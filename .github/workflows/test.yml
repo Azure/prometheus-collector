@@ -22,8 +22,8 @@ jobs:
       - name: show-ls
         run: ls -al
       - name: Build-the-thing
-        run: cd ./prometheus-collector/otelcollector/opentelemetry-collector-builder/ && make
+        run: cd ./otelcollector/opentelemetry-collector-builder/ && make
       - name: show-cur-dir-again
         run: pwd
-      - name: shoe-ls-again
+      - name: show-ls-again
         run: ls -al
