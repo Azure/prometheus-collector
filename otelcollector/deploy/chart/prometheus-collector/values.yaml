@@ -1,0 +1,46 @@
+# Default values for prometheus-collector.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+scrapeTargets:
+  # -- when true, automatically scrape coredns service in the k8s cluster without any additional scrape config
+  coreDns: true
+  # -- when true, automatically scrape kubelet in every node in the k8s cluster without any additional scrape config
+  kubelet: true
+
+azureMetricAccount:
+  # -- default metric account name to ingest metrics into. This will be the account used if metric itself does not have account 'hinting' label. The certificate for this account should be specified in one of the further arguments below here
+  defaultAccountName: ""  #required
+
+#This setting holds information about azure key vault, where Pfx certificates are stored for your metroc account(s)
+azureKeyVault:
+  # -- name of the azure key vault resource
+  name: "" #required
+  # -- tenantid for the azure key vault resource
+  tenantId: "" #required
+  # -- clientid for a service principal that has access to read the Pfx certificates from keyvault specified above
+  clientId: "" #required
+  # -- client secret for the above service principal
+  clientSecret: "" #required
+  # -- name of the Pfx certificate(s) - one per metric account
+  pfxCertNames: [] #required
+
+# -- name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped
+clusterName: "" #required
+
+#do not use any of the internal settings. This is for testing purposes
+internalSettings:
+  intEnvironment: false
+
+image:
+  repository: mcr.microsoft.com/azuremonitor/containerinsights/cidev
+  tag: "prometheus-collector-0423"
+  pullPolicy: IfNotPresent
+
+resources:
+   limits:
+     cpu: 2
+     memory: 2Gi
+   requests:
+     cpu: 250m
+     memory: 1Gi

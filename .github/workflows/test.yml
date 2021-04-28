@@ -1,13 +1,29 @@
-name: test-github-actions
+name: build-and-push-image
 on:
   push:
     branches:
       vishwa/test
 jobs:
-  check-bats-version:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
-      - run: npm install -g bats
-      - run: bats -v
+      - name: Checkout-code
+        uses: actions/checkout@v2
+      - name: Install-golang
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.14.1'
+      - name: Show-versions-(On-build-machine)
+        run: lsb_release -a && go version
+      - name: Install-build-dependencies
+        run: sudo apt-get install build-essential -y
+      - name: show-cur-dir
+        run: pwd
+      - name: show-ls
+        run: ls -al
+      - name: Build-the-thing
+        run: cd ./prometheus-collector/otelcollector/opentelemetry-collector-builder/ && make
+      - name: show-cur-dir-again
+        run: pwd
+      - name: shoe-ls-again
+        run: ls -al

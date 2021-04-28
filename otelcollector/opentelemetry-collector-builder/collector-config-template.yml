@@ -1,0 +1,29 @@
+exporters:
+  file:
+    path: /opt/microsoft/otelcollector/promotel.json
+  #influx:
+  #  loglevel: debug
+  otlp:
+    endpoint: 127.0.0.1:55680
+    insecure: true
+processors:
+  batch:
+    send_batch_size: 8192
+    timeout: 200ms
+    send_batch_max_size: 0
+  resource:
+    attributes:
+    - key: cluster
+      value: "$customResourceId"
+      action: "upsert"
+receivers:
+    prometheus:
+      include_resource_labels: true
+      config:
+        $AZMON_PROMETHEUS_CONFIG
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      exporters: [otlp]
+      processors: [batch, resource]

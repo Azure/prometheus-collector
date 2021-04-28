@@ -1,0 +1,28 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Release.Name}}-prometheus-collector-reader
+  labels:
+    {{- include "prometheus-collector.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources:
+      [
+        "pods",
+        "nodes",
+        "nodes/stats",
+        "nodes/metrics",
+        "nodes/proxy",
+        "namespaces",
+        "services",
+        "endpoints",
+        "ingress"
+      ]
+    verbs: ["list", "get", "watch"]
+  - apiGroups:
+    - networking.k8s.io
+    resources:
+    - ingresses
+    verbs: ["list", "get", "watch"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
