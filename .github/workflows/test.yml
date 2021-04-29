@@ -12,7 +12,7 @@ jobs:
       - name: Set-image-tag-suffix
         run: echo "IMAGE_TAG_DATE=$(date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Set-image-tag-name
-        run echo "IMAGE_TAG_NAME=prometheus-collector" >> $GITHUB_ENV
+        run: echo "IMAGE_TAG_NAME=prometheus-collector" >> $GITHUB_ENV
       - name: Checkout-code
         uses: actions/checkout@v2
       - name: Install-golang
@@ -46,4 +46,3 @@ jobs:
         uses: github/codeql-action/upload-sarif@v1
         with:
           sarif_file: 'trivy-results.sarif'
-        
