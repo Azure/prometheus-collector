@@ -16,7 +16,7 @@ jobs:
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
-        run: export HELM_EXPERIMENTAL_OCI=1
+        run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
       - name: Set-Helm-chart-version
         run: echo "HELM_CHART_VERSION=0.0.1" >> $GITHUB_ENV
       - name: Checkout-code
