@@ -7,8 +7,12 @@ jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
     steps:
-      - name: Set-tag-suffix
+      - name: Set-image-tag-prefix-dev
+        run: echo "IMAGE_TAG_PREFIX_DEV=containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
+      - name: Set-image-tag-suffix
         run: echo "IMAGE_TAG_DATE=$(date +%m-%d-%Y)" >> $GITHUB_ENV
+      - name: Set-image-tag-name
+        run echo "IMAGE_TAG_NAME=prometheus-collector" >> $GITHUB_ENV
       - name: Checkout-code
         uses: actions/checkout@v2
       - name: Install-golang
@@ -27,7 +31,19 @@ jobs:
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
       - name: Create-container-image
         run: |
-            cd ./otelcollector/ && docker build . --file Dockerfile -t containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev:cidev-$IMAGE_TAG_DATE-${GITHUB_SHA::8}
+            cd ./otelcollector/ && docker build . --file Dockerfile -t $IMAGE_TAG_PREFIX_DEV:$IMAGE_TAG_NAME-$IMAGE_TAG_DATE-${GITHUB_SHA::8} --build-arg IMAGE_TAG=$IMAGE_TAG_NAME-$IMAGE_TAG_DATE-${GITHUB_SHA::8}
       - name: list-docker-images
         run: docker images
+      - name: Run-trivy-scanner-on-image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '$IMAGE_TAG_PREFIX_DEV:$IMAGE_TAG_NAME-$IMAGE_TAG_DATE-${GITHUB_SHA::8}'
+          format: 'template'
+          template: '@/contrib/sarif.tpl'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: 'trivy-results.sarif'
         
