@@ -47,11 +47,10 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
       - name: login-to-ACR
-        uses: azure/docker-login@v1
-        with:
-            login-server: containerinsightsprod.azurecr.io
-            username: ${{ secrets.RCA_PS_DI }}
-            password: ${{ secrets.RCA_PS_CES }}
+        #with:
+        #  username: ${{ secrets.RCA_PS_DI }}
+        #  password: ${{ secrets.RCA_PS_CES }}
+        run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p {{ secrets.RCA_PS_CES }}
       - name: push-image-to-ACR
         run: |
             docker push ${{ env.IMAGE_TAG_PREFIX_DEV }}:${{ env.IMAGE_TAG_NAME }}-${{ env.IMAGE_TAG_DATE }}-${{ env.COMMIT_SHA }}
