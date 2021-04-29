@@ -27,7 +27,7 @@ jobs:
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
       - name: Create-container-image
         run: |
-            cd ./otelcollector/ && docker build . --file Dockerfile -t containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev:cidev-{$IMAGE_TAG_DATE}-{GITHUB_SHA::8}
+            cd ./otelcollector/ && docker build . --file Dockerfile -t containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev:cidev-$IMAGE_TAG_DATE-${GITHUB_SHA::8}
       - name: list-docker-images
         run: docker images
         
