@@ -4,9 +4,11 @@ on:
     branches:
       vishwa/test
 jobs:
-  build-and-push:
+  build-and-push-image:
     runs-on: ubuntu-latest
     steps:
+      - name: Set-tag-suffix
+        run: echo "IMAGE_TAG_DATE=$(date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Checkout-code
         uses: actions/checkout@v2
       - name: Install-golang
@@ -23,7 +25,9 @@ jobs:
         run: ls -al
       - name: Build-the-thing
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
-      - name: show-cur-dir-again
-        run: pwd
-      - name: show-ls-again
-        run: ls -al
+      - name: Create-container-image
+        run: |
+            cd ./otelcollector/ && docker build . --file Dockerfile -t containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev:cidev-{$IMAGE_TAG_DATE}-{GITHUB_SHA::8}
+      - name: list-docker-images
+        run: docker images
+        
