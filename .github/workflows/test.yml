@@ -15,6 +15,10 @@ jobs:
         run: echo "IMAGE_TAG_NAME=prometheus-collector" >> $GITHUB_ENV
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
+      - name: Set-Helm-OCI-Experimental-feature
+        run: export HELM_EXPERIMENTAL_OCI=1
+      - name: Set-Helm-chart-version
+        run: echo "HELM_CHART_VERSION=0.0.1" >> $GITHUB_ENV
       - name: Checkout-code
         uses: actions/checkout@v2
       #- name: Install-golang
@@ -22,7 +26,7 @@ jobs:
       #  with:
       #    go-version: '^1.14.1'
       - name: Show-versions-On-build-machine
-        run: lsb_release -a && go version
+        run: lsb_release -a && go version && helm version && docker version
       - name: Install-build-dependencies
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
@@ -46,13 +50,20 @@ jobs:
         uses: github/codeql-action/upload-sarif@v1
         with:
           sarif_file: 'trivy-results.sarif'
-      - name: login-to-ACR(containerinsightsprod)
+      - name: Login-to-ACR(containerinsightsprod)-thru-Docker
         #with:
         #  username: ${{ secrets.RCA_PS_DI }}
         #  password: ${{ secrets.RCA_PS_CES }}
         run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
-      - name: publish-docker-image-to-ACR
-        run: |
-            docker push ${{ env.IMAGE_TAG_PREFIX_DEV }}:${{ env.IMAGE_TAG_NAME }}-${{ env.IMAGE_TAG_DATE }}-${{ env.COMMIT_SHA }}
-      - name: run helm
-        run: helm version
+      #- name: publish-docker-image-to-ACR
+      #  run: |
+      #      docker push ${{ env.IMAGE_TAG_PREFIX_DEV }}:${{ env.IMAGE_TAG_NAME }}-${{ env.IMAGE_TAG_DATE }}-${{ env.COMMIT_SHA }}
+      - name: Save-Helm-chart-to-local-cache
+        run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm chart save . ${{ env.IMAGE_TAG_PREFIX_DEV }}:${{ env.IMAGE_TAG_NAME }}-chart-${{ env.HELM_CHART_VERSION }}-${{ env.IMAGE_TAG_DATE }}-${{ env.COMMIT_SHA }}
+      - name: List-local-Helm-Charts
+        run: helm chart list
+      - name: Login-to-ACR(containerinsightsprod)-thru-Helm
+        run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
+      - name: Publish-Helm-chart-to-ACR
+        run: helm chart push ${{ env.IMAGE_TAG_PREFIX_DEV }}:${{ env.IMAGE_TAG_NAME }}-chart-${{ env.HELM_CHART_VERSION }}-${{ env.IMAGE_TAG_DATE }}-${{ env.COMMIT_SHA }}
+
