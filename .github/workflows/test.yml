@@ -46,12 +46,13 @@ jobs:
         uses: github/codeql-action/upload-sarif@v1
         with:
           sarif_file: 'trivy-results.sarif'
-      - name: push image to ACR
+      - name: login-to-ACR
         uses: azure/docker-login@v1
         with:
-            login-server: contoso.azurecr.io
+            login-server: containerinsightsprod.azurecr.io
             username: ${{ secrets.RCA_PS_DI }}
             password: ${{ secrets.RCA_PS_CES }}
+      - name: push-image-to-ACR
         run: |
             docker push ${{ env.IMAGE_TAG_PREFIX_DEV }}:${{ env.IMAGE_TAG_NAME }}-${{ env.IMAGE_TAG_DATE }}-${{ env.COMMIT_SHA }}
       - name: run helm
