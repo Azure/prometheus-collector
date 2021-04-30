@@ -31,7 +31,7 @@ jobs:
       - name: Set-Helm-chart-version
         run: echo "HELM_CHART_VERSION=0.0.1" >> $GITHUB_ENV
       - name: Set-Helm-tag
-        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${ENV}-${HELM_CHART_VERSION }-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${ENV}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Checkout-code
         uses: actions/checkout@v2
       - name: Show-versions-On-build-machine
