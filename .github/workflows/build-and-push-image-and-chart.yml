@@ -49,9 +49,9 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: "${{ env.IMAGETAG }}"
-          format: 'template'
-          template: '@/contrib/sarif.tpl'
-          output: 'trivy-results.sarif'
+          format: 'table'
+          #template: '@/contrib/sarif.tpl'
+          #output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
           exit-code: '1'
