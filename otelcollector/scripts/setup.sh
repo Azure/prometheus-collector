@@ -51,9 +51,9 @@ cp -f $TMPDIR/prometheus-2.25.2.linux-amd64/promtool /opt/promtool
 chmod 777 /opt/promtool
 
 # Install Telegraf
-wget https://dl.influxdata.com/telegraf/releases/telegraf-1.18.0_linux_amd64.tar.gz
-tar -zxvf telegraf-1.18.0_linux_amd64.tar.gz
-mv /opt/telegraf-1.18.0/usr/bin/telegraf /opt/telegraf/telegraf
+wget https://dl.influxdata.com/telegraf/releases/telegraf-1.18.2_linux_amd64.tar.gz
+tar -zxvf telegraf-1.18.2_linux_amd64.tar.gz
+mv /opt/telegraf-1.18.2/usr/bin/telegraf /opt/telegraf/telegraf
 chmod 777 /opt/telegraf/telegraf
 
 # Install fluent-bit
@@ -77,4 +77,4 @@ rm -f $TMPDIR/metricsext2*.deb
 rm -f $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz
 rm -rf $TMPDIR/prometheus-2.25.2.linux-amd64
 rm -f $TMPDIR/telegraf*.gz
-rm -rf $TMPDIR/telegraf-1.18.0/
+rm -rf $TMPDIR/telegraf-1.18.2/
