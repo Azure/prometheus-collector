@@ -46,7 +46,7 @@ jobs:
       - name: List-docker-images
         run: docker images --digests --all
       - name: Run-trivy-scanner-on-docker-image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.0.8
         with:
           image-ref: ${{ env.IMAGETAG }}
           format: 'template'
