@@ -51,7 +51,7 @@ jobs:
           image-ref: "${{ env.IMAGETAG }}"
           format: 'table'
           #template: '@/contrib/sarif.tpl'
-          #output: 'trivy-results.sarif'
+          output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os'
           exit-code: '1'
