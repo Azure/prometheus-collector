@@ -53,7 +53,7 @@ jobs:
           #template: '@/contrib/sarif.tpl'
           #output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-          vuln-type: 'os,library'
+          vuln-type: 'os'
           exit-code: '1'
       - name: Publish-Trivy-scan-results
         uses: github/codeql-action/upload-sarif@v1
