@@ -25,7 +25,7 @@ jobs:
       - name: Set-image-tag
         run: echo "IMAGETAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-${ENV}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-image-telemetry-tag
-        run: echo "IMAGETAG_TELEMETRY="${IMAGE_TAG_NAME}-${ENV}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+        run: echo "IMAGETAG_TELEMETRY=${IMAGE_TAG_NAME}-${ENV}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
       - name: Set-Helm-chart-version
