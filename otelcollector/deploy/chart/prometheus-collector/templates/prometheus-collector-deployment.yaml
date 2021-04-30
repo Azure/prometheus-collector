@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-prometheus-collector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    component: {{ .Release.Name }}-prometheus-collector
+    tier: node
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      rsName: {{ .Release.Name }}-prometheus-collector
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        rsName: {{ .Release.Name }}-prometheus-collector
+      annotations:
+        agentVersion: "0.0.0.1"
+        schema-versions: "v1"
+    spec:
+      serviceAccountName: {{ .Release.Name }}-prometheus-collector
+      containers:
+        - name: prometheus-collector
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: CLUSTER
+              value: {{ required "clusterName is required" .Values.clusterName | toString | quote }}
+            {{- if .Values.internalSettings.IntEnvironment  }}
+            - name: ME_ADDITIONAL_FLAGS
+              value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
+            {{- end }}
+            - name: CONTROLLER_TYPE
+              value: "ReplicaSet"
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONTAINER_CPU_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.cpu
+                  divisor: 1m
+            - name: CONTAINER_MEMORY_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.memory
+                  divisor: 1Mi
+          securityContext:
+            privileged: false
+          volumeMounts:
+            - mountPath: /etc/config/settings
+              name: settings-vol-config
+              readOnly: true
+            - mountPath: /etc/config/settings/prometheus
+              name: prometheus-config-vol
+              readOnly: true
+            - mountPath: /etc/config/settings/akv
+              name: secrets-store-inline
+              readOnly: true
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - /opt/microsoft/liveness/livenessprobe.sh
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 15
+      affinity:
+        nodeAffinity:
+          # affinity to schedule on to ephemeral os node if its available
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: storageprofile
+                operator: NotIn
+                values:
+                - managed
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - labelSelector:
+                matchExpressions:
+                  - key: beta.kubernetes.io/os
+                    operator: In
+                    values:
+                    - linux
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+      # The following label selector is removed for AKS, this is only required for non AKS
+                  - key: kubernetes.io/role
+                    operator: NotIn
+                    values:
+                      - master
+      # The following tolerations are removed for AKS, this is only required for non AKS
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+        - operator: "Exists"
+          effect: "NoExecute"
+        - operator: "Exists"
+          effect: "PreferNoSchedule"
+      volumes:
+        - name: settings-vol-config
+          configMap:
+            name: {{ .Release.Name }}-prometheus-collector-configmap
+            optional: true
+        - name: prometheus-config-vol
+          configMap:
+            name: {{ .Release.Name }}-prometheus-config
+            optional: true
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "{{ .Release.Name }}-azure-kv-metricstore"
+            nodePublishSecretRef:           # Only required when using service principal mode
+              name: {{ .Release.Name }}-akv-creds   # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
