@@ -48,7 +48,7 @@ jobs:
       - name: Run-trivy-scanner-on-docker-image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.IMAGETAG }}
+          image-ref: 'ubuntu:latest'
           format: 'template'
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results.sarif'
@@ -61,7 +61,7 @@ jobs:
           sarif_file: 'trivy-results.sarif'
       - name: Login-to-ACR-thru-Docker
         run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
-      - name: publish-docker-image-to-ACR
+      - name: Publish-docker-image-to-ACR
         run: |
             docker push ${{ env.IMAGETAG }}
       - name: Save-Helm-chart-to-local-cache
