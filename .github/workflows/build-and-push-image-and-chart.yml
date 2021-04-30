@@ -2,7 +2,6 @@ name: build-and-push-image-and-chart
 on:
   push:
     branches:
-      - vishwa/test
       - main
 jobs:
   build-and-push-image:
