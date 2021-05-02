@@ -83,9 +83,8 @@ jobs:
         if: github.event_name != 'pull_request'
         run: helm chart push ${{ env.HELMTAG }}
       - name: tag-this-push
-      - uses: actions-ecosystem/action-push-tag@v1
+        uses: actions-ecosystem/action-push-tag@v1
         if: github.event_name != 'pull_request'
         with:
           tag: ${{ env.IMAGETAG_TELEMETRY }}
           message: "Created tag ${{ env.IMAGETAG_TELEMETRY }} for CommitID: ${{ env.GITHUB_SHA }}"
-
