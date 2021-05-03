@@ -3,12 +3,22 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
     steps:
-      - name: Set-branch-name
-        run: echo "${GITHUB_REF#refs/heads/}"
+      - name: Set-workflow-initiator
+        run: echo "Initiated by - ${GITHUB_ACTOR}"
+      - name: Set-branch-name-for-non-pr
+        if: ${{ github.event_name != 'pull_request' }}
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _)" >> $GITHUB_ENV
+      - name: Set-branch-name-for-pr
+        if: ${{ github.event_name == 'pull_request' }}
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / _)" >> $GITHUB_ENV
       - name: Set-Env
         run: echo "ENV=dev" >> $GITHUB_ENV
       - name: Set-ACR-Registry
@@ -22,15 +32,15 @@ jobs:
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
       - name: Set-image-tag
-        run: echo "IMAGETAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-${ENV}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+        run: echo "IMAGETAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-image-telemetry-tag
-        run: echo "IMAGETAG_TELEMETRY=${IMAGE_TAG_NAME}-${ENV}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+        run: echo "IMAGETAG_TELEMETRY=${IMAGE_TAG_NAME}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
       - name: Set-Helm-chart-version
         run: echo "HELM_CHART_VERSION=0.0.1" >> $GITHUB_ENV
       - name: Set-Helm-tag
-        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${ENV}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Checkout-code
         uses: actions/checkout@v2
       - name: Show-versions-On-build-machine
@@ -49,26 +59,32 @@ jobs:
         with:
           image-ref: "${{ env.IMAGETAG }}"
           format: 'table'
-          #template: '@/contrib/sarif.tpl'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-          vuln-type: 'os'
+          vuln-type: 'os, library'
+          skip-dirs: 'opt/telegraf/telegraf'
           exit-code: '1'
-      #- name: Publish-Trivy-scan-results
-      #  uses: github/codeql-action/upload-sarif@v1
-      #  with:
-      #    sarif_file: 'trivy-results.sarif'
-      - name: Login-to-ACR-thru-Docker
-        run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
-      - name: Publish-docker-image-to-ACR
-        run: |
-            docker push ${{ env.IMAGETAG }}
+          timeout: '5m0s'
       - name: Save-Helm-chart-to-local-cache
         run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm chart save . ${{ env.HELMTAG }}
       - name: List-local-Helm-Charts
         run: helm chart list
+      - name: Login-to-ACR-thru-Docker
+        if: github.event_name != 'pull_request'
+        run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
+      - name: Publish-docker-image-to-ACR
+        if: github.event_name != 'pull_request'
+        run: |
+            docker push ${{ env.IMAGETAG }}
       - name: Login-to-ACR-thru-Helm
+        if: github.event_name != 'pull_request'
         run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
       - name: Publish-Helm-chart-to-ACR
+        if: github.event_name != 'pull_request'
         run: helm chart push ${{ env.HELMTAG }}
-
+      #- name: Tag-this-push
+      #  uses: actions-ecosystem/action-push-tag@v1
+      #  if: github.event_name != 'pull_request'
+      #  with:
+      #    tag: ${{ env.IMAGETAG_TELEMETRY }}
+      #    message: "Created tag ${{ env.IMAGETAG_TELEMETRY }} for CommitID: ${{ env.GITHUB_SHA }}"
