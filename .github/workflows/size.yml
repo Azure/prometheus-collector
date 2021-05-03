@@ -1,0 +1,13 @@
+name: size-label #https://github.com/kubernetes/kubernetes/labels?q=size
+on: 
+  pull_request:
+    branches:
+      - main
+jobs:
+  size-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: size-label
+        uses: "pascalgn/size-label-action@v0.4.2"
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
