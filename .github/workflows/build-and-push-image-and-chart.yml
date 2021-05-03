@@ -83,7 +83,7 @@ jobs:
       - name: Publish-Helm-chart-to-ACR
         if: github.event_name != 'pull_request'
         run: helm chart push ${{ env.HELMTAG }}
-      #- name: tag-this-push
+      #- name: Tag-this-push
       #  uses: actions-ecosystem/action-push-tag@v1
       #  if: github.event_name != 'pull_request'
       #  with:
