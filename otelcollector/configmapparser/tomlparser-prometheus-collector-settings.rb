@@ -35,8 +35,8 @@ end
 def populateSettingValuesFromConfigMap(parsedConfig)
   # Get if otel collector prometheus scraping is enabled
   begin
-    if !parsedConfig.nil? && !parsedConfig[:prometheus_collector_settings].nil? && !parsedConfig[:prometheus_collector_settings][:default_metric_account].nil? && !parsedConfig[:prometheus_collector_settings][:default_metric_account][:account_name].nil?
-      @defaultMetricAccountName = parsedConfig[:prometheus_collector_settings][:default_metric_account][:account_name]
+    if !parsedConfig.nil? && !parsedConfig[:default_metric_account_name].nil?
+      @defaultMetricAccountName = parsedConfig[:default_metric_account_name]
       puts "config::Using config map setting for prometheus collector default metric account name"
     end
   rescue => errorStr

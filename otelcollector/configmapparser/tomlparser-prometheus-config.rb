@@ -14,8 +14,9 @@ require_relative "ConfigParseErrorLogger"
 @indentedConfig = ""
 @useDefaultConfig = true
 
-@kubeletDefaultString = "job_name: 'kubernetes-nodes'\nscheme: https\ntls_config:\n  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n  insecure_skip_verify: true\nauthorization:\n  credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token\nkubernetes_sd_configs:\n- role: node\nrelabel_configs:\n- action: labelmap\n  regex: __meta_kubernetes_node_label_(.+)"
-@corednsDefaultString = "job_name: kube-dns\nhonor_labels: true\nkubernetes_sd_configs:\n- role: pod\nrelabel_configs:\n- action: keep\n  source_labels:\n  - __meta_kubernetes_namespace\n  - __meta_kubernetes_pod_name\n  separator: '/'\n  regex: 'kube-system/coredns.+'\n- source_labels:\n  - __meta_kubernetes_pod_container_port_name\n  action: keep\n  regex: metrics\n- source_labels:\n  - __meta_kubernetes_pod_name\n  action: replace\n  target_label: instance\n- action: labelmap\n  regex: __meta_kubernetes_pod_label_(.+)"
+@kubeletDefaultString = "job_name: kubelet\nhonor_labels: true\nhonor_timestamps: true\nscrape_interval: 60s\nmetrics_path: /metrics\nscheme: https\nbearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\ntls_config:\n  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n  insecure_skip_verify: true\nrelabel_configs:\n- source_labels: [__address__]\n  regex: (.*):10250\n  action: keep\n- source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]\n  regex: Node;(.*)\n  target_label: node\n  replacement: $${1}\n  action: replace\n- source_labels: [__meta_kubernetes_service_name]\n  regex: (.*)\n  target_label: service\n- source_labels: [__metrics_path__]\n  regex: (.*)\n  target_label: metrics_path\nkubernetes_sd_configs:\n- role: endpoints\n  namespaces:\n    names:\n    - kube-system"
+@corednsDefaultString = "job_name: kube-dns\nhonor_timestamps: true\nscrape_interval: 60s\nmetrics_path: /metrics\nscheme: http\nbearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\nrelabel_configs:\n- source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]\n  regex: Pod;(.*)\n  target_label: pod\n  replacement: $${1}\n- source_labels: [__meta_kubernetes_pod_name]\n  target_label: pod\nkubernetes_sd_configs:\n- role: endpoints\n  namespaces:\n    names:\n    - kube-system"
+@cadvisorDefaultString = "job_name: kubernetes-cadvisor\nhonor_labels: true\nhonor_timestamps: true\nscrape_interval: 60s\nmetrics_path: /metrics/cadvisor\nscheme: https\nbearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\ntls_config:\n  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n  insecure_skip_verify: true\nrelabel_configs:\n- source_labels: [__address__]\n  regex: (.*):10250\n  action: keep\n- source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]\n  regex: Node;(.*)\n  target_label: node\n  replacement: $${1}\n- source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]\n  regex: Pod;(.*)\n  target_label: pod\n  replacement: $${1}\n- source_labels: [__meta_kubernetes_namespace]\n  target_label: namespace\n- source_labels: [__meta_kubernetes_service_name]\n  target_label: service\n- source_labels: [__meta_kubernetes_pod_name]\n  target_label: pod\n- source_labels: [__meta_kubernetes_pod_container_name]\n  target_label: container\n- source_labels: [__metrics_path__]\n  target_label: metrics_path\nkubernetes_sd_configs:\n- role: endpoints"
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -47,6 +48,9 @@ def populateSettingValuesFromConfigMap(configString)
     end
     if !ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].downcase == "true"
       @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @corednsDefaultString)
+    end
+    if !ENV["AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED"].downcase == "true"
+      @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @cadvisorDefaultString)
     end
     puts "config::Using config map setting for prometheus config"
     puts @indentedConfig
