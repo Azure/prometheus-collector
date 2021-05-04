@@ -23,7 +23,7 @@ def parseConfigMap
   begin
     # Check to see if config map is created
     puts "config::configmap prometheus-collector-configmap for prometheus-config file: #{@configMapMountPath}"
-    if (File.file?(@configMapMountPath))
+    if (File.file?(@configMapMountPath) && ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true")
       puts "config::configmap prometheus-collector-configmap for prometheus config mounted, parsing values"
       config = File.read(@configMapMountPath)
       puts "config::Successfully parsed mounted config map"

@@ -113,19 +113,18 @@ if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
       if [ $? -ne 0 ]; then
             echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
-      # Get prometheus config and replace in otelcollector config
-      else 
-            ruby /opt/microsoft/configmapparser/tomlparser-prometheus-config.rb
-
-            cat /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var | while read line; do
-                  echo $line >> ~/.bashrc
-            done
-            source /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var
       fi
 else
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi 
+
+# Get prometheus config and/or default scrape_config settings and replace in otelcollector config
+ruby /opt/microsoft/configmapparser/tomlparser-prometheus-config.rb
+cat /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var | while read line; do
+    echo $line >> ~/.bashrc
+done
+source /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var
 
 
 
