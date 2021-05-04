@@ -8,12 +8,11 @@ data:
     #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
     ver1
   prometheus-collector-settings: |-
-    [prometheus_collector_settings.default_metric_account]
-      account_name = {{ required "azureMetricAccount.defaultAccountName is required" .Values.azureMetricAccount.defaultAccountName | toString | quote }}
-  default-scrape-settings: |-
-    [default_scrape_settings]
-      kubelet_enabled = {{ .Values.scrapeTargets.kubelet }}
-      coredns_enabled = {{ .Values.scrapeTargets.coreDns }}
+    default_metric_account_name = {{ required "azureMetricAccount.defaultAccountName is required" .Values.azureMetricAccount.defaultAccountName | toString | quote }}
+  default-scrape-settings-enabled: |-
+    kubelet = {{ .Values.scrapeTargets.kubelet }}
+    coredns = {{ .Values.scrapeTargets.coreDns }}
+    cadvisor = {{ .Values.scrapeTargets.cAdvisor }}
 metadata:
   name: {{ .Release.Name }}-prometheus-collector-configmap
   namespace: {{ .Release.Namespace }}

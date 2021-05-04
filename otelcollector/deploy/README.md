@@ -34,22 +34,30 @@ helm install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azu
 ```shell kubectl apply -f secretProviderClass.yaml ```
 
 #### Step 6 : Update configmap to provide default MDM Account name and enable/disable default scrape targets
-  Provide the default MDM account name in the config map (prometheus-collector-configmap.yaml), optionally enable/disable default scrape targets for your cluster(kubelet, coredns, etc.) using the configmap settings, and apply the configmap to your kubernetes cluster (see below steps)
-     - 6.1) Ensure the line below in the configmap has your MDM account name (which will be used as the default MDM account to send metrics to)
-          ``` 
-            account_name = "mymetricaccountname"
-          ```
-     - 6.2) Specify if you'd like default kubelet or coredns scrape configs added to the prometheus yaml for you. Set to false, if you don't want these targets scraped or if you already include them in your prometheus yaml. Job names 'kubernetes-nodes' and 'kube-dns' are reserved if these are enabled.
-```yaml
-            default-scrape-settings: |-
-              [default_scrape_settings]
-                kubelet_enabled = true
-                coredns_enabled = true
-```
-     - 6.3) Apply the configmap to the cluster
-```shell
-            kubectl apply -f prometheus-collector-configmap.yaml
-```
+
+Provide the default MDM account name in the config map (prometheus-collector-configmap.yaml), optionally enable/disable default scrape targets for your cluster(kubelet, coredns, etc.) using the configmap settings, and apply the configmap to your kubernetes cluster (see below steps)
+
+- 6.1) Ensure the line below in the configmap has your MDM account name (which will be used as the default MDM account to send metrics to)
+
+     ```yaml
+    prometheus-collector-settings: |-
+      default_metric_account_name = "mymetricaccountname"
+     ```
+
+- 6.2) Specify if you'd like default kubelet or coredns scrape configs added to the prometheus yaml for you. Set to false, if you don't want these targets scraped or if you already include them in your prometheus yaml. Job names `kubelet`, `kubernetes-cadvisor` and `kube-dns` are reserved if these are enabled.
+
+    ```yaml
+    default-scrape-settings-enabled: |-
+      kubelet = true
+      coredns= true
+      cadvisor = true
+    ```
+
+
+- 6.3) Apply the configmap to the cluster
+    ```shell
+    kubectl apply -f prometheus-collector-configmap.yaml
+    ```
 
 #### Step 7 : Provide Prometheus scrape config
 Provide the prometheus scrape config as needed in the prometheus configmap. See [configuration.md](../configuration.md) for more tips on the prometheus config. There are two ways of doing so:

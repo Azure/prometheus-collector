@@ -4,12 +4,13 @@
 require "tomlrb"
 require_relative "ConfigParseErrorLogger"
 
-@configMapMountPath = "/etc/config/settings/default-scrape-settings"
+@configMapMountPath = "/etc/config/settings/default-scrape-settings-enabled"
 @configVersion = ""
 @configSchemaVersion = ""
 
 @kubeletEnabled = true
 @corednsEnabled = true
+@cadvisorEnabled = true
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -34,15 +35,17 @@ end
 # Use the ruby structure created after config parsing to set the right values to be used for otel collector settings
 def populateSettingValuesFromConfigMap(parsedConfig)
   begin
-    if !parsedConfig.nil? && !parsedConfig[:default_scrape_settings].nil?
-      if !parsedConfig[:default_scrape_settings][:kubelet_enabled].nil?
-        @kubeletEnabled = parsedConfig[:default_scrape_settings][:kubelet_enabled]
-        puts "config::Using configmap settings for kubelet_enabled"
-      end
-      if !parsedConfig[:default_scrape_settings][:coredns_enabled].nil?
-        @corednsEnabled = parsedConfig[:default_scrape_settings][:coredns_enabled]
-        puts "config::Using configmap settings for coredns_enabled"
-      end
+    if !parsedConfig.nil? && !parsedConfig[:kubelet].nil?
+      @kubeletEnabled = parsedConfig[:kubelet]
+      puts "config::Using configmap default scrape settings for kubelet"
+    end
+    if !parsedConfig[:coredns].nil?
+      @corednsEnabled = parsedConfig[:coredns]
+      puts "config::Using configmap default scrape settings for coredns"
+    end
+    if !parsedConfig[:cadvisor].nil?
+      @cadvisorEnabled = parsedConfig[:cadvisor]
+      puts "config::Using configmap default scrape settings for cadvisor"
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while reading config map settings for default scrape settings - #{errorStr}, using defaults, please check config map for errors")
@@ -68,6 +71,7 @@ file = File.open("/opt/microsoft/configmapparser/config_default_scrape_settings_
 if !file.nil?
   file.write("export AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED=#{@kubeletEnabled}\n")
   file.write("export AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED=#{@corednsEnabled}\n")
+  file.write("export AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED=#{@cadvisorEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
   puts "****************End default-scrape-settings Processing********************"

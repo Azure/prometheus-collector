@@ -1,0 +1,83 @@
+scrape_configs:
+- job_name: kubelet
+  honor_labels: true
+  honor_timestamps: true
+  scrape_interval: 60s
+  metrics_path: /metrics
+  scheme: https
+  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  tls_config:
+    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecure_skip_verify: true
+  relabel_configs:
+  - source_labels: [__address__]
+    regex: (.*):10250
+    action: keep
+  - source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]
+    regex: Node;(.*)
+    target_label: node
+    replacement: $${1}
+    action: replace
+  - source_labels: [__meta_kubernetes_service_name]
+    regex: (.*)
+    target_label: service
+  - source_labels: [__metrics_path__]
+    regex: (.*)
+    target_label: metrics_path
+  kubernetes_sd_configs:
+  - role: endpoints
+    namespaces:
+      names:
+      - kube-system
+- job_name: kubernetes-cadvisor
+  honor_labels: true
+  honor_timestamps: true
+  scrape_interval: 60s
+  metrics_path: /metrics/cadvisor
+  scheme: https
+  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  tls_config:
+    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecure_skip_verify: true
+  relabel_configs:
+  - source_labels: [__address__]
+    regex: (.*):10250
+    action: keep
+  - source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]
+    regex: Node;(.*)
+    target_label: node
+    replacement: $${1}
+  - source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]
+    regex: Pod;(.*)
+    target_label: pod
+    replacement: $${1}
+  - source_labels: [__meta_kubernetes_namespace]
+    target_label: namespace
+  - source_labels: [__meta_kubernetes_service_name]
+    target_label: service
+  - source_labels: [__meta_kubernetes_pod_name]
+    target_label: pod
+  - source_labels: [__meta_kubernetes_pod_container_name]
+    target_label: container
+  - source_labels: [__metrics_path__]
+    target_label: metrics_path
+  kubernetes_sd_configs:
+  - role: endpoints
+- job_name: kube-dns
+  honor_timestamps: true
+  scrape_interval: 60s
+  metrics_path: /metrics
+  scheme: http
+  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_endpoint_address_target_kind, __meta_kubernetes_endpoint_address_target_name]
+    regex: Pod;(.*)
+    target_label: pod
+    replacement: $${1}
+  - source_labels: [__meta_kubernetes_pod_name]
+    target_label: pod
+  kubernetes_sd_configs:
+  - role: endpoints
+    namespaces:
+      names:
+      - kube-system
