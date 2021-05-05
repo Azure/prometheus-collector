@@ -31,7 +31,7 @@ spec:
           env:
             - name: CLUSTER
               value: {{ required "clusterName is required" .Values.clusterName | toString | quote }}
-            {{- if .Values.internalSettings.IntEnvironment  }}
+            {{- if .Values.internalSettings.intEnvironment  }}
             - name: ME_ADDITIONAL_FLAGS
               value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
             {{- end }}

@@ -1,3 +1,5 @@
+![Builds on main branch](https://github.com/Azure/prometheus-collector/actions/workflows/build-and-push-image-and-chart.yml/badge.svg?branch=main&event=push) ![PRs to main branch](https://github.com/Azure/prometheus-collector/actions/workflows/build-and-push-image-and-chart.yml/badge.svg?branch=main&event!=push)
+
 # prometheus-collector HELM chart
 
 ![Version: 0.0.2](https://img.shields.io/badge/Version-0.0.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.0.2](https://img.shields.io/badge/AppVersion-0.0.2-informational?style=flat-square)
@@ -10,8 +12,11 @@ Kubernetes: `>=1.16.0-0`
 
 ## Pre-requisites
 
+- **Step 0** : Tools
+    You will need [kubectl client tool](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/) and [helm client tool(v3 or later)](https://helm.sh/docs/intro/install/) to continue this deployment.
+
 - **Step 1** : Create MDM Metric Account(s) & obtain Pfx certificate for each of the MDM Metric account(s)
-    You can configure prometheus-collector to ingest different metrics into different MDM account(s). You will need to create atleast one MDM account (to use as default metric account) and have the name of that default MDM account. You also will need pfx certificate for each of the MDM accounts to which you will be configuring prometheus-collector to ingest metrics. See [configuration.md](../configuration.md) for more information about how to configure a metric account per scrape job (to ingest metrics from that scrape job to a specified metric account. If No metric account is specified as part of prometheus configuration for any scrape job, metrics produced by that scrape job will be ingested into the default metrics account specified as parameter)
+    You can configure prometheus-collector to ingest different metrics into different MDM account(s). You will need to create atleast one MDM account (to use as default metric account) and have the name of that default MDM account. You also will need pfx certificate for each of the MDM accounts to which you will be configuring prometheus-collector to ingest metrics. See [configuration.md](../../../configuration.md) for more information about how to configure a metric account per scrape job (to ingest metrics from that scrape job to a specified metric account. If No metric account is specified as part of prometheus configuration for any scrape job, metrics produced by that scrape job will be ingested into the default metrics account specified as parameter)
 
 - **Step 2** : Upload Pfx certificate(s) to Azure KeyVault
     Azure KeyVault is the only supported way for prometheus-collector to consume authentication certificates for ingesting into metric store account(s). Create an Azure KeyVault with RBAC enabled (if there is not one already that you can use to store certificate(s) ). Import certificate(s) from previous step  (pfx is required) per metric account into the KeyVault (ensure private key is exportable for the pfx certificate when importing into KeyVault, which is default behavior when importing pfx certificates into Azure KeyVauly).You will need the below information from this step -
