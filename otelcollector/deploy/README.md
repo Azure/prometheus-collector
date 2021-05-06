@@ -49,7 +49,7 @@ Provide the default MDM account name in the config map (prometheus-collector-con
       default_metric_account_name = "mymetricaccountname"
      ```
 
-- 6.2) Specify if you'd like default kubelet or coredns scrape configs added to the prometheus yaml for you. Set to false, if you don't want these targets scraped or if you already include them in your prometheus yaml. Job names `kubelet`, `kubernetes-cadvisor` and `kube-dns` are reserved if these are enabled.
+- 6.2) Specify if you'd like default kubelet or coredns scrape configs added to the prometheus yaml for you. Set to false, if you don't want these targets scraped or if you already include them in your prometheus yaml. Job names `kubelet`, `cadvisor` and `kube-dns` are reserved if these are enabled.
 
     ```yaml
     default-scrape-settings-enabled: |-
