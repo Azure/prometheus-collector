@@ -26,16 +26,17 @@ const (
 	clusterTypeAKS                                    = "AKS"
 	envAKSResourceID                                  = "AKS_RESOURCE_ID"
 	envACSResourceName                                = "ACS_RESOURCE_NAME"
-	envAgentVersion									  = "AGENT_VERSION"
-	envControllerType								  = "CONTROLLER_TYPE"
-	envCluster										  = "customResourceId"
+	envAgentVersion                                   = "AGENT_VERSION"
+	envControllerType                                 = "CONTROLLER_TYPE"
+	envCluster                                        = "customResourceId"
 	envAppInsightsAuth                                = "APPLICATIONINSIGHTS_AUTH"
 	envAppInsightsEndpoint                            = "APPLICATIONINSIGHTS_ENDPOINT"
 	envComputerName                                   = "NODE_NAME"
-	envTelemetryOffSwitch							  = "DISABLE_TELEMETRY"
+	envTelemetryOffSwitch                             = "DISABLE_TELEMETRY"
 	fluentbitOtelCollectorLogsTag                     = "prometheus.log.otelcollector"
 	fluentbitMetricsExtensionLogsTag                  = "prometheus.log.metricsextension"
 	fluentbitMetricsExtensionMetricsTag               = "prometheus.log.scrapedmetrics"
+	fluentbitContainerLogsTag                         = "prometheus.log.prometheuscollectorcontainer"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -123,6 +124,8 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 			logEntry = ToString(record["message"])
 		} else if tag == fluentbitOtelCollectorLogsTag {
 			logEntry = fmt.Sprintf("%s %s", ToString(record["C"]), ToString(record["M"]))
+		} else if tag == fluentbitContainerLogsTag {
+			logEntry = ToString(record["log"])
 		}
 		logLines = append(logLines, logEntry)
 	}

@@ -73,6 +73,12 @@ spec:
             - mountPath: /etc/config/settings/akv
               name: secrets-store-inline
               readOnly: true
+            - name: host-log-containers
+              readOnly: true
+              mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
           livenessProbe:
             exec:
               command:
@@ -127,6 +133,12 @@ spec:
           configMap:
             name: {{ .Release.Name }}-prometheus-config
             optional: true
+        - name: host-log-containers
+          hostPath:
+            path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
         - name: secrets-store-inline
           csi:
             driver: secrets-store.csi.k8s.io
