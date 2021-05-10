@@ -13,6 +13,8 @@ data:
     kubelet = {{ .Values.scrapeTargets.kubelet }}
     coredns = {{ .Values.scrapeTargets.coreDns }}
     cadvisor = {{ .Values.scrapeTargets.cAdvisor }}
+    kubeproxy = {{ .Values.scrapeTargets.kubeProxy }}
+    apiserver = {{ .Values.scrapeTargets.apiServer }}
 metadata:
   name: {{ .Release.Name }}-prometheus-collector-configmap
   namespace: {{ .Release.Namespace }}

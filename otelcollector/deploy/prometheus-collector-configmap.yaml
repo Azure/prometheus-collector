@@ -13,6 +13,8 @@ data:
     kubelet = true
     coredns = true
     cadvisor = true
+    kubeproxy = true
+    apiserver = true
 metadata:
   name: prometheus-collector-configmap
   namespace: kube-system
