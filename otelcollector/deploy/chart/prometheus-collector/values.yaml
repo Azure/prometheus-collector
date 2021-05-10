@@ -36,7 +36,7 @@ internalSettings:
 
 image:
   repository: mcr.microsoft.com/azuremonitor/containerinsights/cidev
-  tag: "prometheus-collector-main-05-05-2021-b7122082"
+  tag: "prometheus-collector-main-05-06-2021-1b545217"
   pullPolicy: IfNotPresent
 
 resources:
