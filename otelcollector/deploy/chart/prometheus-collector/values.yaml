@@ -7,8 +7,12 @@ scrapeTargets:
   coreDns: true
   # -- when true, automatically scrape kubelet in every node in the k8s cluster without any additional scrape config
   kubelet: true
-  # -- when true, automatically scrape cAdvisor every node in the k8s cluster without any additional scrape config
+  # -- when true, automatically scrape cAdvisor in every node in the k8s cluster without any additional scrape config
   cAdvisor: true
+  # -- when true, automatically scrape the kubernetes proxy in the k8s cluster without any additional scrape config
+  kubeProxy: true
+  # -- when true, automatically scrape the kubernetes api server in the k8s cluster without any additional scrape config
+  apiServer: true
 
 azureMetricAccount:
   # -- default metric account name to ingest metrics into. This will be the account used if metric itself does not have account 'hinting' label. The certificate for this account should be specified in one of the further arguments below here

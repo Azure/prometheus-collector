@@ -11,6 +11,9 @@ require_relative "ConfigParseErrorLogger"
 @kubeletEnabled = true
 @corednsEnabled = true
 @cadvisorEnabled = true
+@kubeproxyEnabled = true
+@apiserverEnabled = true
+@noDefaultsEnabled = false
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -35,7 +38,7 @@ end
 # Use the ruby structure created after config parsing to set the right values to be used for otel collector settings
 def populateSettingValuesFromConfigMap(parsedConfig)
   begin
-    if !parsedConfig.nil? && !parsedConfig[:kubelet].nil?
+    if !parsedConfig[:kubelet].nil?
       @kubeletEnabled = parsedConfig[:kubelet]
       puts "config::Using configmap default scrape settings for kubelet"
     end
@@ -46,6 +49,17 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !parsedConfig[:cadvisor].nil?
       @cadvisorEnabled = parsedConfig[:cadvisor]
       puts "config::Using configmap default scrape settings for cadvisor"
+    end
+    if !parsedConfig[:kubeproxy].nil?
+      @kubeproxyEnabled = parsedConfig[:kubeproxy]
+      puts "config::Using configmap default scrape settings for kubeproxy"
+    end
+    if !parsedConfig[:apiserver].nil?
+      @apiserverEnabled = parsedConfig[:apiserver]
+      puts "config::Using configmap default scrape settings for apiserver"
+    end
+    if !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled
+      @noDefaultsEnabled = true
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while reading config map settings for default scrape settings - #{errorStr}, using defaults, please check config map for errors")
@@ -72,6 +86,9 @@ if !file.nil?
   file.write("export AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED=#{@kubeletEnabled}\n")
   file.write("export AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED=#{@corednsEnabled}\n")
   file.write("export AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED=#{@cadvisorEnabled}\n")
+  file.write("export AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED=#{@kubeproxyEnabled}\n")
+  file.write("export AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED=#{@apiserverEnabled}\n")
+  file.write("export AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=#{@noDefaultsEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
   puts "****************End default-scrape-settings Processing********************"
