@@ -236,3 +236,51 @@ To scrape only certain pods, specify the port, path, and http/https through anno
 
 ### Reducing Cost
 See the [Grafana documentation](https://grafana.com/docs/grafana-cloud/billing-and-usage/prometheus/usage-reduction/) for detailed instructions on using `relabel_configs` and `metric_relabel_configs` for reducing the number of targets scraped and the amount of metrics ingested.
+
+## Exporters
+
+### Kube-state-metrics
+
+Read about it [here](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-state-metrics).
+
+TLDR below -
+
+#### Install :
+```yaml
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+helm upgrade --install <my-kube-state-metricsrelease-name> prometheus-community/kube-state-metrics --namespace=<my-kube-state-metrics-namespace> --create-namespace
+```
+#### Scrape Configuration:
+```yaml
+- job_name: 'kube-state-metrics'
+  static_configs:
+    - targets: ['<my-kube-state-metrics-release-name>.<my-kube-state-metrics-namespace>.svc.cluster.local:8080']
+```
+
+### Node exporter
+
+Read about it [here](https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-node-exporter).
+
+TLDR below -
+
+#### Install :
+```yaml
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+helm upgrade --install <my-node-exporter-release-name> prometheus-community/prometheus-node-exporter --namespace=<my-node-exporter-namespace> --create-namespace
+```
+#### Scrape Configuration:
+```yaml
+- job_name: 'node'
+  scheme: http
+  kubernetes_sd_configs:
+    - role: endpoints
+      namespaces:
+        names:
+        - <my-node-exporter-namespace>
+  relabel_configs:
+    - source_labels: [__meta_kubernetes_endpoints_name]
+      action: keep
+      regex: "<my-node-exporter-release-name>-prometheus-node-exporter>"
+```
