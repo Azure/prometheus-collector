@@ -13,6 +13,7 @@ require_relative "ConfigParseErrorLogger"
 @cadvisorEnabled = true
 @kubeproxyEnabled = true
 @apiserverEnabled = true
+@noDefaultsEnabled = false
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -57,6 +58,9 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @apiserverEnabled = parsedConfig[:apiserver]
       puts "config::Using configmap default scrape settings for apiserver"
     end
+    if !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled
+      @noDefaultsEnabled = true
+    end
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while reading config map settings for default scrape settings - #{errorStr}, using defaults, please check config map for errors")
   end
@@ -84,6 +88,7 @@ if !file.nil?
   file.write("export AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED=#{@cadvisorEnabled}\n")
   file.write("export AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED=#{@kubeproxyEnabled}\n")
   file.write("export AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED=#{@apiserverEnabled}\n")
+  file.write("export AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=#{@noDefaultsEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
   puts "****************End default-scrape-settings Processing********************"
