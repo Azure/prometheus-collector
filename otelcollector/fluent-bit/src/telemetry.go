@@ -35,7 +35,10 @@ const (
 	envTelemetryOffSwitch                             = "DISABLE_TELEMETRY"
 	fluentbitOtelCollectorLogsTag                     = "prometheus.log.otelcollector"
 	fluentbitMetricsExtensionLogsTag                  = "prometheus.log.metricsextension"
-	fluentbitMetricsExtensionMetricsTag               = "prometheus.log.scrapedmetrics"
+	fluentbitProcessedCountTag                        = "prometheus.log.processedcount"
+	fluentbitDiagnosticHeartbeatTag                   = "prometheus.log.diagnosticheartbeat"
+	fluentbitEventsProcessedLastPeriodTag             = "prometheus.log.eventsprocessedlastperiod"
+	fluentbitInfiniteMetricTag                        = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag                         = "prometheus.log.prometheuscollectorcontainer"
 )
 
@@ -139,7 +142,7 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 
 // Get the account name, metrics processed count, and metrics sent count from metrics extension log line
 // that was filtered by fluent-bit
-func PushMetricScrapeInfoToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
 		var metricScrapeInfoRegex = regexp.MustCompile(`\s*([^\s]+)\s*([^\s]+)\s*([^\s]+).*ProcessedCount: ([\d]+).*SentToPublicationCount: ([\d]+).*`)
@@ -153,6 +156,62 @@ func PushMetricScrapeInfoToAppInsightsMetrics(records []map[interface{}]interfac
 				metric.Properties["metricsSentToPubCount"] = groupMatches[5]
 				TelemetryClient.Track(metric)
 			}
+		}
+	}
+
+	return output.FLB_OK
+}
+
+func PushMetricsDroppedCountToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		var logEntry = ToString(record["message"])
+		var metricScrapeInfoRegex = regexp.MustCompile(`.*CurrentRawDataQueueSize: (\d+).*EtwEventsDropped: (\d+).*`)
+		groupMatches := metricScrapeInfoRegex.FindStringSubmatch(logEntry)
+
+		if len(groupMatches) > 1 {
+			metricsDroppedCount, err := strconv.ParseFloat(groupMatches[2], 64)
+			if err == nil {
+				metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
+				metric.Properties["currentQueueSize"] = groupMatches[1]
+				TelemetryClient.Track(metric)
+			}
+		}
+	}
+
+	return output.FLB_OK
+}
+
+func PushReceivedMetricsCountToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		var logEntry = ToString(record["message"])
+		var metricScrapeInfoRegex = regexp.MustCompile(`.*EventsProcessedLastPeriod: (\d+).*`)
+		groupMatches := metricScrapeInfoRegex.FindStringSubmatch(logEntry)
+
+		if len(groupMatches) > 1 {
+		  metricsReceivedCount, err := strconv.ParseFloat(groupMatches[1], 64)
+			if err == nil {
+				metric := appinsights.NewMetricTelemetry("meMetricsReceivedCount", metricsReceivedCount)
+				TelemetryClient.Track(metric)
+			}
+		}
+	}
+
+	return output.FLB_OK
+}
+
+func PushInfiniteMetricLogToAppInsightsEvents(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		var logEntry = ToString(record["message"])
+		var metricScrapeInfoRegex = regexp.MustCompile(`.*Metric: "(\w+)".*DimsCount: (\d+).*EstimatedSizeInBytes: (\d+).*Account: "(\w+)".*`)
+		groupMatches := metricScrapeInfoRegex.FindStringSubmatch(logEntry)
+
+		if len(groupMatches) > 4 {
+			event := appinsights.NewEventTelemetry("meInfiniteMetricDropped")
+			event.Properties["metric"] = groupMatches[1]
+			event.Properties["dimsCount"] = groupMatches[2]
+			event.Properties["estimatedBytes"] = groupMatches[3]
+			event.Properties["mdmAccount"] = groupMatches[4]
+			TelemetryClient.Track(event)
 		}
 	}
 
