@@ -2,7 +2,7 @@ scrape_configs:
 - job_name: cadvisor
   scheme: https
   metrics_path: /metrics/cadvisor
-  scrape_interval: 60s
+  scrape_interval: 30s
   tls_config:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     insecure_skip_verify: true
@@ -13,7 +13,7 @@ scrape_configs:
 - job_name: kubelet
   scheme: https
   metrics_path: /metrics
-  scrape_interval: 60s
+  scrape_interval: 30s
   tls_config:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     insecure_skip_verify: true
@@ -26,6 +26,7 @@ scrape_configs:
   - role: node
 
 - job_name: kube-dns
+  scrape_interval: 30s
   honor_labels: true
   kubernetes_sd_configs:
   - role: pod
@@ -41,7 +42,7 @@ scrape_configs:
     target_label: pod
 
 - job_name: kube-proxy
-  scrape_interval: 60s
+  scrape_interval: 30s
   kubernetes_sd_configs:
   - role: pod
   relabel_configs:
@@ -57,7 +58,7 @@ scrape_configs:
     replacement: $$1:10249
 
 - job_name: kube-apiserver
-  scrape_interval: 60s
+  scrape_interval: 30s
   kubernetes_sd_configs:
   - role: endpoints
   scheme: https
