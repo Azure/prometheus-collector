@@ -43,7 +43,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 25,
+  "id": null,
   "iteration": 1621026631457,
   "links": [],
   "panels": [
@@ -907,11 +907,7 @@
       },
       {
         "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
-        },
+        "current": {},
         "datasource": "${datasource}",
         "definition": "label_values(kube_pod_info, cluster)",
         "description": null,

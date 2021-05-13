@@ -370,7 +370,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 9
+            "y": 2
           },
           "id": 2,
           "links": [],
@@ -480,7 +480,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 17
+            "y": 3
           },
           "hiddenSeries": false,
           "id": 3,
@@ -785,7 +785,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 25
+            "y": 4
           },
           "id": 4,
           "links": [],
@@ -1109,7 +1109,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 33
+            "y": 5
           },
           "id": 5,
           "interval": "1m",
@@ -1231,7 +1231,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 41
+            "y": 6
           },
           "hiddenSeries": false,
           "id": 6,
@@ -1445,7 +1445,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 49
+            "y": 7
           },
           "hiddenSeries": false,
           "id": 8,
@@ -1544,7 +1544,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 49
+            "y": 7
           },
           "hiddenSeries": false,
           "id": 9,
@@ -1659,7 +1659,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 57
+            "y": 8
           },
           "hiddenSeries": false,
           "id": 10,
@@ -1758,7 +1758,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 57
+            "y": 8
           },
           "hiddenSeries": false,
           "id": 11,
@@ -1873,7 +1873,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 65
+            "y": 9
           },
           "hiddenSeries": false,
           "id": 12,
@@ -1972,7 +1972,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 65
+            "y": 9
           },
           "hiddenSeries": false,
           "id": 13,
@@ -2071,7 +2071,7 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "default",
           "value": "default"
         },
