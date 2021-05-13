@@ -3,6 +3,7 @@ global:
   scrape_interval: 60s
 scrape_configs:
 - job_name: node
+  scrape_interval: 30s
   scheme: http
   kubernetes_sd_configs:
     - role: endpoints
@@ -14,6 +15,7 @@ scrape_configs:
       action: keep
       regex: "dev-cluster-node-exporter-release-prometheus-node-exporter"
 - job_name: kube-state-metrics
+  scrape_interval: 30s
   static_configs:
     - targets: ['dev-cluster-kube-state-metrics-release.kube-state-metrics.svc.cluster.local:8080']
 - job_name: prometheus_ref_app
