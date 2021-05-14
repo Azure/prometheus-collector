@@ -254,6 +254,7 @@ helm upgrade --install <my-kube-state-metricsrelease-name> prometheus-community/
 #### Scrape Configuration:
 ```yaml
 - job_name: 'kube-state-metrics'
+  scrape_interval: 30s
   static_configs:
     - targets: ['<my-kube-state-metrics-release-name>.<my-kube-state-metrics-namespace>.svc.cluster.local:8080']
 ```
@@ -274,6 +275,7 @@ helm upgrade --install <my-node-exporter-release-name> prometheus-community/prom
 ```yaml
 - job_name: 'node'
   scheme: http
+  scrape_interval: 30s
   kubernetes_sd_configs:
     - role: endpoints
       namespaces:
