@@ -249,8 +249,9 @@ TLDR below -
 ```yaml
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
-helm upgrade --install <my-kube-state-metricsrelease-name> prometheus-community/kube-state-metrics --namespace=<my-kube-state-metrics-namespace> --create-namespace
+helm upgrade --install <my-kube-state-metricsrelease-name> prometheus-community/kube-state-metrics --namespace=<my-kube-state-metrics-namespace> --create-namespace --set nodeSelector."kubernetes\.io/os"=linux
 ```
+- Note that the `--set nodeSelector."kubernetes\.io/os"=linux` setting for the node selector is necessary if windows nodes exist on the cluster.
 #### Scrape Configuration:
 ```yaml
 - job_name: 'kube-state-metrics'
@@ -269,8 +270,9 @@ TLDR below -
 ```yaml
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
-helm upgrade --install <my-node-exporter-release-name> prometheus-community/prometheus-node-exporter --namespace=<my-node-exporter-namespace> --create-namespace
+helm upgrade --install <my-node-exporter-release-name> prometheus-community/prometheus-node-exporter --namespace=<my-node-exporter-namespace> --create-namespace --set nodeSelector."kubernetes\.io/os"=linux
 ```
+- Note that the `--set nodeSelector."kubernetes\.io/os"=linux` setting for the node selector is necessary if windows nodes exist on the cluster.
 #### Scrape Configuration:
 ```yaml
 - job_name: 'node'
