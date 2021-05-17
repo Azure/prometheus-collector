@@ -61,8 +61,8 @@ jobs:
           format: 'table'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-          vuln-type: 'os, library'
-          skip-dirs: 'opt/telegraf/telegraf, opt/microsoft/otelcollector/otelcollector'
+          vuln-type: 'os,library'
+          skip-dirs: 'opt/telegraf/telegraf,opt/microsoft/otelcollector/otelcollector'
           exit-code: '1'
           timeout: '5m0s'
       - name: Save-Helm-chart-to-local-cache
