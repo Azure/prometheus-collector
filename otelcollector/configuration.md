@@ -286,5 +286,5 @@ helm upgrade --install <my-node-exporter-release-name> prometheus-community/prom
   relabel_configs:
     - source_labels: [__meta_kubernetes_endpoints_name]
       action: keep
-      regex: "<my-node-exporter-release-name>-prometheus-node-exporter>"
+      regex: "<my-node-exporter-release-name>-prometheus-node-exporter"
 ```
