@@ -44,7 +44,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1620633988368,
+  "iteration": 1621440710522,
   "links": [],
   "panels": [
     {
@@ -2438,7 +2438,7 @@
         "definition": "label_values(kube_pod_info, cluster)",
         "description": null,
         "error": null,
-        "hide": 1,
+        "hide": 0,
         "includeAll": true,
         "label": "",
         "multi": false,
@@ -2519,5 +2519,5 @@
   "timezone": "UTC",
   "title": "Kubernetes / Kubelet",
   "uid": "3138fa155d5915769fbded898ac09ff9",
-  "version": 5
+  "version": 6
 }

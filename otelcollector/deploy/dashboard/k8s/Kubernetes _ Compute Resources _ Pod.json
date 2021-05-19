@@ -1,14 +1,5 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_INT-PROMETHEUS",
-      "label": "INT-Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
+  "__inputs": [],
   "__requires": [
     {
       "type": "grafana",
@@ -53,7 +44,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1620633875049,
+  "iteration": 1621440265404,
   "links": [],
   "panels": [
     {
@@ -137,7 +128,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate{namespace=\"$namespace\", pod=\"$pod\", cluster=\"$cluster\"}) by (container)",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", namespace=\"$namespace\", pod=\"$pod\", cluster=\"$cluster\", container!=\"\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\", namespace=\"$namespace\", pod=\"$pod\", cluster=\"$cluster\"})\r\n        )) by (container)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{container}}",
@@ -507,7 +498,7 @@
       ],
       "targets": [
         {
-          "expr": "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate{cluster=\"$cluster\", namespace=\"$namespace\", pod=\"$pod\"}) by (container)",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", namespace=\"$namespace\", pod=\"$pod\", cluster=\"$cluster\", container!=\"\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\", namespace=\"$namespace\", pod=\"$pod\", cluster=\"$cluster\"})\r\n        )) by (container)",
           "format": "table",
           "instant": true,
           "intervalFactor": 2,
@@ -525,7 +516,7 @@
           "step": 10
         },
         {
-          "expr": "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate{cluster=\"$cluster\", namespace=\"$namespace\", pod=\"$pod\"}) by (container) / sum(kube_pod_container_resource_requests{cluster=\"$cluster\", namespace=\"$namespace\", pod=\"$pod\", resource=\"cpu\"}) by (container)",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", namespace=\"$namespace\", pod=\"$pod\", cluster=\"$cluster\", container!=\"\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\", namespace=\"$namespace\", pod=\"$pod\", cluster=\"$cluster\"})\r\n        )) by (container) / sum(kube_pod_container_resource_requests{cluster=\"$cluster\", namespace=\"$namespace\", pod=\"$pod\", resource=\"cpu\"}) by (container)",
           "format": "table",
           "instant": true,
           "intervalFactor": 2,
@@ -543,7 +534,7 @@
           "step": 10
         },
         {
-          "expr": "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate{cluster=\"$cluster\", namespace=\"$namespace\", pod=\"$pod\"}) by (container) / sum(kube_pod_container_resource_limits{cluster=\"$cluster\", namespace=\"$namespace\", pod=\"$pod\", resource=\"cpu\"}) by (container)",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", namespace=\"$namespace\", pod=\"$pod\", cluster=\"$cluster\", container!=\"\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\", namespace=\"$namespace\", pod=\"$pod\", cluster=\"$cluster\"})\r\n        )) by (container) / sum(kube_pod_container_resource_limits{cluster=\"$cluster\", namespace=\"$namespace\", pod=\"$pod\", resource=\"cpu\"}) by (container)",
           "format": "table",
           "instant": true,
           "intervalFactor": 2,
@@ -2470,7 +2461,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "${DS_INT-PROMETHEUS}",
+        "datasource": "${datasource}",
         "definition": "label_values(kube_pod_info, cluster)",
         "description": null,
         "error": null,
@@ -2582,5 +2573,5 @@
   "timezone": "UTC",
   "title": "Kubernetes / Compute Resources / Pod",
   "uid": "6581e46e4e5c7ba40a07646395ef7b23",
-  "version": 4
+  "version": 5
 }

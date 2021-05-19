@@ -44,7 +44,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1620634042034,
+  "iteration": 1621440784953,
   "links": [],
   "panels": [
     {
@@ -1862,7 +1862,7 @@
         "definition": "",
         "description": null,
         "error": null,
-        "hide": 1,
+        "hide": 0,
         "includeAll": true,
         "label": null,
         "multi": false,
@@ -1916,5 +1916,5 @@
   "timezone": "UTC",
   "title": "Kubernetes / Networking / Cluster",
   "uid": "ff635a025bcfea7bc3dd4f508990a3e9",
-  "version": 7
+  "version": 8
 }
