@@ -165,14 +165,15 @@ func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{
 func PushMetricsDroppedCountToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
-		var metricScrapeInfoRegex = regexp.MustCompile(`.*CurrentRawDataQueueSize: (\d+).*EtwEventsDropped: (\d+).*`)
+		var metricScrapeInfoRegex = regexp.MustCompile(`.*CurrentRawDataQueueSize: (\d+).*EtwEventsDropped: (\d+).*AggregatedMetricsDropped: (\d+).*`)
 		groupMatches := metricScrapeInfoRegex.FindStringSubmatch(logEntry)
 
-		if len(groupMatches) > 1 {
+		if len(groupMatches) > 3 {
 			metricsDroppedCount, err := strconv.ParseFloat(groupMatches[2], 64)
 			if err == nil {
 				metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
 				metric.Properties["currentQueueSize"] = groupMatches[1]
+				metric.Properties["aggregatedMetricsDropped"] = groupMatches[3]
 				TelemetryClient.Track(metric)
 			}
 		}
