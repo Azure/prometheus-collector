@@ -1,6 +1,6 @@
 apiVersion: v2
 name: prometheus-collector
-description: A Helm chart for collecting Prometheus metrics in Kubernetes clusters and ingestion to Azure Metrics Account(s)
+description: A Helm chart for collecting Prometheus metrics in Kubernetes clusters and ingesting to Azure Metrics Account(s)
 
 # A chart can be either an 'application' or a 'library' chart.
 #
@@ -23,4 +23,16 @@ version: 0.0.1
 # It is recommended to use it with quotes.
 appVersion: "0.0.1"
 kubeVersion: ">=1.16.0-0"
+dependencies:
+- name: kube-state-metrics
+  version: "3.1.*"
+  repository: https://prometheus-community.github.io/helm-charts
+  condition: scrapeTargets.kubeState
+- name: prometheus-node-exporter
+  version: "1.18.*"
+  repository: https://prometheus-community.github.io/helm-charts
+  condition: scrapeTargets.nodeExporter
+
+  
+
 

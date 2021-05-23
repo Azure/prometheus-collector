@@ -40,3 +40,33 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
+
+{{/* 
+Get node exporter chart's full name
+*/}}
+
+{{/*
+Get node-exporter fullname 
+*/}}
+{{- define "prometheus-collector.nodeexporterfullname" -}}
+{{- $name := "prometheus-node-exporter" -}}
+{{- $releasename := .Release.Name | toString }}
+{{- if contains $name $releasename -}}
+{{- $releasename | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" $releasename $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get kube-state-metrics fullname 
+*/}}
+{{- define "prometheus-collector.kubestatemetricsfullname" -}}
+{{- $name := "kube-state-metrics" -}}
+{{- $releasename := .Release.Name | toString }}
+{{- if contains $name $releasename -}}
+{{- $releasename | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" $releasename $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}

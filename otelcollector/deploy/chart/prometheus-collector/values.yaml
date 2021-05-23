@@ -13,6 +13,10 @@ scrapeTargets:
   kubeProxy: true
   # -- when true, automatically scrape the kubernetes api server in the k8s cluster without any additional scrape config
   apiServer: true
+  # -- when true, automatically install kube-state-metrics chart and then scrape kube-state-metrics in the k8s cluster without any additional scrape config
+  kubeState: true
+  # -- when true, automatically install prometheus-node-exporter chart and then scrape node exporters (linux only) in the k8s cluster without any additional scrape config
+  nodeExporter: true
 
 azureMetricAccount:
   # -- default metric account name to ingest metrics into. This will be the account used if metric itself does not have account 'hinting' label. The certificate for this account should be specified in one of the further arguments below here
@@ -50,3 +54,7 @@ resources:
    requests:
      cpu: 250m
      memory: 1Gi
+kube-state-metrics:
+  nodeSelector."kubernetes\.io/os": linux
+prometheus-node-exporter:
+  nodeSelector."kubernetes\.io/os": linux

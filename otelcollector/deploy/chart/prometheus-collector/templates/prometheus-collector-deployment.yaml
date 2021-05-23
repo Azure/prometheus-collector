@@ -45,6 +45,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -61,6 +65,14 @@ spec:
                   containerName: prometheus-collector
                   resource: limits.memory
                   divisor: 1Mi
+            - name: KUBE_STATE_NAME
+              value: {{ include "prometheus-collector.kubestatemetricsfullname" . }}
+            - name: NODE_EXPORTER_NAME
+              value: {{ include "prometheus-collector.nodeexporterfullname" . }}
+            - name: KUBE_STATE_VERSION
+              value: "{{ index .Values "kube-state-metrics" "image" "repository" }}:{{ index .Values "kube-state-metrics" "image" "tag" }}"
+            - name: NODE_EXPORTER_VERSION
+              value: "{{ index .Values "prometheus-node-exporter" "image" "repository" }}:{{ index .Values "prometheus-node-exporter" "image" "tag" }}"
           securityContext:
             privileged: false
           volumeMounts:

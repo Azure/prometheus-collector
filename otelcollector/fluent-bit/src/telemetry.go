@@ -32,7 +32,10 @@ const (
 	envAppInsightsAuth                                = "APPLICATIONINSIGHTS_AUTH"
 	envAppInsightsEndpoint                            = "APPLICATIONINSIGHTS_ENDPOINT"
 	envComputerName                                   = "NODE_NAME"
+	envDefaultMetricAccountName						  = "AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
+	envPodName										  = "POD_NAME"
 	envTelemetryOffSwitch                             = "DISABLE_TELEMETRY"
+	envNamespace									  = "POD_NAMESPACE"
 	fluentbitOtelCollectorLogsTag                     = "prometheus.log.otelcollector"
 	fluentbitMetricsExtensionLogsTag                  = "prometheus.log.metricsextension"
 	fluentbitProcessedCountTag                        = "prometheus.log.processedcount"
@@ -81,8 +84,11 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties = make(map[string]string)
 	CommonProperties["cluster"] = os.Getenv(envCluster)
 	CommonProperties["computer"] = os.Getenv(envComputerName)
-	CommonProperties["controllerType"] = os.Getenv(envControllerType)
-	CommonProperties["agentVersion"] = os.Getenv(envAgentVersion)
+	CommonProperties["controllertype"] = os.Getenv(envControllerType)
+	CommonProperties["agentversion"] = os.Getenv(envAgentVersion)
+	CommonProperties["namespace"] = os.Getenv(envNamespace)
+	CommonProperties["defaultmetricaccountname"] = os.Getenv(envDefaultMetricAccountName)
+    CommonProperties["podname"] = os.Getenv(envPodName)
 
 	aksResourceID := os.Getenv(envAKSResourceID)
 	// if the aks resource id is not defined, it is most likely an ACS Cluster

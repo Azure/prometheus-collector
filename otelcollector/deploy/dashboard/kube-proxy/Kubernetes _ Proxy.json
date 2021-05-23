@@ -1,14 +1,5 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_INT-PROMETHEUS",
-      "label": "INT-Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
+  "__inputs": [],
   "__requires": [
     {
       "type": "grafana",
@@ -1187,7 +1178,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "${DS_INT-PROMETHEUS}",
+        "datasource": "${datasource}",
         "definition": "label_values(kube_pod_info, cluster)",
         "description": "Source-https://github.com/monitoring-mixins/website/blob/master/assets/kubernetes/dashboards/proxy.json",
         "error": null,
@@ -1226,7 +1217,7 @@
         "options": [],
         "query": {
           "query": "label_values(kubeproxy_network_programming_duration_seconds_bucket{cluster=\"$cluster\", job=\"kube-proxy\"}, instance)",
-          "refId": "Prometheus-INT-Cluster-instance-Variable-Query"
+          "refId": "StandardVariableQuery"
         },
         "refresh": 2,
         "regex": "",
