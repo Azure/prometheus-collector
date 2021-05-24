@@ -319,7 +319,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "  1 - (node_memory_MemAvailable_bytes{job=\"node\",instance=~\"$instance\",cluster=\"$cluster\"}\n   /\r\n       node_memory_MemTotal_bytes{job=\"node\", instance=~\"$instance\",cluster=\"$cluster\"})",
+          "expr": "  1 - (node_memory_MemAvailable_bytes{job=\"node\",instance=~\"$instance\",cluster=~\"$cluster\"}\n   /\r\n       node_memory_MemTotal_bytes{job=\"node\", instance=~\"$instance\",cluster=~\"$cluster\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1000,7 +1000,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "1 -\n(\n  max without (mountpoint, fstype) (node_filesystem_avail_bytes{job=~\"node\", fstype!=\"\", instance=~\"$instance\",cluster=\"$cluster\"})\n/\n  max without (mountpoint, fstype) (node_filesystem_size_bytes{job=~\"node\", fstype!=\"\", instance=~\"$instance\",cluster=\"$cluster\"})\n)\n",
+          "expr": "1 -\n(\n  max without (mountpoint, fstype) (node_filesystem_avail_bytes{job=~\"node\", fstype!=\"\", instance=~\"$instance\",cluster=~\"$cluster\"})\n/\n  max without (mountpoint, fstype) (node_filesystem_size_bytes{job=~\"node\", fstype!=\"\", instance=~\"$instance\",cluster=~\"$cluster\"})\n)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1112,7 +1112,7 @@
         "allValue": null,
         "current": {},
         "datasource": "$datasource",
-        "definition": "label_values(node_filesystem_size_bytes{job=\"node\",cluster=\"$cluster\"},instance)",
+        "definition": "label_values(node_filesystem_size_bytes{job=\"node\",cluster=~\"$cluster\"},instance)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1122,7 +1122,7 @@
         "name": "instance",
         "options": [],
         "query": {
-          "query": "label_values(node_filesystem_size_bytes{job=\"node\",cluster=\"$cluster\"},instance)",
+          "query": "label_values(node_filesystem_size_bytes{job=\"node\",cluster=~\"$cluster\"},instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

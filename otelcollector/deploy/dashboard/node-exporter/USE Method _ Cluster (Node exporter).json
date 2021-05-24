@@ -878,7 +878,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_disk_io_time_weighted_seconds_total{job=~\"node\", device=~\"nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+\",cluster=\"$cluster\"}[5m])\n/ scalar(count(rate(node_disk_io_time_weighted_seconds_total{job=~\"node\", device=~\"nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+\", cluster=~\"$cluster\"}[5m])))",
+          "expr": "rate(node_disk_io_time_weighted_seconds_total{job=~\"node\", device=~\"nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+\",cluster=~\"$cluster\"}[5m])\n/ scalar(count(rate(node_disk_io_time_weighted_seconds_total{job=~\"node\", device=~\"nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+\", cluster=~\"$cluster\"}[5m])))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -992,7 +992,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum without (device) (\n  max without (fstype, mountpoint) (\n    node_filesystem_size_bytes{job=~\"node\", fstype!=\"\"} - node_filesystem_avail_bytes{job=~\"node\", fstype!=\"\",cluster=\"$cluster\"}\n  )\n) \n/ scalar(sum(max without (fstype, mountpoint) (node_filesystem_size_bytes{job=~\"node\", fstype!=\"\",cluster=~\"$cluster\"})))\n",
+          "expr": "sum without (device) (\n  max without (fstype, mountpoint) (\n    node_filesystem_size_bytes{job=~\"node\", fstype!=\"\"} - node_filesystem_avail_bytes{job=~\"node\", fstype!=\"\",cluster=~\"$cluster\"}\n  )\n) \n/ scalar(sum(max without (fstype, mountpoint) (node_filesystem_size_bytes{job=~\"node\", fstype!=\"\",cluster=~\"$cluster\"})))\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,

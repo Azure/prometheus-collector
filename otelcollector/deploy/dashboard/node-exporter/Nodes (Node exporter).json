@@ -935,7 +935,7 @@
         "allValue": null,
         "current": {},
         "datasource": "$datasource",
-        "definition": "label_values(node_exporter_build_info{job=\"node\",cluster=\"$cluster\"}, instance)",
+        "definition": "label_values(node_exporter_build_info{job=\"node\",cluster=~\"$cluster\"}, instance)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -945,7 +945,7 @@
         "name": "instance",
         "options": [],
         "query": {
-          "query": "label_values(node_exporter_build_info{job=\"node\",cluster=\"$cluster\"}, instance)",
+          "query": "label_values(node_exporter_build_info{job=\"node\",cluster=~\"$cluster\"}, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
