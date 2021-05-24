@@ -72,7 +72,7 @@ Provide the default MDM account name in the config map (prometheus-collector-set
 
 #### Step 7 : Provide Prometheus scrape config
 Provide more prometheus scrape config as needed as a configmap in addition to default scrape config. See [sample-scrape-configs](./sample-scrape-configs/README.md) for more tips on the prometheus config. There are two ways of doing so:
-**Use the provided configmap [prometheus-config-configmap.yaml](./sample-scrape-configs/prometheus-config-configmap.yaml) as starting point, and make changes as needed to the prometheus-config.yaml configmap and apply:**
+**Use the provided configmap [prometheus-config-configmap.yaml](./sample-scrape-configs/prometheus-config-configmap.yaml) as starting point, and make changes as needed to the prometheus-config-configmap.yaml configmap and apply:**
 ```shell
         kubectl apply -f prometheus-config-configmap.yaml
 ```

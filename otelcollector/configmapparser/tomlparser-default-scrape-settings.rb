@@ -61,11 +61,11 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       puts "config::Using configmap default scrape settings for apiserver"
     end
     if !parsedConfig[:kubestate].nil?
-      @kubestateEnabled = parsedConfig[:kubeproxy]
+      @kubestateEnabled = parsedConfig[:kubestate]
       puts "config::Using configmap default scrape settings for kubestate"
     end
     if !parsedConfig[:nodeexporter].nil?
-      @nodeexporterEnabled = parsedConfig[:apiserver]
+      @nodeexporterEnabled = parsedConfig[:nodeexporter]
       puts "config::Using configmap default scrape settings for apiserver"
     end
     if !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled

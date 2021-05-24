@@ -51,15 +51,13 @@ helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-pr
 ```shell
 helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-05-14-2021-40399eef
 helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-05-14-2021-40399eef .
-cd ./prometheus-collector
-helm dependency update
+helm dependency update ./prometheus-collector
 
-cd ..
-helm upgrade --install <chart_release_name> ./prometheus-collector --set azureKeyVault.name='**' --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId='**' --set clusterName='**' --set azureMetricAccount.defaultAccountName='**' --set azureKeyVault.clientId='**' --set azureKeyVault.clientSecret='****' --namespace=<my_prom_collector_namespace> --create-namespace
+helm upgrade --install <chart_release_name> ./prometheus-collector --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --namespace=<my_prom_collector_namespace> --create-namespace
 ```
   **Example** :-
 ```shell
-helm upgrade --install my-collector-dev-release ./prometheus-collector --set azureKeyVault.name='containerinsightstest1kv' --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId='72f988bf-****-41af-****-2d7cd011db47' --set clusterName='mydevcluster' --set azureMetricAccount.defaultAccountName='containerinsightsgenevaaccount1' --set azureKeyVault.clientId='70937f05-****-4fc0-****-de917f2a9402' --set azureKeyVault.clientSecret='**********************************' --namespace=prom-collector --create-namespace
+helm upgrade --install my-collector-dev-release ./prometheus-collector --set azureKeyVault.name="containerinsightstest1kv" --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId="72f988bf-****-41af-****-2d7cd011db47" --set clusterName="mydevcluster" --set azureMetricAccount.defaultAccountName="containerinsightsgenevaaccount1" --set azureKeyVault.clientId="70937f05-****-4fc0-****-de917f2a9402" --set azureKeyVault.clientSecret="**********************************" --namespace=prom-collector --create-namespace
 ```
 - **Step 6** : [Optional] - Apply aditional prometheus scrape configuration as configmap
   Any additional prometheus scrape configuration (for your applications/services/other exporters etc..), you can author the config apply it as config map using the below instructions. See the provided sample prometheus scrape config [prometheus-config](../sample-scrape-configs/prometheus-config) as an example.

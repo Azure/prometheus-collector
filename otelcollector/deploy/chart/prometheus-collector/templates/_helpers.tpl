@@ -41,10 +41,6 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
-{{/* 
-Get node exporter chart's full name
-*/}}
-
 {{/*
 Get node-exporter fullname 
 */}}
