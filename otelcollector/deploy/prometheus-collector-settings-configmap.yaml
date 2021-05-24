@@ -18,5 +18,5 @@ data:
     kubestate = true
     nodeexporter = true
 metadata:
-  name: prometheus-collector-configmap
+  name: prometheus-collector-settings-configmap
   namespace: kube-system

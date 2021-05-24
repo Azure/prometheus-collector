@@ -42,7 +42,7 @@ helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-pr
 
 #### Step 6 : Update configmap to provide default MDM Account name and enable/disable default scrape targets
 
-Provide the default MDM account name in the config map (prometheus-collector-configmap.yaml), optionally enable/disable default scrape targets for your cluster(kubelet, coredns, etc.) using the configmap settings, and apply the configmap to your kubernetes cluster (see below steps)
+Provide the default MDM account name in the config map (prometheus-collector-settings-configmap.yaml), optionally enable/disable default scrape targets for your cluster(kubelet, coredns, etc.) using the configmap settings, and apply the configmap to your kubernetes cluster (see below steps)
 
 - 6.1) Ensure the line below in the configmap has your MDM account name (which will be used as the default MDM account to send metrics to)
 
@@ -67,14 +67,14 @@ Provide the default MDM account name in the config map (prometheus-collector-con
 
 - 6.3) Apply the configmap to the cluster
     ```shell
-    kubectl apply -f prometheus-collector-configmap.yaml
+    kubectl apply -f prometheus-collector-settings-configmap.yaml
     ```
 
 #### Step 7 : Provide Prometheus scrape config
 Provide more prometheus scrape config as needed as a configmap in addition to default scrape config. See [sample-scrape-configs](./sample-scrape-configs/README.md) for more tips on the prometheus config. There are two ways of doing so:
 **Use the provided configmap [prometheus-config-configmap.yaml](./sample-scrape-configs/prometheus-config-configmap.yaml) as starting point, and make changes as needed to the prometheus-config.yaml configmap and apply:**
 ```shell
-        kubectl apply -f prometheus-collector-configmap.yaml
+        kubectl apply -f prometheus-config-configmap.yaml
 ```
 
 By default and for testing purposes, the provided configmap has scrape config to scrape our reference service (weather service), which is located in the [app](../app/prometheus-reference-app.yaml) folder. If you'd like to use the default scrape config, you need to deploy the weather service app by running the following command while in the [app](../app/prometheus-reference-app.yaml) folder:

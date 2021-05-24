@@ -188,7 +188,7 @@ spec:
       volumes:
         - name: settings-vol-config
           configMap:
-            name: prometheus-collector-configmap
+            name: prometheus-collector-settings-configmap
             optional: true
         - name: metricstore-secret
           secret:

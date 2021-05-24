@@ -21,7 +21,7 @@ spec:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
     spec:
-      serviceAccountName: {{ template "prometheus-collector.fullname" . }}-prometheus-collector
+      serviceAccountName: {{ template "prometheus-collector.fullname" . }}-serviceaccount
       containers:
         - name: prometheus-collector
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -139,11 +139,11 @@ spec:
       volumes:
         - name: settings-vol-config
           configMap:
-            name: {{ template "prometheus-collector.fullname" . }}-prometheus-collector-configmap
+            name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
             optional: true
         - name: prometheus-config-vol
           configMap:
-            name: {{ template "prometheus-collector.fullname" . }}-prometheus-config
+            name: {{ .Release.Name }}-prometheus-config
             optional: true
         - name: host-log-containers
           hostPath:
