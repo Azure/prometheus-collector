@@ -44,7 +44,7 @@ internalSettings:
 
 image:
   repository: mcr.microsoft.com/azuremonitor/containerinsights/cidev
-  tag: "prometheus-collector-vishwa_prometheus-collector-helm-merge-05-24-2021-cd0963e3"
+  tag: "prometheus-collector-main-05-24-2021-6fe63dfb"
   pullPolicy: IfNotPresent
 
 resources:
