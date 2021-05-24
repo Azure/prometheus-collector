@@ -252,6 +252,7 @@ helm repo update
 helm upgrade --install <my-kube-state-metricsrelease-name> prometheus-community/kube-state-metrics --namespace=<my-kube-state-metrics-namespace> --create-namespace --set nodeSelector."kubernetes\.io/os"=linux
 ```
 - Note that the `--set nodeSelector."kubernetes\.io/os"=linux` setting for the node selector is necessary if windows nodes exist on the cluster.
+- Note that if release name you provided is same as chart name, ```kube-state-metrics``` in this case, you just specify chart name in the place of ```<my-kube-state-metrics-release-name>``` below. Also this name will be truncated to limit to 63 chars due to DNS limits.
 #### Scrape Configuration:
 ```yaml
 - job_name: 'kube-state-metrics'
@@ -273,6 +274,7 @@ helm repo update
 helm upgrade --install <my-node-exporter-release-name> prometheus-community/prometheus-node-exporter --namespace=<my-node-exporter-namespace> --create-namespace --set nodeSelector."kubernetes\.io/os"=linux
 ```
 - Note that the `--set nodeSelector."kubernetes\.io/os"=linux` setting for the node selector is necessary if windows nodes exist on the cluster.
+- Note that if release name you provided is same as chart name, ```prometheus-node-exporter``` in this case, you just specify chart name in the endpoint name regex for the relabel configuration. Also service names will be truncated to limit to 63 chars due to DNS limits.
 #### Scrape Configuration:
 ```yaml
 - job_name: 'node'

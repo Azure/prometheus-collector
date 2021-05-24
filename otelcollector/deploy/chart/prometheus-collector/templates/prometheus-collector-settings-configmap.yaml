@@ -15,8 +15,10 @@ data:
     cadvisor = {{ .Values.scrapeTargets.cAdvisor }}
     kubeproxy = {{ .Values.scrapeTargets.kubeProxy }}
     apiserver = {{ .Values.scrapeTargets.apiServer }}
+    kubestate = {{ .Values.scrapeTargets.kubeState }}
+    nodeexporter = {{ .Values.scrapeTargets.nodeExporter }}
 metadata:
-  name: {{ .Release.Name }}-prometheus-collector-configmap
+  name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "prometheus-collector.labels" . | nindent 4 }}

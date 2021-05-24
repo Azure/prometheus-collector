@@ -122,7 +122,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sort_desc(sum(irate(container_network_receive_bytes_total{cluster=\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
+          "expr": "sort_desc(sum(irate(container_network_receive_bytes_total{cluster=~\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -233,7 +233,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sort_desc(sum(irate(container_network_transmit_bytes_total{cluster=\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
+          "expr": "sort_desc(sum(irate(container_network_transmit_bytes_total{cluster=~\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -356,7 +356,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sort_desc(avg(irate(container_network_receive_bytes_total{cluster=\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
+              "expr": "sort_desc(avg(irate(container_network_receive_bytes_total{cluster=~\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -467,7 +467,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sort_desc(avg(irate(container_network_transmit_bytes_total{cluster=\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
+              "expr": "sort_desc(avg(irate(container_network_transmit_bytes_total{cluster=~\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -599,7 +599,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sort_desc(sum(irate(container_network_receive_bytes_total{cluster=\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
+              "expr": "sort_desc(sum(irate(container_network_receive_bytes_total{cluster=~\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -706,7 +706,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sort_desc(sum(irate(container_network_transmit_bytes_total{cluster=\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
+              "expr": "sort_desc(sum(irate(container_network_transmit_bytes_total{cluster=~\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -834,7 +834,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sort_desc(sum(irate(container_network_receive_packets_total{cluster=\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
+              "expr": "sort_desc(sum(irate(container_network_receive_packets_total{cluster=~\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -941,7 +941,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sort_desc(sum(irate(container_network_transmit_packets_total{cluster=\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
+              "expr": "sort_desc(sum(irate(container_network_transmit_packets_total{cluster=~\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -1069,7 +1069,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sort_desc(sum(irate(container_network_receive_packets_dropped_total{cluster=\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
+              "expr": "sort_desc(sum(irate(container_network_receive_packets_dropped_total{cluster=~\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -1176,7 +1176,7 @@
           "targets": [
             {
               "exemplar": true,
-              "expr": "sort_desc(sum(irate(container_network_transmit_packets_dropped_total{cluster=\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
+              "expr": "sort_desc(sum(irate(container_network_transmit_packets_dropped_total{cluster=~\"$cluster\",namespace=~\"$namespace\"}[$interval:$resolution])\n* on (namespace,pod)\ngroup_left(owner_name,owner_kind) kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\", owner_name=~\"$workload\", owner_kind=\"$type\"}) by (pod))\n",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -1299,7 +1299,7 @@
         "auto_min": "10s",
         "current": {},
         "datasource": "$datasource",
-        "definition": "label_values(container_network_receive_packets_total{cluster=\"$cluster\"}, namespace)",
+        "definition": "label_values(container_network_receive_packets_total{cluster=~\"$cluster\"}, namespace)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1309,7 +1309,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(container_network_receive_packets_total{cluster=\"$cluster\"}, namespace)",
+          "query": "label_values(container_network_receive_packets_total{cluster=~\"$cluster\"}, namespace)",
           "refId": "Prometheus-INT-Cluster-namespace-Variable-Query"
         },
         "refresh": 2,
@@ -1329,7 +1329,7 @@
         "auto_min": "10s",
         "current": {},
         "datasource": "$datasource",
-        "definition": "label_values(kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\"}, owner_kind)",
+        "definition": "label_values(kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\"}, owner_kind)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1339,7 +1339,7 @@
         "name": "type",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\"}, owner_kind)",
+          "query": "label_values(kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\"}, owner_kind)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -1359,7 +1359,7 @@
         "auto_min": "10s",
         "current": {},
         "datasource": "$datasource",
-        "definition": "label_values(kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\",owner_kind=\"$type\"}, owner_name)",
+        "definition": "label_values(kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\",owner_kind=\"$type\"}, owner_name)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1369,7 +1369,7 @@
         "name": "workload",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_owner{cluster=\"$cluster\",namespace=~\"$namespace\",owner_kind=\"$type\"}, owner_name)",
+          "query": "label_values(kube_pod_owner{cluster=~\"$cluster\",namespace=~\"$namespace\",owner_kind=\"$type\"}, owner_name)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

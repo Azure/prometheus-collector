@@ -94,6 +94,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -110,6 +114,14 @@ spec:
                   containerName: prometheus-collector
                   resource: limits.memory
                   divisor: 1Mi
+            - name: KUBE_STATE_NAME
+              value: "<my-kube-state-metrics-release-name>"
+            - name: NODE_EXPORTER_NAME
+              value: "<my-node-exporter-release-name>"
+            - name: KUBE_STATE_VERSION
+              value: "<kube-state-version>"
+            - name: NODE_EXPORTER_VERSION
+              value: "<node-exporter-version>"
           securityContext:
             privileged: false
           volumeMounts:
@@ -176,7 +188,7 @@ spec:
       volumes:
         - name: settings-vol-config
           configMap:
-            name: prometheus-collector-configmap
+            name: prometheus-collector-settings-configmap
             optional: true
         - name: metricstore-secret
           secret:

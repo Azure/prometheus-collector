@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-prometheus-collector
+  name: {{ template "prometheus-collector.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    component: {{ .Release.Name }}-prometheus-collector
+    component: {{ template "prometheus-collector.fullname" . }}
     tier: node
 spec:
   replicas: 1
   selector:
     matchLabels:
-      rsName: {{ .Release.Name }}-prometheus-collector
+      rsName: {{ template "prometheus-collector.fullname" . }}
   strategy:
     type: RollingUpdate
   template:
     metadata:
       labels:
-        rsName: {{ .Release.Name }}-prometheus-collector
+        rsName: {{ template "prometheus-collector.fullname" . }}
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
     spec:
-      serviceAccountName: {{ .Release.Name }}-prometheus-collector
+      serviceAccountName: {{ template "prometheus-collector.fullname" . }}-serviceaccount
       containers:
         - name: prometheus-collector
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -45,6 +45,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -61,6 +65,14 @@ spec:
                   containerName: prometheus-collector
                   resource: limits.memory
                   divisor: 1Mi
+            - name: KUBE_STATE_NAME
+              value: {{ include "prometheus-collector.kubestatemetricsfullname" . }}
+            - name: NODE_EXPORTER_NAME
+              value: {{ include "prometheus-collector.nodeexporterfullname" . }}
+            - name: KUBE_STATE_VERSION
+              value: "{{ index .Values "kube-state-metrics" "image" "repository" }}:{{ index .Values "kube-state-metrics" "image" "tag" }}"
+            - name: NODE_EXPORTER_VERSION
+              value: "{{ index .Values "prometheus-node-exporter" "image" "repository" }}:{{ index .Values "prometheus-node-exporter" "image" "tag" }}"
           securityContext:
             privileged: false
           volumeMounts:
@@ -127,7 +139,7 @@ spec:
       volumes:
         - name: settings-vol-config
           configMap:
-            name: {{ .Release.Name }}-prometheus-collector-configmap
+            name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
             optional: true
         - name: prometheus-config-vol
           configMap:
@@ -144,6 +156,6 @@ spec:
             driver: secrets-store.csi.k8s.io
             readOnly: true
             volumeAttributes:
-              secretProviderClass: "{{ .Release.Name }}-azure-kv-metricstore"
+              secretProviderClass: "{{ template "prometheus-collector.fullname" . }}-azure-kv-metricstore"
             nodePublishSecretRef:           # Only required when using service principal mode
-              name: {{ .Release.Name }}-akv-creds   # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
+              name: {{ template "prometheus-collector.fullname" . }}-akv-creds   # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault

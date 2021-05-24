@@ -13,6 +13,8 @@ require_relative "ConfigParseErrorLogger"
 @cadvisorEnabled = true
 @kubeproxyEnabled = true
 @apiserverEnabled = true
+@kubestateEnabled = true
+@nodeexporterEnabled = true
 @noDefaultsEnabled = false
 
 # Use parser to parse the configmap toml file to a ruby structure
@@ -58,7 +60,15 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @apiserverEnabled = parsedConfig[:apiserver]
       puts "config::Using configmap default scrape settings for apiserver"
     end
-    if !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled
+    if !parsedConfig[:kubestate].nil?
+      @kubestateEnabled = parsedConfig[:kubestate]
+      puts "config::Using configmap default scrape settings for kubestate"
+    end
+    if !parsedConfig[:nodeexporter].nil?
+      @nodeexporterEnabled = parsedConfig[:nodeexporter]
+      puts "config::Using configmap default scrape settings for apiserver"
+    end
+    if !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled
       @noDefaultsEnabled = true
     end
   rescue => errorStr
@@ -88,6 +98,8 @@ if !file.nil?
   file.write("export AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED=#{@cadvisorEnabled}\n")
   file.write("export AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED=#{@kubeproxyEnabled}\n")
   file.write("export AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED=#{@apiserverEnabled}\n")
+  file.write("export AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED=#{@kubestateEnabled}\n")
+  file.write("export AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED=#{@nodeexporterEnabled}\n")
   file.write("export AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=#{@noDefaultsEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close

@@ -8,14 +8,16 @@
 #### Step 0 : Pre-requisites
   You have a kubernetes cluster, which you want to monitor with this tool. You also will need [kubectl client tool](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/) and [helm client tool(v3 or later)](https://helm.sh/docs/intro/install/) to continue this deployment.
 
+  ```Note: Its recommended to use linux/WSL in windows to deploy with the below steps. Though windows command shell/powershell should work, we haven't fully tested with them. If you find any bug, please let us know (askcoin@microsoft.com)```
+
 #### Step 1 : Create MDM Metric Account(s) & Pfx certificate for each account
   You can configure prometheus-collector to ingest different metrics into different MDM account(s). You will need to create atleast one MDM account (to use as default metric account) and have the name of that default MDM account. You also will need pfx certificate for each of the MDM accounts to which you will be configuring prometheus-collector to ingest metrics. See [configuration.md](../configuration.md) for more information about how to configure a metric account per scrape job (to ingest metrics from that scrape job to a specified metric account. If no metric account is specified as part of prometheus configuration for any scrape job, metrics produced by that scrape job will be ingested into the default metrics account specified in the configmap [step 6.1 below])
 
-#### Step 2 : Upload Pfx certificate(s) to Azure KeyVault
-  Azure KeyVault is the only supported way for this prometheus-collector to read authentication certificates for ingesting into metric store account(s). Create an Azure KeyVault (if there is not one already that you can use to store certificate(s) ). Import certificate(s) (pfx is required) per metric account into the KeyVault (ensure private key is exportable for the pfx certificate when importing into KeyVault), and update the secretProviderClass.yaml with the below (and save the secretProviderClass.yaml file)
+#### Step 2 : Upload/provision certificate(s) for your metric store account(s) in Azure KeyVault
+  Azure KeyVault is the only supported way for this prometheus-collector to read authentication certificates for ingesting into metric store account(s). Create an Azure KeyVault (if there is not one already that you can use to store certificate(s) ). Import/create certificate(s) (private key should be exportable) per metric account into the KeyVault (ensure private key is exportable for the certificate), and update the secretProviderClass.yaml with the below (and save the secretProviderClass.yaml file)
      - KeyVaultName
      - KeyVault TenantId
-     - Certificate Name (for each of the account's Pfx certificate that you uploaded to KeyVault in this step)
+     - Certificate Name (for each of the account's certificate (thats exportable with private key) that you uploaded to KeyVault in this step)
 
 #### Step 3 : Provide access to KeyVault using service principal
   Prometheus-collector will need a service principal and secret to access key vault and pull the certificate(s) to use for ingesting metrics into MDM account(s). For this purpose, you will need to create/use a service principal and do the following -
@@ -40,7 +42,7 @@ helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-pr
 
 #### Step 6 : Update configmap to provide default MDM Account name and enable/disable default scrape targets
 
-Provide the default MDM account name in the config map (prometheus-collector-configmap.yaml), optionally enable/disable default scrape targets for your cluster(kubelet, coredns, etc.) using the configmap settings, and apply the configmap to your kubernetes cluster (see below steps)
+Provide the default MDM account name in the config map (prometheus-collector-settings-configmap.yaml), optionally enable/disable default scrape targets for your cluster(kubelet, coredns, etc.) using the configmap settings, and apply the configmap to your kubernetes cluster (see below steps)
 
 - 6.1) Ensure the line below in the configmap has your MDM account name (which will be used as the default MDM account to send metrics to)
 
@@ -49,7 +51,7 @@ Provide the default MDM account name in the config map (prometheus-collector-con
       default_metric_account_name = "mymetricaccountname"
      ```
 
-- 6.2) Specify if you'd like default kubelet or coredns scrape configs added to the prometheus yaml for you. Set to false, if you don't want these targets scraped or if you already include them in your prometheus yaml. Job names `kubelet`, `cadvisor`, `kube-dns`, `kube-proxy`, and `kube-apiserver` are reserved if these are enabled.
+- 6.2) Specify if you'd like default kubelet or coredns scrape configs added to the prometheus yaml for you. Set to false, if you don't want these targets scraped or if you already include them in your prometheus yaml. Job names `kubelet`, `cadvisor`, `kube-dns`, `kube-proxy`, `kube-apiserver`, `kube-state-metrics` and `node` are reserved if these are enabled.
 
     ```yaml
     default-scrape-settings-enabled: |-
@@ -58,19 +60,21 @@ Provide the default MDM account name in the config map (prometheus-collector-con
       cadvisor = true
       kubeproxy = true
       apiserver = true
+      kubestate = true
+      nodeexporter = true
     ```
 
 
 - 6.3) Apply the configmap to the cluster
     ```shell
-    kubectl apply -f prometheus-collector-configmap.yaml
+    kubectl apply -f prometheus-collector-settings-configmap.yaml
     ```
 
 #### Step 7 : Provide Prometheus scrape config
-Provide the prometheus scrape config as needed in the prometheus configmap. See [configuration.md](../configuration.md) for more tips on the prometheus config. There are two ways of doing so:
-**Use the provided configmap (prometheus-config.yaml) as starting point, and make changes as needed to the prometheus-config.yaml configmap and apply:**
+Provide more prometheus scrape config as needed as a configmap in addition to default scrape config. See [sample-scrape-configs](./sample-scrape-configs/README.md) for more tips on the prometheus config. There are two ways of doing so:
+**Use the provided configmap [prometheus-config-configmap.yaml](./sample-scrape-configs/prometheus-config-configmap.yaml) as starting point, and make changes as needed to the prometheus-config-configmap.yaml configmap and apply:**
 ```shell
-        kubectl apply -f prometheus-collector-configmap.yaml
+        kubectl apply -f prometheus-config-configmap.yaml
 ```
 
 By default and for testing purposes, the provided configmap has scrape config to scrape our reference service (weather service), which is located in the [app](../app/prometheus-reference-app.yaml) folder. If you'd like to use the default scrape config, you need to deploy the weather service app by running the following command while in the [app](../app/prometheus-reference-app.yaml) folder:
@@ -78,7 +82,7 @@ By default and for testing purposes, the provided configmap has scrape config to
     kubectl apply -f prometheus-reference-app.yaml
 ```
     
-**If you have your own prometheus yaml scrape configuration and want to use that without having to paste into the configmap, rename your config file   to ```prometheus-config``` and run:**
+**If you have your own prometheus yaml scrape configuration and want to use that without having to paste into the configmap, rename your scrape configuration file to ```prometheus-config``` and run te below command. See the provided sample prometheus scrape config [prometheus-config](./sample-scrape-configs/prometheus-config) as an example.
 ```shell
        kubectl create configmap prometheus-config --from-file=prometheus-config -n kube-system
 ```
@@ -89,6 +93,15 @@ By default and for testing purposes, the provided configmap has scrape config to
 ```
     You can also download to this tool and run this command for your prometheus config before adding to the configmap, to save some time.
 
-#### Step 8 :  Deploy the Prometheus-collector agent
-Provide your cluster name as value for ```CLUSTER``` environment variable in deployment file (prometheus-collector.yaml). This will be added as a label ```cluster``` to every metric collected from this cluster. Now you are ready to deploy the prometheus collector (prometheus-collector.yaml) by running the below kubectl commsnd. [Prometheus-collector will run in kube-system namespace as a singleton replica]
+#### Step 8 : Deploy prometheus-node-exporter and kube-state-metrics in your cluster
+
+- See steps [here](./sample-scrape-configs/README.md) to deploy prometheus-node-exporter and kube-state-metrics
+- You don't need to specify scrape configs for prometheus-node-exporter and kube-state-metrics as its included in the default scrape targets (unless you 
+  turned it OFF in the config map using the settings ```scrapeTargets.kubestate``` and ```scrapeTargets.nodeexporter```)
+- Make note of the release names for kube-state-metrics and prometheus-node-exporter deployments from this step, as you will need them for the next step
+
+#### Step 9 :  Deploy the Prometheus-collector agent
+Provide your cluster name as value for ```CLUSTER``` environment variable in deployment file (prometheus-collector.yaml). This will be added as a label ```cluster``` to every metric collected from this cluster. 
+Provider your release names for kube-state-metrics and node-exporter deployments in the env vars '
+Now you are ready to deploy the prometheus collector (prometheus-collector.yaml) by running the below kubectl commsnd. [Prometheus-collector will run in kube-system namespace as a singleton replica]
 ```shell kubectl apply -f prometheus-collector.yaml ```
