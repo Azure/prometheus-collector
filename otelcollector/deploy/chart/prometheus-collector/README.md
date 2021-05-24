@@ -49,8 +49,8 @@ helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-pr
 
 - **Step 5** : Pull, Export & Install prometheus-collector chart in your cluster
 ```shell
-helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-05-14-2021-40399eef
-helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-05-14-2021-40399eef .
+helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-05-24-2021-c7f3b39a
+helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-05-24-2021-c7f3b39a .
 helm dependency update ./prometheus-collector
 
 helm upgrade --install <chart_release_name> ./prometheus-collector --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --namespace=<my_prom_collector_namespace> --create-namespace
@@ -93,7 +93,7 @@ kubectl create configmap my-collector-dev-release-prometheus-config --from-file=
 | clusterName | string | <mark>`Required`</mark> | `""` | name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped |
 | image.pullPolicy | string | Optional | `"IfNotPresent"` |  |
 | image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/cidev"` |  |
-| image.tag | string | Optional | `"prometheus-collector-main-05-20-2021-d42f2e38"` |  |
+| image.tag | string | Optional | `"prometheus-collector-main-05-24-2021-6fe63dfb"` |  |
 | internalSettings.intEnvironment | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes |
 | resources.limits.cpu | string | Optional | `2` |  |
 | resources.limits.memory | string | Optional | `"2Gi"` |  |
