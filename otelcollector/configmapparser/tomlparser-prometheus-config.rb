@@ -63,13 +63,13 @@ def populateSettingValuesFromConfigMap(configString)
       @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @apiserverDefaultString)
     end
     if !ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].downcase == "true"
-      @kubestateDefaultString = @kubestateDefaultString.gsub, '$$KUBE_STATE_NAME$$' ,ENV["KUBE_STATE_NAME"]
-      @kubestateDefaultString = @kubestateDefaultString.gsub, '$$POD_NAMESPACE$$' ,ENV["POD_NAMESPACE"]
+      @kubestateDefaultString = @kubestateDefaultString.gsub('$$KUBE_STATE_NAME$$', ENV["KUBE_STATE_NAME"])
+      @kubestateDefaultString = @kubestateDefaultString.gsub('$$POD_NAMESPACE$$', ENV["POD_NAMESPACE"])
       @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @kubestateDefaultString)
     end
     if !ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].downcase == "true"
-      @nodeexporterDefaultString = @nodeexporterDefaultString.gsub, '$$NODE_EXPORTER_NAME$$' ,ENV["NODE_EXPORTER_NAME"]
-      @nodeexporterDefaultString = @nodeexporterDefaultString.gsub, '$$POD_NAMESPACE$$' ,ENV["POD_NAMESPACE"]
+      @nodeexporterDefaultString = @nodeexporterDefaultString.gsub('$$NODE_EXPORTER_NAME$$', ENV["NODE_EXPORTER_NAME"])
+      @nodeexporterDefaultString = @nodeexporterDefaultString.gsub('$$POD_NAMESPACE$$', ENV["POD_NAMESPACE"])
       @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @nodeexporterDefaultString)
     end
     puts "config::Using config map setting for prometheus config"
