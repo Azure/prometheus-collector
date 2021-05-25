@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"math/rand"
+	"net/http"
+	"os"
+	"strconv"
   "time"
 
   "github.com/prometheus/client_golang/prometheus"
@@ -17,34 +19,20 @@ type TempInfo struct{
 }
 
 var (
-	//seasons = []string{"spring", "summer", "winter", "fall"}
-	//locations = []string{"midwest", "pnw", "south", "east"}
-	/*locationsToMinTemp = map[string]map[string]int{
-		"midwest": map[string]int{
-			"spring": 40,
-			"summer": 65,
-			"winter": 0,
-			"fall": 	30,
+	locationsToMinTempPerf = map[string]map[string]TempInfo {
+		"midwest": map[string]TempInfo{
+			"chicago": TempInfo{minTemp: 34, tempRange: 11},
+			"minneapolis": TempInfo{minTemp: 24, tempRange: 20},
+			"milwaukee": TempInfo{minTemp: 31, tempRange: 11},
+			"indianapolis": TempInfo{minTemp: 31, tempRange: 19},
 		},
-		"pnw": map[string]int{
-			"spring": 50,
-			"summer": 60,
-			"winter": 30,
-			"fall": 	50,
+		"pnw": map[string]TempInfo{
+			"seattle": {42, 10},
+			"portland": {41, 15},
+			"tacoma": {37, 16},
+			"bend": 	{27, 24},
 		},
-		"south": map[string]int{
-			"spring": 65,
-			"summer": 70,
-			"winter": 50,
-			"fall": 	60,
-		},
-		"east": map[string]int{
-			"spring": 40,
-			"summer": 65,
-			"winter": 0,
-			"fall": 	30,
-		},
-	}*/
+	}
 	locationsToMinTemp = map[string]map[string]TempInfo {
 		"midwest": map[string]TempInfo{
 			"chicago": TempInfo{minTemp: 34, tempRange: 11},
@@ -102,14 +90,6 @@ func recordMetrics() {
 	go func() {
 		i := 0
   	for {
-			//seasonIndex := i % 4
-			//season := seasons[seasonIndex]
-
-			// new measurement
-			//for _, location := range(locations) {
-				//counter.WithLabelValues(season, location).Inc()
-			//}
-
 			for location, tempInfoByCity := range(locationsToMinTemp) {
 				for city, info := range(tempInfoByCity) {
 					counter.WithLabelValues(city, location).Inc()
@@ -142,78 +122,133 @@ func recordMetrics() {
 	}()
 }
 
+func recordPerfMetrics() {
+	go func() {
+		i := 0
+  	for {
+			for _, gauge := range(gaugeList) {
+				for location, tempInfoByCity := range(locationsToMinTempPerf) {
+					for city, info := range(tempInfoByCity) {
+						tempRange := info.tempRange
+						minTemp := info.minTemp
+						temperature := float64(rand.Intn(tempRange) + minTemp)
+						gauge.WithLabelValues(city, location).Set(temperature)
+					}
+				}
+
+				i++
+		 	}
+			// Wait the scrape interval
+			for j := 0; j < scrapeIntervalSec; j++ {
+				time.Sleep(1 * time.Second)
+			}
+  	}
+	}()
+}
+
+
+func createGauges() {
+	for i := 0; i < metricCount; i++ {
+		name := fmt.Sprintf("myapp_temperature_%d", i)
+		gauge := promauto.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: name,
+			},
+			[]string{
+				"city",
+				"location",
+			},
+		)
+		gaugeList = append(gaugeList, gauge)
+	}
+}
+
 var(
-counter = promauto.NewCounterVec(
-	prometheus.CounterOpts{
-		Name: "myapp_measurements_total",
-	},
-	[]string{
-		"city",
-		"location",
-	},
-)
-gauge = promauto.NewGaugeVec(
-	prometheus.GaugeOpts{
-		Name: "myapp_temperature",
-	},
-	[]string{
-		"city",
-		"location",
-	},
-)
-rainfallGauge = promauto.NewGaugeVec(
-	prometheus.GaugeOpts{
-		Name: "myapp_rainfall",
-	},
-	[]string{
-		"city",
-		"location",
-	},
-)
-summary = promauto.NewSummaryVec(
-	prometheus.SummaryOpts{
-		Name: "myapp_temperature_summary",
-		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-	},
-	[]string{
-		"city",
-		"location",
-	},
-)
-rainfallSummary = promauto.NewSummaryVec(
-	prometheus.SummaryOpts{
-		Name: "myapp_rainfall_summary",
-		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-	},
-	[]string{
-		"city",
-		"location",
-	},
-)
-histogram = promauto.NewHistogramVec(
-	prometheus.HistogramOpts{
-		Name: "myapp_temperature_histogram",
-		Buckets: prometheus.LinearBuckets(0, 10, 10),
-	},
-	[]string{
-		"city",
-		"location",
-	},
-)
-rainfallHistogram = promauto.NewHistogramVec(
-	prometheus.HistogramOpts{
-		Name: "myapp_rainfall_histogram",
-		Buckets: prometheus.LinearBuckets(0, 0.05, 10),
-	},
-	[]string{
-		"city",
-		"location",
-	},
-)
+	scrapeIntervalSec = 60
+	metricCount = 10000
+	gaugeList = make([]*prometheus.GaugeVec, 0, metricCount)
+	counter = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "myapp_measurements_total",
+		},
+		[]string{
+			"city",
+			"location",
+		},
+	)
+	gauge = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "myapp_temperature",
+		},
+		[]string{
+			"city",
+			"location",
+		},
+	)
+	rainfallGauge = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "myapp_rainfall",
+		},
+		[]string{
+			"city",
+			"location",
+		},
+	)
+	summary = promauto.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name: "myapp_temperature_summary",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		},
+		[]string{
+			"city",
+			"location",
+		},
+	)
+	rainfallSummary = promauto.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name: "myapp_rainfall_summary",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		},
+		[]string{
+			"city",
+			"location",
+		},
+	)
+	histogram = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "myapp_temperature_histogram",
+			Buckets: prometheus.LinearBuckets(0, 10, 10),
+		},
+		[]string{
+			"city",
+			"location",
+		},
+	)
+	rainfallHistogram = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "myapp_rainfall_histogram",
+			Buckets: prometheus.LinearBuckets(0, 0.05, 10),
+		},
+		[]string{
+			"city",
+			"location",
+		},
+	)
 )
 
 func main() {
-  recordMetrics()
+	if os.Getenv("RUN_PERF_TEST") == "true" {
+		if os.Getenv("SCRAPE_INTERVAL") != "" {
+			scrapeIntervalSec, _ = strconv.Atoi(os.Getenv("SCRAPE_INTERVAL"))
+		}
+		if os.Getenv("METRIC_COUNT") != "" {
+			metricCount, _ = strconv.Atoi(os.Getenv("METRIC_COUNT"))
+		}
+		createGauges()
+		recordPerfMetrics()
+	} else {
+		recordMetrics()
+	}
 
   http.Handle("/metrics", promhttp.Handler())
 	http.ListenAndServe(":2112", nil)

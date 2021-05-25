@@ -14,7 +14,14 @@ spec:
     spec:
       containers:
         - name: prometheus-reference-app
-          image: docker.io/gracewehner/prometheus-reference-app:030921
+          image: docker.io/gracewehner/prometheus-reference-app:052521
+          env:
+            - name: RUN_PERF_TEST
+              value: "true"
+            - name: SCRAPE_INTERVAL
+              value: "15"
+            - name: METRIC_COUNT
+              value: "125000"
           ports:
             - containerPort: 2112
               protocol: TCP
