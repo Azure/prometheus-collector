@@ -1663,9 +1663,9 @@
     "list": [
       {
         "current": {
-          "selected": true,
-          "text": "Dev-Prometheus",
-          "value": "Dev-Prometheus"
+          "selected": false,
+          "text": "default",
+          "value": "default"
         },
         "description": null,
         "error": null,
@@ -1686,7 +1686,7 @@
         "allValue": null,
         "current": {},
         "datasource": "${datasource}",
-        "definition": "label_values(coredns_dns_request_count_total{job=\"kube-dns\"}, cluster)",
+        "definition": "",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1696,8 +1696,8 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "",
-          "refId": "demo-prometheus-cluster-Variable-Query"
+          "query": "label_values(coredns_dns_request_count_total{job=\"kube-dns\"}, cluster)",
+          "refId": "StandardVariableQuery"
         },
         "refresh": 2,
         "regex": "",
@@ -1713,7 +1713,7 @@
         "allValue": null,
         "current": {},
         "datasource": "$datasource",
-        "definition": "label_values(coredns_dns_request_count_total{job=\"kube-dns\", cluster=~\"$cluster\"}, pod)",
+        "definition": "",
         "description": null,
         "error": null,
         "hide": 0,
