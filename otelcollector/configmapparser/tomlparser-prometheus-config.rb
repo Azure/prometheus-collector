@@ -73,7 +73,6 @@ def populateSettingValuesFromConfigMap(configString)
       @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @nodeexporterDefaultString)
     end
     puts "config::Using config map setting for prometheus config"
-    puts @indentedConfig
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while substituting the prometheus config in the otelcollector config - #{errorStr}, using defaults, please check config map for errors")
     @indentedConfig = ""
