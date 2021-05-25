@@ -32,12 +32,11 @@ const (
 	envAppInsightsAuth                                = "APPLICATIONINSIGHTS_AUTH"
 	envAppInsightsEndpoint                            = "APPLICATIONINSIGHTS_ENDPOINT"
 	envComputerName                                   = "NODE_NAME"
-	envDefaultMetricAccountName						  = "AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
-	envPodName										  = "POD_NAME"
+	envDefaultMetricAccountName                       = "AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
+	envPodName                                        = "POD_NAME"
 	envTelemetryOffSwitch                             = "DISABLE_TELEMETRY"
-	envNamespace									  = "POD_NAMESPACE"
+	envNamespace                                      = "POD_NAMESPACE"
 	fluentbitOtelCollectorLogsTag                     = "prometheus.log.otelcollector"
-	fluentbitMetricsExtensionLogsTag                  = "prometheus.log.metricsextension"
 	fluentbitProcessedCountTag                        = "prometheus.log.processedcount"
 	fluentbitDiagnosticHeartbeatTag                   = "prometheus.log.diagnosticheartbeat"
 	fluentbitEventsProcessedLastPeriodTag             = "prometheus.log.eventsprocessedlastperiod"
@@ -129,9 +128,7 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 		var logEntry = ""
 
 		// Logs have different parsed formats depending on if they're from otelcollector or metricsextension
-		if tag == fluentbitMetricsExtensionLogsTag {
-			logEntry = ToString(record["message"])
-		} else if tag == fluentbitOtelCollectorLogsTag {
+		if tag == fluentbitOtelCollectorLogsTag {
 			logEntry = fmt.Sprintf("%s %s", ToString(record["C"]), ToString(record["M"]))
 		} else if tag == fluentbitContainerLogsTag {
 			logEntry = ToString(record["log"])

@@ -137,10 +137,6 @@ source ~/.bashrc
 service cron start
 
 #start otelcollector
-if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
-      echo "prometheus config specified for otel collector:"
-      cat /etc/config/settings/prometheus/prometheus-config
-fi
 echo "Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
 
 # will need to rotate log file
