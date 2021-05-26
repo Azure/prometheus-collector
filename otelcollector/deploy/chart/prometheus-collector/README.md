@@ -93,7 +93,7 @@ kubectl create configmap my-collector-dev-release-prometheus-config --from-file=
 | clusterName | string | <mark>`Required`</mark> | `""` | name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped |
 | image.pullPolicy | string | Optional | `"IfNotPresent"` |  |
 | image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/cidev"` |  |
-| image.tag | string | Optional | `"prometheus-collector-main-05-24-2021-6fe63dfb"` |  |
+| image.tag | string | Optional | `"prometheus-collector-main-05-25-2021-0eeb4ffd"` |  |
 | internalSettings.intEnvironment | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes |
 | resources.limits.cpu | string | Optional | `2` |  |
 | resources.limits.memory | string | Optional | `"2Gi"` |  |
