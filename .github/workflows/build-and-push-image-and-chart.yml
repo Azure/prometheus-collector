@@ -49,6 +49,8 @@ jobs:
         uses: actions/checkout@v2
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version && helm version && docker version
+      - name: Run-Helm-lint
+        run: helm dependency update ./otelcollector/deploy/chart/prometheus-collector/ && helm lint ./otelcollector/deploy/chart/prometheus-collector/ --set "azureKeyVault.name=containerinsightstest1kv,azureKeyVault.pfxCertNames={containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx},azureKeyVault.tenantId=72f988bf-****-41af-****-2d7cd011db47,clusterName=mydevcluster,azureMetricAccount.defaultAccountName=containerinsightsgenevaaccount1,azureKeyVault.clientId=70937f05-****-4fc0-****-de917f2a9402,azureKeyVault.clientSecret=**********************************" --with-subcharts
       - name: Install-build-dependencies
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
@@ -69,8 +71,6 @@ jobs:
           skip-dirs: 'opt/telegraf/telegraf,opt/microsoft/otelcollector/otelcollector'
           exit-code: '1'
           timeout: '5m0s'
-      - name: Run-Helm-lint
-        run: helm dependency update ./otelcollector/deploy/chart/prometheus-collector/ && helm lint ./otelcollector/deploy/chart/prometheus-collector/ --set "azureKeyVault.name=containerinsightstest1kv,azureKeyVault.pfxCertNames={containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx},azureKeyVault.tenantId=72f988bf-****-41af-****-2d7cd011db47,clusterName=mydevcluster,azureMetricAccount.defaultAccountName=containerinsightsgenevaaccount1,azureKeyVault.clientId=70937f05-****-4fc0-****-de917f2a9402,azureKeyVault.clientSecret=**********************************" --with-subcharts
       - name: Save-Helm-chart-to-local-cache
         run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm chart save . ${{ env.HELMTAG }}
       - name: List-local-Helm-Charts
