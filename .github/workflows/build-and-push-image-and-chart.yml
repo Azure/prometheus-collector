@@ -3,10 +3,14 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
       - main
+    paths-ignore:
+      - '**.md'
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
@@ -28,7 +32,7 @@ jobs:
       - name: Set-image-tag-name
         run: echo "IMAGE_TAG_NAME=prometheus-collector" >> $GITHUB_ENV
       - name: Set-image-tag-suffix
-        run: echo "IMAGE_TAG_DATE=$(date +%m-%d-%Y)" >> $GITHUB_ENV
+        run: echo "IMAGE_TAG_DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
       - name: Set-image-tag
@@ -45,6 +49,8 @@ jobs:
         uses: actions/checkout@v2
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version && helm version && docker version
+      - name: Run-Helm-lint
+        run: helm dependency update ./otelcollector/deploy/chart/prometheus-collector/ && helm lint ./otelcollector/deploy/chart/prometheus-collector/ --set "azureKeyVault.name=containerinsightstest1kv,azureKeyVault.pfxCertNames={containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx},azureKeyVault.tenantId=72f988bf-****-41af-****-2d7cd011db47,clusterName=mydevcluster,azureMetricAccount.defaultAccountName=containerinsightsgenevaaccount1,azureKeyVault.clientId=70937f05-****-4fc0-****-de917f2a9402,azureKeyVault.clientSecret=**********************************" --with-subcharts
       - name: Install-build-dependencies
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
