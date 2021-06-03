@@ -150,6 +150,10 @@ fi
 
 echo "started otelcollector"
 
+# Make a copy of the mounted akv directory to see if it changes
+mkdir -p /opt/akv-copy
+cp -r /etc/config/settings/akv /opt/akv-copy
+
 echo "finding files from akv in /etc/config/settings/akv to decode..."
 decodeLocation="/opt/akv/decoded"
 # secrets can only be alpha numeric chars and dashes
