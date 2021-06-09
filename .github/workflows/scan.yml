@@ -18,7 +18,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           #image-ref: "mcr.microsoft.com/azuremonitor/containerinsights/cidev:cidevcfa804a1adeb3eb4e82d78f14569e3238e2f6dbd"
-          image-ref: "mcr.microsoft.com/azuremonitor/containerinsights/cidev:vishwacidevtest06092021-3"
+          image-ref: "mcr.microsoft.com/azuremonitor/containerinsights/cidev:vishwacidevtest06092021-4"
           #image-ref: "${{ github.event.inputs.imageToScan }}"
           format: 'table'
           #output: 'trivy-results.sarif'
