@@ -9,7 +9,7 @@ on:
   #      description: 'Full image path in any public registry. ex;- mcr.microsoft.com/azuremonitor/containerinsights/cidev:cidevcfa804a1adeb3eb4e82d78f14569e3238e2f6dbd'
   #      required: true
 jobs:
-   scan-image--1:
+  scan-image--1:
     runs-on: ubuntu-latest
     steps:
       - name: Set-workflow-initiator
