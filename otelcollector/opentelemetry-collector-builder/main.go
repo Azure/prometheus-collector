@@ -12,20 +12,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to build components: %v", err)
 	}
-
-	info := component.ApplicationStartInfo{
-		ExeName:  "custom-collector-distro",
-		LongName: "Custom OpenTelemetry Collector distribution",
-		Version:  "1.0.0",
+	info := component.BuildInfo{
+		Command:     "custom-collector-distro",
+		Description: "Custom OpenTelemetry Collector distributionr",
+		Version:     "1.0.0",
 	}
 
-	app, err := service.New(service.Parameters{ApplicationStartInfo: info, Factories: factories})
+	app, err := service.New(service.CollectorSettings{BuildInfo: info, Factories: factories})
 	if err != nil {
-		log.Fatal("failed to construct the application: %w", err)
+		log.Fatal("failed to construct the collector server: %w", err)
 	}
 
 	err = app.Run()
 	if err != nil {
-		log.Fatal("application run finished with error: %w", err)
+		log.Fatal("collector server run finished with error: %w", err)
 	}
 }

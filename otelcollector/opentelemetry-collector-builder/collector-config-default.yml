@@ -6,6 +6,7 @@ exporters:
   otlp:
     endpoint: 127.0.0.1:55680
     insecure: true
+    compression: "gzip"
 processors:
   batch:
     send_batch_size: 8192
@@ -18,7 +19,6 @@ processors:
       action: "upsert"
 receivers:
     prometheus:
-      include_resource_labels: true
       config:
         scrape_configs:
         # scrape_configs must be non-null for collector to start
