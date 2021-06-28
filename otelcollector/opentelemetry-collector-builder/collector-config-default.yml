@@ -18,7 +18,6 @@ processors:
       action: "upsert"
 receivers:
     prometheus:
-      include_resource_labels: true
       config:
         scrape_configs:
         # scrape_configs must be non-null for collector to start

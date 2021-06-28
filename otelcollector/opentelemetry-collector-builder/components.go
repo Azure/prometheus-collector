@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/collector/exporter/fileexporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
 	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
-	"github.com/vishiy/influxexporter"
-	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
+	//"github.com/vishiy/influxexporter"
+	"go.opentelemetry.io/collector/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/extension/healthcheckextension"
 	"go.opentelemetry.io/collector/extension/pprofextension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
@@ -34,7 +34,7 @@ func components() (component.Factories, error) {
 	}
 
 	receivers, err := component.MakeReceiverFactoryMap (
-		privatepromreceiver.NewFactory(),
+		prometheusreceiver.NewFactory(),
 	)
 
 	if err != nil {
@@ -47,7 +47,7 @@ func components() (component.Factories, error) {
 		fileexporter.NewFactory(),
 		otlpexporter.NewFactory(),
 		otlphttpexporter.NewFactory(),
-		influxexporter.NewFactory(),
+		//influxexporter.NewFactory(),
 	)
 
 	if err != nil {
@@ -69,5 +69,5 @@ func components() (component.Factories, error) {
 		Exporters : exporters,
 		Extensions : extensions,
 	}
-	return factories, consumererror.CombineErrors(errs)
+	return factories, consumererror.Combine(errs)
 }
