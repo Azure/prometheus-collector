@@ -6,6 +6,7 @@ exporters:
   otlp:
     endpoint: 127.0.0.1:55680
     insecure: true
+    compression: "gzip"
 processors:
   batch:
     send_batch_size: 8192
