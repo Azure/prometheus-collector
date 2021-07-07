@@ -51,7 +51,6 @@ metadata:
   namespace: kube-system
   labels:
     component: prometheus-collector
-    tier: node
 spec:
   replicas: 1
   selector:
@@ -118,10 +117,14 @@ spec:
               value: "<my-kube-state-metrics-release-name>"
             - name: NODE_EXPORTER_NAME
               value: "<my-node-exporter-release-name>"
+            - name: NODE_EXPORTER_TARGETPORT
+              value: "9100"
             - name: KUBE_STATE_VERSION
               value: "<kube-state-version>"
             - name: NODE_EXPORTER_VERSION
               value: "<node-exporter-version>"
+            - name: MODE
+              value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
           securityContext:
             privileged: false
           volumeMounts:
@@ -197,6 +200,163 @@ spec:
         - name: prometheus-config-vol
           configMap:
             name: prometheus-config
+            optional: true
+        - name: host-log-containers
+          hostPath:
+            path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "azure-kv-metricstore"
+            nodePublishSecretRef:           # Only required when using service principal mode
+              name: akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: prometheus-collector-node
+  namespace: kube-system
+  labels:
+    component: prometheus-collector
+spec:
+  selector:
+    matchLabels:
+      dsName: "prometheus-collector-node"
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        dsName: "prometheus-collector-node"
+      annotations:
+        agentVersion: "0.0.0.1"
+        schema-versions: "v1"
+    spec:
+      serviceAccountName: prometheus-collector
+      containers:
+        - name: prometheus-collector
+          image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-main-05-25-2021-0eeb4ffd"
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 500Mi
+          env:
+            - name: CLUSTER
+              value: "my-cluster-name"
+            #- name: ME_ADDITIONAL_FLAGS
+            #  value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
+            - name: CONTROLLER_TYPE
+              value: "DaemonSet"
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONTAINER_CPU_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.cpu
+                  divisor: 1m
+            - name: CONTAINER_MEMORY_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.memory
+                  divisor: 1Mi
+            - name: KUBE_STATE_NAME
+              value: "<my-kube-state-metrics-release-name>"
+            - name: NODE_EXPORTER_NAME
+              value: "<my-node-exporter-release-name>"
+            - name: NODE_EXPORTER_TARGETPORT
+              value: "9100"
+            - name: KUBE_STATE_VERSION
+              value: "<kube-state-version>"
+            - name: NODE_EXPORTER_VERSION
+              value: "<node-exporter-version>"
+            - name: MODE
+              value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
+          securityContext:
+            privileged: false
+          volumeMounts:
+            - mountPath: /etc/config/settings
+              name: settings-vol-config
+              readOnly: true
+            - mountPath: /etc/config/settings/prometheus
+              name: prometheus-config-vol
+              readOnly: true
+            - mountPath: /etc/config/settings/akv
+              name: secrets-store-inline
+              readOnly: true
+            - name: host-log-containers
+              readOnly: true
+              mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - /opt/microsoft/liveness/livenessprobe.sh
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 15
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - labelSelector:
+                matchExpressions:
+                  - key: beta.kubernetes.io/os
+                    operator: In
+                    values:
+                    - linux
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+      # The following tolerations are removed for AKS, this is only required for non AKS
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+        - operator: "Exists"
+          effect: "NoExecute"
+        - operator: "Exists"
+          effect: "PreferNoSchedule"
+      volumes:
+        - name: settings-vol-config
+          configMap:
+            name: prometheus-collector-settings-configmap
+            optional: true
+        - name: metricstore-secret
+          secret:
+            secretName: metricstore-secret
+            optional: true
+        - name: prometheus-config-vol
+          configMap:
+            name: prometheus-config-node
             optional: true
         - name: host-log-containers
           hostPath:

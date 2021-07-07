@@ -28,6 +28,8 @@ const (
 	envACSResourceName                                = "ACS_RESOURCE_NAME"
 	envAgentVersion                                   = "AGENT_VERSION"
 	envControllerType                                 = "CONTROLLER_TYPE"
+	envNodeIP										  = "NODE_IP"
+	envMode											  = "MODE"
 	envCluster                                        = "customResourceId"
 	envAppInsightsAuth                                = "APPLICATIONINSIGHTS_AUTH"
 	envAppInsightsEndpoint                            = "APPLICATIONINSIGHTS_ENDPOINT"
@@ -83,6 +85,8 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties = make(map[string]string)
 	CommonProperties["cluster"] = os.Getenv(envCluster)
 	CommonProperties["computer"] = os.Getenv(envComputerName)
+	CommonProperties["nodeip"] = os.Getenv(envNodeIP)
+	CommonProperties["mode"] = os.Getenv(envMode)
 	CommonProperties["controllertype"] = os.Getenv(envControllerType)
 	CommonProperties["agentversion"] = os.Getenv(envAgentVersion)
 	CommonProperties["namespace"] = os.Getenv(envNamespace)

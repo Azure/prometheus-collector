@@ -95,10 +95,15 @@ kubectl create configmap my-collector-dev-release-prometheus-config --from-file=
 | image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/cidev"` |  |
 | image.tag | string | Optional | `"prometheus-collector-main-05-25-2021-0eeb4ffd"` |  |
 | internalSettings.intEnvironment | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes |
-| resources.limits.cpu | string | Optional | `2` |  |
-| resources.limits.memory | string | Optional | `"2Gi"` |  |
-| resources.requests.cpu | string | Optional | `"250m"` |  |
-| resources.requests.memory | string | Optional | `"1Gi"` |  |
+| mode.advanced | bool | Optional | `false` | if mode.advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset
+| resources.deployment.limits.cpu | string | Optional | `4` |  |
+| resources.deployment.limits.memory | string | Optional | `"4Gi"` |  |
+| resources.deployment.requests.cpu | string | Optional | `"1"` |  |
+| resources.deployment.requests.memory | string | Optional | `"2Gi"` |  |
+| resources.daemonSet.limits.cpu | string | Optional | `1` |  |
+| resources.daemonSet.limits.memory | string | Optional | `"2Gi"` |  |
+| resources.daemonSet.requests.cpu | string | Optional | `"500m"` |  |
+| resources.daemonSet.requests.memory | string | Optional | `"1Gi"` |  |
 | scrapeTargets.coreDns | bool | Optional | `true` | when true, automatically scrape coredns service in the k8s cluster without any additional scrape config |
 | scrapeTargets.kubelet | bool | Optional | `true` | when true, automatically scrape kubelet in every node in the k8s cluster without any additional scrape config |
 | scrapeTargets.cAdvisor | bool | Optional | `true` | when true, automatically scrape cAdvisor in every node in the k8s cluster without any additional scrape config |

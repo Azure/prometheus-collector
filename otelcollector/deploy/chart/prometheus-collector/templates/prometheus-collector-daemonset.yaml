@@ -1,21 +1,21 @@
+{{- if .Values.mode.advanced  }}
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
-  name: {{ template "prometheus-collector.fullname" . }}
+  name: {{ template "prometheus-collector.fullname" . }}-node
   namespace: {{ .Release.Namespace }}
   labels:
     component: {{ template "prometheus-collector.fullname" . }}
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      rsName: {{ template "prometheus-collector.fullname" . }}
-  strategy:
+      dsName: {{ template "prometheus-collector.fullname" . }}-node
+  updateStrategy:
     type: RollingUpdate
   template:
     metadata:
       labels:
-        rsName: {{ template "prometheus-collector.fullname" . }}
+        dsName: {{ template "prometheus-collector.fullname" . }}-node
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
@@ -26,16 +26,16 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           resources:
-            {{- toYaml .Values.resources.deployment | nindent 12 }}
+            {{- toYaml .Values.resources.daemonSet | nindent 12 }}
           env:
             - name: CLUSTER
               value: {{ required "clusterName is required" .Values.clusterName | toString | quote }}
             {{- if .Values.internalSettings.intEnvironment  }}
             - name: ME_ADDITIONAL_FLAGS
               value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
-            {{- end }}
+            {{- end }}  
             - name: CONTROLLER_TYPE
-              value: "ReplicaSet"
+              value: "DaemonSet"
             - name: NODE_IP
               valueFrom:
                 fieldRef:
@@ -110,15 +110,6 @@ spec:
             timeoutSeconds: 15
       affinity:
         nodeAffinity:
-          # affinity to schedule on to ephemeral os node if its available
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 1
-            preference:
-              matchExpressions:
-              - key: storageprofile
-                operator: NotIn
-                values:
-                - managed
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - labelSelector:
@@ -131,11 +122,6 @@ spec:
                     operator: NotIn
                     values:
                       - virtual-kubelet
-      # The following label selector is removed for AKS, this is only required for non AKS
-                  - key: kubernetes.io/role
-                    operator: NotIn
-                    values:
-                      - master
       # The following tolerations are removed for AKS, this is only required for non AKS
       tolerations:
         - operator: "Exists"
@@ -151,7 +137,7 @@ spec:
             optional: true
         - name: prometheus-config-vol
           configMap:
-            name: {{ .Release.Name }}-prometheus-config
+            name: {{ .Release.Name }}-prometheus-config-node
             optional: true
         - name: host-log-containers
           hostPath:
@@ -166,4 +152,5 @@ spec:
             volumeAttributes:
               secretProviderClass: "{{ template "prometheus-collector.fullname" . }}-azure-kv-metricstore"
             nodePublishSecretRef:           # Only required when using service principal mode
-              name: {{ template "prometheus-collector.fullname" . }}-akv-creds   # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
+              name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
+{{- end }}
