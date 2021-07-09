@@ -8,9 +8,9 @@ scrape_configs:
     insecure_skip_verify: true
   bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
   relabel_configs:
-- source_labels: [__address__]
-  replacement: '$$NODE_NAME'
-  target_label: instance
+  - source_labels: [__address__]
+    replacement: '$$NODE_NAME'
+    target_label: instance
   static_configs:
   - targets: ['$NODE_IP:10250']
 
