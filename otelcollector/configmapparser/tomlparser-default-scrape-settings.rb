@@ -66,10 +66,21 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     end
     if !parsedConfig[:nodeexporter].nil?
       @nodeexporterEnabled = parsedConfig[:nodeexporter]
-      puts "config::Using configmap default scrape settings for apiserver"
+      puts "config::Using configmap default scrape settings for nodeexporter"
     end
-    if !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled
+
+    if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
+      controllerType = ENV["CONTROLLER_TYPE"]
+      if controllerType == "ReplicaSet" && @kubeletEnabled && @cadvisorEnabled && @nodeexporterEnabled
+        @noDefaultsEnabled = true
+        puts "config::No default scrape configs enabled"
+      elsif controllerType == "DaemonSet" && @corednsEnabled && @kubeproxyEnabled && @apiserverEnabled && @kubestateEnabled
+        @noDefaultsEnabled = true
+        puts "config::No default scrape configs enabled"
+      end
+    elsif @kubeletEnabled && @corednsEnabled && @cadvisorEnabled && @kubeproxyEnabled && @apiserverEnabled && @kubestateEnabled && @nodeexporterEnabled
       @noDefaultsEnabled = true
+      puts "config::No default scrape configs enabled"
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while reading config map settings for default scrape settings - #{errorStr}, using defaults, please check config map for errors")
