@@ -16,6 +16,7 @@ jobs:
         with:
           image-ref: "${{ github.event.inputs.imageToScan }}"
           format: 'table'
+          #ignore format
           #output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
