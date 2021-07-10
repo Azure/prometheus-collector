@@ -45,24 +45,23 @@ var (
 )
 
 type metricBuilder struct {
-	hasData               bool
-	hasInternalMetric     bool
-	mc                    MetadataCache
-	metrics               []*metricspb.Metric
-	numTimeseries         int
-	droppedTimeseries     int
-	useStartTimeMetric    bool
-	startTimeMetricRegex  *regexp.Regexp
-	includeResourceLabels bool
-	startTime             float64
-	logger                *zap.Logger
-	currentMf             MetricFamily
+	hasData              bool
+	hasInternalMetric    bool
+	mc                   MetadataCache
+	metrics              []*metricspb.Metric
+	numTimeseries        int
+	droppedTimeseries    int
+	useStartTimeMetric   bool
+	startTimeMetricRegex *regexp.Regexp
+	startTime            float64
+	logger               *zap.Logger
+	currentMf            MetricFamily
 }
 
 // newMetricBuilder creates a MetricBuilder which is allowed to feed all the datapoints from a single prometheus
 // scraped page by calling its AddDataPoint function, and turn them into an opencensus data.MetricsData object
 // by calling its Build function
-func newMetricBuilder(mc MetadataCache, useStartTimeMetric bool, startTimeMetricRegex string, includeResourceLabels bool,logger *zap.Logger) *metricBuilder {
+func newMetricBuilder(mc MetadataCache, useStartTimeMetric bool, startTimeMetricRegex string, logger *zap.Logger) *metricBuilder {
 	var regex *regexp.Regexp
 	if startTimeMetricRegex != "" {
 		regex, _ = regexp.Compile(startTimeMetricRegex)
@@ -75,7 +74,6 @@ func newMetricBuilder(mc MetadataCache, useStartTimeMetric bool, startTimeMetric
 		droppedTimeseries:    0,
 		useStartTimeMetric:   useStartTimeMetric,
 		startTimeMetricRegex: regex,
-		includeResourceLabels: includeResourceLabels,
 	}
 }
 
@@ -98,7 +96,6 @@ func (b *metricBuilder) AddDataPoint(ls labels.Labels, t int64, v float64) error
 	case isInternalMetric(metricName):
 		b.hasInternalMetric = true
 		lm := ls.Map()
-		delete(lm, model.MetricNameLabel)
 		// See https://www.prometheus.io/docs/concepts/jobs_instances/#automatically-generated-labels-and-time-series
 		// up: 1 if the instance is healthy, i.e. reachable, or 0 if the scrape failed.
 		if metricName == scrapeUpMetricName && v != 1.0 {
@@ -113,7 +110,6 @@ func (b *metricBuilder) AddDataPoint(ls labels.Labels, t int64, v float64) error
 					zap.String("target_labels", fmt.Sprintf("%v", lm)))
 			}
 		}
-		return nil
 	case b.useStartTimeMetric && b.matchStartTimeMetric(metricName):
 		b.startTime = v
 	}
@@ -127,9 +123,9 @@ func (b *metricBuilder) AddDataPoint(ls labels.Labels, t int64, v float64) error
 		if m != nil {
 			b.metrics = append(b.metrics, m)
 		}
-		b.currentMf = newMetricFamily(metricName, b.mc, b.includeResourceLabels)
+		b.currentMf = newMetricFamily(metricName, b.mc, b.logger)
 	} else if b.currentMf == nil {
-		b.currentMf = newMetricFamily(metricName, b.mc, b.includeResourceLabels)
+		b.currentMf = newMetricFamily(metricName, b.mc, b.logger)
 	}
 
 	return b.currentMf.Add(metricName, ls, t, v)
@@ -160,38 +156,42 @@ func (b *metricBuilder) Build() ([]*metricspb.Metric, int, int, error) {
 
 // TODO: move the following helper functions to a proper place, as they are not called directly in this go file
 
-func isUsefulLabel(mType metricspb.MetricDescriptor_Type, labelKey string, includeResourceLabels bool) bool {
-	result := false
+func isUsefulLabel(mType metricspb.MetricDescriptor_Type, labelKey string) bool {
 	switch labelKey {
-	case model.MetricNameLabel:
-	case model.InstanceLabel:
-		result = includeResourceLabels
-	case model.SchemeLabel:
-	case model.MetricsPathLabel:
-	case model.JobLabel:
-		result = includeResourceLabels
+	case model.MetricNameLabel, model.InstanceLabel, model.SchemeLabel, model.MetricsPathLabel, model.JobLabel:
+		return false
 	case model.BucketLabel:
-		result = mType != metricspb.MetricDescriptor_GAUGE_DISTRIBUTION &&
+		return mType != metricspb.MetricDescriptor_GAUGE_DISTRIBUTION &&
 			mType != metricspb.MetricDescriptor_CUMULATIVE_DISTRIBUTION
 	case model.QuantileLabel:
-		result = mType != metricspb.MetricDescriptor_SUMMARY
-	default:
-		result = true
+		return mType != metricspb.MetricDescriptor_SUMMARY
 	}
-	return result
+	return true
 }
 
 // dpgSignature is used to create a key for data complexValue belong to a same group of a metric family
 func dpgSignature(orderedKnownLabelKeys []string, ls labels.Labels) string {
-	sign := make([]string, 0, len(orderedKnownLabelKeys))
+	size := 0
 	for _, k := range orderedKnownLabelKeys {
 		v := ls.Get(k)
 		if v == "" {
 			continue
 		}
-		sign = append(sign, k+"="+v)
+		// 2 enclosing quotes + 1 equality sign = 3 extra chars.
+		// Note: if any character in the label value requires escaping,
+		// we'll need more space than that, which will lead to some
+		// extra allocation.
+		size += 3 + len(k) + len(v)
 	}
-	return fmt.Sprintf("%#v", sign)
+	sign := make([]byte, 0, size)
+	for _, k := range orderedKnownLabelKeys {
+		v := ls.Get(k)
+		if v == "" {
+			continue
+		}
+		sign = strconv.AppendQuote(sign, k+"="+v)
+	}
+	return string(sign)
 }
 
 func normalizeMetricName(name string) string {

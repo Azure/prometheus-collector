@@ -15,6 +15,7 @@
 package internal
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/prometheus/prometheus/pkg/labels"
 	"github.com/prometheus/prometheus/pkg/textparse"
 	"github.com/prometheus/prometheus/scrape"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -35,19 +37,18 @@ type MetricFamily interface {
 }
 
 type metricFamily struct {
-	name              		string
-	mtype             		metricspb.MetricDescriptor_Type
-	mc                		MetadataCache
-	droppedTimeseries 		int
-	labelKeys         		map[string]bool
-	labelKeysOrdered  		[]string
-	metadata          		*scrape.MetricMetadata
-	groupOrders       		map[string]int
-	groups            		map[string]*metricGroup
-	includeResourceLabels 	bool
+	name              string
+	mtype             metricspb.MetricDescriptor_Type
+	mc                MetadataCache
+	droppedTimeseries int
+	labelKeys         map[string]bool
+	labelKeysOrdered  []string
+	metadata          *scrape.MetricMetadata
+	groupOrders       map[string]int
+	groups            map[string]*metricGroup
 }
 
-func newMetricFamily(metricName string, mc MetadataCache, includeResourceLabels bool) MetricFamily {
+func newMetricFamily(metricName string, mc MetadataCache, logger *zap.Logger) MetricFamily {
 	familyName := normalizeMetricName(metricName)
 
 	// lookup metadata based on familyName
@@ -63,20 +64,54 @@ func newMetricFamily(metricName string, mc MetadataCache, includeResourceLabels 
 			metadata.Metric = familyName
 			metadata.Type = textparse.MetricTypeUnknown
 		}
+	} else if !ok && isInternalMetric(metricName) {
+		metadata = defineInternalMetric(metricName, metadata, logger)
+	}
+	ocaMetricType := convToOCAMetricType(metadata.Type)
+	if ocaMetricType == metricspb.MetricDescriptor_UNSPECIFIED {
+		logger.Debug(fmt.Sprintf("Invalid metric : %s %+v", metricName, metadata))
 	}
 
 	return &metricFamily{
-		name:              		familyName,
-		mtype:             		convToOCAMetricType(metadata.Type),
-		mc:                		mc,
-		droppedTimeseries: 		0,
-		labelKeys:         		make(map[string]bool),
-		labelKeysOrdered:  		make([]string, 0),
-		metadata:          		&metadata,
-		groupOrders:       		make(map[string]int),
-		groups:            		make(map[string]*metricGroup),
-		includeResourceLabels: 	includeResourceLabels,
+		name:              familyName,
+		mtype:             ocaMetricType,
+		mc:                mc,
+		droppedTimeseries: 0,
+		labelKeys:         make(map[string]bool),
+		labelKeysOrdered:  make([]string, 0),
+		metadata:          &metadata,
+		groupOrders:       make(map[string]int),
+		groups:            make(map[string]*metricGroup),
 	}
+}
+
+// Define manually the metadata of prometheus scrapper internal metrics
+func defineInternalMetric(metricName string, metadata scrape.MetricMetadata, logger *zap.Logger) scrape.MetricMetadata {
+	if metadata.Metric != "" && metadata.Type != "" && metadata.Help != "" {
+		logger.Debug("Internal metric seems already fully defined")
+		return metadata
+	}
+	metadata.Metric = metricName
+
+	switch metricName {
+	case scrapeUpMetricName:
+		metadata.Type = textparse.MetricTypeGauge
+		metadata.Help = "The scraping was successful"
+	case "scrape_duration_seconds":
+		metadata.Unit = "seconds"
+		metadata.Type = textparse.MetricTypeGauge
+		metadata.Help = "Duration of the scrape"
+	case "scrape_samples_scraped":
+		metadata.Type = textparse.MetricTypeGauge
+		metadata.Help = "The number of samples the target exposed"
+	case "scrape_series_added":
+		metadata.Type = textparse.MetricTypeGauge
+		metadata.Help = "The approximate number of new series in this scrape"
+	case "scrape_samples_post_metric_relabeling":
+		metadata.Type = textparse.MetricTypeGauge
+		metadata.Help = "The number of samples remaining after metric relabeling was applied"
+	}
+	return metadata
 }
 
 func (mf *metricFamily) IsSameFamily(metricName string) bool {
@@ -90,15 +125,14 @@ func (mf *metricFamily) IsSameFamily(metricName string) bool {
 // from the same metric family we will need to keep track of what labels have ever been observed.
 func (mf *metricFamily) updateLabelKeys(ls labels.Labels) {
 	for _, l := range ls {
-		if isUsefulLabel(mf.mtype, l.Name, mf.includeResourceLabels) {
+		if isUsefulLabel(mf.mtype, l.Name) {
 			if _, ok := mf.labelKeys[l.Name]; !ok {
 				mf.labelKeys[l.Name] = true
 				// use insertion sort to maintain order
 				i := sort.SearchStrings(mf.labelKeysOrdered, l.Name)
-				labelKeys := append(mf.labelKeysOrdered, "")
-				copy(labelKeys[i+1:], labelKeys[i:])
-				labelKeys[i] = l.Name
-				mf.labelKeysOrdered = labelKeys
+				mf.labelKeysOrdered = append(mf.labelKeysOrdered, "")
+				copy(mf.labelKeysOrdered[i+1:], mf.labelKeysOrdered[i:])
+				mf.labelKeysOrdered[i] = l.Name
 			}
 		}
 	}
@@ -263,7 +297,7 @@ func (mg *metricGroup) sortPoints() {
 }
 
 func (mg *metricGroup) toDistributionTimeSeries(orderedLabelKeys []string) *metricspb.TimeSeries {
-	if !(mg.hasCount && mg.hasSum) || len(mg.complexValue) == 0 {
+	if !(mg.hasCount) || len(mg.complexValue) == 0 {
 		return nil
 	}
 	mg.sortPoints()
@@ -310,10 +344,10 @@ func (mg *metricGroup) toDistributionTimeSeries(orderedLabelKeys []string) *metr
 }
 
 func (mg *metricGroup) toSummaryTimeSeries(orderedLabelKeys []string) *metricspb.TimeSeries {
-	// expecting count and sum to be provided, however, in the following two cases, they can be missed.
+	// expecting count to be provided, however, in the following two cases, they can be missed.
 	// 1. data is corrupted
 	// 2. ignored by startValue evaluation
-	if !(mg.hasCount && mg.hasSum) {
+	if !(mg.hasCount) {
 		return nil
 	}
 	mg.sortPoints()

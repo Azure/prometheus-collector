@@ -13,7 +13,8 @@ import (
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
 	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 	//"github.com/vishiy/influxexporter"
-	"go.opentelemetry.io/collector/receiver/prometheusreceiver"
+	//"go.opentelemetry.io/collector/receiver/prometheusreceiver"
+	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 	"go.opentelemetry.io/collector/extension/healthcheckextension"
 	"go.opentelemetry.io/collector/extension/pprofextension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
@@ -34,7 +35,7 @@ func components() (component.Factories, error) {
 	}
 
 	receivers, err := component.MakeReceiverFactoryMap (
-		prometheusreceiver.NewFactory(),
+		privatepromreceiver.NewFactory(),
 	)
 
 	if err != nil {
