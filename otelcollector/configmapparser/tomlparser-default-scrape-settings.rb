@@ -71,14 +71,14 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
-      if controllerType == "ReplicaSet" && @kubeletEnabled && @cadvisorEnabled && @nodeexporterEnabled
+      if controllerType == "ReplicaSet" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
-      elsif controllerType == "DaemonSet" && @corednsEnabled && @kubeproxyEnabled && @apiserverEnabled && @kubestateEnabled
+      elsif controllerType == "DaemonSet" && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
       end
-    elsif @kubeletEnabled && @corednsEnabled && @cadvisorEnabled && @kubeproxyEnabled && @apiserverEnabled && @kubestateEnabled && @nodeexporterEnabled
+    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled
       @noDefaultsEnabled = true
       puts "config::No default scrape configs enabled"
     end

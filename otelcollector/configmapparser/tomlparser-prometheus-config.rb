@@ -26,7 +26,8 @@ require_relative "ConfigParseErrorLogger"
 @kubeproxyDefaultString = "job_name: kube-proxy\nscrape_interval: 30s\nkubernetes_sd_configs:\n- role: pod\nrelabel_configs:\n- action: keep\n  source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]\n  separator: '/'\n  regex: 'kube-system/kube-proxy.+'\n- source_labels:\n  - __address__\n  action: replace\n  target_label: __address__\n  regex: (.+?)(\\:\\d+)?\n  replacement: $$1:10249"
 @apiserverDefaultString = "job_name: kube-apiserver\nscrape_interval: 30s\nkubernetes_sd_configs:\n- role: endpoints\nscheme: https\ntls_config:\n  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n  insecure_skip_verify: true\nbearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\nrelabel_configs:\n- source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]\n  action: keep\n  regex: default;kubernetes;https"
 @kubestateDefaultString = "job_name: kube-state-metrics\nscrape_interval: 30s\nstatic_configs:\n- targets: ['$$KUBE_STATE_NAME$$.$$POD_NAMESPACE$$.svc.cluster.local:8080']"
-@nodeexporterDefaultStringRs = "job_name: node\nscheme: http\nscrape_interval: 30s\nkubernetes_sd_configs:\n- role: endpoints\n  namespaces:\n   names:\n   - $$POD_NAMESPACE$$\nrelabel_configs:\n- action: keep\n  source_labels: [__meta_kubernetes_endpoints_name]\n  regex: $$NODE_EXPORTER_NAME$$"
+@nodeexporterDefaultStringRsSimple = "job_name: node\nscheme: http\nscrape_interval: 30s\nkubernetes_sd_configs:\n- role: endpoints\n  namespaces:\n   names:\n   - $$POD_NAMESPACE$$\nrelabel_configs:\n- action: keep\n  source_labels: [__meta_kubernetes_endpoints_name]\n  regex: $$NODE_EXPORTER_NAME$$"
+@nodeexporterDefaultStringRsAdvanced = "job_name: node\nscheme: http\nscrape_interval: 30s\nkubernetes_sd_configs:\n- role: endpoints\n  namespaces:\n   names:\n   - $$POD_NAMESPACE$$\nrelabel_configs:\n- action: keep\n  source_labels: [__meta_kubernetes_endpoints_name]\n  regex: $$NODE_EXPORTER_NAME$$\nmetric_relabel_configs:\n- source_labels: [__name__]\n  action: keep\n  regex: \"up\""
 @nodeexporterDefaultStringDs = "job_name: node\nscheme: http\nscrape_interval: 30s\nstatic_configs:\n- targets: ['$$NODE_IP$$:$$NODE_EXPORTER_TARGETPORT$$']"
 
 # Use parser to parse the configmap toml file to a ruby structure
@@ -111,11 +112,13 @@ def populateSettingValuesFromConfigMap(configString)
     end
     if !ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].downcase == "true"
       if currentControllerType == @replicasetControllerType
-        if advancedMode == false
-          @nodeexporterDefaultStringRs = @nodeexporterDefaultStringRs.gsub('$$NODE_EXPORTER_NAME$$', ENV["NODE_EXPORTER_NAME"])
-          @nodeexporterDefaultStringRs = @nodeexporterDefaultStringRs.gsub('$$POD_NAMESPACE$$', ENV["POD_NAMESPACE"])
-          @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @nodeexporterDefaultStringRs)
+        nodeexporterDefaultStringRs = @nodeexporterDefaultStringRsSimple
+        if advancedMode == true
+          nodeexporterDefaultStringRs = @nodeexporterDefaultStringRsAdvanced
         end
+        nodeexporterDefaultStringRs = nodeexporterDefaultStringRs.gsub('$$NODE_EXPORTER_NAME$$', ENV["NODE_EXPORTER_NAME"])
+        nodeexporterDefaultStringRs = nodeexporterDefaultStringRs.gsub('$$POD_NAMESPACE$$', ENV["POD_NAMESPACE"])
+        @indentedConfig = addDefaultScrapeConfig(@indentedConfig, nodeexporterDefaultStringRs)
       else
         if advancedMode == true
           @nodeexporterDefaultStringDs = @nodeexporterDefaultStringDs.gsub('$$NODE_IP$$', ENV["NODE_IP"])
