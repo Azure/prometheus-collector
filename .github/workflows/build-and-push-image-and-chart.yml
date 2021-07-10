@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      #- vishwa/scale
+      - vishwa/scale
     paths-ignore:
       - '**.md'
   pull_request:
