@@ -73,11 +73,11 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 1
-              memory: 1Gi
+              cpu: 4
+              memory: 7Gi
             requests:
-              cpu: 250m
-              memory: 250Mi
+              cpu: 1
+              memory: 2Gi
           env:
             - name: CLUSTER
               value: "my-cluster-name"
@@ -245,11 +245,11 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
+              cpu: 1
+              memory: 2Gi
+            requests:
               cpu: 500m
               memory: 1Gi
-            requests:
-              cpu: 250m
-              memory: 500Mi
           env:
             - name: CLUSTER
               value: "my-cluster-name"

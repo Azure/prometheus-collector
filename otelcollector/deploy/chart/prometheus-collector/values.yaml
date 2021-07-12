@@ -48,14 +48,14 @@ mode:
 
 image:
   repository: mcr.microsoft.com/azuremonitor/containerinsights/cidev
-  tag: "prometheus-collector-vishwa_scale-07-09-2021-1d2d958b"
+  tag: "prometheus-collector-vishwa_scale-07-11-2021-fd846617"
   pullPolicy: IfNotPresent
 
 resources:
  deployment:
    limits:
      cpu: 4
-     memory: 4Gi
+     memory: 7Gi
    requests:
      cpu: 1
      memory: 2Gi

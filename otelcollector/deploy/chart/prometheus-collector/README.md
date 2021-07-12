@@ -95,9 +95,9 @@ kubectl create configmap my-collector-dev-release-prometheus-config --from-file=
 | image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/cidev"` |  |
 | image.tag | string | Optional | `"prometheus-collector-main-05-25-2021-0eeb4ffd"` |  |
 | internalSettings.intEnvironment | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes |
-| mode.advanced | bool | Optional | `false` | if mode.advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset
+| mode.advanced | bool | Optional | `false` | if mode.advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset. On bigger clusters (> 50+ nodes and > 1500+ pods), it is highly recommended to set this to `true`, as this will distribute the metric volumes to individual nodes as nodes & pods scale out & grow. Note:- When this is set to `true`, the `up` metric for the node target will be generated from the replica, so when the node (and daemonset in the node) becomes unvailable), the target availability can still be tracked.
 | resources.deployment.limits.cpu | string | Optional | `4` |  |
-| resources.deployment.limits.memory | string | Optional | `"4Gi"` |  |
+| resources.deployment.limits.memory | string | Optional | `"7Gi"` |  |
 | resources.deployment.requests.cpu | string | Optional | `"1"` |  |
 | resources.deployment.requests.memory | string | Optional | `"2Gi"` |  |
 | resources.daemonSet.limits.cpu | string | Optional | `1` |  |
