@@ -48,7 +48,7 @@ mode:
 
 image:
   repository: mcr.microsoft.com/azuremonitor/containerinsights/cidev
-  tag: "prometheus-vishwa-070521-3"
+  tag: "prometheus-collector-vishwa_scale-07-09-2021-1d2d958b"
   pullPolicy: IfNotPresent
 
 resources:

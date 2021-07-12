@@ -150,8 +150,9 @@ spec:
                 - -c
                 - /opt/microsoft/liveness/livenessprobe.sh
             initialDelaySeconds: 60
-            periodSeconds: 60
-            timeoutSeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
       affinity:
         nodeAffinity:
           # affinity to schedule on to ephemeral os node if its available
@@ -321,8 +322,9 @@ spec:
                 - -c
                 - /opt/microsoft/liveness/livenessprobe.sh
             initialDelaySeconds: 60
-            periodSeconds: 60
-            timeoutSeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Run inotify as a daemon to track changes to the mounted configmap.
-inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
+inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete,modify --format '%e : %T' --timefmt '+%s'
 
 echo "MODE="$MODE
 echo "CONTROLLER_TYPE="$CONTROLLER_TYPE
@@ -157,10 +157,10 @@ source ~/.bashrc
 # will need to rotate log file
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
       echo "starting otelcollector with DEFAULT prometheus configuration...."
-      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml --log-level ERROR --log-format json --metrics-level none &> /opt/microsoft/otelcollector/collector-log.txt &
+      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml --log-level ERROR --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 else
       echo "starting otelcollector...."
-      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level ERROR --log-format json --metrics-level none &> /opt/microsoft/otelcollector/collector-log.txt &
+      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level ERROR --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
 
 echo "started otelcollector"
