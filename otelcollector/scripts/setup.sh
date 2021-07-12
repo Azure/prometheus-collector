@@ -44,6 +44,12 @@ gem install tomlrb
 ##forceSilent='-o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"'
 #sudo apt-get install metricsext2=2.2021.302.1751-2918e9-~bionic -y
 
+#Get collector
+#wget https://github.com/open-telemetry/opentelemetry-collector/releases/download/v0.27.0/otelcol_linux_amd64
+#mkdir --parents /opt/microsoft/otelcollector27
+#mv ./otelcol_linux_amd64 /opt/microsoft/otelcollector27/otelcollector
+#chmod 777 /opt/microsoft/otelcollector27/otelcollector
+
 # Install promtools for prometheus config validation
 wget https://github.com/prometheus/prometheus/releases/download/v2.25.2/prometheus-2.25.2.linux-amd64.tar.gz
 tar -xf $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz

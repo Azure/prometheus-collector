@@ -18,7 +18,7 @@ func main() {
 		Version:     "1.0.0",
 	}
 
-	app, err := service.New(service.CollectorSettings{BuildInfo: info, Factories: factories})
+	app, err := service.New(service.Parameters{BuildInfo: info, Factories: factories})
 	if err != nil {
 		log.Fatal("failed to construct the collector server: %w", err)
 	}

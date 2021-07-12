@@ -1,0 +1,157 @@
+{{- if .Values.mode.advanced  }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ template "prometheus-collector.fullname" . }}-node
+  namespace: {{ .Release.Namespace }}
+  labels:
+    component: {{ template "prometheus-collector.fullname" . }}
+spec:
+  selector:
+    matchLabels:
+      dsName: {{ template "prometheus-collector.fullname" . }}-node
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        dsName: {{ template "prometheus-collector.fullname" . }}-node
+      annotations:
+        agentVersion: "0.0.0.1"
+        schema-versions: "v1"
+    spec:
+      serviceAccountName: {{ template "prometheus-collector.fullname" . }}-serviceaccount
+      containers:
+        - name: prometheus-collector
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.resources.daemonSet | nindent 12 }}
+          env:
+            - name: CLUSTER
+              value: {{ required "clusterName is required" .Values.clusterName | toString | quote }}
+            {{- if .Values.internalSettings.intEnvironment  }}
+            - name: ME_ADDITIONAL_FLAGS
+              value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
+            {{- end }}  
+            - name: CONTROLLER_TYPE
+              value: "DaemonSet"
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONTAINER_CPU_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.cpu
+                  divisor: 1m
+            - name: CONTAINER_MEMORY_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.memory
+                  divisor: 1Mi
+            - name: KUBE_STATE_NAME
+              value: {{ include "prometheus-collector.kubestatemetricsfullname" . }}
+            - name: NODE_EXPORTER_NAME
+              value: {{ include "prometheus-collector.nodeexporterfullname" . }}
+            - name: NODE_EXPORTER_TARGETPORT
+              value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
+            - name: KUBE_STATE_VERSION
+              value: "{{ index .Values "kube-state-metrics" "image" "repository" }}:{{ index .Values "kube-state-metrics" "image" "tag" }}"
+            - name: NODE_EXPORTER_VERSION
+              value: "{{ index .Values "prometheus-node-exporter" "image" "repository" }}:{{ index .Values "prometheus-node-exporter" "image" "tag" }}"
+            {{- if .Values.mode.advanced  }}
+            - name: MODE
+              value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- else }}
+            - name: MODE
+              value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- end }}
+          securityContext:
+            privileged: false
+          volumeMounts:
+            - mountPath: /etc/config/settings
+              name: settings-vol-config
+              readOnly: true
+            - mountPath: /etc/config/settings/prometheus
+              name: prometheus-config-vol
+              readOnly: true
+            - mountPath: /etc/config/settings/akv
+              name: secrets-store-inline
+              readOnly: true
+            - name: host-log-containers
+              readOnly: true
+              mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - /opt/microsoft/liveness/livenessprobe.sh
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - labelSelector:
+                matchExpressions:
+                  - key: beta.kubernetes.io/os
+                    operator: In
+                    values:
+                    - linux
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+      # The following tolerations are removed for AKS, this is only required for non AKS
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+        - operator: "Exists"
+          effect: "NoExecute"
+        - operator: "Exists"
+          effect: "PreferNoSchedule"
+      volumes:
+        - name: settings-vol-config
+          configMap:
+            name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
+            optional: true
+        - name: prometheus-config-vol
+          configMap:
+            name: {{ .Release.Name }}-prometheus-config-node
+            optional: true
+        - name: host-log-containers
+          hostPath:
+            path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "{{ template "prometheus-collector.fullname" . }}-azure-kv-metricstore"
+            nodePublishSecretRef:           # Only required when using service principal mode
+              name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
+{{- end }}

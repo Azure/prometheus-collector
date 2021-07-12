@@ -13,7 +13,7 @@ COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
 COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
 COPY ./opentelemetry-collector-builder/otelcollector ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/microsoft/otelcollector/
 COPY ./scripts/setup.sh ./scripts/main.sh $tmpdir/
-COPY ./metricextension/me.config /usr/sbin/
+COPY ./metricextension/me.config ./metricextension/me_ds.config /usr/sbin/
 COPY ./telegraf/telegraf-prometheus-collector.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/

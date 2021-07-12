@@ -1,7 +1,10 @@
 #!/bin/bash
 
 #Run inotify as a daemon to track changes to the mounted configmap.
-inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
+inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete,modify --format '%e : %T' --timefmt '+%s'
+
+echo "MODE="$MODE
+echo "CONTROLLER_TYPE="$CONTROLLER_TYPE
 
 #resourceid override.
 if [ -z $AKS_RESOURCE_ID ]; then
@@ -139,13 +142,25 @@ service cron start
 #start otelcollector
 echo "Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
 
+#get controller kind in lowercase, trimmed
+controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
+if [ $controllerType = "replicaset" ]; then
+      meConfigFile="/usr/sbin/me.config"
+else
+      meConfigFile="/usr/sbin/me_ds.config"
+fi
+
+export ME_CONFIG_FILE=$meConfigFile	
+echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
+source ~/.bashrc
+
 # will need to rotate log file
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
       echo "starting otelcollector with DEFAULT prometheus configuration...."
-      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml --log-level ERROR --log-format json --metrics-level none &> /opt/microsoft/otelcollector/collector-log.txt &
+      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 else
       echo "starting otelcollector...."
-      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level ERROR --log-format json --metrics-level none &> /opt/microsoft/otelcollector/collector-log.txt &
+      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
 
 echo "started otelcollector"
@@ -184,10 +199,12 @@ source ~/.bashrc
 echo "AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
 
 echo "starting metricsextension"
+
+echo "ME_CONFIG_FILE"$ME_CONFIG_FILE
 # will need to rotate the entire log location
 # will need to remove accountname fetching from env
 # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
-/usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath /usr/sbin/me.config $ME_ADDITIONAL_FLAGS &
+/usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS &
 
 #get ME version
 dpkg -l | grep metricsext | awk '{print $2 " " $3}'
