@@ -3,14 +3,12 @@ on:
   push:
     branches:
       - main
-      - vishwa/scale
     paths-ignore:
       - '**.md'
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
       - main
-      - vishwa/scale
     paths-ignore:
       - '**.md'
 jobs:

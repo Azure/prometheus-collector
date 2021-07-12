@@ -3,6 +3,8 @@
 
 # Configure metrics collection
 
+Check the [existing limitations](./PromMDMfaq.md#known-issues) on the collection side.
+
 When you deployed the prometheus-collector, it set up the following targets to be scraped by default every 30 seconds - 'coreDns', 'kubelet', cAdvisor', 'kubeproxy', 'apiServer', 'kube-state-metrics' and 'node'.
   
 If these are the only targets you want to scrape, then you can proceed further to [Setting up Grafana](~/metrics/prometheus/PromMDMTutorial4SetUpGrafanaAMG.md).  
