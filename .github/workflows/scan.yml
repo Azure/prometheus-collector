@@ -16,7 +16,8 @@ jobs:
         with:
           image-ref: "${{ github.event.inputs.imageToScan }}"
           format: 'table'
-          output: 'trivy-results.sarif'
+          #ignore format
+          #output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
           #skip-dirs: 'opt/telegraf/telegraf,opt/microsoft/otelcollector/otelcollector'
