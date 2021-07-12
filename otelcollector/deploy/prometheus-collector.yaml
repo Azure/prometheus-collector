@@ -69,7 +69,7 @@ spec:
       serviceAccountName: prometheus-collector
       containers:
         - name: prometheus-collector
-          image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-main-05-25-2021-0eeb4ffd"
+          image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-main-07-12-2021-f2cafbf6"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
@@ -241,7 +241,7 @@ spec:
       serviceAccountName: prometheus-collector
       containers:
         - name: prometheus-collector
-          image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-main-05-25-2021-0eeb4ffd"
+          image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-main-07-12-2021-f2cafbf6"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
