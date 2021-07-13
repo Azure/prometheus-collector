@@ -5,8 +5,6 @@
 
 For deploying the metrics collection agent, we will leverage [HELM](https://kubernetes.io/blog/2016/10/helm-charts-making-it-simple-to-package-and-deploy-apps-on-kubernetes/).  
 
-> HELM is strongly recommended. If you cannot use HELM see these alternate instructions to [deploy the agent manually](~/metrics/Prometheus/PromMDMDeployAgentManual.md)  
-
 ## Install prometheus-collector chart in your cluster
 
 The prometheus-collector is the name of the agent pod (replica set) that will collect Prometheus metrics from your Kubernetes cluster.
