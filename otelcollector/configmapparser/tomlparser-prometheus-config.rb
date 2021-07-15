@@ -143,7 +143,7 @@ def addDefaultScrapeConfig(indentedConfig, defaultScrapeConfig)
     indexToAddAt = scrapeConfigIndex + scrapeConfigString.length
 
     # Get how far indented the existing scrape configs are and add the scrape config at the same indentation
-    matched = indentedConfig.match("scrape_configs\s*:\s*\n(\s*)-(\s+).*")
+    matched = indentedConfig.match(/scrape_configs\s*:\s*.*\s*.*\s*\n(\s*)-(\s+).*/)
     if !matched.nil? && !matched.captures.nil? && matched.captures.length > 1
       whitespaceBeforeDash = matched.captures[0]
       whiteSpaceAfterDash = matched.captures[1]
@@ -156,6 +156,8 @@ def addDefaultScrapeConfig(indentedConfig, defaultScrapeConfig)
 
       # Add the indented scrape config to the existing config
       indentedConfig = indentedConfig.insert(indexToAddAt, indentedDefaultConfig)
+    else
+      puts "config::Could not find regex match for place to add default configs"
     end
 
   # The section "scrape_configs:" isn't in config, so add it at the beginning and the extra scrape config underneath
