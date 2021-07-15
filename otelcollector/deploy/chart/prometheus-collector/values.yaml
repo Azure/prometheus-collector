@@ -48,7 +48,7 @@ mode:
 
 image:
   repository: mcr.microsoft.com/azuremonitor/containerinsights/cidev
-  tag: "prometheus-collector-main-07-12-2021-f2cafbf6"
+  tag: "prometheus-collector-main-07-15-2021-08872f50"
   pullPolicy: IfNotPresent
 
 resources:
