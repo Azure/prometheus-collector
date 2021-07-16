@@ -64,8 +64,9 @@ def populateSettingValuesFromConfigMap(configString)
       advancedMode = true
     end
     
-    # Indent for the otelcollector config
+    # Indent for the otelcollector config and remove comments
     @indentedConfig = configString.gsub(/\R+/, "\n        ")
+    @indentedConfig = @indentedConfig.gsub(/#.*/, "")
     if !ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].downcase == "true"
       if currentControllerType == @replicasetControllerType
         if advancedMode == false
@@ -143,7 +144,7 @@ def addDefaultScrapeConfig(indentedConfig, defaultScrapeConfig)
     indexToAddAt = scrapeConfigIndex + scrapeConfigString.length
 
     # Get how far indented the existing scrape configs are and add the scrape config at the same indentation
-    matched = indentedConfig.match(/scrape_configs\s*:\s*.*\s*.*\s*\n(\s*)-(\s+).*/)
+    matched = indentedConfig.match(/scrape_configs\s*:\s*\n(\s*)-(\s+).*/)
     if !matched.nil? && !matched.captures.nil? && matched.captures.length > 1
       whitespaceBeforeDash = matched.captures[0]
       whiteSpaceAfterDash = matched.captures[1]
