@@ -1236,7 +1236,7 @@
       "type": "row"
     }
   ],
-  "refresh": "10s",
+  "refresh": "1m",
   "schemaVersion": 27,
   "style": "dark",
   "tags": [

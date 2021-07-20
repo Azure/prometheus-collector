@@ -3145,7 +3145,7 @@
       ]
     }
   ],
-  "refresh": "",
+  "refresh": "1m",
   "schemaVersion": 27,
   "style": "dark",
   "tags": [
