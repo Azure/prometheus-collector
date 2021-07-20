@@ -1,3 +1,4 @@
+{{- if .Values.prometheusConfig }}
 kind: ConfigMap
 apiVersion: v1
 metadata:
@@ -8,3 +9,4 @@ metadata:
 data:
   prometheus-config: |-
   {{ .Values.prometheusConfig | nindent 4 }}
+{{- end }}
