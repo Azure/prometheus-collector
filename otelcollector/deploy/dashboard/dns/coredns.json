@@ -33,7 +33,7 @@
       }
     ]
   },
-  "description": "A dashboard for the CoreDNS DNS server with updated metrics for version 1.7.0+.  Based on the CoreDNS dashboard by buhay.",
+  "description": "Source-https://github.com/monitoring-mixins/website/blob/master/assets/coredns/dashboards/coredns.json",
   "editable": true,
   "gnetId": 12539,
   "graphTooltip": 0,
