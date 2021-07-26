@@ -46,7 +46,7 @@ gem install tomlrb
 
 #Get collector
 #wget https://github.com/open-telemetry/opentelemetry-collector/releases/download/v0.29.0/otelcol_linux_amd64
-#kdir --parents /opt/microsoft/otelcollector29
+#mkdir --parents /opt/microsoft/otelcollector29
 #mv ./otelcol_linux_amd64 /opt/microsoft/otelcollector29/otelcollector
 #chmod 777 /opt/microsoft/otelcollector29/otelcollector
 
