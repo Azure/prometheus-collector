@@ -1,8 +1,9 @@
-name: build-and-push-image-and-chart
+name: build-and-push-image-and-chart-test
 on:
   push:
     branches:
       - main
+      - grace/test-helm-chart-version
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
@@ -37,14 +38,14 @@ jobs:
         run: echo "IMAGETAG_TELEMETRY=${IMAGE_TAG_NAME}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
-      - name: Set-Helm-chart-version
-        run: echo "HELM_CHART_VERSION=0.0.1" >> $GITHUB_ENV
-      - name: Set-Helm-tag
-        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Checkout-code
         uses: actions/checkout@v2
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version && helm version && docker version
+      - name: Set-Helm-chart-version
+        run: major_minor=$(cat ./otelcollector/deploy/chart/prometheus-collector/chartversion) && echo "HELM_CHART_VERSION=${major_minor}.${GITHUB_RUN_ID}" >> $GITHUB_ENV
+      - name: Set-Helm-tag
+        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Run-Helm-lint
         run: helm dependency update ./otelcollector/deploy/chart/prometheus-collector/ && helm lint ./otelcollector/deploy/chart/prometheus-collector/ --set "azureKeyVault.name=containerinsightstest1kv,azureKeyVault.pfxCertNames={containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx},azureKeyVault.tenantId=72f988bf-****-41af-****-2d7cd011db47,clusterName=mydevcluster,azureMetricAccount.defaultAccountName=containerinsightsgenevaaccount1,azureKeyVault.clientId=70937f05-****-4fc0-****-de917f2a9402,azureKeyVault.clientSecret=**********************************" --with-subcharts
       - name: Install-build-dependencies
@@ -66,23 +67,25 @@ jobs:
           skip-dirs: 'opt/telegraf/telegraf,opt/microsoft/otelcollector/otelcollector,opt/microsoft/otelcollector27/otelcollector'
           exit-code: '1'
           timeout: '5m0s'
+      - name: Set-Helm-chart-versioning
+        run: cd ./otelcollector/deploy/chart/prometheus-collector/ && envsubst < Chart-template.yaml > Chart.yaml && envsubst < values-template.yaml > values.yaml
       - name: Save-Helm-chart-to-local-cache
-        run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm chart save . ${{ env.HELMTAG }}
+        run: helm chart save . ${{ env.HELMTAG }}
       - name: List-local-Helm-Charts
         run: helm chart list
-      - name: Login-to-ACR-thru-Docker
-        if: github.event_name != 'pull_request'
-        run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
-      - name: Publish-docker-image-to-ACR
-        if: github.event_name != 'pull_request'
-        run: |
-            docker push ${{ env.IMAGETAG }}
-      - name: Login-to-ACR-thru-Helm
-        if: github.event_name != 'pull_request'
-        run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
-      - name: Publish-Helm-chart-to-ACR
-        if: github.event_name != 'pull_request'
-        run: helm chart push ${{ env.HELMTAG }}
+      #- name: Login-to-ACR-thru-Docker
+        #if: github.event_name != 'pull_request'
+        #run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
+      #- name: Publish-docker-image-to-ACR
+        #if: github.event_name != 'pull_request'
+        #run: |
+      #      docker push ${{ env.IMAGETAG }}
+      #- name: Login-to-ACR-thru-Helm
+        #if: github.event_name != 'pull_request'
+        #run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
+      #- name: Publish-Helm-chart-to-ACR
+        #if: github.event_name != 'pull_request'
+        #run: helm chart push ${{ env.HELMTAG }}
       #- name: Tag-this-push
       #  uses: actions-ecosystem/action-push-tag@v1
       #  if: github.event_name != 'pull_request'
