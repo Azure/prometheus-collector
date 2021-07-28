@@ -43,7 +43,7 @@ jobs:
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version && helm version && docker version
       - name: Set-Helm-chart-version
-        run: major_minor=$(cat ./otelcollector/deploy/chart/prometheus-collector/chartversion) && echo "HELM_CHART_VERSION=${major_minor}.${GITHUB_RUN_ID}" >> $GITHUB_ENV
+        run: major_minor=$(cat ./otelcollector/deploy/chart/prometheus-collector/chartversion) && echo "HELM_CHART_VERSION=${major_minor}.${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
       - name: Set-Helm-tag
         run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-Helm-chart-versioning
