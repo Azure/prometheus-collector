@@ -8,7 +8,7 @@ ENV AZMON_COLLECT_ENV False
 ENV tmpdir /opt
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
-COPY ./logrotate/prometheus-collector-log-files.conf /etc/logrotate.d/
+COPY ./logrotate/prometheus-collector /etc/logrotate.d/
 RUN apt-get update && apt-get install -y libc-bin wget openssl curl sudo init-system-helpers net-tools cron vim apt-transport-https locales ruby-full gnupg logrotate
 RUN apt-get upgrade libsystemd0 -y
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
