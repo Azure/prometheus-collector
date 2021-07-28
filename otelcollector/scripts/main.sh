@@ -137,7 +137,7 @@ fi
 source ~/.bashrc
 
 #start cron daemon for logrotate
-service cron start
+service cron restart
 
 #start otelcollector
 echo "Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"

@@ -20,6 +20,7 @@ COPY ./telegraf/telegraf-prometheus-collector.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
+COPY /etc/cron.daily/logrotate /etc/cron.hourly/
 
 RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
 CMD [ "/opt/main.sh" ]

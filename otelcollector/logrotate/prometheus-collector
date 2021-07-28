@@ -1,3 +1,4 @@
+#you will see the status of eah of these files' rotate in var/lib/logrotate/status
 #Metrics extension log file
 /MetricsExtensionConsoleDebugLog.log {
         maxsize 1M
