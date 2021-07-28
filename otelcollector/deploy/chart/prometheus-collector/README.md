@@ -39,12 +39,12 @@ Kubernetes: `>=1.16.0-0`
 - **Step 4** : Install csi driver & secrets store provider for azure KeyVault in your cluster
 ```shell 
 helm repo add csi-secrets-store-provider-azure https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/charts 
-helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --namespace <my_any_namespace> --create-namespace
+helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --set secrets-store-csi-driver.enableSecretRotation=true --namespace <my_any_namespace> --create-namespace
 ```
   **Example** :-
 ```shell
 helm repo add csi-secrets-store-provider-azure https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/charts
-helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --namespace csi --create-namespace
+helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --set secrets-store-csi-driver.enableSecretRotation=true --namespace csi --create-namespace
 ```
 
 - **Step 5** : Pull, Export & Install prometheus-collector chart in your cluster

@@ -63,14 +63,14 @@ For this we will leverage [HELM](https://kubernetes.io/blog/2016/10/helm-charts-
 
 ```shell
 helm repo add csi-secrets-store-provider-azure https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/charts 
-helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --namespace <my_any_namespace> --create-namespace
+helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --set secrets-store-csi-driver.enableSecretRotation=true --namespace <my_any_namespace> --create-namespace
 ```
 
 **Example** :-
 
 ```shell
 helm repo add csi-secrets-store-provider-azure https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/charts
-helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --namespace csi --create-namespace
+helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --set secrets-store-csi-driver.enableSecretRotation=true --namespace csi --create-namespace
 ```
 
 #### Register certificate with Geneva Metrics
