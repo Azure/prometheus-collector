@@ -1,0 +1,74 @@
+# Default values for prometheus-collector.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+scrapeTargets:
+  # -- when true, automatically scrape coredns service in the k8s cluster without any additional scrape config
+  coreDns: true
+  # -- when true, automatically scrape kubelet in every node in the k8s cluster without any additional scrape config
+  kubelet: true
+  # -- when true, automatically scrape cAdvisor in every node in the k8s cluster without any additional scrape config
+  cAdvisor: true
+  # -- when true, automatically scrape the kubernetes proxy in the k8s cluster without any additional scrape config
+  kubeProxy: true
+  # -- when true, automatically scrape the kubernetes api server in the k8s cluster without any additional scrape config
+  apiServer: true
+  # -- when true, automatically install kube-state-metrics chart and then scrape kube-state-metrics in the k8s cluster without any additional scrape config
+  kubeState: true
+  # -- when true, automatically install prometheus-node-exporter chart and then scrape node exporters (linux only) in the k8s cluster without any additional scrape config
+  nodeExporter: true
+
+azureMetricAccount:
+  # -- default metric account name to ingest metrics into. This will be the account used if metric itself does not have account 'hinting' label. The certificate for this account should be specified in one of the further arguments below here
+  defaultAccountName: ""  #required
+
+#This setting holds information about azure key vault, where Pfx certificates are stored for your metroc account(s)
+azureKeyVault:
+  # -- name of the azure key vault resource
+  name: "" #required
+  # -- tenantid for the azure key vault resource
+  tenantId: "" #required
+  # -- clientid for a service principal that has access to read the Pfx certificates from keyvault specified above
+  clientId: "" #required
+  # -- client secret for the above service principal
+  clientSecret: "" #required
+  # -- name of the Pfx certificate(s) - one per metric account
+  pfxCertNames: [] #required
+
+# -- name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped
+clusterName: "" #required
+
+#do not use any of the internal settings. This is for testing purposes
+internalSettings:
+  intEnvironment: false
+
+#if advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset
+mode:
+  advanced: false
+
+image:
+  repository: ${ACR_REGISTRY}${ACR_REPOSITORY}
+  tag: ${IMAGE_TAG_NAME}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}
+  pullPolicy: IfNotPresent
+
+resources:
+ deployment:
+   limits:
+     cpu: 4
+     memory: 7Gi
+   requests:
+     cpu: 1
+     memory: 2Gi
+ daemonSet:
+   limits:
+     cpu: 1
+     memory: 2Gi
+   requests:
+     cpu: 500m
+     memory: 1Gi
+kube-state-metrics:
+  nodeSelector:
+    kubernetes.io/os: linux
+prometheus-node-exporter:
+  nodeSelector:
+    kubernetes.io/os: linux
