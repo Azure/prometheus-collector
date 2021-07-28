@@ -66,7 +66,11 @@ func newMetricFamily(metricName string, mc MetadataCache, logger *zap.Logger) Me
 		}
 	} else if !ok && isInternalMetric(metricName) {
 		metadata = defineInternalMetric(metricName, metadata, logger)
+	} else if !ok {
+		logger.Debug(fmt.Sprintf("Metadata unknown : %s %+v", metricName, metadata))
+		metadata.Type = textparse.MetricTypeUnknown
 	}
+
 	ocaMetricType := convToOCAMetricType(metadata.Type)
 	if ocaMetricType == metricspb.MetricDescriptor_UNSPECIFIED {
 		logger.Debug(fmt.Sprintf("Invalid metric : %s %+v", metricName, metadata))
