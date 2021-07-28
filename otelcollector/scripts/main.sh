@@ -113,10 +113,10 @@ if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
       /opt/promtool check config /etc/config/settings/prometheus/prometheus-config
 
       # Use default config if specified config is invalid
-      if [ $? -ne 0 ]; then
-            echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-            export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
-      fi
+      # if [ $? -ne 0 ]; then
+      #       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+      #       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
+      # fi
 else
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
