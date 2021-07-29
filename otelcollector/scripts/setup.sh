@@ -78,6 +78,9 @@ sudo apt-get install inotify-tools -y
 # This is because we are keeping the same fluentbit version but have upgraded ubuntu
 sudo apt-get install td-agent-bit=1.6.8 -y
 
+# setup hourly cron for logrotate
+cp /etc/cron.daily/logrotate /etc/cron.hourly/
+
 #cleanup all install
 rm -f $TMPDIR/metricsext2*.deb
 rm -f $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz
