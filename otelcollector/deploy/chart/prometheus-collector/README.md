@@ -49,8 +49,8 @@ helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-pr
 
 - **Step 5** : Pull, Export & Install prometheus-collector chart in your cluster
 ```shell
-helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-07-29-2021-4c6a3691
-helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-07-29-2021-4c6a3691 .
+helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-07-29-2021-34a65d59
+helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-07-29-2021-34a65d59 .
 helm dependency update ./prometheus-collector
 
 helm upgrade --install <chart_release_name> ./prometheus-collector --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --namespace=<my_prom_collector_namespace> --create-namespace
