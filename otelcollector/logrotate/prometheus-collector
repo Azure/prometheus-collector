@@ -1,7 +1,7 @@
 #you will see the status of eah of these files' rotate in var/lib/logrotate/status
 #Metrics extension log file
 /MetricsExtensionConsoleDebugLog.log {
-        maxsize 1M
+        maxsize 10M
         daily
         copytruncate
         missingok
@@ -12,7 +12,7 @@
 
 #Collector log file
 /opt/microsoft/otelcollector/collector-log.txt {
-        maxsize 1M
+        maxsize 10M
         daily
         copytruncate
         missingok
