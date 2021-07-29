@@ -16,8 +16,8 @@ To deploy the agent we will leverage HELM again. At this step you will need to p
 > Note you must set the following environment variable for the below commands to work: HELM_EXPERIMENTAL_OCI=1
 
 ```shell
-helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-07-15-2021-244ea4c0
-helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-07-15-2021-244ea4c0 .
+helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-07-29-2021-4c6a3691
+helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-07-29-2021-4c6a3691 .
 helm dependency update ./prometheus-collector
 
 helm upgrade --install <chart_release_name> ./prometheus-collector --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --namespace=<my_prom_collector_namespace> --create-namespace
