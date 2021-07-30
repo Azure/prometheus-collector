@@ -43,7 +43,7 @@ jobs:
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version && helm version && docker version
       - name: Set-Helm-chart-version
-        run: version=$(cat ./VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
+        run: version=$(cat ./otelcollector/VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
       - name: Set-Helm-tag
         run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
       - name: Set-Helm-chart-versioning
