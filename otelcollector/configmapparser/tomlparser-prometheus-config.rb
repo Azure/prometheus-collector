@@ -64,9 +64,13 @@ def populateSettingValuesFromConfigMap(configString)
       advancedMode = true
     end
     
-    # Indent for the otelcollector config and remove comments
+    # Indent for the otelcollector config
     @indentedConfig = configString.gsub(/\R+/, "\n        ")
-    @indentedConfig = @indentedConfig.gsub(/#.*/, "")
+
+    # Remove comments from config
+    # See for regex: https://stackoverflow.com/questions/11502598/how-to-match-something-with-regex-that-is-not-between-two-special-characters
+    @indentedConfig = @indentedConfig.gsub(/#(?=(?:(?:\\.|[^"^'\\])*["'](?:\\.|[^"^'\\])*["'])*(?:\\.|[^"^'\\])*\Z).*/, "")
+
     if !ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].downcase == "true"
       if currentControllerType == @replicasetControllerType
         if advancedMode == false
