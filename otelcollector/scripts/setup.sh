@@ -57,9 +57,9 @@ cp -f $TMPDIR/prometheus-2.25.2.linux-amd64/promtool /opt/promtool
 chmod 777 /opt/promtool
 
 # Install Telegraf
-wget https://dl.influxdata.com/telegraf/releases/telegraf-1.18.2_linux_amd64.tar.gz
-tar -zxvf telegraf-1.18.2_linux_amd64.tar.gz
-mv /opt/telegraf-1.18.2/usr/bin/telegraf /opt/telegraf/telegraf
+wget https://dl.influxdata.com/telegraf/releases/telegraf-1.19.1_linux_amd64.tar.gz
+tar -zxvf telegraf-1.19.1_linux_amd64.tar.gz
+mv /opt/telegraf-1.19.1/usr/bin/telegraf /opt/telegraf/telegraf
 chmod 777 /opt/telegraf/telegraf
 
 # Install fluent-bit
@@ -78,9 +78,12 @@ sudo apt-get install inotify-tools -y
 # This is because we are keeping the same fluentbit version but have upgraded ubuntu
 sudo apt-get install td-agent-bit=1.6.8 -y
 
+# setup hourly cron for logrotate
+cp /etc/cron.daily/logrotate /etc/cron.hourly/
+
 #cleanup all install
 rm -f $TMPDIR/metricsext2*.deb
 rm -f $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz
 rm -rf $TMPDIR/prometheus-2.25.2.linux-amd64
 rm -f $TMPDIR/telegraf*.gz
-rm -rf $TMPDIR/telegraf-1.18.2/
+rm -rf $TMPDIR/telegraf-1.19.1/
