@@ -1,0 +1,33 @@
+#you will see the status of eah of these files' rotate in var/lib/logrotate/status
+#Metrics extension log file
+/MetricsExtensionConsoleDebugLog.log {
+        maxsize 10M
+        daily
+        copytruncate
+        missingok
+        notifempty
+        rotate 3
+        compress
+}
+
+#Collector log file
+/opt/microsoft/otelcollector/collector-log.txt {
+        maxsize 10M
+        daily
+        copytruncate
+        missingok
+        notifempty
+        rotate 3
+        compress
+}
+
+#fluentbit log file
+/opt/fluent-bit/fluent-bit.log {
+        maxsize 1M
+        daily
+        copytruncate
+        missingok
+        notifempty
+        rotate 3
+        compress
+}

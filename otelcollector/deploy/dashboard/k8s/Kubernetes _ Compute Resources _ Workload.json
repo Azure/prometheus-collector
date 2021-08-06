@@ -354,7 +354,7 @@
                       {
                         "targetBlank": false,
                         "title": "Drill down",
-                        "url": "./d/6581e46e4e5c7ba40a07646395ef7b23/k8s-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
+                        "url": "./d/6581e46e4e5c7ba40a07646395ef7b23/kubernetes-compute-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
                       }
                     ]
                   },
@@ -769,7 +769,7 @@
                       {
                         "targetBlank": false,
                         "title": "Drill down",
-                        "url": "./d/6581e46e4e5c7ba40a07646395ef7b23/k8s-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
+                        "url": "./d/6581e46e4e5c7ba40a07646395ef7b23/kubernetes-compute-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
                       }
                     ]
                   },
@@ -1093,7 +1093,7 @@
                       {
                         "targetBlank": false,
                         "title": "Drill down",
-                        "url": "./d/6581e46e4e5c7ba40a07646395ef7b23/k8s-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
+                        "url": "./d/6581e46e4e5c7ba40a07646395ef7b23/kubernetes-compute-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
                       }
                     ]
                   },

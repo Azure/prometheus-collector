@@ -34,7 +34,7 @@
 helm repo add csi-secrets-store-provider-azure https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/charts 
 ```
 ```shell 
-helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --namespace kube-system 
+helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --set secrets-store-csi-driver.enableSecretRotation=true --namespace kube-system 
 ```
 
 #### Step 5 : Apply the secretProviderClass.yaml that you updated step-2
