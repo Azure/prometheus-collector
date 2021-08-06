@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	errNilScrapeConfig = errors.New("expecting a non-nil ScrapeConfig")
+	errNilScrapeConfig = errors.New("Rashmi-prom-collector-logs ----------please provide some scrape configs--------------------")
 )
 
 // NewFactory creates a new Prometheus receiver factory.
