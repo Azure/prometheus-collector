@@ -51,6 +51,7 @@ var _ config.CustomUnmarshable = (*Config)(nil)
 // Validate checks the receiver configuration is valid
 func (cfg *Config) Validate() error {
 	if cfg.PrometheusConfig != nil && len(cfg.PrometheusConfig.ScrapeConfigs) == 0 {
+		fmt.Errorf("Rashmi-prom-collector-logs ----------please provide some scrape configs--------------------\n")
 		return errNilScrapeConfig
 	}
 	return nil
