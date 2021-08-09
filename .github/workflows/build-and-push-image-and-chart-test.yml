@@ -32,24 +32,32 @@ jobs:
         run: echo "IMAGE_TAG_DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
+      - name: Set-Helm-chart-version
+        run: version=$(cat ./otelcollector/VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
       - name: Set-image-tag
-        run: echo "IMAGETAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+        run: echo "IMAGETAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${HELM_CHART_VERSION}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-image-telemetry-tag
-        run: echo "IMAGETAG_TELEMETRY=${IMAGE_TAG_NAME}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+        run: echo "IMAGETAG_TELEMETRY=${IMAGE_TAG_NAME}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${HELM_CHART_VERSION}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
       - name: Checkout-code
         uses: actions/checkout@v2
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version && helm version && docker version
-      - name: Set-Helm-chart-version
-        run: version=$(cat ./otelcollector/VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
       - name: Set-Helm-tag
-        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${HELM_CHART_VERSION}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-Helm-chart-versioning
         run: envsubst < ./otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < ./otelcollector/deploy/chart/prometheus-collector/values-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/values.yaml
       - name: Run-Helm-lint
         run: helm dependency update ./otelcollector/deploy/chart/prometheus-collector/ && helm lint ./otelcollector/deploy/chart/prometheus-collector/ --set "azureKeyVault.name=containerinsightstest1kv,azureKeyVault.pfxCertNames={containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx},azureKeyVault.tenantId=72f988bf-****-41af-****-2d7cd011db47,clusterName=mydevcluster,azureMetricAccount.defaultAccountName=containerinsightsgenevaaccount1,azureKeyVault.clientId=70937f05-****-4fc0-****-de917f2a9402,azureKeyVault.clientSecret=**********************************" --with-subcharts
+      - name: Push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v5.6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${IMAGE_TAG_DATE}-${HELM_CHART_VERSION}-${COMMIT_SHA}
+          tag_prefix: ""
+          dry_run: true
       - name: Install-build-dependencies
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
@@ -92,3 +100,4 @@ jobs:
       #  with:
       #    tag: ${{ env.IMAGETAG_TELEMETRY }}
       #    message: "Created tag ${{ env.IMAGETAG_TELEMETRY }} for CommitID: ${{ env.GITHUB_SHA }}"
+
