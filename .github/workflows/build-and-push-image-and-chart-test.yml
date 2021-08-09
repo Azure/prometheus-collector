@@ -55,7 +55,7 @@ jobs:
         uses: mathieudutour/github-tag-action@v5.6
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{IMAGE_TAG_DATE}}-${{HELM_CHART_VERSION}}-${{COMMIT_SHA}}
+          custom_tag: ${{ IMAGE_TAG_DATE }}-${{ HELM_CHART_VERSION }}-${{ COMMIT_SHA }}
           tag_prefix: ""
           dry_run: true
       - name: Install-build-dependencies
