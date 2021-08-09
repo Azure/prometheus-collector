@@ -55,8 +55,7 @@ jobs:
         uses: mathieudutour/github-tag-action@v5.6
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ env.IMAGE_TAG_DATE }}-${{ env.HELM_CHART_VERSION }}-${{ env.COMMIT_SHA }}
-          tag_prefix: ""
+          custom_tag: ${{ env.HELM_CHART_VERSION }}-${{ env.IMAGE_TAG_DATE }}-${{ env.COMMIT_SHA }}
           dry_run: true
       - name: Install-build-dependencies
         run: sudo apt-get install build-essential -y
