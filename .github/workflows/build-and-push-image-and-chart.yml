@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - grace/CI-CD
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
@@ -85,6 +86,12 @@ jobs:
       - name: Publish-Helm-chart-to-ACR
         if: github.event_name != 'pull_request'
         run: helm chart push ${{ env.HELMTAG }}
+      - name: Get-kube-config
+        if: github.event_name != 'pull_request'
+        run: mkdir ~/.kube/ && echo "${{ secrets.GRACE_TEST_KUBE_CONFIG }}" > ~/.kube/config
+      - name: Deploy-to-cluster
+        if: github.event_name != 'pull_request'
+        run: cd ../ && helm upgrade prom ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGETAG_TELEMETRY }} -n monitoring
       - name: Tag-this-push
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.6
