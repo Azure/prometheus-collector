@@ -73,7 +73,7 @@ func (cfg *Config) Validate() error {
 	//cfg.logger.Info("Starting custom validation...\n")
 	fmt.Printf("Starting custom validation...\n")
 	for _, scfg := range cfg.PrometheusConfig.ScrapeConfigs {
-		fmt.Printf("in bearer token file validation-%v...\n",scfg.HTTPClientConfig.BearerTokenFile)
+		fmt.Sprintf("in bearer token file validation-%v...\n",scfg.HTTPClientConfig.BearerTokenFile)
 		if err := checkFileExists(scfg.HTTPClientConfig.BearerTokenFile); err != nil {
 			fmt.Printf("error checking bearer token file %q - %s", scfg.HTTPClientConfig.BearerTokenFile, err)
 			return errors.New("error checking bearer token file")
