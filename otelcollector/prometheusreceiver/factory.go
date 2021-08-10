@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver/receiverhelper"
-	"go.uber.org/zap"
+	// "go.uber.org/zap"
 	// "github.com/gracewehner/prometheusreceiver/internal"
 )
 
@@ -42,14 +42,16 @@ const (
 func NewFactory() component.ReceiverFactory {
 	return receiverhelper.NewFactory(
 		typeStr,
-		createDefaultConfig(params),
+		// createDefaultConfig(params),
+		createDefaultConfig,
 		receiverhelper.WithMetrics(createMetricsReceiver))
 }
 
-func createDefaultConfig(params component.ReceiverCreateParams) config.Receiver {
+func createDefaultConfig() config.Receiver {
+// func createDefaultConfig(params component.ReceiverCreateParams) config.Receiver {
 	return &Config{
 		ReceiverSettings: config.NewReceiverSettings(config.NewID(typeStr)),
-		logger : params.Logger,
+		// logger : params.Logger,
 	}
 }
 
