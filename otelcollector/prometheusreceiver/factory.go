@@ -32,9 +32,9 @@ const (
 	typeStr = "prometheus"
 )
 
-var (
-	errNilScrapeConfig = errors.New("Rashmi-prom-collector-logs ----------please provide some scrape configs--------------------")
-)
+// var (
+// 	errNilScrapeConfig = errors.New("Rashmi-prom-collector-logs ----------please provide some scrape configs--------------------")
+// )
 
 // NewFactory creates a new Prometheus receiver factory.
 func NewFactory() component.ReceiverFactory {

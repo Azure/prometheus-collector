@@ -17,7 +17,7 @@ package prometheusreceiver
 import (
 	"fmt"
 	"time"
-
+	"os"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/spf13/cast"
 	"gopkg.in/yaml.v2"
@@ -48,10 +48,30 @@ type Config struct {
 var _ config.Receiver = (*Config)(nil)
 var _ config.CustomUnmarshable = (*Config)(nil)
 
+func checkFileExists(fn string) error {
+	// Nothing set, nothing to error on.
+	if fn == "" {
+		return nil
+	}
+	_, err := os.Stat(fn)
+	return err
+}
+
+
 // Validate checks the receiver configuration is valid
 func (cfg *Config) Validate() error {
-	if cfg.PrometheusConfig != nil && len(cfg.PrometheusConfig.ScrapeConfigs) == 0 {
-		return errNilScrapeConfig
+	if cfg.PrometheusConfig == nil {
+		return nil // noop receiver
+	}
+	if len(cfg.PrometheusConfig.ScrapeConfigs) == 0 {
+		return errors.New("no Prometheus scrape_configs")
+	}
+	fmt.Infof("Starting custom validation...\n")
+	for _, scfg := range cfg.PrometheusConfig.ScrapeConfigs {
+		fmt.Infof("in bearer token file validation-%v...\n",scfg.HTTPClientConfig.BearerTokenFile)
+		if err := checkFileExists(scfg.HTTPClientConfig.BearerTokenFile); err != nil {
+			return errors.Wrapf(err, "error checking bearer token file %q", scfg.HTTPClientConfig.BearerTokenFile)
+		}
 	}
 	return nil
 }
