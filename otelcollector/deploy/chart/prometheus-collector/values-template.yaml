@@ -72,3 +72,5 @@ kube-state-metrics:
 prometheus-node-exporter:
   nodeSelector:
     kubernetes.io/os: linux
+
+prometheusConfig: ""

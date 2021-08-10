@@ -1,0 +1,12 @@
+{{- if .Values.prometheusConfig }}
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-prometheus-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "prometheus-collector.labels" . | nindent 4 }}
+data:
+  prometheus-config: |-
+  {{ .Values.prometheusConfig | nindent 4 }}
+{{- end }}
