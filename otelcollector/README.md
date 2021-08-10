@@ -33,4 +33,4 @@ Each commit to a PR for `main` or a merge into `main` generates a build.
     commit_id=<commit id> ./release.sh
     ```
   - This changes the image and helm chart tags in all the README files that contain it.
-- **PR 3**: Make a PR to update the Geneva docs with any changes made in `/otelcollector/deploy/eng.ms/docs/Prometheus`
+- **PR 3**: Make a PR to update the [Geneva docs](https://msazure.visualstudio.com/One/_git/EngSys-MDA-GenevaDocs?path=%2Fdocumentation%2Fmetrics%2FPrometheus&version=GBmaster&_a=contents) with any changes made in `/otelcollector/deploy/eng.ms/docs/Prometheus`
