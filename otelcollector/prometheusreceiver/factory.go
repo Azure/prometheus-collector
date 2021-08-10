@@ -42,14 +42,14 @@ const (
 func NewFactory() component.ReceiverFactory {
 	return receiverhelper.NewFactory(
 		typeStr,
-		createDefaultConfig,
+		createDefaultConfig(params),
 		receiverhelper.WithMetrics(createMetricsReceiver))
 }
 
-func createDefaultConfig() config.Receiver {
+func createDefaultConfig(params component.ReceiverCreateParams) config.Receiver {
 	return &Config{
 		ReceiverSettings: config.NewReceiverSettings(config.NewID(typeStr)),
-		logger : *zap.Logger,
+		logger : params.Logger,
 	}
 }
 
