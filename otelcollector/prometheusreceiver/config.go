@@ -70,7 +70,7 @@ func (cfg *Config) Validate() error {
 	if len(cfg.PrometheusConfig.ScrapeConfigs) == 0 {
 		return errors.New("no Prometheus scrape_configs")
 	}
-	cfg.logger.Info("Starting custom validation...\n")
+	logger.Info("Starting custom validation...\n")
 	fmt.Sprintf("Starting custom validation...\n")
 	for _, scfg := range cfg.PrometheusConfig.ScrapeConfigs {
 		fmt.Sprintf("in bearer token file validation-%v...\n",scfg.HTTPClientConfig.BearerTokenFile)
