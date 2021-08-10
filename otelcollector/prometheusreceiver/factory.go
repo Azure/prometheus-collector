@@ -16,7 +16,7 @@ package prometheusreceiver
 
 import (
 	"context"
-	"errors"
+	// "errors"
 
 	_ "github.com/prometheus/prometheus/discovery/install" // init() of this package registers service discovery impl.
 
