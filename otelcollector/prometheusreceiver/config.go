@@ -24,7 +24,7 @@ import (
 	"errors"
 	"go.uber.org/zap"
 	"go.opentelemetry.io/collector/config"
-	"github.com/gracewehner/prometheusreceiver/internal"
+	//"github.com/gracewehner/prometheusreceiver/internal"
 )
 
 const (
@@ -63,14 +63,14 @@ func checkFileExists(fn string) error {
 
 // Validate checks the receiver configuration is valid
 func (cfg *Config) Validate() error {
-	logger := internal.NewZapToGokitLogAdapter(cfg.logger)
+	//logger := internal.NewZapToGokitLogAdapter(cfg.logger)
 	if cfg.PrometheusConfig == nil {
 		return nil // noop receiver
 	}
 	if len(cfg.PrometheusConfig.ScrapeConfigs) == 0 {
 		return errors.New("no Prometheus scrape_configs")
 	}
-	logger.Info("Starting custom validation...\n")
+	cfg.logger.Info("Starting custom validation...\n")
 	fmt.Sprintf("Starting custom validation...\n")
 	for _, scfg := range cfg.PrometheusConfig.ScrapeConfigs {
 		fmt.Sprintf("in bearer token file validation-%v...\n",scfg.HTTPClientConfig.BearerTokenFile)
