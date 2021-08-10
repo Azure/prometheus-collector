@@ -48,7 +48,7 @@ mode:
 
 image:
   repository: ${ACR_REGISTRY}${ACR_REPOSITORY}
-  tag: ${IMAGE_TAG_NAME}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${GITHUB_RUN_NUMBER}
+  tag: ${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}
   pullPolicy: IfNotPresent
 
 resources:

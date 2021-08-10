@@ -21,7 +21,7 @@ version: ${HELM_CHART_VERSION}
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "${HELM_CHART_VERSION}"
+appVersion: "${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}"
 kubeVersion: ">=1.16.0-0"
 dependencies:
 - name: kube-state-metrics
