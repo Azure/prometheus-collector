@@ -48,7 +48,7 @@ func NewFactory() component.ReceiverFactory {
 func createDefaultConfig() config.Receiver {
 	return &Config{
 		ReceiverSettings: config.NewReceiverSettings(config.NewID(typeStr)),
-		logger : internal.NewZapToGokitLogAdapter(config.logger),
+		logger : logger *zap.Logger,
 	}
 }
 

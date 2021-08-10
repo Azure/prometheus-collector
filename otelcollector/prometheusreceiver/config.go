@@ -63,7 +63,7 @@ func checkFileExists(fn string) error {
 
 // Validate checks the receiver configuration is valid
 func (cfg *Config) Validate() error {
-	//logger := internal.NewZapToGokitLogAdapter(cfg.logger)
+	cfg.logger := internal.NewZapToGokitLogAdapter(cfg.logger)
 	if cfg.PrometheusConfig == nil {
 		return nil // noop receiver
 	}
