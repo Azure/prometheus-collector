@@ -22,8 +22,9 @@ import (
 	"github.com/spf13/cast"
 	"gopkg.in/yaml.v2"
 	"errors"
-
+	"go.uber.org/zap"
 	"go.opentelemetry.io/collector/config"
+	"github.com/gracewehner/prometheusreceiver/internal"
 )
 
 const (
@@ -44,6 +45,7 @@ type Config struct {
 	// that requires that all keys present in the config actually exist on the
 	// structure, ie.: it will error if an unknown key is present.
 	ConfigPlaceholder interface{} `mapstructure:"config"`
+	logger  *zap.Logger
 }
 
 var _ config.Receiver = (*Config)(nil)
@@ -61,12 +63,14 @@ func checkFileExists(fn string) error {
 
 // Validate checks the receiver configuration is valid
 func (cfg *Config) Validate() error {
+	logger := internal.NewZapToGokitLogAdapter(cfg.logger)
 	if cfg.PrometheusConfig == nil {
 		return nil // noop receiver
 	}
 	if len(cfg.PrometheusConfig.ScrapeConfigs) == 0 {
 		return errors.New("no Prometheus scrape_configs")
 	}
+	cfg.logger.info("Starting custom validation...\n")
 	fmt.Sprintf("Starting custom validation...\n")
 	for _, scfg := range cfg.PrometheusConfig.ScrapeConfigs {
 		fmt.Sprintf("in bearer token file validation-%v...\n",scfg.HTTPClientConfig.BearerTokenFile)
