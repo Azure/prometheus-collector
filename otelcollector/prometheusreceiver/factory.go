@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver/receiverhelper"
+	"github.com/gracewehner/prometheusreceiver/internal"
 )
 
 // This file implements config for Prometheus receiver.
@@ -47,6 +48,7 @@ func NewFactory() component.ReceiverFactory {
 func createDefaultConfig() config.Receiver {
 	return &Config{
 		ReceiverSettings: config.NewReceiverSettings(config.NewID(typeStr)),
+		logger := internal.NewZapToGokitLogAdapter(config.logger),
 	}
 }
 
