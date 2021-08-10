@@ -24,7 +24,7 @@ import (
 	"errors"
 	"go.uber.org/zap"
 	"go.opentelemetry.io/collector/config"
-	//"github.com/gracewehner/prometheusreceiver/internal"
+	"github.com/gracewehner/prometheusreceiver/internal"
 )
 
 const (
@@ -63,7 +63,7 @@ func checkFileExists(fn string) error {
 
 // Validate checks the receiver configuration is valid
 func (cfg *Config) Validate() error {
-	cfg.logger := internal.NewZapToGokitLogAdapter(cfg.logger)
+	cfg.logger = internal.NewZapToGokitLogAdapter(cfg.logger)
 	if cfg.PrometheusConfig == nil {
 		return nil // noop receiver
 	}
