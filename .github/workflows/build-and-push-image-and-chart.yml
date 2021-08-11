@@ -72,9 +72,9 @@ jobs:
       - name: Save-Helm-chart-to-local-cache
         run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm chart save . ${{ env.HELMTAG }}
       - name: List-files-in-directory
-        run: ls
+        run: cd ./otelcollector/deploy/chart/ && ls
       - name: List-files-in-parent-directory
-        run: cd ../ && ls
+        run: cd ./otelcollector/deploy/chart/prometheus-collector/ && ls
       - name: List-local-Helm-Charts
         run: helm chart list
       #- name: Login-to-ACR-thru-Docker
