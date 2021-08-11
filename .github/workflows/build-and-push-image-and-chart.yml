@@ -95,8 +95,7 @@ jobs:
           for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 10
-            docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGETAG_TELEMETRY}
-            if [ $? -eq 0 ]
+            if docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGETAG_TELEMETRY}
             then
               echo "Image published to mcr"
               exit 0
