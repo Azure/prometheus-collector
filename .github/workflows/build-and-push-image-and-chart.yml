@@ -89,6 +89,21 @@ jobs:
       - name: Get-kube-config
         if: github.event_name != 'pull_request'
         run: mkdir ~/.kube/ && echo "${{ secrets.GRACE_TEST_KUBE_CONFIG }}" > ~/.kube/config
+      - name: Wait-for-mcr-image
+        if: github.event_name != 'pull_request'
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10
+          do
+            sleep 10
+            docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGETAG_TELEMETRY}
+            if [ $? -eq 0 ]
+            then
+              echo "Image published to mcr"
+              exit 0
+            fi
+          done
+          echo "Image not published to mcr within 5 minutes"
+          exit 1
       - name: Deploy-to-cluster
         if: github.event_name != 'pull_request'
         run: cd ./otelcollector/deploy/chart/ && helm upgrade prom ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGETAG_TELEMETRY }} -n monitoring
