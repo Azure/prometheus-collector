@@ -15,13 +15,16 @@
 package prometheusreceiver
 
 import (
+	"errors"
 	"fmt"
-	"time"
 	"os"
+	"time"
+
+	//"github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/spf13/cast"
 	"gopkg.in/yaml.v2"
-	"errors"
+
 	//"go.uber.org/zap"
 	"go.opentelemetry.io/collector/config"
 	//"github.com/gracewehner/prometheusreceiver/internal"
@@ -60,7 +63,6 @@ func checkFileExists(fn string) error {
 	return err
 }
 
-
 // Validate checks the receiver configuration is valid
 func (cfg *Config) Validate() error {
 	//cfg.logger = internal.NewZapToGokitLogAdapter(cfg.logger)
@@ -74,10 +76,11 @@ func (cfg *Config) Validate() error {
 	fmt.Printf("Starting custom validation...\n")
 	for _, scfg := range cfg.PrometheusConfig.ScrapeConfigs {
 		fmt.Printf(".................................\n")
-		fmt.Printf("scrape config- HTTPClientConfig - %v...\n",scfg.HTTPClientConfig)
-		fmt.Printf("in bearer token file validation-BearerTokenFile- %v...\n",scfg.HTTPClientConfig.BearerTokenFile)
-		if err := checkFileExists(scfg.HTTPClientConfig.BearerTokenFile); err != nil {
-			fmt.Printf("error checking bearer token file %q - %s", scfg.HTTPClientConfig.BearerTokenFile, err)
+		fmt.Printf("scrape config- HTTPClientConfig - %v...\n", scfg.HTTPClientConfig)
+		fmt.Printf("in file validation-Authorization- %v...\n", scfg.HTTPClientConfig.Authorization)
+		fmt.Printf("in file validation-Authorization-credentials file- %v...\n", scfg.HTTPClientConfig.Authorization.CredentialsFile)
+		if err := checkFileExists(scfg.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
+			fmt.Printf("error checking bearer token file %q - %s", scfg.HTTPClientConfig.Authorization, err)
 			return errors.New("error checking bearer token file")
 		}
 	}
