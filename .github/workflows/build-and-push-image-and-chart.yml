@@ -85,7 +85,7 @@ jobs:
         run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
       - name: Publish-Helm-chart-to-ACR
         if: github.event_name != 'pull_request'
-       run: helm chart push ${{ env.HELMTAG }}
+        run: helm chart push ${{ env.HELMTAG }}
       - name: Get-kube-config
         if: github.event_name != 'pull_request'
         run: mkdir ~/.kube/ && echo "${{ secrets.GRACE_TEST_KUBE_CONFIG }}" > ~/.kube/config
