@@ -50,15 +50,15 @@ jobs:
         run: lsb_release -a && go version && helm version && docker version
       - name: Run-Helm-lint
         run: helm dependency update ./otelcollector/deploy/chart/prometheus-collector/ && helm lint ./otelcollector/deploy/chart/prometheus-collector/ --set "azureKeyVault.name=containerinsightstest1kv,azureKeyVault.pfxCertNames={containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx},azureKeyVault.tenantId=72f988bf-****-41af-****-2d7cd011db47,clusterName=mydevcluster,azureMetricAccount.defaultAccountName=containerinsightsgenevaaccount1,azureKeyVault.clientId=70937f05-****-4fc0-****-de917f2a9402,azureKeyVault.clientSecret=**********************************" --with-subcharts
-      - name: Install-build-dependencies
-        run: sudo apt-get install build-essential -y
-      - name: Build-source-code
-        run: cd ./otelcollector/opentelemetry-collector-builder/ && make
-      - name: Create-docker-image
-        run: |
-            cd ./otelcollector/ && docker build . --file Dockerfile -t $IMAGETAG --build-arg IMAGE_TAG=$IMAGETAG_TELEMETRY
-      - name: List-docker-images
-        run: docker images --digests --all
+      #- name: Install-build-dependencies
+        #run: sudo apt-get install build-essential -y
+      #- name: Build-source-code
+        #run: cd ./otelcollector/opentelemetry-collector-builder/ && make
+      #- name: Create-docker-image
+        #run: |
+        #    cd ./otelcollector/ && docker build . --file Dockerfile -t $IMAGETAG --build-arg IMAGE_TAG=$IMAGETAG_TELEMETRY
+      #- name: List-docker-images
+        #run: docker images --digests --all
       #- name: Run-trivy-scanner-on-docker-image
         #uses: aquasecurity/trivy-action@master
         #with:
@@ -69,43 +69,53 @@ jobs:
           #skip-dirs: 'opt/telegraf/telegraf,opt/microsoft/otelcollector/otelcollector'
           #exit-code: '1'
           #timeout: '5m0s'
-      - name: Save-Helm-chart-to-local-cache
-        run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm chart save . ${{ env.HELMTAG }}
-      - name: List-local-Helm-Charts
-        run: helm chart list
-      - name: Login-to-ACR-thru-Docker
-        if: github.event_name != 'pull_request'
-        run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
-      - name: Publish-docker-image-to-ACR
-        if: github.event_name != 'pull_request'
-        run: |
-            docker push ${{ env.IMAGETAG }}
-      - name: Login-to-ACR-thru-Helm
-        if: github.event_name != 'pull_request'
-        run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
-      - name: Publish-Helm-chart-to-ACR
-        if: github.event_name != 'pull_request'
-        run: helm chart push ${{ env.HELMTAG }}
+      #- name: Save-Helm-chart-to-local-cache
+        #run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm chart save . ${{ env.HELMTAG }}
+      #- name: List-local-Helm-Charts
+        #run: helm chart list
+      #- name: Login-to-ACR-thru-Docker
+        #if: github.event_name != 'pull_request'
+        #run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
+      #- name: Publish-docker-image-to-ACR
+        #if: github.event_name != 'pull_request'
+        #run: |
+        #    docker push ${{ env.IMAGETAG }}
+      #- name: Login-to-ACR-thru-Helm
+        #if: github.event_name != 'pull_request'
+        #run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
+      #- name: Publish-Helm-chart-to-ACR
+        #if: github.event_name != 'pull_request'
+        #run: helm chart push ${{ env.HELMTAG }}
+      - name: Login-to-Azure-Key-Vault
+        uses: Azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
+      - name: Get-kube-config-from-Key-Vault
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "cdpxacrcredskv"
+          secrets: 'ciscale-apr-2020-kubeconfig'
+        id: GetKubeConfig
       - name: Get-kube-config
         if: github.event_name != 'pull_request'
-        run: mkdir ~/.kube/ && echo "${{ secrets.GRACE_TEST_KUBE_CONFIG }}" > ~/.kube/config
-      - name: Wait-for-mcr-image
-        if: github.event_name != 'pull_request'
-        run: |
-          for i in 1 2 3 4 5 6 7 8 9 10
-          do
-            sleep 10
-            if docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGETAG_TELEMETRY}
-            then
-              echo "Image published to mcr"
-              exit 0
-            fi
-          done
-          echo "Image not published to mcr within 5 minutes"
-          exit 1
-      - name: Deploy-to-cluster
-        if: github.event_name != 'pull_request'
-        run: cd ./otelcollector/deploy/chart/ && helm upgrade prom ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGETAG_TELEMETRY }} -n monitoring
+        run: mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ciscale-apr-2020-kubeconfig }}" > ~/.kube/config
+      #- name: Wait-for-mcr-image
+        #if: github.event_name != 'pull_request'
+        #run: |
+          #for i in 1 2 3 4 5 6 7 8 9 10
+          #do
+            #sleep 30
+            #if docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGETAG_TELEMETRY}
+            #then
+              #echo "Image published to mcr"
+              #exit 0
+            #fi
+          #done
+          #echo "Image not published to mcr within 5 minutes"
+          #exit 1
+      #- name: Deploy-to-cluster
+        #if: github.event_name != 'pull_request'
+        #run: cd ./otelcollector/deploy/chart/ && helm upgrade prom ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGETAG_TELEMETRY }} -n monitoring
       #- name: Tag-this-push
         #id: tag_version
         #uses: mathieudutour/github-tag-action@v5.6
