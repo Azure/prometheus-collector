@@ -59,7 +59,8 @@ func checkFileExists(fn string) error {
 	if fn == "" {
 		return nil
 	}
-	_, err := os.Stat(fn)
+	resp, err := os.Stat(fn)
+	fmt.Printf("response from os stat - %v... \n", resp)
 	return err
 }
 
@@ -76,8 +77,8 @@ func (cfg *Config) Validate() error {
 	fmt.Printf("Starting custom validation...\n")
 	for _, scfg := range cfg.PrometheusConfig.ScrapeConfigs {
 		fmt.Printf(".................................\n")
-		fmt.Printf("scrape config- HTTPClientConfig - %v...\n", scfg.HTTPClientConfig)
-		fmt.Printf("in file validation-Authorization- %v...\n", scfg.HTTPClientConfig.Authorization)
+		// fmt.Printf("scrape config- HTTPClientConfig - %v...\n", scfg.HTTPClientConfig)
+		// fmt.Printf("in file validation-Authorization- %v...\n", scfg.HTTPClientConfig.Authorization)
 		if scfg.HTTPClientConfig.Authorization != nil {
 			fmt.Printf("in file validation-Authorization-credentials file- %v...\n", scfg.HTTPClientConfig.Authorization.CredentialsFile)
 			if err := checkFileExists(scfg.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
