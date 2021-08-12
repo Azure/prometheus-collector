@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - grace/CI-CD
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
