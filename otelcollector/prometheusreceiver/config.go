@@ -21,6 +21,7 @@ import (
 	"time"
 
 	//"github.com/prometheus/common/config"
+	config_util "github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/spf13/cast"
 	"gopkg.in/yaml.v2"
@@ -59,9 +60,30 @@ func checkFileExists(fn string) error {
 	if fn == "" {
 		return nil
 	}
-	resp, err := os.Stat(fn)
-	fmt.Printf("response from os stat - %v... \n", resp)
+	_, err := os.Stat(fn)
+	// fmt.Printf("response from os stat - %v... \n", resp)
 	return err
+}
+
+func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
+	if err := checkFileExists(tlsConfig.CertFile); err != nil {
+
+		fmt.Printf("error checking client cert file %q - &v", tlsConfig.CertFile, err)
+		return errors.New("error checking client cert file %q", tlsConfig.CertFile)
+	}
+	if err := checkFileExists(tlsConfig.KeyFile); err != nil {
+		fmt.Printf("error checking client key file %q - &v", tlsConfig.KeyFile, err)
+		return errors.New("error checking client key file %q", tlsConfig.KeyFile)
+	}
+
+	if len(tlsConfig.CertFile) > 0 && len(tlsConfig.KeyFile) == 0 {
+		return errors.New("client cert file %q specified without client key file", tlsConfig.CertFile)
+	}
+	if len(tlsConfig.KeyFile) > 0 && len(tlsConfig.CertFile) == 0 {
+		return errors.New("client key file %q specified without client cert file", tlsConfig.KeyFile)
+	}
+
+	return nil
 }
 
 // Validate checks the receiver configuration is valid
@@ -80,11 +102,15 @@ func (cfg *Config) Validate() error {
 		// fmt.Printf("scrape config- HTTPClientConfig - %v...\n", scfg.HTTPClientConfig)
 		// fmt.Printf("in file validation-Authorization- %v...\n", scfg.HTTPClientConfig.Authorization)
 		if scfg.HTTPClientConfig.Authorization != nil {
-			fmt.Printf("in file validation-Authorization-credentials file- %v...\n", scfg.HTTPClientConfig.Authorization.CredentialsFile)
+			// fmt.Printf("in file validation-Authorization-credentials file- %v...\n", scfg.HTTPClientConfig.Authorization.CredentialsFile)
 			if err := checkFileExists(scfg.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
-				fmt.Printf("error checking bearer token file %q - %s", scfg.HTTPClientConfig.Authorization, err)
-				return errors.New("error checking bearer token file")
+				fmt.Printf("error checking authorization credentials file %q - %s", scfg.HTTPClientConfig.Authorization, err)
+				return errors.New("error checking authorization credentials file")
 			}
+		}
+
+		if err := checkTLSConfig(scfg.HTTPClientConfig.TLSConfig); err != nil {
+			return err
 		}
 	}
 	return nil
