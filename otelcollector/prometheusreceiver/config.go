@@ -66,11 +66,15 @@ func checkFileExists(fn string) error {
 }
 
 func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
-	if err := checkFileExists(tlsConfig.CertFile); err != nil {
+	fmt.Printf("in checkTLSConfig.....\n")
+	fmt.Printf("tlsConfig.CertFile - %v\n", tlsConfig.CertFile)
 
+	if err := checkFileExists(tlsConfig.CertFile); err != nil {
 		fmt.Printf("error checking client cert file %q - &v", tlsConfig.CertFile, err)
 		return errors.New("error checking client cert file %q", tlsConfig.CertFile)
 	}
+	fmt.Printf("tlsConfig.KeyFile - %v\n", tlsConfig.KeyFile)
+
 	if err := checkFileExists(tlsConfig.KeyFile); err != nil {
 		fmt.Printf("error checking client key file %q - &v", tlsConfig.KeyFile, err)
 		return errors.New("error checking client key file %q", tlsConfig.KeyFile)
