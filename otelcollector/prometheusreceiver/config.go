@@ -66,7 +66,7 @@ func checkFileExists(fn string) error {
 }
 
 func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
-	fmt.Printf("in checkTLSConfig.....\n")
+	fmt.Printf("in checkTLSConfig %v.....\n", tlsConfig)
 	fmt.Printf("tlsConfig.CertFile - %v\n", tlsConfig.CertFile)
 
 	if err := checkFileExists(tlsConfig.CertFile); err != nil {
@@ -115,6 +115,7 @@ func (cfg *Config) Validate() error {
 			}
 		}
 
+		fmt.Printf("Checking TLS config %v", scfg.HTTPClientConfig.TLSConfig)
 		if err := checkTLSConfig(scfg.HTTPClientConfig.TLSConfig); err != nil {
 			return err
 		}
