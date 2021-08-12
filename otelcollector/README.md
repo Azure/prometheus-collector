@@ -21,6 +21,8 @@ Each commit to a PR for `main` or a merge into `main` generates a build.
   - Image tag is `prometheus-collector-{branch name}-{helm chart version}-{Pacific time date}-{commit id}`
   - Helm chart image tag is `prometheus-collector-chart-{branch name}-{helm chart version}-{Pacific time date}-{commit id}`
   - Each merge commit is tagged with: `v{helm chart version}-{Pacific time date}-{commit id}`
+  
+Each merge into `main` will push the image to the public mcr and deploy to the dev cluster.
 
 
 ## Release Pull Requests
