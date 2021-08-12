@@ -71,20 +71,22 @@ func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
 
 	if err := checkFileExists(tlsConfig.CertFile); err != nil {
 		fmt.Printf("error checking client cert file %q - &v", tlsConfig.CertFile, err)
-		return errors.New("error checking client cert file %q", tlsConfig.CertFile)
+		return errors.New("error checking client cert file")
 	}
 	fmt.Printf("tlsConfig.KeyFile - %v\n", tlsConfig.KeyFile)
 
 	if err := checkFileExists(tlsConfig.KeyFile); err != nil {
 		fmt.Printf("error checking client key file %q - &v", tlsConfig.KeyFile, err)
-		return errors.New("error checking client key file %q", tlsConfig.KeyFile)
+		return errors.New("error checking client key file")
 	}
 
 	if len(tlsConfig.CertFile) > 0 && len(tlsConfig.KeyFile) == 0 {
-		return errors.New("client cert file %q specified without client key file", tlsConfig.CertFile)
+		fmt.Printf("client cert file %q specified without client key file", tlsConfig.CertFile)
+		return errors.New("client cert file specified without client key file")
 	}
 	if len(tlsConfig.KeyFile) > 0 && len(tlsConfig.CertFile) == 0 {
-		return errors.New("client key file %q specified without client cert file", tlsConfig.KeyFile)
+		fmt.Printf("client key file %q specified without client cert file", tlsConfig.CertFile)
+		return errors.New("client key file specified without client cert file")
 	}
 
 	return nil
