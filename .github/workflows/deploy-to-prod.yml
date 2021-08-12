@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Set-workflow-initiator
         run: echo "Initiated by - ${GITHUB_ACTOR}"
+      - name: Set-Helm-OCI-Experimental-feature
+        run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
       - name: Pull-from-mcr
         run: helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-${{ github.event.inputs.helmChartTag }}
       - name: Export-chart-locally
