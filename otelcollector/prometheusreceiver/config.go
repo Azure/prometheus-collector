@@ -78,10 +78,12 @@ func (cfg *Config) Validate() error {
 		fmt.Printf(".................................\n")
 		fmt.Printf("scrape config- HTTPClientConfig - %v...\n", scfg.HTTPClientConfig)
 		fmt.Printf("in file validation-Authorization- %v...\n", scfg.HTTPClientConfig.Authorization)
-		fmt.Printf("in file validation-Authorization-credentials file- %v...\n", scfg.HTTPClientConfig.Authorization.CredentialsFile)
-		if err := checkFileExists(scfg.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
-			fmt.Printf("error checking bearer token file %q - %s", scfg.HTTPClientConfig.Authorization, err)
-			return errors.New("error checking bearer token file")
+		if scfg.HTTPClientConfig.Authorization != nil {
+			fmt.Printf("in file validation-Authorization-credentials file- %v...\n", scfg.HTTPClientConfig.Authorization.CredentialsFile)
+			if err := checkFileExists(scfg.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
+				fmt.Printf("error checking bearer token file %q - %s", scfg.HTTPClientConfig.Authorization, err)
+				return errors.New("error checking bearer token file")
+			}
 		}
 	}
 	return nil
