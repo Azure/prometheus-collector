@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - grace/CI-CD
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
@@ -86,22 +87,22 @@ jobs:
         if: github.event_name != 'pull_request'
         run: helm chart push ${{ env.HELMTAG }}
       - name: Login-to-Azure-Key-Vault
-        if: github.event_name != 'pull_request' && env.BRANCH_NAME == "main"
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         uses: Azure/login@v1
         with:
           creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
       - name: Get-kube-config-from-Key-Vault
-        if: github.event_name != 'pull_request' && env.BRANCH_NAME == "main"
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         uses: Azure/get-keyvault-secrets@v1
         with:
           keyvault: "cdpxacrcredskv"
           secrets: 'ci-dev-aks-wcus-kubeconfig'
         id: GetKubeConfig
       - name: Get-kube-config
-        if: github.event_name != 'pull_request' && env.BRANCH_NAME == "main"
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         run: mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ci-dev-aks-wcus-kubeconfig }}" > ~/.kube/config
       - name: Wait-for-mcr-image
-        if: github.event_name != 'pull_request' && env.BRANCH_NAME == "main"
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         run: |
           for i in 1 2 3 4 5 6 7 8 9 10
           do
@@ -115,12 +116,12 @@ jobs:
           echo "Image not published to mcr within 5 minutes"
           exit 1
       - name: Deploy-to-cluster
-        if: github.event_name != 'pull_request' && env.BRANCH_NAME == "main"
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         run: cd ./otelcollector/deploy/chart/ && helm upgrade prom-dev ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGETAG_TELEMETRY }} -n monitoring
       - name: Tag-this-push
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.6
-        if: github.event_name != 'pull_request' && env.BRANCH_NAME == "main"
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           custom_tag: ${{ env.HELM_CHART_VERSION }}-${{ env.IMAGE_TAG_DATE }}-${{ env.COMMIT_SHA }}
