@@ -1,0 +1,35 @@
+name: deploy-to-prod-cluster
+on:
+  workflow_dispatch:
+    inputs:
+      helmChartTag:
+        description: 'Version tag to deploy to prod cluster in the format of 0.0.1-07-29-2021-34a65d59'
+        required: true
+jobs:
+  scan-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set-workflow-initiator
+        run: echo "Initiated by - ${GITHUB_ACTOR}"
+      - name: Set-Helm-OCI-Experimental-feature
+        run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
+      - name: Pull-from-mcr
+        run: helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-${{ github.event.inputs.helmChartTag }}
+      - name: Export-chart-locally
+        run: helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-${{ github.event.inputs.helmChartTag }} .
+      - name: Get-dependency-updates
+        run: helm dependency update ./prometheus-collector
+      - name: Login-to-Azure-Key-Vault
+        uses: Azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
+      - name: Get-kube-config-from-Key-Vault
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "cdpxacrcredskv"
+          secrets: 'ci-dev-prod-eus-kubeconfig'
+        id: GetKubeConfig
+      - name: Get-kube-config
+        run: mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ci-prod-aks-eus-kubeconfig }}" > ~/.kube/config
+      - name: Deploy-to-cluster
+        run: helm upgrade prom-prod ./prometheus-collector --reuse-values --set image.tag=prometheus-collector-main-${{ github.event.inputs.helmChartTag }} -n monitoring
