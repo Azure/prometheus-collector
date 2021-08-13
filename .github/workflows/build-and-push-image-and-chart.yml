@@ -31,18 +31,20 @@ jobs:
         run: echo "IMAGE_TAG_DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
-      - name: Set-image-tag
-        run: echo "IMAGETAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
-      - name: Set-image-telemetry-tag
-        run: echo "IMAGETAG_TELEMETRY=${IMAGE_TAG_NAME}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
-      - name: Set-Helm-OCI-Experimental-feature
-        run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
-      - name: Set-Helm-chart-version
-        run: echo "HELM_CHART_VERSION=0.0.1" >> $GITHUB_ENV
-      - name: Set-Helm-tag
-        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Checkout-code
         uses: actions/checkout@v2
+      - name: Set-Helm-chart-version
+        run: version=$(cat ./otelcollector/VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
+      - name: Set-image-tag
+        run: echo "IMAGETAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+      - name: Set-image-telemetry-tag
+        run: echo "IMAGETAG_TELEMETRY=${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+      - name: Set-Helm-OCI-Experimental-feature
+        run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
+      - name: Set-Helm-tag
+        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+      - name: Set-Helm-chart-versioning
+        run: envsubst < ./otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < ./otelcollector/deploy/chart/prometheus-collector/values-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/values.yaml
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version && helm version && docker version
       - name: Run-Helm-lint
@@ -83,6 +85,45 @@ jobs:
       - name: Publish-Helm-chart-to-ACR
         if: github.event_name != 'pull_request'
         run: helm chart push ${{ env.HELMTAG }}
+      - name: Login-to-Azure-Key-Vault
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        uses: Azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
+      - name: Get-kube-config-from-Key-Vault
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "cdpxacrcredskv"
+          secrets: 'ci-dev-aks-wcus-kubeconfig'
+        id: GetKubeConfig
+      - name: Get-kube-config
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        run: mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ci-dev-aks-wcus-kubeconfig }}" > ~/.kube/config
+      - name: Wait-for-mcr-image
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10
+          do
+            sleep 30
+            if docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGETAG_TELEMETRY}
+            then
+              echo "Image published to mcr"
+              exit 0
+            fi
+          done
+          echo "Image not published to mcr within 5 minutes"
+          exit 1
+      - name: Deploy-to-cluster
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        run: cd ./otelcollector/deploy/chart/ && helm upgrade prom-dev ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGETAG_TELEMETRY }} -n monitoring
+      - name: Tag-this-push
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v5.6
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ env.HELM_CHART_VERSION }}-${{ env.IMAGE_TAG_DATE }}-${{ env.COMMIT_SHA }}
       #- name: Tag-this-push
       #  uses: actions-ecosystem/action-push-tag@v1
       #  if: github.event_name != 'pull_request'

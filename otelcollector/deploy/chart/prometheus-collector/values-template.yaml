@@ -47,8 +47,8 @@ mode:
   advanced: false
 
 image:
-  repository: mcr.microsoft.com/azuremonitor/containerinsights/cidev
-  tag: "prometheus-collector-main-07-28-2021-55fb08c2"
+  repository: ${ACR_REGISTRY}${ACR_REPOSITORY}
+  tag: ${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}
   pullPolicy: IfNotPresent
 
 resources:
