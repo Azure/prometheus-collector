@@ -27,7 +27,7 @@ jobs:
         uses: Azure/get-keyvault-secrets@v1
         with:
           keyvault: "cdpxacrcredskv"
-          secrets: 'ci-dev-prod-eus-kubeconfig'
+          secrets: 'ci-prod-aks-eus-kubeconfig'
         id: GetKubeConfig
       - name: Get-kube-config
         run: mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ci-prod-aks-eus-kubeconfig }}" > ~/.kube/config
