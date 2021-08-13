@@ -2,35 +2,24 @@ name: scan-any-public-image
 on:
   workflow_dispatch:
     inputs:
-      helmChartTag:
-        description: 'Version tag to deploy to prod cluster in the format of 0.0.1-07-29-2021-34a65d59'
+      imageToScan:
+        description: 'Full image path in any public registry. ex;- mcr.microsoft.com/azuremonitor/containerinsights/cidev:cidevcfa804a1adeb3eb4e82d78f14569e3238e2f6dbd'
         required: true
 jobs:
-  deploy-to-prod-cluster:
+  scan-image:
     runs-on: ubuntu-latest
     steps:
       - name: Set-workflow-initiator
         run: echo "Initiated by - ${GITHUB_ACTOR}"
-      - name: Set-Helm-OCI-Experimental-feature
-        run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
-      - name: Pull-from-mcr
-        run: helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-${{ github.event.inputs.helmChartTag }}
-      - name: Export-chart-locally
-        run: helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-${{ github.event.inputs.helmChartTag }} .
-      - name: Get-dependency-updates
-        run: helm dependency update ./prometheus-collector
-      - name: Login-to-Azure-Key-Vault
-        uses: Azure/login@v1
+      - name: Run-trivy-scanner-on-docker-image
+        uses: aquasecurity/trivy-action@master
         with:
-          creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
-      - name: Get-kube-config-from-Key-Vault
-        uses: Azure/get-keyvault-secrets@v1
-        with:
-          keyvault: "cdpxacrcredskv"
-          secrets: 'ci-prod-aks-eus-kubeconfig'
-        id: GetKubeConfig
-      - name: Get-kube-config
-        run: mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ci-prod-aks-eus-kubeconfig }}" > ~/.kube/config
-      - name: Deploy-to-cluster
-        run: helm upgrade prom-prod ./prometheus-collector --reuse-values --set image.tag=prometheus-collector-main-${{ github.event.inputs.helmChartTag }} -n monitoring
-
+          image-ref: "${{ github.event.inputs.imageToScan }}"
+          format: 'table'
+          #ignore format
+          #output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          vuln-type: 'os,library'
+          #skip-dirs: 'opt/telegraf/telegraf,opt/microsoft/otelcollector/otelcollector'
+          exit-code: '1'
+          timeout: '5m0s'
