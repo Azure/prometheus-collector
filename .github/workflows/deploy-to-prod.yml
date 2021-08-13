@@ -1,5 +1,8 @@
 name: deploy-to-prod-cluster
 on:
+  push:
+    branches:
+      - grace/prod-deployment-workflow
   workflow_dispatch:
     inputs:
       helmChartTag:
