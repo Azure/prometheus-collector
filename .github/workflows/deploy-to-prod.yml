@@ -1,15 +1,15 @@
 name: deploy-to-prod-cluster
 on:
-  push:
-    branches:
-      - grace/prod-deployment-workflow
+  #push:
+    #branches:
+      #- grace/prod-deployment-workflow
   workflow_dispatch:
     inputs:
       helmChartTag:
         description: 'Version tag to deploy to prod cluster in the format of 0.0.1-07-29-2021-34a65d59'
         required: true
 jobs:
-  scan-image:
+  deploy-to-prod-cluster:
     runs-on: ubuntu-latest
     steps:
       - name: Set-workflow-initiator
