@@ -25,7 +25,7 @@ Each commit to a PR for `main` or a merge into `main` generates a build.
 Each merge into `main` will push the image to the public mcr and deploy to the dev cluster.
 
 
-## Release Pull Requests
+## Release Process
 - **PR 1**: Bump the version in the VERSION file following semantic versioning.
     - If you know your PR with the last feature changes will be the last one before the release, you can do this then.
     - **Build 1**: The `values.yaml` and `Chart.yaml` templates for the HELM chart will automatically be replaced with the image tag and the HELM chart version during the workflow build.
@@ -36,3 +36,4 @@ Each merge into `main` will push the image to the public mcr and deploy to the d
     ```
   - This changes the image and helm chart tags in all the README files that contain it.
 - **PR 3**: Make a PR to update the [Geneva docs](https://msazure.visualstudio.com/One/_git/EngSys-MDA-GenevaDocs?path=%2Fdocumentation%2Fmetrics%2FPrometheus&version=GBmaster&_a=contents) with any changes made in `/otelcollector/deploy/eng.ms/docs/Prometheus`
+- **Deploy to Prod Cluster**: Go to the Actions tab in Github and run the workflow `deploy-to-prod.yml` to deploy the release to the prod cluster by specifing the tag in the format of `{helm chart version}-{Pacific time date}-{commit id}`.
