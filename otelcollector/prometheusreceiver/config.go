@@ -77,22 +77,22 @@ func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
 	fmt.Printf("tlsConfig.CertFile - %v\n", tlsConfig.CertFile)
 
 	if err := checkFileExists(tlsConfig.CertFile); err != nil {
-		fmt.Printf("error checking client cert file %q - &v", tlsConfig.CertFile, err)
+		fmt.Errorf("error checking client cert file %q - &v", tlsConfig.CertFile, err)
 		return errors.New("error checking client cert file")
 	}
 	fmt.Printf("tlsConfig.KeyFile - %v\n", tlsConfig.KeyFile)
 
 	if err := checkFileExists(tlsConfig.KeyFile); err != nil {
-		fmt.Printf("error checking client key file %q - &v", tlsConfig.KeyFile, err)
+		fmt.Errorf("error checking client key file %q - &v", tlsConfig.KeyFile, err)
 		return errors.New("error checking client key file")
 	}
 
 	if len(tlsConfig.CertFile) > 0 && len(tlsConfig.KeyFile) == 0 {
-		fmt.Printf("client cert file %q specified without client key file", tlsConfig.CertFile)
+		fmt.Errorf("client cert file %q specified without client key file", tlsConfig.CertFile)
 		return errors.New("client cert file specified without client key file")
 	}
 	if len(tlsConfig.KeyFile) > 0 && len(tlsConfig.CertFile) == 0 {
-		fmt.Printf("client key file %q specified without client cert file", tlsConfig.CertFile)
+		fmt.Errorf("client key file %q specified without client cert file", tlsConfig.CertFile)
 		return errors.New("client key file specified without client cert file")
 	}
 
@@ -123,13 +123,13 @@ func checkSDFile(filename string) error {
 			return err
 		}
 	default:
-		fmt.Printf("invalid file extension: %q", ext)
+		fmt.Errorf("invalid file extension: %q", ext)
 		return errors.New("invalid file extension")
 	}
 
 	for i, tg := range targetGroups {
 		if tg == nil {
-			fmt.Printf("nil target group item found (index %d)", i)
+			fmt.Errorf("nil target group item found (index %d)", i)
 			return errors.New("nil target group item found")
 		}
 	}
@@ -155,7 +155,7 @@ func (cfg *Config) Validate() error {
 		if scfg.HTTPClientConfig.Authorization != nil {
 			// fmt.Printf("in file validation-Authorization-credentials file- %v...\n", scfg.HTTPClientConfig.Authorization.CredentialsFile)
 			if err := checkFileExists(scfg.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
-				fmt.Printf("error checking authorization credentials file %q - %s", scfg.HTTPClientConfig.Authorization, err)
+				fmt.Errorf("error checking authorization credentials file %q - %s", scfg.HTTPClientConfig.Authorization, err)
 				return errors.New("error checking authorization credentials file")
 			}
 		}
@@ -183,7 +183,8 @@ func (cfg *Config) Validate() error {
 						for _, f := range files {
 							err = checkSDFile(f)
 							if err != nil {
-								return errors.Errorf("checking SD file %q: %v", file, err)
+								fmt.Errorf("checking SD file %q: %v", file, err)
+								return errors.New("Error in SD file check")
 							}
 						}
 						continue
