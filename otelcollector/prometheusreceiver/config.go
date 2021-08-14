@@ -15,18 +15,25 @@
 package prometheusreceiver
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	//"github.com/prometheus/common/config"
 	config_util "github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/spf13/cast"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 
 	//"go.uber.org/zap"
+	"github.com/prometheus/prometheus/discovery/file"
+	"github.com/prometheus/prometheus/discovery/kubernetes"
+	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"go.opentelemetry.io/collector/config"
 	//"github.com/gracewehner/prometheusreceiver/internal"
 )
@@ -92,6 +99,44 @@ func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
 	return nil
 }
 
+func checkSDFile(filename string) error {
+	fd, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+
+	content, err := ioutil.ReadAll(fd)
+	if err != nil {
+		return err
+	}
+
+	var targetGroups []*targetgroup.Group
+
+	switch ext := filepath.Ext(filename); strings.ToLower(ext) {
+	case ".json":
+		if err := json.Unmarshal(content, &targetGroups); err != nil {
+			return err
+		}
+	case ".yml", ".yaml":
+		if err := yaml.UnmarshalStrict(content, &targetGroups); err != nil {
+			return err
+		}
+	default:
+		fmt.Printf("invalid file extension: %q", ext)
+		return errors.New("invalid file extension")
+	}
+
+	for i, tg := range targetGroups {
+		if tg == nil {
+			fmt.Printf("nil target group item found (index %d)", i)
+			return errors.New("nil target group item found")
+		}
+	}
+
+	return nil
+}
+
 // Validate checks the receiver configuration is valid
 func (cfg *Config) Validate() error {
 	//cfg.logger = internal.NewZapToGokitLogAdapter(cfg.logger)
@@ -118,6 +163,34 @@ func (cfg *Config) Validate() error {
 		fmt.Printf("Checking TLS config %v", scfg.HTTPClientConfig.TLSConfig)
 		if err := checkTLSConfig(scfg.HTTPClientConfig.TLSConfig); err != nil {
 			return err
+		}
+
+		for _, c := range scfg.ServiceDiscoveryConfigs {
+			switch c := c.(type) {
+			case *kubernetes.SDConfig:
+				fmt.Printf("In kubernetes sd config...%v", c.HTTPClientConfig.TLSConfig)
+				if err := checkTLSConfig(c.HTTPClientConfig.TLSConfig); err != nil {
+					return err
+				}
+			case *file.SDConfig:
+				fmt.Printf("In file sd config...")
+				for _, file := range c.Files {
+					files, err := filepath.Glob(file)
+					if err != nil {
+						return err
+					}
+					if len(files) != 0 {
+						for _, f := range files {
+							err = checkSDFile(f)
+							if err != nil {
+								return errors.Errorf("checking SD file %q: %v", file, err)
+							}
+						}
+						continue
+					}
+					fmt.Printf("  WARNING: file %q for file_sd in scrape job %q does not exist\n", file, scfg.JobName)
+				}
+			}
 		}
 	}
 	return nil
