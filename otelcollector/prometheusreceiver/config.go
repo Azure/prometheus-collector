@@ -100,6 +100,7 @@ func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
 }
 
 func checkSDFile(filename string) error {
+	fmt.Printf("In CheckSDFile...")
 	fd, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -116,10 +117,12 @@ func checkSDFile(filename string) error {
 	switch ext := filepath.Ext(filename); strings.ToLower(ext) {
 	case ".json":
 		if err := json.Unmarshal(content, &targetGroups); err != nil {
+			fmt.Errorf("Error in unmarshaling json file extension - %v", err)
 			return err
 		}
 	case ".yml", ".yaml":
 		if err := yaml.UnmarshalStrict(content, &targetGroups); err != nil {
+			fmt.Errorf("Error in unmarshaling yaml file extension - %v", err)
 			return err
 		}
 	default:
