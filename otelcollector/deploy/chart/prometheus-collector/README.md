@@ -104,6 +104,7 @@ kubectl create configmap my-collector-dev-release-prometheus-config --from-file=
 | resources.daemonSet.limits.memory | string | Optional | `"2Gi"` |  |
 | resources.daemonSet.requests.cpu | string | Optional | `"500m"` |  |
 | resources.daemonSet.requests.memory | string | Optional | `"1Gi"` |  |
+| updateStrategy.daemonSet.maxUnavailable | string | Optional | `"1"` | This can be a number or percentage of pods |
 | scrapeTargets.coreDns | bool | Optional | `true` | when true, automatically scrape coredns service in the k8s cluster without any additional scrape config |
 | scrapeTargets.kubelet | bool | Optional | `true` | when true, automatically scrape kubelet in every node in the k8s cluster without any additional scrape config |
 | scrapeTargets.cAdvisor | bool | Optional | `true` | when true, automatically scrape cAdvisor in every node in the k8s cluster without any additional scrape config |
