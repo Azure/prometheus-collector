@@ -28,7 +28,7 @@ func main() {
 		fmt.Printf("Error: %v", err)
 	}
 	fmt.Printf("Config contents: %v", configContents)
-	cfg{PrometheusConfig: configContents}
+	cfg.*PrometheusConfig = configContents
 
 	cfgErr := cfg.Validate()
 	if cfgErr != nil {
