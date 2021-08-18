@@ -18,15 +18,12 @@ import (
 	"context"
 	// "errors"
 
-	promconfig "github.com/prometheus/prometheus/config"
 	_ "github.com/prometheus/prometheus/discovery/install" // init() of this package registers service discovery impl.
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver/receiverhelper"
-	// "go.uber.org/zap"
-	// "github.com/gracewehner/prometheusreceiver/internal"
 )
 
 // This file implements config for Prometheus receiver.
@@ -36,32 +33,20 @@ const (
 )
 
 // var (
-// 	errNilScrapeConfig = errors.New("Rashmi-prom-collector-logs ----------please provide some scrape configs--------------------")
+// 	errNilScrapeConfig = errors.New("expecting a non-nil ScrapeConfig")
 // )
 
 // NewFactory creates a new Prometheus receiver factory.
 func NewFactory() component.ReceiverFactory {
 	return receiverhelper.NewFactory(
 		typeStr,
-		// createDefaultConfig(params),
 		createDefaultConfig,
 		receiverhelper.WithMetrics(createMetricsReceiver))
 }
 
 func createDefaultConfig() config.Receiver {
-	// func createDefaultConfig(params component.ReceiverCreateParams) config.Receiver {
 	return &Config{
 		ReceiverSettings: config.NewReceiverSettings(config.NewID(typeStr)),
-		// logger : params.Logger,
-	}
-}
-
-func createCustomConfig(cfg *promconfig.Config) config.Receiver {
-	// func createDefaultConfig(params component.ReceiverCreateParams) config.Receiver {
-	return &Config{
-		ReceiverSettings: config.NewReceiverSettings(config.NewID(typeStr)),
-		PrometheusConfig: cfg,
-		// logger : params.Logger,
 	}
 }
 
