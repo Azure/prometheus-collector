@@ -2,14 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 )
 
 func main() {
 	receiver := components()
-	if err != nil {
-		log.Fatalf("failed to build receiver: %v", err)
-	}
 	// info := component.BuildInfo{
 	// 	Command:     "custom-receiver-validator",
 	// 	Description: "Custom Receiver validator",
