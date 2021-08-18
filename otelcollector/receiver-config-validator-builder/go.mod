@@ -1,4 +1,4 @@
-module github.com/rashmy/promreceiver-validator-builder
+module github.com/rashmy/promreceiver-config-validator-builder
 
 go 1.14
 
