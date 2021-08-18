@@ -34,13 +34,14 @@ func main() {
 	defCfg := receiver.CreateDefaultConfig()
 	fmt.Printf("DefConfig: %+v\n", defCfg)
 
-	customConfig := createCustomConfig(configContents)
-	fmt.Printf("CustomConfig: %+v\n", customConfig)
 	configContents, err := promconfig.LoadFile(filePath, false, log.NewNopLogger())
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
 	fmt.Printf("Config contents: %v", configContents)
+
+	customConfig := createCustomConfig(configContents)
+	fmt.Printf("CustomConfig: %+v\n", customConfig)
 	//cfg.PrometheusConfig = configContents
 
 	//cfgErr := cfg.Validate()
