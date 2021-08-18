@@ -16,4 +16,8 @@ func main() {
 	cfg := receiver.CreateDefaultConfig()
 	fmt.Printf("Config: %+v\n", cfg)
 
+	err := cfg.Validate()
+	if err != nil {
+		fmt.Printf("Error: %v", err)
+	}
 }
