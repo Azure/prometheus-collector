@@ -1,11 +1,19 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+
+	"github.com/go-kit/log"
+	"github.com/prometheus/prometheus/config"
 )
 
 func main() {
 	receiver := components()
+	configFilePtr := flag.String("config-file", "", "Config file to validate")
+	flag.Parse()
+	filePath := *configFilePtr
+	fmt.Printf("Config file provided : %s", filePath)
 	// info := component.BuildInfo{
 	// 	Command:     "custom-receiver-validator",
 	// 	Description: "Custom Receiver validator",
@@ -15,6 +23,9 @@ func main() {
 	fmt.Printf("Receiver: %+v\n", receiver)
 	cfg := receiver.CreateDefaultConfig()
 	fmt.Printf("Config: %+v\n", cfg)
+	configContents := config.LoadFile(filePath, false, log.NewNopLogger())
+	fmt.Printf("Config contents: %v", configContents)
+	cfg.PrometheusConfig = configContents
 
 	err := cfg.Validate()
 	if err != nil {
