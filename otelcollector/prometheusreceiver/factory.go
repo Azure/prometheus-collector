@@ -56,7 +56,7 @@ func createDefaultConfig() config.Receiver {
 	}
 }
 
-func createCustomConfig(cfg promconfig.Config) config.Receiver {
+func createCustomConfig(cfg *promconfig.Config) config.Receiver {
 	// func createDefaultConfig(params component.ReceiverCreateParams) config.Receiver {
 	return &Config{
 		ReceiverSettings: config.NewReceiverSettings(config.NewID(typeStr)),
