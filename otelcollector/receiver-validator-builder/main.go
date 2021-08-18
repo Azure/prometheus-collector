@@ -11,6 +11,7 @@ func main() {
 	// 	Description: "Custom Receiver validator",
 	// 	Version:     "1.0.0",
 	// }
-	fmt.Printf("Receiver: %v", receiver)
+	// fmt.Printf("Receiver: %v", receiver)
+	fmt.Printf("Receiver: %+v\n", receiver)
 
 }
