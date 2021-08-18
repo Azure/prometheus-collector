@@ -28,10 +28,10 @@ func main() {
 		fmt.Printf("Error: %v", err)
 	}
 	fmt.Printf("Config contents: %v", configContents)
-	cfg.*PrometheusConfig = configContents
+	//cfg.PrometheusConfig = configContents
 
-	cfgErr := cfg.Validate()
-	if cfgErr != nil {
-		fmt.Printf("Error: %v", cfgErr)
-	}
+	//cfgErr := cfg.Validate()
+	//if cfgErr != nil {
+	//	fmt.Printf("Error: %v", cfgErr)
+	//}
 }
