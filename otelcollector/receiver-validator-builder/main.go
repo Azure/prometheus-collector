@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/go-kit/log"
+	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 	promconfig "github.com/prometheus/prometheus/config"
-	colConfig "go.opentelemetry.io/collector/config"
 )
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 	fmt.Printf("Config contents: %v", configContents)
 
 	//customConfig := receiver.createCustomConfig(configContents)
-	customConfig := &colConfig.Config{
+	customConfig := &privatepromreceiver.Config{
 		PrometheusConfig: configContents,
 	}
 	fmt.Printf("CustomConfig: %+v\n", customConfig)
