@@ -13,5 +13,7 @@ func main() {
 	// }
 	// fmt.Printf("Receiver: %v", receiver)
 	fmt.Printf("Receiver: %+v\n", receiver)
+	cfg := receiver.createDefaultConfig()
+	fmt.Printf("Config: %+v\n", cfg)
 
 }
