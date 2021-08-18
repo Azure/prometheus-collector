@@ -60,7 +60,7 @@ func createCustomConfig(cfg promconfig.Config) config.Receiver {
 	// func createDefaultConfig(params component.ReceiverCreateParams) config.Receiver {
 	return &Config{
 		ReceiverSettings: config.NewReceiverSettings(config.NewID(typeStr)),
-		PrometheusConfig: *cfg,
+		PrometheusConfig: cfg,
 		// logger : params.Logger,
 	}
 }
