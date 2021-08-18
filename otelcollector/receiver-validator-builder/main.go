@@ -5,8 +5,18 @@ import (
 	"fmt"
 
 	"github.com/go-kit/log"
-	"github.com/prometheus/prometheus/config"
+	promconfig "github.com/prometheus/prometheus/config"
+	"go.opentelemetry.io/collector/config"
 )
+
+func createCustomConfig(promconfig.Config cfg) config.Receiver {
+	// func createDefaultConfig(params component.ReceiverCreateParams) config.Receiver {
+	return &Config{
+		ReceiverSettings: config.NewReceiverSettings(config.NewID(typeStr)),
+		PrometheusConfig: cfg,
+		// logger : params.Logger,
+	}
+}
 
 func main() {
 	receiver := components()
@@ -21,9 +31,12 @@ func main() {
 	// }
 	// fmt.Printf("Receiver: %v", receiver)
 	fmt.Printf("Receiver: %+v\n", receiver)
-	cfg := receiver.CreateDefaultConfig()
-	fmt.Printf("Config: %+v\n", cfg)
-	configContents, err := config.LoadFile(filePath, false, log.NewNopLogger())
+	defCfg := receiver.CreateDefaultConfig()
+	fmt.Printf("DefConfig: %+v\n", defCfg)
+
+customConfig := createCustomConfig(configContents)
+fmt.Printf("CustomConfig: %+v\n", customConfig)
+	configContents, err := promconfig.LoadFile(filePath, false, log.NewNopLogger())
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
