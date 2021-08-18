@@ -28,9 +28,9 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
-	fmt.Printf("Config contents: %v", *configContents)
+	fmt.Printf("Config contents: %v", configContents)
 
-	customConfig := receiver.CreateCustomConfig(configContents)
+	customConfig := receiver.CreateCustomConfig(*configContents)
 	fmt.Printf("CustomConfig: %+v\n", customConfig)
 	//cfg.PrometheusConfig = configContents
 
