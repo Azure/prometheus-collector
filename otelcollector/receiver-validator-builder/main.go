@@ -38,8 +38,8 @@ func main() {
 	fmt.Printf("CustomConfig: %+v\n", customConfig)
 	//cfg.PrometheusConfig = configContents
 
-	//cfgErr := cfg.Validate()
-	//if cfgErr != nil {
-	//	fmt.Printf("Error: %v", cfgErr)
-	//}
+	cfgErr := customConfig.Validate()
+	if cfgErr != nil {
+		fmt.Printf("Error: %v", cfgErr)
+	}
 }
