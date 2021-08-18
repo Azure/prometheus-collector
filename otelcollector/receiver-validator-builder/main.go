@@ -9,7 +9,7 @@ import (
 	"go.opentelemetry.io/collector/config"
 )
 
-func createCustomConfig(promconfig.Config cfg) config.Receiver {
+func createCustomConfig(cfg promconfig.Config) config.Receiver {
 	// func createDefaultConfig(params component.ReceiverCreateParams) config.Receiver {
 	return &Config{
 		ReceiverSettings: config.NewReceiverSettings(config.NewID(typeStr)),
@@ -34,8 +34,8 @@ func main() {
 	defCfg := receiver.CreateDefaultConfig()
 	fmt.Printf("DefConfig: %+v\n", defCfg)
 
-customConfig := createCustomConfig(configContents)
-fmt.Printf("CustomConfig: %+v\n", customConfig)
+	customConfig := createCustomConfig(configContents)
+	fmt.Printf("CustomConfig: %+v\n", customConfig)
 	configContents, err := promconfig.LoadFile(filePath, false, log.NewNopLogger())
 	if err != nil {
 		fmt.Printf("Error: %v", err)
