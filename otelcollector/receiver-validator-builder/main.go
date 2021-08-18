@@ -30,7 +30,7 @@ func main() {
 	}
 	fmt.Printf("Config contents: %v", configContents)
 
-	customConfig := receiver.CreateCustomConfig(&configContents)
+	customConfig := receiver.CreateCustomConfig(configContents)
 	fmt.Printf("CustomConfig: %+v\n", customConfig)
 	//cfg.PrometheusConfig = configContents
 
