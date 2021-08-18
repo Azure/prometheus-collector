@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	receiver, err := components()
+	receiver := components()
 	if err != nil {
 		log.Fatalf("failed to build receiver: %v", err)
 	}
