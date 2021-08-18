@@ -8,7 +8,7 @@ import (
 	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 )
 
-func components() component.Receiver {
+func components() component.ReceiverFactory {
 	// var errs []error
 
 	receiver := privatepromreceiver.NewFactory()
