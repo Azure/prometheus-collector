@@ -23,9 +23,12 @@ func main() {
 	fmt.Printf("Receiver: %+v\n", receiver)
 	cfg := receiver.CreateDefaultConfig()
 	fmt.Printf("Config: %+v\n", cfg)
-	configContents := config.LoadFile(filePath, false, log.NewNopLogger())
+	configContents, err := config.LoadFile(filePath, false, log.NewNopLogger())
+	if err != nil {
+		fmt.Printf("Error: %v", err)
+	}
 	fmt.Printf("Config contents: %v", configContents)
-	cfg.PrometheusConfig = configContents
+	&cfg{PrometheusConfig: configContents}
 
 	err := cfg.Validate()
 	if err != nil {
