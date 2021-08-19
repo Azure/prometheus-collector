@@ -2,6 +2,8 @@
 # frozen_string_literal: true
 
 require "tomlrb"
+require "deep_merge"
+require "yaml"
 require_relative "ConfigParseErrorLogger"
 
 @configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
@@ -11,24 +13,25 @@ require_relative "ConfigParseErrorLogger"
 @configSchemaVersion = ""
 @replicasetControllerType = "replicaset"
 @daemonsetControllerType = "daemonset"
+# @defaultConfigs = []
 
 # Setting default values which will be used in case they are not set in the configmap or if configmap doesnt exist
 @indentedConfig = ""
 @useDefaultConfig = true
 
-@kubeletDefaultStringRsSimple = "job_name: kubelet\nscheme: https\nmetrics_path: /metrics\nscrape_interval: 30s\ntls_config:\n  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n  insecure_skip_verify: true\nbearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\nrelabel_configs:\n- source_labels: [__metrics_path__]\n  regex: (.*)\n  target_label: metrics_path\nkubernetes_sd_configs:\n- role: node"
-@kubeletDefaultStringRsAdvanced = "job_name: kubelet\nscheme: https\nmetrics_path: /metrics\nscrape_interval: 30s\ntls_config:\n  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n  insecure_skip_verify: true\nbearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\nrelabel_configs:\n- source_labels: [__metrics_path__]\n  regex: (.*)\n  target_label: metrics_path\nmetric_relabel_configs:\n- source_labels: [__name__]\n  action: keep\n  regex: \"up\"\nkubernetes_sd_configs:\n- role: node"
-@kubeletDefaultStringDs = "job_name: kubelet\nscheme: https\nmetrics_path: /metrics\nscrape_interval: 30s\ntls_config:\n  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n  insecure_skip_verify: true\nbearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\nrelabel_configs:\n- source_labels: [__metrics_path__]\n  regex: (.*)\n  target_label: metrics_path\n- source_labels: [__address__]\n  replacement: '$$NODE_NAME$$'\n  target_label: instance\nstatic_configs:\n- targets: ['$$NODE_IP$$:10250']"
-@corednsDefaultString = "job_name: kube-dns\nscheme: http\nmetrics_path: /metrics\nscrape_interval: 30s\nrelabel_configs:\n- action: keep\n  source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]\n  separator: '/'\n  regex: 'kube-system/coredns.+'\n- source_labels: [__meta_kubernetes_pod_container_port_name]\n  action: keep\n  regex: metrics\n- source_labels: [__meta_kubernetes_pod_name]\n  target_label: pod\nkubernetes_sd_configs:\n- role: pod"
-@cadvisorDefaultStringRsSimple = "job_name: cadvisor\nscheme: https\nmetrics_path: /metrics/cadvisor\nscrape_interval: 30s\ntls_config:\n  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n  insecure_skip_verify: true\nbearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\nkubernetes_sd_configs:\n- role: node"
-@cadvisorDefaultStringRsAdvanced = "job_name: cadvisor\nscheme: https\nmetrics_path: /metrics/cadvisor\nscrape_interval: 30s\ntls_config:\n  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n  insecure_skip_verify: true\nbearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\nmetric_relabel_configs:\n- source_labels: [__name__]\n  action: keep\n  regex: \"up\"\nkubernetes_sd_configs:\n- role: node"
-@cadvisorDefaultStringDs = "job_name: cadvisor\nscheme: https\nmetrics_path: /metrics/cadvisor\nscrape_interval: 30s\ntls_config:\n  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n  insecure_skip_verify: true\nbearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\nrelabel_configs:\n- source_labels: [__address__]\n  replacement: '$$NODE_NAME$$'\n  target_label: instance\nstatic_configs:\n- targets: ['$$NODE_IP$$:10250']"
-@kubeproxyDefaultString = "job_name: kube-proxy\nscrape_interval: 30s\nkubernetes_sd_configs:\n- role: pod\nrelabel_configs:\n- action: keep\n  source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]\n  separator: '/'\n  regex: 'kube-system/kube-proxy.+'\n- source_labels:\n  - __address__\n  action: replace\n  target_label: __address__\n  regex: (.+?)(\\:\\d+)?\n  replacement: $$1:10249"
-@apiserverDefaultString = "job_name: kube-apiserver\nscrape_interval: 30s\nkubernetes_sd_configs:\n- role: endpoints\nscheme: https\ntls_config:\n  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n  insecure_skip_verify: true\nbearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\nrelabel_configs:\n- source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]\n  action: keep\n  regex: default;kubernetes;https"
-@kubestateDefaultString = "job_name: kube-state-metrics\nscrape_interval: 30s\nstatic_configs:\n- targets: ['$$KUBE_STATE_NAME$$.$$POD_NAMESPACE$$.svc.cluster.local:8080']"
-@nodeexporterDefaultStringRsSimple = "job_name: node\nscheme: http\nscrape_interval: 30s\nkubernetes_sd_configs:\n- role: endpoints\n  namespaces:\n   names:\n   - $$POD_NAMESPACE$$\nrelabel_configs:\n- action: keep\n  source_labels: [__meta_kubernetes_endpoints_name]\n  regex: $$NODE_EXPORTER_NAME$$"
-@nodeexporterDefaultStringRsAdvanced = "job_name: node\nscheme: http\nscrape_interval: 30s\nkubernetes_sd_configs:\n- role: endpoints\n  namespaces:\n   names:\n   - $$POD_NAMESPACE$$\nrelabel_configs:\n- action: keep\n  source_labels: [__meta_kubernetes_endpoints_name]\n  regex: $$NODE_EXPORTER_NAME$$\nmetric_relabel_configs:\n- source_labels: [__name__]\n  action: keep\n  regex: \"up\""
-@nodeexporterDefaultStringDs = "job_name: node\nscheme: http\nscrape_interval: 30s\nstatic_configs:\n- targets: ['$$NODE_IP$$:$$NODE_EXPORTER_TARGETPORT$$']"
+@kubeletDefaultStringRsSimple = "scrape_configs:\n- job_name: kubelet\n  scheme: https\n  metrics_path: /metrics\n  scrape_interval: 30s\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  relabel_configs:\n  - source_labels: [__metrics_path__]\n    regex: (.*)\n    target_label: metrics_path\n  kubernetes_sd_configs:\n  - role: node"
+@kubeletDefaultStringRsAdvanced = "scrape_configs:\n- job_name: kubelet\n    scheme: https\n    metrics_path: /metrics\n    scrape_interval: 30s\n    tls_config:\n      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n      insecure_skip_verify: true\n    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n    relabel_configs:\n    - source_labels: [__metrics_path__]\n    regex: (.*)\n    target_label: metrics_path\n  metric_relabel_configs:\n  - source_labels: [__name__]\n    action: keep\n    regex: \"up\"\n  kubernetes_sd_configs:\n  - role: node"
+@kubeletDefaultStringDs = "scrape_configs:\n- job_name: kubelet\n  scheme: https\n  metrics_path: /metrics\n  scrape_interval: 30s\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  relabel_configs:\n  - source_labels: [__metrics_path__]\n    regex: (.*)\n    target_label: metrics_path\n  - source_labels: [__address__]\n    replacement: '$$NODE_NAME$$'\n    target_label: instance\n  static_configs:\n  - targets: ['$$NODE_IP$$:10250']"
+@corednsDefaultString = "scrape_configs:\n- job_name: kube-dns\n  scheme: http\n  metrics_path: /metrics\n  scrape_interval: 30s\n  relabel_configs:\n  - action: keep\n    source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]\n    separator: '/'\n    regex: 'kube-system/coredns.+'\n  - source_labels: [__meta_kubernetes_pod_container_port_name]\n    action: keep\n    regex: metrics\n  - source_labels: [__meta_kubernetes_pod_name]\n    target_label: pod\n  kubernetes_sd_configs:\n  - role: pod"
+@cadvisorDefaultStringRsSimple = "scrape_configs:\n- job_name: cadvisor\n  scheme: https\n  metrics_path: /metrics/cadvisor\n  scrape_interval: 30s\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  kubernetes_sd_configs:\n  - role: node"
+@cadvisorDefaultStringRsAdvanced = "scrape_configs:\n- job_name: cadvisor\n  scheme: https\n  metrics_path: /metrics/cadvisor\n  scrape_interval: 30s\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  metric_relabel_configs:\n  - source_labels: [__name__]\n    action: keep\n    regex: \"up\"\n  kubernetes_sd_configs:\n  - role: node"
+@cadvisorDefaultStringDs = "scrape_configs:\n- job_name: cadvisor\n  scheme: https\n  metrics_path: /metrics/cadvisor\n  scrape_interval: 30s\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  relabel_configs:\n  - source_labels: [__address__]\n    replacement: '$$NODE_NAME$$'\n    target_label: instance\n  static_configs:\n  - targets: ['$$NODE_IP$$:10250']"
+@kubeproxyDefaultString = "scrape_configs:\n- job_name: kube-proxy\n  scrape_interval: 30s\n  kubernetes_sd_configs:\n  - role: pod\n  relabel_configs:\n  - action: keep\n    source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]\n    separator: '/'\n    regex: 'kube-system/kube-proxy.+'\n  - source_labels:\n    - __address__\n    action: replace\n    target_label: __address__\n    regex: (.+?)(\\:\\d+)?\n    replacement: $$1:10249"
+@apiserverDefaultString = "scrape_configs:\n- job_name: kube-apiserver\n  scrape_interval: 30s\n  kubernetes_sd_configs:\n  - role: endpoints\n  scheme: https\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  relabel_configs:\n  - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]\n    action: keep\n    regex: default;kubernetes;https"
+@kubestateDefaultString = "scrape_configs:\n- job_name: kube-state-metrics\n  scrape_interval: 30s\n  static_configs:\n  - targets: ['$$KUBE_STATE_NAME$$.$$POD_NAMESPACE$$.svc.cluster.local:8080']"
+@nodeexporterDefaultStringRsSimple = "scrape_configs:\n- job_name: node\n  scheme: http\n  scrape_interval: 30s\n  kubernetes_sd_configs:\n  - role: endpoints\n    namespaces:\n     names:\n     - $$POD_NAMESPACE$$\n  relabel_configs:\n  - action: keep\n    source_labels: [__meta_kubernetes_endpoints_name]\n    regex: $$NODE_EXPORTER_NAME$$"
+@nodeexporterDefaultStringRsAdvanced = "scrape_configs:\n- job_name: node\n  scheme: http\n  scrape_interval: 30s\n  kubernetes_sd_configs:\n  - role: endpoints\n    namespaces:\n     names:\n     - $$POD_NAMESPACE$$\n  relabel_configs:\n  - action: keep\n    source_labels: [__meta_kubernetes_endpoints_name]\n    regex: $$NODE_EXPORTER_NAME$$\n  metric_relabel_configs:\n  - source_labels: [__name__]\n    action: keep\n    regex: \"up\""
+@nodeexporterDefaultStringDs = "scrape_configs:\n- job_name: node\n  scheme: http\n  scrape_interval: 30s\n  static_configs:\n  - targets: ['$$NODE_IP$$:$$NODE_EXPORTER_TARGETPORT$$']"
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -63,53 +66,65 @@ def populateSettingValuesFromConfigMap(configString)
     if currentMode == "advanced"
       advancedMode = true
     end
-    
+
     # Indent for the otelcollector config and remove comments
-    @indentedConfig = configString.gsub(/\R+/, "\n        ")
-    @indentedConfig = @indentedConfig.gsub(/#.*/, "")
+    # @indentedConfig = configString
+    defaultConfigs = []
+    # @indentedConfig = configString.gsub(/\R+/, "\n        ")
+    # @indentedConfig = @indentedConfig.gsub(/#.*/, "")
     if !ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].downcase == "true"
       if currentControllerType == @replicasetControllerType
         if advancedMode == false
-          @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @kubeletDefaultStringRsSimple)
+          defaultConfigs.push(@kubeletDefaultStringRsSimple)
+          # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @kubeletDefaultStringRsSimple)
         else
-          @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @kubeletDefaultStringRsAdvanced)
+          defaultConfigs.push(@kubeletDefaultStringRsAdvanced)
+          # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @kubeletDefaultStringRsAdvanced)
         end
       else
         if advancedMode == true
-          @kubeletDefaultStringDs = @kubeletDefaultStringDs.gsub('$$NODE_IP$$', ENV["NODE_IP"])
-          @kubeletDefaultStringDs = @kubeletDefaultStringDs.gsub('$$NODE_NAME$$', ENV["NODE_NAME"])
-          @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @kubeletDefaultStringDs)
+          @kubeletDefaultStringDs = @kubeletDefaultStringDs.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          @kubeletDefaultStringDs = @kubeletDefaultStringDs.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+          defaultConfigs.push(@kubeletDefaultStringDs)
+          # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @kubeletDefaultStringDs)
         end
       end
     end
     if !ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
-      @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @corednsDefaultString)
+      defaultConfigs.push(@corednsDefaultString)
+      # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @corednsDefaultString)
     end
     if !ENV["AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED"].downcase == "true"
       if currentControllerType == @replicasetControllerType
         if advancedMode == false
-          @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @cadvisorDefaultStringRsSimple)
+          defaultConfigs.push(@cadvisorDefaultStringRsSimple)
+          # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @cadvisorDefaultStringRsSimple)
         else
-          @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @cadvisorDefaultStringRsAdvanced)
+          defaultConfigs.push(@cadvisorDefaultStringRsAdvanced)
+          # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @cadvisorDefaultStringRsAdvanced)
         end
       else
         if advancedMode == true
-          @cadvisorDefaultStringDs = @cadvisorDefaultStringDs.gsub('$$NODE_IP$$', ENV["NODE_IP"])
-          @cadvisorDefaultStringDs = @cadvisorDefaultStringDs.gsub('$$NODE_NAME$$', ENV["NODE_NAME"])
-          @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @cadvisorDefaultStringDs)
+          @cadvisorDefaultStringDs = @cadvisorDefaultStringDs.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          @cadvisorDefaultStringDs = @cadvisorDefaultStringDs.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+          defaultConfigs.push(@cadvisorDefaultStringDs)
+          # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @cadvisorDefaultStringDs)
         end
       end
     end
     if !ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
-      @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @kubeproxyDefaultString)
+      defaultConfigs.push(@kubeproxyDefaultString)
+      # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @kubeproxyDefaultString)
     end
     if !ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
-      @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @apiserverDefaultString)
+      defaultConfigs.push(@apiserverDefaultString)
+      # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @apiserverDefaultString)
     end
     if !ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
-      @kubestateDefaultString = @kubestateDefaultString.gsub('$$KUBE_STATE_NAME$$', ENV["KUBE_STATE_NAME"])
-      @kubestateDefaultString = @kubestateDefaultString.gsub('$$POD_NAMESPACE$$', ENV["POD_NAMESPACE"])
-      @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @kubestateDefaultString)
+      @kubestateDefaultString = @kubestateDefaultString.gsub("$$KUBE_STATE_NAME$$", ENV["KUBE_STATE_NAME"])
+      @kubestateDefaultString = @kubestateDefaultString.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
+      defaultConfigs.push(@kubestateDefaultString)
+      # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @kubestateDefaultString)
     end
     if !ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].downcase == "true"
       if currentControllerType == @replicasetControllerType
@@ -117,17 +132,22 @@ def populateSettingValuesFromConfigMap(configString)
         if advancedMode == true
           nodeexporterDefaultStringRs = @nodeexporterDefaultStringRsAdvanced
         end
-        nodeexporterDefaultStringRs = nodeexporterDefaultStringRs.gsub('$$NODE_EXPORTER_NAME$$', ENV["NODE_EXPORTER_NAME"])
-        nodeexporterDefaultStringRs = nodeexporterDefaultStringRs.gsub('$$POD_NAMESPACE$$', ENV["POD_NAMESPACE"])
-        @indentedConfig = addDefaultScrapeConfig(@indentedConfig, nodeexporterDefaultStringRs)
+        nodeexporterDefaultStringRs = nodeexporterDefaultStringRs.gsub("$$NODE_EXPORTER_NAME$$", ENV["NODE_EXPORTER_NAME"])
+        nodeexporterDefaultStringRs = nodeexporterDefaultStringRs.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
+        defaultConfigs.push(nodeexporterDefaultStringRs)
+        # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, nodeexporterDefaultStringRs)
       else
         if advancedMode == true
-          @nodeexporterDefaultStringDs = @nodeexporterDefaultStringDs.gsub('$$NODE_IP$$', ENV["NODE_IP"])
-          @nodeexporterDefaultStringDs = @nodeexporterDefaultStringDs.gsub('$$NODE_EXPORTER_TARGETPORT$$', ENV["NODE_EXPORTER_TARGETPORT"])
-          @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @nodeexporterDefaultStringDs)
+          @nodeexporterDefaultStringDs = @nodeexporterDefaultStringDs.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          @nodeexporterDefaultStringDs = @nodeexporterDefaultStringDs.gsub("$$NODE_EXPORTER_TARGETPORT$$", ENV["NODE_EXPORTER_TARGETPORT"])
+          defaultConfigs.push(@nodeexporterDefaultStringDs)
+          # @indentedConfig = addDefaultScrapeConfig(@indentedConfig, @nodeexporterDefaultStringDs)
         end
       end
     end
+
+    @indentedConfig = addDefaultScrapeConfig(configString, defaultScrapeConfigs)
+
     puts "config::Using config map setting for prometheus config"
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while substituting the prometheus config in the otelcollector config - #{errorStr}, using defaults, please check config map for errors")
@@ -135,42 +155,68 @@ def populateSettingValuesFromConfigMap(configString)
   end
 end
 
-def addDefaultScrapeConfig(indentedConfig, defaultScrapeConfig)
+def addDefaultScrapeConfig(customConfig, defaultScrapeConfigs)
+  indentedConfig = ""
+  begin
+    # Load custom prometheus config
+    promCustomConfig = YAML::load(customConfig)
 
-  # Check where to put the extra scrape config
-  scrapeConfigString = "scrape_configs:"
-  scrapeConfigIndex = indentedConfig.index(scrapeConfigString)
-  if !scrapeConfigIndex.nil?
-    indexToAddAt = scrapeConfigIndex + scrapeConfigString.length
+    defaultScrapeConfigs.each { |defaultScrapeConfig|
+      # Load yaml from default config
+      defaultConfigYaml = YAML::load(defaultScrapeConfig)
+      promCustomConfig = promCustomConfig.deep_merge!(defaultConfigYaml)
+    }
+    # Load yaml from default configs
+    # defaultConfigYaml = YAML::load(defaultScrapeConfig)
 
-    # Get how far indented the existing scrape configs are and add the scrape config at the same indentation
-    matched = indentedConfig.match(/scrape_configs\s*:\s*\n(\s*)-(\s+).*/)
-    if !matched.nil? && !matched.captures.nil? && matched.captures.length > 1
-      whitespaceBeforeDash = matched.captures[0]
-      whiteSpaceAfterDash = matched.captures[1]
+    # mergedConfigYaml = promCustomConfig.deep_merge!(defaultConfigYaml)
 
-      # Match indentation for everything underneath "- job_name:" (Include an extra space for -)
-      indentedDefaultConfig = defaultScrapeConfig.gsub(/\R+/, sprintf("\n%s %s", whitespaceBeforeDash, whiteSpaceAfterDash))
+    mergedYamlToIndent = YAML::dump(promCustomConfig)
 
-      # Match indentation and add dash for the starting line "- job_name:"
-      indentedDefaultConfig = sprintf("\n%s-%s%s\n", whitespaceBeforeDash, whiteSpaceAfterDash, indentedDefaultConfig)
-
-      # Add the indented scrape config to the existing config
-      indentedConfig = indentedConfig.insert(indexToAddAt, indentedDefaultConfig)
-    else
-      puts "config::Could not find regex match for place to add default configs"
-    end
-
-  # The section "scrape_configs:" isn't in config, so add it at the beginning and the extra scrape config underneath
-  # Don't need to match indentation since there aren't any other scrape configs
-  else
-    indentedDefaultConfig = defaultScrapeConfig.gsub(/\R+/, "\n          ")
-    stringToAdd = sprintf("scrape_configs:\n        - %s\n        ", indentedDefaultConfig)
-    indentedConfig = indentedConfig.insert(0, stringToAdd)
+    mergedYamlToIndent = mergedYamlToIndent.sub("---\n", "        ")
+    indentedConfig = mergedYamlToIndent.gsub(/\R+/, "\n        ")
+  rescue => errorStr
+    ConfigParseErrorLogger.logError("Exception while adding default scrape config- #{errorStr}, using defaults")
   end
-
   return indentedConfig
 end
+
+# def addDefaultScrapeConfig(indentedConfig, defaultScrapeConfig)
+
+#   # Check where to put the extra scrape config
+#   scrapeConfigString = "scrape_configs:"
+#   scrapeConfigIndex = indentedConfig.index(scrapeConfigString)
+#   if !scrapeConfigIndex.nil?
+#     indexToAddAt = scrapeConfigIndex + scrapeConfigString.length
+
+#     # Get how far indented the existing scrape configs are and add the scrape config at the same indentation
+#     matched = indentedConfig.match(/scrape_configs\s*:\s*\n(\s*)-(\s+).*/)
+#     if !matched.nil? && !matched.captures.nil? && matched.captures.length > 1
+#       whitespaceBeforeDash = matched.captures[0]
+#       whiteSpaceAfterDash = matched.captures[1]
+
+#       # Match indentation for everything underneath "- job_name:" (Include an extra space for -)
+#       indentedDefaultConfig = defaultScrapeConfig.gsub(/\R+/, sprintf("\n%s %s", whitespaceBeforeDash, whiteSpaceAfterDash))
+
+#       # Match indentation and add dash for the starting line "- job_name:"
+#       indentedDefaultConfig = sprintf("\n%s-%s%s\n", whitespaceBeforeDash, whiteSpaceAfterDash, indentedDefaultConfig)
+
+#       # Add the indented scrape config to the existing config
+#       indentedConfig = indentedConfig.insert(indexToAddAt, indentedDefaultConfig)
+#     else
+#       puts "config::Could not find regex match for place to add default configs"
+#     end
+
+#     # The section "scrape_configs:" isn't in config, so add it at the beginning and the extra scrape config underneath
+#     # Don't need to match indentation since there aren't any other scrape configs
+#   else
+#     indentedDefaultConfig = defaultScrapeConfig.gsub(/\R+/, "\n          ")
+#     stringToAdd = sprintf("scrape_configs:\n        - %s\n        ", indentedDefaultConfig)
+#     indentedConfig = indentedConfig.insert(0, stringToAdd)
+#   end
+
+#   return indentedConfig
+# end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
 puts "****************Start Prometheus Config Processing********************"
