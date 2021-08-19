@@ -156,6 +156,7 @@ def populateSettingValuesFromConfigMap(configString)
 end
 
 def addDefaultScrapeConfig(customConfig, defaultScrapeConfigs)
+  puts "Adding default scrape configs..."
   indentedConfig = ""
   begin
     # Load custom prometheus config
