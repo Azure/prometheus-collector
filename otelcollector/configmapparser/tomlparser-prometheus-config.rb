@@ -238,6 +238,11 @@ begin
     #Replace the placeholder value in the otelcollector with values from custom config
     text = File.read(@collectorConfigTemplatePath)
     new_contents = text.gsub("$AZMON_PROMETHEUS_CONFIG", @indentedConfig)
+    puts "------------------indentedConfig----------------"
+    puts @indentedConfig
+    puts "------------------new_contents----------------"
+    puts new_contents
+    puts "------------------new_contents----------------"
     File.open(@collectorConfigPath, "w") { |file| file.puts new_contents }
     @useDefaultConfig = false
   else
