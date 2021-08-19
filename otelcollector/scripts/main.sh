@@ -110,7 +110,7 @@ fi
 
 if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
       # Currently only logs the success or failure
-      /opt/promtool check config /etc/config/settings/prometheus/prometheus-config
+      # /opt/promtool check config /etc/config/settings/prometheus/prometheus-config
 
       # Use default config if specified config is invalid
       # if [ $? -ne 0 ]; then
