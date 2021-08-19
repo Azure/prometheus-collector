@@ -52,6 +52,7 @@ type OcaStore struct {
 	externalLabels       labels.Labels
 
 	logger *zap.Logger
+	stalenessStore *stalenessStore
 }
 
 // NewOcaStore returns an ocaStore instance, which can be acted as prometheus' scrape.Appendable
@@ -88,6 +89,9 @@ func (o *OcaStore) SetScrapeManager(scrapeManager *scrape.Manager) {
 func (o *OcaStore) Appender(context.Context) storage.Appender {
 	state := atomic.LoadInt32(&o.running)
 	if state == runningStateReady {
+		// Firstly prepare the stalenessStore for a new scrape cyle.
+		o.stalenessStore.refresh()
+
 		return newTransaction(
 			o.ctx,
 			o.jobsMap,
@@ -98,6 +102,7 @@ func (o *OcaStore) Appender(context.Context) storage.Appender {
 			o.sink,
 			o.externalLabels,
 			o.logger,
+			o.stalenessStore,
 		)
 	} else if state == runningStateInit {
 		panic("ScrapeManager is not set")

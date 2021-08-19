@@ -75,6 +75,8 @@ type transaction struct {
 	metricBuilder        *metricBuilder
 	externalLabels       labels.Labels
 	logger               *zap.Logger
+	stalenessStore       *stalenessStore
+	startTimeMs          int64
 }
 
 func newTransaction(
@@ -86,7 +88,7 @@ func newTransaction(
 	ms *metadataService,
 	sink consumer.Metrics,
 	externalLabels labels.Labels,
-	logger *zap.Logger) *transaction {
+	logger *zap.Logger, stalenessStore *stalenessStore) *transaction {
 	return &transaction{
 		id:                   atomic.AddInt64(&idSeq, 1),
 		ctx:                  ctx,
@@ -99,6 +101,8 @@ func newTransaction(
 		ms:                   ms,
 		externalLabels:       externalLabels,
 		logger:               logger,
+		stalenessStore:       stalenessStore,
+		startTimeMs:          -1,
 	}
 }
 
@@ -107,6 +111,9 @@ var _ storage.Appender = (*transaction)(nil)
 
 // Append always returns 0 to disable label caching.
 func (tr *transaction) Append(ref uint64, ls labels.Labels, t int64, v float64) (uint64, error) {
+	if tr.startTimeMs < 0 {
+		tr.startTimeMs = t
+	}
 	// Important, must handle. prometheus will still try to feed the appender some data even if it failed to
 	// scrape the remote target,  if the previous scrape was success and some data were cached internally
 	// in our case, we don't need these data, simply drop them shall be good enough. more details:
@@ -156,7 +163,7 @@ func (tr *transaction) initTransaction(ls labels.Labels) error {
 		tr.instance = instance
 	}
 	tr.node, tr.resource = createNodeAndResource(job, instance, mc.SharedLabels().Get(model.SchemeLabel))
-	tr.metricBuilder = newMetricBuilder(mc, tr.useStartTimeMetric, tr.startTimeMetricRegex, tr.logger)
+	tr.metricBuilder = newMetricBuilder(mc, tr.useStartTimeMetric, tr.startTimeMetricRegex, tr.logger, tr.stalenessStore)
 	tr.isNew = false
 	return nil
 }
@@ -168,6 +175,16 @@ func (tr *transaction) Commit() error {
 		// never added any data points, that the transaction has not been initialized.
 		return nil
 	}
+
+	// Before building metrics, issue staleness markers for every stale metric.
+	staleLabels := tr.stalenessStore.emitStaleLabels()
+
+	for _, sEntry := range staleLabels {
+		tr.metricBuilder.AddDataPoint(sEntry.labels, sEntry.seenAtMs, stalenessSpecialValue)
+	}
+
+	tr.startTimeMs = -1
+
 
 	ctx := obsreport.StartMetricsReceiveOp(tr.ctx, tr.receiverID, transport)
 	metrics, _, _, err := tr.metricBuilder.Build()
@@ -206,6 +223,7 @@ func (tr *transaction) Commit() error {
 }
 
 func (tr *transaction) Rollback() error {
+	tr.startTimeMs = -1
 	return nil
 }
 
