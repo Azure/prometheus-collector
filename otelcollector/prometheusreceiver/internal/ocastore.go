@@ -75,6 +75,7 @@ func NewOcaStore(
 		startTimeMetricRegex: startTimeMetricRegex,
 		receiverID:           receiverID,
 		externalLabels:       externalLabels,
+		stalenessStore:       newStalenessStore(),
 	}
 }
 
