@@ -174,7 +174,7 @@ def addDefaultScrapeConfig(customConfig, defaultScrapeConfigs)
 
     mergedYamlToIndent = YAML::dump(promCustomConfig)
 
-    mergedYamlToIndent = mergedYamlToIndent.sub("---\n", "  ")
+    mergedYamlToIndent = mergedYamlToIndent.sub("---\n", "")
     indentedConfig = mergedYamlToIndent.gsub(/\R+/, "\n        ")
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while adding default scrape config- #{errorStr}, using defaults")
