@@ -146,7 +146,7 @@ def populateSettingValuesFromConfigMap(configString)
       end
     end
 
-    @indentedConfig = addDefaultScrapeConfig(configString, defaultScrapeConfigs)
+    @indentedConfig = addDefaultScrapeConfig(configString, defaultConfigs)
 
     puts "config::Using config map setting for prometheus config"
   rescue => errorStr
