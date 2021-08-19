@@ -161,11 +161,11 @@ def addDefaultScrapeConfig(customConfig, defaultScrapeConfigs)
   indentedConfig = ""
   begin
     # Load custom prometheus config
-    promCustomConfig = YAML::load(customConfig)
+    promCustomConfig = YAML.load(customConfig)
 
     defaultScrapeConfigs.each { |defaultScrapeConfig|
       # Load yaml from default config
-      defaultConfigYaml = YAML::load(defaultScrapeConfig)
+      defaultConfigYaml = YAML.load(defaultScrapeConfig)
       promCustomConfig = promCustomConfig.deep_merge!(defaultConfigYaml)
     }
     # Load yaml from default configs
