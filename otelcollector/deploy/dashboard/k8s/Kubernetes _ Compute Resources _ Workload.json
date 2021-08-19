@@ -354,7 +354,7 @@
                       {
                         "targetBlank": false,
                         "title": "Drill down",
-                        "url": "./d/6581e46e4e5c7ba40a07646395ef7b23/kubernetes-compute-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
+                        "url": "d/6581e46e4e5c7ba40a07646395ef7b23/kubernetes-compute-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
                       }
                     ]
                   },
@@ -769,7 +769,7 @@
                       {
                         "targetBlank": false,
                         "title": "Drill down",
-                        "url": "./d/6581e46e4e5c7ba40a07646395ef7b23/kubernetes-compute-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
+                        "url": "d/6581e46e4e5c7ba40a07646395ef7b23/kubernetes-compute-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
                       }
                     ]
                   },
@@ -1093,7 +1093,7 @@
                       {
                         "targetBlank": false,
                         "title": "Drill down",
-                        "url": "./d/6581e46e4e5c7ba40a07646395ef7b23/kubernetes-compute-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
+                        "url": "d/6581e46e4e5c7ba40a07646395ef7b23/kubernetes-compute-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell"
                       }
                     ]
                   },
@@ -2091,13 +2091,17 @@
         "type": "datasource"
       },
       {
-        "allValue": null,
-        "current": {},
+        "allValue": ".*",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": "$datasource",
         "definition": "",
         "description": null,
         "error": null,
-        "hide": 2,
+        "hide": 0,
         "includeAll": false,
         "label": null,
         "multi": false,
@@ -2132,7 +2136,7 @@
         "options": [],
         "query": {
           "query": "label_values(kube_pod_info{cluster=~\"$cluster\"}, namespace)",
-          "refId": "Prometheus-INT-Cluster-namespace-Variable-Query"
+          "refId": "StandardVariableQuery"
         },
         "refresh": 2,
         "regex": "",

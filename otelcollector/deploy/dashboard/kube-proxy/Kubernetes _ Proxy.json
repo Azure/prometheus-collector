@@ -1176,14 +1176,18 @@
         "type": "datasource"
       },
       {
-        "allValue": null,
-        "current": {},
+        "allValue": ".*",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": "${datasource}",
         "definition": "label_values(kubeproxy_sync_proxy_rules_duration_seconds_count, cluster)",
         "description": "Source-https://github.com/monitoring-mixins/website/blob/master/assets/kubernetes/dashboards/proxy.json",
         "error": null,
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": "cluster",
         "multi": false,
         "name": "cluster",

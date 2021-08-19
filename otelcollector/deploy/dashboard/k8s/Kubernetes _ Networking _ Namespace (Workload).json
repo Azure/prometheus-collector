@@ -556,7 +556,7 @@
                   {
                     "targetBlank": false,
                     "title": "Drill down",
-                    "url": "d/728bf77cc1166d2f3133bf25846876cc/kubernetes-networking-workload?orgId=1&refresh=1m&var-namespace=$namespace&var-type=$type&var-workload=$__cell"
+                    "url": "d/728bf77cc1166d2f3133bf25846876cc/kubernetes-networking-workload?refresh=1m&var-namespace=$namespace&var-type=$type&var-workload=$__cell"
                   }
                 ]
               },
@@ -1663,14 +1663,18 @@
         "type": "datasource"
       },
       {
-        "allValue": null,
-        "current": {},
+        "allValue": ".*",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": "${datasource}",
         "definition": "label_values(kube_pod_info, cluster)",
         "description": null,
         "error": null,
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": null,
         "multi": false,
         "name": "cluster",
