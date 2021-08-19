@@ -783,7 +783,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(kube_statefulset_metadata_generation{job=\"kube-state-metrics\", cluster=\"$cluster\"}, namespace)",
+          "query": "label_values(kube_statefulset_metadata_generation{job=\"kube-state-metrics\", cluster=~\"$cluster\"}, namespace)",
           "refId": "Prometheus-namespace-Variable-Query"
         },
         "refresh": 2,
@@ -809,7 +809,7 @@
         "name": "statefulset",
         "options": [],
         "query": {
-          "query": "label_values(kube_statefulset_metadata_generation{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\"}, statefulset)",
+          "query": "label_values(kube_statefulset_metadata_generation{job=\"kube-state-metrics\", cluster=~\"$cluster\", namespace=\"$namespace\"}, statefulset)",
           "refId": "Prometheus-statefulset-Variable-Query"
         },
         "refresh": 2,
