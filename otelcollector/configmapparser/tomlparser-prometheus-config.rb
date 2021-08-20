@@ -157,7 +157,7 @@ def populateSettingValuesFromConfigMap(configString)
 end
 
 def addDefaultScrapeConfig(customConfig, defaultScrapeConfigs)
-  puts "Adding default scrape configs..."
+  puts "config::Adding default scrape configs..."
   indentedConfig = ""
   begin
     # Load custom prometheus config
@@ -234,16 +234,15 @@ end
 
 begin
   if !@indentedConfig.nil? && !@indentedConfig.empty? && !@indentedConfig.strip.empty?
-    puts "config::Starting to substitute the placeholders in collector.yml"
+    puts "config::Starting to set prometheus config values in collector.yml"
     #Replace the placeholder value in the otelcollector with values from custom config
-    text = File.read(@collectorConfigTemplatePath)
-    new_contents = text.gsub("$AZMON_PROMETHEUS_CONFIG", @indentedConfig)
-    puts "------------------indentedConfig----------------"
-    puts @indentedConfig
-    puts "------------------new_contents----------------"
-    puts new_contents
-    puts "------------------new_contents----------------"
-    File.open(@collectorConfigPath, "w") { |file| file.puts new_contents }
+    #text = File.read(@collectorConfigTemplatePath)
+    #new_contents = text.gsub("$AZMON_PROMETHEUS_CONFIG", @indentedConfig)
+    collectorTemplate = YAML.load(File.read(@collectorConfigTemplatePath))
+    # Doing this instead of gsub because gsub causes ruby's string interpreter to strip escape characters from regex
+    collectorTemplate["receivers"]["prometheus"]["config"] = @indentedConfig
+    collectorNewConfig = YAML::dump(collectorTemplate)
+    File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
     @useDefaultConfig = false
   else
     puts "config::config is empty so using the default config with an empty job"
