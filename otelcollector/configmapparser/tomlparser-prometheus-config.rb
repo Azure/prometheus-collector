@@ -147,7 +147,7 @@ def populateSettingValuesFromConfigMap(configString)
     end
 
     @indentedConfig = addDefaultScrapeConfig(configString, defaultConfigs)
-    # puts @indentedConfig
+    puts @indentedConfig
 
     puts "config::Using config map setting for prometheus config"
   rescue => errorStr
@@ -174,9 +174,8 @@ def addDefaultScrapeConfig(customConfig, defaultScrapeConfigs)
     # mergedConfigYaml = promCustomConfig.deep_merge!(defaultConfigYaml)
 
     mergedYamlToIndent = YAML::dump(promCustomConfig)
-
-    mergedYamlToIndent = mergedYamlToIndent.sub("---\n", "")
-    indentedConfig = mergedYamlToIndent.gsub(/\R+/, "\n        ")
+    indentedConfig = mergedYamlToIndent.sub("---\n", "")
+    # indentedConfig = mergedYamlToIndent.gsub(/\R+/, "\n        ")
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while adding default scrape config- #{errorStr}, using defaults")
   end
@@ -242,7 +241,7 @@ begin
     # Doing this instead of gsub because gsub causes ruby's string interpreter to strip escape characters from regex
     collectorTemplate["receivers"]["prometheus"]["config"] = @indentedConfig
     collectorNewConfig = YAML::dump(collectorTemplate)
-    puts "----------------collectorNewConfig----------"
+    #puts "----------------collectorNewConfig----------"
     puts collectorNewConfig
     File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
     @useDefaultConfig = false
