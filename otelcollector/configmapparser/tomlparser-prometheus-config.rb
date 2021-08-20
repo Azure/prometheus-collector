@@ -162,6 +162,29 @@ def addDefaultScrapeConfig(configString, defaultScrapeConfigs)
   begin
     # Load custom prometheus config
     promCustomConfig = YAML.load(configString)
+    #     input = YAML.load(File.read("prom-config-with-relabel.yaml"))
+
+    # scfgs = input["scrape_configs"]
+
+    # if !scfgs.nil? && !scfgs.empty? && scfgs.length > 0
+    #   scfgs.each { |scfg|
+    #     relabelConfigs = scfg["relabel_configs"]
+    #     if !relabelConfigs.nil? && !relabelConfigs.empty? && relabelConfigs.length > 0
+    #       relabelConfigs.each { |relabelConfig|
+    #         action = relabelConfig["action"]
+    #         if !action.nil? && !action.empty? && (action.strip.casecmp("labeldrop") == 0 || action.strip.casecmp("labelkeep") == 0)
+    #           replacement = relabelConfig["replacement"]
+    #           if !replacement.nil? && !replacement.empty?
+    #             relabelConfig["replacement"] = replacement.gsub("$", "$$")
+    #           end
+    #         end
+    #       }
+    #     end
+    #       }
+    # end
+
+    # output = YAML::dump(input)
+    # File.open("output.yaml", "w") { |file| file.puts output }
     # Load each of the default scrape configs and merge it with prometheus custom config
     defaultScrapeConfigs.each { |defaultScrapeConfig|
       # Load yaml from default config
