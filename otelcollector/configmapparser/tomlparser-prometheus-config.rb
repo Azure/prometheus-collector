@@ -242,6 +242,8 @@ begin
     # Doing this instead of gsub because gsub causes ruby's string interpreter to strip escape characters from regex
     collectorTemplate["receivers"]["prometheus"]["config"] = @indentedConfig
     collectorNewConfig = YAML::dump(collectorTemplate)
+    puts "----------------collectorNewConfig----------"
+    puts collectorNewConfig
     File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
     @useDefaultConfig = false
   else
