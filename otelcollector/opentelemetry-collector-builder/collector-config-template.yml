@@ -23,7 +23,6 @@ processors:
 receivers:
     prometheus:
       config:
-        $AZMON_PROMETHEUS_CONFIG
 service:
   pipelines:
     metrics:
