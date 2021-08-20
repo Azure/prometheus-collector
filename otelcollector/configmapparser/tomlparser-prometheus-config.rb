@@ -16,7 +16,7 @@ require_relative "ConfigParseErrorLogger"
 # @defaultConfigs = []
 
 # Setting default values which will be used in case they are not set in the configmap or if configmap doesnt exist
-@indentedConfig = ""
+@mergedPromConfig = ""
 @useDefaultConfig = true
 
 @kubeletDefaultStringRsSimple = "scrape_configs:\n- job_name: kubelet\n  scheme: https\n  metrics_path: /metrics\n  scrape_interval: 30s\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  relabel_configs:\n  - source_labels: [__metrics_path__]\n    regex: (.*)\n    target_label: metrics_path\n  kubernetes_sd_configs:\n  - role: node"
@@ -69,6 +69,7 @@ def populateSettingValuesFromConfigMap(configString)
 
     # Indent for the otelcollector config and remove comments
     # @indentedConfig = configString
+
     defaultConfigs = []
     # @indentedConfig = configString.gsub(/\R+/, "\n        ")
     # @indentedConfig = @indentedConfig.gsub(/#.*/, "")
@@ -146,78 +147,33 @@ def populateSettingValuesFromConfigMap(configString)
       end
     end
 
-    @indentedConfig = addDefaultScrapeConfig(configString, defaultConfigs)
-    puts @indentedConfig
+    @mergedPromConfig = addDefaultScrapeConfig(configString, defaultConfigs)
 
     puts "config::Using config map setting for prometheus config"
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while substituting the prometheus config in the otelcollector config - #{errorStr}, using defaults, please check config map for errors")
-    @indentedConfig = ""
+    @mergedPromConfig = ""
   end
 end
 
-def addDefaultScrapeConfig(customConfig, defaultScrapeConfigs)
+def addDefaultScrapeConfig(configString, defaultScrapeConfigs)
   puts "config::Adding default scrape configs..."
-  indentedConfig = ""
+  mergedCustomAndDefaultConfig = ""
   begin
     # Load custom prometheus config
-    promCustomConfig = YAML.load(customConfig)
-
+    promCustomConfig = YAML.load(configString)
+    # Load each of the default scrape configs and merge it with prometheus custom config
     defaultScrapeConfigs.each { |defaultScrapeConfig|
       # Load yaml from default config
       defaultConfigYaml = YAML.load(defaultScrapeConfig)
       promCustomConfig = promCustomConfig.deep_merge!(defaultConfigYaml)
     }
-    # Load yaml from default configs
-    # defaultConfigYaml = YAML::load(defaultScrapeConfig)
-
-    # mergedConfigYaml = promCustomConfig.deep_merge!(defaultConfigYaml)
-
-    mergedYamlToIndent = YAML::dump(promCustomConfig)
-    indentedConfig = mergedYamlToIndent.sub("---\n", "")
-    # indentedConfig = mergedYamlToIndent.gsub(/\R+/, "\n        ")
+    mergedCustomAndDefaultConfig = promCustomConfig
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while adding default scrape config- #{errorStr}, using defaults")
   end
-  return indentedConfig
+  return mergedCustomAndDefaultConfig
 end
-
-# def addDefaultScrapeConfig(indentedConfig, defaultScrapeConfig)
-
-#   # Check where to put the extra scrape config
-#   scrapeConfigString = "scrape_configs:"
-#   scrapeConfigIndex = indentedConfig.index(scrapeConfigString)
-#   if !scrapeConfigIndex.nil?
-#     indexToAddAt = scrapeConfigIndex + scrapeConfigString.length
-
-#     # Get how far indented the existing scrape configs are and add the scrape config at the same indentation
-#     matched = indentedConfig.match(/scrape_configs\s*:\s*\n(\s*)-(\s+).*/)
-#     if !matched.nil? && !matched.captures.nil? && matched.captures.length > 1
-#       whitespaceBeforeDash = matched.captures[0]
-#       whiteSpaceAfterDash = matched.captures[1]
-
-#       # Match indentation for everything underneath "- job_name:" (Include an extra space for -)
-#       indentedDefaultConfig = defaultScrapeConfig.gsub(/\R+/, sprintf("\n%s %s", whitespaceBeforeDash, whiteSpaceAfterDash))
-
-#       # Match indentation and add dash for the starting line "- job_name:"
-#       indentedDefaultConfig = sprintf("\n%s-%s%s\n", whitespaceBeforeDash, whiteSpaceAfterDash, indentedDefaultConfig)
-
-#       # Add the indented scrape config to the existing config
-#       indentedConfig = indentedConfig.insert(indexToAddAt, indentedDefaultConfig)
-#     else
-#       puts "config::Could not find regex match for place to add default configs"
-#     end
-
-#     # The section "scrape_configs:" isn't in config, so add it at the beginning and the extra scrape config underneath
-#     # Don't need to match indentation since there aren't any other scrape configs
-#   else
-#     indentedDefaultConfig = defaultScrapeConfig.gsub(/\R+/, "\n          ")
-#     stringToAdd = sprintf("scrape_configs:\n        - %s\n        ", indentedDefaultConfig)
-#     indentedConfig = indentedConfig.insert(0, stringToAdd)
-#   end
-
-#   return indentedConfig
-# end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
 puts "****************Start Prometheus Config Processing********************"
@@ -232,17 +188,12 @@ else
 end
 
 begin
-  if !@indentedConfig.nil? && !@indentedConfig.empty? && !@indentedConfig.strip.empty?
+  if !@mergedPromConfig.nil? && !@mergedPromConfig.empty?
     puts "config::Starting to set prometheus config values in collector.yml"
-    #Replace the placeholder value in the otelcollector with values from custom config
-    #text = File.read(@collectorConfigTemplatePath)
-    #new_contents = text.gsub("$AZMON_PROMETHEUS_CONFIG", @indentedConfig)
     collectorTemplate = YAML.load(File.read(@collectorConfigTemplatePath))
     # Doing this instead of gsub because gsub causes ruby's string interpreter to strip escape characters from regex
-    collectorTemplate["receivers"]["prometheus"]["config"] = @indentedConfig
+    collectorTemplate["receivers"]["prometheus"]["config"] = @mergedPromConfig
     collectorNewConfig = YAML::dump(collectorTemplate)
-    #puts "----------------collectorNewConfig----------"
-    puts collectorNewConfig
     File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
     @useDefaultConfig = false
   else
