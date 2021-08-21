@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - vishwa/fixdeploymentbreak08202021
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
