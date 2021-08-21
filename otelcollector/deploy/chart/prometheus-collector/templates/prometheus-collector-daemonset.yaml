@@ -12,9 +12,13 @@ spec:
       dsName: {{ template "prometheus-collector.fullname" . }}-node
   updateStrategy:
     type: RollingUpdate
-    {{- if .Values.updateStrategy.daemonSet.maxUnavailable }}
+    {{- if .Values.updateStrategy }}
+      {{- if .Values.updateStrategy.daemonSet }}
+        {{- if .Values.updateStrategy.daemonSet.maxUnavailable }}
     rollingUpdate:
       maxUnavailable: {{ .Values.updateStrategy.daemonSet.maxUnavailable }}
+        {{- end }}
+      {{- end }}
     {{- end }}  
   template:
     metadata:
