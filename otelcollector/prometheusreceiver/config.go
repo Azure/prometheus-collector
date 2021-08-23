@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -77,23 +78,19 @@ func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
 	fmt.Printf("tlsConfig.CertFile - %v\n", tlsConfig.CertFile)
 
 	if err := checkFileExists(tlsConfig.CertFile); err != nil {
-		fmt.Errorf("error checking client cert file %q - &v", tlsConfig.CertFile, err)
-		return errors.New("error checking client cert file")
+		return fmt.Errorf("error checking client cert file %q - &v", tlsConfig.CertFile, err)
 	}
 	fmt.Printf("tlsConfig.KeyFile - %v\n", tlsConfig.KeyFile)
 
 	if err := checkFileExists(tlsConfig.KeyFile); err != nil {
-		fmt.Errorf("error checking client key file %q - &v", tlsConfig.KeyFile, err)
-		return errors.New("error checking client key file")
+		return fmt.Errorf("error checking client key file %q - &v", tlsConfig.KeyFile, err)
 	}
 
 	if len(tlsConfig.CertFile) > 0 && len(tlsConfig.KeyFile) == 0 {
-		fmt.Errorf("client cert file %q specified without client key file", tlsConfig.CertFile)
-		return errors.New("client cert file specified without client key file")
+		return fmt.Errorf("client cert file %q specified without client key file", tlsConfig.CertFile)
 	}
 	if len(tlsConfig.KeyFile) > 0 && len(tlsConfig.CertFile) == 0 {
-		fmt.Errorf("client key file %q specified without client cert file", tlsConfig.CertFile)
-		return errors.New("client key file specified without client cert file")
+		return fmt.Errorf("client key file %q specified without client cert file", tlsConfig.CertFile)
 	}
 
 	return nil
@@ -117,56 +114,86 @@ func checkSDFile(filename string) error {
 	switch ext := filepath.Ext(filename); strings.ToLower(ext) {
 	case ".json":
 		if err := json.Unmarshal(content, &targetGroups); err != nil {
-			fmt.Errorf("Error in unmarshaling json file extension - %v", err)
-			return err
+			return fmt.Errorf("Error in unmarshaling json file extension - %v", err)
 		}
 	case ".yml", ".yaml":
 		if err := yaml.UnmarshalStrict(content, &targetGroups); err != nil {
-			fmt.Errorf("Error in unmarshaling yaml file extension - %v", err)
-			return err
+			return fmt.Errorf("Error in unmarshaling yaml file extension - %v", err)
 		}
 	default:
-		fmt.Errorf("invalid file extension: %q", ext)
-		return errors.New("invalid file extension")
+		return fmt.Errorf("invalid file extension: %q", ext)
 	}
 
 	for i, tg := range targetGroups {
 		if tg == nil {
-			fmt.Errorf("nil target group item found (index %d)", i)
-			return errors.New("nil target group item found")
+			return fmt.Errorf("nil target group item found (index %d)", i)
 		}
 	}
-
 	return nil
 }
 
 // Validate checks the receiver configuration is valid
 func (cfg *Config) Validate() error {
 	//cfg.logger = internal.NewZapToGokitLogAdapter(cfg.logger)
-	if cfg.PrometheusConfig == nil {
+	promConfig := cfg.PrometheusConfig
+	if promConfig == nil {
 		return nil // noop receiver
 	}
-	if len(cfg.PrometheusConfig.ScrapeConfigs) == 0 {
+	if len(promConfig.ScrapeConfigs) == 0 {
 		return errors.New("no Prometheus scrape_configs")
 	}
+
+	// Reject features that Prometheus supports but that the receiver doesn't support:
+	// See:
+	// * https://github.com/open-telemetry/opentelemetry-collector/issues/3863
+	// * https://github.com/open-telemetry/wg-prometheus/issues/3
+	unsupportedFeatures := make([]string, 0, 4)
+	if len(promConfig.RemoteWriteConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "remote_write")
+	}
+	if len(promConfig.RemoteReadConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "remote_read")
+	}
+	if len(promConfig.RuleFiles) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "rule_files")
+	}
+	if len(promConfig.AlertingConfig.AlertRelabelConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "alert_config.relabel_configs")
+	}
+	if len(promConfig.AlertingConfig.AlertmanagerConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "alert_config.alertmanagers")
+	}
+	if len(unsupportedFeatures) != 0 {
+		// Sort the values for deterministic error messages.
+		sort.Strings(unsupportedFeatures)
+		return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
+	}
+
+	for _, sc := range cfg.PrometheusConfig.ScrapeConfigs {
+		for _, rc := range sc.MetricRelabelConfigs {
+			if rc.TargetLabel == "__name__" {
+				// TODO(#2297): Remove validation after renaming is fixed
+				return fmt.Errorf("error validating scrapeconfig for job %v: %w", sc.JobName, errRenamingDisallowed)
+			}
+		}
+	}
+
 	//cfg.logger.Info("Starting custom validation...\n")
 	fmt.Printf("Starting custom validation...\n")
-	for _, scfg := range cfg.PrometheusConfig.ScrapeConfigs {
+	for _, scfg := range promConfig.ScrapeConfigs {
 		fmt.Printf(".................................\n")
 		// fmt.Printf("scrape config- HTTPClientConfig - %v...\n", scfg.HTTPClientConfig)
 		// fmt.Printf("in file validation-Authorization- %v...\n", scfg.HTTPClientConfig.Authorization)
 
 		// Providing support for older version on prometheus config
 		if err := checkFileExists(scfg.HTTPClientConfig.BearerTokenFile); err != nil {
-			fmt.Errorf("error checking bearer token file %q - %s", scfg.HTTPClientConfig.BearerTokenFile, err)
-			return errors.New("error checking bearer token file")
+			return fmt.Errorf("error checking bearer token file %q - %s", scfg.HTTPClientConfig.BearerTokenFile, err)
 		}
 
 		if scfg.HTTPClientConfig.Authorization != nil {
 			// fmt.Printf("in file validation-Authorization-credentials file- %v...\n", scfg.HTTPClientConfig.Authorization.CredentialsFile)
 			if err := checkFileExists(scfg.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
-				fmt.Errorf("error checking authorization credentials file %q - %s", scfg.HTTPClientConfig.Authorization, err)
-				return errors.New("error checking authorization credentials file")
+				return fmt.Errorf("error checking authorization credentials file %q - %s", scfg.HTTPClientConfig.Authorization, err)
 			}
 		}
 
@@ -193,13 +220,12 @@ func (cfg *Config) Validate() error {
 						for _, f := range files {
 							err = checkSDFile(f)
 							if err != nil {
-								fmt.Errorf("checking SD file %q: %v", file, err)
-								return errors.New("Error in SD file check")
+								return fmt.Errorf("checking SD file %q: %v", file, err)
 							}
 						}
 						continue
 					}
-					fmt.Printf("  WARNING: file %q for file_sd in scrape job %q does not exist\n", file, scfg.JobName)
+					fmt.Printf("WARNING: file %q for file_sd in scrape job %q does not exist\n", file, scfg.JobName)
 				}
 			}
 		}
