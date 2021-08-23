@@ -160,8 +160,14 @@ def addDefaultScrapeConfig(configString, defaultScrapeConfigs)
   puts "config::Adding default scrape configs..."
   mergedCustomAndDefaultConfig = ""
   begin
-    # Load custom prometheus config
-    promCustomConfig = YAML.load(configString)
+    # Load custom prometheus config and check if it is valid, doing this since empty configmap returns false when we load config yaml
+    # using the yaml library
+    isPromCustomConfigValid = !!YAML.load(configString)
+    if isPromCustomConfigValid == true
+      promCustomConfig = YAML.load(configString)
+    else
+      promCustomConfig = "scrape_configs:"
+    end
     #     input = YAML.load(File.read("prom-config-with-relabel.yaml"))
 
     # scfgs = input["scrape_configs"]
