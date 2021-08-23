@@ -25,6 +25,10 @@ jobs:
         run: echo "ACR_REGISTRY=containerinsightsprod.azurecr.io" >> $GITHUB_ENV
       - name: Set-ACR-Repository
         run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
+      - name: Set-MCR-Registry
+        run: echo "MCR_REGISTRY=mcr.microsoft.com" >> $GITHUB_ENV
+      - name: Set-MCR-Repository
+        run: echo "MCR_REPOSITORY=/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
       - name: Set-image-tag-name
         run: echo "IMAGE_TAG_NAME=prometheus-collector" >> $GITHUB_ENV
       - name: Set-image-tag-suffix

@@ -27,7 +27,7 @@ sed -i "s/$image_regex/$image_replacement/g" ./deploy/prometheus-collector.yaml
 sed -i "s/$image_regex/$image_replacement/g" ./deploy/chart/prometheus-collector/README.md
 sed -i "s/$image_regex/$image_replacement/g" ./deploy/eng.ms/docs/Prometheus/chartvalues.md
 
-helm_regex="prometheus-collector-main-[a-zA-Z0-9.-]\+"
+helm_regex="prometheus-collector-chart-main-[a-zA-Z0-9.-]\+"
 helm_replacement="prometheus-collector-chart-main-$version-$date-$commit_id"
 echo "Replacing the HELM chart tag with: $helm_replacement"
 sed -i "s/$helm_regex/$helm_replacement/g" ./deploy/eng.ms/docs/Prometheus/PromMDMTutorial2DeployAgentHELM.md
