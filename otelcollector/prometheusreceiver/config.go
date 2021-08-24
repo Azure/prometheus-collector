@@ -182,8 +182,6 @@ func (cfg *Config) Validate() error {
 	fmt.Printf("Starting custom validation...\n")
 	for _, scfg := range promConfig.ScrapeConfigs {
 		fmt.Printf(".................................\n")
-		// fmt.Printf("scrape config- HTTPClientConfig - %v...\n", scfg.HTTPClientConfig)
-		// fmt.Printf("in file validation-Authorization- %v...\n", scfg.HTTPClientConfig.Authorization)
 
 		// Providing support for older version on prometheus config
 		if err := checkFileExists(scfg.HTTPClientConfig.BearerTokenFile); err != nil {
