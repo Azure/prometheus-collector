@@ -8,9 +8,14 @@ import (
 
 func main() {
 
-	def := parserProvider.Default()
+	colParserProvider := parserProvider.Default()
 
-	fmt.Printf("def parser provider: %v", def)
+	cp, err := colParserProvider.Get()
+	if err != nil {
+		return fmt.Errorf("cannot load configuration's parser: %w", err)
+	}
+
+	// fmt.Printf("def parser provider: %v", def)
 
 	// factories, err := components()
 	// if err != nil {
