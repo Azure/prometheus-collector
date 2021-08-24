@@ -12,10 +12,10 @@ func main() {
 
 	cp, err := colParserProvider.Get()
 	if err != nil {
-		return fmt.Errorf("cannot load configuration's parser: %w", err)
+		fmt.Errorf("cannot load configuration's parser: %w", err)
 	}
 
-	// fmt.Printf("def parser provider: %v", def)
+	fmt.Printf("def parser provider: %v", cp)
 
 	// factories, err := components()
 	// if err != nil {
