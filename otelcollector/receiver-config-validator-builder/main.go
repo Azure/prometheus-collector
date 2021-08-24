@@ -2,17 +2,11 @@ package main
 
 import (
 	"fmt"
-
-	"log"
-
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/service"
-	"go.opentelemetry.io/collector/service/parserprovider"
+		"go.opentelemetry.io/collector/service/parserprovider"
 )
 
 func main() {
 
-	parserProvider parserprovider.ParserProvider
 	def := parserProvider.Default()
 
 	fmt.Printf("def parser provider: %v", def)
