@@ -1,21 +1,41 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 
+	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/config/configloader"
+	"go.opentelemetry.io/collector/config/configparser"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 )
 
 func main() {
+	factories, err := components()
 
-	colParserProvider := parserProvider.Default()
+	flags := new(flag.FlagSet)
+	parserProvider.Flags(flags)
 
-	cp, err := colParserProvider.Get()
-	if err != nil {
-		fmt.Errorf("cannot load configuration's parser: %w", err)
-	}
+	err = flags.Parse([]string{
+		"--config=testdata/otelcol-config.yaml",
+		"--set=processors.doesnotexist.timeout=2s",
+	})
 
-	fmt.Printf("def parser provider: %v", cp)
+	var cp *configparser.Parser
+
+	var cfg *config.Config
+	cfg, err = configloader.Load(cp, factories)
+
+	fmt.Printf("config - %v", cfg)
+
+	// colParserProvider := parserProvider.Default("")
+
+	// cp, err := colParserProvider.Get()
+	// if err != nil {
+	// 	fmt.Errorf("cannot load configuration's parser: %w", err)
+	// }
+
+	// fmt.Printf("def parser provider: %v", cp)
 
 	// factories, err := components()
 	// if err != nil {
