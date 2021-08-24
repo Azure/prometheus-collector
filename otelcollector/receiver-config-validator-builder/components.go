@@ -3,15 +3,16 @@ package main
 import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer/consumererror"
+	"go.opentelemetry.io/collector/exporter/fileexporter"
+	"go.opentelemetry.io/collector/exporter/loggingexporter"
+	"go.opentelemetry.io/collector/exporter/otlpexporter"
+	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
+	"go.opentelemetry.io/collector/exporter/prometheusexporter"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/processor/filterprocessor"
 	"go.opentelemetry.io/collector/processor/memorylimiter"
 	"go.opentelemetry.io/collector/processor/resourceprocessor"
-	"go.opentelemetry.io/collector/exporter/loggingexporter"
-	"go.opentelemetry.io/collector/exporter/prometheusexporter"
-	"go.opentelemetry.io/collector/exporter/fileexporter"
-	"go.opentelemetry.io/collector/exporter/otlpexporter"
-	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
+
 	//"github.com/vishiy/influxexporter"
 	//"go.opentelemetry.io/collector/receiver/prometheusreceiver"
 	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
@@ -23,7 +24,7 @@ import (
 func components() (component.Factories, error) {
 	var errs []error
 
-	processors, err := component.MakeProcessorFactoryMap (
+	processors, err := component.MakeProcessorFactoryMap(
 		batchprocessor.NewFactory(),
 		memorylimiter.NewFactory(),
 		resourceprocessor.NewFactory(),
@@ -31,18 +32,18 @@ func components() (component.Factories, error) {
 	)
 
 	if err != nil {
-		errs = append(errs,err)
+		errs = append(errs, err)
 	}
 
-	receivers, err := component.MakeReceiverFactoryMap (
+	receivers, err := component.MakeReceiverFactoryMap(
 		privatepromreceiver.NewFactory(),
 	)
 
 	if err != nil {
-		errs = append(errs,err)
+		errs = append(errs, err)
 	}
 
-	exporters, err := component.MakeExporterFactoryMap (
+	exporters, err := component.MakeExporterFactoryMap(
 		loggingexporter.NewFactory(),
 		prometheusexporter.NewFactory(),
 		fileexporter.NewFactory(),
@@ -52,23 +53,23 @@ func components() (component.Factories, error) {
 	)
 
 	if err != nil {
-		errs = append(errs,err)
+		errs = append(errs, err)
 	}
 
-	extensions, err := component.MakeExtensionFactoryMap (
+	extensions, err := component.MakeExtensionFactoryMap(
 		healthcheckextension.NewFactory(),
 		pprofextension.NewFactory(),
 		zpagesextension.NewFactory(),
 	)
 
 	if err != nil {
-		errs = append(errs,err)
+		errs = append(errs, err)
 	}
 	factories := component.Factories{
-		Processors : processors,
-		Receivers : receivers,
-		Exporters : exporters,
-		Extensions : extensions,
+		Processors: processors,
+		Receivers:  receivers,
+		Exporters:  exporters,
+		Extensions: extensions,
 	}
 	return factories, consumererror.Combine(errs)
 }
