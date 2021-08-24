@@ -184,10 +184,9 @@ def addDefaultScrapeConfig(configString, defaultScrapeConfigs)
     # using the yaml library
     isPromCustomConfigValid = !!YAML.load(configString)
     if isPromCustomConfigValid == true
-      puts "config::Prometheus custom config is a valid yaml, merging custom scrape config with defaults"
       promCustomConfig = YAML.load(configString)
       scfgs = promCustomConfig["scrape_configs"]
-      puts "config::Starting to replace $ with $$ for regexes in relabel_configs and metric_relabel_configs"
+      puts "config::Starting to replace $ with $$ for regexes in relabel_configs and metric_relabel_configs if any "
       if !scfgs.nil? && !scfgs.empty? && scfgs.length > 0
         scfgs.each { |scfg|
           relabelConfigs = scfg["relabel_configs"]
@@ -200,7 +199,8 @@ def addDefaultScrapeConfig(configString, defaultScrapeConfigs)
           end
         }
       end
-      puts "config::Done replacing $ with $$ for regexes in relabel_configs and metric_relabel_configs if any"
+      puts "config::Done replacing $ with $$ for regexes in relabel_configs and metric_relabel_configs"
+      puts "config::Prometheus custom config is a valid yaml, merging custom scrape config with defaults"
     else
       puts "config::Prometheus custom config is either an invalid yaml or empty, merging empty scrape config with defaults"
       promCustomConfig = YAML.load("scrape_configs:")
