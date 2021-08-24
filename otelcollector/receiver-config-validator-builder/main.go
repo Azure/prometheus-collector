@@ -23,6 +23,13 @@ func main() {
 
 	colParserProvider := parserProvider.Default()
 	fmt.Printf("colParserProvider - %v", colParserProvider)
+
+	cp, err := colParserProvider.Get()
+	if err != nil {
+		fmt.Errorf("cannot load configuration's parser: %w", err)
+	}
+
+	fmt.Printf("def parser provider: %v", cp)
 	// var cp *configparser.Parser
 
 	// var cfg *config.Config
