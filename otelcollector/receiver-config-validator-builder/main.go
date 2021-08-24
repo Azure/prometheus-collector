@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-		"go.opentelemetry.io/collector/service/parserprovider"
+
+	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 )
 
 func main() {
