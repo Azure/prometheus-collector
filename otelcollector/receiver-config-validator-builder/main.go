@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/go-kit/log"
+	"log"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/service"
 )
