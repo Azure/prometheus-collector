@@ -21,6 +21,8 @@ func main() {
 		fmt.Printf("error - %v", err)
 	}
 
+	colParserProvider := parserProvider.Default()
+	fmt.Printf("colParserProvider - %v", colParserProvider)
 	// var cp *configparser.Parser
 
 	// var cfg *config.Config
