@@ -4,11 +4,12 @@ import (
 	"flag"
 	"fmt"
 
+	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 )
 
 func main() {
-	//factories, err := components()
+	factories, err := components()
 
 	flags := new(flag.FlagSet)
 	parserProvider.Flags(flags)
@@ -30,6 +31,14 @@ func main() {
 	}
 
 	fmt.Printf("def parser provider: %v", cp)
+
+	cfg, err := configloader.Load(cp, factories)
+	if err != nil {
+		return fmt.Errorf("cannot load configuration: %w", err)
+	}
+
+	fmt.Printf("cfg: %v", cfg)
+
 	// var cp *configparser.Parser
 
 	// var cfg *config.Config
