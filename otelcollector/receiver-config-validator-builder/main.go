@@ -4,29 +4,29 @@ import (
 	"flag"
 	"fmt"
 
-	"go.opentelemetry.io/collector/config"
-	"go.opentelemetry.io/collector/config/configloader"
-	"go.opentelemetry.io/collector/config/configparser"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 )
 
 func main() {
-	factories, err := components()
+	//factories, err := components()
 
 	flags := new(flag.FlagSet)
 	parserProvider.Flags(flags)
 
-	err = flags.Parse([]string{
+	err := flags.Parse([]string{
 		"--config=testdata/otelcol-config.yaml",
 		"--set=processors.doesnotexist.timeout=2s",
 	})
+	if err != nil {
+		fmt.Printf("error - %v", err)
+	}
 
-	var cp *configparser.Parser
+	// var cp *configparser.Parser
 
-	var cfg *config.Config
-	cfg, err = configloader.Load(cp, factories)
+	// var cfg *config.Config
+	// cfg, err = configloader.Load(cp, factories)
 
-	fmt.Printf("config - %v", cfg)
+	// fmt.Printf("config - %v", cfg)
 
 	// colParserProvider := parserProvider.Default("")
 
