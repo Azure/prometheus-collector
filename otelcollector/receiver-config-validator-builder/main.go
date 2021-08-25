@@ -35,9 +35,10 @@ func main() {
 
 	fmt.Printf("def parser provider: %+v\n", cp)
 
-	cfg, err := configloader.Load(cp, factories)
-	if err != nil {
-		fmt.Errorf("cannot load configuration: %w", err)
+	cfg, cfgerr := configloader.Load(cp, factories)
+	if cfgerr != nil {
+		fmt.Printf("in error handler")
+		fmt.Errorf("cannot load configuration: %w", cfgerr)
 	}
 
 	fmt.Printf("cfg: %+v\n", cfg)
