@@ -14,8 +14,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to build components: %v", err)
 	}
-	flags := new(flag.FlagSet)
-	parserProvider.Flags(flags)
+	// flags := new(flag.FlagSet)
+	// parserProvider.Flags(flags)
 
 	configFilePtr := flag.String("-config", "", "Config file to validate")
 	flag.Parse()
@@ -23,6 +23,9 @@ func main() {
 
 	configFlag := fmt.Sprintf("--config=%s", filePath)
 	fmt.Printf(configFlag)
+
+	flags := new(flag.FlagSet)
+	parserProvider.Flags(flags)
 	err = flags.Parse([]string{
 		// "--config=testdata/otelcol-config.yaml",
 		configFlag,
