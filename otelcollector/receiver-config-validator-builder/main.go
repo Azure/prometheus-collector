@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
@@ -11,37 +12,35 @@ import (
 func main() {
 	factories, err := components()
 	if err != nil {
-		fmt.Printf("factories error - %v", err)
+		log.Fatalf("failed to build components: %v", err)
 	}
 	flags := new(flag.FlagSet)
 	parserProvider.Flags(flags)
 
 	err = flags.Parse([]string{
-		"--config=testdata/otelcol-config.yaml",
-		// "--set=processors.doesnotexist.timeout=2s",
+		// "--config=testdata/otelcol-config.yaml",
 	})
 	if err != nil {
-		fmt.Printf("error - %v", err)
+		fmt.Printf("Error parsing flags - %v", err)
 	}
 
 	colParserProvider := parserProvider.Default()
-	// fmt.Printf("colParserProvider - %v", colParserProvider)
-	fmt.Printf("colParserProvider - %+v\n", colParserProvider)
 
 	cp, err := colParserProvider.Get()
 	if err != nil {
 		fmt.Errorf("cannot load configuration's parser: %w", err)
 	}
+	fmt.Printf("Loading configuration...")
 
-	fmt.Printf("def parser provider: %+v\n", cp)
-
-	cfg, cfgerr := configloader.Load(cp, factories)
-	if cfgerr != nil {
-		fmt.Printf("in error handler")
-		fmt.Errorf("cannot load configuration: %w", cfgerr)
+	cfg, err := configloader.Load(cp, factories)
+	if err != nil {
+		fmt.Printf("Cannot load configuration: %w\n", err)
 	}
 
-	fmt.Printf("cfg: %+v\n", cfg)
+	err = cfg.Validate()
+	if err != nil {
+		fmt.Printf("Invalid configuration: %w", err)
+	}
 
 	// var cp *configparser.Parser
 
