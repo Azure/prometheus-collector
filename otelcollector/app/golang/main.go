@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -236,6 +237,12 @@ var(
 	)
 )
 
+func untypedHandler(w http.ResponseWriter, r *http.Request) {
+  fmt.Fprintf(w, "untyped_metric{label_0=\"label-value\"} 0")
+	fmt.Fprintf(w, "\n")
+	fmt.Fprintf(w, "untyped_metric{label_1=\"label-value\"} 1")
+}
+
 func main() {
 	if os.Getenv("RUN_PERF_TEST") == "true" {
 		if os.Getenv("SCRAPE_INTERVAL") != "" {
@@ -250,8 +257,16 @@ func main() {
 		recordMetrics()
 	}
 
-  http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":2112", nil)
+	untypedServer := http.NewServeMux()
+	untypedServer.HandleFunc("/metrics", untypedHandler)
+	weatherServer := http.NewServeMux()
+  weatherServer.Handle("/metrics", promhttp.Handler())
+
+	go func() {
+		log.Fatal(http.ListenAndServe(":2113", untypedServer))
+	}()
+
+	http.ListenAndServe(":2112", weatherServer)
 	
 	fmt.Printf("ending main function")
 }
