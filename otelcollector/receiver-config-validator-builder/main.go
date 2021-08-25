@@ -50,7 +50,7 @@ func main() {
 
 		cfg, err := configloader.Load(cp, factories)
 		if err != nil {
-			log.Fatal("Cannot load configuration: %v\n", err)
+			log.Fatalf("Cannot load configuration: %v", err)
 		}
 
 		err = cfg.Validate()
@@ -58,7 +58,7 @@ func main() {
 			fmt.Printf("Invalid configuration: %w\n", err)
 		}
 	} else {
-		log.Fatal("Please provide a config file using the --config flag to validate\n")
+		log.Fatalf("Please provide a config file using the --config flag to validate\n")
 	}
 
 	// var cp *configparser.Parser
