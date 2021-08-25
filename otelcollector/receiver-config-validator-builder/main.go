@@ -17,8 +17,15 @@ func main() {
 	flags := new(flag.FlagSet)
 	parserProvider.Flags(flags)
 
+	configFilePtr := flag.String("-config", "", "Config file to validate")
+	flag.Parse()
+	filePath := *configFilePtr
+
+	configFlag := fmt.Sprintf("--config=%s", filePath)
+	fmt.Printf(configFlag)
 	err = flags.Parse([]string{
 		// "--config=testdata/otelcol-config.yaml",
+		configFlag,
 	})
 	if err != nil {
 		fmt.Printf("Error parsing flags - %v", err)
