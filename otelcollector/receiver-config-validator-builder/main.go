@@ -12,6 +12,8 @@ func main() {
 	factories, err := components()
 
 	flags := new(flag.FlagSet)
+	parserProvider.Flags(flags)
+
 	err = flags.Parse([]string{
 		"--config=testdata/otelcol-config.yaml",
 		// "--set=processors.doesnotexist.timeout=2s",
@@ -19,7 +21,6 @@ func main() {
 	if err != nil {
 		fmt.Printf("error - %v", err)
 	}
-	parserProvider.Flags(flags)
 
 	colParserProvider := parserProvider.Default()
 	// fmt.Printf("colParserProvider - %v", colParserProvider)
