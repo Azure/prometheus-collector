@@ -10,7 +10,9 @@ import (
 
 func main() {
 	factories, err := components()
-
+	if err != nil {
+		fmt.Printf("factories error - %v", err)
+	}
 	flags := new(flag.FlagSet)
 	parserProvider.Flags(flags)
 
