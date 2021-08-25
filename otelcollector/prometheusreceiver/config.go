@@ -233,6 +233,7 @@ func (cfg *Config) Validate() error {
 
 // Unmarshal a config.Parser into the config struct.
 func (cfg *Config) Unmarshal(componentParser *config.Parser) error {
+	fmt.Printf("In Rashmi's unmarshal")
 	if componentParser == nil {
 		return nil
 	}
