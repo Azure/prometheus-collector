@@ -16,7 +16,7 @@ func main() {
 
 	err = flags.Parse([]string{
 		"--config=testdata/otelcol-config.yaml",
-		"--set=processors.doesnotexist.timeout=2s",
+		// "--set=processors.doesnotexist.timeout=2s",
 	})
 	if err != nil {
 		fmt.Printf("error - %v", err)
