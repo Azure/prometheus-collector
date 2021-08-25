@@ -12,7 +12,7 @@ import (
 func main() {
 	factories, err := components()
 	if err != nil {
-		log.Fatalf("failed to build components: %v", err)
+		log.Fatalf("failed to build components: %v\n", err)
 	}
 	// flags := new(flag.FlagSet)
 	// parserProvider.Flags(flags)
@@ -22,7 +22,7 @@ func main() {
 	filePath := *configFilePtr
 
 	configFlag := fmt.Sprintf("--config=%s", filePath)
-	fmt.Printf(configFlag)
+	fmt.Printf("config file provided - %s\n", configFlag)
 
 	flags := new(flag.FlagSet)
 	parserProvider.Flags(flags)
@@ -31,25 +31,25 @@ func main() {
 		configFlag,
 	})
 	if err != nil {
-		fmt.Printf("Error parsing flags - %v", err)
+		fmt.Printf("Error parsing flags - %v\n", err)
 	}
 
 	colParserProvider := parserProvider.Default()
 
 	cp, err := colParserProvider.Get()
 	if err != nil {
-		fmt.Errorf("cannot load configuration's parser: %w", err)
+		fmt.Errorf("cannot load configuration's parser: %w\n", err)
 	}
-	fmt.Printf("Loading configuration...")
+	fmt.Printf("Loading configuration...\n")
 
 	cfg, err := configloader.Load(cp, factories)
 	if err != nil {
-		fmt.Printf("Cannot load configuration: %w\n", err)
+		log.Fatal("Cannot load configuration: %w\n", err)
 	}
 
 	err = cfg.Validate()
 	if err != nil {
-		fmt.Printf("Invalid configuration: %w", err)
+		fmt.Printf("Invalid configuration: %w\n", err)
 	}
 
 	// var cp *configparser.Parser
