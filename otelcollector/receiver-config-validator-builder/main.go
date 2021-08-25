@@ -10,10 +10,10 @@ import (
 )
 
 func main() {
-	factories, err := components()
-	if err != nil {
-		log.Fatalf("failed to build components: %v\n", err)
-	}
+	// factories, err := components()
+	// if err != nil {
+	// 	log.Fatalf("failed to build components: %v\n", err)
+	// }
 	// flags := new(flag.FlagSet)
 	// parserProvider.Flags(flags)
 
@@ -21,35 +21,44 @@ func main() {
 	flag.Parse()
 	filePath := *configFilePtr
 
-	configFlag := fmt.Sprintf("--config=%s", filePath)
-	fmt.Printf("config file provided - %s\n", configFlag)
+	if filePath != "" {
+		configFlag := fmt.Sprintf("--config=%s", filePath)
+		fmt.Printf("config file provided - %s\n", configFlag)
 
-	flags := new(flag.FlagSet)
-	parserProvider.Flags(flags)
-	err = flags.Parse([]string{
-		// "--config=testdata/otelcol-config.yaml",
-		configFlag,
-	})
-	if err != nil {
-		fmt.Printf("Error parsing flags - %v\n", err)
-	}
+		flags := new(flag.FlagSet)
+		parserProvider.Flags(flags)
+		err := flags.Parse([]string{
+			// "--config=testdata/otelcol-config.yaml",
+			configFlag,
+		})
+		if err != nil {
+			fmt.Printf("Error parsing flags - %v\n", err)
+		}
 
-	colParserProvider := parserProvider.Default()
+		factories, err := components()
+		if err != nil {
+			log.Fatalf("failed to build components: %v\n", err)
+		}
 
-	cp, err := colParserProvider.Get()
-	if err != nil {
-		fmt.Errorf("cannot load configuration's parser: %w\n", err)
-	}
-	fmt.Printf("Loading configuration...\n")
+		colParserProvider := parserProvider.Default()
 
-	cfg, err := configloader.Load(cp, factories)
-	if err != nil {
-		log.Fatal("Cannot load configuration: %w\n", err)
-	}
+		cp, err := colParserProvider.Get()
+		if err != nil {
+			fmt.Errorf("cannot load configuration's parser: %w\n", err)
+		}
+		fmt.Printf("Loading configuration...\n")
 
-	err = cfg.Validate()
-	if err != nil {
-		fmt.Printf("Invalid configuration: %w\n", err)
+		cfg, err := configloader.Load(cp, factories)
+		if err != nil {
+			log.Fatal("Cannot load configuration: %v\n", err)
+		}
+
+		err = cfg.Validate()
+		if err != nil {
+			fmt.Printf("Invalid configuration: %w\n", err)
+		}
+	} else {
+		log.Fatal("Please provide a config file using the --config flag to validate\n")
 	}
 
 	// var cp *configparser.Parser
