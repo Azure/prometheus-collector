@@ -14,7 +14,7 @@ func main() {
 	flags := new(flag.FlagSet)
 	parserProvider.Flags(flags)
 
-	err := flags.Parse([]string{
+	err = flags.Parse([]string{
 		"--config=testdata/otelcol-config.yaml",
 		"--set=processors.doesnotexist.timeout=2s",
 	})
@@ -34,7 +34,7 @@ func main() {
 
 	cfg, err := configloader.Load(cp, factories)
 	if err != nil {
-		return fmt.Errorf("cannot load configuration: %w", err)
+		fmt.Errorf("cannot load configuration: %w", err)
 	}
 
 	fmt.Printf("cfg: %v", cfg)
