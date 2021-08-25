@@ -17,7 +17,7 @@ func main() {
 	// flags := new(flag.FlagSet)
 	// parserProvider.Flags(flags)
 
-	configFilePtr := flag.String("-config", "", "Config file to validate")
+	configFilePtr := flag.String("config", "", "Config file to validate")
 	flag.Parse()
 	filePath := *configFilePtr
 
