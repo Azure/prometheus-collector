@@ -1,6 +1,6 @@
 .PHONY: promconfigvalidator
 promconfigvalidator:
- 	@echo "========================= Building prom config validator ========================="
+	@echo "========================= Building prom config validator ========================="
 	@echo "========================= cleanup existing promconfigvalidator ========================="
 	rm -rf promconfigvalidator
 	@echo "========================= go get  ========================="

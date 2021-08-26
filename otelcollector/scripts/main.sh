@@ -111,14 +111,14 @@ fi
 if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
       # Currently only logs the success or failure
       if [ -e "/opt/promCollectorConfig.yml" ]; then
-            /opt/receivervalidator --config /opt/promCollectorConfig.yml
+            /opt/promconfigvalidator --config /opt/promCollectorConfig.yml
       fi
 
       # Use default config if specified config is invalid
-      # if [ $? -ne 0 ]; then
-      #       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-      #       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
-      # fi
+      if [ $? -ne 0 ]; then
+            echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+            export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
+      fi
 else
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
