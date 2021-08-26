@@ -110,7 +110,9 @@ fi
 
 if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
       # Currently only logs the success or failure
-      /opt/promtool check config /etc/config/settings/prometheus/prometheus-config
+      if [ -e "/opt/promCollectorConfig.yml" ]; then
+            /opt/receivervalidator --config /opt/promCollectorConfig.yml
+      fi
 
       # Use default config if specified config is invalid
       # if [ $? -ne 0 ]; then

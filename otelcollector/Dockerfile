@@ -14,6 +14,7 @@ RUN apt-get upgrade libsystemd0 -y
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
 COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
 COPY ./opentelemetry-collector-builder/otelcollector ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/microsoft/otelcollector/
+COPY ./receiver-config-validator-builder/receivervalidator $tmpdir/
 COPY ./scripts/setup.sh ./scripts/main.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_ds.config /usr/sbin/
 COPY ./telegraf/telegraf-prometheus-collector.conf $tmpdir/telegraf/

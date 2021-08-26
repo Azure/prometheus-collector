@@ -4,32 +4,29 @@
 require "tomlrb"
 require "deep_merge"
 require "yaml"
-#require_relative "ConfigParseErrorLogger"
-
-#@@promCustomConfigPath = "/etc/config/settings/prometheus/prometheus-config"
-#@@promCustomConfigPath = "rashmi"
+require_relative "ConfigParseErrorLogger"
 
 class OtelConfigGenerator
   @@promCustomConfigPath = "/etc/config/settings/prometheus/prometheus-config"
   @@collectorConfigTemplatePath = "/opt/microsoft/otelcollector/collector-config-template.yml"
-  #@@promCustomConfigPath = "rashmi"
+  @@mergedCollectorConfig = "/opt/promCollectorConfig.yml"
+
   def self.generate_otelconfig
     begin
-      puts "in file"
-      if (File.exist?(@@promCustomConfigPath))
-        promCustomConfig = YAML.load(File.read("/etc/config/settings/prometheus/prometheus-config"))
+      promConfig = File.read(@@promCustomConfigPath)
+      isPromCustomConfigValid = !!YAML.load(promConfig)
+      if isPromCustomConfigValid == true
+        promCustomConfig = YAML.load(promConfig)
         collectorTemplate = YAML.load(File.read(@@collectorConfigTemplatePath))
         collectorConfig = collectorTemplate.deep_merge!(promCustomConfig)
         collectorConfigYaml = YAML.dump(collectorConfig)
-        puts "collector config successfully generated..."
-        return collectorConfigYaml
+        puts "otelConfigValidator::Collector config successfully generated..."
+        File.open(@@mergedCollectorConfig, "w") { |file| file.puts collectorConfigYaml }
       else
-        puts "Prometheus configmap doesnot exist"
-        return nil
+        ConfigParseErrorLogger.logError("otelConfigValidator::Invalid prometheus config provided in the configmap")
       end
     rescue => errorStr
-      puts "Error generating collector config from prometheus custom config to run validator - #{errorStr}"
-      return nil
+      ConfigParseErrorLogger.logError("otelConfigValidator::otelConfigValidator::Error generating collector config from prometheus custom config to run validator - #{errorStr}")
     end
   end
 end
