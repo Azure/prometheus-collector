@@ -67,6 +67,7 @@ func main() {
 		log.Fatalf("Please provide a config file using the --config flag to validate\n")
 		os.Exit(1)
 	}
+	os.Exit(0)
 
 	// var cp *configparser.Parser
 
