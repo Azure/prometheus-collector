@@ -9,6 +9,7 @@ require_relative "ConfigParseErrorLogger"
 @configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
 @collectorConfigTemplatePath = "/opt/microsoft/otelcollector/collector-config-template.yml"
 @collectorConfigPath = "/opt/microsoft/otelcollector/collector-config.yml"
+@otelCustomPromConfigPath = "/opt/promCollectorConfig.yml"
 @configVersion = ""
 @configSchemaVersion = ""
 @replicasetControllerType = "replicaset"
@@ -34,27 +35,28 @@ require_relative "ConfigParseErrorLogger"
 @nodeexporterDefaultStringDs = "scrape_configs:\n- job_name: node\n  scheme: http\n  scrape_interval: 30s\n  static_configs:\n  - targets: ['$$NODE_IP$$:$$NODE_EXPORTER_TARGETPORT$$']"
 
 # Use parser to parse the configmap toml file to a ruby structure
-def parseConfigMap
-  begin
-    # Check to see if config map is created
-    puts "config::configmap prometheus-collector-configmap for prometheus-config file: #{@configMapMountPath}"
-    if (File.file?(@configMapMountPath) && ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true")
-      puts "config::configmap prometheus-collector-configmap for prometheus config mounted, parsing values"
-      config = File.read(@configMapMountPath)
-      puts "config::Successfully parsed mounted config map"
-      return config
-    else
-      puts "config::configmap prometheus-collector-configmap for prometheus config not mounted, using defaults"
-      return ""
-    end
-  rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while parsing config map for prometheus config : #{errorStr}, using defaults, please check config map for errors")
-    return ""
-  end
-end
+# def parseConfigMap
+#   begin
+#     # Check to see if config map is created
+#     puts "config::configmap prometheus-collector-configmap for prometheus-config file: #{@configMapMountPath}"
+#     if (File.file?(@configMapMountPath) && ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true")
+#       puts "config::configmap prometheus-collector-configmap for prometheus config mounted, parsing values"
+#       config = File.read(@configMapMountPath)
+#       puts "config::Successfully parsed mounted config map"
+#       return config
+#     else
+#       puts "config::configmap prometheus-collector-configmap for prometheus config not mounted, using defaults"
+#       return ""
+#     end
+#   rescue => errorStr
+#     ConfigParseErrorLogger.logError("Exception while parsing config map for prometheus config : #{errorStr}, using defaults, please check config map for errors")
+#     return ""
+#   end
+# end
 
 # Get the prometheus config and indent correctly for otelcollector config
-def populateSettingValuesFromConfigMap(configString)
+# def populateSettingValuesFromConfigMap(configString)
+def populateSettingValuesFromConfigMap
   begin
     # check if running in daemonset or replicaset
     currentControllerType = ENV["CONTROLLER_TYPE"].strip.downcase
@@ -147,125 +149,151 @@ def populateSettingValuesFromConfigMap(configString)
       end
     end
 
-    @mergedPromConfig = addDefaultScrapeConfig(configString, defaultConfigs)
-
+    # @mergedPromConfig = addDefaultScrapeConfig(configString, defaultConfigs)
+    @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
     puts "config::Using config map setting for prometheus config"
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while substituting the prometheus config in the otelcollector config - #{errorStr}, using defaults, please check config map for errors")
-    @mergedPromConfig = ""
+    # ConfigParseErrorLogger.logError("Exception while substituting the prometheus config in the otelcollector config - #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError("Exception while merging default prometheus configs - #{errorStr}, using defaults")
+    @mergedDefaultConfigs = ""
   end
 end
 
-def replaceRelabelConfigRegex(relabelConfigs)
-  begin
-    relabelConfigs.each { |relabelConfig|
-      action = relabelConfig["action"]
-      if !action.nil? && !action.empty? # && (action.strip.casecmp("labeldrop") == 0 || action.strip.casecmp("labelkeep") == 0)
-        replacement = relabelConfig["replacement"]
-        if !replacement.nil? && !replacement.empty?
-          relabelConfig["replacement"] = replacement.gsub("$", "$$")
-        end
-        regex = relabelConfig["regex"]
-        if !regex.nil? && !regex.empty?
-          relabelConfig["regex"] = regex.gsub("$", "$$")
-        end
-      end
-    }
-  rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while replacing relabel config regexes - #{errorStr}")
-  end
-end
+# def replaceRelabelConfigRegex(relabelConfigs)
+#   begin
+#     relabelConfigs.each { |relabelConfig|
+#       action = relabelConfig["action"]
+#       if !action.nil? && !action.empty? # && (action.strip.casecmp("labeldrop") == 0 || action.strip.casecmp("labelkeep") == 0)
+#         replacement = relabelConfig["replacement"]
+#         if !replacement.nil? && !replacement.empty?
+#           relabelConfig["replacement"] = replacement.gsub("$", "$$")
+#         end
+#         regex = relabelConfig["regex"]
+#         if !regex.nil? && !regex.empty?
+#           relabelConfig["regex"] = regex.gsub("$", "$$")
+#         end
+#       end
+#     }
+#   rescue => errorStr
+#     ConfigParseErrorLogger.logError("Exception while replacing relabel config regexes - #{errorStr}")
+#   end
+# end
 
-def addDefaultScrapeConfig(configString, defaultScrapeConfigs)
+# def addDefaultScrapeConfig(configString, defaultScrapeConfigs)
+def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
   puts "config::Adding default scrape configs..."
-  mergedCustomAndDefaultConfig = ""
+  # mergedCustomAndDefaultConfig = ""
+  mergedDefaultConfigs = ""
   begin
     # Load custom prometheus config and check if it is valid, doing this since empty configmap returns false when we load config yaml
     # using the yaml library
-    isPromCustomConfigValid = !!YAML.load(configString)
-    if isPromCustomConfigValid == true
-      promCustomConfig = YAML.load(configString)
-      scfgs = promCustomConfig["scrape_configs"]
-      puts "config::Starting to replace $ with $$ for regexes in relabel_configs and metric_relabel_configs if any "
-      if !scfgs.nil? && !scfgs.empty? && scfgs.length > 0
-        scfgs.each { |scfg|
-          relabelConfigs = scfg["relabel_configs"]
-          if !relabelConfigs.nil? && !relabelConfigs.empty? && relabelConfigs.length > 0
-            replaceRelabelConfigRegex(relabelConfigs)
-          end
-          metricRelabelConfigs = scfg["metric_relabel_configs"]
-          if !metricRelabelConfigs.nil? && !metricRelabelConfigs.empty? && metricRelabelConfigs.length > 0
-            replaceRelabelConfigRegex(metricRelabelConfigs)
-          end
-        }
-      end
-      puts "config::Done replacing $ with $$ for regexes in relabel_configs and metric_relabel_configs"
-      puts "config::Prometheus custom config is a valid yaml, merging custom scrape config with defaults"
-    else
-      puts "config::Prometheus custom config is either an invalid yaml or empty, merging empty scrape config with defaults"
-      promCustomConfig = YAML.load("scrape_configs:")
-    end
-    #     input = YAML.load(File.read("prom-config-with-relabel.yaml"))
-
-    # scfgs = input["scrape_configs"]
-
+    # isPromCustomConfigValid = !!YAML.load(configString)
+    # if isPromCustomConfigValid == true
+    #   promCustomConfig = YAML.load(configString)
+    # scfgs = promCustomConfig["scrape_configs"]
+    # puts "config::Starting to replace $ with $$ for regexes in relabel_configs and metric_relabel_configs if any "
     # if !scfgs.nil? && !scfgs.empty? && scfgs.length > 0
     #   scfgs.each { |scfg|
     #     relabelConfigs = scfg["relabel_configs"]
     #     if !relabelConfigs.nil? && !relabelConfigs.empty? && relabelConfigs.length > 0
-    #       relabelConfigs.each { |relabelConfig|
-    #         action = relabelConfig["action"]
-    #         if !action.nil? && !action.empty? && (action.strip.casecmp("labeldrop") == 0 || action.strip.casecmp("labelkeep") == 0)
-    #           replacement = relabelConfig["replacement"]
-    #           if !replacement.nil? && !replacement.empty?
-    #             relabelConfig["replacement"] = replacement.gsub("$", "$$")
-    #           end
-    #         end
-    #       }
+    #       replaceRelabelConfigRegex(relabelConfigs)
+    #     end
+    #     metricRelabelConfigs = scfg["metric_relabel_configs"]
+    #     if !metricRelabelConfigs.nil? && !metricRelabelConfigs.empty? && metricRelabelConfigs.length > 0
+    #       replaceRelabelConfigRegex(metricRelabelConfigs)
     #     end
     #   }
     # end
+    # puts "config::Done replacing $ with $$ for regexes in relabel_configs and metric_relabel_configs"
+    #   puts "config::Prometheus custom config is a valid yaml, merging custom scrape config with defaults"
+    # else
+    #   puts "config::Prometheus custom config is either an invalid yaml or empty, merging empty scrape config with defaults"
+    #   promCustomConfig = YAML.load("scrape_configs:")
+    # end
 
-    # Load each of the default scrape configs and merge it with prometheus custom config
-    defaultScrapeConfigs.each { |defaultScrapeConfig|
-      # Load yaml from default config
-      defaultConfigYaml = YAML.load(defaultScrapeConfig)
-      promCustomConfig = promCustomConfig.deep_merge!(defaultConfigYaml)
-    }
-    mergedCustomAndDefaultConfig = promCustomConfig
-    puts "config::Done merging custom prometheus scrape config with defaults"
+    if defaultScrapeConfigs.length > 0
+      mergedDefaultConfigs = YAML.load("scrape_configs:")
+      # Load each of the default scrape configs and merge it with prometheus custom config
+      defaultScrapeConfigs.each { |defaultScrapeConfig|
+        # Load yaml from default config
+        defaultConfigYaml = YAML.load(defaultScrapeConfig)
+        mergedDefaultConfigs = mergedDefaultConfigs.deep_merge!(defaultConfigYaml)
+      }
+    end
+    # mergedCustomAndDefaultConfig = promCustomConfig
+    # puts "config::Done merging custom prometheus scrape config with defaults"
+    puts "config::Done merging #{defaultScrapeConfigs.length} default prometheus config(s)"
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while adding default scrape config- #{errorStr}, using defaults")
+    mergedDefaultConfigs = ""
   end
-  return mergedCustomAndDefaultConfig
+  return mergedDefaultConfigs
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
 puts "****************Start Prometheus Config Processing********************"
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
-  prometheusConfigString = parseConfigMap
+  # prometheusConfigString = parseConfigMap
   # Need to populate default configs even if specfied config is empty
-  populateSettingValuesFromConfigMap(prometheusConfigString)
+  # populateSettingValuesFromConfigMap(prometheusConfigString)
+  populateSettingValuesFromConfigMap
 else
   if (File.file?(@configMapMountPath))
     ConfigParseErrorLogger.logError("config::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
   end
 end
 
+# begin
+#   if !@mergedPromConfig.nil? && !@mergedPromConfig.empty?
+#     puts "config::Starting to set prometheus config values in collector.yml"
+#     collectorTemplate = YAML.load(File.read(@collectorConfigTemplatePath))
+#     # Doing this instead of gsub because gsub causes ruby's string interpreter to strip escape characters from regex
+#     collectorTemplate["receivers"]["prometheus"]["config"] = @mergedPromConfig
+#     collectorNewConfig = YAML::dump(collectorTemplate)
+#     File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
+#     @useDefaultConfig = false
+#   else
+#     puts "config::config is empty so using the default config with an empty job"
+#   end
+# rescue => errorStr
+#   ConfigParseErrorLogger.logError("Exception while substituing placeholders for prometheus config - #{errorStr}")
+# end
+
 begin
-  if !@mergedPromConfig.nil? && !@mergedPromConfig.empty?
-    puts "config::Starting to set prometheus config values in collector.yml"
-    collectorTemplate = YAML.load(File.read(@collectorConfigTemplatePath))
-    # Doing this instead of gsub because gsub causes ruby's string interpreter to strip escape characters from regex
-    collectorTemplate["receivers"]["prometheus"]["config"] = @mergedPromConfig
-    collectorNewConfig = YAML::dump(collectorTemplate)
-    File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
-    @useDefaultConfig = false
+  # If prometheus custom config is valid, then merge default configs with this and use it as config for otelcollector
+  if (ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true")
+    otelCustomConfig = File.read(@otelCustomPromConfigPath)
+    if !otelCustomConfig.empty? && !otelCustomConfig.nil?
+      if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
+        puts "config::Starting to merge default prometheus config values in collector.yml"
+        collectorConfig = YAML.load(otelCustomConfig)
+        promConfig = collectorConfig["receivers"]["prometheus"]["config"]["scrape_configs"]
+        mergedPromConfig = @mergedDefaultConfigs.deep_merge!(promConfig)
+        # Doing this instead of gsub because gsub causes ruby's string interpreter to strip escape characters from regex
+        collectorConfig["receivers"]["prometheus"]["config"]["scrape_configs"] = mergedPromConfig
+        collectorNewConfig = YAML::dump(collectorConfig)
+        # File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
+        # @useDefaultConfig = false
+      else
+        # If default merged config is empty, then use the prometheus custom config alone
+        puts "config::merged default configs is empty, so ignoring them"
+        collectorNewConfig = otelCustomConfig
+      end
+      File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
+      @useDefaultConfig = false
+    end
   else
-    puts "config::config is empty so using the default config with an empty job"
+    # If prometheus custom config is invalid or not applied as configmap
+    collectorTemplate = YAML.load(File.read(@collectorConfigTemplatePath))
+    if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
+      collectorTemplate["receivers"]["prometheus"]["config"] = @mergedDefaultConfigs
+      collectorNewConfig = YAML::dump(collectorTemplate)
+      File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
+      @useDefaultConfig = false
+    end
   end
 rescue => errorStr
-  ConfigParseErrorLogger.logError("Exception while substituing placeholders for prometheus config - #{errorStr}")
+  ConfigParseErrorLogger.logError("Exception while merging otel custom prometheus config and default config - #{errorStr}")
 end
 
 # Write the settings to file, so that they can be set as environment variables
