@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 require "tomlrb"
-require "deep_merge"
+# require "deep_merge"
 require "yaml"
 require_relative "ConfigParseErrorLogger"
 
@@ -18,8 +18,9 @@ class OtelConfigGenerator
       if isPromCustomConfigValid == true
         promCustomConfig = YAML.load(promConfig)
         collectorTemplate = YAML.load(File.read(@@collectorConfigTemplatePath))
-        collectorConfig = collectorTemplate.deep_merge!(promCustomConfig)
-        collectorConfigYaml = YAML.dump(collectorConfig)
+        collectorTemplate["receivers"]["prometheus"]["config"] = promCustomConfig
+        # collectorConfig = collectorTemplate.deep_merge!(promCustomConfig)
+        collectorConfigYaml = YAML.dump(collectorTemplate)
         puts "otelConfigValidator::Collector config successfully generated..."
         File.open(@@mergedCollectorConfig, "w") { |file| file.puts collectorConfigYaml }
       else
