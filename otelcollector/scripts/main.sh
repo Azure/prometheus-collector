@@ -118,6 +118,10 @@ if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
                   echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
                   export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
             fi
+      else
+            # Setting use default config to true, in case there were any errors and the config file(promCollectorConfig.yml) was not generated
+            echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+            export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
       fi
 else
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc

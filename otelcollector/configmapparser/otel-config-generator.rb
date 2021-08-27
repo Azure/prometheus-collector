@@ -11,7 +11,7 @@ class OtelConfigGenerator
   @@collectorConfigTemplatePath = "/opt/microsoft/otelcollector/collector-config-template.yml"
   @@mergedCollectorConfig = "/opt/promCollectorConfig.yml"
 
-  def replaceRelabelConfigRegex(relabelConfigs)
+  def self.replaceRelabelConfigRegex(relabelConfigs)
     begin
       relabelConfigs.each { |relabelConfig|
         action = relabelConfig["action"]
