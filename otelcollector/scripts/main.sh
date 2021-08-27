@@ -131,7 +131,7 @@ fi
 # Get prometheus config or default scrape_config settings and replace in otelcollector config
 # Only run if there is valid custom config or some default settings are enabled
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" != "true" ] || [ "$AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED" != "true" ]; then
-  ruby /opt/microsoft/configmapparser/tomlparser-prometheus-config.rb
+  ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
   cat /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var | while read line; do
       echo $line >> ~/.bashrc
   done
