@@ -109,15 +109,15 @@ if [ -e "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var" 
 fi
 
 if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
+      ruby -r "/opt/microsoft/configmapparser/otel-config-generator.rb" -e "OtelConfigGenerator.generate_otelconfig"
       # Currently only logs the success or failure
       if [ -e "/opt/promCollectorConfig.yml" ]; then
             /opt/promconfigvalidator --config /opt/promCollectorConfig.yml
-      fi
-
-      # Use default config if specified config is invalid
-      if [ $? -ne 0 ]; then
-            echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-            export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
+            # Use default config if specified config is invalid
+            if [ $? -ne 0 ]; then
+                  echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+                  export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
+            fi
       fi
 else
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
