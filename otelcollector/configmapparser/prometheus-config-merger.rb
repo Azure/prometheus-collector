@@ -145,12 +145,14 @@ populateDefaultPrometheusConfig
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
 
-if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
-  puts "config::Supported config schema version found - will be merging custom prometheus config"
-else
-  if (File.file?(@configMapMountPath))
-    @supportedSchemaVersion = false
-    ConfigParseErrorLogger.logError("config::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
+if (ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true")
+  if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
+    puts "config::Supported config schema version found - will be merging custom prometheus config"
+  else
+    if (File.file?(@configMapMountPath))
+      @supportedSchemaVersion = false
+      ConfigParseErrorLogger.logError("config::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
+    end
   end
 end
 
