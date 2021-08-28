@@ -140,9 +140,7 @@ def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
 end
 
 puts "****************Start Merging Default and Custom Prometheus Config If Valid********************"
-
 populateDefaultPrometheusConfig
-
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
 
 if (ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true")
