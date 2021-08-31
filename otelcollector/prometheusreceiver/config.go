@@ -97,7 +97,7 @@ func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
 }
 
 func checkSDFile(filename string) error {
-	fmt.Printf("In CheckSDFile...")
+	// fmt.Printf("In CheckSDFile...")
 	fd, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -110,8 +110,8 @@ func checkSDFile(filename string) error {
 	}
 
 	var targetGroups []*targetgroup.Group
-	fmt.Printf("file contents: %v", content)
-	fmt.Printf("file ext: %v", filepath.Ext(filename))
+	// fmt.Printf("file contents: %v", content)
+	// fmt.Printf("file ext: %v", filepath.Ext(filename))
 
 	switch ext := filepath.Ext(filename); strings.ToLower(ext) {
 	case ".json":
@@ -128,7 +128,7 @@ func checkSDFile(filename string) error {
 		return fmt.Errorf("invalid file extension: %q", ext)
 	}
 
-	fmt.Printf("target groups found: %v\n", targetGroups)
+	// fmt.Printf("target groups found: %v\n", targetGroups)
 	for i, tg := range targetGroups {
 		fmt.Printf("target group: %v\n", tg)
 		if tg == nil {
