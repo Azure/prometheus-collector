@@ -110,13 +110,17 @@ func checkSDFile(filename string) error {
 	}
 
 	var targetGroups []*targetgroup.Group
+	fmt.Printf("file contents: %v", content)
+	fmt.Printf("file ext: %v", filepath.Ext(filename))
 
 	switch ext := filepath.Ext(filename); strings.ToLower(ext) {
 	case ".json":
+		fmt.Printf("in json unmarshal")
 		if err := json.Unmarshal(content, &targetGroups); err != nil {
 			return fmt.Errorf("Error in unmarshaling json file extension - %v", err)
 		}
 	case ".yml", ".yaml":
+		fmt.Printf("in yaml unmarshal")
 		if err := yaml.UnmarshalStrict(content, &targetGroups); err != nil {
 			return fmt.Errorf("Error in unmarshaling yaml file extension - %v", err)
 		}
