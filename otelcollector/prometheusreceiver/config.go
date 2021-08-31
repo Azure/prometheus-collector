@@ -128,7 +128,7 @@ func checkSDFile(filename string) error {
 		return fmt.Errorf("invalid file extension: %q", ext)
 	}
 
-	// fmt.Printf("target groups found: %v\n", targetGroups)
+	fmt.Printf("length of target: %v\n", len(targetGroups))
 	for i, tg := range targetGroups {
 		fmt.Printf("target group: %v\n", tg)
 		if tg == nil {
