@@ -124,6 +124,7 @@ func checkSDFile(filename string) error {
 		return fmt.Errorf("invalid file extension: %q", ext)
 	}
 
+	fmt.Printf("target groups found: %v", targetGroups)
 	for i, tg := range targetGroups {
 		if tg == nil {
 			return fmt.Errorf("nil target group item found (index %d)", i)
@@ -178,10 +179,8 @@ func (cfg *Config) Validate() error {
 		}
 	}
 
-	//cfg.logger.Info("Starting custom validation...\n")
 	fmt.Printf("Starting custom validation...\n")
 	for _, scfg := range promConfig.ScrapeConfigs {
-		fmt.Printf(".................................\n")
 
 		// Providing support for older version on prometheus config
 		if err := checkFileExists(scfg.HTTPClientConfig.BearerTokenFile); err != nil {
@@ -195,7 +194,6 @@ func (cfg *Config) Validate() error {
 			}
 		}
 
-		fmt.Printf("Checking TLS config %v", scfg.HTTPClientConfig.TLSConfig)
 		if err := checkTLSConfig(scfg.HTTPClientConfig.TLSConfig); err != nil {
 			return err
 		}
