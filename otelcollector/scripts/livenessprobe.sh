@@ -1,11 +1,11 @@
 #test to exit non zero value if otelcollector or ME is not running or config changed
 
-# (ps -ef | grep otelcollector | grep -v "grep")
-# if [ $? -ne 0 ]
-# then
-#   echo "OpenTelemetryCollector is not running" > /dev/termination-log
-#   exit 1
-# fi
+(ps -ef | grep otelcollector | grep -v "grep")
+if [ $? -ne 0 ]
+then
+  echo "OpenTelemetryCollector is not running" > /dev/termination-log
+  exit 1
+fi
 
 (ps -ef | grep MetricsExt | grep -v "grep")
 if [ $? -ne 0 ]
