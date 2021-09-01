@@ -57,7 +57,7 @@ type Config struct {
 }
 
 var _ config.Receiver = (*Config)(nil)
-var _ config.Unmarshallable = (*Config)(nil)
+var _ config.CustomUnmarshable = (*Config)(nil)
 
 func checkFileExists(fn string) error {
 	// Nothing set, nothing to error on.
