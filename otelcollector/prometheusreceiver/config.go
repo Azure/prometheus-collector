@@ -25,18 +25,14 @@ import (
 	"strings"
 	"time"
 
-	//"github.com/prometheus/common/config"
 	config_util "github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
-	"github.com/spf13/cast"
-	yaml "gopkg.in/yaml.v2"
-
-	//"go.uber.org/zap"
 	"github.com/prometheus/prometheus/discovery/file"
 	"github.com/prometheus/prometheus/discovery/kubernetes"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"go.opentelemetry.io/collector/config"
-	//"github.com/gracewehner/prometheusreceiver/internal"
+	"go.opentelemetry.io/collector/config/configparser"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -57,11 +53,10 @@ type Config struct {
 	// that requires that all keys present in the config actually exist on the
 	// structure, ie.: it will error if an unknown key is present.
 	ConfigPlaceholder interface{} `mapstructure:"config"`
-	//logger  *zap.Logger
 }
 
 var _ config.Receiver = (*Config)(nil)
-var _ config.CustomUnmarshable = (*Config)(nil)
+var _ config.Unmarshallable = (*Config)(nil)
 
 func checkFileExists(fn string) error {
 	// Nothing set, nothing to error on.
@@ -69,35 +64,26 @@ func checkFileExists(fn string) error {
 		return nil
 	}
 	_, err := os.Stat(fn)
-	// fmt.Printf("response from os stat - %v... \n", resp)
 	return err
 }
 
 func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
-	fmt.Printf("in checkTLSConfig %v.....\n", tlsConfig)
-	fmt.Printf("tlsConfig.CertFile - %v\n", tlsConfig.CertFile)
-
 	if err := checkFileExists(tlsConfig.CertFile); err != nil {
-		return fmt.Errorf("error checking client cert file %q - &v", tlsConfig.CertFile, err)
+		return fmt.Errorf("error checking client cert file %q - %v", tlsConfig.CertFile, err)
 	}
-	fmt.Printf("tlsConfig.KeyFile - %v\n", tlsConfig.KeyFile)
-
 	if err := checkFileExists(tlsConfig.KeyFile); err != nil {
-		return fmt.Errorf("error checking client key file %q - &v", tlsConfig.KeyFile, err)
+		return fmt.Errorf("error checking client key file %q - %v", tlsConfig.KeyFile, err)
 	}
-
 	if len(tlsConfig.CertFile) > 0 && len(tlsConfig.KeyFile) == 0 {
 		return fmt.Errorf("client cert file %q specified without client key file", tlsConfig.CertFile)
 	}
 	if len(tlsConfig.KeyFile) > 0 && len(tlsConfig.CertFile) == 0 {
-		return fmt.Errorf("client key file %q specified without client cert file", tlsConfig.CertFile)
+		return fmt.Errorf("client key file %q specified without client cert file", tlsConfig.KeyFile)
 	}
-
 	return nil
 }
 
 func checkSDFile(filename string) error {
-	// fmt.Printf("In CheckSDFile...")
 	fd, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -110,17 +96,13 @@ func checkSDFile(filename string) error {
 	}
 
 	var targetGroups []*targetgroup.Group
-	// fmt.Printf("file contents: %v", content)
-	// fmt.Printf("file ext: %v", filepath.Ext(filename))
 
 	switch ext := filepath.Ext(filename); strings.ToLower(ext) {
 	case ".json":
-		fmt.Printf("in json unmarshal")
 		if err := json.Unmarshal(content, &targetGroups); err != nil {
 			return fmt.Errorf("Error in unmarshaling json file extension - %v", err)
 		}
 	case ".yml", ".yaml":
-		fmt.Printf("in yaml unmarshal")
 		if err := yaml.UnmarshalStrict(content, &targetGroups); err != nil {
 			return fmt.Errorf("Error in unmarshaling yaml file extension - %v", err)
 		}
@@ -128,9 +110,7 @@ func checkSDFile(filename string) error {
 		return fmt.Errorf("invalid file extension: %q", ext)
 	}
 
-	fmt.Printf("length of target: %v\n", len(targetGroups))
 	for i, tg := range targetGroups {
-		fmt.Printf("target group: %v\n", tg)
 		if tg == nil {
 			return fmt.Errorf("nil target group item found (index %d)", i)
 		}
@@ -138,9 +118,8 @@ func checkSDFile(filename string) error {
 	return nil
 }
 
-// Validate checks the receiver configuration is valid
+// Validate checks the receiver configuration is valid.
 func (cfg *Config) Validate() error {
-	//cfg.logger = internal.NewZapToGokitLogAdapter(cfg.logger)
 	promConfig := cfg.PrometheusConfig
 	if promConfig == nil {
 		return nil // noop receiver
@@ -182,36 +161,24 @@ func (cfg *Config) Validate() error {
 				return fmt.Errorf("error validating scrapeconfig for job %v: %w", sc.JobName, errRenamingDisallowed)
 			}
 		}
-	}
 
-	fmt.Printf("Starting custom validation...\n")
-	for _, scfg := range promConfig.ScrapeConfigs {
-
-		// Providing support for older version on prometheus config
-		if err := checkFileExists(scfg.HTTPClientConfig.BearerTokenFile); err != nil {
-			return fmt.Errorf("error checking bearer token file %q - %s", scfg.HTTPClientConfig.BearerTokenFile, err)
-		}
-
-		if scfg.HTTPClientConfig.Authorization != nil {
-			// fmt.Printf("in file validation-Authorization-credentials file- %v...\n", scfg.HTTPClientConfig.Authorization.CredentialsFile)
-			if err := checkFileExists(scfg.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
-				return fmt.Errorf("error checking authorization credentials file %q - %s", scfg.HTTPClientConfig.Authorization, err)
+		if sc.HTTPClientConfig.Authorization != nil {
+			if err := checkFileExists(sc.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
+				return fmt.Errorf("error checking authorization credentials file %q - %s", sc.HTTPClientConfig.Authorization.CredentialsFile, err)
 			}
 		}
 
-		if err := checkTLSConfig(scfg.HTTPClientConfig.TLSConfig); err != nil {
+		if err := checkTLSConfig(sc.HTTPClientConfig.TLSConfig); err != nil {
 			return err
 		}
 
-		for _, c := range scfg.ServiceDiscoveryConfigs {
+		for _, c := range sc.ServiceDiscoveryConfigs {
 			switch c := c.(type) {
 			case *kubernetes.SDConfig:
-				fmt.Printf("In kubernetes sd config...%v", c.HTTPClientConfig.TLSConfig)
 				if err := checkTLSConfig(c.HTTPClientConfig.TLSConfig); err != nil {
 					return err
 				}
 			case *file.SDConfig:
-				fmt.Printf("In file sd config...")
 				for _, file := range c.Files {
 					files, err := filepath.Glob(file)
 					if err != nil {
@@ -226,7 +193,7 @@ func (cfg *Config) Validate() error {
 						}
 						continue
 					}
-					fmt.Printf("WARNING: file %q for file_sd in scrape job %q does not exist\n", file, scfg.JobName)
+					fmt.Printf("WARNING: file %q for file_sd in scrape job %q does not exist\n", file, sc.JobName)
 				}
 			}
 		}
@@ -235,8 +202,7 @@ func (cfg *Config) Validate() error {
 }
 
 // Unmarshal a config.Parser into the config struct.
-func (cfg *Config) Unmarshal(componentParser *config.Parser) error {
-	// fmt.Printf("In Rashmi's unmarshal")
+func (cfg *Config) Unmarshal(componentParser *configparser.Parser) error {
 	if componentParser == nil {
 		return nil
 	}
@@ -249,11 +215,11 @@ func (cfg *Config) Unmarshal(componentParser *config.Parser) error {
 	}
 
 	// Unmarshal prometheus's config values. Since prometheus uses `yaml` tags, so use `yaml`.
-	promCfgMap := cast.ToStringMap(componentParser.Get(prometheusConfigKey))
-	if len(promCfgMap) == 0 {
-		return nil
+	promCfg, err := componentParser.Sub(prometheusConfigKey)
+	if err != nil || len(promCfg.ToStringMap()) == 0 {
+		return err
 	}
-	out, err := yaml.Marshal(promCfgMap)
+	out, err := yaml.Marshal(promCfg.ToStringMap())
 	if err != nil {
 		return fmt.Errorf("prometheus receiver failed to marshal config to yaml: %s", err)
 	}
@@ -262,5 +228,6 @@ func (cfg *Config) Unmarshal(componentParser *config.Parser) error {
 	if err != nil {
 		return fmt.Errorf("prometheus receiver failed to unmarshal yaml to prometheus config: %s", err)
 	}
+
 	return nil
 }
