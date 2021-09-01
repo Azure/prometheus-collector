@@ -54,11 +54,10 @@ type Config struct {
 	// that requires that all keys present in the config actually exist on the
 	// structure, ie.: it will error if an unknown key is present.
 	ConfigPlaceholder interface{} `mapstructure:"config"`
-	//logger  *zap.Logger
 }
 
 var _ config.Receiver = (*Config)(nil)
-var _ config.CustomUnmarshable = (*Config)(nil)
+var _ config.Unmarshallable = (*Config)(nil)
 
 func checkFileExists(fn string) error {
 	// Nothing set, nothing to error on.
@@ -80,7 +79,7 @@ func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
 		return fmt.Errorf("client cert file %q specified without client key file", tlsConfig.CertFile)
 	}
 	if len(tlsConfig.KeyFile) > 0 && len(tlsConfig.CertFile) == 0 {
-		return fmt.Errorf("client key file %q specified without client cert file", tlsConfig.CertFile)
+		return fmt.Errorf("client key file %q specified without client cert file", tlsConfig.KeyFile)
 	}
 
 	return nil
@@ -121,7 +120,7 @@ func checkSDFile(filename string) error {
 	return nil
 }
 
-// Validate checks the receiver configuration is valid
+// Validate checks the receiver configuration is valid.
 func (cfg *Config) Validate() error {
 	promConfig := cfg.PrometheusConfig
 	if promConfig == nil {
@@ -164,20 +163,18 @@ func (cfg *Config) Validate() error {
 				return fmt.Errorf("error validating scrapeconfig for job %v: %w", sc.JobName, errRenamingDisallowed)
 			}
 		}
-	}
 
-	for _, scfg := range promConfig.ScrapeConfigs {
-		if scfg.HTTPClientConfig.Authorization != nil {
-			if err := checkFileExists(scfg.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
-				return fmt.Errorf("error checking authorization credentials file %q - %s", scfg.HTTPClientConfig.Authorization, err)
+		if sc.HTTPClientConfig.Authorization != nil {
+			if err := checkFileExists(sc.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
+				return fmt.Errorf("error checking authorization credentials file %q - %s", sc.HTTPClientConfig.Authorization.CredentialsFile, err)
 			}
 		}
 
-		if err := checkTLSConfig(scfg.HTTPClientConfig.TLSConfig); err != nil {
+		if err := checkTLSConfig(sc.HTTPClientConfig.TLSConfig); err != nil {
 			return err
 		}
 
-		for _, c := range scfg.ServiceDiscoveryConfigs {
+		for _, c := range sc.ServiceDiscoveryConfigs {
 			switch c := c.(type) {
 			case *kubernetes.SDConfig:
 				if err := checkTLSConfig(c.HTTPClientConfig.TLSConfig); err != nil {
@@ -198,11 +195,12 @@ func (cfg *Config) Validate() error {
 						}
 						continue
 					}
-					fmt.Printf("WARNING: file %q for file_sd in scrape job %q does not exist\n", file, scfg.JobName)
+					fmt.Printf("WARNING: file %q for file_sd in scrape job %q does not exist\n", file, sc.JobName)
 				}
 			}
 		}
 	}
+
 	return nil
 }
 
