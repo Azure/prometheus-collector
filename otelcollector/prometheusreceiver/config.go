@@ -25,18 +25,15 @@ import (
 	"strings"
 	"time"
 
-	//"github.com/prometheus/common/config"
 	config_util "github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/spf13/cast"
 	yaml "gopkg.in/yaml.v2"
 
-	//"go.uber.org/zap"
 	"github.com/prometheus/prometheus/discovery/file"
 	"github.com/prometheus/prometheus/discovery/kubernetes"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"go.opentelemetry.io/collector/config"
-	//"github.com/gracewehner/prometheusreceiver/internal"
 )
 
 const (
@@ -69,23 +66,16 @@ func checkFileExists(fn string) error {
 		return nil
 	}
 	_, err := os.Stat(fn)
-	// fmt.Printf("response from os stat - %v... \n", resp)
 	return err
 }
 
 func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
-	fmt.Printf("in checkTLSConfig %v.....\n", tlsConfig)
-	fmt.Printf("tlsConfig.CertFile - %v\n", tlsConfig.CertFile)
-
 	if err := checkFileExists(tlsConfig.CertFile); err != nil {
-		return fmt.Errorf("error checking client cert file %q - &v", tlsConfig.CertFile, err)
+		return fmt.Errorf("error checking client cert file %q - %v", tlsConfig.CertFile, err)
 	}
-	fmt.Printf("tlsConfig.KeyFile - %v\n", tlsConfig.KeyFile)
-
 	if err := checkFileExists(tlsConfig.KeyFile); err != nil {
-		return fmt.Errorf("error checking client key file %q - &v", tlsConfig.KeyFile, err)
+		return fmt.Errorf("error checking client key file %q - %v", tlsConfig.KeyFile, err)
 	}
-
 	if len(tlsConfig.CertFile) > 0 && len(tlsConfig.KeyFile) == 0 {
 		return fmt.Errorf("client cert file %q specified without client key file", tlsConfig.CertFile)
 	}
@@ -97,7 +87,6 @@ func checkTLSConfig(tlsConfig config_util.TLSConfig) error {
 }
 
 func checkSDFile(filename string) error {
-	fmt.Printf("In CheckSDFile...")
 	fd, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -134,7 +123,6 @@ func checkSDFile(filename string) error {
 
 // Validate checks the receiver configuration is valid
 func (cfg *Config) Validate() error {
-	//cfg.logger = internal.NewZapToGokitLogAdapter(cfg.logger)
 	promConfig := cfg.PrometheusConfig
 	if promConfig == nil {
 		return nil // noop receiver
@@ -178,24 +166,13 @@ func (cfg *Config) Validate() error {
 		}
 	}
 
-	//cfg.logger.Info("Starting custom validation...\n")
-	fmt.Printf("Starting custom validation...\n")
 	for _, scfg := range promConfig.ScrapeConfigs {
-		fmt.Printf(".................................\n")
-
-		// Providing support for older version on prometheus config
-		if err := checkFileExists(scfg.HTTPClientConfig.BearerTokenFile); err != nil {
-			return fmt.Errorf("error checking bearer token file %q - %s", scfg.HTTPClientConfig.BearerTokenFile, err)
-		}
-
 		if scfg.HTTPClientConfig.Authorization != nil {
-			// fmt.Printf("in file validation-Authorization-credentials file- %v...\n", scfg.HTTPClientConfig.Authorization.CredentialsFile)
 			if err := checkFileExists(scfg.HTTPClientConfig.Authorization.CredentialsFile); err != nil {
 				return fmt.Errorf("error checking authorization credentials file %q - %s", scfg.HTTPClientConfig.Authorization, err)
 			}
 		}
 
-		fmt.Printf("Checking TLS config %v", scfg.HTTPClientConfig.TLSConfig)
 		if err := checkTLSConfig(scfg.HTTPClientConfig.TLSConfig); err != nil {
 			return err
 		}
@@ -203,12 +180,10 @@ func (cfg *Config) Validate() error {
 		for _, c := range scfg.ServiceDiscoveryConfigs {
 			switch c := c.(type) {
 			case *kubernetes.SDConfig:
-				fmt.Printf("In kubernetes sd config...%v", c.HTTPClientConfig.TLSConfig)
 				if err := checkTLSConfig(c.HTTPClientConfig.TLSConfig); err != nil {
 					return err
 				}
 			case *file.SDConfig:
-				fmt.Printf("In file sd config...")
 				for _, file := range c.Files {
 					files, err := filepath.Glob(file)
 					if err != nil {
@@ -233,7 +208,6 @@ func (cfg *Config) Validate() error {
 
 // Unmarshal a config.Parser into the config struct.
 func (cfg *Config) Unmarshal(componentParser *config.Parser) error {
-	// fmt.Printf("In Rashmi's unmarshal")
 	if componentParser == nil {
 		return nil
 	}
