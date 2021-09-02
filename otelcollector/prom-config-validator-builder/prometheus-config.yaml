@@ -1,0 +1,36 @@
+global:
+  evaluation_interval: 60s
+  scrape_interval: 60s
+scrape_configs:  
+- job_name: prometheus_ref_app
+  scheme: http
+  follow_redirects: true
+  kubernetes_sd_configs:
+    - role: service
+  relabel_configs:
+    - source_labels: [__meta_kubernetes_service_name]
+      action: keep
+      regex: "prometheus-reference-service"
+  # Below is to test $ in regex field to mean endswith and $ in replacement for regex grouping. Validator should work for both 
+  metric_relabel_configs:
+    - action: replace
+      source_labels: [city]
+      regex: (s.*)(ttle$)
+      replacement: "seattle_city_$1"
+      target_label: city
+    - source_labels: [location]
+      separator: ;
+      regex: (.*)
+      target_label: location
+      replacement: $1
+      action: replace
+- job_name: dummy_app
+  scheme: http
+  follow_redirects: true
+  kubernetes_sd_configs:
+    - role: service
+  file_sd_configs:
+  - files: ["dummy-sd-config.json"]
+# Unsupported feature
+#rule_files: [rulefile.txt]
+  

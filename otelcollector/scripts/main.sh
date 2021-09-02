@@ -163,10 +163,10 @@ source ~/.bashrc
 # will need to rotate log file
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
       echo "starting otelcollector with DEFAULT prometheus configuration...."
-      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml --log-level DEBUG --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
+      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 else
       echo "starting otelcollector...."
-      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level DEBUG --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
+      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
 
 echo "started otelcollector"

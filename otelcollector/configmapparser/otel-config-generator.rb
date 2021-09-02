@@ -27,7 +27,7 @@ class OtelConfigGenerator
         end
       }
     rescue => errorStr
-      ConfigParseErrorLogger.logError("otelConfigValidator::Exception while replacing relabel config regexes - #{errorStr}")
+      ConfigParseErrorLogger.logError("otelConfigGenerator::Exception while replacing relabel config regexes - #{errorStr}")
     end
   end
 
@@ -39,7 +39,7 @@ class OtelConfigGenerator
         promCustomConfig = YAML.load(promConfig)
 
         scfgs = promCustomConfig["scrape_configs"]
-        puts "otelConfigValidator::Starting to replace $ with $$ for regexes in relabel_configs and metric_relabel_configs if any "
+        puts "otelConfigGenerator::Starting to replace $ with $$ for regexes in relabel_configs and metric_relabel_configs if any "
         if !scfgs.nil? && !scfgs.empty? && scfgs.length > 0
           scfgs.each { |scfg|
             relabelConfigs = scfg["relabel_configs"]
@@ -52,20 +52,18 @@ class OtelConfigGenerator
             end
           }
         end
-        puts "otelConfigValidator::Done replacing $ with $$ for regexes in relabel_configs and metric_relabel_configs"
+        puts "otelConfigGenerator::Done replacing $ with $$ for regexes in relabel_configs and metric_relabel_configs"
         collectorTemplate = YAML.load(File.read(@@collectorConfigTemplatePath))
         collectorTemplate["receivers"]["prometheus"]["config"] = promCustomConfig
         # collectorConfig = collectorTemplate.deep_merge!(promCustomConfig)
         collectorConfigYaml = YAML.dump(collectorTemplate)
-        puts "otelConfigValidator::Collector config successfully generated..."
+        puts "otelConfigGenerator::Collector config successfully generated..."
         File.open(@@mergedCollectorConfig, "w") { |file| file.puts collectorConfigYaml }
       else
-        ConfigParseErrorLogger.logError("otelConfigValidator::Invalid prometheus config provided in the configmap")
+        ConfigParseErrorLogger.logError("otelConfigGenerator::Invalid prometheus config provided in the configmap")
       end
     rescue => errorStr
-      ConfigParseErrorLogger.logError("otelConfigValidator::otelConfigValidator::Error generating collector config from prometheus custom config to run validator - #{errorStr}")
+      ConfigParseErrorLogger.logError("otelConfigGenerator::otelConfigValidator::Error generating collector config from prometheus custom config to run validator - #{errorStr}")
     end
   end
 end
-
-#/usr/bin/ruby -r "./test.rb" -e "OtelConfigGenerator.generate_otelconfig"

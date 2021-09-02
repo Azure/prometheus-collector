@@ -13,8 +13,6 @@ import (
 	"go.opentelemetry.io/collector/processor/memorylimiter"
 	"go.opentelemetry.io/collector/processor/resourceprocessor"
 
-	//"github.com/vishiy/influxexporter"
-	//"go.opentelemetry.io/collector/receiver/prometheusreceiver"
 	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 	"go.opentelemetry.io/collector/extension/healthcheckextension"
 	"go.opentelemetry.io/collector/extension/pprofextension"
@@ -49,7 +47,6 @@ func components() (component.Factories, error) {
 		fileexporter.NewFactory(),
 		otlpexporter.NewFactory(),
 		otlphttpexporter.NewFactory(),
-		//influxexporter.NewFactory(),
 	)
 
 	if err != nil {

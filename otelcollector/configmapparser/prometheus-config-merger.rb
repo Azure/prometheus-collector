@@ -119,7 +119,7 @@ def populateDefaultPrometheusConfig
 end
 
 def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
-  puts "config::Adding default scrape configs..."
+  puts "prometheus-config-merger::Adding default scrape configs..."
   mergedDefaultConfigs = ""
   begin
     if defaultScrapeConfigs.length > 0
@@ -131,7 +131,7 @@ def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
         mergedDefaultConfigs = mergedDefaultConfigs.deep_merge!(defaultConfigYaml)
       }
     end
-    puts "config::Done merging #{defaultScrapeConfigs.length} default prometheus config(s)"
+    puts "prometheus-config-merger::Done merging #{defaultScrapeConfigs.length} default prometheus config(s)"
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while adding default scrape config- #{errorStr}, using defaults")
     mergedDefaultConfigs = ""
@@ -145,11 +145,11 @@ populateDefaultPrometheusConfig
 
 if (ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true")
   if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
-    puts "config::Supported config schema version found - will be merging custom prometheus config"
+    puts "prometheus-config-merger::Supported config schema version found - will be merging custom prometheus config"
   else
     if (File.file?(@configMapMountPath))
       @supportedSchemaVersion = false
-      ConfigParseErrorLogger.logError("config::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
+      ConfigParseErrorLogger.logError("prometheus-config-merger::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
     end
   end
 end
@@ -160,7 +160,7 @@ begin
     otelCustomConfig = File.read(@otelCustomPromConfigPath)
     if !otelCustomConfig.empty? && !otelCustomConfig.nil?
       if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
-        puts "config::Starting to merge default prometheus config values in collector.yml with custom prometheus config"
+        puts "prometheus-config-merger::Starting to merge default prometheus config values in collector.yml with custom prometheus config"
         collectorConfig = YAML.load(otelCustomConfig)
         promConfig = collectorConfig["receivers"]["prometheus"]["config"] #["scrape_configs"]
         mergedPromConfig = @mergedDefaultConfigs.deep_merge!(promConfig)
@@ -169,7 +169,7 @@ begin
         collectorNewConfig = YAML::dump(collectorConfig)
       else
         # If default merged config is empty, then use the prometheus custom config alone
-        puts "config::merged default configs is empty, so ignoring them"
+        puts "prometheus-config-merger::merged default configs is empty, so ignoring them"
         collectorNewConfig = otelCustomConfig
       end
       File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
@@ -177,7 +177,7 @@ begin
     end
   else
     # If prometheus custom config is invalid or not applied as configmap
-    puts "config::Starting to merge default prometheus config values in collector template"
+    puts "prometheus-config-merger::Starting to merge default prometheus config values in collector template"
     collectorTemplate = YAML.load(File.read(@collectorConfigTemplatePath))
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
       collectorTemplate["receivers"]["prometheus"]["config"] = @mergedDefaultConfigs
