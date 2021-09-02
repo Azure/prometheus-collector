@@ -68,15 +68,12 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
-
-extern GoInt FLBPluginRegister(void* p0);
+extern GoInt FLBPluginRegister(void* ctx);
 
 // (fluentbit will call this)
 // ctx (context) pointer to fluentbit context (state/ c code)
-
-extern GoInt FLBPluginInit(void* p0);
-
-extern GoInt FLBPluginFlush(void* p0, int p1, char* p2);
+extern GoInt FLBPluginInit(void* ctx);
+extern GoInt FLBPluginFlush(void* data, int length, char* tag);
 
 #ifdef __cplusplus
 }
