@@ -28,6 +28,10 @@
         ```
         kubectl create secret generic akv-creds --from-literal clientid="<service_principal_client_id>" --from-literal clientsecret="<service_principal_client_secret>" -n=kube-system 
         ```
+     - 3.5) Label the kubernetes secret so that the secrets-store-csi-driver knows to rotate the secret
+       ```
+       kubectl label secret akv-creds secrets-store.csi.k8s.io/used=true -n=kube-system
+       ```
 
 #### Step 4 : Install csi driver & secrets store provider for azure KeyVault in your cluster
 ```shell 
