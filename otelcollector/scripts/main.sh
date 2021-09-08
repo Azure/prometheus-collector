@@ -116,12 +116,20 @@ if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
             # Use default config if specified config is invalid
             if [ $? -ne 0 ]; then
                   echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+                  # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
+                  echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
                   export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
+                  export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
+
             fi
       else
             # Setting use default config to true, in case there were any errors and the config file(promCollectorConfig.yml) was not generated
             echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+            # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
+            echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
+            export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
+
       fi
 else
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc

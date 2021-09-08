@@ -63,7 +63,7 @@ class OtelConfigGenerator
         ConfigParseErrorLogger.logError("otelConfigGenerator::Invalid prometheus config provided in the configmap")
       end
     rescue => errorStr
-      ConfigParseErrorLogger.logError("otelConfigGenerator::otelConfigValidator::Error generating collector config from prometheus custom config to run validator - #{errorStr}")
+      ConfigParseErrorLogger.logError("otelConfigGenerator::Error generating collector config from prometheus custom config to run validator - #{errorStr}")
     end
   end
 end

@@ -113,7 +113,7 @@ def populateDefaultPrometheusConfig
     end
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while merging default prometheus configs - #{errorStr}, using defaults")
+    ConfigParseErrorLogger.logError("prometheus-config-merger::Exception while merging default prometheus configs - #{errorStr}, using defaults")
     @mergedDefaultConfigs = ""
   end
 end
@@ -133,7 +133,7 @@ def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
     end
     puts "prometheus-config-merger::Done merging #{defaultScrapeConfigs.length} default prometheus config(s)"
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while adding default scrape config- #{errorStr}, using defaults")
+    ConfigParseErrorLogger.logError("prometheus-config-merger::Exception while adding default scrape config- #{errorStr}, using defaults")
     mergedDefaultConfigs = ""
   end
   return mergedDefaultConfigs
@@ -187,7 +187,7 @@ begin
     end
   end
 rescue => errorStr
-  ConfigParseErrorLogger.logError("Exception while merging otel custom prometheus config and default config - #{errorStr}")
+  ConfigParseErrorLogger.logError("prometheus-config-merger::Exception while merging otel custom prometheus config and default config - #{errorStr}")
 end
 
 # Write the settings to file, so that they can be set as environment variables
