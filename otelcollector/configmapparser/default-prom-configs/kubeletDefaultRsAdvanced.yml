@@ -1,14 +1,14 @@
   scrape_configs:
   - job_name: kubelet
-      scheme: https
-      metrics_path: /metrics
-      scrape_interval: 30s
-      tls_config:
-        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-        insecure_skip_verify: true
-      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-      relabel_configs:
-      - source_labels: [__metrics_path__]
+    scheme: https
+    metrics_path: /metrics
+    scrape_interval: 30s
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      insecure_skip_verify: true
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+    - source_labels: [__metrics_path__]
       regex: (.*)
       target_label: metrics_path
     metric_relabel_configs:

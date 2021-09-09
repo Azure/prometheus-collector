@@ -17,7 +17,7 @@ func main() {
 
 	if filePath != "" {
 		configFlag := fmt.Sprintf("--config=%s", filePath)
-		fmt.Printf("config file provided - %s\n", configFlag)
+		fmt.Printf("prom-config-validator::Config file provided - %s\n", configFlag)
 
 		flags := new(flag.FlagSet)
 		parserProvider.Flags(flags)
@@ -25,13 +25,13 @@ func main() {
 			configFlag,
 		})
 		if err != nil {
-			fmt.Printf("Error parsing flags - %v\n", err)
+			fmt.Printf("prom-config-validator::Error parsing flags - %v\n", err)
 			os.Exit(1)
 		}
 
 		factories, err := components()
 		if err != nil {
-			log.Fatalf("failed to build components: %v\n", err)
+			log.Fatalf("prom-config-validator::Failed to build components: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -39,25 +39,26 @@ func main() {
 
 		cp, err := colParserProvider.Get()
 		if err != nil {
-			fmt.Errorf("cannot load configuration's parser: %w\n", err)
+			fmt.Errorf("prom-config-validator::Cannot load configuration's parser: %w\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("Loading configuration...\n")
+		fmt.Printf("prom-config-validator::Loading configuration...\n")
 
 		cfg, err := configloader.Load(cp, factories)
 		if err != nil {
-			log.Fatalf("Cannot load configuration: %v", err)
+			log.Fatalf("prom-config-validator::Cannot load configuration: %v", err)
 			os.Exit(1)
 		}
 
 		err = cfg.Validate()
 		if err != nil {
-			fmt.Printf("Invalid configuration: %w\n", err)
+			fmt.Printf("prom-config-validator::Invalid configuration: %w\n", err)
 			os.Exit(1)
 		}
 	} else {
-		log.Fatalf("Please provide a config file using the --config flag to validate\n")
+		log.Fatalf("prom-config-validator::Please provide a config file using the --config flag to validate\n")
 		os.Exit(1)
 	}
+	fmt.Printf("prom-config-validator::Successfully loaded and validated custom prometheus config")
 	os.Exit(0)
 }
