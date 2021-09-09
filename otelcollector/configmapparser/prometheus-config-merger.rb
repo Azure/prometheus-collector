@@ -15,27 +15,26 @@ require_relative "ConfigParseErrorLogger"
 @replicasetControllerType = "replicaset"
 @daemonsetControllerType = "daemonset"
 @supportedSchemaVersion = true
-# @defaultConfigs = []
-
+@defaultPromConfigPathPrefix = "/opt/microsoft/otelcollector/default-prom-configs/"
 # Setting default values which will be used in case they are not set in the configmap or if configmap doesnt exist
 @mergedPromConfig = ""
 @useDefaultConfig = true
 
-@kubeletDefaultStringRsSimple = "scrape_configs:\n- job_name: kubelet\n  scheme: https\n  metrics_path: /metrics\n  scrape_interval: 30s\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  relabel_configs:\n  - source_labels: [__metrics_path__]\n    regex: (.*)\n    target_label: metrics_path\n  kubernetes_sd_configs:\n  - role: node"
-@kubeletDefaultStringRsAdvanced = "scrape_configs:\n- job_name: kubelet\n    scheme: https\n    metrics_path: /metrics\n    scrape_interval: 30s\n    tls_config:\n      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n      insecure_skip_verify: true\n    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n    relabel_configs:\n    - source_labels: [__metrics_path__]\n    regex: (.*)\n    target_label: metrics_path\n  metric_relabel_configs:\n  - source_labels: [__name__]\n    action: keep\n    regex: \"up\"\n  kubernetes_sd_configs:\n  - role: node"
-@kubeletDefaultStringDs = "scrape_configs:\n- job_name: kubelet\n  scheme: https\n  metrics_path: /metrics\n  scrape_interval: 30s\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  relabel_configs:\n  - source_labels: [__metrics_path__]\n    regex: (.*)\n    target_label: metrics_path\n  - source_labels: [__address__]\n    replacement: '$$NODE_NAME$$'\n    target_label: instance\n  static_configs:\n  - targets: ['$$NODE_IP$$:10250']"
-@corednsDefaultString = "scrape_configs:\n- job_name: kube-dns\n  scheme: http\n  metrics_path: /metrics\n  scrape_interval: 30s\n  relabel_configs:\n  - action: keep\n    source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]\n    separator: '/'\n    regex: 'kube-system/coredns.+'\n  - source_labels: [__meta_kubernetes_pod_container_port_name]\n    action: keep\n    regex: metrics\n  - source_labels: [__meta_kubernetes_pod_name]\n    target_label: pod\n  kubernetes_sd_configs:\n  - role: pod"
-@cadvisorDefaultStringRsSimple = "scrape_configs:\n- job_name: cadvisor\n  scheme: https\n  metrics_path: /metrics/cadvisor\n  scrape_interval: 30s\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  kubernetes_sd_configs:\n  - role: node"
-@cadvisorDefaultStringRsAdvanced = "scrape_configs:\n- job_name: cadvisor\n  scheme: https\n  metrics_path: /metrics/cadvisor\n  scrape_interval: 30s\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  metric_relabel_configs:\n  - source_labels: [__name__]\n    action: keep\n    regex: \"up\"\n  kubernetes_sd_configs:\n  - role: node"
-@cadvisorDefaultStringDs = "scrape_configs:\n- job_name: cadvisor\n  scheme: https\n  metrics_path: /metrics/cadvisor\n  scrape_interval: 30s\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  relabel_configs:\n  - source_labels: [__address__]\n    replacement: '$$NODE_NAME$$'\n    target_label: instance\n  static_configs:\n  - targets: ['$$NODE_IP$$:10250']"
-@kubeproxyDefaultString = "scrape_configs:\n- job_name: kube-proxy\n  scrape_interval: 30s\n  kubernetes_sd_configs:\n  - role: pod\n  relabel_configs:\n  - action: keep\n    source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]\n    separator: '/'\n    regex: 'kube-system/kube-proxy.+'\n  - source_labels:\n    - __address__\n    action: replace\n    target_label: __address__\n    regex: (.+?)(\\:\\d+)?\n    replacement: $$1:10249"
-@apiserverDefaultString = "scrape_configs:\n- job_name: kube-apiserver\n  scrape_interval: 30s\n  kubernetes_sd_configs:\n  - role: endpoints\n  scheme: https\n  tls_config:\n    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt\n    insecure_skip_verify: true\n  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token\n  relabel_configs:\n  - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]\n    action: keep\n    regex: default;kubernetes;https"
-@kubestateDefaultString = "scrape_configs:\n- job_name: kube-state-metrics\n  scrape_interval: 30s\n  static_configs:\n  - targets: ['$$KUBE_STATE_NAME$$.$$POD_NAMESPACE$$.svc.cluster.local:8080']"
-@nodeexporterDefaultStringRsSimple = "scrape_configs:\n- job_name: node\n  scheme: http\n  scrape_interval: 30s\n  kubernetes_sd_configs:\n  - role: endpoints\n    namespaces:\n     names:\n     - $$POD_NAMESPACE$$\n  relabel_configs:\n  - action: keep\n    source_labels: [__meta_kubernetes_endpoints_name]\n    regex: $$NODE_EXPORTER_NAME$$"
-@nodeexporterDefaultStringRsAdvanced = "scrape_configs:\n- job_name: node\n  scheme: http\n  scrape_interval: 30s\n  kubernetes_sd_configs:\n  - role: endpoints\n    namespaces:\n     names:\n     - $$POD_NAMESPACE$$\n  relabel_configs:\n  - action: keep\n    source_labels: [__meta_kubernetes_endpoints_name]\n    regex: $$NODE_EXPORTER_NAME$$\n  metric_relabel_configs:\n  - source_labels: [__name__]\n    action: keep\n    regex: \"up\""
-@nodeexporterDefaultStringDs = "scrape_configs:\n- job_name: node\n  scheme: http\n  scrape_interval: 30s\n  static_configs:\n  - targets: ['$$NODE_IP$$:$$NODE_EXPORTER_TARGETPORT$$']"
+@kubeletDefaultFileRsSimple = @defaultPromConfigPathPrefix + "kubeletDefaultRsSimple.yml"
+@kubeletDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "kubeletDefaultRsAdvanced.yml"
+@kubeletDefaultFileDs = @defaultPromConfigPathPrefix + "kubeletDefaultDs.yml"
+@corednsDefaultFile = @defaultPromConfigPathPrefix + "corednsDefault.yml"
+@cadvisorDefaultFileRsSimple = @defaultPromConfigPathPrefix + "cadvisorDefaultRsSimple.yml"
+@cadvisorDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "cadvisorDefaultRsAdvanced.yml"
+@cadvisorDefaultFileDs = @defaultPromConfigPathPrefix + "cadvisorDefaultDs.yml"
+@kubeproxyDefaultFile = @defaultPromConfigPathPrefix + "kubeproxyDefault.yml"
+@apiserverDefaultFile = @defaultPromConfigPathPrefix + "apiserverDefault.yml"
+@kubestateDefaultFile = @defaultPromConfigPathPrefix + "kubestateDefault.yml"
+@nodeexporterDefaultFileRsSimple = @defaultPromConfigPathPrefix + "nodeexporterDefaultRsSimple.yml"
+@nodeexporterDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "nodeexporterDefaultRsAdvanced.yml"
+@nodeexporterDefaultFileDs = @defaultPromConfigPathPrefix + "nodeexporterDefaultDs.yml"
 
-# Get the prometheus config and indent correctly for otelcollector config
+# Get the list of default configs to be included in the otel's prometheus config
 def populateDefaultPrometheusConfig
   begin
     # check if running in daemonset or replicaset
@@ -53,61 +52,75 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].downcase == "true"
       if currentControllerType == @replicasetControllerType
         if advancedMode == false
-          defaultConfigs.push(@kubeletDefaultStringRsSimple)
+          defaultConfigs.push(@kubeletDefaultFileRsSimple)
         else
-          defaultConfigs.push(@kubeletDefaultStringRsAdvanced)
+          defaultConfigs.push(@kubeletDefaultFileRsAdvanced)
         end
       else
         if advancedMode == true
-          @kubeletDefaultStringDs = @kubeletDefaultStringDs.gsub("$$NODE_IP$$", ENV["NODE_IP"])
-          @kubeletDefaultStringDs = @kubeletDefaultStringDs.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
-          defaultConfigs.push(@kubeletDefaultStringDs)
+          contents = File.read(@kubeletDefaultFileDs)
+          contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+          File.open(@kubeletDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@kubeletDefaultFileDs)
         end
       end
     end
     if !ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
-      defaultConfigs.push(@corednsDefaultString)
+      defaultConfigs.push(@corednsDefaultFile)
     end
     if !ENV["AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED"].downcase == "true"
       if currentControllerType == @replicasetControllerType
         if advancedMode == false
-          defaultConfigs.push(@cadvisorDefaultStringRsSimple)
+          defaultConfigs.push(@cadvisorDefaultFileRsSimple)
         else
-          defaultConfigs.push(@cadvisorDefaultStringRsAdvanced)
+          defaultConfigs.push(@cadvisorDefaultFileRsAdvanced)
         end
       else
         if advancedMode == true
-          @cadvisorDefaultStringDs = @cadvisorDefaultStringDs.gsub("$$NODE_IP$$", ENV["NODE_IP"])
-          @cadvisorDefaultStringDs = @cadvisorDefaultStringDs.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
-          defaultConfigs.push(@cadvisorDefaultStringDs)
+          contents = File.read(@cadvisorDefaultFileDs)
+          contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+          File.open(@cadvisorDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@cadvisorDefaultFileDs)
         end
       end
     end
     if !ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
-      defaultConfigs.push(@kubeproxyDefaultString)
+      defaultConfigs.push(@kubeproxyDefaultFile)
     end
     if !ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
-      defaultConfigs.push(@apiserverDefaultString)
+      defaultConfigs.push(@apiserverDefaultFile)
     end
     if !ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
-      @kubestateDefaultString = @kubestateDefaultString.gsub("$$KUBE_STATE_NAME$$", ENV["KUBE_STATE_NAME"])
-      @kubestateDefaultString = @kubestateDefaultString.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
-      defaultConfigs.push(@kubestateDefaultString)
+      contents = File.read(@kubestateDefaultFile)
+      contents = contents.gsub("$$KUBE_STATE_NAME$$", ENV["KUBE_STATE_NAME"])
+      contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
+      File.open(@kubestateDefaultFile, "w") { |file| file.puts contents }
+      defaultConfigs.push(@kubestateDefaultFile)
     end
     if !ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].downcase == "true"
       if currentControllerType == @replicasetControllerType
-        nodeexporterDefaultStringRs = @nodeexporterDefaultStringRsSimple
         if advancedMode == true
-          nodeexporterDefaultStringRs = @nodeexporterDefaultStringRsAdvanced
+          contents = File.read(@nodeexporterDefaultFileRsAdvanced)
+          contents = contents.gsub("$$NODE_EXPORTER_NAME$$", ENV["NODE_EXPORTER_NAME"])
+          contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
+          File.open(@nodeexporterDefaultFileRsAdvanced, "w") { |file| file.puts contents }
+          defaultConfigs.push(@nodeexporterDefaultFileRsAdvanced)
+        else
+          contents = File.read(@nodeexporterDefaultFileRsSimple)
+          contents = contents.gsub("$$NODE_EXPORTER_NAME$$", ENV["NODE_EXPORTER_NAME"])
+          contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
+          File.open(@nodeexporterDefaultFileRsSimple, "w") { |file| file.puts contents }
+          defaultConfigs.push(@nodeexporterDefaultFileRsSimple)
         end
-        nodeexporterDefaultStringRs = nodeexporterDefaultStringRs.gsub("$$NODE_EXPORTER_NAME$$", ENV["NODE_EXPORTER_NAME"])
-        nodeexporterDefaultStringRs = nodeexporterDefaultStringRs.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
-        defaultConfigs.push(nodeexporterDefaultStringRs)
       else
         if advancedMode == true
-          @nodeexporterDefaultStringDs = @nodeexporterDefaultStringDs.gsub("$$NODE_IP$$", ENV["NODE_IP"])
-          @nodeexporterDefaultStringDs = @nodeexporterDefaultStringDs.gsub("$$NODE_EXPORTER_TARGETPORT$$", ENV["NODE_EXPORTER_TARGETPORT"])
-          defaultConfigs.push(@nodeexporterDefaultStringDs)
+          contents = File.read(@nodeexporterDefaultFileDs)
+          contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          contents = contents.gsub("$$NODE_EXPORTER_TARGETPORT$$", ENV["NODE_EXPORTER_TARGETPORT"])
+          File.open(@nodeexporterDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@nodeexporterDefaultFileDs)
         end
       end
     end
@@ -127,7 +140,7 @@ def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
       # Load each of the default scrape configs and merge them
       defaultScrapeConfigs.each { |defaultScrapeConfig|
         # Load yaml from default config
-        defaultConfigYaml = YAML.load(defaultScrapeConfig)
+        defaultConfigYaml = YAML.load(File.read(defaultScrapeConfig))
         mergedDefaultConfigs = mergedDefaultConfigs.deep_merge!(defaultConfigYaml)
       }
     end

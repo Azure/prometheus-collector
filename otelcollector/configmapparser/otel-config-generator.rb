@@ -55,7 +55,6 @@ class OtelConfigGenerator
         puts "otelConfigGenerator::Done replacing $ with $$ for regexes in relabel_configs and metric_relabel_configs"
         collectorTemplate = YAML.load(File.read(@@collectorConfigTemplatePath))
         collectorTemplate["receivers"]["prometheus"]["config"] = promCustomConfig
-        # collectorConfig = collectorTemplate.deep_merge!(promCustomConfig)
         collectorConfigYaml = YAML.dump(collectorTemplate)
         puts "otelConfigGenerator::Collector config successfully generated..."
         File.open(@@mergedCollectorConfig, "w") { |file| file.puts collectorConfigYaml }
