@@ -4,14 +4,19 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
 	"github.com/fluent/fluent-bit-go/output"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -19,6 +24,38 @@ var (
 	CommonProperties map[string]string
 	// TelemetryClient is the client used to send the telemetry
 	TelemetryClient appinsights.TelemetryClient
+	metricsReceivedTotal float64 = 0
+	metricsSentTotal float64 = 0
+	bytesSentTotal float64 = 0
+	TimeseriesVolumeTicker *time.Ticker
+	TimeseriesVolumeMutex = &sync.Mutex{}
+	timeseriesReceivedRate = 0.0
+	timeseriesSentRate = 0.0
+	bytesSentRate = 0.0
+)
+
+var (
+	timeseriesReceivedMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "timeseries_received_per_minute",
+			Help: "Number of timeseries to be sent to storage",
+		},
+		[]string{"computer"},
+	)
+	timeseriesSentMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "timeseries_sent_per_minute",
+			Help: "Number of timeseries sent to storage",
+		},
+		[]string{"computer"},
+	)
+	bytesSentMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "bytes_sent_per_minute",
+			Help: "Number of bytes of timeseries sent to storage",
+		},
+		[]string{"computer"},
+	)
 )
 
 const (
@@ -28,8 +65,8 @@ const (
 	envACSResourceName                                = "ACS_RESOURCE_NAME"
 	envAgentVersion                                   = "AGENT_VERSION"
 	envControllerType                                 = "CONTROLLER_TYPE"
-	envNodeIP										  = "NODE_IP"
-	envMode											  = "MODE"
+	envNodeIP                                         = "NODE_IP"
+	envMode                                           = "MODE"
 	envCluster                                        = "customResourceId"
 	envAppInsightsAuth                                = "APPLICATIONINSIGHTS_AUTH"
 	envAppInsightsEndpoint                            = "APPLICATIONINSIGHTS_ENDPOINT"
@@ -91,7 +128,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["agentversion"] = os.Getenv(envAgentVersion)
 	CommonProperties["namespace"] = os.Getenv(envNamespace)
 	CommonProperties["defaultmetricaccountname"] = os.Getenv(envDefaultMetricAccountName)
-    CommonProperties["podname"] = os.Getenv(envPodName)
+  CommonProperties["podname"] = os.Getenv(envPodName)
 
 	aksResourceID := os.Getenv(envAKSResourceID)
 	// if the aks resource id is not defined, it is most likely an ACS Cluster
@@ -147,21 +184,39 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 	return output.FLB_OK
 }
 
-// Get the account name, metrics processed count, and metrics sent count from metrics extension log line
+// Get the account name, metrics/bytes processed count, and metrics/bytes sent count from metrics extension log line
 // that was filtered by fluent-bit
 func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
-		var metricScrapeInfoRegex = regexp.MustCompile(`\s*([^\s]+)\s*([^\s]+)\s*([^\s]+).*ProcessedCount: ([\d]+).*SentToPublicationCount: ([\d]+).*`)
+		var metricScrapeInfoRegex = regexp.MustCompile(`\s*([^\s]+)\s*([^\s]+)\s*([^\s]+).*ProcessedCount: ([\d]+).*ProcessedBytes: ([\d]+).*SentToPublicationCount: ([\d]+).*SentToPublicationBytes: ([\d]+).*`)
 		groupMatches := metricScrapeInfoRegex.FindStringSubmatch(logEntry)
 
-		if len(groupMatches) > 5 {
+		if len(groupMatches) > 7 {
 			metricsProcessedCount, err := strconv.ParseFloat(groupMatches[4], 64)
 			if err == nil {
 				metric := appinsights.NewMetricTelemetry("meMetricsProcessedCount", metricsProcessedCount)
 				metric.Properties["metricsAccountName"] = groupMatches[3]
-				metric.Properties["metricsSentToPubCount"] = groupMatches[5]
+				metric.Properties["bytesProcessedCount"] = groupMatches[5]
+				metric.Properties["metricsSentToPubCount"] = groupMatches[6]
+				metric.Properties["bytesSentToPubCount"] = groupMatches[7]
 				TelemetryClient.Track(metric)
+			}
+			metricsSentToPubCount, err := strconv.ParseFloat(groupMatches[6], 64)
+			if err == nil {
+				Log("about to lock for metrics sent")
+				TimeseriesVolumeMutex.Lock()
+				metricsSentTotal += metricsSentToPubCount
+				TimeseriesVolumeMutex.Unlock()
+				Log("unlocked for metrics sent")
+			}
+			bytesSentToPubCount, err := strconv.ParseFloat(groupMatches[7], 64)
+			if err == nil {
+				Log("About to lock for bytes sent")
+				TimeseriesVolumeMutex.Lock()
+				bytesSentTotal += bytesSentToPubCount
+				TimeseriesVolumeMutex.Unlock()
+				Log("Unlocked for bytes sent")
 			}
 		}
 	}
@@ -198,6 +253,11 @@ func PushReceivedMetricsCountToAppInsightsMetrics(records []map[interface{}]inte
 		if len(groupMatches) > 1 {
 		  metricsReceivedCount, err := strconv.ParseFloat(groupMatches[1], 64)
 			if err == nil {
+				Log("About to lock for received total")
+				TimeseriesVolumeMutex.Lock()
+				metricsReceivedTotal += metricsReceivedCount
+				TimeseriesVolumeMutex.Unlock()
+				Log("Unlocking received total")
 				metric := appinsights.NewMetricTelemetry("meMetricsReceivedCount", metricsReceivedCount)
 				TelemetryClient.Track(metric)
 			}
@@ -224,4 +284,62 @@ func PushInfiniteMetricLogToAppInsightsEvents(records []map[interface{}]interfac
 	}
 
 	return output.FLB_OK
+}
+
+func PublishTimeseriesVolume() {
+	Log("In go routine for server")
+	r := prometheus.NewRegistry()
+	r.MustRegister(timeseriesReceivedMetric)
+	r.MustRegister(timeseriesSentMetric)
+	r.MustRegister(bytesSentMetric)
+	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
+	http.Handle("/metrics", handler)
+
+	go func() {
+		Log("In go func for ticker")
+		telemetryPushInterval := 60
+		TimeseriesVolumeTicker = time.NewTicker(time.Second * time.Duration(telemetryPushInterval))
+		start := time.Now()
+		
+		for ; true; <-TimeseriesVolumeTicker.C {
+			elapsed := time.Since(start)
+			Log("About to lock, calculating rates")
+		
+			TimeseriesVolumeMutex.Lock()
+
+			Log("Have locked, calculating rates")
+			timePassedInMinutes := (float64(elapsed) / float64(time.Second)) / 60.0
+			Log("time passed in seconds: %f", float64(elapsed) / float64(time.Second))
+			Log("time passed in minutes: %f", timePassedInMinutes)
+			timeseriesReceivedRate = metricsReceivedTotal / timePassedInMinutes
+			timeseriesSentRate = metricsSentTotal / timePassedInMinutes
+			bytesSentRate = bytesSentTotal / timePassedInMinutes
+
+			timeseriesReceivedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"]}).Set(timeseriesReceivedRate)
+			timeseriesSentMetric.With(prometheus.Labels{"computer":CommonProperties["computer"]}).Set(timeseriesSentRate)
+			bytesSentMetric.With(prometheus.Labels{"computer":CommonProperties["computer"]}).Set(bytesSentRate)
+		
+			metricsReceivedTotal = 0.0
+			metricsSentTotal = 0.0
+			bytesSentTotal = 0.0
+			TimeseriesVolumeMutex.Unlock()
+			Log("Have unlocked, calculated rates")
+		
+			start = time.Now()
+			Log("About to wait a minute")
+		}
+	}()
+
+	Log("About to listen and serve")
+	http.ListenAndServe(":2234", nil)
+}
+
+func metricInfoHandler(responseWriter http.ResponseWriter, request *http.Request) {
+	Log("Handling request, about to lock")
+	TimeseriesVolumeMutex.Lock()
+	Log("Have locked, writing to response writer")
+	fmt.Fprintf(responseWriter, "# HELP timeseriesReceivedTotal The total number of timeseries received by MetricsExtension\n# TYPE timeseriesReceivedTotal counter\ntimeseriesReceivedTotal{computer=\"%s\",cluster=\"%s\"} %f\n\n# HELP timeseriesSentTotal The total number of timeseries sent by MetricsExtension\n# TYPE timeseriesSentTotal counter\ntimeseriesSentTotal{computer=\"%s\",cluster=\"%s\"} %f\n\n# HELP bytesSentTotal The total number of bytest sent by MetricsExtension\n# TYPE bytesSentTotal counter\nbytesSentTotal{computer=\"%s\",cluster=\"%s\"} %f\n",
+	CommonProperties["computer"], CommonProperties["cluster"], timeseriesReceivedRate, CommonProperties["computer"], CommonProperties["cluster"], timeseriesSentRate, CommonProperties["computer"], CommonProperties["cluster"], bytesSentRate)
+	TimeseriesVolumeMutex.Unlock()
+	Log("have unlocked")
 }

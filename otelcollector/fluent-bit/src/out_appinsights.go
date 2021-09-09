@@ -26,6 +26,8 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	InitializePlugin(agentVersion)
 
+	go PublishTimeseriesVolume()
+
 	return output.FLB_OK
 }
 
