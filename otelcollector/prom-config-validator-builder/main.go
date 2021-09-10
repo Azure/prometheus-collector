@@ -12,9 +12,11 @@ import (
 
 func main() {
 	configFilePtr := flag.String("config", "", "Config file to validate")
+	outFile := flag.String("output", "", "Output file path for writing collector config")
 	flag.Parse()
 	filePath := *configFilePtr
-
+	outputFilePath := *outFile
+	fmt.Printf("outfile path - %v", outputFilePath)
 	if filePath != "" {
 		configFlag := fmt.Sprintf("--config=%s", filePath)
 		fmt.Printf("prom-config-validator::Config file provided - %s\n", configFlag)
@@ -59,6 +61,6 @@ func main() {
 		log.Fatalf("prom-config-validator::Please provide a config file using the --config flag to validate\n")
 		os.Exit(1)
 	}
-	fmt.Printf("prom-config-validator::Successfully loaded and validated custom prometheus config")
+	fmt.Printf("prom-config-validator::Successfully loaded and validated custom prometheus config\n")
 	os.Exit(0)
 }
