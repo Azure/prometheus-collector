@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/go-kit/log"
+	gokitLogger "github.com/go-kit/log"
 	prometheusConfig "github.com/prometheus/prometheus/config"
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
@@ -39,7 +39,7 @@ func generateOtelConfig(promFilePath string) error {
 	}
 
 	//var promConfig *prometheusConfig.Config
-	promConfig, err := prometheusConfig.LoadFile(promFilePath, false, log.NewNopLogger())
+	promConfig, err := prometheusConfig.LoadFile(promFilePath, false, gokitLogger.NewNopLogger())
 	if err != nil {
 		return err
 	}
