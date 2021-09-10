@@ -3,11 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func main() {
@@ -22,11 +24,17 @@ func main() {
 		fmt.Printf("prom-config-validator::Config file provided - %s\n", configFlag)
 
 		dat, err := os.ReadFile(filePath)
+		m := make(map[interface{}]interface{})
+		_ = yaml.Unmarshal([]byte(dat), &m)
+		//m["bearer_token_file"] = "rashmi"
+		data, _ := yaml.Marshal(&m)
+		err = ioutil.WriteFile(outputFilePath, data, 0)
+
 		fmt.Printf("%v", dat)
 
 		flags := new(flag.FlagSet)
 		parserProvider.Flags(flags)
-		err := flags.Parse([]string{
+		err = flags.Parse([]string{
 			configFlag,
 		})
 		if err != nil {
