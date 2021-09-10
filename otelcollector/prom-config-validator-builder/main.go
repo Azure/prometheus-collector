@@ -12,14 +12,56 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+type otelConfigStruct struct {
+	Exporters struct {
+		File struct {
+			Path string `yaml:"path"`
+		} `yaml:"file"`
+		Otlp struct {
+			Endpoint       string `yaml:"endpoint"`
+			Insecure       bool   `yaml:"insecure"`
+			Compression    string `yaml:"compression"`
+			RetryOnFailure struct {
+				Enabled bool `yaml:"enabled"`
+			} `yaml:"retry_on_failure"`
+			Timeout string `yaml:"timeout"`
+		} `yaml:"otlp"`
+	} `yaml:"exporters"`
+	Processors struct {
+		Batch struct {
+			SendBatchSize    int    `yaml:"send_batch_size"`
+			Timeout          string `yaml:"timeout"`
+			SendBatchMaxSize int    `yaml:"send_batch_max_size"`
+		} `yaml:"batch"`
+		Resource struct {
+			Attributes []struct {
+				Key    string `yaml:"key"`
+				Value  string `yaml:"value"`
+				Action string `yaml:"action"`
+			} `yaml:"attributes"`
+		} `yaml:"resource"`
+	} `yaml:"processors"`
+	Receivers struct {
+		Prometheus struct {
+			Config interface{} `yaml:"config"`
+		} `yaml:"prometheus"`
+	} `yaml:"receivers"`
+	Service struct {
+		Pipelines struct {
+			Metrics struct {
+				Receivers  []string `yaml:"receivers"`
+				Exporters  []string `yaml:"exporters"`
+				Processors []string `yaml:"processors"`
+			} `yaml:"metrics"`
+		} `yaml:"pipelines"`
+	} `yaml:"service"`
+}
+
 func generateOtelConfig(promFilePath string) error {
-	otelConfig := make(map[interface{}]interface{})
+	// otelConfig := make(map[interface{}]interface{})
+	var otelConfig otelConfigStruct
 	var otelTemplatePath = "collector-config-template.yml"
-	// dat, err := os.ReadFile(filePath)
-	// m := make(map[interface{}]interface{})
-	// _ = yaml.Unmarshal([]byte(dat), &m)
-	// data, _ := yaml.Marshal(&m)
-	// err = ioutil.WriteFile(outputFilePath, data, 0)
+
 	otelConfigFileContents, err := os.ReadFile(otelTemplatePath)
 	if err != nil {
 		return err
@@ -40,7 +82,7 @@ func generateOtelConfig(promFilePath string) error {
 		return err
 	}
 
-	otelConfig["receivers"]["prometheus"]["config"] = promConfig
+	otelConfig.Receivers.Prometheus.Config = promConfig
 
 	// data, _ := yaml.Marshal(&m)
 	// err = ioutil.WriteFile(outputFilePath, data, 0)
