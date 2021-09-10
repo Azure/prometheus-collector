@@ -21,6 +21,9 @@ func main() {
 		configFlag := fmt.Sprintf("--config=%s", filePath)
 		fmt.Printf("prom-config-validator::Config file provided - %s\n", configFlag)
 
+		dat, err := os.ReadFile(filePath)
+		fmt.Printf("%v", dat)
+
 		flags := new(flag.FlagSet)
 		parserProvider.Flags(flags)
 		err := flags.Parse([]string{
