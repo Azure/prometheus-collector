@@ -58,21 +58,20 @@ import (
 // }
 //}
 
-type otelConfigStruct struct {
-	Receivers struct {
-		Prometheus struct {
-			Config interface{} `yaml:"config"`
-		} `yaml:"prometheus"`
-	} `yaml:"receivers"`
-	Exporters
-	Processors
-	Extensions
-	Service
-}
+// type otelConfigStruct struct {
+// 	Receivers struct {
+// 		Prometheus struct {
+// 			Config interface{} `yaml:"config"`
+// 		} `yaml:"prometheus"`
+// 	} `yaml:"receivers"`
+// 	Exporters  interface{} `yaml:"exporters"`
+// 	Processors interface{} `yaml:"processors"`
+// 	Service    interface{} `yaml:"service"`
+// }
 
 func generateOtelConfig(promFilePath string) error {
-	// otelConfig := make(map[interface{}]interface{})
-	var otelConfig otelConfigStruct
+	//var otelConfig otelConfigStruct
+	var otelConfig collectorConfig
 	var otelTemplatePath = "collector-config-template.yml"
 
 	otelConfigFileContents, err := os.ReadFile(otelTemplatePath)
