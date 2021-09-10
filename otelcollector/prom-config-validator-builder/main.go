@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 
-	promconfig "github.com/prometheus/prometheus/config"
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 	yaml "gopkg.in/yaml.v2"
@@ -59,20 +58,11 @@ import (
 // }
 //}
 
-// type otelConfigStruct struct {
-// 	Receivers struct {
-// 		Prometheus struct {
-// 			Config interface{} `yaml:"config"`
-// 		} `yaml:"prometheus"`
-// 	} `yaml:"receivers"`
-// 	Exporters  interface{} `yaml:"exporters"`
-// 	Processors interface{} `yaml:"processors"`
-// 	Service    interface{} `yaml:"service"`
-// }
-
 type otelConfigStruct struct {
 	Receivers struct {
-		Prometheus *promconfig.Config `yaml:"prometheus"`
+		Prometheus struct {
+			Config interface{} `yaml:"config"`
+		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
 	Exporters  interface{} `yaml:"exporters"`
 	Processors interface{} `yaml:"processors"`
