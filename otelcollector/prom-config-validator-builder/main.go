@@ -32,9 +32,11 @@ func generateOtelConfig(promFilePath string) error {
 		return err
 	}
 
-	for k, v := range override {
-		master[k] = v
-	}
+	// for k, v := range override {
+	// 	master[k] = v
+	// }
+
+	master["receivers"]["prometheus"]["config"] = override
 
 	bs, err = yaml.Marshal(master)
 	if err != nil {
