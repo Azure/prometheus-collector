@@ -13,36 +13,65 @@ import (
 )
 
 func generateOtelConfig(promFilePath string) error {
-	var master map[string]interface{}
+	otelConfig := make(map[interface{}]interface{})
 	var otelTemplatePath = "collector-config-template.yml"
-	bs, err := ioutil.ReadFile(otelTemplatePath)
+	// dat, err := os.ReadFile(filePath)
+	// m := make(map[interface{}]interface{})
+	// _ = yaml.Unmarshal([]byte(dat), &m)
+	// data, _ := yaml.Marshal(&m)
+	// err = ioutil.WriteFile(outputFilePath, data, 0)
+	otelConfigFileContents, err := os.ReadFile(otelTemplatePath)
 	if err != nil {
 		return err
 	}
-	if err := yaml.Unmarshal(bs, &master); err != nil {
-		return err
-	}
-
-	var override map[string]interface{}
-	bs, err = ioutil.ReadFile(promFilePath)
+	err = yaml.Unmarshal([]byte(otelConfigFileContents), &otelConfig)
 	if err != nil {
 		return err
 	}
-	if err := yaml.Unmarshal(bs, &override); err != nil {
+
+	promConfig := make(map[interface{}]interface{})
+
+	promConfigFileContents, err := os.ReadFile(promFilePath)
+	if err != nil {
+		return err
+	}
+	err = yaml.Unmarshal([]byte(promConfigFileContents), &promConfig)
+	if err != nil {
 		return err
 	}
 
-	// for k, v := range override {
-	// 	master[k] = v
+	otelConfig["receivers"]["prometheus"]["config"] = promConfig
+
+	// data, _ := yaml.Marshal(&m)
+	// err = ioutil.WriteFile(outputFilePath, data, 0)
+
+	// if err != nil {
+	// 	return err
+	// }
+	// if err := yaml.Unmarshal(bs, &master); err != nil {
+	// 	return err
 	// }
 
-	master["receivers"]["prometheus"]["config"] = override
+	// var override map[string]interface{}
+	// bs, err = ioutil.ReadFile(promFilePath)
+	// if err != nil {
+	// 	return err
+	// }
+	// if err := yaml.Unmarshal(bs, &override); err != nil {
+	// 	return err
+	// }
 
-	bs, err = yaml.Marshal(master)
+	// // for k, v := range override {
+	// // 	master[k] = v
+	// // }
+
+	// master["receivers"]["prometheus"]["config"] = override
+
+	mergedConfig, err := yaml.Marshal(otelConfig)
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile("merged.yaml", bs, 0644); err != nil {
+	if err := ioutil.WriteFile("merged.yaml", mergedConfig, 0644); err != nil {
 		return err
 	}
 	return nil
