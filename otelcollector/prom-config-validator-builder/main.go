@@ -7,56 +7,11 @@ import (
 	"log"
 	"os"
 
+	prometheusConfig "github.com/prometheus/prometheus/config"
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 	yaml "gopkg.in/yaml.v2"
 )
-
-// type otelConfigStruct struct {
-// 	Exporters struct {
-// 		File struct {
-// 			Path string `yaml:"path"`
-// 		} `yaml:"file"`
-// 		Otlp struct {
-// 			Endpoint       string `yaml:"endpoint"`
-// 			Insecure       bool   `yaml:"insecure"`
-// 			Compression    string `yaml:"compression"`
-// 			RetryOnFailure struct {
-// 				Enabled bool `yaml:"enabled"`
-// 			} `yaml:"retry_on_failure"`
-// 			Timeout string `yaml:"timeout"`
-// 		} `yaml:"otlp"`
-// 	} `yaml:"exporters"`
-// 	Processors struct {
-// 		Batch struct {
-// 			SendBatchSize    int    `yaml:"send_batch_size"`
-// 			Timeout          string `yaml:"timeout"`
-// 			SendBatchMaxSize int    `yaml:"send_batch_max_size"`
-// 		} `yaml:"batch"`
-// 		Resource struct {
-// 			Attributes []struct {
-// 				Key    string `yaml:"key"`
-// 				Value  string `yaml:"value"`
-// 				Action string `yaml:"action"`
-// 			} `yaml:"attributes"`
-// 		} `yaml:"resource"`
-// 	} `yaml:"processors"`
-// 	Receivers struct {
-// 		Prometheus struct {
-// 			Config interface{} `yaml:"config"`
-// 		} `yaml:"prometheus"`
-// 	} `yaml:"receivers"`
-// 	Service struct {
-// 		Pipelines struct {
-// 			Metrics struct {
-// 				Receivers  []string `yaml:"receivers"`
-// 				Exporters  []string `yaml:"exporters"`
-// 				Processors []string `yaml:"processors"`
-// 			} `yaml:"metrics"`
-// 		} `yaml:"pipelines"`
-// 	} `yaml:"service"`
-// }
-//}
 
 type otelConfigStruct struct {
 	Receivers struct {
@@ -82,7 +37,8 @@ func generateOtelConfig(promFilePath string) error {
 		return err
 	}
 
-	promConfig := make(map[interface{}]interface{})
+	var promConfig *prometheusConfig.Config
+	//promConfig := make(map[interface{}]interface{})
 
 	promConfigFileContents, err := os.ReadFile(promFilePath)
 	if err != nil {
@@ -94,31 +50,6 @@ func generateOtelConfig(promFilePath string) error {
 	}
 
 	otelConfig.Receivers.Prometheus.Config = promConfig
-
-	// data, _ := yaml.Marshal(&m)
-	// err = ioutil.WriteFile(outputFilePath, data, 0)
-
-	// if err != nil {
-	// 	return err
-	// }
-	// if err := yaml.Unmarshal(bs, &master); err != nil {
-	// 	return err
-	// }
-
-	// var override map[string]interface{}
-	// bs, err = ioutil.ReadFile(promFilePath)
-	// if err != nil {
-	// 	return err
-	// }
-	// if err := yaml.Unmarshal(bs, &override); err != nil {
-	// 	return err
-	// }
-
-	// // for k, v := range override {
-	// // 	master[k] = v
-	// // }
-
-	// master["receivers"]["prometheus"]["config"] = override
 
 	mergedConfig, err := yaml.Marshal(otelConfig)
 	if err != nil {
