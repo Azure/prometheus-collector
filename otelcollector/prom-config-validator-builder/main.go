@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/go-kit/log"
 	prometheusConfig "github.com/prometheus/prometheus/config"
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
@@ -37,17 +38,24 @@ func generateOtelConfig(promFilePath string) error {
 		return err
 	}
 
-	var promConfig *prometheusConfig.Config
-	//promConfig := make(map[interface{}]interface{})
+	//var promConfig *prometheusConfig.Config
+	promConfig, err := prometheusConfig.LoadFile(promFilePath, false, log.NewNopLogger())
+	if err != nil {
+		return err
+	}
 
-	promConfigFileContents, err := os.ReadFile(promFilePath)
-	if err != nil {
-		return err
-	}
-	err = yaml.Unmarshal([]byte(promConfigFileContents), &promConfig)
-	if err != nil {
-		return err
-	}
+	// promConfigFileContents, err := os.ReadFile(promFilePath)
+	// if err != nil {
+	// 	return err
+	// }
+	// err = yaml.Unmarshal([]byte(promConfigFileContents), &promConfig)
+	// if err != nil {
+	// 	return err
+	// }
+
+	//fmt.Printf("Replacing single $ in regexes to $$ to prevent environment variable replacement\n")
+
+	//scfg := promConfig.sc
 
 	otelConfig.Receivers.Prometheus.Config = promConfig
 
