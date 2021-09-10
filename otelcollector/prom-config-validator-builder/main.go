@@ -12,6 +12,40 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+func generateOtelConfig(promFilePath string) error {
+	var master map[string]interface{}
+	var otelTemplatePath = "collector-config-template.yml"
+	bs, err := ioutil.ReadFile(otelTemplatePath)
+	if err != nil {
+		return err
+	}
+	if err := yaml.Unmarshal(bs, &master); err != nil {
+		return err
+	}
+
+	var override map[string]interface{}
+	bs, err = ioutil.ReadFile(promFilePath)
+	if err != nil {
+		return err
+	}
+	if err := yaml.Unmarshal(bs, &override); err != nil {
+		return err
+	}
+
+	for k, v := range override {
+		master[k] = v
+	}
+
+	bs, err = yaml.Marshal(master)
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile("merged.yaml", bs, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
 func main() {
 	configFilePtr := flag.String("config", "", "Config file to validate")
 	outFile := flag.String("output", "", "Output file path for writing collector config")
@@ -23,14 +57,13 @@ func main() {
 		configFlag := fmt.Sprintf("--config=%s", filePath)
 		fmt.Printf("prom-config-validator::Config file provided - %s\n", configFlag)
 
-		dat, err := os.ReadFile(filePath)
-		m := make(map[interface{}]interface{})
-		_ = yaml.Unmarshal([]byte(dat), &m)
-		//m["bearer_token_file"] = "rashmi"
-		data, _ := yaml.Marshal(&m)
-		err = ioutil.WriteFile(outputFilePath, data, 0)
+		// dat, err := os.ReadFile(filePath)
+		// m := make(map[interface{}]interface{})
+		// _ = yaml.Unmarshal([]byte(dat), &m)
+		// data, _ := yaml.Marshal(&m)
+		// err = ioutil.WriteFile(outputFilePath, data, 0)
 
-		fmt.Printf("%v", dat)
+		err := generateOtelConfig(filePath)
 
 		flags := new(flag.FlagSet)
 		parserProvider.Flags(flags)
