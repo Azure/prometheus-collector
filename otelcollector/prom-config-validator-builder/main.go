@@ -127,7 +127,7 @@ func main() {
 	outputFilePath := *outFile
 	fmt.Printf("outfile path - %v", outputFilePath)
 	if filePath != "" {
-		configFlag := fmt.Sprintf("--config=%s", filePath)
+		// configFlag := fmt.Sprintf("--config=%s", filePath)
 		fmt.Printf("prom-config-validator::Config file provided - %s\n", configFlag)
 
 		// dat, err := os.ReadFile(filePath)
@@ -140,6 +140,8 @@ func main() {
 
 		flags := new(flag.FlagSet)
 		parserProvider.Flags(flags)
+		configFlag := fmt.Sprintf("--config=%s", "merged.yaml")
+
 		err = flags.Parse([]string{
 			configFlag,
 		})
