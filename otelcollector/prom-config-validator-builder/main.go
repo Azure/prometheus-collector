@@ -128,7 +128,8 @@ func main() {
 	fmt.Printf("outfile path - %v", outputFilePath)
 	if filePath != "" {
 		// configFlag := fmt.Sprintf("--config=%s", filePath)
-		fmt.Printf("prom-config-validator::Config file provided - %s\n", configFlag)
+		// fmt.Printf("prom-config-validator::Config file provided - %s\n", configFlag)
+		fmt.Printf("prom-config-validator::Config file provided - %s\n", filePath)
 
 		// dat, err := os.ReadFile(filePath)
 		// m := make(map[interface{}]interface{})
