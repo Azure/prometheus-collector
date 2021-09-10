@@ -60,7 +60,7 @@ type otelConfigStruct struct {
 func generateOtelConfig(promFilePath string) error {
 	// otelConfig := make(map[interface{}]interface{})
 	var otelConfig otelConfigStruct
-	var otelTemplatePath = "collector-config-template.yml"
+	var otelTemplatePath = "../opentelemetry-collector-builder/collector-config-template.yml"
 
 	otelConfigFileContents, err := os.ReadFile(otelTemplatePath)
 	if err != nil {
