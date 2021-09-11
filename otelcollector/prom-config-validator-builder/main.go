@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
+	"strings"
 
 	gokitLogger "github.com/go-kit/log"
 	prometheusConfig "github.com/prometheus/prometheus/config"
@@ -26,6 +28,8 @@ type otelConfigStruct struct {
 }
 
 func generateOtelConfig(promFilePath string) error {
+	fmt.Printf("in generate\n")
+
 	var otelConfig otelConfigStruct
 	var otelTemplatePath = "collector-config-template.yml"
 
@@ -43,13 +47,52 @@ func generateOtelConfig(promFilePath string) error {
 	if err != nil {
 		return err
 	}
+	// Need this here even though it is present in the validate method because in the absence of this, only the $ for regex and replacement fields
+	// in scrape config are replaced and the load method of the collector fails due to single $. This is because validate does this check after the load
+	// is done
+	unsupportedFeatures := make([]string, 0, 4)
+	if len(promConfig.RemoteWriteConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "remote_write")
+	}
+	if len(promConfig.RemoteReadConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "remote_read")
+	}
+	if len(promConfig.RuleFiles) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "rule_files")
+	}
+	if len(promConfig.AlertingConfig.AlertRelabelConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "alert_config.relabel_configs")
+	}
+	if len(promConfig.AlertingConfig.AlertmanagerConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "alert_config.alertmanagers")
+	}
+	if len(unsupportedFeatures) != 0 {
+		// Sort the values for deterministic error messages.
+		//sort.Strings(unsupportedFeatures)
+		return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
+	}
 
+	singleDollarRegex, _ := regexp.Compile(`\$`)
+	fmt.Printf("here\n")
 	for _, scfg := range promConfig.ScrapeConfigs {
 		for _, relabelConfig := range scfg.RelabelConfigs {
-			fmt.Printf("%v\n", relabelConfig)
+			fmt.Printf("here\n")
+			regexString := relabelConfig.Regex.String()
+			fmt.Println(singleDollarRegex.ReplaceAllLiteralString(regexString, "$$"))
+
+			replacement := relabelConfig.Replacement
+			fmt.Printf("replacement: %s", replacement)
+			fmt.Println(singleDollarRegex.ReplaceAllLiteralString(replacement, "$$"))
+
+			//relabelConfig.Action = "rashmi"
+			//fmt.Printf("%v\n", relabelConfig)
 		}
-		for _, MetricRelabelConfig := range scfg.MetricRelabelConfigs {
-			fmt.Printf("%v\n", MetricRelabelConfig)
+		for _, metricRelabelConfig := range scfg.MetricRelabelConfigs {
+			regexString := metricRelabelConfig.Regex.String()
+			fmt.Println(singleDollarRegex.ReplaceAllLiteralString(regexString, "$$"))
+
+			replacement := metricRelabelConfig.Replacement
+			fmt.Println(singleDollarRegex.ReplaceAllLiteralString(replacement, "$$"))
 		}
 
 	}
@@ -97,7 +140,10 @@ func main() {
 		// err = ioutil.WriteFile(outputFilePath, data, 0)
 
 		err := generateOtelConfig(filePath)
-
+		if err != nil {
+			log.Fatalf("Generating otel config failed: %v\n", err)
+			os.Exit(1)
+		}
 		flags := new(flag.FlagSet)
 		parserProvider.Flags(flags)
 		configFlag := fmt.Sprintf("--config=%s", "merged.yaml")
