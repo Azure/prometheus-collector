@@ -11,6 +11,7 @@ import (
 
 	gokitLogger "github.com/go-kit/log"
 	prometheusConfig "github.com/prometheus/prometheus/config"
+	"github.com/prometheus/prometheus/pkg/relabel"
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 	yaml "gopkg.in/yaml.v2"
@@ -72,18 +73,32 @@ func generateOtelConfig(promFilePath string) error {
 		return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
 	}
 
-	singleDollarRegex, _ := regexp.Compile(`\$`)
-	fmt.Printf("here\n")
+	//singleDollarRegex, _ := regexp.Compile(`\$`)
+	singleDollarRegex, err := regexp.Compile(`/(?<!\$)\$(?!\$)/`)
+	if err != nil {
+		return err
+	}
+	//fmt.Printf("here\n")
 	for _, scfg := range promConfig.ScrapeConfigs {
 		for _, relabelConfig := range scfg.RelabelConfigs {
-			fmt.Printf("here\n")
+			//fmt.Printf("here\n")
 			regexString := relabelConfig.Regex.String()
-			fmt.Println(singleDollarRegex.ReplaceAllLiteralString(regexString, "$$"))
+			fmt.Printf("regex- %v\n", regexString)
+			modifiedRegexString := singleDollarRegex.ReplaceAllLiteralString(regexString, "$$")
+			modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
+			if err != nil {
+				return err
+			}
+			relabelConfig.Regex = modifiedRegex
 
 			replacement := relabelConfig.Replacement
-			fmt.Printf("replacement: %s", replacement)
-			fmt.Println(singleDollarRegex.ReplaceAllLiteralString(replacement, "$$"))
-
+			fmt.Printf("replacement: %s\n", replacement)
+			modifiedReplacementString := singleDollarRegex.ReplaceAllLiteralString(replacement, "$$")
+			// modifiedReplacement, err := relabel.NewRegexp(modifiedReplacementString)
+			// if err != nil {
+			// 	return err
+			// }
+			relabelConfig.Replacement = modifiedReplacementString
 			//relabelConfig.Action = "rashmi"
 			//fmt.Printf("%v\n", relabelConfig)
 		}
