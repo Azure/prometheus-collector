@@ -44,6 +44,15 @@ func generateOtelConfig(promFilePath string) error {
 		return err
 	}
 
+	for _, scfg := range promConfig.ScrapeConfigs {
+		for _, relabelConfig := range scfg.relabelConfigs {
+			fmt.Printf("%v\n", relabelConfig)
+		}
+		for _, MetricRelabelConfig := range scfg.MetricRelabelConfigs {
+			fmt.Printf("%v\n", MetricRelabelConfig)
+		}
+
+	}
 	// promConfigFileContents, err := os.ReadFile(promFilePath)
 	// if err != nil {
 	// 	return err
