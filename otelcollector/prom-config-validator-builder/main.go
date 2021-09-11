@@ -6,12 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"regexp"
-	"strings"
 
-	gokitLogger "github.com/go-kit/log"
-	prometheusConfig "github.com/prometheus/prometheus/config"
-	"github.com/prometheus/prometheus/pkg/relabel"
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 	yaml "gopkg.in/yaml.v2"
@@ -44,73 +39,90 @@ func generateOtelConfig(promFilePath string) error {
 	}
 
 	//var promConfig *prometheusConfig.Config
-	promConfig, err := prometheusConfig.LoadFile(promFilePath, false, gokitLogger.NewNopLogger())
+	promConfig := make(map[interface{}]interface{})
+	// promConfig, err := prometheusConfig.LoadFile(promFilePath, false, gokitLogger.NewNopLogger())
+	// if err != nil {
+	// 	return err
+	// }
+	promConfigFileContents, err := os.ReadFile(promFilePath)
 	if err != nil {
 		return err
 	}
+	err = yaml.Unmarshal([]byte(promConfigFileContents), &promConfig)
+	if err != nil {
+		return err
+	}
+
 	// Need this here even though it is present in the validate method because in the absence of this, only the $ for regex and replacement fields
 	// in scrape config are replaced and the load method of the collector fails due to single $. This is because validate does this check after the load
 	// is done
-	unsupportedFeatures := make([]string, 0, 4)
-	if len(promConfig.RemoteWriteConfigs) != 0 {
-		unsupportedFeatures = append(unsupportedFeatures, "remote_write")
-	}
-	if len(promConfig.RemoteReadConfigs) != 0 {
-		unsupportedFeatures = append(unsupportedFeatures, "remote_read")
-	}
-	if len(promConfig.RuleFiles) != 0 {
-		unsupportedFeatures = append(unsupportedFeatures, "rule_files")
-	}
-	if len(promConfig.AlertingConfig.AlertRelabelConfigs) != 0 {
-		unsupportedFeatures = append(unsupportedFeatures, "alert_config.relabel_configs")
-	}
-	if len(promConfig.AlertingConfig.AlertmanagerConfigs) != 0 {
-		unsupportedFeatures = append(unsupportedFeatures, "alert_config.alertmanagers")
-	}
-	if len(unsupportedFeatures) != 0 {
-		// Sort the values for deterministic error messages.
-		//sort.Strings(unsupportedFeatures)
-		return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
-	}
+	// unsupportedFeatures := make([]string, 0, 4)
+	// if len(promConfig.RemoteWriteConfigs) != 0 {
+	// 	unsupportedFeatures = append(unsupportedFeatures, "remote_write")
+	// }
+	// if len(promConfig.RemoteReadConfigs) != 0 {
+	// 	unsupportedFeatures = append(unsupportedFeatures, "remote_read")
+	// }
+	// if len(promConfig.RuleFiles) != 0 {
+	// 	unsupportedFeatures = append(unsupportedFeatures, "rule_files")
+	// }
+	// if len(promConfig.AlertingConfig.AlertRelabelConfigs) != 0 {
+	// 	unsupportedFeatures = append(unsupportedFeatures, "alert_config.relabel_configs")
+	// }
+	// if len(promConfig.AlertingConfig.AlertmanagerConfigs) != 0 {
+	// 	unsupportedFeatures = append(unsupportedFeatures, "alert_config.alertmanagers")
+	// }
+	// if len(unsupportedFeatures) != 0 {
+	// 	// Sort the values for deterministic error messages.
+	// 	//sort.Strings(unsupportedFeatures)
+	// 	return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
+	// }
 
 	//singleDollarRegex, _ := regexp.Compile(`\$`)
-	singleDollarRegex, err := regexp.Compile(`/(?<!\$)\$(?!\$)/`)
+	//singleDollarRegex, err := regexp.Compile(`(?<!\$)\$(?!\$)`)
 	if err != nil {
 		return err
 	}
 	//fmt.Printf("here\n")
-	for _, scfg := range promConfig.ScrapeConfigs {
-		for _, relabelConfig := range scfg.RelabelConfigs {
-			//fmt.Printf("here\n")
-			regexString := relabelConfig.Regex.String()
-			fmt.Printf("regex- %v\n", regexString)
-			modifiedRegexString := singleDollarRegex.ReplaceAllLiteralString(regexString, "$$")
-			modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
-			if err != nil {
-				return err
-			}
-			relabelConfig.Regex = modifiedRegex
+	// for _, scfg := range promConfig.ScrapeConfigs {
+	// 	for _, relabelConfig := range scfg.RelabelConfigs {
+	// 		regexString := relabelConfig.Regex.String()
+	// 		modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+	// 		modifiedRegexString = strings.ReplaceAll(regexString, "$", "$$")
+	// 		modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		relabelConfig.Regex = modifiedRegex
 
-			replacement := relabelConfig.Replacement
-			fmt.Printf("replacement: %s\n", replacement)
-			modifiedReplacementString := singleDollarRegex.ReplaceAllLiteralString(replacement, "$$")
-			// modifiedReplacement, err := relabel.NewRegexp(modifiedReplacementString)
-			// if err != nil {
-			// 	return err
-			// }
-			relabelConfig.Replacement = modifiedReplacementString
-			//relabelConfig.Action = "rashmi"
-			//fmt.Printf("%v\n", relabelConfig)
-		}
-		for _, metricRelabelConfig := range scfg.MetricRelabelConfigs {
-			regexString := metricRelabelConfig.Regex.String()
-			fmt.Println(singleDollarRegex.ReplaceAllLiteralString(regexString, "$$"))
+	// 		replacement := relabelConfig.Replacement
+	// 		modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+	// 		modifiedReplacementString = strings.ReplaceAll(replacement, "$", "$$")
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		relabelConfig.Replacement = modifiedReplacementString
+	// 	}
+	// 	for _, metricRelabelConfig := range scfg.MetricRelabelConfigs {
+	// 		regexString := metricRelabelConfig.Regex.String()
+	// 		modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+	// 		modifiedRegexString = strings.ReplaceAll(regexString, "$", "$$")
+	// 		modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		metricRelabelConfig.Regex = modifiedRegex
 
-			replacement := metricRelabelConfig.Replacement
-			fmt.Println(singleDollarRegex.ReplaceAllLiteralString(replacement, "$$"))
-		}
+	// 		replacement := metricRelabelConfig.Replacement
+	// 		modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+	// 		modifiedReplacementString = strings.ReplaceAll(replacement, "$", "$$")
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		metricRelabelConfig.Replacement = modifiedReplacementString
+	// 	}
 
-	}
+	// }
 	// promConfigFileContents, err := os.ReadFile(promFilePath)
 	// if err != nil {
 	// 	return err
