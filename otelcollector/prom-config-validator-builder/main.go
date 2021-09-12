@@ -6,13 +6,16 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
+	"strings"
 
+	relabel "github.com/prometheus/prometheus/pkg/relabel"
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 	yaml "gopkg.in/yaml.v2"
 )
 
-type otelConfigStruct struct {
+type OtelConfig struct {
 	Receivers struct {
 		Prometheus struct {
 			Config interface{} `yaml:"config"`
@@ -23,10 +26,59 @@ type otelConfigStruct struct {
 	Service    interface{} `yaml:"service"`
 }
 
+type Regexp struct {
+	*regexp.Regexp
+	original string
+}
+
+type RelabelConfig struct {
+	SourceLabels interface{} `yaml:"source_labels,flow,omitempty"`
+	Separator    interface{} `yaml:"separator,omitempty"`
+	Regex        *Regexp     `yaml:"regex,omitempty"`
+	Modulus      interface{} `yaml:"modulus,omitempty"`
+	TargetLabel  interface{} `yaml:"target_label,omitempty"`
+	Replacement  string      `yaml:"replacement,omitempty"`
+	Action       interface{} `yaml:"action,omitempty"`
+}
+
+type ScrapeConfig struct {
+	JobName                 interface{}      `yaml:"job_name"`
+	HonorLabels             interface{}      `yaml:"honor_labels,omitempty"`
+	HonorTimestamps         interface{}      `yaml:"honor_timestamps"`
+	Params                  interface{}      `yaml:"params,omitempty"`
+	ScrapeInterval          interface{}      `yaml:"scrape_interval,omitempty"`
+	ScrapeTimeout           interface{}      `yaml:"scrape_timeout,omitempty"`
+	MetricsPath             interface{}      `yaml:"metrics_path,omitempty"`
+	Scheme                  interface{}      `yaml:"scheme,omitempty"`
+	BodySizeLimit           interface{}      `yaml:"body_size_limit,omitempty"`
+	SampleLimit             interface{}      `yaml:"sample_limit,omitempty"`
+	TargetLimit             interface{}      `yaml:"target_limit,omitempty"`
+	LabelLimit              interface{}      `yaml:"label_limit,omitempty"`
+	LabelNameLengthLimit    interface{}      `yaml:"label_name_length_limit,omitempty"`
+	LabelValueLengthLimit   interface{}      `yaml:"label_value_length_limit,omitempty"`
+	ServiceDiscoveryConfigs interface{}      `yaml:"-"`
+	HTTPClientConfig        struct{}         `yaml:",inline"`
+	RelabelConfigs          []*RelabelConfig `yaml:"relabel_configs,omitempty"`
+	MetricRelabelConfigs    []*RelabelConfig `yaml:"metric_relabel_configs,omitempty"`
+}
+
+type PrometheusConfig struct {
+	GlobalConfig   interface{} `yaml:"global"`
+	AlertingConfig interface{} `yaml:"alerting,omitempty"`
+	RuleFiles      interface{} `yaml:"rule_files,omitempty"`
+	//ScrapeConfigs  []*pconfig.ScrapeConfig `yaml:"scrape_configs,omitempty"`
+	// ScrapeConfigs []*ScrapeConfig `yaml:"scrape_configs,omitempty"`
+	ScrapeConfigs []*ScrapeConfig `yaml:"scrape_configs,omitempty"`
+	StorageConfig interface{}     `yaml:"storage,omitempty"`
+
+	RemoteWriteConfigs interface{} `yaml:"remote_write,omitempty"`
+	RemoteReadConfigs  interface{} `yaml:"remote_read,omitempty"`
+}
+
 func generateOtelConfig(promFilePath string) error {
 	fmt.Printf("in generate\n")
 
-	var otelConfig otelConfigStruct
+	var otelConfig OtelConfig
 	var otelTemplatePath = "collector-config-template.yml"
 
 	otelConfigFileContents, err := os.ReadFile(otelTemplatePath)
@@ -39,11 +91,12 @@ func generateOtelConfig(promFilePath string) error {
 	}
 
 	//var promConfig *prometheusConfig.Config
-	promConfig := make(map[interface{}]interface{})
+	//promConfig := make(map[interface{}]interface{})
 	// promConfig, err := prometheusConfig.LoadFile(promFilePath, false, gokitLogger.NewNopLogger())
 	// if err != nil {
 	// 	return err
 	// }
+	var promConfig PrometheusConfig
 	promConfigFileContents, err := os.ReadFile(promFilePath)
 	if err != nil {
 		return err
@@ -84,43 +137,44 @@ func generateOtelConfig(promFilePath string) error {
 		return err
 	}
 	//fmt.Printf("here\n")
-	// for _, scfg := range promConfig.ScrapeConfigs {
-	// 	for _, relabelConfig := range scfg.RelabelConfigs {
-	// 		regexString := relabelConfig.Regex.String()
-	// 		modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-	// 		modifiedRegexString = strings.ReplaceAll(regexString, "$", "$$")
-	// 		modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		relabelConfig.Regex = modifiedRegex
+	for _, scfg := range promConfig.ScrapeConfigs {
+		for _, relabelConfig := range scfg.RelabelConfigs {
+			regexString := relabelConfig.Regex.String()
+			modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+			modifiedRegexString = strings.ReplaceAll(regexString, "$", "$$")
+			modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
+			if err != nil {
+				return err
+			}
+			relabelConfig.Regex = modifiedRegex
 
-	// 		replacement := relabelConfig.Replacement
-	// 		modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-	// 		modifiedReplacementString = strings.ReplaceAll(replacement, "$", "$$")
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		relabelConfig.Replacement = modifiedReplacementString
-	// 	}
-	// 	for _, metricRelabelConfig := range scfg.MetricRelabelConfigs {
-	// 		regexString := metricRelabelConfig.Regex.String()
-	// 		modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-	// 		modifiedRegexString = strings.ReplaceAll(regexString, "$", "$$")
-	// 		modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		metricRelabelConfig.Regex = modifiedRegex
+			replacement := relabelConfig.Replacement
+			modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+			modifiedReplacementString = strings.ReplaceAll(replacement, "$", "$$")
+			if err != nil {
+				return err
+			}
+			relabelConfig.Replacement = modifiedReplacementString
+		}
+		for _, metricRelabelConfig := range scfg.MetricRelabelConfigs {
+			regexString := metricRelabelConfig.Regex.String()
+			modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+			modifiedRegexString = strings.ReplaceAll(regexString, "$", "$$")
+			modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
+			if err != nil {
+				return err
+			}
+			metricRelabelConfig.Regex = modifiedRegex
 
-	// 		replacement := metricRelabelConfig.Replacement
-	// 		modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-	// 		modifiedReplacementString = strings.ReplaceAll(replacement, "$", "$$")
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		metricRelabelConfig.Replacement = modifiedReplacementString
-	// 	}
+			replacement := metricRelabelConfig.Replacement
+			modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+			modifiedReplacementString = strings.ReplaceAll(replacement, "$", "$$")
+			if err != nil {
+				return err
+			}
+			metricRelabelConfig.Replacement = modifiedReplacementString
+		}
+	}
 
 	// }
 	// promConfigFileContents, err := os.ReadFile(promFilePath)
