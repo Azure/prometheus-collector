@@ -1,6 +1,13 @@
 global:
   evaluation_interval: 60s
   scrape_interval: 60s
+# Unsupported feature - uncomment this to make sure validator errors out
+# alerting:
+#   alert_relabel_configs:
+#   - separator: ;
+#     regex: prometheus_replica
+#     action: labeldrop
+#     replacement: $$1
 scrape_configs:  
 - job_name: prometheus_ref_app
   scheme: http
@@ -11,7 +18,9 @@ scrape_configs:
     - source_labels: [__meta_kubernetes_service_name]
       action: keep
       regex: "prometheus-reference-service"
-  # Below is to test $ in regex field to mean endswith and $ in replacement for regex grouping. Validator should work for both 
+    - source_labels: [__meta_kubernetes_service_name]
+      action: keep
+  # Below is to test $ in regex field to mean endswith and $$(backward compatibility) in replacement for regex grouping. Validator should work for both 
   metric_relabel_configs:
     - action: replace
       source_labels: [city]
@@ -22,7 +31,7 @@ scrape_configs:
       separator: ;
       regex: (.*)
       target_label: location
-      replacement: $1
+      replacement: $$1
       action: replace
 - job_name: dummy_app
   scheme: http
@@ -31,6 +40,6 @@ scrape_configs:
     - role: service
   file_sd_configs:
   - files: ["dummy-sd-config.json"]
-# Unsupported feature
+# Unsupported feature - uncomment this to make sure validator errors out
 #rule_files: [rulefile.txt]
   
