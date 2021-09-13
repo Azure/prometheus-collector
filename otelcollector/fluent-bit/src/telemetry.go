@@ -40,21 +40,21 @@ var (
 			Name: "timeseries_received_per_minute",
 			Help: "Number of timeseries to be sent to storage",
 		},
-		[]string{"computer"},
+		[]string{"computer", "release", "controller_type"},
 	)
 	timeseriesSentMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "timeseries_sent_per_minute",
 			Help: "Number of timeseries sent to storage",
 		},
-		[]string{"computer"},
+		[]string{"computer", "release", "controller_type"},
 	)
 	bytesSentMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "bytes_sent_per_minute",
 			Help: "Number of bytes of timeseries sent to storage",
 		},
-		[]string{"computer"},
+		[]string{"computer", "release", "controller_type"},
 	)
 )
 
@@ -75,6 +75,7 @@ const (
 	envPodName                                        = "POD_NAME"
 	envTelemetryOffSwitch                             = "DISABLE_TELEMETRY"
 	envNamespace                                      = "POD_NAMESPACE"
+	envHelmReleaseName                                = "HELM_RELEASE_NAME"
 	fluentbitOtelCollectorLogsTag                     = "prometheus.log.otelcollector"
 	fluentbitProcessedCountTag                        = "prometheus.log.processedcount"
 	fluentbitDiagnosticHeartbeatTag                   = "prometheus.log.diagnosticheartbeat"
@@ -129,6 +130,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["namespace"] = os.Getenv(envNamespace)
 	CommonProperties["defaultmetricaccountname"] = os.Getenv(envDefaultMetricAccountName)
   CommonProperties["podname"] = os.Getenv(envPodName)
+	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 
 	aksResourceID := os.Getenv(envAKSResourceID)
 	// if the aks resource id is not defined, it is most likely an ACS Cluster
@@ -315,9 +317,9 @@ func PublishTimeseriesVolume() {
 			timeseriesSentRate = metricsSentTotal / timePassedInMinutes
 			bytesSentRate = bytesSentTotal / timePassedInMinutes
 
-			timeseriesReceivedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"]}).Set(timeseriesReceivedRate)
-			timeseriesSentMetric.With(prometheus.Labels{"computer":CommonProperties["computer"]}).Set(timeseriesSentRate)
-			bytesSentMetric.With(prometheus.Labels{"computer":CommonProperties["computer"]}).Set(bytesSentRate)
+			timeseriesReceivedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(timeseriesReceivedRate)
+			timeseriesSentMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(timeseriesSentRate)
+			bytesSentMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(bytesSentRate)
 		
 			metricsReceivedTotal = 0.0
 			metricsSentTotal = 0.0

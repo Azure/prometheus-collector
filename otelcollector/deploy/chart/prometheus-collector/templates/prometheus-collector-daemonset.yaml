@@ -82,6 +82,8 @@ spec:
               value: "{{ index .Values "kube-state-metrics" "image" "repository" }}:{{ index .Values "kube-state-metrics" "image" "tag" }}"
             - name: NODE_EXPORTER_VERSION
               value: "{{ index .Values "prometheus-node-exporter" "image" "repository" }}:{{ index .Values "prometheus-node-exporter" "image" "tag" }}"
+            - name: HELM_RELEASE_NAME
+              value: "{{ .Release.Name }}"
             {{- if .Values.mode.advanced  }}
             - name: MODE
               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
