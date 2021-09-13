@@ -101,13 +101,14 @@ type PrometheusConfig struct {
 	RemoteReadConfigs  []interface{} `yaml:"remote_read,omitempty"`
 }
 
-func generateOtelConfig(promFilePath string, outputFilePath string) error {
+func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTemplatePath string) error {
 	fmt.Printf("in generate\n")
 
 	var otelConfig OtelConfig
-	var otelTemplatePath = "collector-config-template.yml"
+	//var otelTemplatePath = "collector-config-template.yml"
 
-	otelConfigFileContents, err := os.ReadFile(otelTemplatePath)
+	// otelConfigFileContents, err := os.ReadFile(otelTemplatePath)
+	otelConfigFileContents, err := os.ReadFile(otelConfigTemplatePath)
 	if err != nil {
 		return err
 	}
@@ -242,9 +243,15 @@ func generateOtelConfig(promFilePath string, outputFilePath string) error {
 
 func main() {
 	configFilePtr := flag.String("config", "", "Config file to validate")
-	outFile := flag.String("output", "", "Output file path for writing collector config")
+	outFilePtr := flag.String("output", "", "Output file path for writing collector config")
+	otelTemplatePathPtr := flag.String("otelTemplate", "", "OTel Collector config template file path")
 	flag.Parse()
 	promFilePath := *configFilePtr
+	otelConfigTemplatePath := *otelTemplatePathPtr
+	if otelConfigTemplatePath == "" {
+		log.Fatalf("prom-config-validator::Please provide otel config template path\n")
+		os.Exit(1)
+	}
 	// outputFilePath := *outFile
 	// fmt.Printf("outfile path - %v", outputFilePath)
 	if promFilePath != "" {
@@ -257,14 +264,14 @@ func main() {
 		// _ = yaml.Unmarshal([]byte(dat), &m)
 		// data, _ := yaml.Marshal(&m)
 		// err = ioutil.WriteFile(outputFilePath, data, 0)
-		outputFilePath := *outFile
+		outputFilePath := *outFilePtr
 		// fmt.Printf("outfile path - %v", outputFilePath)
 		if outputFilePath == "" {
 			outputFilePath = "merged-otel-config.yaml"
 		}
 		fmt.Printf("outfile path - %v", outputFilePath)
 
-		err := generateOtelConfig(promFilePath, outputFilePath)
+		err := generateOtelConfig(promFilePath, outputFilePath, otelConfigTemplatePath)
 		if err != nil {
 			log.Fatalf("Generating otel config failed: %v\n", err)
 			os.Exit(1)
