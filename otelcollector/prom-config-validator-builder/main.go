@@ -6,10 +6,11 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"regexp"
+
+	//"regexp"
 	"strings"
 
-	relabel "github.com/prometheus/prometheus/pkg/relabel"
+	//relabel "github.com/prometheus/prometheus/pkg/relabel"
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 	yaml "gopkg.in/yaml.v2"
@@ -26,19 +27,39 @@ type OtelConfig struct {
 	Service    interface{} `yaml:"service"`
 }
 
-type Regexp struct {
-	*regexp.Regexp
-	original string
-}
+// type OtelConfig struct {
+// 	Receivers struct {
+// 		Prometheus struct {
+// 			Config PrometheusConfig `yaml:"config"`
+// 		} `yaml:"prometheus"`
+// 	} `yaml:"receivers"`
+// 	Exporters  interface{} `yaml:"exporters"`
+// 	Processors interface{} `yaml:"processors"`
+// 	Service    interface{} `yaml:"service"`
+// }
+
+// type Regexp struct {
+// 	*regexp.Regexp
+// 	original string
+// }
+
+// func NewRegexp(s string) (Regexp, error) {
+// 	regex, err := regexp.Compile("^(?:" + s + ")$")
+// 	return Regexp{
+// 		Regexp:   regex,
+// 		original: s,
+// 	}, err
+// }
 
 type RelabelConfig struct {
 	SourceLabels interface{} `yaml:"source_labels,flow,omitempty"`
 	Separator    interface{} `yaml:"separator,omitempty"`
-	Regex        *Regexp     `yaml:"regex,omitempty"`
-	Modulus      interface{} `yaml:"modulus,omitempty"`
-	TargetLabel  interface{} `yaml:"target_label,omitempty"`
-	Replacement  string      `yaml:"replacement,omitempty"`
-	Action       interface{} `yaml:"action,omitempty"`
+	// Regex        Regexp      `yaml:"regex,omitempty"`
+	Regex       string      `yaml:"regex,omitempty"`
+	Modulus     interface{} `yaml:"modulus,omitempty"`
+	TargetLabel interface{} `yaml:"target_label,omitempty"`
+	Replacement string      `yaml:"replacement,omitempty"`
+	Action      interface{} `yaml:"action,omitempty"`
 }
 
 type ScrapeConfig struct {
@@ -62,17 +83,22 @@ type ScrapeConfig struct {
 	MetricRelabelConfigs    []*RelabelConfig `yaml:"metric_relabel_configs,omitempty"`
 }
 
+type AlertingConfig struct {
+	AlertRelabelConfigs []interface{} `yaml:"alert_relabel_configs,omitempty"`
+	AlertmanagerConfigs []interface{} `yaml:"alertmanagers,omitempty"`
+}
+
 type PrometheusConfig struct {
-	GlobalConfig   interface{} `yaml:"global"`
-	AlertingConfig interface{} `yaml:"alerting,omitempty"`
-	RuleFiles      interface{} `yaml:"rule_files,omitempty"`
+	GlobalConfig   interface{}    `yaml:"global"`
+	AlertingConfig AlertingConfig `yaml:"alerting,omitempty"`
+	RuleFiles      []interface{}  `yaml:"rule_files,omitempty"`
 	//ScrapeConfigs  []*pconfig.ScrapeConfig `yaml:"scrape_configs,omitempty"`
 	// ScrapeConfigs []*ScrapeConfig `yaml:"scrape_configs,omitempty"`
 	ScrapeConfigs []*ScrapeConfig `yaml:"scrape_configs,omitempty"`
 	StorageConfig interface{}     `yaml:"storage,omitempty"`
 
-	RemoteWriteConfigs interface{} `yaml:"remote_write,omitempty"`
-	RemoteReadConfigs  interface{} `yaml:"remote_read,omitempty"`
+	RemoteWriteConfigs []interface{} `yaml:"remote_write,omitempty"`
+	RemoteReadConfigs  []interface{} `yaml:"remote_read,omitempty"`
 }
 
 func generateOtelConfig(promFilePath string) error {
@@ -106,30 +132,30 @@ func generateOtelConfig(promFilePath string) error {
 		return err
 	}
 
-	// Need this here even though it is present in the validate method because in the absence of this, only the $ for regex and replacement fields
-	// in scrape config are replaced and the load method of the collector fails due to single $. This is because validate does this check after the load
-	// is done
-	// unsupportedFeatures := make([]string, 0, 4)
-	// if len(promConfig.RemoteWriteConfigs) != 0 {
-	// 	unsupportedFeatures = append(unsupportedFeatures, "remote_write")
-	// }
-	// if len(promConfig.RemoteReadConfigs) != 0 {
-	// 	unsupportedFeatures = append(unsupportedFeatures, "remote_read")
-	// }
-	// if len(promConfig.RuleFiles) != 0 {
-	// 	unsupportedFeatures = append(unsupportedFeatures, "rule_files")
-	// }
-	// if len(promConfig.AlertingConfig.AlertRelabelConfigs) != 0 {
-	// 	unsupportedFeatures = append(unsupportedFeatures, "alert_config.relabel_configs")
-	// }
-	// if len(promConfig.AlertingConfig.AlertmanagerConfigs) != 0 {
-	// 	unsupportedFeatures = append(unsupportedFeatures, "alert_config.alertmanagers")
-	// }
-	// if len(unsupportedFeatures) != 0 {
-	// 	// Sort the values for deterministic error messages.
-	// 	//sort.Strings(unsupportedFeatures)
-	// 	return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
-	// }
+	// Need this here even though it is present in the receiver's config validate method since we only do the $ manipulation for regex and replacement fields
+	// in scrape configs sections and the load method which is called before the validate method fails to unmarshal due to single $.
+	// Either approach will fail but the receiver's config load wont return the right error message
+	unsupportedFeatures := make([]string, 0, 4)
+	if len(promConfig.RemoteWriteConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "remote_write")
+	}
+	if len(promConfig.RemoteReadConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "remote_read")
+	}
+	if len(promConfig.RuleFiles) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "rule_files")
+	}
+	if len(promConfig.AlertingConfig.AlertRelabelConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "alert_config.relabel_configs")
+	}
+	if len(promConfig.AlertingConfig.AlertmanagerConfigs) != 0 {
+		unsupportedFeatures = append(unsupportedFeatures, "alert_config.alertmanagers")
+	}
+	if len(unsupportedFeatures) != 0 {
+		// Sort the values for deterministic error messages.
+		//sort.Strings(unsupportedFeatures)
+		return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
+	}
 
 	//singleDollarRegex, _ := regexp.Compile(`\$`)
 	//singleDollarRegex, err := regexp.Compile(`(?<!\$)\$(?!\$)`)
@@ -139,36 +165,44 @@ func generateOtelConfig(promFilePath string) error {
 	//fmt.Printf("here\n")
 	for _, scfg := range promConfig.ScrapeConfigs {
 		for _, relabelConfig := range scfg.RelabelConfigs {
-			regexString := relabelConfig.Regex.String()
+			// regexString := relabelConfig.Regex.String()
+			regexString := relabelConfig.Regex
+			// Replacing $$ with $ for backward compatibility, since golang doesnt support lookarounds cannot use this regex /(?<!\$)\$(?!\$)/ for checking single $
 			modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-			modifiedRegexString = strings.ReplaceAll(regexString, "$", "$$")
-			modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
-			if err != nil {
-				return err
-			}
-			relabelConfig.Regex = modifiedRegex
+			modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+			//modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
+			//modifiedRegex, err := NewRegexp(modifiedRegexString)
+			// if err != nil {
+			// 	return err
+			// }
+			//relabelConfig.Regex = modifiedRegex
+			relabelConfig.Regex = modifiedRegexString
 
 			replacement := relabelConfig.Replacement
 			modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-			modifiedReplacementString = strings.ReplaceAll(replacement, "$", "$$")
+			modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
 			if err != nil {
 				return err
 			}
 			relabelConfig.Replacement = modifiedReplacementString
 		}
 		for _, metricRelabelConfig := range scfg.MetricRelabelConfigs {
-			regexString := metricRelabelConfig.Regex.String()
+			// regexString := metricRelabelConfig.Regex.String()
+			regexString := metricRelabelConfig.Regex
+			// Replacing $$ with $ for backward compatibility
 			modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-			modifiedRegexString = strings.ReplaceAll(regexString, "$", "$$")
-			modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
-			if err != nil {
-				return err
-			}
-			metricRelabelConfig.Regex = modifiedRegex
+			modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+			// modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
+			//modifiedRegex, err := NewRegexp(modifiedRegexString)
+			// if err != nil {
+			// 	return err
+			// }
+			// metricRelabelConfig.Regex = modifiedRegex
+			metricRelabelConfig.Regex = modifiedRegexString
 
 			replacement := metricRelabelConfig.Replacement
 			modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-			modifiedReplacementString = strings.ReplaceAll(replacement, "$", "$$")
+			modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
 			if err != nil {
 				return err
 			}
