@@ -109,29 +109,19 @@ if [ -e "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var" 
 fi
 
 if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
-      ruby -r "/opt/microsoft/configmapparser/otel-config-generator.rb" -e "OtelConfigGenerator.generate_otelconfig"
-      # Currently only logs the success or failure
-      if [ -e "/opt/promCollectorConfig.yml" ]; then
-            /opt/promconfigvalidator --config /opt/promCollectorConfig.yml
+      # promconfigvalidator validates by generating an otel config and running through receiver's config load and validate method
+      /opt/promconfigvalidator --config "/etc/config/settings/prometheus/prometheus-config" --output "/opt/promCollectorConfig.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+      if [ $? -ne 0 ] || [ ! -e "/opt/promCollectorConfig.yml" ]; then
             # Use default config if specified config is invalid
-            if [ $? -ne 0 ]; then
-                  echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-                  # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
-                  echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-                  export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
-                  export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
-
-            fi
-      else
-            # Setting use default config to true, in case there were any errors and the config file(promCollectorConfig.yml) was not generated
+            echo "Prometheus custom config validation failed, using defaults"
             echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
             echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
-
       fi
 else
+      echo "No Config map mounted for prometheus custom config, using defaults"
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi 
@@ -145,8 +135,6 @@ if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" != "true" ] || [ "$AZMON_PROMETHEUS_
   done
   source /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var
 fi
-
-
 
 source ~/.bashrc
 
