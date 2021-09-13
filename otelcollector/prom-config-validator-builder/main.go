@@ -101,7 +101,7 @@ type PrometheusConfig struct {
 	RemoteReadConfigs  []interface{} `yaml:"remote_read,omitempty"`
 }
 
-func generateOtelConfig(promFilePath string) error {
+func generateOtelConfig(promFilePath string, outputFilePath string) error {
 	fmt.Printf("in generate\n")
 
 	var otelConfig OtelConfig
@@ -230,7 +230,11 @@ func generateOtelConfig(promFilePath string) error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile("merged.yaml", mergedConfig, 0644); err != nil {
+
+	// if outputFilePath == "" {
+	// 	outputFilePath = "merged-otel-config.yaml"
+	// }
+	if err := ioutil.WriteFile(outputFilePath, mergedConfig, 0644); err != nil {
 		return err
 	}
 	return nil
@@ -240,28 +244,34 @@ func main() {
 	configFilePtr := flag.String("config", "", "Config file to validate")
 	outFile := flag.String("output", "", "Output file path for writing collector config")
 	flag.Parse()
-	filePath := *configFilePtr
-	outputFilePath := *outFile
-	fmt.Printf("outfile path - %v", outputFilePath)
-	if filePath != "" {
+	promFilePath := *configFilePtr
+	// outputFilePath := *outFile
+	// fmt.Printf("outfile path - %v", outputFilePath)
+	if promFilePath != "" {
 		// configFlag := fmt.Sprintf("--config=%s", filePath)
 		// fmt.Printf("prom-config-validator::Config file provided - %s\n", configFlag)
-		fmt.Printf("prom-config-validator::Config file provided - %s\n", filePath)
+		fmt.Printf("prom-config-validator::Config file provided - %s\n", promFilePath)
 
 		// dat, err := os.ReadFile(filePath)
 		// m := make(map[interface{}]interface{})
 		// _ = yaml.Unmarshal([]byte(dat), &m)
 		// data, _ := yaml.Marshal(&m)
 		// err = ioutil.WriteFile(outputFilePath, data, 0)
+		outputFilePath := *outFile
+		// fmt.Printf("outfile path - %v", outputFilePath)
+		if outputFilePath == "" {
+			outputFilePath = "merged-otel-config.yaml"
+		}
+		fmt.Printf("outfile path - %v", outputFilePath)
 
-		err := generateOtelConfig(filePath)
+		err := generateOtelConfig(promFilePath, outputFilePath)
 		if err != nil {
 			log.Fatalf("Generating otel config failed: %v\n", err)
 			os.Exit(1)
 		}
 		flags := new(flag.FlagSet)
 		parserProvider.Flags(flags)
-		configFlag := fmt.Sprintf("--config=%s", "merged.yaml")
+		configFlag := fmt.Sprintf("--config=%s", outputFilePath)
 
 		err = flags.Parse([]string{
 			configFlag,
