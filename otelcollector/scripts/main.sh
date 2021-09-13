@@ -110,7 +110,7 @@ fi
 
 if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
       #ruby -r "/opt/microsoft/configmapparser/otel-config-generator.rb" -e "OtelConfigGenerator.generate_otelconfig"
-      /opt/promconfigvalidator --config "/etc/config/settings/prometheus/prometheus-config" --output "/opt/promCollectorConfig.yml"
+      /opt/microsoft/otelcollector/promconfigvalidator --config "/etc/config/settings/prometheus/prometheus-config" --output "/opt/promCollectorConfig.yml"
       # Currently only logs the success or failure
       if [ $? -ne 0 ] || [ ! -e "/opt/promCollectorConfig.yml" ]; then
             #/opt/promconfigvalidator --config /opt/promCollectorConfig.yml
