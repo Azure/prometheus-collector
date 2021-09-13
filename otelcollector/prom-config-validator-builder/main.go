@@ -7,59 +7,32 @@ import (
 	"log"
 	"os"
 
-	//"regexp"
 	"strings"
 
-	//relabel "github.com/prometheus/prometheus/pkg/relabel"
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 	yaml "gopkg.in/yaml.v2"
 )
 
 type OtelConfig struct {
-	Receivers struct {
-		Prometheus struct {
-			Config interface{} `yaml:"config"`
-		} `yaml:"prometheus"`
-	} `yaml:"receivers"`
 	Exporters  interface{} `yaml:"exporters"`
 	Processors interface{} `yaml:"processors"`
-	Service    interface{} `yaml:"service"`
+	Receivers  struct {
+		Prometheus struct {
+			Config PrometheusConfig `yaml:"config"`
+		} `yaml:"prometheus"`
+	} `yaml:"receivers"`
+	Service interface{} `yaml:"service"`
 }
-
-// type OtelConfig struct {
-// 	Receivers struct {
-// 		Prometheus struct {
-// 			Config PrometheusConfig `yaml:"config"`
-// 		} `yaml:"prometheus"`
-// 	} `yaml:"receivers"`
-// 	Exporters  interface{} `yaml:"exporters"`
-// 	Processors interface{} `yaml:"processors"`
-// 	Service    interface{} `yaml:"service"`
-// }
-
-// type Regexp struct {
-// 	*regexp.Regexp
-// 	original string
-// }
-
-// func NewRegexp(s string) (Regexp, error) {
-// 	regex, err := regexp.Compile("^(?:" + s + ")$")
-// 	return Regexp{
-// 		Regexp:   regex,
-// 		original: s,
-// 	}, err
-// }
 
 type RelabelConfig struct {
 	SourceLabels interface{} `yaml:"source_labels,flow,omitempty"`
 	Separator    interface{} `yaml:"separator,omitempty"`
-	// Regex        Regexp      `yaml:"regex,omitempty"`
-	Regex       string      `yaml:"regex,omitempty"`
-	Modulus     interface{} `yaml:"modulus,omitempty"`
-	TargetLabel interface{} `yaml:"target_label,omitempty"`
-	Replacement string      `yaml:"replacement,omitempty"`
-	Action      interface{} `yaml:"action,omitempty"`
+	Regex        string      `yaml:"regex,omitempty"`
+	Modulus      interface{} `yaml:"modulus,omitempty"`
+	TargetLabel  interface{} `yaml:"target_label,omitempty"`
+	Replacement  string      `yaml:"replacement,omitempty"`
+	Action       interface{} `yaml:"action,omitempty"`
 }
 
 type ScrapeConfig struct {
@@ -89,25 +62,19 @@ type AlertingConfig struct {
 }
 
 type PrometheusConfig struct {
-	GlobalConfig   interface{}    `yaml:"global"`
-	AlertingConfig AlertingConfig `yaml:"alerting,omitempty"`
-	RuleFiles      []interface{}  `yaml:"rule_files,omitempty"`
-	//ScrapeConfigs  []*pconfig.ScrapeConfig `yaml:"scrape_configs,omitempty"`
-	// ScrapeConfigs []*ScrapeConfig `yaml:"scrape_configs,omitempty"`
-	ScrapeConfigs []*ScrapeConfig `yaml:"scrape_configs,omitempty"`
-	StorageConfig interface{}     `yaml:"storage,omitempty"`
+	GlobalConfig   interface{}     `yaml:"global"`
+	AlertingConfig AlertingConfig  `yaml:"alerting,omitempty"`
+	RuleFiles      []interface{}   `yaml:"rule_files,omitempty"`
+	ScrapeConfigs  []*ScrapeConfig `yaml:"scrape_configs,omitempty"`
+	StorageConfig  interface{}     `yaml:"storage,omitempty"`
 
 	RemoteWriteConfigs []interface{} `yaml:"remote_write,omitempty"`
 	RemoteReadConfigs  []interface{} `yaml:"remote_read,omitempty"`
 }
 
 func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTemplatePath string) error {
-	fmt.Printf("in generate\n")
-
 	var otelConfig OtelConfig
-	//var otelTemplatePath = "collector-config-template.yml"
 
-	// otelConfigFileContents, err := os.ReadFile(otelTemplatePath)
 	otelConfigFileContents, err := os.ReadFile(otelConfigTemplatePath)
 	if err != nil {
 		return err
@@ -117,12 +84,6 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		return err
 	}
 
-	//var promConfig *prometheusConfig.Config
-	//promConfig := make(map[interface{}]interface{})
-	// promConfig, err := prometheusConfig.LoadFile(promFilePath, false, gokitLogger.NewNopLogger())
-	// if err != nil {
-	// 	return err
-	// }
 	var promConfig PrometheusConfig
 	promConfigFileContents, err := os.ReadFile(promFilePath)
 	if err != nil {
@@ -153,30 +114,18 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		unsupportedFeatures = append(unsupportedFeatures, "alert_config.alertmanagers")
 	}
 	if len(unsupportedFeatures) != 0 {
-		// Sort the values for deterministic error messages.
-		//sort.Strings(unsupportedFeatures)
 		return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
 	}
 
-	//singleDollarRegex, _ := regexp.Compile(`\$`)
-	//singleDollarRegex, err := regexp.Compile(`(?<!\$)\$(?!\$)`)
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("here\n")
 	for _, scfg := range promConfig.ScrapeConfigs {
 		for _, relabelConfig := range scfg.RelabelConfigs {
-			// regexString := relabelConfig.Regex.String()
 			regexString := relabelConfig.Regex
 			// Replacing $$ with $ for backward compatibility, since golang doesnt support lookarounds cannot use this regex /(?<!\$)\$(?!\$)/ for checking single $
 			modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
 			modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-			//modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
-			//modifiedRegex, err := NewRegexp(modifiedRegexString)
-			// if err != nil {
-			// 	return err
-			// }
-			//relabelConfig.Regex = modifiedRegex
 			relabelConfig.Regex = modifiedRegexString
 
 			replacement := relabelConfig.Replacement
@@ -188,17 +137,11 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 			relabelConfig.Replacement = modifiedReplacementString
 		}
 		for _, metricRelabelConfig := range scfg.MetricRelabelConfigs {
-			// regexString := metricRelabelConfig.Regex.String()
 			regexString := metricRelabelConfig.Regex
-			// Replacing $$ with $ for backward compatibility
+			// Replacing $$ with $ for backward compatibility, since golang doesnt support lookarounds cannot use this regex /(?<!\$)\$(?!\$)/ for checking single $
 			modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
 			modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-			// modifiedRegex, err := relabel.NewRegexp(modifiedRegexString)
-			//modifiedRegex, err := NewRegexp(modifiedRegexString)
-			// if err != nil {
-			// 	return err
-			// }
-			// metricRelabelConfig.Regex = modifiedRegex
+
 			metricRelabelConfig.Regex = modifiedRegexString
 
 			replacement := metricRelabelConfig.Replacement
@@ -211,20 +154,6 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		}
 	}
 
-	// }
-	// promConfigFileContents, err := os.ReadFile(promFilePath)
-	// if err != nil {
-	// 	return err
-	// }
-	// err = yaml.Unmarshal([]byte(promConfigFileContents), &promConfig)
-	// if err != nil {
-	// 	return err
-	// }
-
-	//fmt.Printf("Replacing single $ in regexes to $$ to prevent environment variable replacement\n")
-
-	//scfg := promConfig.sc
-
 	otelConfig.Receivers.Prometheus.Config = promConfig
 
 	mergedConfig, err := yaml.Marshal(otelConfig)
@@ -232,12 +161,10 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		return err
 	}
 
-	// if outputFilePath == "" {
-	// 	outputFilePath = "merged-otel-config.yaml"
-	// }
 	if err := ioutil.WriteFile(outputFilePath, mergedConfig, 0644); err != nil {
 		return err
 	}
+	fmt.Printf("prom-config-validator::Successfully generated otel config\n")
 	return nil
 }
 
@@ -252,30 +179,20 @@ func main() {
 		log.Fatalf("prom-config-validator::Please provide otel config template path\n")
 		os.Exit(1)
 	}
-	// outputFilePath := *outFile
-	// fmt.Printf("outfile path - %v", outputFilePath)
 	if promFilePath != "" {
-		// configFlag := fmt.Sprintf("--config=%s", filePath)
-		// fmt.Printf("prom-config-validator::Config file provided - %s\n", configFlag)
 		fmt.Printf("prom-config-validator::Config file provided - %s\n", promFilePath)
 
-		// dat, err := os.ReadFile(filePath)
-		// m := make(map[interface{}]interface{})
-		// _ = yaml.Unmarshal([]byte(dat), &m)
-		// data, _ := yaml.Marshal(&m)
-		// err = ioutil.WriteFile(outputFilePath, data, 0)
 		outputFilePath := *outFilePtr
-		// fmt.Printf("outfile path - %v", outputFilePath)
 		if outputFilePath == "" {
 			outputFilePath = "merged-otel-config.yaml"
 		}
-		fmt.Printf("outfile path - %v", outputFilePath)
 
 		err := generateOtelConfig(promFilePath, outputFilePath, otelConfigTemplatePath)
 		if err != nil {
 			log.Fatalf("Generating otel config failed: %v\n", err)
 			os.Exit(1)
 		}
+
 		flags := new(flag.FlagSet)
 		parserProvider.Flags(flags)
 		configFlag := fmt.Sprintf("--config=%s", outputFilePath)

@@ -109,13 +109,10 @@ if [ -e "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var" 
 fi
 
 if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
-      #ruby -r "/opt/microsoft/configmapparser/otel-config-generator.rb" -e "OtelConfigGenerator.generate_otelconfig"
+      # promconfigvalidator validates by generating an otel config and running through receiver's config load and validate method
       /opt/promconfigvalidator --config "/etc/config/settings/prometheus/prometheus-config" --output "/opt/promCollectorConfig.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
-      # Currently only logs the success or failure
       if [ $? -ne 0 ] || [ ! -e "/opt/promCollectorConfig.yml" ]; then
-            #/opt/promconfigvalidator --config /opt/promCollectorConfig.yml
             # Use default config if specified config is invalid
-            #if [ $? -ne 0 ]; then
             echo "Prometheus custom config validation failed, using defaults"
             echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
