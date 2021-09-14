@@ -75,7 +75,7 @@ type PrometheusConfig struct {
 func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTemplatePath string) error {
 	var otelConfig OtelConfig
 
-	otelConfigFileContents, err := os.ReadFile(otelConfigTemplatePath)
+	otelConfigFileContents, err := ioutil.ReadFile(otelConfigTemplatePath)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	}
 
 	var promConfig PrometheusConfig
-	promConfigFileContents, err := os.ReadFile(promFilePath)
+	promConfigFileContents, err := ioutil.ReadFile(promFilePath)
 	if err != nil {
 		return err
 	}
