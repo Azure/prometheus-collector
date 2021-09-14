@@ -24,6 +24,7 @@ sudo apt-get update
 sudo apt-get install inotify-tools -y
 
 gem install tomlrb
+gem install deep_merge
 
 #used to setcaps for ruby process to read /proc/env
 #echo "installing libcap2-bin"

@@ -1,0 +1,6 @@
+  scrape_configs:
+  - job_name: node
+    scheme: http
+    scrape_interval: 30s
+    static_configs:
+    - targets: ['$$NODE_IP$$:$$NODE_EXPORTER_TARGETPORT$$']
