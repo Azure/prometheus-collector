@@ -33,6 +33,7 @@ require_relative "ConfigParseErrorLogger"
 @nodeexporterDefaultFileRsSimple = @defaultPromConfigPathPrefix + "nodeexporterDefaultRsSimple.yml"
 @nodeexporterDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "nodeexporterDefaultRsAdvanced.yml"
 @nodeexporterDefaultFileDs = @defaultPromConfigPathPrefix + "nodeexporterDefaultDs.yml"
+@timeseriesvolumeDefaultFile = @defaultPromConfigPathPrefix + "scrapedTimeseriesVolume.yml"
 
 # Get the list of default configs to be included in the otel's prometheus config
 def populateDefaultPrometheusConfig
@@ -124,6 +125,12 @@ def populateDefaultPrometheusConfig
         end
       end
     end
+
+    # Timeseries volume config should be enabled or disabled for both replicaset and daemonset
+    if !ENV["AZMON_PROMETHEUS_TIMESERIES_VOLUME_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_TIMESERIES_VOLUME_SCRAPING_ENABLED"].downcase == "true"
+      defaultConfigs.push(@timeseriesvolumeDefaultFile)
+    end
+
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
   rescue => errorStr
     ConfigParseErrorLogger.logError("prometheus-config-merger::Exception while merging default prometheus configs - #{errorStr}, using defaults")

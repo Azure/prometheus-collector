@@ -15,6 +15,7 @@ require_relative "ConfigParseErrorLogger"
 @apiserverEnabled = true
 @kubestateEnabled = true
 @nodeexporterEnabled = true
+@timeseriesVolumeEnabled = true
 @noDefaultsEnabled = false
 
 # Use parser to parse the configmap toml file to a ruby structure
@@ -68,17 +69,21 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @nodeexporterEnabled = parsedConfig[:nodeexporter]
       puts "config::Using configmap default scrape settings for nodeexporter"
     end
+    if !parsedConfig[:timeseriesvolume].nil?
+      @timeseriesVolumeEnabled = parsedConfig[:timeseriesvolume]
+      puts "config::Using configmap default scrape settings for timeseriesscrapedvolume"
+    end
 
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
-      if controllerType == "ReplicaSet" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled
+      if controllerType == "ReplicaSet" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@timeseriesVolumeEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
-      elsif controllerType == "DaemonSet" && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled
+      elsif controllerType == "DaemonSet" && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@timeseriesVolumeEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
       end
-    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled
+    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@timeseriesVolumeEnabled
       @noDefaultsEnabled = true
       puts "config::No default scrape configs enabled"
     end
@@ -112,6 +117,7 @@ if !file.nil?
   file.write("export AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED=#{@kubestateEnabled}\n")
   file.write("export AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED=#{@nodeexporterEnabled}\n")
   file.write("export AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=#{@noDefaultsEnabled}\n")
+  file.write("export AZMON_PROMETHEUS_TIMESERIES_VOLUME_SCRAPING_ENABLED=#{@timeseriesVolumeEnabled\n"})
   # Close file after writing all metric collection setting environment variables
   file.close
   puts "****************End default-scrape-settings Processing********************"
