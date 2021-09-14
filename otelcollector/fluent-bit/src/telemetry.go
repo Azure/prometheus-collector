@@ -16,7 +16,6 @@ import (
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
-	"github.com/fluent/fluent-bit-go/output"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
