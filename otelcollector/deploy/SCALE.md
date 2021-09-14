@@ -22,10 +22,11 @@
 * A single instance can handle up to around 2.7 million timeseries per minute and 4 GB of timeseries per minute. After this, multiple instances will need to be used with scrape jobs split between them in the custom configmaps.
 
 ## Viewing The Volume of Timeseries Scraped and Sent
-* To know how many timeseries and bytes you are sending, you can check usage by instance in the `Prometheus-Collector Health` default dashboard. This shows the historical number of timeseries and bytes that have been scraped and sent by each instance.
+* To know how many timeseries and bytes you are sending, you can check usage by instance in the `Prometheus-Collector Health` default dashboard. This shows the historical number of timeseries and bytes that have been scraped and sent.
+* The variables can be adjusted to view the total timeseries and bytes scraped for the whole cluster, for an individual release, the replicaset and daemonset, and individual nodes. To view if you are close to the single instance limit of 2.7 million timeseries per minute and 4 GB of timeseries per minute, select a release name and `replicaset` as the `controller_type`.
 * If the amount of metrics sent is already high enough that it may be over the limit, you can also port-forward to check the number of timeseries and bytes the instance is sending in that instance.
   ```
-  kubectl port-forward <prometheus-collector pod name> -n <prometheus-collector pod namespace> 2234:2234
+  kubectl port-forward <prometheus-collector replicaset pod name> -n <prometheus-collector pod namespace> 2234:2234
   ```
   Curl `http://127.0.0.1:2234/metrics` to see the volume metrics for that minute. 
 * The metrics are:

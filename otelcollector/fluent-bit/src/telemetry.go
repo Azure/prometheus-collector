@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"regexp"
@@ -313,9 +314,9 @@ func PublishTimeseriesVolume() {
 			timePassedInMinutes := (float64(elapsed) / float64(time.Second)) / 60.0
 			Log("time passed in seconds: %f", float64(elapsed) / float64(time.Second))
 			Log("time passed in minutes: %f", timePassedInMinutes)
-			timeseriesReceivedRate = metricsReceivedTotal / timePassedInMinutes
-			timeseriesSentRate = metricsSentTotal / timePassedInMinutes
-			bytesSentRate = bytesSentTotal / timePassedInMinutes
+			timeseriesReceivedRate = math.Round(metricsReceivedTotal / timePassedInMinutes)
+			timeseriesSentRate = math.Round(metricsSentTotal / timePassedInMinutes)
+			bytesSentRate = math.Round(bytesSentTotal / timePassedInMinutes)
 
 			timeseriesReceivedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(timeseriesReceivedRate)
 			timeseriesSentMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(timeseriesSentRate)
