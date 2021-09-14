@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -130,4 +131,184 @@ func TestLoadConfigFailsOnUnknownPrometheusSection(t *testing.T) {
 
 	require.Error(t, err)
 	require.Nil(t, cfg)
+}
+
+// Renaming is not allowed
+func TestLoadConfigFailsOnRenameDisallowed(t *testing.T) {
+	factories, err := componenttest.NopFactories()
+	assert.NoError(t, err)
+
+	factory := NewFactory()
+	factories.Receivers[typeStr] = factory
+	cfg, err := configtest.LoadConfigAndValidate(path.Join(".", "testdata", "invalid-config-prometheus-relabel.yaml"), factories)
+	assert.Error(t, err)
+	assert.NotNil(t, cfg)
+}
+
+func TestRejectUnsupportedPrometheusFeatures(t *testing.T) {
+	factories, err := componenttest.NopFactories()
+	assert.NoError(t, err)
+
+	factory := NewFactory()
+	factories.Receivers[typeStr] = factory
+	cfg, err := configtest.LoadConfig(path.Join(".", "testdata", "invalid-config-prometheus-unsupported-features.yaml"), factories)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	err = cfg.Validate()
+	require.NotNil(t, err, "Expected a non-nil error")
+
+	wantErrMsg := `receiver "prometheus" has invalid configuration: unsupported features:
+        alert_config.alertmanagers
+        alert_config.relabel_configs
+        remote_read
+        remote_write
+        rule_files`
+
+	gotErrMsg := strings.ReplaceAll(err.Error(), "\t", strings.Repeat(" ", 8))
+	require.Equal(t, wantErrMsg, gotErrMsg)
+
+}
+
+func TestNonExistentAuthCredentialsFile(t *testing.T) {
+	factories, err := componenttest.NopFactories()
+	assert.NoError(t, err)
+
+	factory := NewFactory()
+	factories.Receivers[typeStr] = factory
+	cfg, err := configtest.LoadConfig(path.Join(".", "testdata", "invalid-config-prometheus-non-existent-auth-credentials-file.yaml"), factories)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	err = cfg.Validate()
+	require.NotNil(t, err, "Expected a non-nil error")
+
+	wantErrMsg := `receiver "prometheus" has invalid configuration: error checking authorization credentials file "/nonexistentauthcredentialsfile" - stat /nonexistentauthcredentialsfile: no such file or directory`
+
+	gotErrMsg := err.Error()
+	require.Equal(t, wantErrMsg, gotErrMsg)
+}
+
+func TestTLSConfigNonExistentCertFile(t *testing.T) {
+	factories, err := componenttest.NopFactories()
+	assert.NoError(t, err)
+
+	factory := NewFactory()
+	factories.Receivers[typeStr] = factory
+	cfg, err := configtest.LoadConfig(path.Join(".", "testdata", "invalid-config-prometheus-non-existent-cert-file.yaml"), factories)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	err = cfg.Validate()
+	require.NotNil(t, err, "Expected a non-nil error")
+
+	wantErrMsg := `receiver "prometheus" has invalid configuration: error checking client cert file "/nonexistentcertfile" - stat /nonexistentcertfile: no such file or directory`
+
+	gotErrMsg := err.Error()
+	require.Equal(t, wantErrMsg, gotErrMsg)
+}
+
+func TestTLSConfigNonExistentKeyFile(t *testing.T) {
+	factories, err := componenttest.NopFactories()
+	assert.NoError(t, err)
+
+	factory := NewFactory()
+	factories.Receivers[typeStr] = factory
+	cfg, err := configtest.LoadConfig(path.Join(".", "testdata", "invalid-config-prometheus-non-existent-key-file.yaml"), factories)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	err = cfg.Validate()
+	require.NotNil(t, err, "Expected a non-nil error")
+
+	wantErrMsg := `receiver "prometheus" has invalid configuration: error checking client key file "/nonexistentkeyfile" - stat /nonexistentkeyfile: no such file or directory`
+
+	gotErrMsg := err.Error()
+	require.Equal(t, wantErrMsg, gotErrMsg)
+}
+
+func TestTLSConfigCertFileWithoutKeyFile(t *testing.T) {
+	factories, err := componenttest.NopFactories()
+	assert.NoError(t, err)
+
+	factory := NewFactory()
+	factories.Receivers[typeStr] = factory
+	cfg, err := configtest.LoadConfig(path.Join(".", "testdata", "invalid-config-prometheus-cert-file-without-key-file.yaml"), factories)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	err = cfg.Validate()
+	require.NotNil(t, err, "Expected a non-nil error")
+
+	wantErrMsg := `receiver "prometheus" has invalid configuration: client cert file "./testdata/dummy-tls-cert-file" specified without client key file`
+
+	gotErrMsg := err.Error()
+	require.Equal(t, wantErrMsg, gotErrMsg)
+}
+
+func TestTLSConfigKeyFileWithoutCertFile(t *testing.T) {
+	factories, err := componenttest.NopFactories()
+	assert.NoError(t, err)
+
+	factory := NewFactory()
+	factories.Receivers[typeStr] = factory
+	cfg, err := configtest.LoadConfig(path.Join(".", "testdata", "invalid-config-prometheus-key-file-without-cert-file.yaml"), factories)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	err = cfg.Validate()
+	require.NotNil(t, err, "Expected a non-nil error")
+
+	wantErrMsg := `receiver "prometheus" has invalid configuration: client key file "./testdata/dummy-tls-key-file" specified without client cert file`
+
+	gotErrMsg := err.Error()
+	require.Equal(t, wantErrMsg, gotErrMsg)
+}
+
+func TestKubernetesSDConfigWithoutKeyFile(t *testing.T) {
+	factories, err := componenttest.NopFactories()
+	assert.NoError(t, err)
+
+	factory := NewFactory()
+	factories.Receivers[typeStr] = factory
+	cfg, err := configtest.LoadConfig(path.Join(".", "testdata", "invalid-config-prometheus-kubernetes-sd-config.yaml"), factories)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	err = cfg.Validate()
+	require.NotNil(t, err, "Expected a non-nil error")
+
+	wantErrMsg := `receiver "prometheus" has invalid configuration: client cert file "./testdata/dummy-tls-cert-file" specified without client key file`
+
+	gotErrMsg := err.Error()
+	require.Equal(t, wantErrMsg, gotErrMsg)
+}
+
+func TestFileSDConfigJsonNilTargetGroup(t *testing.T) {
+	factories, err := componenttest.NopFactories()
+	assert.NoError(t, err)
+
+	factory := NewFactory()
+	factories.Receivers[typeStr] = factory
+	cfg, err := configtest.LoadConfig(path.Join(".", "testdata", "invalid-config-prometheus-file-sd-config-json.yaml"), factories)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	err = cfg.Validate()
+	require.NotNil(t, err, "Expected a non-nil error")
+
+	wantErrMsg := `receiver "prometheus" has invalid configuration: checking SD file "./testdata/sd-config-with-null-target-group.json": nil target group item found (index 1)`
+
+	gotErrMsg := err.Error()
+	require.Equal(t, wantErrMsg, gotErrMsg)
+}
+
+func TestFileSDConfigYamlNilTargetGroup(t *testing.T) {
+	factories, err := componenttest.NopFactories()
+	assert.NoError(t, err)
+
+	factory := NewFactory()
+	factories.Receivers[typeStr] = factory
+	cfg, err := configtest.LoadConfig(path.Join(".", "testdata", "invalid-config-prometheus-file-sd-config-yaml.yaml"), factories)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	err = cfg.Validate()
+	require.NotNil(t, err, "Expected a non-nil error")
+
+	wantErrMsg := `receiver "prometheus" has invalid configuration: checking SD file "./testdata/sd-config-with-null-target-group.yaml": nil target group item found (index 1)`
+
+	gotErrMsg := err.Error()
+	require.Equal(t, wantErrMsg, gotErrMsg)
 }

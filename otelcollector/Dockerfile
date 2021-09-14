@@ -13,7 +13,9 @@ RUN apt-get update && apt-get install -y libc-bin wget openssl curl sudo init-sy
 RUN apt-get upgrade libsystemd0 -y
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
 COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
+COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/otelcollector ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/microsoft/otelcollector/
+COPY ./prom-config-validator-builder/promconfigvalidator $tmpdir/
 COPY ./scripts/setup.sh ./scripts/main.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_ds.config /usr/sbin/
 COPY ./telegraf/telegraf-prometheus-collector.conf $tmpdir/telegraf/

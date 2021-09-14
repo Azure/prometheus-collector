@@ -1,6 +1,6 @@
 BASE_DIR := $(subst /build/linux,,$(PWD))
 
-all: otelcollector fluentbitplugin
+all: otelcollector fluentbitplugin promconfigvalidator
 
 .PHONY: otelcollector
 otelcollector:
@@ -10,3 +10,6 @@ otelcollector:
 
 fluentbitplugin:
 	make -C ../fluent-bit/src
+
+promconfigvalidator:
+	make -C ../prom-config-validator-builder

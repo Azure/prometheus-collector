@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
 	"github.com/fluent/fluent-bit-go/output"
@@ -33,6 +34,9 @@ var (
 	timeseriesReceivedRate = 0.0
 	timeseriesSentRate = 0.0
 	bytesSentRate = 0.0
+	
+	// Invalid Prometheus config validation environemnt variable used for telemetry
+	InvalidCustomPrometheusConfig string
 )
 
 var (
@@ -60,29 +64,29 @@ var (
 )
 
 const (
-	clusterTypeACS                                    = "ACS"
-	clusterTypeAKS                                    = "AKS"
-	envAKSResourceID                                  = "AKS_RESOURCE_ID"
-	envACSResourceName                                = "ACS_RESOURCE_NAME"
-	envAgentVersion                                   = "AGENT_VERSION"
-	envControllerType                                 = "CONTROLLER_TYPE"
-	envNodeIP                                         = "NODE_IP"
-	envMode                                           = "MODE"
-	envCluster                                        = "customResourceId"
-	envAppInsightsAuth                                = "APPLICATIONINSIGHTS_AUTH"
-	envAppInsightsEndpoint                            = "APPLICATIONINSIGHTS_ENDPOINT"
-	envComputerName                                   = "NODE_NAME"
-	envDefaultMetricAccountName                       = "AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
-	envPodName                                        = "POD_NAME"
-	envTelemetryOffSwitch                             = "DISABLE_TELEMETRY"
-	envNamespace                                      = "POD_NAMESPACE"
-	envHelmReleaseName                                = "HELM_RELEASE_NAME"
-	fluentbitOtelCollectorLogsTag                     = "prometheus.log.otelcollector"
-	fluentbitProcessedCountTag                        = "prometheus.log.processedcount"
-	fluentbitDiagnosticHeartbeatTag                   = "prometheus.log.diagnosticheartbeat"
-	fluentbitEventsProcessedLastPeriodTag             = "prometheus.log.eventsprocessedlastperiod"
-	fluentbitInfiniteMetricTag                        = "prometheus.log.infinitemetric"
-	fluentbitContainerLogsTag                         = "prometheus.log.prometheuscollectorcontainer"
+	clusterTypeACS                        = "ACS"
+	clusterTypeAKS                        = "AKS"
+	envAKSResourceID                      = "AKS_RESOURCE_ID"
+	envACSResourceName                    = "ACS_RESOURCE_NAME"
+	envAgentVersion                       = "AGENT_VERSION"
+	envControllerType                     = "CONTROLLER_TYPE"
+	envNodeIP                             = "NODE_IP"
+	envMode                               = "MODE"
+	envCluster                            = "customResourceId"
+	envAppInsightsAuth                    = "APPLICATIONINSIGHTS_AUTH"
+	envAppInsightsEndpoint                = "APPLICATIONINSIGHTS_ENDPOINT"
+	envComputerName                       = "NODE_NAME"
+	envDefaultMetricAccountName           = "AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
+	envPodName                            = "POD_NAME"
+	envTelemetryOffSwitch                 = "DISABLE_TELEMETRY"
+	envNamespace                          = "POD_NAMESPACE"
+	envHelmReleaseName                    = "HELM_RELEASE_NAME"
+	fluentbitOtelCollectorLogsTag         = "prometheus.log.otelcollector"
+	fluentbitProcessedCountTag            = "prometheus.log.processedcount"
+	fluentbitDiagnosticHeartbeatTag       = "prometheus.log.diagnosticheartbeat"
+	fluentbitEventsProcessedLastPeriodTag = "prometheus.log.eventsprocessedlastperiod"
+	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
+	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -130,7 +134,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["agentversion"] = os.Getenv(envAgentVersion)
 	CommonProperties["namespace"] = os.Getenv(envNamespace)
 	CommonProperties["defaultmetricaccountname"] = os.Getenv(envDefaultMetricAccountName)
-  CommonProperties["podname"] = os.Getenv(envPodName)
+	CommonProperties["podname"] = os.Getenv(envPodName)
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 
 	aksResourceID := os.Getenv(envAKSResourceID)
@@ -151,7 +155,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 		CommonProperties["ACSResourceName"] = ""
 		CommonProperties["AKS_RESOURCE_ID"] = aksResourceID
 		splitStrings := strings.Split(aksResourceID, "/")
-		if len(splitStrings) >=9 {
+		if len(splitStrings) >= 9 {
 			CommonProperties["SubscriptionID"] = splitStrings[2]
 			CommonProperties["ResourceGroupName"] = splitStrings[4]
 			CommonProperties["ClusterName"] = splitStrings[8]
@@ -163,6 +167,8 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	}
 
 	TelemetryClient.Context().CommonProperties = CommonProperties
+
+	InvalidCustomPrometheusConfig = os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG")
 	return 0, nil
 }
 
@@ -203,6 +209,9 @@ func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{
 				metric.Properties["bytesProcessedCount"] = groupMatches[5]
 				metric.Properties["metricsSentToPubCount"] = groupMatches[6]
 				metric.Properties["bytesSentToPubCount"] = groupMatches[7]
+				if InvalidCustomPrometheusConfig != "" {
+					metric.Properties["InvalidCustomPrometheusConfig"] = InvalidCustomPrometheusConfig
+				}
 				TelemetryClient.Track(metric)
 			}
 			metricsSentToPubCount, err := strconv.ParseFloat(groupMatches[6], 64)
@@ -254,7 +263,7 @@ func PushReceivedMetricsCountToAppInsightsMetrics(records []map[interface{}]inte
 		groupMatches := metricScrapeInfoRegex.FindStringSubmatch(logEntry)
 
 		if len(groupMatches) > 1 {
-		  metricsReceivedCount, err := strconv.ParseFloat(groupMatches[1], 64)
+			metricsReceivedCount, err := strconv.ParseFloat(groupMatches[1], 64)
 			if err == nil {
 				Log("About to lock for received total")
 				TimeseriesVolumeMutex.Lock()
