@@ -17,7 +17,7 @@ package internal
 import (
 	"context"
 	"errors"
-	"math"
+	//"math"
 	"net"
 	"sync/atomic"
 
