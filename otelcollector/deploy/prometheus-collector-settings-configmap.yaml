@@ -17,6 +17,7 @@ data:
     apiserver = true
     kubestate = true
     nodeexporter = true
+    timeseriesvolume = true
 metadata:
   name: prometheus-collector-settings-configmap
   namespace: kube-system
