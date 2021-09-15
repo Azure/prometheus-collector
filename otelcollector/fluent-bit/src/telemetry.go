@@ -298,7 +298,6 @@ func PushInfiniteMetricLogToAppInsightsEvents(records []map[interface{}]interfac
 }
 
 func PublishTimeseriesVolume() {
-	Log("In go routine for server")
 	r := prometheus.NewRegistry()
 	r.MustRegister(timeseriesReceivedMetric)
 	r.MustRegister(timeseriesSentMetric)
@@ -307,7 +306,6 @@ func PublishTimeseriesVolume() {
 	http.Handle("/metrics", handler)
 
 	go func() {
-		Log("In go func for ticker")
 		telemetryPushInterval := 60
 		TimeseriesVolumeTicker = time.NewTicker(time.Second * time.Duration(telemetryPushInterval))
 		start := time.Now()
@@ -343,14 +341,4 @@ func PublishTimeseriesVolume() {
 
 	Log("About to listen and serve")
 	http.ListenAndServe(":2234", nil)
-}
-
-func metricInfoHandler(responseWriter http.ResponseWriter, request *http.Request) {
-	Log("Handling request, about to lock")
-	TimeseriesVolumeMutex.Lock()
-	Log("Have locked, writing to response writer")
-	fmt.Fprintf(responseWriter, "# HELP timeseriesReceivedTotal The total number of timeseries received by MetricsExtension\n# TYPE timeseriesReceivedTotal counter\ntimeseriesReceivedTotal{computer=\"%s\",cluster=\"%s\"} %f\n\n# HELP timeseriesSentTotal The total number of timeseries sent by MetricsExtension\n# TYPE timeseriesSentTotal counter\ntimeseriesSentTotal{computer=\"%s\",cluster=\"%s\"} %f\n\n# HELP bytesSentTotal The total number of bytest sent by MetricsExtension\n# TYPE bytesSentTotal counter\nbytesSentTotal{computer=\"%s\",cluster=\"%s\"} %f\n",
-	CommonProperties["computer"], CommonProperties["cluster"], timeseriesReceivedRate, CommonProperties["computer"], CommonProperties["cluster"], timeseriesSentRate, CommonProperties["computer"], CommonProperties["cluster"], bytesSentRate)
-	TimeseriesVolumeMutex.Unlock()
-	Log("have unlocked")
 }
