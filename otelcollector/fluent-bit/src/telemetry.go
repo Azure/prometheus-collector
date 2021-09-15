@@ -4,20 +4,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"math"
-	"net/http"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -25,41 +19,8 @@ var (
 	CommonProperties map[string]string
 	// TelemetryClient is the client used to send the telemetry
 	TelemetryClient appinsights.TelemetryClient
-	metricsReceivedTotal float64 = 0
-	metricsSentTotal float64 = 0
-	bytesSentTotal float64 = 0
-	TimeseriesVolumeTicker *time.Ticker
-	TimeseriesVolumeMutex = &sync.Mutex{}
-	timeseriesReceivedRate = 0.0
-	timeseriesSentRate = 0.0
-	bytesSentRate = 0.0
-	
 	// Invalid Prometheus config validation environemnt variable used for telemetry
 	InvalidCustomPrometheusConfig string
-)
-
-var (
-	timeseriesReceivedMetric = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "timeseries_received_per_minute",
-			Help: "Number of timeseries to be sent to storage",
-		},
-		[]string{"computer", "release", "controller_type"},
-	)
-	timeseriesSentMetric = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "timeseries_sent_per_minute",
-			Help: "Number of timeseries sent to storage",
-		},
-		[]string{"computer", "release", "controller_type"},
-	)
-	bytesSentMetric = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "bytes_sent_per_minute",
-			Help: "Number of bytes of timeseries sent to storage",
-		},
-		[]string{"computer", "release", "controller_type"},
-	)
 )
 
 const (
@@ -213,21 +174,19 @@ func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{
 				}
 				TelemetryClient.Track(metric)
 			}
+
 			metricsSentToPubCount, err := strconv.ParseFloat(groupMatches[6], 64)
 			if err == nil {
-				Log("about to lock for metrics sent")
 				TimeseriesVolumeMutex.Lock()
-				metricsSentTotal += metricsSentToPubCount
+				TimeseriesSentTotal += metricsSentToPubCount
 				TimeseriesVolumeMutex.Unlock()
-				Log("unlocked for metrics sent")
 			}
+
 			bytesSentToPubCount, err := strconv.ParseFloat(groupMatches[7], 64)
 			if err == nil {
-				Log("About to lock for bytes sent")
 				TimeseriesVolumeMutex.Lock()
-				bytesSentTotal += bytesSentToPubCount
+				BytesSentTotal += bytesSentToPubCount
 				TimeseriesVolumeMutex.Unlock()
-				Log("Unlocked for bytes sent")
 			}
 		}
 	}
@@ -264,11 +223,10 @@ func PushReceivedMetricsCountToAppInsightsMetrics(records []map[interface{}]inte
 		if len(groupMatches) > 1 {
 			metricsReceivedCount, err := strconv.ParseFloat(groupMatches[1], 64)
 			if err == nil {
-				Log("About to lock for received total")
 				TimeseriesVolumeMutex.Lock()
-				metricsReceivedTotal += metricsReceivedCount
+				TimeseriesReceivedTotal += metricsReceivedCount
 				TimeseriesVolumeMutex.Unlock()
-				Log("Unlocking received total")
+
 				metric := appinsights.NewMetricTelemetry("meMetricsReceivedCount", metricsReceivedCount)
 				TelemetryClient.Track(metric)
 			}
@@ -295,50 +253,4 @@ func PushInfiniteMetricLogToAppInsightsEvents(records []map[interface{}]interfac
 	}
 
 	return output.FLB_OK
-}
-
-func PublishTimeseriesVolume() {
-	r := prometheus.NewRegistry()
-	r.MustRegister(timeseriesReceivedMetric)
-	r.MustRegister(timeseriesSentMetric)
-	r.MustRegister(bytesSentMetric)
-	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
-	http.Handle("/metrics", handler)
-
-	go func() {
-		telemetryPushInterval := 60
-		TimeseriesVolumeTicker = time.NewTicker(time.Second * time.Duration(telemetryPushInterval))
-		start := time.Now()
-		
-		for ; true; <-TimeseriesVolumeTicker.C {
-			elapsed := time.Since(start)
-			Log("About to lock, calculating rates")
-		
-			TimeseriesVolumeMutex.Lock()
-
-			Log("Have locked, calculating rates")
-			timePassedInMinutes := (float64(elapsed) / float64(time.Second)) / 60.0
-			Log("time passed in seconds: %f", float64(elapsed) / float64(time.Second))
-			Log("time passed in minutes: %f", timePassedInMinutes)
-			timeseriesReceivedRate = math.Round(metricsReceivedTotal / timePassedInMinutes)
-			timeseriesSentRate = math.Round(metricsSentTotal / timePassedInMinutes)
-			bytesSentRate = math.Round(bytesSentTotal / timePassedInMinutes)
-
-			timeseriesReceivedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(timeseriesReceivedRate)
-			timeseriesSentMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(timeseriesSentRate)
-			bytesSentMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(bytesSentRate)
-		
-			metricsReceivedTotal = 0.0
-			metricsSentTotal = 0.0
-			bytesSentTotal = 0.0
-			TimeseriesVolumeMutex.Unlock()
-			Log("Have unlocked, calculated rates")
-		
-			start = time.Now()
-			Log("About to wait a minute")
-		}
-	}()
-
-	Log("About to listen and serve")
-	http.ListenAndServe(":2234", nil)
 }

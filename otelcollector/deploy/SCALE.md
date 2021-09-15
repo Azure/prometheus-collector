@@ -18,13 +18,13 @@
   ```
 
 ## Scraping with Multiple Prometheus-Collector Instances
-* Even with off-loading some jobs to a daemonset using advanced mode, there still may be an extremely high-load of metrics being scraped from the replicaset. This requires multiple deployments of the prometheus-collector and multiple corresponding custom scrape configs in configmaps, with different jobs split up between configmaps.
-* A single instance can handle up to around 2.7 million timeseries per minute and 4 GB of timeseries per minute. After this, multiple instances will need to be used with scrape jobs split between them in the custom configmaps.
+* Even with off-loading some jobs to a daemonset using advanced mode, there still may be an extremely high load of metrics being scraped from the replicaset. This requires multiple deployments of the prometheus-collector and multiple corresponding custom scrape configs in configmaps, with different jobs split up between configmaps.
+* A single instance can handle up to around `2.7 million timeseries per minute` and `4 GB of timeseries per minute`. After this, multiple instances will need to be used with scrape jobs split between them in the custom configmaps.
 
 ## Viewing The Volume of Timeseries Scraped and Sent
 * To know how many timeseries and bytes you are sending, you can check usage by instance in the `Prometheus-Collector Health` default dashboard. This shows the historical number of timeseries and bytes that have been scraped and sent.
-* The variables can be adjusted to view the total timeseries and bytes scraped for the whole cluster, for an individual release, the replicaset and daemonset, and individual nodes. To view if you are close to the single instance limit of 2.7 million timeseries per minute and 4 GB of timeseries per minute, select a release name and `replicaset` as the `controller_type`.
-* If the amount of metrics sent is already high enough that it may be over the limit, you can also port-forward to check the number of timeseries and bytes the instance is sending in that instance.
+* The variable selectors can be adjusted to view the total timeseries and bytes scraped for the whole cluster, for an individual release, the replicaset and daemonset, and individual nodes. To view if you are close to the single instance limit of 2.7 million timeseries per minute and 4 GB of timeseries per minute, select the release name for that instance and `replicaset` as the `controller_type`.
+* If the amount of metrics sent is already high enough that it may be over the limit, you can also port-forward to check the number of timeseries and bytes the instance is sending for that previous minute.
   ```
   kubectl port-forward <prometheus-collector replicaset pod name> -n <prometheus-collector pod namespace> 2234:2234
   ```
@@ -35,11 +35,11 @@
   | `timeseries_received_per_minute` | Number of timseries scraped
   | `timeseries_sent_per_minute`  | Number of timeseries sent to storage
   | `bytes_sent_per_minute` | Number of bytes of timeseries sent to storage
-* The metric `timeseries_received_per_minute` may not exactly equal `timeseries_sent_per_minute` in the same minute. However, if there is a large difference and `timeseries_received_per_minute` is over 2.7 million timeseries / minute, not all your timeseries may be sending, and you will need to deploy multiple instances of the prometheus-collector.
+* The metric `timeseries_received_per_minute` may not exactly equal `timeseries_sent_per_minute` in the same minute. However, if there is a large difference and `timeseries_received_per_minute` is over 2.7 million timeseries per minute, not all your timeseries may be sending, and you will need to deploy multiple instances of the prometheus-collector.
 
 ## Configuring Multiple Instances
 * Follow the regular HELM deployment instructions for the first instance with advanced mode enabled and whichever default scrape targets you wish to have enabled or disabled. Custom scrape targets will be in the configmap `<chart release name>-prometheus-config` as usual.
-* Deploy the HELM chart a second time with a different chart release name, advanced mode not enabled, and all default scrape targets disabled. THe default scrape targets need to be disabled or else node-exporter and kube-state-metrics will be installed again and all the default metrics will be sent from both instances. Additional custom scrape targets should be in the configmap `<chart release name 2>-prometheus-config`.
+* Deploy the HELM chart a second time with a different chart release name, advanced mode not enabled, and all default scrape targets disabled. The default scrape targets need to be disabled or else node-exporter and kube-state-metrics will be installed again and all the default metrics will be sent from both instances. Additional custom scrape targets should be in the configmap `<chart release name 2>-prometheus-config`.
 * For example, if the first helm chart install command was:
   ```
   helm upgrade --install <chart_release_name_1> ./prometheus-collector --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --set mode.advanced=true
