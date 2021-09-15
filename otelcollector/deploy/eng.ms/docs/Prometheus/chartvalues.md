@@ -30,5 +30,6 @@
 | scrapeTargets.apiServer | bool | Optional | `true` | when true, automatically scrape the kubernetes api server in the k8s cluster without any additional scrape config |
 | scrapeTargets.kubeState | bool | Optional | `true` | when true, automatically install kube-state-metrics and scrape kube-state-metrics in the k8s cluster without any additional scrape config |
 | scrapeTargets.nodeExporter | bool | Optional | `true` | when true, automatically install prometheus-node-exporter in every node in the k8s cluster and scrape node metrics without any additional scrape config |
+| scrapeTargets.timeseriesVolume | bool | Optional | `true` | when true, automatically scrape info about the amount and size of timeseries scraped |
 
 ----------------------------------------------
