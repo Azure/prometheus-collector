@@ -117,7 +117,7 @@ if !file.nil?
   file.write("export AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED=#{@kubestateEnabled}\n")
   file.write("export AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED=#{@nodeexporterEnabled}\n")
   file.write("export AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=#{@noDefaultsEnabled}\n")
-  file.write("export AZMON_PROMETHEUS_TIMESERIES_VOLUME_SCRAPING_ENABLED=#{@timeseriesVolumeEnabled\n"})
+  file.write("export AZMON_PROMETHEUS_TIMESERIES_VOLUME_SCRAPING_ENABLED=#{@timeseriesVolumeEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
   puts "****************End default-scrape-settings Processing********************"

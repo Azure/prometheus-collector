@@ -53,7 +53,8 @@ var (
 )
 
 const (
-	telemetryPushInterval = 60
+	timeseriesVolumeInterval = 60
+	timeseriesVolumePort = ":2234"
 )
 
 func PublishTimeseriesVolume() {
@@ -68,13 +69,13 @@ func PublishTimeseriesVolume() {
 	http.Handle("/metrics", handler)
 
 	go func() {
-		TimeseriesVolumeTicker = time.NewTicker(time.Second * time.Duration(telemetryPushInterval))
+		TimeseriesVolumeTicker = time.NewTicker(time.Second * time.Duration(timeseriesVolumeInterval))
 		start := time.Now()
 		
 		for ; true; <-TimeseriesVolumeTicker.C {
 			elapsed := time.Since(start)
 		
-			timePassedInMinutes := (float64(elapsed) / float64(time.Second)) / float64(telemetryPushInterval)
+			timePassedInMinutes := (float64(elapsed) / float64(time.Second)) / float64(timeseriesVolumeInterval)
 
 			TimeseriesVolumeMutex.Lock()
 			timeseriesReceivedRate := math.Round(TimeseriesReceivedTotal / timePassedInMinutes)
@@ -94,5 +95,5 @@ func PublishTimeseriesVolume() {
 		}
 	}()
 
-	http.ListenAndServe(":2234", nil)
+	http.ListenAndServe(timeseriesVolumePort, nil)
 }
