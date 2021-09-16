@@ -57,9 +57,11 @@ const (
 	timeseriesVolumePort = ":2234"
 )
 
+
+// Expose Prometheus metrics for number of timeseries and bytes scraped and sent
 func PublishTimeseriesVolume() {
 
-	// A new registry prevents go_* and promhttp_* metrics from sending to the endpoint
+	// A new registry excludes go_* and promhttp_* metrics for the endpoint
 	r := prometheus.NewRegistry()
 	r.MustRegister(timeseriesReceivedMetric)
 	r.MustRegister(timeseriesSentMetric)
@@ -95,5 +97,6 @@ func PublishTimeseriesVolume() {
 		}
 	}()
 
-	http.ListenAndServe(timeseriesVolumePort, nil)
+	err := http.ListenAndServe(timeseriesVolumePort, nil)
+	Log("Error for timeseries volume endpoint: %s", err.Error())
 }

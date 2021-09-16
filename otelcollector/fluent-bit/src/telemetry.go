@@ -41,6 +41,7 @@ const (
 	envTelemetryOffSwitch                 = "DISABLE_TELEMETRY"
 	envNamespace                          = "POD_NAMESPACE"
 	envHelmReleaseName                    = "HELM_RELEASE_NAME"
+	envTimeseriesVolume                   = "AZMON_PROMETHEUS_TIMESERIES_VOLUME_SCRAPING_ENABLED"
 	fluentbitOtelCollectorLogsTag         = "prometheus.log.otelcollector"
 	fluentbitProcessedCountTag            = "prometheus.log.processedcount"
 	fluentbitDiagnosticHeartbeatTag       = "prometheus.log.diagnosticheartbeat"
@@ -175,19 +176,23 @@ func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{
 				TelemetryClient.Track(metric)
 			}
 
-			metricsSentToPubCount, err := strconv.ParseFloat(groupMatches[6], 64)
-			if err == nil {
-				TimeseriesVolumeMutex.Lock()
-				TimeseriesSentTotal += metricsSentToPubCount
-				TimeseriesVolumeMutex.Unlock()
-			}
+			if strings.ToLower(os.Getenv(envTimeseriesVolume)) == "true" {
+				// Add to the total that PublishTimeseriesVolume() uses
+				metricsSentToPubCount, err := strconv.ParseFloat(groupMatches[6], 64)
+				if err == nil {
+					TimeseriesVolumeMutex.Lock()
+					TimeseriesSentTotal += metricsSentToPubCount
+					TimeseriesVolumeMutex.Unlock()
+				}
 
-			bytesSentToPubCount, err := strconv.ParseFloat(groupMatches[7], 64)
-			if err == nil {
-				TimeseriesVolumeMutex.Lock()
-				BytesSentTotal += bytesSentToPubCount
-				TimeseriesVolumeMutex.Unlock()
-			}
+				// Add to the total that PublishTimeseriesVolume() uses
+				bytesSentToPubCount, err := strconv.ParseFloat(groupMatches[7], 64)
+				if err == nil {
+					TimeseriesVolumeMutex.Lock()
+					BytesSentTotal += bytesSentToPubCount
+					TimeseriesVolumeMutex.Unlock()
+				}
+		 	}
 		}
 	}
 
@@ -223,9 +228,13 @@ func PushReceivedMetricsCountToAppInsightsMetrics(records []map[interface{}]inte
 		if len(groupMatches) > 1 {
 			metricsReceivedCount, err := strconv.ParseFloat(groupMatches[1], 64)
 			if err == nil {
-				TimeseriesVolumeMutex.Lock()
-				TimeseriesReceivedTotal += metricsReceivedCount
-				TimeseriesVolumeMutex.Unlock()
+
+				// Add to the total that PublishTimeseriesVolume() uses
+				if strings.ToLower(os.Getenv(envTimeseriesVolume)) == "true" {
+					TimeseriesVolumeMutex.Lock()
+					TimeseriesReceivedTotal += metricsReceivedCount
+					TimeseriesVolumeMutex.Unlock()
+				}
 
 				metric := appinsights.NewMetricTelemetry("meMetricsReceivedCount", metricsReceivedCount)
 				TelemetryClient.Track(metric)
