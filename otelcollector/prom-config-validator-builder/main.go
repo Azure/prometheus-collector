@@ -9,6 +9,7 @@ import (
 
 	"strings"
 
+	//"github.com/spf13/viper"
 	"go.opentelemetry.io/collector/config/configloader"
 	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
 	yaml "gopkg.in/yaml.v2"
@@ -75,6 +76,32 @@ type PrometheusConfig struct {
 func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTemplatePath string) error {
 	var otelConfig OtelConfig
 
+	//test code here
+
+	// viper.SetConfigType("yaml") // or viper.SetConfigType("YAML")
+
+	// any approach to require this configuration into your program.
+	// 	var yamlExample = []byte(`
+	// Hacker: true
+	// name: steve
+	// hobbies:
+	// - skateboarding
+	// - snowboarding
+	// - go
+	// clothing:
+	//   jacket: leather
+	//   trousers: denim
+	// age: 35
+	// eyes : brown
+	// beard: true
+	// `)
+
+	// viper.ReadConfig(bytes.NewBuffer(yamlExample))
+
+	// fmt.Printf("name: %v\n", viper.Get("name"))
+
+	// test code here
+
 	otelConfigFileContents, err := ioutil.ReadFile(otelConfigTemplatePath)
 	if err != nil {
 		return err
@@ -85,13 +112,35 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	}
 
 	var promConfig PrometheusConfig
+
 	promConfigFileContents, err := ioutil.ReadFile(promFilePath)
 	if err != nil {
 		return err
 	}
+	// viper.SetConfigType("yaml") // or viper.SetConfigType("YAML")
+
+	// viper.ReadConfig(bytes.NewBuffer(promConfigFileContents))
+
+	// fmt.Printf("scrape configs: %v\n", viper.Get("scrape_configs"))
+
 	err = yaml.Unmarshal([]byte(promConfigFileContents), &promConfig)
 	if err != nil {
 		return err
+	}
+
+	var test map[string]interface{}
+	err = yaml.Unmarshal([]byte(promConfigFileContents), &test)
+	if err != nil {
+		return err
+	}
+
+	//fmt.Printf("%v\n", test["scrape_configs"])
+	var sc = test["scrape_configs"].([]interface{})
+	for _, rash := range sc {
+		//fmt.Printf("rashmi -%v\n", rash)
+		//fmt.Printf("%v\n", rash)
+		rashmi := rash.(map[interface{}]interface{})
+		fmt.Printf("rashmi -%v\n", rashmi["relabel_configs"])
 	}
 
 	// Need this here even though it is present in the receiver's config validate method since we only do the $ manipulation for regex and replacement fields
