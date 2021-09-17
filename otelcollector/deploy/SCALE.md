@@ -54,11 +54,17 @@
 * The CPU and memory needed are correlated with the number of bytes each timeseries sent is and how many timeseries there are. 
 * Some reference measurements recorded using just the default scrape targets and non-advanced mode are:
 
-  | Node Count | Pod Count| Timeseries Sent / Minute | GB Sent / Minute | Prometheus-Collector CPU Usage (cores) |Prometheus-Collector Memory Usage (GB)
+  (**TODO**: *Add remaining memory usage columns after running overnight since the usage slowly grows and stabilizes after > 4 hours*)
+
+
+  | Timeseries Sent / Minute | GB Sent / Minute | Node Count | Pod Count | Prometheus-Collector CPU Usage (cores) |Prometheus-Collector Memory Usage (GB)
   | --- | --- | --- | --- | --- | --- |
-  | 309 | 1000 | 2.77 million | 3.2 | 3.6 | 10.4 |
-  | 175 | 3000 | 2.78 million | 3.8 | 4.4 | 10.7 |
-  | 275 | 3000 | 3.54 million | 4.4 | 5.0 | 11.9 |
+  | 2.5 million | 2.8 | 240 | 1500 | 3.6 |  |
+  | 2.7 million | 3.2 | 309 | 1000 | 3.6 | 10.4 |
+  | 2.7 million | 3.8 | 175 | 3000 | 4.4 | 10.7 |
+  | 2.8 million | 3.5 | 240 | 2000 | 4.3 |  |
+  | 3.1 million | 4.1 | 265 | 2000 | 4.7 |  |
+  | 3.5 million | 4.4 | 275 | 3000 | 5.0 | 11.9 |
 
   The number of `Timeseries Sent / Minute` and `GB Sent / Minute` can be compared with your volume to set the CPU and Memory limits for your prometheus-collector deployments.
 * The limits and requests can be adjusted by setting values in the HELM chart:
