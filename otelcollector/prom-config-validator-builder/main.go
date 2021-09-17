@@ -20,7 +20,8 @@ type OtelConfig struct {
 	Processors interface{} `yaml:"processors"`
 	Receivers  struct {
 		Prometheus struct {
-			Config PrometheusConfig `yaml:"config"`
+			//Config PrometheusConfig `yaml:"config"`
+			Config interface{} `yaml:"config"`
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
 	Service interface{} `yaml:"service"`
@@ -128,19 +129,77 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		return err
 	}
 
-	var test map[string]interface{}
-	err = yaml.Unmarshal([]byte(promConfigFileContents), &test)
+	var prometheusConfig map[string]interface{}
+	err = yaml.Unmarshal([]byte(promConfigFileContents), &prometheusConfig)
 	if err != nil {
 		return err
 	}
 
 	//fmt.Printf("%v\n", test["scrape_configs"])
-	var sc = test["scrape_configs"].([]interface{})
-	for _, rash := range sc {
+	var sc = prometheusConfig["scrape_configs"].([]interface{})
+	for _, scrapeConfig := range sc {
 		//fmt.Printf("rashmi -%v\n", rash)
 		//fmt.Printf("%v\n", rash)
-		rashmi := rash.(map[interface{}]interface{})
-		fmt.Printf("rashmi -%v\n", rashmi["relabel_configs"])
+		scrapeConfig := scrapeConfig.(map[interface{}]interface{})
+		if scrapeConfig["relabel_configs"] != nil {
+			relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
+			//fmt.Printf("relabelConfig -%v\n", scrapeConfig["relabel_configs"])
+			for _, relabelConfig := range relabelConfigs {
+				// fmt.Printf("%v\n", relabelConfig)
+				relabelConfig := relabelConfig.(map[interface{}]interface{})
+				//fmt.Printf("%v\n", relabelConfig["regex"])
+				//replace $ with $$ for regex
+				if relabelConfig["regex"] != nil {
+					regexString := relabelConfig["regex"].(string)
+					modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+					modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+					relabelConfig["regex"] = modifiedRegexString
+					//fmt.Printf("%v\n", relabelConfig)
+				}
+				//replace $ with $$ for replacement
+				if relabelConfig["replacement"] != nil {
+					replacement := relabelConfig["replacement"].(string)
+					modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+					modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+					if err != nil {
+						return err
+					}
+					relabelConfig["replacement"] = modifiedReplacementString
+				}
+				fmt.Printf("relabelConfig - %v\n", relabelConfig)
+			}
+		}
+
+		if scrapeConfig["metric_relabel_configs"] != nil {
+			metricRelabelConfigs := scrapeConfig["metric_relabel_configs"].([]interface{})
+			//fmt.Printf("relabelConfig -%v\n", scrapeConfig["relabel_configs"])
+			for _, metricRelabelConfig := range metricRelabelConfigs {
+				// fmt.Printf("%v\n", relabelConfig)
+				metricRelabelConfig := metricRelabelConfig.(map[interface{}]interface{})
+				//fmt.Printf("%v\n", relabelConfig["regex"])
+				//replace $ with $$ for regex
+				if metricRelabelConfig["regex"] != nil {
+					regexString := metricRelabelConfig["regex"].(string)
+					modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+					modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+					metricRelabelConfig["regex"] = modifiedRegexString
+				}
+				//fmt.Printf("%v\n", relabelConfig)
+
+				//replace $ with $$ for replacement
+				if metricRelabelConfig["replacement"] != nil {
+					replacement := metricRelabelConfig["replacement"].(string)
+					modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+					modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+					if err != nil {
+						return err
+					}
+					metricRelabelConfig["replacement"] = modifiedReplacementString
+				}
+				fmt.Printf("metricRelabelConfig - %v\n", metricRelabelConfig)
+
+			}
+		}
 	}
 
 	// Need this here even though it is present in the receiver's config validate method since we only do the $ manipulation for regex and replacement fields
@@ -203,7 +262,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		}
 	}
 
-	otelConfig.Receivers.Prometheus.Config = promConfig
+	//otelConfig.Receivers.Prometheus.Config = promConfig
+	otelConfig.Receivers.Prometheus.Config = prometheusConfig
 
 	mergedConfig, err := yaml.Marshal(otelConfig)
 	if err != nil {
