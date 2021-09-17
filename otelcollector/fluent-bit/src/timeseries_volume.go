@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -34,6 +35,7 @@ var (
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
+
 	// timeseriesSentMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
 	timeseriesSentMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -42,6 +44,7 @@ var (
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
+
 	// bytesSentMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
 	bytesSentMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -72,11 +75,10 @@ func PublishTimeseriesVolume() {
 
 	go func() {
 		TimeseriesVolumeTicker = time.NewTicker(time.Second * time.Duration(timeseriesVolumeInterval))
-		start := time.Now()
+		lastTickerStart := time.Now()
 		
 		for ; true; <-TimeseriesVolumeTicker.C {
-			elapsed := time.Since(start)
-		
+			elapsed := time.Since(lastTickerStart)
 			timePassedInMinutes := (float64(elapsed) / float64(time.Second)) / float64(timeseriesVolumeInterval)
 
 			TimeseriesVolumeMutex.Lock()
@@ -93,10 +95,14 @@ func PublishTimeseriesVolume() {
 			BytesSentTotal = 0.0
 			TimeseriesVolumeMutex.Unlock()
 		
-			start = time.Now()
+			lastTickerStart = time.Now()
 		}
 	}()
 
 	err := http.ListenAndServe(timeseriesVolumePort, nil)
-	Log("Error for timeseries volume endpoint: %s", err.Error())
+	if err != nil {
+		Log("Error for timeseries volume endpoint: %s", err.Error())
+		exception := appinsights.NewExceptionTelemetry(err.Error())
+		TelemetryClient.Track(exception)
+	}
 }
