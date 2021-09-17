@@ -104,29 +104,23 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	// Need this here even though it is present in the receiver's config validate method since we only do the $ manipulation for regex and replacement fields
 	// in scrape configs sections and the load method which is called before the validate method fails to unmarshal due to single $.
 	// Either approach will fail but the receiver's config load wont return the right error message
-	// unsupportedFeatures := make([]string, 0, 4)
-	// if len(promConfig.RemoteWriteConfigs) != 0 {
-	// 	unsupportedFeatures = append(unsupportedFeatures, "remote_write")
-	// }
-	// if len(promConfig.RemoteReadConfigs) != 0 {
-	// 	unsupportedFeatures = append(unsupportedFeatures, "remote_read")
-	// }
-	// if len(promConfig.RuleFiles) != 0 {
-	// 	unsupportedFeatures = append(unsupportedFeatures, "rule_files")
-	// }
-	// if len(promConfig.AlertingConfig.AlertRelabelConfigs) != 0 {
-	// 	unsupportedFeatures = append(unsupportedFeatures, "alert_config.relabel_configs")
-	// }
-	// if len(promConfig.AlertingConfig.AlertmanagerConfigs) != 0 {
-	// 	unsupportedFeatures = append(unsupportedFeatures, "alert_config.alertmanagers")
-	// }
-	// if len(unsupportedFeatures) != 0 {
-	// 	return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
-	// }
+	unsupportedFeatures := make([]string, 0, 4)
 
-	// if err != nil {
-	// 	return err
-	// }
+	if prometheusConfig["remote_write"] != nil {
+		unsupportedFeatures = append(unsupportedFeatures, "remote_write")
+	}
+	if prometheusConfig["remote_read"] != nil {
+		unsupportedFeatures = append(unsupportedFeatures, "remote_read")
+	}
+	if prometheusConfig["rule_files"] != nil {
+		unsupportedFeatures = append(unsupportedFeatures, "rule_files")
+	}
+	if prometheusConfig["alerting"] != nil {
+		unsupportedFeatures = append(unsupportedFeatures, "alerting")
+	}
+	if len(unsupportedFeatures) != 0 {
+		return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
+	}
 
 	otelConfig.Receivers.Prometheus.Config = prometheusConfig
 

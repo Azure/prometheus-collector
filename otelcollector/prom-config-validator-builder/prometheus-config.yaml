@@ -1,13 +1,18 @@
 global:
   evaluation_interval: 60s
   scrape_interval: 60s
-# Unsupported feature - uncomment this to make sure validator errors out
+# Unsupported features(remote write, remote read, rule files and alerting) - uncomment these to make sure validator errors out
 # alerting:
 #   alert_relabel_configs:
 #   - separator: ;
 #     regex: prometheus_replica
 #     action: labeldrop
 #     replacement: $$1
+# remote_write:
+#   - url: "https://example.org/write"
+# remote_read:
+#   - url: "https://example.org/read"
+# rule_files: [rulefile.txt]
 # Config to test that the ordering of source label doesnt get altered
 scrape_configs:
 - job_name: kube-proxy
@@ -31,7 +36,8 @@ scrape_configs:
   tls_config:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     insecure_skip_verify: true
-  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  # Fails since file doesnt exist, but uncomment to test out that the backward compatibility doesnt break in the generated output file(merged-otel-config.yaml)
+  #bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
   kubernetes_sd_configs:
   - role: node
   relabel_configs:
@@ -80,6 +86,4 @@ scrape_configs:
   # Uncomment below to make sure validator fails since the file doesnt exist
   # file_sd_configs:
   # - files: ["dummy-sd-config.json"]
-# Unsupported feature - uncomment this to make sure validator errors out
-#rule_files: [rulefile.txt]
   
