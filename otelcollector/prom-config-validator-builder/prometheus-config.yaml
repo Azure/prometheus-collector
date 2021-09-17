@@ -77,8 +77,9 @@ scrape_configs:
   follow_redirects: true
   kubernetes_sd_configs:
     - role: service
-  file_sd_configs:
-  - files: ["dummy-sd-config.json"]
+  # Uncomment below to make sure validator fails since the file doesnt exist
+  # file_sd_configs:
+  # - files: ["dummy-sd-config.json"]
 # Unsupported feature - uncomment this to make sure validator errors out
 #rule_files: [rulefile.txt]
   
