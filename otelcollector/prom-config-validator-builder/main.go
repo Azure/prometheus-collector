@@ -67,9 +67,6 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					replacement := relabelConfig["replacement"].(string)
 					modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
 					modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-					if err != nil {
-						return err
-					}
 					relabelConfig["replacement"] = modifiedReplacementString
 				}
 			}
@@ -92,9 +89,6 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					replacement := metricRelabelConfig["replacement"].(string)
 					modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
 					modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-					if err != nil {
-						return err
-					}
 					metricRelabelConfig["replacement"] = modifiedReplacementString
 				}
 			}
