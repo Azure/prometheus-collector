@@ -41,7 +41,7 @@ const (
 	envTelemetryOffSwitch                 = "DISABLE_TELEMETRY"
 	envNamespace                          = "POD_NAMESPACE"
 	envHelmReleaseName                    = "HELM_RELEASE_NAME"
-	envTimeseriesVolume                   = "AZMON_PROMETHEUS_TIMESERIES_VOLUME_SCRAPING_ENABLED"
+	envPrometheusCollectorHealth          = "AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"
 	fluentbitOtelCollectorLogsTag         = "prometheus.log.otelcollector"
 	fluentbitProcessedCountTag            = "prometheus.log.processedcount"
 	fluentbitDiagnosticHeartbeatTag       = "prometheus.log.diagnosticheartbeat"
@@ -176,7 +176,7 @@ func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{
 				TelemetryClient.Track(metric)
 			}
 
-			if strings.ToLower(os.Getenv(envTimeseriesVolume)) == "true" {
+			if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
 				// Add to the total that PublishTimeseriesVolume() uses
 				metricsSentToPubCount, err := strconv.ParseFloat(groupMatches[6], 64)
 				if err == nil {
@@ -230,7 +230,7 @@ func PushReceivedMetricsCountToAppInsightsMetrics(records []map[interface{}]inte
 			if err == nil {
 
 				// Add to the total that PublishTimeseriesVolume() uses
-				if strings.ToLower(os.Getenv(envTimeseriesVolume)) == "true" {
+				if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
 					TimeseriesVolumeMutex.Lock()
 					TimeseriesReceivedTotal += metricsReceivedCount
 					TimeseriesVolumeMutex.Unlock()

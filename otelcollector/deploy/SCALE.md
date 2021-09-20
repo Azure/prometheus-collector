@@ -54,17 +54,11 @@
 * The CPU and memory needed are correlated with the number of bytes each timeseries sent is and how many timeseries there are. 
 * Some reference measurements recorded using just the default scrape targets and non-advanced mode are:
 
-  (**TODO**: *Add remaining memory usage columns after running overnight since the usage slowly grows and stabilizes after > 4 hours*)
-
-
   | Timeseries Sent / Minute | GB Sent / Minute | Node Count | Pod Count | Prometheus-Collector CPU Usage (cores) |Prometheus-Collector Memory Usage (GB)
   | --- | --- | --- | --- | --- | --- |
-  | 2.5 million | 2.8 | 240 | 1500 | 3.6 |  |
-  | 2.7 million | 3.2 | 309 | 1000 | 3.6 | 10.4 |
-  | 2.7 million | 3.8 | 175 | 3000 | 4.4 | 10.7 |
-  | 2.8 million | 3.5 | 240 | 2000 | 4.3 |  |
-  | 3.1 million | 4.1 | 265 | 2000 | 4.7 |  |
-  | 3.5 million | 4.4 | 275 | 3000 | 5.0 | 11.9 |
+  | 2.58 million | 3.1 | 240 | 1500 | 3.45 | 8.45 |
+  | 2.84 million | 3.5 | 240 | 2000 | 3.51 | 9.39 |
+  | 3.03 million | 3.7 | 265 | 2000 | 4.07 | 10.76 |
 
   The number of `Timeseries Sent / Minute` and `GB Sent / Minute` can be compared with your volume to set the CPU and Memory limits for your prometheus-collector deployments.
 * The limits and requests can be adjusted by setting values in the HELM chart:
@@ -85,4 +79,4 @@
         cpu: 500m
         memory: 1Gi
   ```
-  These can be adjusted by adjusting the values such as `--set resources.deployment.limits.cpu=5`and `--set resources.deployment.limits.memory=11GB` in the HELM upgrade/install command.
+  These can be adjusted by adjusting the values such as `--set resources.deployment.limits.cpu=5` and `--set resources.deployment.limits.memory=11GB` in the HELM upgrade/install command.

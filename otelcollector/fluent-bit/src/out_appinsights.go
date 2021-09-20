@@ -28,7 +28,7 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	// Run a go routine that hosts Prometheus metrics for the volume of timeseries scraped and sent
 	// These numbers are picked up from the ME logs in the fluent-bit pipeline
-	if strings.ToLower(os.Getenv(envTimeseriesVolume)) == "true" {
+	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
 		go PublishTimeseriesVolume()
 	}
 

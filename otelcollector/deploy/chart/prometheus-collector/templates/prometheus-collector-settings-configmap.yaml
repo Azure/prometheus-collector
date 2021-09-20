@@ -17,7 +17,7 @@ data:
     apiserver = {{ .Values.scrapeTargets.apiServer }}
     kubestate = {{ .Values.scrapeTargets.kubeState }}
     nodeexporter = {{ .Values.scrapeTargets.nodeExporter }}
-    timeseriesvolume = {{ .Values.scrapeTargets.timeseriesVolume }}
+    prometheuscollectorhealth = {{ .Values.scrapeTargets.prometheusCollectorHealth }}
 metadata:
   name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
   namespace: {{ .Release.Namespace }}
