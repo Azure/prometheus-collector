@@ -33,6 +33,8 @@ require_relative "ConfigParseErrorLogger"
 @nodeexporterDefaultFileRsSimple = @defaultPromConfigPathPrefix + "nodeexporterDefaultRsSimple.yml"
 @nodeexporterDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "nodeexporterDefaultRsAdvanced.yml"
 @nodeexporterDefaultFileDs = @defaultPromConfigPathPrefix + "nodeexporterDefaultDs.yml"
+@windowsexporterDefaultFile = @defaultPromConfigPathPrefix + "windowsexporterDefault.yml"
+@windowskubeproxyDefaultFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefault.yml"
 
 # Get the list of default configs to be included in the otel's prometheus config
 def populateDefaultPrometheusConfig
@@ -123,6 +125,12 @@ def populateDefaultPrometheusConfig
           defaultConfigs.push(@nodeexporterDefaultFileDs)
         end
       end
+    end
+    if !ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+      defaultConfigs.push(@windowsexporterDefaultFile)
+    end
+    if !ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+      defaultConfigs.push(@windowskubeproxyDefaultFile)
     end
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
   rescue => errorStr

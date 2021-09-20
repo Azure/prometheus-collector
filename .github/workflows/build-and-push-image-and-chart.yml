@@ -3,10 +3,12 @@ on:
   push:
     branches:
       - main
+      - vishwa/win092021
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
       - main
+      - vishwa/win092021
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest

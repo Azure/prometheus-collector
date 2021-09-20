@@ -286,3 +286,41 @@ helm upgrade --install <my-node-exporter-release-name> prometheus-community/prom
       action: keep
       regex: "<my-node-exporter-release-name>-prometheus-node-exporter"
 ```
+### Windows exporter (previously WMI exporter)
+
+Read about it [here](https://github.com/prometheus-community/windows_exporter).
+
+TLDR below -
+
+#### Install Windows exporter :
+  
+  Currently, Windows exporter is only installable as a windows service in windows host nodes. You could automate installing it for  windows nodes in the cluster using DSC. When installing Windows exporter, ensure its using default port (9182) and also `os`,`memory` and `container` collectors are enabled.
+
+```yaml
+Invoke-WebRequest -Uri https://github.com/prometheus-community/windows_exporter/releases/download/v0.16.0/windows_exporter-0.16.0-amd64.msi -OutFile c:\windowsexporter.msi
+msiexec /i C:\windowsexporter.msi ENABLED_COLLECTORS="[defaults],container,os,memory" /quiet
+```
+
+#### Scrape Configuration for Windows exporter:
+```yaml
+  scrape_configs:
+    - job_name: windows-exporter
+      scheme: http
+      scrape_interval: 30s
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      kubernetes_sd_configs:
+      - role: node
+      relabel_configs:
+      - action: keep
+        source_labels: [__meta_kubernetes_node_label_kubernetes_io_os]
+        regex: windows
+      - source_labels:
+        - __address__
+        action: replace
+        target_label: __address__
+        regex: (.+?)(\:\d+)?
+        replacement: $$1:9182
+```

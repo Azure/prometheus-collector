@@ -37,15 +37,14 @@ We are currently in limited preview with 5 selected customers. We will be openin
 
 ## Known issues
 
-### Known issues on data collection side
-1. For regex grouping, use $$ (instead of $) – This limitation is due to a bug where none of the $’s are escaped **(will be fixed soon)**
-2. When config changes, instead of process re-start with SIGHUP, container will restart **(will be fixed soon)**
-3. Metrics with Inf values will be dropped (we will address this soon)
-4. 'job' and 'instance' labels are reserved and cannot be relabled. If you either try to relabel 'job' & 'instance' labels, or try adding a label called 'job' or 'instance' (through re-labeling or external labels), it will fail the entire scrape output for that job, and no metrics will be ingested for that job. At present there is no fix for this.
-5. In the scrape config, `remote_write` and `groups` ( rule groups for recording & alerting rules) sections are un-supported. Please remove them from your custom scrape configuration, or else config validation will fail.
+### Known things on data collection side
+1. For regex grouping, use $$ (instead of $) – This limitation is due to a bug where none of the $’s are escaped. This is due to the fact Prometheus doesn't support environment variables, but this collector does.
+2. Metrics with +-Inf and NaN values will be dropped (by design)
+3. 'job' and 'instance' labels are reserved and cannot be relabled. If you either try to relabel 'job' & 'instance' labels, or try adding a label called 'job' or 'instance' (through re-labeling or external labels), it will fail the entire scrape output for that job, and no metrics will be ingested for that job. At present there is no fix for this.
+4. In the scrape config, `remote_write` and `groups` ( rule groups for recording & alerting rules) sections are un-supported. Please remove them from your custom scrape configuration, or else config validation will fail.
 
 
-### Known issues on query side
+### Known things on query side
 1. Query durations > 14d are blocked
 2. Grafana Template functions
     * label_values(my_label) not supported due to cost of the query on MDM storage
@@ -64,7 +63,7 @@ We are currently in limited preview with 5 selected customers. We will be openin
 
 ### These inbuilt Grafana dashboard have some changes than open-source dashboard: What are those changes?
 1. Queries using metrics from recording rules needed to be updated for all Prometheus default dashboards
-   * So far, out of the 19 default k8s-Prometheus dashboards, We changed below dashboards which were using recording rules –
+   * So far, out of the 20 default k8s-Prometheus dashboards, We changed below dashboards which were using recording rules –
       * api-server (1)
       * workloads* (4)
       * node exporter* (3)
@@ -110,3 +109,10 @@ or exec-ing into the container:
 ```
 kubectl exec -it $(kubectl get pods -n kube-system -o custom-columns=NAME:.metadata.name | grep prometheus-collector) -n <release-namespace> -- bash
 ```
+### Windows support
+
+1. Currently below windows targets are included in default targets
+   1. Windows exporter - Scraping this target is turned OFF by default. You would need to install Windows exporter manually in every windows host node (or automate installation using DSC in every windows host node in the cluster). See here for more information & tips on this.
+   2. Windows kube proxy - Scraping this target is turned OFF by default. This will scrape kube-proxy service running on windows host nodes.
+   3. Grafana dashboards for Windows -
+      1. At present, 2 Windows exporter dashboards are included by default for windows node metrics.
