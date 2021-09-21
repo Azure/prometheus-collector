@@ -8,7 +8,6 @@ on:
     types: [opened, synchronize, reopened]
     branches:
       - main
-      - vishwa/win092021
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
