@@ -13,11 +13,14 @@ If you'd like to scrape additional custom targets, then create a Prometheus conf
 
 ## Validate the custom config
 
-Now validate the prometheus configuration using the [PromTool](https://github.com/prometheus/prometheus/tree/main/cmd/promtool), an official command line prometheus tool. This same tool is used by the agent to validate. If the config is not valid, then the custom configuration given will not be used by the agent.
+Now validate the prometheus configuration using the [promconfigvalidator](TBD), an official command line prometheus config validation tool. This same tool is used by the agent to validate. If the config is not valid, then the custom configuration given will not be used by the agent.
+Download the template here - TBD
 
 ```shell
-    promtool check config <config_file_name>
+    ./promconfigvalidator --config "config-path" --otelTemplate "collector-config-template-path"
 ```
+This by default generates the otel collector configuration file 'merged-otel-config.yaml' if no paramater is provided using the optional --output paramater.
+This is the otel config that will be applied to the prometheus collector which includes the custom prometheus config
 
 ## Create a configmap from your configuration file
 

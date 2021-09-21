@@ -87,11 +87,13 @@ By default and for testing purposes, the provided configmap has scrape config to
        kubectl create configmap prometheus-config --from-file=prometheus-config -n kube-system
 ```
 
-**Tip** We will validate provided prometheus configuration using [promtool](https://github.com/prometheus/prometheus/tree/main/cmd/promtool), an official commandline prometheus tool, with the command:
+**Tip** We will validate provided prometheus configuration using [promconfigvalidator](TBD), a commandline prometheus config validation tool, with the command:
 ```shell
-    promtool check config <config name>
+    ./promconfigvalidator --config "config-path" --otelTemplate "collector-config-template-path"
 ```
-    You can also download to this tool and run this command for your prometheus config before adding to the configmap, to save some time.
+    You can also download this tool and the collector config template and run this command for your prometheus config before adding to the configmap, to save some time.
+    This by default generates the otel collector configuration file 'merged-otel-config.yaml' if no paramater is provided using the optional --output paramater.
+    This is the otel config that will be applied to the prometheus collector which includes the custom prometheus config
 
 #### Step 8 : Deploy prometheus-node-exporter and kube-state-metrics in your cluster
 

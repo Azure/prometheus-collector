@@ -48,48 +48,51 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		return err
 	}
 
-	var sc = prometheusConfig["scrape_configs"].([]interface{})
-	for _, scrapeConfig := range sc {
-		scrapeConfig := scrapeConfig.(map[interface{}]interface{})
-		if scrapeConfig["relabel_configs"] != nil {
-			relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
-			for _, relabelConfig := range relabelConfigs {
-				relabelConfig := relabelConfig.(map[interface{}]interface{})
-				//replace $ with $$ for regex field
-				if relabelConfig["regex"] != nil {
-					regexString := relabelConfig["regex"].(string)
-					modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-					modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-					relabelConfig["regex"] = modifiedRegexString
-				}
-				//replace $ with $$ for replacement field
-				if relabelConfig["replacement"] != nil {
-					replacement := relabelConfig["replacement"].(string)
-					modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-					modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-					relabelConfig["replacement"] = modifiedReplacementString
+	scrapeConfigs := prometheusConfig["scrape_configs"]
+	if scrapeConfigs != nil {
+		var sc = scrapeConfigs.([]interface{})
+		for _, scrapeConfig := range sc {
+			scrapeConfig := scrapeConfig.(map[interface{}]interface{})
+			if scrapeConfig["relabel_configs"] != nil {
+				relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
+				for _, relabelConfig := range relabelConfigs {
+					relabelConfig := relabelConfig.(map[interface{}]interface{})
+					//replace $ with $$ for regex field
+					if relabelConfig["regex"] != nil {
+						regexString := relabelConfig["regex"].(string)
+						modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+						modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+						relabelConfig["regex"] = modifiedRegexString
+					}
+					//replace $ with $$ for replacement field
+					if relabelConfig["replacement"] != nil {
+						replacement := relabelConfig["replacement"].(string)
+						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						relabelConfig["replacement"] = modifiedReplacementString
+					}
 				}
 			}
-		}
 
-		if scrapeConfig["metric_relabel_configs"] != nil {
-			metricRelabelConfigs := scrapeConfig["metric_relabel_configs"].([]interface{})
-			for _, metricRelabelConfig := range metricRelabelConfigs {
-				metricRelabelConfig := metricRelabelConfig.(map[interface{}]interface{})
-				//replace $ with $$ for regex field
-				if metricRelabelConfig["regex"] != nil {
-					regexString := metricRelabelConfig["regex"].(string)
-					modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-					modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-					metricRelabelConfig["regex"] = modifiedRegexString
-				}
+			if scrapeConfig["metric_relabel_configs"] != nil {
+				metricRelabelConfigs := scrapeConfig["metric_relabel_configs"].([]interface{})
+				for _, metricRelabelConfig := range metricRelabelConfigs {
+					metricRelabelConfig := metricRelabelConfig.(map[interface{}]interface{})
+					//replace $ with $$ for regex field
+					if metricRelabelConfig["regex"] != nil {
+						regexString := metricRelabelConfig["regex"].(string)
+						modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+						modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+						metricRelabelConfig["regex"] = modifiedRegexString
+					}
 
-				//replace $ with $$ for replacement field
-				if metricRelabelConfig["replacement"] != nil {
-					replacement := metricRelabelConfig["replacement"].(string)
-					modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-					modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-					metricRelabelConfig["replacement"] = modifiedReplacementString
+					//replace $ with $$ for replacement field
+					if metricRelabelConfig["replacement"] != nil {
+						replacement := metricRelabelConfig["replacement"].(string)
+						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						metricRelabelConfig["replacement"] = modifiedReplacementString
+					}
 				}
 			}
 		}

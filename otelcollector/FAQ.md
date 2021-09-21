@@ -6,10 +6,12 @@ kubectl logs $(kubectl get pods -n kube-system -o custom-columns=NAME:.metadata.
 ```
 This will have info about:
 - What configmap settings were used.
-- The result from running the promtool check on a custom config:
+- The result from running the promconfigvalidator check on a custom config:
   ```
-  Checking /etc/config/settings/prometheus/prometheus-config
-  SUCCESS: 0 rule files found
+  prom-config-validator::Config file provided - /etc/config/settings/prometheus/prometheus-config
+  prom-config-validator::Successfully generated otel config
+  prom-config-validator::Loading configuration...
+  prom-config-validator::Successfully loaded and validated custom prometheus config
   ```
   This means the custom prometheus config is valid. Otherwise, the errors will be printed.
 - The metric account names and results of decoding their certificates. 
