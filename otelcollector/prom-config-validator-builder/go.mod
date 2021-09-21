@@ -10,5 +10,6 @@ require (
 	github.com/gracewehner/prometheusreceiver v0.0.0-00010101000000-000000000000
 	//github.com/vishiy/influxexporter v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/collector v0.27.0
+	gopkg.in/yaml.v2 v2.4.0
 // go.opentelemetry.io/collector/config/configloader
 )
