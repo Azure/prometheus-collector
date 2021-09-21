@@ -136,7 +136,7 @@ jobs:
           exit 1
       - name: Deploy-to-cluster
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
-        run: cd ./otelcollector/deploy/chart/ && helm upgrade prom-dev ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGETAG_TELEMETRY }} -n monitoring
+        run: cd ./otelcollector/deploy/chart/ && helm upgrade prom-dev ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGETAG_TELEMETRY }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true -n monitoring
       - name: Tag-this-push
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.6
