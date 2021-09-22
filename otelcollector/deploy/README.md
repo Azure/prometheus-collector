@@ -89,7 +89,7 @@ By default and for testing purposes, the provided configmap has scrape config to
        kubectl create configmap prometheus-config --from-file=prometheus-config -n kube-system
 ```
 
-**Tip** We will validate provided prometheus configuration using [promconfigvalidator], a commandline prometheus config validation tool, with the command:
+**Tip** We will validate provided prometheus configuration using promconfigvalidator, a commandline prometheus config validation tool, with the command:
 ```shell
     ./promconfigvalidator --config "config-path" --otelTemplate "collector-config-template-path"
 ```

@@ -64,7 +64,7 @@ helm upgrade --install my-collector-dev-release ./prometheus-collector --set azu
 - **Step 6** : [Optional] - Apply aditional prometheus scrape configuration as configmap
   Any additional prometheus scrape configuration (for your applications/services/other exporters etc..), you can author the config apply it as config map using the below instructions. See the provided sample prometheus scrape config [prometheus-config](../sample-scrape-configs/prometheus-config) as an example.
   
-  Rename your config file to ```prometheus-config``` (no extension for the file)  and validate it using [promconfigvalidator], a commandline prometheus config validation tool, with the command below. Copy the tool and template from these paths /opt/promconfigvalidator and /opt/microsoft/otelcollector/collector-config-template.yml from within the prometheus-collector container
+  Rename your config file to ```prometheus-config``` (no extension for the file)  and validate it using promconfigvalidator, a commandline prometheus config validation tool, with the command below. Copy the tool and template from these paths /opt/promconfigvalidator and /opt/microsoft/otelcollector/collector-config-template.yml from within the prometheus-collector container
 
 ```shell
     ./promconfigvalidator --config "config-path" --otelTemplate "collector-config-template-path"
