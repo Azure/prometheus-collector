@@ -100,3 +100,43 @@ scrape_configs:
   scrape_interval: 30s
   static_configs:
     - targets: ['dev-cluster-kube-state-metrics-release.kube-state-metrics.svc.cluster.local:8080']
+
+- job_name: windows-exporter
+  scheme: http
+  scrape_interval: 30s
+  tls_config:
+    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecure_skip_verify: true
+  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  kubernetes_sd_configs:
+  - role: node
+  relabel_configs:
+  - action: keep
+    source_labels: [__meta_kubernetes_node_label_kubernetes_io_os]
+    regex: windows
+  - source_labels:
+    - __address__
+    action: replace
+    target_label: __address__
+    regex: (.+?)(\:\d+)?
+    replacement: $$1:9182
+
+- job_name: kube-proxy-windows
+  scheme: http
+  scrape_interval: 30s
+  tls_config:
+    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecure_skip_verify: true
+  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  kubernetes_sd_configs:
+  - role: node
+  relabel_configs:
+  - action: keep
+    source_labels: [__meta_kubernetes_node_label_kubernetes_io_os]
+    regex: windows
+  - source_labels:
+    - __address__
+    action: replace
+    target_label: __address__
+    regex: (.+?)(\:\d+)?
+    replacement: $$1:10249

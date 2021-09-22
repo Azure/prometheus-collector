@@ -18,6 +18,8 @@ data:
     kubestate = {{ .Values.scrapeTargets.kubeState }}
     nodeexporter = {{ .Values.scrapeTargets.nodeExporter }}
     prometheuscollectorhealth = {{ .Values.scrapeTargets.prometheusCollectorHealth }}
+    windowsexporter = {{ .Values.scrapeTargets.windowsExporter }}
+    windowskubeproxy = {{ .Values.scrapeTargets.windowsKubeProxy }}
 metadata:
   name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
   namespace: {{ .Release.Namespace }}

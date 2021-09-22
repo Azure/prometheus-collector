@@ -32,4 +32,4 @@ jobs:
       - name: Get-kube-config
         run: mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ci-prod-aks-eus-kubeconfig }}" > ~/.kube/config
       - name: Deploy-to-cluster
-        run: helm upgrade prom-prod ./prometheus-collector --reuse-values --set image.tag=prometheus-collector-main-${{ github.event.inputs.helmChartTag }} -n monitoring
+        run: helm upgrade prom-prod ./prometheus-collector --reuse-values --set image.tag=prometheus-collector-main-${{ github.event.inputs.helmChartTag }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true -n monitoring

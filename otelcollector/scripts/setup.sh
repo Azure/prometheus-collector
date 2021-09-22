@@ -7,7 +7,7 @@ sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \
     update-locale LANG=en_US.UTF-8
 
-wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2021.714.2112-2bc750-_focal_amd64.deb
+wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2021.901.1511-69f7bf-_focal_amd64.deb
 
 #Need this for newer scripts
 chmod 775 $TMPDIR/*.sh
