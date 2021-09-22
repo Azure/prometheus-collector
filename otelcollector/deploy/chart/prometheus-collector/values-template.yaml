@@ -17,6 +17,13 @@ scrapeTargets:
   kubeState: true
   # -- when true, automatically install prometheus-node-exporter chart and then scrape node exporters (linux only) in the k8s cluster without any additional scrape config
   nodeExporter: true
+   # -- when true, scrape windows exporter (windows only) in every windows node in the k8s cluster without any additional scrape config. Note:- windows exporter currently needs to be setup outside/seperately/manually with default port defaulting to 8192. Please see docs on this.
+  windowsExporter: false
+   # -- when true, scrape kube proxy endpoint (windows only) in every windows node in the k8s cluster without any additional scrape config
+  windowsKubeProxy: false
+  # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
+  prometheusCollectorHealth: true
+  
 
 azureMetricAccount:
   # -- default metric account name to ingest metrics into. This will be the account used if metric itself does not have account 'hinting' label. The certificate for this account should be specified in one of the further arguments below here

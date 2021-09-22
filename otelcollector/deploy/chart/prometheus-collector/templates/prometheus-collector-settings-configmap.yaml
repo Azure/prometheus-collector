@@ -17,6 +17,7 @@ data:
     apiserver = {{ .Values.scrapeTargets.apiServer }}
     kubestate = {{ .Values.scrapeTargets.kubeState }}
     nodeexporter = {{ .Values.scrapeTargets.nodeExporter }}
+    prometheuscollectorhealth = {{ .Values.scrapeTargets.prometheusCollectorHealth }}
     windowsexporter = {{ .Values.scrapeTargets.windowsExporter }}
     windowskubeproxy = {{ .Values.scrapeTargets.windowsKubeProxy }}
 metadata:

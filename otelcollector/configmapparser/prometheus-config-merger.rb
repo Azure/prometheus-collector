@@ -33,6 +33,7 @@ require_relative "ConfigParseErrorLogger"
 @nodeexporterDefaultFileRsSimple = @defaultPromConfigPathPrefix + "nodeexporterDefaultRsSimple.yml"
 @nodeexporterDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "nodeexporterDefaultRsAdvanced.yml"
 @nodeexporterDefaultFileDs = @defaultPromConfigPathPrefix + "nodeexporterDefaultDs.yml"
+@prometheusCollectorHealthDefaultFile = @defaultPromConfigPathPrefix + "prometheusCollectorHealth.yml"
 @windowsexporterDefaultFile = @defaultPromConfigPathPrefix + "windowsexporterDefault.yml"
 @windowskubeproxyDefaultFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefault.yml"
 
@@ -125,6 +126,11 @@ def populateDefaultPrometheusConfig
           defaultConfigs.push(@nodeexporterDefaultFileDs)
         end
       end
+    end
+    
+    # Collector health config should be enabled or disabled for both replicaset and daemonset
+    if !ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].downcase == "true"
+      defaultConfigs.push(@prometheusCollectorHealthDefaultFile)
     end
     if !ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
       defaultConfigs.push(@windowsexporterDefaultFile)

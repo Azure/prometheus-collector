@@ -17,6 +17,9 @@ data:
     apiserver = true
     kubestate = true
     nodeexporter = true
+    windowsexporter = false
+    windowskubeproxy = false
+    prometheuscollectorhealth = true
 metadata:
   name: prometheus-collector-settings-configmap
   namespace: kube-system

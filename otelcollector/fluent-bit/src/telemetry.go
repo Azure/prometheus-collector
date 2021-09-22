@@ -40,6 +40,8 @@ const (
 	envPodName                            = "POD_NAME"
 	envTelemetryOffSwitch                 = "DISABLE_TELEMETRY"
 	envNamespace                          = "POD_NAMESPACE"
+	envHelmReleaseName                    = "HELM_RELEASE_NAME"
+	envPrometheusCollectorHealth          = "AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"
 	fluentbitOtelCollectorLogsTag         = "prometheus.log.otelcollector"
 	fluentbitProcessedCountTag            = "prometheus.log.processedcount"
 	fluentbitDiagnosticHeartbeatTag       = "prometheus.log.diagnosticheartbeat"
@@ -94,6 +96,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["namespace"] = os.Getenv(envNamespace)
 	CommonProperties["defaultmetricaccountname"] = os.Getenv(envDefaultMetricAccountName)
 	CommonProperties["podname"] = os.Getenv(envPodName)
+	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 
 	aksResourceID := os.Getenv(envAKSResourceID)
 	// if the aks resource id is not defined, it is most likely an ACS Cluster
@@ -151,25 +154,45 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 	return output.FLB_OK
 }
 
-// Get the account name, metrics processed count, and metrics sent count from metrics extension log line
+// Get the account name, metrics/bytes processed count, and metrics/bytes sent count from metrics extension log line
 // that was filtered by fluent-bit
 func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
-		var metricScrapeInfoRegex = regexp.MustCompile(`\s*([^\s]+)\s*([^\s]+)\s*([^\s]+).*ProcessedCount: ([\d]+).*SentToPublicationCount: ([\d]+).*`)
+		var metricScrapeInfoRegex = regexp.MustCompile(`\s*([^\s]+)\s*([^\s]+)\s*([^\s]+).*ProcessedCount: ([\d]+).*ProcessedBytes: ([\d]+).*SentToPublicationCount: ([\d]+).*SentToPublicationBytes: ([\d]+).*`)
 		groupMatches := metricScrapeInfoRegex.FindStringSubmatch(logEntry)
 
-		if len(groupMatches) > 5 {
+		if len(groupMatches) > 7 {
 			metricsProcessedCount, err := strconv.ParseFloat(groupMatches[4], 64)
 			if err == nil {
 				metric := appinsights.NewMetricTelemetry("meMetricsProcessedCount", metricsProcessedCount)
 				metric.Properties["metricsAccountName"] = groupMatches[3]
-				metric.Properties["metricsSentToPubCount"] = groupMatches[5]
+				metric.Properties["bytesProcessedCount"] = groupMatches[5]
+				metric.Properties["metricsSentToPubCount"] = groupMatches[6]
+				metric.Properties["bytesSentToPubCount"] = groupMatches[7]
 				if InvalidCustomPrometheusConfig != "" {
 					metric.Properties["InvalidCustomPrometheusConfig"] = InvalidCustomPrometheusConfig
 				}
 				TelemetryClient.Track(metric)
 			}
+
+			if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
+				// Add to the total that PublishTimeseriesVolume() uses
+				metricsSentToPubCount, err := strconv.ParseFloat(groupMatches[6], 64)
+				if err == nil {
+					TimeseriesVolumeMutex.Lock()
+					TimeseriesSentTotal += metricsSentToPubCount
+					TimeseriesVolumeMutex.Unlock()
+				}
+
+				// Add to the total that PublishTimeseriesVolume() uses
+				bytesSentToPubCount, err := strconv.ParseFloat(groupMatches[7], 64)
+				if err == nil {
+					TimeseriesVolumeMutex.Lock()
+					BytesSentTotal += bytesSentToPubCount
+					TimeseriesVolumeMutex.Unlock()
+				}
+		 	}
 		}
 	}
 
@@ -205,6 +228,14 @@ func PushReceivedMetricsCountToAppInsightsMetrics(records []map[interface{}]inte
 		if len(groupMatches) > 1 {
 			metricsReceivedCount, err := strconv.ParseFloat(groupMatches[1], 64)
 			if err == nil {
+
+				// Add to the total that PublishTimeseriesVolume() uses
+				if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
+					TimeseriesVolumeMutex.Lock()
+					TimeseriesReceivedTotal += metricsReceivedCount
+					TimeseriesVolumeMutex.Unlock()
+				}
+
 				metric := appinsights.NewMetricTelemetry("meMetricsReceivedCount", metricsReceivedCount)
 				TelemetryClient.Track(metric)
 			}
