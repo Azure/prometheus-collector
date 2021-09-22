@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - grace/volume-metrics-test-2
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
