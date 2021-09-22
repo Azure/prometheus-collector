@@ -6,7 +6,9 @@
 # Deployment Instructions
 
 #### Step 0 : Pre-requisites
-  You have a kubernetes cluster, which you want to monitor with this tool. You also will need [kubectl client tool](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/) and [helm client tool(v3 or later)](https://helm.sh/docs/intro/install/) to continue this deployment.
+  You have a kubernetes cluster, which you want to monitor with this tool. You also will need [kubectl client tool](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/) and [helm client tool(v3 or later - see below note)](https://helm.sh/docs/intro/install/) to continue this deployment. 
+  
+  ```Note: There seems to have been breaking changes since HELM version >= 3.7.0 for OCI charts specifically, so please avoid HELM versions >= 3.7.0 until we fix and update this documentation.```
 
   ```Note: Its recommended to use linux/WSL in windows to deploy with the below steps. Though windows command shell/powershell should work, we haven't fully tested with them. If you find any bug, please let us know (askcoin@microsoft.com)```
 

@@ -15,7 +15,9 @@ Kubernetes: `>=1.16.0-0`
 ## Pre-requisites
 
 - **Step 0** : Tools
-    You will need [kubectl client tool](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/) and [helm client tool(v3 or later)](https://helm.sh/docs/intro/install/) to continue this deployment.
+    You will need [kubectl client tool](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/) and [helm client tool(v3 or later - see below note)](https://helm.sh/docs/intro/install/) to continue this deployment. 
+
+    ```Note: There seems to have been breaking changes since HELM version >= 3.7.0 for OCI charts specifically, so please avoid HELM versions >= 3.7.0 until we fix and update this documentation.```
 
     ```Note: Its recommended to use linux/WSL in windows to deploy with the below steps. Though windows command shell/powershell should work, we haven't fully tested with them. If you find any bug, please let us know (askcoin@microsoft.com)```
 
@@ -113,6 +115,8 @@ kubectl create configmap my-collector-dev-release-prometheus-config --from-file=
 | scrapeTargets.apiServer | bool | Optional | `true` | when true, automatically scrape the kubernetes api server in the k8s cluster without any additional scrape config |
 | scrapeTargets.kubeState | bool | Optional | `true` | when true, automatically install kube-state-metrics and scrape kube-state-metrics in the k8s cluster without any additional scrape config |
 | scrapeTargets.nodeExporter | bool | Optional | `true` | when true, automatically install prometheus-node-exporter in every node in the k8s cluster and scrape node metrics without any additional scrape config |
+| scrapeTargets.windowsExporter | bool | Optional | `false` | when true, will scrape windows node exporter, without requiring any additional scrape configuration, in every windows node discovered in the cluster. Note:- Windows-exporter is not installed by this tool on windows node(s). You would need to install it by yourselves, before turning this ON |
+| scrapeTargets.windowsKubeProxy | bool | Optional | `false` | when true, will scrape windows node's kubeproxy service, without requiring any additional scrape configuration, in every windows node discovered in the cluster |
 
 
 ----------------------------------------------
