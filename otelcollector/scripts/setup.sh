@@ -51,12 +51,6 @@ gem install deep_merge
 #mv ./otelcol_linux_amd64 /opt/microsoft/otelcollector29/otelcollector
 #chmod 777 /opt/microsoft/otelcollector29/otelcollector
 
-# Install promtools for prometheus config validation
-wget https://github.com/prometheus/prometheus/releases/download/v2.25.2/prometheus-2.25.2.linux-amd64.tar.gz
-tar -xf $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz
-cp -f $TMPDIR/prometheus-2.25.2.linux-amd64/promtool /opt/promtool
-chmod 777 /opt/promtool
-
 # Install Telegraf
 wget https://dl.influxdata.com/telegraf/releases/telegraf-1.19.1_linux_amd64.tar.gz
 tar -zxvf telegraf-1.19.1_linux_amd64.tar.gz

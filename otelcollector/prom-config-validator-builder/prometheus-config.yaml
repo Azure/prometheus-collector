@@ -1,14 +1,55 @@
 global:
   evaluation_interval: 60s
   scrape_interval: 60s
-# Unsupported feature - uncomment this to make sure validator errors out
+# Unsupported features(remote write, remote read, rule files and alerting) - uncomment these to make sure validator errors out
 # alerting:
 #   alert_relabel_configs:
 #   - separator: ;
 #     regex: prometheus_replica
 #     action: labeldrop
 #     replacement: $$1
-scrape_configs:  
+# remote_write:
+#   - url: "https://example.org/write"
+# remote_read:
+#   - url: "https://example.org/read"
+# rule_files: [rulefile.txt]
+# Config to test that the ordering of source label doesnt get altered
+scrape_configs:
+- job_name: kube-proxy
+  scrape_interval: 30s
+  kubernetes_sd_configs:
+  - role: pod
+  relabel_configs:
+  - action: keep
+    source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]
+    separator: '/'
+    regex: 'kube-system/kube-proxy.+'
+  - source_labels:
+    - __address__
+    action: replace
+    target_label: __address__
+    regex: (.+?)(\:\d+)?
+    replacement: $$1:10249
+- job_name: windows-exporter
+  scheme: http
+  scrape_interval: 30s
+  tls_config:
+    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecure_skip_verify: true
+  # Fails since file doesnt exist, but uncomment to test out that the backward compatibility doesnt break in the generated output file(merged-otel-config.yaml)
+  #bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  kubernetes_sd_configs:
+  - role: node
+  relabel_configs:
+  - action: keep
+    source_labels: [__meta_kubernetes_node_label_kubernetes_io_os]
+    regex: windows
+  - source_labels:
+    - __address__
+    action: replace
+    target_label: __address__
+    regex: (.+?)(\:\d+)?
+    replacement: $$1:9182
 - job_name: prometheus_ref_app
   scheme: http
   follow_redirects: true
@@ -18,6 +59,12 @@ scrape_configs:
     - source_labels: [__meta_kubernetes_service_name]
       action: keep
       regex: "prometheus-reference-service"
+    - source_labels: [location]
+      separator: ;
+      regex: $$1
+      target_label: location
+      replacement: $1
+      action: replace
   # Below is to test $ in regex field to mean endswith and $$(backward compatibility) in replacement for regex grouping. Validator should work for both 
   metric_relabel_configs:
     - action: replace
@@ -36,8 +83,7 @@ scrape_configs:
   follow_redirects: true
   kubernetes_sd_configs:
     - role: service
-  file_sd_configs:
-  - files: ["dummy-sd-config.json"]
-# Unsupported feature - uncomment this to make sure validator errors out
-#rule_files: [rulefile.txt]
+  # Uncomment below to make sure validator fails since the file doesnt exist
+  # file_sd_configs:
+  # - files: ["dummy-sd-config.json"]
   

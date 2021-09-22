@@ -38,10 +38,9 @@ We are currently in limited preview with 5 selected customers. We will be openin
 ## Known issues
 
 ### Known things on data collection side
-1. For regex grouping, use $$ (instead of $) – This limitation is due to a bug where none of the $’s are escaped. This is due to the fact Prometheus doesn't support environment variables, but this collector does.
-2. Metrics with +-Inf and NaN values will be dropped (by design)
-3. 'job' and 'instance' labels are reserved and cannot be relabled. If you either try to relabel 'job' & 'instance' labels, or try adding a label called 'job' or 'instance' (through re-labeling or external labels), it will fail the entire scrape output for that job, and no metrics will be ingested for that job. At present there is no fix for this.
-4. In the scrape config, `remote_write` and `groups` ( rule groups for recording & alerting rules) sections are un-supported. Please remove them from your custom scrape configuration, or else config validation will fail.
+1. Metrics with +-Inf and NaN values will be dropped (by design)
+2. 'job' and 'instance' labels are reserved and cannot be relabled. If you either try to relabel 'job' & 'instance' labels, or try adding a label called 'job' or 'instance' (through re-labeling or external labels), it will fail the entire scrape output for that job, and no metrics will be ingested for that job. At present there is no fix for this.
+3. In the scrape config, `remote_write` and `groups` ( rule groups for recording & alerting rules) sections are un-supported. Please remove them from your custom scrape configuration, or else config validation will fail.
 
 
 ### Known things on query side
@@ -88,10 +87,12 @@ kubectl logs $(kubectl get pods -n kube-system -o custom-columns=NAME:.metadata.
 ```
 This will have info about:
 - What configmap settings were used.
-- The result from running the promtool check on a custom config:
+- The result from running the promconfigvalidator check on a custom config:
   ```
-  Checking /etc/config/settings/prometheus/prometheus-config
-  SUCCESS: 0 rule files found
+  prom-config-validator::Config file provided - /etc/config/settings/prometheus/prometheus-config
+  prom-config-validator::Successfully generated otel config
+  prom-config-validator::Loading configuration...
+  prom-config-validator::Successfully loaded and validated custom prometheus config
   ```
   This means the custom prometheus config is valid. Otherwise, the errors will be printed.
 - The metric account names and results of decoding their certificates. 
