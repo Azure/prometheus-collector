@@ -87,11 +87,11 @@ By default and for testing purposes, the provided configmap has scrape config to
        kubectl create configmap prometheus-config --from-file=prometheus-config -n kube-system
 ```
 
-**Tip** We will validate provided prometheus configuration using [promconfigvalidator](TBD), a commandline prometheus config validation tool, with the command:
+**Tip** We will validate provided prometheus configuration using [promconfigvalidator], a commandline prometheus config validation tool, with the command:
 ```shell
     ./promconfigvalidator --config "config-path" --otelTemplate "collector-config-template-path"
 ```
-    You can also download this tool and the collector config template and run this command for your prometheus config before adding to the configmap, to save some time.
+    You can also copy this tool and the collector config template using kubectl cp from paths /opt/promconfigvalidator and /opt/microsoft/otelcollector/collector-config-template.yml from within the prometheus-collector container and run this command for your prometheus config before adding to the configmap, to save some time.
     This by default generates the otel collector configuration file 'merged-otel-config.yaml' if no paramater is provided using the optional --output paramater.
     This is the otel config that will be applied to the prometheus collector which includes the custom prometheus config
 

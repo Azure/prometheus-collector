@@ -13,8 +13,8 @@ If you'd like to scrape additional custom targets, then create a Prometheus conf
 
 ## Validate the custom config
 
-Now validate the prometheus configuration using the [promconfigvalidator](TBD), an official command line prometheus config validation tool. This same tool is used by the agent to validate. If the config is not valid, then the custom configuration given will not be used by the agent.
-Download the template here - TBD
+Now validate the prometheus configuration using the [promconfigvalidator], a command line prometheus config validation tool. This same tool is used by the agent to validate. If the config is not valid, then the custom configuration given will not be used by the agent.
+Use kubectl cp to copy the tool and template from these paths /opt/promconfigvalidator and /opt/microsoft/otelcollector/collector-config-template.yml from within the prometheus-collector container
 
 ```shell
     ./promconfigvalidator --config "config-path" --otelTemplate "collector-config-template-path"
