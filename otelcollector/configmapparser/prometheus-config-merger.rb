@@ -131,7 +131,7 @@ def populateDefaultPrometheusConfig
     # Collector health config should be enabled or disabled for both replicaset and daemonset
     if !ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].downcase == "true"
       defaultConfigs.push(@prometheusCollectorHealthDefaultFile)
-    
+    end
     if !ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
       defaultConfigs.push(@windowsexporterDefaultFile)
     end
