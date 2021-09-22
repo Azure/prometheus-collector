@@ -9,7 +9,7 @@ scrape_configs:
   - <scrape_config>
   ...
 ```
-Note that any other unsupported sections need to be removed from the config before applying as a configmap, else the promconfigvalidator tool will fail to validate the config and as a result the custom scrape configuration will not be applied
+Note that any other unsupported sections need to be removed from the config before applying as a configmap, else the promconfigvalidator tool validation will fail and as a result the custom scrape configuration will not be applied
 
 The `scrape_config` setting `honor_labels` (`false` by default) should be `true` for scrape configs where labels that are normally added by Prometheus, such as `job` and `instance`, are already labels of the scraped metrics and should not be overridden. This is only applicable for cases like [federation](https://prometheus.io/docs/prometheus/latest/federation/) or scraping the [Pushgateway](https://github.com/prometheus/pushgateway), where the scraped metrics already have `job` and `instance` labels. See the [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) for more details.
 
