@@ -128,3 +128,7 @@ scrape_configs:
     target_label: __address__
     regex: (.+?)(\:\d+)?
     replacement: $$1:10249
+
+- job_name: prometheus_collector_health
+  static_configs:
+  - targets: ['127.0.0.1:2234']
