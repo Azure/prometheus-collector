@@ -3,7 +3,9 @@
 
 # Deploy agent to Kubernetes cluster for metrics collection
 
-For deploying the metrics collection agent, we will leverage [HELM](https://kubernetes.io/blog/2016/10/helm-charts-making-it-simple-to-package-and-deploy-apps-on-kubernetes/).  
+For deploying the metrics collection agent, we will leverage [HELM](https://kubernetes.io/blog/2016/10/helm-charts-making-it-simple-to-package-and-deploy-apps-on-kubernetes/). 
+
+```Note: There seems to have been breaking changes since HELM version >= 3.7.0 for OCI charts specifically, so please avoid HELM versions >= 3.7.0 until we fix and update this documentation.```
 
 ## Install prometheus-collector chart in your cluster
 
