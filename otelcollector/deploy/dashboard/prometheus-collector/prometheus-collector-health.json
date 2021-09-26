@@ -116,7 +116,7 @@
           "expr": "sum(timeseries_sent_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "timeseries scraped per minute",
+          "legendFormat": "timeseries sent per minute",
           "refId": "A"
         },
         {
@@ -125,7 +125,7 @@
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "timeseries sent per minute",
+          "legendFormat": "timeseries scraped per minute",
           "refId": "B"
         }
       ],
