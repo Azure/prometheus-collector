@@ -26,12 +26,12 @@
 | scrapeTargets.coreDns | bool | Optional | `true` | when true, automatically scrape coredns service in the k8s cluster without any additional scrape config |
 | scrapeTargets.kubelet | bool | Optional | `true` | when true, automatically scrape kubelet in every node in the k8s cluster without any additional scrape config |
 | scrapeTargets.cAdvisor | bool | Optional | `true` | when true, automatically scrape cAdvisor in every node in the k8s cluster without any additional scrape config |
-| scrapeTargets.kubeProxy | bool | Optional | `true` | when true, automatically scrape kube-proxy in every node in the k8s cluster without any additional scrape config |
+| scrapeTargets.kubeProxy | bool | Optional | `true` | `linux only` - when true, automatically scrape kube-proxy in every linux node discovered in the k8s cluster without any additional scrape config |
 | scrapeTargets.apiServer | bool | Optional | `true` | when true, automatically scrape the kubernetes api server in the k8s cluster without any additional scrape config |
 | scrapeTargets.kubeState | bool | Optional | `true` | when true, automatically install kube-state-metrics and scrape kube-state-metrics in the k8s cluster without any additional scrape config |
-| scrapeTargets.nodeExporter | bool | Optional | `true` | when true, automatically install prometheus-node-exporter in every node in the k8s cluster and scrape node metrics without any additional scrape config |
+| scrapeTargets.nodeExporter | bool | Optional | `true` | `linux only` - when true, automatically install prometheus-node-exporter in every linux node in the k8s cluster and scrape node metrics without any additional scrape config |
 | scrapeTargets.prometheusCollectorHealth | bool | Optional | `true` | when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped |
-| scrapeTargets.windowsExporter | bool | Optional | `false` | when true, will scrape windows node exporter, without requiring any additional scrape configuration, in every windows node discovered in the cluster. Note:- Windows-exporter is not installed by this tool on windows node(s). You would need to install it by yourselves, before turning this ON |
-| scrapeTargets.windowsKubeProxy | bool | Optional | `false` | when true, will scrape windows node's kubeproxy service, without requiring any additional scrape configuration, in every windows node discovered in the cluster |
+| scrapeTargets.windowsExporter | bool | Optional | `false` | `windows only` - when true, will scrape windows node exporter in every windows node discovered in the cluster, without requiring any additional scrape configuration. Note:- Windows-exporter is not installed by this tool on windows node(s). You would need to install it by yourselves, before turning this ON |
+| scrapeTargets.windowsKubeProxy | bool | Optional | `false` | `windows only` - when true, will scrape windows node's kubeproxy service, without requiring any additional scrape configuration, in every windows node discovered in the cluster. Note:- Windows kube-proxy metrics will soon be enabled on windows nodes for AKS clusters |
 
 ----------------------------------------------
