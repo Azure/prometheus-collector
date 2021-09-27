@@ -6,7 +6,7 @@
 
 For Grafana to access your Prometheus metrics it needs to know where the data is and be able to access it with the right authentication. This is accomplished by a data source. Prometheus data source is supported natively in Grafana. We need to have this be configured to pull metrics from your MDM account instead of a Prometheus tsdb.  
   
-To do this follow the instructions below.  
+If you are using the Azure Managed Workspace for Grafana preview, refer to [this doc](https://github.com/microsoft/azure-grafana-preview-doc/blob/main/ConfigureDataSources.md) to setup your Prometheus data source. For Dogfood users, follow the instructions below.  
     
 * Go to the cog icon in the Grafana side menu. If the side menu is not visible click the Grafana icon in the upper left corner.  
 
@@ -30,7 +30,26 @@ In the data source configuration fill in the fields per guidance below.
 > Please make sure to use a new name for the data source. Reusing previous data source names will result in errors during saving the datasource.
 - Under HTTP section, set **URL** to 'https://az-eus.prod.prometheusmetrics.trafficmanager.net' . This is the end point used by Grafana to pull metrics from the MDM tsdb.  
 
-- Under Auth section, enable the **Forward OAuth Identity** toggle. This enables with AAD auth from Grafana to MDM to work.  
+- If you are using Azure Managed Grafana Private preview version, you have two options to enable authentication
+    - **Managed Identity**: This is the easiest way.
+    - System Managed Identity is enabled by default on the Grafana resource.
+    - Enable **Azure Authentication** during above data source setup, select “Managed Identity” from drop down and provide **AAD Resource Id** as https://management.azure.com
+   
+   ![Add AMGAddDatasourcePP3](~/metrics/images/prometheus/AMGAddDatasourcePP3.png)
+
+    - **AAD App registration**: This is the second option
+    - Create an AAD App in MSFT CORP tenant (72f988bf-86f1-41af-91ab-2d7cd011db47) or AME tenant (33e01921-4d64-4f8c-a055-5bdaffd5e33d).
+    - Enable “Azure Authentication” during data source setup, select “App Registration” from drop down and provide following details -
+      - Directory (tenant) ID: Go to AAD APP in portal, overview page and copy the tenant Id. 
+      - Application (client) ID: Go to AAD APP in portal, overview page and copy the Application (client) ID.
+      - Client Secret: Go to AAD APP in portal, create a new secret and copy it. You will get 1 time opportunity to copy it after creation.
+      - AAD Resource Id: https://management.azure.com
+    
+     ![Add AMGAddDatasourcePP4](~/metrics/images/prometheus/AMGAddDatasourcePP4.png)
+
+> [!Note]
+> If you are using Grafana dogfood version, use this step for Authentication
+>  Under Auth section, enable the **Forward OAuth Identity** toggle. This enables with AAD auth from Grafana to MDM to work.  
   
 ![Add datasource6](~/metrics/images/prometheus/AMGAddDatasource6.png)  
   

@@ -3,7 +3,9 @@
 
 # Deploy agent to Kubernetes cluster for metrics collection
 
-For deploying the metrics collection agent, we will leverage [HELM](https://kubernetes.io/blog/2016/10/helm-charts-making-it-simple-to-package-and-deploy-apps-on-kubernetes/).  
+For deploying the metrics collection agent, we will leverage [HELM](https://kubernetes.io/blog/2016/10/helm-charts-making-it-simple-to-package-and-deploy-apps-on-kubernetes/). 
+
+```Note: There seems to have been breaking changes since HELM version >= 3.7.0 for OCI charts specifically, so please avoid HELM versions >= 3.7.0 until we fix and update this documentation.```
 
 ## Install prometheus-collector chart in your cluster
 
@@ -16,8 +18,8 @@ To deploy the agent we will leverage HELM again. At this step you will need to p
 > Note you must set the following environment variable for the below commands to work: HELM_EXPERIMENTAL_OCI=1
 
 ```shell
-helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-07-29-2021-34a65d59
-helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.1-07-29-2021-34a65d59 .
+helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.5-09-25-2021-e1c22c83
+helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.5-09-25-2021-e1c22c83 .
 helm dependency update ./prometheus-collector
 
 helm upgrade --install <chart_release_name> ./prometheus-collector --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --namespace=<my_prom_collector_namespace> --create-namespace

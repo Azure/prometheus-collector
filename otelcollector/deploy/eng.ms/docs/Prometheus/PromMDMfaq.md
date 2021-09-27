@@ -112,8 +112,10 @@ kubectl exec -it $(kubectl get pods -n kube-system -o custom-columns=NAME:.metad
 ```
 ### Windows support
 
-1. Currently below windows targets are included in default targets
+1. Currently below windows targets are included as default scrape targets, but they are not turned ON by default
    1. Windows exporter - Scraping this target is turned OFF by default. You would need to install Windows exporter manually in every windows host node (or automate installation using DSC in every windows host node in the cluster). See here for more information & tips on this.
    2. Windows kube proxy - Scraping this target is turned OFF by default. This will scrape kube-proxy service running on windows host nodes.
-   3. Grafana dashboards for Windows -
-      1. At present, 2 Windows exporter dashboards are included by default for windows node metrics.
+   3. You can see windows v. linux specific targets , and whats turned ON by default [here](~/metrics/prometheus/chartvalues.md)
+2. Grafana dashboards for Windows -
+      1. At present, 2 Windows exporter dashboards, showing windows node metrics, are included by default.
+   

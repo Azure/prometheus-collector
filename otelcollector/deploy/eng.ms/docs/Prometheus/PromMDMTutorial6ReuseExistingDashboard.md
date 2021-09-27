@@ -20,6 +20,7 @@ As part of this private preview you will have the following 19 dashboards availa
     * Namespace network(Pods)
     * Namespace network(Workloads)
     * Persistent Volume
+    * StatefulSets
 2. Core-dns
 3. Kubelet
 4. kube-proxy
@@ -27,6 +28,10 @@ As part of this private preview you will have the following 19 dashboards availa
     * Nodes
     * USE Method(Cluster)
     * USE Method(Node)
+6. Windows exporter (for windows nodes. Require manuall installation of windows exporter)
+    * USE Methos / Cluster(Windows)
+    * USE Method / Node(Windows)
+7. Prometheus-Collector Health (this is Health dashboard, showing metrics from Prometheus-Collector agent)
 
 To see these
 
