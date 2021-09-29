@@ -31,7 +31,7 @@ spec:
       serviceAccountName: {{ template "prometheus-collector.fullname" . }}-serviceaccount
       containers:
         - name: prometheus-collector
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: &collectorimagetag "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           resources:
             {{- toYaml .Values.resources.daemonSet | nindent 12 }}
@@ -84,6 +84,8 @@ spec:
               value: "{{ index .Values "prometheus-node-exporter" "image" "repository" }}:{{ index .Values "prometheus-node-exporter" "image" "tag" }}"
             - name: HELM_RELEASE_NAME
               value: "{{ .Release.Name }}"
+            - name: AGENT_VERSION
+              value: *collectorimagetag
             {{- if .Values.mode.advanced  }}
             - name: MODE
               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
