@@ -16,10 +16,15 @@ package prometheusreceiver
 
 import (
 	"context"
+	"os"
+	"fmt"
 	"time"
+	"net/url"
 
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
+	"github.com/prometheus/common/version"
+  //"github.com/prometheus/prometheus/web"
 	"go.uber.org/zap"
 
 	"go.opentelemetry.io/collector/component"
@@ -27,6 +32,9 @@ import (
 	"go.opentelemetry.io/collector/obsreport"
 	//"go.opentelemetry.io/collector/receiver/prometheusreceiver/internal"
 	"github.com/gracewehner/prometheusreceiver/internal"
+	"github.com/gracewehner/prometheusreceiver/web"
+	//"github.com/gracewehner/web"
+	"github.com/go-kit/log"
 )
 
 const transport = "http"
@@ -101,6 +109,46 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 			host.ReportFatalError(err)
 		}
 	}()
+
+	ctxWeb, _ := context.WithCancel(context.Background())
+	webOptions := web.Options{
+		ScrapeManager: scrapeManager,
+		Context: ctxWeb,
+		ListenAddress: ":9091",
+		ExternalURL: &url.URL{
+			Scheme: "http",
+			Host:   "localhost:9091",
+			Path:   "",
+		},
+		RoutePrefix:    "/",
+		ReadTimeout: time.Second * 10,
+		PageTitle: "Prometheus Receiver",
+		Version: &web.PrometheusVersion{
+			Version:   version.Version,
+			Revision:  version.Revision,
+			Branch:    version.Branch,
+			BuildUser: version.BuildUser,
+			BuildDate: version.BuildDate,
+			GoVersion: version.GoVersion,
+		},
+		MaxConnections: 3,
+	} 
+	w := log.NewSyncWriter(os.Stderr)
+  go_kit_logger := log.NewLogfmtLogger(w)
+	// Depends on cfg.web.ScrapeManager so needs to be after cfg.web.ScrapeManager = scrapeManager.
+	webHandler := web.New(go_kit_logger, &webOptions)
+	listener, err := webHandler.Listener()
+	if err != nil {
+		os.Exit(1)
+	}
+	webHandler.ApplyConfig(r.cfg.PrometheusConfig)
+	//webHandler.Ready()
+	go func() {
+		if err := webHandler.Run(ctxWeb, listener, ""); err != nil {
+			return //errors.Wrapf(err, "error starting web server")
+		}
+	}()
+
 	return nil
 }
 

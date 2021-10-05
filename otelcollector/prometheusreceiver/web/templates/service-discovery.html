@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="robots" content="noindex,nofollow">
+    <title>{{ pageTitle }}</title>
+    <script src="/static/vendor/js/jquery-3.5.1.min.js"></script>
+    <script src="/static/vendor/js/popper.min.js"></script>
+    <script src="/static/vendor/bootstrap-4.5.2/js/bootstrap.min.js"></script>
+
+    <link type="text/css" rel="stylesheet" href="/static/vendor/bootstrap-4.5.2/css/bootstrap.min.css">
+    <link type="text/css" rel="stylesheet" href="/static/css/prometheus.css">
+    <link type="text/css" rel="stylesheet" href="/static/vendor/bootstrap4-glyphicons/css/bootstrap-glyphicons.min.css">
+
+    <script>
+        var PATH_PREFIX = "";
+        var BUILD_VERSION = "";
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+        })
+    </script>
+    <link type="text/css" rel="stylesheet" href="/static/css/targets.css">
+    <script src="/static/js/targets.js"></script>
+
+<style>
+  *[id]:before {
+    display: block;
+    content: " ";
+    margin-top: -65px;
+    height: 65px;
+    visibility: hidden;
+  }
+</style>
+</head>
+
+<body>
+  <nav class="navbar fixed-top navbar-expand-sm navbar-dark bg-dark">
+    <div class="container-fluid">
+
+        <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#nav-content" aria-expanded="false" aria-controls="nav-content" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div id="nav-content" class="navbar-collapse collapse">
+            <ul class="navbar-nav">
+              <li class="nav-item"><a class="nav-link" href="/config">Configuration</a></li>
+              <li class="nav-item"><a class="nav-link" href="/targets">Targets</a></li>
+              <li class="nav-item"></li><a class="nav-link" href="/service-discovery">Service Discovery</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+  <div class="container-fluid">
+
+    <h1>Service Discovery</h1>
+    <div>
+      <ul>
+        {{- range $i, $job := .Index}}
+          <li><a href="#job-{{$job}}">{{$job}}</a> ({{ index $.Active $i }}/{{ index $.Total $i }} active targets)</li>
+        {{- end}}
+      </ul>
+    </div>
+
+    {{- $targets := .Targets}}
+    {{- range $i, $job := .Index}}
+
+    <div class="table-container">
+      <h2 class="job_header" id="job-{{$job}}">
+        {{$job}} <button type="button" class="targets collapsed-table btn btn-primary">show more</button>
+      </h2>
+      {{- with index $.Dropped $i}}
+      {{- if gt . 100 }}
+      <div class="collapsed-element" style="display:none">{{ . }} targets have been dropped, showing only the first 100 dropped targets as examples.</div>
+      {{- end}}
+      {{- end}}
+      <table class="table table-sm table-bordered table-striped table-hover" style="display:none">
+        <thead class="job_details">
+          <tr>
+            <th>Discovered Labels</th>
+            <th>Target Labels</th>
+          </tr>
+        </thead>
+        <tbody>
+
+        {{- range index $targets $job}}
+          <tr>
+            <td class="labels">
+                {{- $labels := .DiscoveredLabels.Map }}
+                <ul class="list-inline" style="list-style-type:none">
+                  {{- range $label, $value := $labels }}
+                    <li><span class="badge badge-primary">{{$label}}="{{$value}}"</span></li>
+                  {{- else -}}
+                    <li><span class="badge badge-default">none</span></li>
+                  {{- end }}
+                </ul>
+            </td>
+            <td class="labels">
+                {{- $labels := .Labels.Map }}
+                <ul class="list-inline" style="list-style-type:none">
+                  {{- range $label, $value := $labels }}
+                    <li><span class="badge badge-primary">{{$label}}="{{$value}}"</span></li>
+                  {{- else -}}
+                    <li><span class="badge badge-default">Dropped</span></li>
+                  {{- end }}
+                </ul>
+            </td>
+          </tr>
+        {{- end}}
+        </tbody>
+      </table>
+    </div>
+    {{- end }}
+  </div>
+</body>
+</html>
