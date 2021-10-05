@@ -83,7 +83,7 @@ Yes, you can use this with your local Grafana instance. However we recommend you
 ### How do I check the prometheus-collector logs?
 The prometheus-collector container prints logs at startup and errors from Metrics Extension.
 ```
-kubectl logs $(kubectl get pods -n kube-system -o custom-columns=NAME:.metadata.name | grep prometheus-collector) -n <release-namespace>
+kubectl logs $(kubectl get pods -n <release-namespace> -o custom-columns=NAME:.metadata.name | grep prometheus-collector) -n <release-namespace>
 ```
 This will have info about:
 - What configmap settings were used.
@@ -99,21 +99,22 @@ This will have info about:
 - The following processes starting up: otelcollector, metricsextension, telegraf, and fluent-bit.
 - Any Metrics Extension errors, including authentication, certificate, and ingestion issues.
 
-
 ### How do I check the Metrics Extension logs?
-ME logs are located in the prometheus-collector container at the root: `/MetricsExtensionConsoleDebugLog.log`. These are logs at the `INFO` level and include information about metrics received, processed, published, and dropped, as well as any errors. Access the logs either by copying the file from the container:
+ME logs are located at the root: `/MetricsExtensionConsoleDebugLog.log`. These are logs at the `INFO` level and include information about metrics received, processed, published, and dropped, as well as any errors. Access either by copying the file from the container:
 ```
-kubectl cp $(kubectl get pods -n kube-system -o custom-columns=NAME:.metadata.name | grep prometheus-collector):MetricsExtensionConsoleDebugLog
-.log MetricsExtensionConsoleDebugLog.log -n kube-system -n <release-namespace>
+kubectl cp $(kubectl get pods -n <release-namespace> -o custom-columns=NAME:.metadata.name | grep prometheus-collector):MetricsExtensionConsoleDebugLog
+.log MetricsExtensionConsoleDebugLog.log -n <release-namespace>
 ```
 or exec-ing into the container:
 ```
-kubectl exec -it $(kubectl get pods -n kube-system -o custom-columns=NAME:.metadata.name | grep prometheus-collector) -n <release-namespace> -- bash
+kubectl exec -it $(kubectl get pods -n <release-namespace> -o custom-columns=NAME:.metadata.name | grep prometheus-collector) -n <release-namespace> -- bash
 ```
 ### Windows support
 
-1. Currently below windows targets are included in default targets
+1. Currently below windows targets are included as default scrape targets, but they are not turned ON by default
    1. Windows exporter - Scraping this target is turned OFF by default. You would need to install Windows exporter manually in every windows host node (or automate installation using DSC in every windows host node in the cluster). See here for more information & tips on this.
    2. Windows kube proxy - Scraping this target is turned OFF by default. This will scrape kube-proxy service running on windows host nodes.
-   3. Grafana dashboards for Windows -
-      1. At present, 2 Windows exporter dashboards are included by default for windows node metrics.
+   3. You can see windows v. linux specific targets , and whats turned ON by default [here](~/metrics/prometheus/chartvalues.md)
+2. Grafana dashboards for Windows -
+      1. At present, 2 Windows exporter dashboards, showing windows node metrics, are included by default.
+   

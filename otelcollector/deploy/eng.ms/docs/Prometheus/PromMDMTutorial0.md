@@ -16,7 +16,8 @@ Here are steps we will walk through.
 3. [Configure metrics collection](~/metrics/prometheus/PromMDMTutorial3ConfigureCollection.md)  
 4. [Set up Azure Grafana Service](~/metrics/prometheus/PromMDMTutorial4SetUpGrafanaAMG.md)  
 5. [Configure Prometheus data source](~/metrics/prometheus/PromMDMTutorial5AddPromDataSource.md)  
-6. [Use built-in dashboards](~/metrics/prometheus/PromMDMTutorial6ReuseExistingDashboard.md)  
+6. [Use built-in dashboards](~/metrics/prometheus/PromMDMTutorial6ReuseExistingDashboard.md)
+7. [Release notes for Prometheus collector agent releases](~/metrics/prometheus/PromMDMReleaseNotes.md)
 
 ## Prerequisites
 

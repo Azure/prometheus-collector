@@ -11,6 +11,13 @@ jobs:
     steps:
       - name: Set-workflow-initiator
         run: echo "Initiated by - ${GITHUB_ACTOR}"
+      - name: Install-specific-HELM-version
+        uses: azure/setup-helm@v1
+        with:
+          version: '3.6.3'
+        id: install
+      - name: Show-versions-On-deployment-machine
+        run: lsb_release -a && helm version
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
       - name: Pull-from-mcr

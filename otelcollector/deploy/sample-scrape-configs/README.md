@@ -197,7 +197,7 @@ To scrape only certain pods, specify the port, path, and http/https through anno
         # Scrape only pods with the annotation: prometheus.io/scrape = true
         - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
           action: keep
-          regex: true
+          regex: "true"
 
         # If prometheus.io/path is specified, scrape this path instead of /metrics
         - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]

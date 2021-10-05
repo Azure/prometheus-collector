@@ -3,24 +3,33 @@
 
 # Setup Azure Grafana Service
 
-### Prerequisites
+Grafana is a popular open source tool that allows you to query, visualize, alert on and understand your metrics no matter where they are stored. You can install and manage Grafana yourself, or make use of a managed Grafana service. A managed Grafana service will allow you to focus only on creating your dashboards and visualizations, without the overhead involved in installing, maintaining, securing and scaling your data.  
+
+## Azure Managed Workspace for Grafana
+
+There are two versions of Azure managed Grafana at present - an early Dogfood service and the private preview of Azure Managed Workspace for Grafana:
+
+* If you are using Grafana to query Prometheus metrics from MDM, we strongly recommend that you onboard the private preview directly (instead of Dogfood). If you are already on Dogfood, you will be asked to migrate to the private preview in the near future.
+* If you are using Grafana to query classic (non-Prometheus) MDM metrics, you will start with the Dogfood and be asked to migrate to the preview at a later date.
+
+### Prerequisites for Azure Managed Workspace for Grafana preview
+
+To join the private preview, please send your Azure subscription ID to [this email](mailto:ad4g@microsoft.com) with a subject line *Request to join private preview*. We ask you to limit to one subscription due to the current capacity constraints.
+
+### Prerequisites for Azure Managed Grafana Dogfood
 
 If you have not done this already at the beginning of the tutorial, you will need to have performed these before you proceed with the tutorial.
 
-* For this step, you will be using a preview version of Azure Grafana Service, and need access to a dogfood subscription. If you do not yet have one, [please request one via](mailto:ad4g@microsoft.com)  
+* For this step, you will be using a preview version of Azure Grafana Service, and need access to a dogfood subscription. If you do not yet have one, please request one via [this email](mailto:ad4g@microsoft.com)
 * Also to be able to set up data sources and dashboards, you will need to have 'Grafana Admin' access. To do this [join the Azure Dashboard for Grafana Dogfood (Admin) group](https://idweb/identitymanagement/aspx/groups/MyGroups.aspx?popupFromClipboard=%2Fidentitymanagement%2Faspx%2FGroups%2FEditGroup.aspx%3Fid%3Daa23b20a-f5ef-485d-94bd-468bbf2346fb) via IDWeb.
 
 ## Grafana and data sources
 
-Grafana is a popular open source tool that allows you to query, visualize, alert on and understand your metrics no matter where they are stored. To connect Grafana with metrics in metrics store, you would use a [data source](https://grafana.com/docs/grafana/latest/datasources/), which will import data from a metrics store. Grafana has several built-in data sources (including one for Prometheus) and you can add to it by writing your own.  
+To connect Grafana with metrics in metrics store, you would use a [data source](https://grafana.com/docs/grafana/latest/datasources/), which will import data from a metrics store. Grafana has several built-in data sources (including one for Prometheus) and you can add to it by writing your own. We will use Grafana and Prometheus data source to visualize/query the metrics we collected in previous steps.
 
-For our tutorial, we will use Grafana and Prometheus data source to visualize/query the metrics we collected in previous steps.  
+If you are using the Azure Managed Workspace for Grafana preview, you can find setup instructions at [our doc repo](https://github.com/microsoft/azure-grafana-preview-doc). You will need a Microsoft GitHub account to access the repo.
 
-### Azure Grafana Service
-
-You can install and manage Grafana yourself, or make use of a managed Grafana service. A managed Grafana service will allow you to focus only on creating your dashboards and visualizations, without the overhead involved in installing, maintaining, securing and scaling your data.  
-
-Azure will soon be introducing Azure Grafana Service, with enterprise level security and tight Azure integration. It is now in preview and we will use this in our tutorial.  
+The rest of this tutorial applies to the Azure Managed Grafana Dogfood service. In either case, please also join the [Azure Grafana Service](https://teams.microsoft.com/l/team/19%3aU7k7xgekXyKeLAIS8igygU0-6vFHk9W243x16DOVPng1%40thread.tacv2/conversations?groupId=4e24cc02-a532-453a-bfeb-0089595e72e7&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47) team to get support, report issues and provide feedback.
 
 ## Create Grafana cluster
 

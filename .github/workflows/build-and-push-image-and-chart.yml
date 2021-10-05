@@ -35,6 +35,11 @@ jobs:
         run: echo "IMAGE_TAG_DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
+      - name: Install-specific-HELM-version
+        uses: azure/setup-helm@v1
+        with:
+          version: '3.6.3'
+        id: install
       - name: Checkout-code
         uses: actions/checkout@v2
       - name: Set-Helm-chart-version
@@ -73,7 +78,7 @@ jobs:
           token: ${{ github.token }}
       - name: Create-docker-image
         run: |
-            cd ./otelcollector/ && docker build . --file Dockerfile -t $IMAGETAG --build-arg IMAGE_TAG=$IMAGETAG_TELEMETRY
+            cd ./otelcollector/ && docker build . --file Dockerfile -t $IMAGETAG
       - name: List-docker-images
         run: docker images --digests --all
       - name: Run-trivy-scanner-on-docker-image
