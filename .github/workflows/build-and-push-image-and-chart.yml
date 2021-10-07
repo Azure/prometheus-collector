@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - vishwa/helm37
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
@@ -15,10 +16,10 @@ jobs:
         run: echo "Initiated by - ${GITHUB_ACTOR}"
       - name: Set-branch-name-for-non-pr
         if: ${{ github.event_name != 'pull_request' }}
-        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _)" >> $GITHUB_ENV
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
-        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / _)" >> $GITHUB_ENV
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / -)" >> $GITHUB_ENV
       - name: Set-Env
         run: echo "ENV=dev" >> $GITHUB_ENV
       - name: Set-ACR-Registry
@@ -35,23 +36,16 @@ jobs:
         run: echo "IMAGE_TAG_DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
-      - name: Install-specific-HELM-version
-        uses: azure/setup-helm@v1
-        with:
-          version: '3.6.3'
-        id: install
       - name: Checkout-code
         uses: actions/checkout@v2
       - name: Set-Helm-chart-version
         run: version=$(cat ./otelcollector/VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
       - name: Set-image-tag
         run: echo "IMAGETAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
-      - name: Set-image-telemetry-tag
-        run: echo "IMAGETAG_TELEMETRY=${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+      - name: Set-image-HELM-tag
+        run: echo "IMAGE_HELM_TAG=${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
-      - name: Set-Helm-tag
-        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-Helm-chart-versioning
         run: envsubst < ./otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < ./otelcollector/deploy/chart/prometheus-collector/values-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/values.yaml
       - name: Show-versions-On-build-machine
@@ -91,10 +85,14 @@ jobs:
           skip-dirs: 'opt/telegraf/telegraf,opt/microsoft/otelcollector/otelcollector'
           exit-code: '1'
           timeout: '5m0s'
-      - name: Save-Helm-chart-to-local-cache
-        run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm chart save . ${{ env.HELMTAG }}
-      - name: List-local-Helm-Charts
-        run: helm chart list
+      - name: Update-HELM-dependencies
+        run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm dep update
+      - name: List-dependent-HELM-Charts
+        run: ls -la ./otelcollector/deploy/chart/prometheus-collector/charts/
+      - name: Package-HELM-chart
+        run: cd ./otelcollector/deploy/chart/ && helm package ./prometheus-collector/
+      - name: List-packaged-HELM-chart
+        run: ls -la ./otelcollector/deploy/chart/
       - name: Login-to-ACR-thru-Docker
         if: github.event_name != 'pull_request'
         run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
@@ -107,7 +105,7 @@ jobs:
         run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
       - name: Publish-Helm-chart-to-ACR
         if: github.event_name != 'pull_request'
-        run: helm chart push ${{ env.HELMTAG }}
+        run: cd ./otelcollector/deploy/chart/ && helm push ${{ env.IMAGE_HELM_TAG }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY }}
       - name: Login-to-Azure-Key-Vault
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         uses: Azure/login@v1
@@ -129,7 +127,7 @@ jobs:
           for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 30
-            if docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGETAG_TELEMETRY}
+            if docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGE_HELM_TAG}
             then
               echo "Image published to mcr"
               exit 0
@@ -139,7 +137,7 @@ jobs:
           exit 1
       - name: Deploy-to-cluster
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
-        run: cd ./otelcollector/deploy/chart/ && helm upgrade prom-dev ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGETAG_TELEMETRY }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
+        run: cd ./otelcollector/deploy/chart/ && helm upgrade prom-dev ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGE_HELM_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
       - name: Tag-this-push
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.6
