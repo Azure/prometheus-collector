@@ -32,7 +32,7 @@ jobs:
         run: echo "MCR_REPOSITORY=/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
       - name: Set-image-tag-name
         run: echo "IMAGE_TAG_NAME=prometheus-collector" >> $GITHUB_ENV
-      - name: Set-image-tag-suffix
+      - name: Set-image-tag-date
         run: echo "IMAGE_TAG_DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
@@ -41,9 +41,11 @@ jobs:
       - name: Set-Helm-chart-version
         run: version=$(cat ./otelcollector/VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
       - name: Set-image-tag
-        run: echo "IMAGETAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
-      - name: Set-image-HELM-tag
-        run: echo "IMAGE_HELM_TAG=${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+        run: echo "IMAGE_TAG=${IMAGE_TAG_NAME}-${HELM_CHART_VERSION}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+      - name: Set-image-full-tag
+        run: echo "IMAGE_FULL_TAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG}" >> $GITHUB_ENV
+       - name: Set-HELM-chart-semver
+        run: echo "HELM_SEMVER=${HELM_CHART_VERSION}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
       - name: Set-Helm-chart-versioning
@@ -72,13 +74,13 @@ jobs:
           token: ${{ github.token }}
       - name: Create-docker-image
         run: |
-            cd ./otelcollector/ && docker build . --file Dockerfile -t $IMAGETAG
+            cd ./otelcollector/ && docker build . --file Dockerfile -t $IMAGE_FULL_TAG
       - name: List-docker-images
         run: docker images --digests --all
       - name: Run-trivy-scanner-on-docker-image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "${{ env.IMAGETAG }}"
+          image-ref: "${{ env.IMAGE_FULL_TAG }}"
           format: 'table'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
@@ -99,13 +101,13 @@ jobs:
       - name: Publish-docker-image-to-ACR
         if: github.event_name != 'pull_request'
         run: |
-            docker push ${{ env.IMAGETAG }}
+            docker push ${{ env.IMAGE_FULL_TAG }}
       - name: Login-to-ACR-thru-Helm
         if: github.event_name != 'pull_request'
         run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
       - name: Publish-Helm-chart-to-ACR
         if: github.event_name != 'pull_request'
-        run: cd ./otelcollector/deploy/chart/ && helm push ${{ env.IMAGE_HELM_TAG }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY }}
+        run: cd ./otelcollector/deploy/chart/ && helm push ${{ env.IMAGE_TAG_NAME }}-${{ env.HELM_SEMVER }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY }}
       - name: Login-to-Azure-Key-Vault
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         uses: Azure/login@v1
@@ -127,7 +129,7 @@ jobs:
           for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 30
-            if docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGE_HELM_TAG}
+            if docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGE_TAG}
             then
               echo "Image published to mcr"
               exit 0
@@ -137,7 +139,7 @@ jobs:
           exit 1
       - name: Deploy-to-cluster
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
-        run: cd ./otelcollector/deploy/chart/ && helm upgrade prom-dev ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGE_HELM_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
+        run: cd ./otelcollector/deploy/chart/ && helm upgrade prom-dev ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
       - name: Tag-this-push
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.6
