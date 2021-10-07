@@ -44,7 +44,7 @@ jobs:
         run: echo "IMAGE_TAG=${IMAGE_TAG_NAME}-${HELM_CHART_VERSION}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-image-full-tag
         run: echo "IMAGE_FULL_TAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG}" >> $GITHUB_ENV
-       - name: Set-HELM-chart-semver
+      - name: Set-HELM-chart-semver
         run: echo "HELM_SEMVER=${HELM_CHART_VERSION}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
