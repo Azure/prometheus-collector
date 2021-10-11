@@ -55,7 +55,7 @@ mode:
 
 image:
   repository: ${MCR_REGISTRY}${MCR_REPOSITORY}
-  tag: ${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}
+  tag: ${IMAGE_TAG}
   pullPolicy: IfNotPresent
 
 resources:

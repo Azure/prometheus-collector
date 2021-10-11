@@ -8,6 +8,7 @@ on:
     types: [opened, synchronize, reopened]
     branches:
       - main
+      - vishwa/helm37
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
@@ -24,31 +25,33 @@ jobs:
         run: echo "ENV=dev" >> $GITHUB_ENV
       - name: Set-ACR-Registry
         run: echo "ACR_REGISTRY=containerinsightsprod.azurecr.io" >> $GITHUB_ENV
-      - name: Set-ACR-Repository
-        run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
+      - name: Set-ACR-Repository-Image
+        run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev/prometheus-collector" >> $GITHUB_ENV
+      - name: Set-ACR-Repository-HELM-Chart
+        run: echo "ACR_REPOSITORY_HELM=/public/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
       - name: Set-MCR-Registry
         run: echo "MCR_REGISTRY=mcr.microsoft.com" >> $GITHUB_ENV
       - name: Set-MCR-Repository
-        run: echo "MCR_REPOSITORY=/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
-      - name: Set-image-tag-name
-        run: echo "IMAGE_TAG_NAME=prometheus-collector" >> $GITHUB_ENV
+        run: echo "MCR_REPOSITORY=/azuremonitor/containerinsights/cidev/prometheus-collector" >> $GITHUB_ENV
       - name: Set-image-tag-date
         run: echo "IMAGE_TAG_DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
       - name: Checkout-code
         uses: actions/checkout@v2
+      - name: Set-HELM-Chart-name
+        run: echo "HELM_CHART_NAME=prometheus-collector" >> $GITHUB_ENV
       - name: Set-Helm-chart-version
         run: version=$(cat ./otelcollector/VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
-      - name: Set-image-tag
-        run: echo "IMAGE_TAG=${IMAGE_TAG_NAME}-${HELM_CHART_VERSION}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
-      - name: Set-image-full-tag
-        run: echo "IMAGE_FULL_TAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG}" >> $GITHUB_ENV
       - name: Set-HELM-chart-semver
         run: echo "HELM_SEMVER=${HELM_CHART_VERSION}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+      - name: Set-image-tag
+        run: echo "IMAGE_TAG=${HELM_SEMVER}" >> $GITHUB_ENV
+      - name: Set-image-full-tag
+        run: echo "IMAGE_FULL_TAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG}" >> $GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
-      - name: Set-Helm-chart-versioning
+      - name: Set-Helm-chart-version-in-template
         run: envsubst < ./otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < ./otelcollector/deploy/chart/prometheus-collector/values-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/values.yaml
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version && helm version && docker version
@@ -107,7 +110,7 @@ jobs:
         run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
       - name: Publish-Helm-chart-to-ACR
         if: github.event_name != 'pull_request'
-        run: cd ./otelcollector/deploy/chart/ && helm push ${{ env.IMAGE_TAG_NAME }}-${{ env.HELM_SEMVER }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY }}
+        run: cd ./otelcollector/deploy/chart/ && helm push ${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY_HELM }}
       - name: Login-to-Azure-Key-Vault
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         uses: Azure/login@v1
@@ -139,7 +142,7 @@ jobs:
           exit 1
       - name: Deploy-to-cluster
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
-        run: cd ./otelcollector/deploy/chart/ && helm upgrade prom-dev ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
+        run: helm upgrade prom-dev oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} --reuse-values --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
       - name: Tag-this-push
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.6
