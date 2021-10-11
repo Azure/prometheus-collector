@@ -26,13 +26,13 @@ jobs:
       - name: Set-ACR-Registry
         run: echo "ACR_REGISTRY=containerinsightsprod.azurecr.io" >> $GITHUB_ENV
       - name: Set-ACR-Repository-Image
-        run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev/prometheus-collector" >> $GITHUB_ENV
+        run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $GITHUB_ENV
       - name: Set-ACR-Repository-HELM-Chart
         run: echo "ACR_REPOSITORY_HELM=/public/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
       - name: Set-MCR-Registry
         run: echo "MCR_REGISTRY=mcr.microsoft.com" >> $GITHUB_ENV
       - name: Set-MCR-Repository
-        run: echo "MCR_REPOSITORY=/azuremonitor/containerinsights/cidev/prometheus-collector" >> $GITHUB_ENV
+        run: echo "MCR_REPOSITORY=/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $GITHUB_ENV
       - name: Set-image-tag-date
         run: echo "IMAGE_TAG_DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Set-commit-sha
