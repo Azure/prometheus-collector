@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       helmChartTag:
-        description: 'HELM chart SemVer (semantic version) to deploy to prod cluster in the format of 0.0.5-main-10-11-2021-4a8de406'
+        description: 'HELM chart SemVer (semantic version) to deploy to prod cluster in the format of 0.0.6-main-09-12-2021-4a8de406'
         required: true
 jobs:
   deploy-to-prod-cluster:
