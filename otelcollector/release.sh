@@ -9,6 +9,7 @@ fi
 if [ ${#commit_id} -lt 8 ]
 then
   echo "commit_id is less than 8 characters. Re-run with longer commit id."
+  exit
 fi
 
 if [ ${#commit_id} -gt 8 ]
@@ -19,7 +20,7 @@ fi
 
 version=$(cat ./VERSION)
 date=$(TZ=America/Los_Angeles date +%m-%d-%Y)
-
+#0.0.5-main-10-11-2021-4a8de406 prometheus-collector-chart-main-0.0.5-09-25-2021-e1c22c83
 image_regex="prometheus-collector-main-[a-zA-Z0-9.-]\+"
 image_replacement="prometheus-collector-main-$version-$date-$commit_id"
 echo "Replacing the image tag with:      $image_replacement"

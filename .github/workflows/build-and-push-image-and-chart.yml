@@ -33,6 +33,8 @@ jobs:
         run: echo "MCR_REGISTRY=mcr.microsoft.com" >> $GITHUB_ENV
       - name: Set-MCR-Repository
         run: echo "MCR_REPOSITORY=/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $GITHUB_ENV
+      - name: Set-MCR-HELM-CHART-Repository
+        run: echo "MCR_REPOSITORY_HELM=/azuremonitor/containerinsights/cidev/prometheus-collector" >> $GITHUB_ENV
       - name: Set-image-tag-date
         run: echo "IMAGE_TAG_DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Set-commit-sha
@@ -132,7 +134,7 @@ jobs:
           for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 30
-            if docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGE_TAG}
+            if docker manifest inspect {MCR_REGISTRY}{MCR_REPOSITORY}:${IMAGE_TAG}
             then
               echo "Image published to mcr"
               exit 0
@@ -142,14 +144,14 @@ jobs:
           exit 1
       - name: Deploy-to-cluster
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
-        run: helm upgrade prom-dev oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} --reuse-values --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
+        run: helm pull oci://${{ env.MCR_REGISTRY }}${{ MCR_REPOSITORY_HELM }} --version {{ env.HELM_SEMVER }} && helm upgrade prom-dev ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --version ${{ env.HELM_SEMVER }} --reuse-values --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
       - name: Tag-this-push
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.6
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ env.HELM_CHART_VERSION }}-${{ env.IMAGE_TAG_DATE }}-${{ env.COMMIT_SHA }}
+          custom_tag: ${{ env.HELM_SEMVER }}
       #- name: Tag-this-push
       #  uses: actions-ecosystem/action-push-tag@v1
       #  if: github.event_name != 'pull_request'

@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       helmChartTag:
-        description: 'Version tag to deploy to prod cluster in the format of 0.0.1-07-29-2021-34a65d59'
+        description: 'HELM chart SemVer (semantic version) to deploy to prod cluster in the format of 0.0.5-main-10-11-2021-4a8de406'
         required: true
 jobs:
   deploy-to-prod-cluster:
@@ -11,21 +11,14 @@ jobs:
     steps:
       - name: Set-workflow-initiator
         run: echo "Initiated by - ${GITHUB_ACTOR}"
-      - name: Install-specific-HELM-version
-        uses: azure/setup-helm@v1
-        with:
-          version: '3.6.3'
-        id: install
       - name: Show-versions-On-deployment-machine
         run: lsb_release -a && helm version
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
-      - name: Pull-from-mcr
-        run: helm chart pull mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-${{ github.event.inputs.helmChartTag }}
-      - name: Export-chart-locally
-        run: helm chart export mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-${{ github.event.inputs.helmChartTag }} .
-      - name: Get-dependency-updates
-        run: helm dependency update ./prometheus-collector
+      - name: Set-MCR-Repository
+        run: echo "MCR_REPOSITORY=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $GITHUB_ENV
+      - name: Set-MCR-HELM-CHART-Repository
+        run: echo "MCR_REPOSITORY_HELM=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector" >> $GITHUB_ENV 
       - name: Login-to-Azure-Key-Vault
         uses: Azure/login@v1
         with:
@@ -38,5 +31,5 @@ jobs:
         id: GetKubeConfig
       - name: Get-kube-config
         run: mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ci-prod-aks-eus-kubeconfig }}" > ~/.kube/config
-      - name: Deploy-to-cluster
-        run: helm upgrade prom-prod ./prometheus-collector --reuse-values --set image.tag=prometheus-collector-main-${{ github.event.inputs.helmChartTag }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
+      - name: Pull-HELM-chart-and-Deploy-to-cluster
+        run: helm pull oci://{{ MCR_REPOSITORY_HELM }} --version {{ github.event.inputs.helmChartTag }} && helm upgrade prom-prod ./prometheus-collector-${{ github.event.inputs.helmChartTag }}.tgz --reuse-values --dependency-update --set image.repository=${{ env.MCR_REPOSITORY }} --set image.tag=${{ github.event.inputs.helmChartTag }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
