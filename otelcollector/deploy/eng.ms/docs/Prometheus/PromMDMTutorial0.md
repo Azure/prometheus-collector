@@ -25,9 +25,9 @@ Please ensure you have the following set up before continuing with this tutorial
 
 * Kubernetes: `>=1.16.0-0`  
 * [Kubectl client tool](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/)  
-* [HELM client tool(v3 or later - see below note)](https://helm.sh/docs/intro/install/)  
+* [HELM client tool(v3.7.0 or later - see below note)](https://helm.sh/docs/intro/install/)  
 
-    ```Note: There seems to have been breaking changes since HELM version >= 3.7.0 for OCI charts specifically, so please avoid HELM versions >= 3.7.0 until we fix and update this documentation.```  
+    ```Note: Our charts will not work on HELM clients < 3.7.0```  
  
 * Access to a dogfood subscription of Azure Grafana Service. If you do not yet have one, [please request one via](mailto:ad4g@microsoft.com)  
 * Permission to set up data sources and dashboards in Azure Grafana. To do this [join the Azure Dashboard for Grafana Dogfood (Admin) group](https://idweb/identitymanagement/aspx/groups/MyGroups.aspx?popupFromClipboard=%2Fidentitymanagement%2Faspx%2FGroups%2FEditGroup.aspx%3Fid%3Daa23b20a-f5ef-485d-94bd-468bbf2346fb) via IDWeb.

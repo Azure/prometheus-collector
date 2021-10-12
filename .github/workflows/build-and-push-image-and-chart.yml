@@ -3,12 +3,10 @@ on:
   push:
     branches:
       - main
-      - vishwa/helm37
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
       - main
-      - vishwa/helm37
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
