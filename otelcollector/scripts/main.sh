@@ -108,10 +108,40 @@ if [ -e "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var" 
       source ~/.bashrc
 fi
 
-if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
+# if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
+#       # promconfigvalidator validates by generating an otel config and running through receiver's config load and validate method
+#       /opt/promconfigvalidator --config "/etc/config/settings/prometheus/prometheus-config" --output "/opt/promCollectorConfig.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+#       if [ $? -ne 0 ] || [ ! -e "/opt/promCollectorConfig.yml" ]; then
+#             # Use default config if specified config is invalid
+#             echo "Prometheus custom config validation failed, using defaults"
+#             echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+#             # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
+#             echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+#             export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
+#             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
+#       fi
+# else
+#       echo "No Config map mounted for prometheus custom config, using defaults"
+#       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+#       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
+# fi 
+
+# # Get prometheus config or default scrape_config settings and replace in otelcollector config
+# # Only run if there is valid custom config or some default settings are enabled
+# if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" != "true" ] || [ "$AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED" != "true" ]; then
+#   ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
+#   cat /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var | while read line; do
+#       echo $line >> ~/.bashrc
+#   done
+#   source /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var
+# fi
+
+ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
+
+if [ -e "/opt/promMergedConfig.yml" ]; then
       # promconfigvalidator validates by generating an otel config and running through receiver's config load and validate method
-      /opt/promconfigvalidator --config "/etc/config/settings/prometheus/prometheus-config" --output "/opt/promCollectorConfig.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
-      if [ $? -ne 0 ] || [ ! -e "/opt/promCollectorConfig.yml" ]; then
+      /opt/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+      if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
             # Use default config if specified config is invalid
             echo "Prometheus custom config validation failed, using defaults"
             echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
@@ -120,21 +150,21 @@ if [ -e "/etc/config/settings/prometheus/prometheus-config" ]; then
             export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
       fi
-else
-      echo "No Config map mounted for prometheus custom config, using defaults"
+else 
+      echo "Merged prometheus config file not found, using defaults"
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi 
 
 # Get prometheus config or default scrape_config settings and replace in otelcollector config
 # Only run if there is valid custom config or some default settings are enabled
-if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" != "true" ] || [ "$AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED" != "true" ]; then
-  ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
-  cat /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var | while read line; do
-      echo $line >> ~/.bashrc
-  done
-  source /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var
-fi
+# if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" != "true" ] || [ "$AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED" != "true" ]; then
+#   ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
+#   cat /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var | while read line; do
+#       echo $line >> ~/.bashrc
+#   done
+#   source /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var
+# fi
 
 source ~/.bashrc
 

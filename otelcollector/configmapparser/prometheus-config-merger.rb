@@ -9,6 +9,8 @@ require_relative "ConfigParseErrorLogger"
 @configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
 @collectorConfigTemplatePath = "/opt/microsoft/otelcollector/collector-config-template.yml"
 @collectorConfigPath = "/opt/microsoft/otelcollector/collector-config.yml"
+@collectorConfigWithDefaultPromConfigs = "/opt/microsoft/otelcollector/collector-config-default.yml"
+@promMergedConfigPath = "/opt/promMergedConfig.yml"
 @otelCustomPromConfigPath = "/opt/promCollectorConfig.yml"
 @configVersion = ""
 @configSchemaVersion = ""
@@ -36,6 +38,25 @@ require_relative "ConfigParseErrorLogger"
 @prometheusCollectorHealthDefaultFile = @defaultPromConfigPathPrefix + "prometheusCollectorHealth.yml"
 @windowsexporterDefaultFile = @defaultPromConfigPathPrefix + "windowsexporterDefault.yml"
 @windowskubeproxyDefaultFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefault.yml"
+
+def parseConfigMap
+  begin
+    # Check to see if config map is created
+    puts "config::configmap prometheus-collector-configmap for prometheus-config file: #{@configMapMountPath}"
+    if (File.file?(@configMapMountPath))
+      puts "prometheus-config-merger::configmap prometheus-collector-configmap for prometheus config mounted, parsing values"
+      config = File.read(@configMapMountPath)
+      puts "prometheus-config-merger::Successfully parsed mounted config map"
+      return config
+    else
+      puts "prometheus-config-merger::configmap prometheus-collector-configmap for prometheus config not mounted, using defaults"
+      return ""
+    end
+  rescue => errorStr
+    ConfigParseErrorLogger.logError("Exception while parsing config map for prometheus config : #{errorStr}, using defaults, please check config map for errors")
+    return ""
+  end
+end
 
 # Get the list of default configs to be included in the otel's prometheus config
 def populateDefaultPrometheusConfig
@@ -127,7 +148,7 @@ def populateDefaultPrometheusConfig
         end
       end
     end
-    
+
     # Collector health config should be enabled or disabled for both replicaset and daemonset
     if !ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].downcase == "true"
       defaultConfigs.push(@prometheusCollectorHealthDefaultFile)
@@ -166,66 +187,102 @@ def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
   return mergedDefaultConfigs
 end
 
-puts "****************Start Merging Default and Custom Prometheus Config If Valid********************"
-populateDefaultPrometheusConfig
-@configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
-
-if (ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true")
-  if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
-    puts "prometheus-config-merger::Supported config schema version found - will be merging custom prometheus config"
-  else
-    if (File.file?(@configMapMountPath))
-      @supportedSchemaVersion = false
-      ConfigParseErrorLogger.logError("prometheus-config-merger::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
+def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
+  puts "prometheus-config-merger::Merging default and custom scrape configs..."
+  mergedConfigs = ""
+  begin
+    if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
+      mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPromConfig)
+    else
+      mergedConfigs = customPromConfig
     end
+    puts "prometheus-config-merger::Done merging default scrape config(s) with custom prometheus config(s), writing them to file"
+    File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigs }
+  rescue => errorStr
+    ConfigParseErrorLogger.logError("prometheus-config-merger::Exception while merging default and custom scrape configs- #{errorStr}, using defaults")
   end
 end
 
+puts "****************Start Merging Default and Custom Prometheus Config If Valid********************"
+
+# Populate default scrape config(s) and write them as a collector config file, in case the custom config validation fails
+# and we need to fall back to defaults
 begin
-  # If prometheus custom config is valid, then merge default configs with this and use it as config for otelcollector
-  if (ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true" && !!@supportedSchemaVersion)
-    otelCustomConfig = File.read(@otelCustomPromConfigPath)
-    if !otelCustomConfig.empty? && !otelCustomConfig.nil?
-      if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
-        puts "prometheus-config-merger::Starting to merge default prometheus config values in collector.yml with custom prometheus config"
-        collectorConfig = YAML.load(otelCustomConfig)
-        promConfig = collectorConfig["receivers"]["prometheus"]["config"] #["scrape_configs"]
-        mergedPromConfig = @mergedDefaultConfigs.deep_merge!(promConfig)
-        # Doing this instead of gsub because gsub causes ruby's string interpreter to strip escape characters from regex
-        collectorConfig["receivers"]["prometheus"]["config"] = mergedPromConfig
-        collectorNewConfig = YAML::dump(collectorConfig)
-      else
-        # If default merged config is empty, then use the prometheus custom config alone
-        puts "prometheus-config-merger::merged default configs is empty, so ignoring them"
-        collectorNewConfig = otelCustomConfig
-      end
-      File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
-      @useDefaultConfig = false
-    end
-  else
-    # If prometheus custom config is invalid or not applied as configmap
-    puts "prometheus-config-merger::Starting to merge default prometheus config values in collector template"
+  populateDefaultPrometheusConfig
+  if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
+    # @mergedDefaultConfigs = YAML.load("scrape_configs:")
+    puts "prometheus-config-merger::Starting to merge default prometheus config values in collector template as backup"
     collectorTemplate = YAML.load(File.read(@collectorConfigTemplatePath))
-    if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
-      collectorTemplate["receivers"]["prometheus"]["config"] = @mergedDefaultConfigs
-      collectorNewConfig = YAML::dump(collectorTemplate)
-      File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
-      @useDefaultConfig = false
-    end
+    collectorTemplate["receivers"]["prometheus"]["config"] = @mergedDefaultConfigs
+    collectorNewConfig = YAML::dump(collectorTemplate)
+    File.open(@collectorConfigWithDefaultPromConfigs, "w") { |file| file.puts collectorNewConfig }
   end
 rescue => errorStr
-  ConfigParseErrorLogger.logError("prometheus-config-merger::Exception while merging otel custom prometheus config and default config - #{errorStr}")
+  ConfigParseErrorLogger.logError("prometheus-config-merger::Error while populating defaults and writing them to the defaults file")
 end
+
+@configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
+
+# if (ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true")
+if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
+  puts "prometheus-config-merger::Supported config schema version found - will be merging custom prometheus config"
+  prometheusConfigString = parseConfigMap
+  if !prometheusConfigString.nil? && !prometheusConfigString.empty?
+    mergeDefaultAndCustomScrapeConfigs(prometheusConfigString)
+  end
+else
+  if (File.file?(@configMapMountPath))
+    @supportedSchemaVersion = false
+    ConfigParseErrorLogger.logError("prometheus-config-merger::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
+  end
+end
+# end
+
+# begin
+#   # If prometheus custom config is valid, then merge default configs with this and use it as config for otelcollector
+#   if (ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true" && !!@supportedSchemaVersion)
+#     otelCustomConfig = File.read(@otelCustomPromConfigPath)
+#     if !otelCustomConfig.empty? && !otelCustomConfig.nil?
+#       if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
+#         puts "prometheus-config-merger::Starting to merge default prometheus config values in collector.yml with custom prometheus config"
+#         collectorConfig = YAML.load(otelCustomConfig)
+#         promConfig = collectorConfig["receivers"]["prometheus"]["config"] #["scrape_configs"]
+#         mergedPromConfig = @mergedDefaultConfigs.deep_merge!(promConfig)
+#         # Doing this instead of gsub because gsub causes ruby's string interpreter to strip escape characters from regex
+#         collectorConfig["receivers"]["prometheus"]["config"] = mergedPromConfig
+#         collectorNewConfig = YAML::dump(collectorConfig)
+#       else
+#         # If default merged config is empty, then use the prometheus custom config alone
+#         puts "prometheus-config-merger::merged default configs is empty, so ignoring them"
+#         collectorNewConfig = otelCustomConfig
+#       end
+#       File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
+#       @useDefaultConfig = false
+#     end
+#   else
+#     # If prometheus custom config is invalid or not applied as configmap
+#     puts "prometheus-config-merger::Starting to merge default prometheus config values in collector template"
+#     collectorTemplate = YAML.load(File.read(@collectorConfigTemplatePath))
+#     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
+#       collectorTemplate["receivers"]["prometheus"]["config"] = @mergedDefaultConfigs
+#       collectorNewConfig = YAML::dump(collectorTemplate)
+#       File.open(@collectorConfigPath, "w") { |file| file.puts collectorNewConfig }
+#       @useDefaultConfig = false
+#     end
+#   end
+# rescue => errorStr
+#   ConfigParseErrorLogger.logError("prometheus-config-merger::Exception while merging otel custom prometheus config and default config - #{errorStr}")
+# end
 
 # Write the settings to file, so that they can be set as environment variables
-file = File.open("/opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var", "w")
+# file = File.open("/opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var", "w")
 
-if !file.nil?
-  file.write("export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=#{@useDefaultConfig}\n")
-  # Close file after writing all metric collection setting environment variables
-  file.close
-  puts "****************Done Merging Default and Valid Custom Prometheus Config********************"
-else
-  puts "Exception while opening file for writing prometheus config environment variables"
-  puts "****************Done Merging Default and Valid Custom Prometheus Config********************"
-end
+# if !file.nil?
+#   file.write("export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=#{@useDefaultConfig}\n")
+#   # Close file after writing all metric collection setting environment variables
+#   file.close
+#   puts "****************Done Merging Default and Valid Custom Prometheus Config********************"
+# else
+#   puts "Exception while opening file for writing prometheus config environment variables"
+#   puts "****************Done Merging Default and Valid Custom Prometheus Config********************"
+# end
