@@ -151,7 +151,7 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
       fi
 else 
-      echo "Merged prometheus config file not found, using defaults"
+      echo "Merged prometheus config file with default and custom config not found, using defaults"
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi 

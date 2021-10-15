@@ -42,7 +42,7 @@ require_relative "ConfigParseErrorLogger"
 def parseConfigMap
   begin
     # Check to see if config map is created
-    puts "config::configmap prometheus-collector-configmap for prometheus-config file: #{@configMapMountPath}"
+    puts "prometheus-config-merger::Checking to see if prometheus-config file exists: #{@configMapMountPath}"
     if (File.file?(@configMapMountPath))
       puts "prometheus-config-merger::configmap prometheus-collector-configmap for prometheus config mounted, parsing values"
       config = File.read(@configMapMountPath)
@@ -203,9 +203,9 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
   end
 end
 
-puts "****************Start Merging Default and Custom Prometheus Config If Valid********************"
+puts "****************Start Merging Default and Custom Prometheus Config********************"
 
-# Populate default scrape config(s) and write them as a collector config file, in case the custom config validation fails
+# Populate default scrape config(s) and write them as a collector config file, in case the custom config validation fails,
 # and we need to fall back to defaults
 begin
   populateDefaultPrometheusConfig
@@ -225,7 +225,7 @@ end
 
 # if (ENV["AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"] != "true")
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
-  puts "prometheus-config-merger::Supported config schema version found - will be merging custom prometheus config"
+  puts "prometheus-config-merger::Supported config schema version found - will be parsing custom prometheus config"
   prometheusConfigString = parseConfigMap
   if !prometheusConfigString.nil? && !prometheusConfigString.empty?
     mergeDefaultAndCustomScrapeConfigs(prometheusConfigString)
@@ -236,6 +236,8 @@ else
     ConfigParseErrorLogger.logError("prometheus-config-merger::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
   end
 end
+
+puts "****************Done Merging Default and Valid Custom Prometheus Config********************"
 # end
 
 # begin
