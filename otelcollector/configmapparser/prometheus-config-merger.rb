@@ -192,8 +192,11 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
   mergedConfigs = ""
   begin
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
-      mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPromConfig)
+      puts "in if"
+      customPrometheusConfig = YAML.load(customPromConfig)
+      mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
     else
+      puts "in else"
       mergedConfigs = customPromConfig
     end
     puts "prometheus-config-merger::Done merging default scrape config(s) with custom prometheus config(s), writing them to file"
@@ -237,7 +240,7 @@ else
   end
 end
 
-puts "****************Done Merging Default and Valid Custom Prometheus Config********************"
+puts "****************Done Merging Default and Custom Prometheus Config********************"
 # end
 
 # begin
