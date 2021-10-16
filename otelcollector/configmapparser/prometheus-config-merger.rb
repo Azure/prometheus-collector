@@ -182,17 +182,18 @@ def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
 end
 
 def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
-  puts "prometheus-config-merger::Merging default and custom scrape configs..."
   mergedConfigYaml = ""
   begin
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
+      puts "prometheus-config-merger::Merging default and custom scrape configs..."
       customPrometheusConfig = YAML.load(customPromConfig)
       mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
       mergedConfigYaml = YAML::dump(mergedConfigs)
+      puts "prometheus-config-merger::Done merging default scrape config(s) with custom prometheus config(s), writing them to file"
     else
+      puts "prometheus-config-merger::Merged default scrape config nil or empty, using custom scrape configs to write to file..."
       mergedConfigYaml = customPromConfig
     end
-    puts "prometheus-config-merger::Done merging default scrape config(s) with custom prometheus config(s), writing them to file"
     File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigYaml }
   rescue => errorStr
     ConfigParseErrorLogger.logError("prometheus-config-merger::Exception while merging default and custom scrape configs- #{errorStr}, using defaults")
