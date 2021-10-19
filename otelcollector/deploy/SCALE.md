@@ -43,12 +43,12 @@
 * Deploy the HELM chart a second time with a different chart release name, advanced mode not enabled, and all default scrape targets disabled. The default scrape targets need to be disabled or else node-exporter and kube-state-metrics will be installed again and all the default metrics will be sent from both instances. Additional custom scrape targets should be in the configmap `<chart release name 2>-prometheus-config`.
 * For example, if the first helm chart install command was:
   ```
-  helm upgrade --install <chart_release_name_1> ./prometheus-collector --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --set mode.advanced=true
+  helm upgrade --install <chart_release_name_1> <chart>.tgz --version <chart_semver> --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --set mode.advanced=true
   --namespace=<my_prom_collector_namespace> --create-namespace
   ```
   Then the second should be similar to:
   ```
-  helm upgrade --install <chart_release_name_2> ./prometheus-collector --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --set scrapeTargets.coreDns=false --set scrapeTargets.kubelet=false --set scrapeTargets.cAdvisor=false -- set scrapeTargets.kubeProxy=false --set scrapeTargets.apiServer=false --set scrapeTargets.kubeState=false --set scrapeTargets.nodeExporter=false --namespace=<my_prom_collector_namespace> --create-namespace
+  helm upgrade --install <chart_release_name_2> <chart.tgz> --version <chart_semver> --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --set scrapeTargets.coreDns=false --set scrapeTargets.kubelet=false --set scrapeTargets.cAdvisor=false -- set scrapeTargets.kubeProxy=false --set scrapeTargets.apiServer=false --set scrapeTargets.kubeState=false --set scrapeTargets.nodeExporter=false --namespace=<my_prom_collector_namespace> --create-namespace
   ```
 
 ## Setting Custom CPU and Memory Limits
