@@ -16,6 +16,7 @@
   ```
   kubectl create configmap <prometheus collector chart release name>-prometheus-config-node --from-file=prometheus-config -n <same namespace as prometheus collector namespace>
   ```
+**<em>Note that the file name has to be prometheus-config for the --from-file parameter since we rely on the data in the configmap to be prometheus-config</em>**
 
 ## Scraping with Multiple Prometheus-Collector Instances
 * Even with off-loading some jobs to a daemonset using advanced mode, there still may be an extremely high load of metrics being scraped from the replicaset. This requires multiple deployments of the prometheus-collector and multiple corresponding custom scrape configs in configmaps, with different jobs split up between configmaps.
