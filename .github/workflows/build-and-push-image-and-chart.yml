@@ -142,7 +142,7 @@ jobs:
           exit 1
       - name: Deploy-to-cluster
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
-        run: helm pull oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }} --version {{ env.HELM_SEMVER }} && helm upgrade prom-dev ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --version ${{ env.HELM_SEMVER }} --reuse-values --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
+        run: helm pull oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} && helm upgrade prom-dev ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --reuse-values --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true -n monitoring
       - name: Tag-this-push
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.6
