@@ -32,7 +32,3 @@ dependencies:
   version: "1.18.*"
   repository: https://prometheus-community.github.io/helm-charts
   condition: scrapeTargets.nodeExporter
-
-  
-
-

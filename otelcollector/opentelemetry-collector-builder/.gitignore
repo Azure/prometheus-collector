@@ -5,8 +5,7 @@
 *.so
 *.dylib
 *.tgz
-#otelcollector
-promconfigvalidator
+otelcollector
 
 # Test binary, built with `go test -c`
 *.test
