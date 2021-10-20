@@ -16,10 +16,14 @@ package prometheusreceiver
 
 import (
 	"context"
+	"os"
 	"time"
+	"net/url"
 
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
+	"github.com/prometheus/common/version"
+	"github.com/prometheus/prometheus/web"
 	"go.uber.org/zap"
 
 	"go.opentelemetry.io/collector/component"
@@ -27,9 +31,17 @@ import (
 	"go.opentelemetry.io/collector/obsreport"
 	//"go.opentelemetry.io/collector/receiver/prometheusreceiver/internal"
 	"github.com/gracewehner/prometheusreceiver/internal"
+	"github.com/go-kit/log"
 )
 
-const transport = "http"
+const (
+	transport = "http"
+
+	// Use same settings as Prometheus web server
+	maxConnections = 512
+	readTimeoutMinutes = 10
+)
+
 
 // pReceiver is the type that provides Prometheus scraper/receiver functionality.
 type pReceiver struct {
@@ -101,6 +113,51 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 			host.ReportFatalError(err)
 		}
 	}()
+
+	// Setup settings and logger and create Prometheus web handler
+	webOptions := web.Options{
+		ScrapeManager: scrapeManager,
+		Context: discoveryCtx,
+		ListenAddress: ":9090",
+		ExternalURL: &url.URL{
+			Scheme: "http",
+			Host:   "localhost:9090",
+			Path:   "",
+		},
+		RoutePrefix:    "/",
+		ReadTimeout: time.Minute * readTimeoutMinutes,
+		PageTitle: "Prometheus Receiver",
+		Version: &web.PrometheusVersion{
+			Version:   version.Version,
+			Revision:  version.Revision,
+			Branch:    version.Branch,
+			BuildUser: version.BuildUser,
+			BuildDate: version.BuildDate,
+			GoVersion: version.GoVersion,
+		},
+		MaxConnections: maxConnections,
+	}
+	go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+	webHandler := web.New(go_kit_logger, &webOptions)
+
+	listener, err := webHandler.Listener()
+	if err != nil {
+		return err
+	}
+
+	// Pass config and let the web handler know the config is ready.
+	// These are needed because Prometheus allows reloading the config without restarting.
+	webHandler.ApplyConfig(r.cfg.PrometheusConfig)
+	webHandler.Ready()
+
+	// Uses the same context as the discovery and scrape managers for shutting down
+	go func() {
+		if err := webHandler.Run(discoveryCtx, listener, ""); err != nil {
+			r.logger.Error("Web handler failed", zap.Error(err))
+			host.ReportFatalError(err)
+		}
+	}()
+
 	return nil
 }
 

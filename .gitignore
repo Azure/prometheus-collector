@@ -4,6 +4,8 @@
 *.dll
 *.so
 *.dylib
+otelcollector
+promconfigvalidator
 
 # Test binary, built with `go test -c`
 *.test

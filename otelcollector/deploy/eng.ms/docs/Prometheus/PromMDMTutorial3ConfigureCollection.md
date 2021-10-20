@@ -40,6 +40,20 @@ kubectl create configmap my-collector-dev-release-prometheus-config --from-file=
 > [!Note]
 > The release name 'my-collector-dev-release-' is used as prefix to the configmap name below, and also config map should be created in the same namespace (ex;- prom-collector in this example) into which prometheus-collector chart was installed.
 
+## Troubleshoot scrape configuration and targets with the Prometheus Web UI
+
+You can access certain Prometheus Web UI pages to view information about configuration, targets, and service discovery by port-forwarding:
+
+```shell
+kubectl port-forward <prometheus-collector pod name> -n <prometheus-collector namespace> 9090:9090
+```
+
+After running the above command, you can go to `127.0.0.1:9090/config` in your browser. This will have information about the full Prometheus config given with the default targets included, the service discovery, and the targets and their labels before and after re-labeling.
+
+This is meant to aid authoring custom scrape configs and troubleshooting the service discovery and target relabeling specified in the custom configs. For clusters where kubectl access is unavailable, the `up` metric can be queried in Grafana to see which targets are being scraped.
+
+Note that the `cluster` label will not be present since this is added as label later in the pipeline.
+
 --------------------------------------
 
 In this step you configured what metrics should be collected from your Kubernetes cluster, and the metric account(s) they will be stored in.  
