@@ -15,22 +15,22 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: ${HELM_SEMVER}
+version: ${HELM_CHART_VERSION}
 
-# This is the version number of the application being deployed (basically, imagetag for the image built/compatible with this chart semver above). This version number should be
+# This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "${IMAGE_TAG}"
+appVersion: "${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}"
 kubeVersion: ">=1.16.0-0"
 dependencies:
 - name: kube-state-metrics
-  version: "3.5.2"
-  repository: oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }}
+  version: "3.1.*"
+  repository: https://prometheus-community.github.io/helm-charts
   condition: scrapeTargets.kubeState
 - name: prometheus-node-exporter
-  version: "2.2.0"
-  repository: oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }}
+  version: "1.18.*"
+  repository: https://prometheus-community.github.io/helm-charts
   condition: scrapeTargets.nodeExporter
 
   
