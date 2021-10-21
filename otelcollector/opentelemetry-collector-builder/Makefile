@@ -1,5 +1,3 @@
-BASE_DIR := $(subst /build/linux,,$(PWD))
-
 all: otelcollector fluentbitplugin promconfigvalidator
 
 .PHONY: otelcollector
