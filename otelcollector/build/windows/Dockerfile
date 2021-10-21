@@ -11,14 +11,14 @@ COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/main.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/livenessprobe.cmd $tmpdir/scripts/
 
-COPY ../../configmapparser/*.rb $tmpdir/configmapparser/
-COPY ../../opentelemetry-collector-builder/otelcollector.exe ../../opentelemetry-collector-builder/collector-config-default.yml ../../opentelemetry-collector-builder/collector-config-template.yml $tmpdir/otelcollector/
+COPY ./configmapparser/*.rb $tmpdir/configmapparser/
+COPY ./opentelemetry-collector-builder/otelcollector.exe ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/otelcollector/
 
-COPY ../../metricextension/me.config ../../metricextension/me_ds.config $tmpdir/metricextension/
-COPY ../../telegraf/telegraf-prometheus-collector.conf $tmpdir/telegraf/
-COPY ../../fluent-bit/fluent-bit.conf $tmpdir/fluent-bit/
-COPY ../../fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
-COPY ../../fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
+COPY ./metricextension/me.config ./metricextension/me_ds.config $tmpdir/metricextension/
+COPY ./telegraf/telegraf-prometheus-collector.conf $tmpdir/telegraf/
+COPY ./fluent-bit/fluent-bit.conf $tmpdir/fluent-bit/
+COPY ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
+COPY ./fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
 
 # Do not split this into multiple RUN!
 # Docker creates a layer for every RUN-Statement
