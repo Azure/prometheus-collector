@@ -33,6 +33,12 @@ require_relative "ConfigParseErrorLogger"
 @windowsexporterDefaultFile = @defaultPromConfigPathPrefix + "windowsexporterDefault.yml"
 @windowskubeproxyDefaultFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefault.yml"
 
+
+# if they run in advacned mode + windows + if its turned on (check environment variable) {kubelet is only one turned on by default}
+# kubeletDefaultDs, windowsexporterDefaultFile, windowskubeproxyDefaultFile
+# kubeproxyDefaultFile check if this works in windows, if its on by default in windows then just turn it on for us too.
+# cadvisorDefaultFileDs check if this works in windows, if its on by default in windows then just turn it on for us too.
+
 def parseConfigMap
   begin
     # Check to see if config map is created

@@ -7,9 +7,9 @@ ENV tmpdir /opt/microsoft/
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH "MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
 
-COPY ./scripts/setup.ps1 $tmpdir/scripts/
-COPY ./scripts/main.ps1 $tmpdir/scripts/
-COPY ./scripts/livenessprobe.cmd $tmpdir/scripts/
+COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
+COPY ./build/windows/scripts/main.ps1 $tmpdir/scripts/
+COPY ./build/windows/scripts/livenessprobe.cmd $tmpdir/scripts/
 
 COPY ../../configmapparser/*.rb $tmpdir/configmapparser/
 COPY ../../opentelemetry-collector-builder/otelcollector.exe ../../opentelemetry-collector-builder/collector-config-default.yml ../../opentelemetry-collector-builder/collector-config-template.yml $tmpdir/otelcollector/
