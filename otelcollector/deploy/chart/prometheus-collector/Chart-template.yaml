@@ -26,9 +26,9 @@ kubeVersion: ">=1.16.0-0"
 dependencies:
 - name: kube-state-metrics
   version: "3.5.2"
-  repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM}
+  repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
   condition: scrapeTargets.kubeState
 - name: prometheus-node-exporter
   version: "2.2.0"
-  repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM}
+  repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
   condition: scrapeTargets.nodeExporter

@@ -31,6 +31,8 @@ jobs:
         run: echo "MCR_REGISTRY=mcr.microsoft.com" >> $GITHUB_ENV
       - name: Set-MCR-Repository
         run: echo "MCR_REPOSITORY=/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $GITHUB_ENV
+      - name: Set-MCR-HELM-CHART-Repository-Dependent-Charts
+        run: echo "MCR_REPOSITORY_HELM_DEPENDENCIES=/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
       - name: Set-MCR-HELM-CHART-Repository
         run: echo "MCR_REPOSITORY_HELM=/azuremonitor/containerinsights/cidev/prometheus-collector" >> $GITHUB_ENV
       - name: Set-image-tag-date
