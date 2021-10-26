@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - vishwa/10262021
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
@@ -89,7 +90,7 @@ jobs:
           format: 'table'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
-          skip-dirs: 'opt/telegraf/telegraf,opt/microsoft/otelcollector/otelcollector'
+          skip-dirs: '/opt/telegraf,/opt/microsoft/otelcollector'
           exit-code: '1'
           timeout: '5m0s'
       - name: Update-HELM-dependencies
