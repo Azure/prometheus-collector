@@ -23,8 +23,12 @@ chmod 777 /usr/sbin/
 sudo apt-get update
 sudo apt-get install inotify-tools -y
 
+# Build essential package required to install re2 gem
+sudo apt install build-essential
+
 gem install tomlrb
 gem install deep_merge
+gem install re2
 
 #used to setcaps for ruby process to read /proc/env
 #echo "installing libcap2-bin"
