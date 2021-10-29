@@ -25,16 +25,16 @@ def parseConfigMap
     # Check to see if config map is created
     puts "config::configmap prometheus-collector-configmap for prometheus collector file: #{@configMapMountPath}"
     if (File.file?(@configMapMountPath))
-      puts "config::configmap prometheus-collector-configmap for default targets metric whitelist mounted, parsing values"
+      puts "config::configmap prometheus-collector-configmap for default-targets-metrics-keep-list mounted, parsing values"
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
       puts "config::Successfully parsed mounted config map"
       return parsedConfig
     else
-      puts "config::configmap prometheus-collector-configmap for default targets metric whitelist not mounted, using defaults"
+      puts "config::configmap prometheus-collector-configmap for default-targets-metrics-keep-list not mounted, using defaults"
       return nil
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while parsing config map for default targets metric whitelist: #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError("Exception while parsing config map for default-targets-metrics-keep-list: #{errorStr}, using defaults, please check config map for errors")
     return nil
   end
 end
@@ -165,7 +165,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
-puts "****************Start default-targets-metric-whitelist Processing********************"
+puts "****************Start default-targets-metrics-keep-list Processing********************"
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
   if !configMapSettings.nil?
@@ -192,8 +192,8 @@ if !file.nil?
   file.write("export AZMON_PROMETHEUS_WINDOWSKUBEPROXY_METRICS_KEEP_LIST=#{@windowskubeproxyRegex}\n")
   # Close file after writing all metric keep list setting environment variables
   file.close
-  puts "****************End default-targets-metric-whitelist Processing********************"
+  puts "****************End default-targets-metrics-keep-list Processing********************"
 else
-  puts "Exception while opening file for writing default-targets-metric-whitelist config environment variables"
-  puts "****************End default-targets-metric-whitelist Processing********************"
+  puts "Exception while opening file for writing default-targets-metrics-keep-list config environment variables"
+  puts "****************End default-targets-metrics-keep-list Processing********************"
 end
