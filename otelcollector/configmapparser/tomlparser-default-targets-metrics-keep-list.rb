@@ -181,15 +181,15 @@ end
 file = File.open("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_env_var", "w")
 
 if !file.nil?
-  file.write("export AZMON_PROMETHEUS_KUBELET_METRICS_KEEP_LIST=#{@kubeletRegex}\n")
-  file.write("export AZMON_PROMETHEUS_COREDNS_METRICS_KEEP_LIST=#{@corednsRegex}\n")
-  file.write("export AZMON_PROMETHEUS_CADVISOR_METRICS_KEEP_LIST=#{@cadvisorRegex}\n")
-  file.write("export AZMON_PROMETHEUS_KUBEPROXY_METRICS_KEEP_LIST=#{@kubeproxyRegex}\n")
-  file.write("export AZMON_PROMETHEUS_APISERVER_METRICS_KEEP_LIST=#{@apiserverRegex}\n")
-  file.write("export AZMON_PROMETHEUS_KUBESTATE_METRICS_KEEP_LIST=#{@kubestateRegex}\n")
-  file.write("export AZMON_PROMETHEUS_NODEEXPORTER_METRICS_KEEP_LIST=#{@nodeexporterRegex}\n")
-  file.write("export AZMON_PROMETHEUS_WINDOWSEXPORTER_METRICS_KEEP_LIST=#{@windowsexporterRegex}\n")
-  file.write("export AZMON_PROMETHEUS_WINDOWSKUBEPROXY_METRICS_KEEP_LIST=#{@windowskubeproxyRegex}\n")
+  file.write("export AZMON_PROMETHEUS_KUBELET_METRICS_KEEP_LIST_REGEX=#{@kubeletRegex}\n")
+  file.write("export AZMON_PROMETHEUS_COREDNS_METRICS_KEEP_LIST_REGEX=#{@corednsRegex}\n")
+  file.write("export AZMON_PROMETHEUS_CADVISOR_METRICS_KEEP_LIST_REGEX=#{@cadvisorRegex}\n")
+  file.write("export AZMON_PROMETHEUS_KUBEPROXY_METRICS_KEEP_LIST_REGEX=#{@kubeproxyRegex}\n")
+  file.write("export AZMON_PROMETHEUS_APISERVER_METRICS_KEEP_LIST_REGEX=#{@apiserverRegex}\n")
+  file.write("export AZMON_PROMETHEUS_KUBESTATE_METRICS_KEEP_LIST_REGEX=#{@kubestateRegex}\n")
+  file.write("export AZMON_PROMETHEUS_NODEEXPORTER_METRICS_KEEP_LIST_REGEX=#{@nodeexporterRegex}\n")
+  file.write("export AZMON_PROMETHEUS_WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX=#{@windowsexporterRegex}\n")
+  file.write("export AZMON_PROMETHEUS_WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX=#{@windowskubeproxyRegex}\n")
   # Close file after writing all metric keep list setting environment variables
   file.close
   puts "****************End default-targets-metrics-keep-list Processing********************"
