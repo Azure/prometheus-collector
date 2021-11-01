@@ -5,7 +5,8 @@
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:1.0.0-main-11-01-2021-e86fc50d`
 * image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:1.0.0-main-11-01-2021-e86fc50d`
 * Change Log -
-  * Support for HELM versions >= 3.7.0 , only works with helm versions >= 3.7.0
+  * Support for HELM versions >= 3.7.0 
+    * This is a breaking change, this chart and image versions only work with helm versions >= 3.7.0
   * Target UX to visualize the config, targets and service discovery  
   * Validate otel config after default and custom scrape configurations are merged
   * Move to MCR for dependent charts
