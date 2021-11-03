@@ -20,12 +20,11 @@ Here is a timeline, capabilities and expectations of the Limited private preview
 
 * Starting 5/24 : Teams will be on-boarded to Limited preview (5 teams across MS)
 * 5/24 – 7/15 : Get feedback, address any critical issues and prepare for production scale
-* 7/15 - 12/31 (Ni) : Starting July we will expand the preview to 10 customers, and open up to all Geneva customers for preview by end of Ni.
+* 7/15 - 12/31 (Ni) : Starting July we will iteratively open up to a wider set of 1P customers, leading to a full internal preview, and subsequently have customers move production workloads to the solution.
 
 And finally as we work through details of Ni planning, we will have more details to share on when these will light up:
 
-* Ability to alert on Prom metrics via Geneva alerting (current estimate - private preview end of Ni)
-* Ingest directly from Prom server via Remote write (current estimate - private preview end of Ni)
+* Ability to alert on Prom metrics via Geneva alerting
 * Ingest directly from Prom server via Remote write
 * Support for HOBO scenarios (AAD auth)
 * Prometheus operator support via CRD

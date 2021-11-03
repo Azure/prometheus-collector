@@ -17,8 +17,8 @@
 
 ## Release 09-25-2021 
 
-* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.5-09-25-2021-e1c22c8`
-* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-main-0.0.5-09-25-2021-e1c22c8`
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.5-09-25-2021-e1c22c83`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-main-0.0.5-09-25-2021-e1c22c83`
 * Change Log -
   * Add support for sending staleness markers (MDM store has this support added as well to co-ordinate with this release)
   * Configuration Parsing -
