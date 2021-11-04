@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - rashmi/def-targets
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
