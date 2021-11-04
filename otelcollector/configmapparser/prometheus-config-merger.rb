@@ -137,6 +137,7 @@ def populateDefaultPrometheusConfig
           contents = File.read(@nodeexporterDefaultFileDs)
           contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
           contents = contents.gsub("$$NODE_EXPORTER_TARGETPORT$$", ENV["NODE_EXPORTER_TARGETPORT"])
+          contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
           File.open(@nodeexporterDefaultFileDs, "w") { |file| file.puts contents }
           defaultConfigs.push(@nodeexporterDefaultFileDs)
         end
