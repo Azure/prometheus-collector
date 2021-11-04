@@ -24,6 +24,17 @@ scrapeTargets:
   # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   prometheusCollectorHealth: true
   
+# The following setting will allow only the metrics for each target whose names match the regex string
+keepListRegexes:
+  coreDns: ""
+  kubelet: ""
+  cAdvisor: ""
+  kubeProxy: ""
+  apiServer: ""
+  kubeState: ""
+  nodeExporter: ""
+  windowsExporter: ""
+  windowsKubeProxy: ""
 
 azureMetricAccount:
   # -- default metric account name to ingest metrics into. This will be the account used if metric itself does not have account 'hinting' label. The certificate for this account should be specified in one of the further arguments below here

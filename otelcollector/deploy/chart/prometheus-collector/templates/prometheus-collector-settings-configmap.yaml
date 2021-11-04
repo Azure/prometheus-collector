@@ -21,15 +21,15 @@ data:
     windowsexporter = {{ .Values.scrapeTargets.windowsExporter }}
     windowskubeproxy = {{ .Values.scrapeTargets.windowsKubeProxy }}
   default-targets-metrics-keep-list: |-
-    kubelet = {{ .Values.scrapeTargets.kubelet.keepListRegex }}
-    coredns = {{ .Values.scrapeTargets.coreDns.keepListRegex }}
-    cadvisor = {{ .Values.scrapeTargets.cAdvisor.keepListRegex }}
-    kubeproxy = {{ .Values.scrapeTargets.kubeProxy.keepListRegex }}
-    apiserver = {{ .Values.scrapeTargets.apiServer.keepListRegex }}
-    kubestate = {{ .Values.scrapeTargets.kubeState.keepListRegex }}
-    nodeexporter = {{ .Values.scrapeTargets.nodeExporter.keepListRegex }}
-    windowsexporter = {{ .Values.scrapeTargets.windowsExporter.keepListRegex }}
-    windowskubeproxy = {{ .Values.scrapeTargets.windowsKubeProxy.keepListRegex }}
+    kubelet = {{ .Values.keepListRegexes.kubelet }}
+    coredns = {{ .Values.keepListRegexes.coreDns }}
+    cadvisor = {{ .Values.keepListRegexes.cAdvisor }}
+    kubeproxy = {{ .Values.keepListRegexes.kubeProxy }}
+    apiserver = {{ .Values.keepListRegexes.apiServer }}
+    kubestate = {{ .Values.keepListRegexes.kubeState }}
+    nodeexporter = {{ .Values.keepListRegexes.nodeExporter }}
+    windowsexporter = {{ .Values.keepListRegexes.windowsExporter }}
+    windowskubeproxy = {{ .Values.keepListRegexes.windowsKubeProxy }}
 metadata:
   name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
   namespace: {{ .Release.Namespace }}
