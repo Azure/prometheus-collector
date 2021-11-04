@@ -21,6 +21,8 @@ var (
 	TelemetryClient appinsights.TelemetryClient
 	// Invalid Prometheus config validation environemnt variable used for telemetry
 	InvalidCustomPrometheusConfig string
+	// Default Collector config
+	DefaultPrometheusConfig string
 	// Kubelet metrics keep list regex
 	KubeletKeepListRegex string
 	// CoreDNS metrics keep list regex
@@ -148,6 +150,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	TelemetryClient.Context().CommonProperties = CommonProperties
 
 	InvalidCustomPrometheusConfig = os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG")
+	DefaultPrometheusConfig = os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG")
 	KubeletKeepListRegex = os.Getenv("AZMON_PROMETHEUS_KUBELET_METRICS_KEEP_LIST_REGEX")
 	CoreDNSKeepListRegex = os.Getenv("AZMON_PROMETHEUS_COREDNS_METRICS_KEEP_LIST_REGEX")
 	CAdvisorKeepListRegex = os.Getenv("AZMON_PROMETHEUS_CADVISOR_METRICS_KEEP_LIST_REGEX")
@@ -200,6 +203,9 @@ func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{
 				metric.Properties["bytesSentToPubCount"] = groupMatches[7]
 				if InvalidCustomPrometheusConfig != "" {
 					metric.Properties["InvalidCustomPrometheusConfig"] = InvalidCustomPrometheusConfig
+				}
+				if DefaultPrometheusConfig != "" {
+					metric.Properties["DefaultPrometheusConfig"] = DefaultPrometheusConfig
 				}
 				if KubeletKeepListRegex != "" {
 					metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
