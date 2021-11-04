@@ -126,14 +126,34 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
       if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
             # Use default config if specified config is invalid
             echo "Prometheus custom config validation failed, using defaults"
-            echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-            # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
             echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-            export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
+            if [ -e "/opt/defaultsMergedConfig.yml" ]; then
+                  /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+                  if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
+                        echo "Prometheus default config validation failed, using empty job as collector config"
+                  else
+                        cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
+                  fi
+                  echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+                  export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
+            fi 
       fi
-else 
+elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
       echo "No custom config found, using defaults"
+      /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+      if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
+            echo "Prometheus default config validation failed, using empty job as collector config"
+      else
+            echo "Prometheus default config validation succeeded, using this as collector config"
+            cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
+      fi
+      echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+      export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
+
+else
+      # This else block is needed, when there is no custom config mounted as config map or default configs enabled
+      echo "No custom config or default configs found, using empty job as collector config"
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi 
