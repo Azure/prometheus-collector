@@ -79,10 +79,13 @@ scrape_configs:
       namespaces:
         names:
         - node-exporter-namespace
-      relabel_configs:
+  relabel_configs:
     - source_labels: [__meta_kubernetes_endpoints_name]
       action: keep
       regex: "dev-cluster-node-exporter-release-prometheus-node-exporter"
+    - source_labels: [__meta_kubernetes_endpoint_node_name]
+      regex: (.*)
+      target_label: instance
 
 - job_name: kube-state-metrics
   scrape_interval: 30s

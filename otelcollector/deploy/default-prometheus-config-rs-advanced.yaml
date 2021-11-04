@@ -91,6 +91,9 @@ scrape_configs:
     - source_labels: [__meta_kubernetes_endpoints_name]
       action: keep
       regex: "dev-cluster-node-exporter-release-prometheus-node-exporter"
+    - source_labels: [__meta_kubernetes_endpoint_node_name]
+      regex: (.*)
+      target_label: instance
   metric_relabel_configs:
   - source_labels: [__name__]
     action: keep
