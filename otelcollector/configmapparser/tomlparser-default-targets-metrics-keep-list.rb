@@ -70,6 +70,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         if isValidRegex(corednsRegex) == true
           @corednsRegex = corednsRegex
           puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for coredns"
+        else
+          puts "def-target-metrics-keep-list-config::invalid keep list regex for coredns"
         end
       end
     else
@@ -82,6 +84,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         if isValidRegex(cadvisorRegex) == true
           @cadvisorRegex = cadvisorRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for cadvisor"
+        else
+          puts "def-target-metrics-keep-list-config::invalid keep list regex for cadvisor"
         end
       end
     else
@@ -94,6 +98,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         if isValidRegex(kubeproxyRegex) == true
           @kubeproxyRegex = kubeproxyRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for kubeproxy"
+        else
+          puts "def-target-metrics-keep-list-config::invalid keep list regex for kubeproxy"
         end
       end
     else
@@ -106,6 +112,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         if isValidRegex(apiserverRegex) == true
           @apiserverRegex = apiserverRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for apiserver"
+        else
+          puts "def-target-metrics-keep-list-config::invalid keep list regex for apiserver"
         end
       end
     else
@@ -118,6 +126,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         if isValidRegex(kubestateRegex) == true
           @kubestateRegex = kubestateRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for kubestate"
+        else
+          puts "def-target-metrics-keep-list-config::invalid keep list regex for kubestate"
         end
       end
     else
@@ -130,6 +140,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         if isValidRegex(nodeexporterRegex) == true
           @nodeexporterRegex = nodeexporterRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for nodeexporter"
+        else
+          puts "def-target-metrics-keep-list-config::invalid keep list regex for nodeexporter"
         end
       end
     else
@@ -142,6 +154,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         if isValidRegex(windowsexporterRegex) == true
           @windowsexporterRegex = windowsexporterRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for windowsexporter"
+        else
+          puts "def-target-metrics-keep-list-config::invalid keep list regex for windowsexporter"
         end
       end
     else
@@ -154,6 +168,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         if isValidRegex(windowskubeproxyRegex) == true
           @windowskubeproxyRegex = windowskubeproxyRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for windowskubeproxy"
+        else
+          puts "def-target-metrics-keep-list-config::invalid keep list regex for windowskubeproxy"
         end
       end
     else
