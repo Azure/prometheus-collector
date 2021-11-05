@@ -55,21 +55,27 @@ end
 
 def AppendMetricRelabelConfig(yamlConfigFile, keepListRegex)
   begin
-    cfgYaml = YAML.load(File.read(yamlConfigFile))
-    scrapeConfigs = cfgYaml["scrape_configs"]
+    puts "prometheus-config-merger::In AppendMetricRelabelConfig for #{yamlConfigFile}"
+    config = YAML.load(File.read(yamlConfigFile))
+    #scrapeConfigs = cfgYaml["scrape_configs"]
     keepListMetricRelabelConfig = [{ "source_labels" => ["__name__"], "action" => "keep", "regex" => keepListRegex }]
 
     # Iterate through each scrape config and append metric relabel config for keep list
-    scrapeConfigs.each { |scfg|
-      metricRelabelCfgs = scfg["metric_relabel_configs"]
-      if metricRelabelCfgs.nil?
-        scfg["metric_relabel_configs"] = keepListMetricRelabelConfig
-      else
-        scfg["metric_relabel_configs"] = metricRelabelCfgs.concat(keepListMetricRelabelConfig)
+    if !config.nil?
+      scrapeConfigs = config["scrape_configs"]
+      if !scrapeConfigs.nil? && !scrapeConfigs.empty?
+        scrapeConfigs.each { |scfg|
+          metricRelabelCfgs = scfg["metric_relabel_configs"]
+          if metricRelabelCfgs.nil?
+            scfg["metric_relabel_configs"] = keepListMetricRelabelConfig
+          else
+            scfg["metric_relabel_configs"] = metricRelabelCfgs.concat(keepListMetricRelabelConfig)
+          end
+        }
+        cfgYamlWithMetricRelabelConfig = YAML::dump(config)
+        File.open(yamlConfigFile, "w") { |file| file.puts cfgYamlWithMetricRelabelConfig }
       end
-    }
-    cfgYamlWithMetricRelabelConfig = YAML::dump(scrapeConfigs)
-    File.open(yamlConfigFile, "w") { |file| file.puts cfgYamlWithMetricRelabelConfig }
+    end
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while appending metric relabel config in default target file - #{yamlConfigFile} : #{errorStr}, using defaults")
   end
