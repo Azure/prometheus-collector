@@ -135,9 +135,9 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
                   else
                         cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
                   fi
-                  echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-                  export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
             fi 
+            echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
+            export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
       fi
 elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
       echo "No custom config found, using defaults"
