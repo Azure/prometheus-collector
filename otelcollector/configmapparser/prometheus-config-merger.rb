@@ -7,8 +7,6 @@ require "yaml"
 require_relative "ConfigParseErrorLogger"
 
 @configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
-# @collectorConfigTemplatePath = "/opt/microsoft/otelcollector/collector-config-template.yml"
-# @collectorConfigWithDefaultPromConfigs = "/opt/microsoft/otelcollector/collector-config-default.yml"
 @promMergedConfigPath = "/opt/promMergedConfig.yml"
 @mergedDefaultConfigPath = "/opt/defaultsMergedConfig.yml"
 @configSchemaVersion = ""
@@ -283,10 +281,6 @@ if !ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROME
     populateDefaultPrometheusConfig
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
       puts "prometheus-config-merger::Starting to merge default prometheus config values in collector template as backup"
-      # collectorTemplate = YAML.load(File.read(@collectorConfigTemplatePath))
-      # collectorTemplate["receivers"]["prometheus"]["config"] = @mergedDefaultConfigs
-      # collectorNewConfig = YAML::dump(collectorTemplate)
-      # File.open(@collectorConfigWithDefaultPromConfigs, "w") { |file| file.puts collectorNewConfig }
       mergedDefaultConfigYaml = YAML::dump(@mergedDefaultConfigs)
       File.open(@mergedDefaultConfigPath, "w") { |file| file.puts mergedDefaultConfigYaml }
     end

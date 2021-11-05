@@ -23,11 +23,6 @@ chmod 777 /usr/sbin/
 sudo apt-get update
 sudo apt-get install inotify-tools -y
 
-# Build essential, libre2-dev and ruby-dev packages are required to install re2 gem
-# sudo apt install -y build-essential
-# sudo apt-get install -y libre2-dev
-# sudo apt-get install -y ruby-dev
-
 gem install tomlrb
 gem install deep_merge
 gem install re2
