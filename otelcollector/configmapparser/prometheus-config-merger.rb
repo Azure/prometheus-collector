@@ -282,7 +282,8 @@ if !ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROME
       # collectorTemplate["receivers"]["prometheus"]["config"] = @mergedDefaultConfigs
       # collectorNewConfig = YAML::dump(collectorTemplate)
       # File.open(@collectorConfigWithDefaultPromConfigs, "w") { |file| file.puts collectorNewConfig }
-      File.open(@mergedDefaultConfigPath, "w") { |file| file.puts @mergedDefaultConfigs }
+      mergedDefaultConfigYaml = YAML::dump(@mergedDefaultConfigs)
+      File.open(@mergedDefaultConfigPath, "w") { |file| file.puts mergedDefaultConfigYaml }
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError("prometheus-config-merger::Error while populating defaults and writing them to the defaults file")
