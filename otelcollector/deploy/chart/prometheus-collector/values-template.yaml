@@ -26,14 +26,23 @@ scrapeTargets:
   
 # The following setting will allow only the metrics for each target whose names match the regex string
 keepListRegexes:
+  # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   coreDns: "" 
+  # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   kubelet: "" 
+  # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   cAdvisor: "" 
+  # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   kubeProxy: "" 
+  # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   apiServer: "" 
+  # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   kubeState: "" 
+  # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   nodeExporter: "" 
+  # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   windowsExporter: "" 
+  # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   windowsKubeProxy: "" 
 
 azureMetricAccount:
