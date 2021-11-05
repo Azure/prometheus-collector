@@ -57,7 +57,6 @@ def AppendMetricRelabelConfig(yamlConfigFile, keepListRegex)
   begin
     puts "prometheus-config-merger::In AppendMetricRelabelConfig for #{yamlConfigFile}"
     config = YAML.load(File.read(yamlConfigFile))
-    #scrapeConfigs = cfgYaml["scrape_configs"]
     keepListMetricRelabelConfig = [{ "source_labels" => ["__name__"], "action" => "keep", "regex" => keepListRegex }]
 
     # Iterate through each scrape config and append metric relabel config for keep list
