@@ -1,0 +1,72 @@
+name: build-and-release-mixin
+on:
+  workflow_dispatch:
+    inputs:
+      mixinName:
+        description: 'Mixin name to build & release. Allowed mixins are "kubernetes", "node-exporter", "coredns" '
+        required: true
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set-workflow-initiator
+        run: echo "Initiated by - ${GITHUB_ACTOR}"
+      - name: Set-branch-name-for-non-pr
+        if: ${{ github.event_name != 'pull_request' }}
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
+      - name: Set-branch-name-for-pr
+        if: ${{ github.event_name == 'pull_request' }}
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / -)" >> $GITHUB_ENV
+      - name: Set-Env
+        run: echo "ENV=dev" >> $GITHUB_ENV
+      - name: Set-date-time-in-PST
+        run: echo "DATE_TIME_PST=$(TZ=America/Los_Angeles date +%m-%d-%Y-%H:%M:%S)" >> $GITHUB_ENV
+      - name: Set-commit-sha
+        run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
+      - name: Checkout-code
+        uses: actions/checkout@v2
+      - name: Show-versions-On-build-machine
+        run: lsb_release -a && go version
+      - name: Build-mixin
+        run: cd ./mixins/${{ github.event.inputs.mixinName }}/ && make && zip ${{ github.event.inputs.mixinName }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
+      - name: List-build-output
+        run: cd ./mixins/${{ github.event.inputs.mixinName }}/ && ls -lt && ls -lt ./dashboards_out
+      - name: Run-trivy-scanner-on-mixin
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: "./mixins/${{ github.event.inputs.mixinName }}/"
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          timeout: '5m0s'
+      - name: Create-release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}-${{ env.BRANCH_NAME }}-${{ env.DATE_TIME_PST }}
+          release_name: mixin-${{ github.event.inputs.mixinName }}-release-${{ github.ref }}-${{ env.BRANCH_NAME }}-${{ env.DATE_TIME_PST }}
+          body: |
+             Release_Date : ${{ env.DATE_TIME_PST }}
+             Branch_Name  : ${{ env.BRANCH_NAME }}
+             Released_By  : ${GITHUB_ACTOR}
+          draft: false
+          prerelease: true
+      - name: Upload-Release-Asset
+        id: upload-Release-Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: "./mixins/${{ github.event.inputs.mixinName }}/"
+          asset_name: "${{ github.event.inputs.mixinName }}-mixins.zip"
+          asset_content_type: application/zip
+      #- name: Tag-this-push
+      #  uses: actions-ecosystem/action-push-tag@v1
+      #  if: github.event_name != 'pull_request'
+      #  with:
+      #    tag: ${{ env.IMAGETAG_TELEMETRY }}
+      #    message: "Created tag ${{ env.IMAGETAG_TELEMETRY }} for CommitID: ${{ env.GITHUB_SHA }}"
