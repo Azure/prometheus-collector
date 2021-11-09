@@ -61,7 +61,7 @@ end
 file = File.open("/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var", "w")
 
 if !file.nil?
-  if ENV['OS_TYPE'] == "linux"
+  if !ENV['OS_TYPE'].nil? && ENV['OS_TYPE'].downcase == "linux"
     file.write("export AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
   else
     file.write("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")

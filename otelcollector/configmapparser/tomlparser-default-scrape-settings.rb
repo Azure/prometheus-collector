@@ -119,7 +119,7 @@ end
 file = File.open("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var", "w")
 
 $export = "export "
-if ENV['OS_TYPE'] == "windows"
+if !ENV['OS_TYPE'].nil? && ENV['OS_TYPE'].downcase == "windows"
   $export = "";
 end
 
