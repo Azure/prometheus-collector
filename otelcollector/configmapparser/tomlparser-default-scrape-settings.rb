@@ -17,8 +17,8 @@ require_relative "ConfigParseErrorLogger"
 @nodeexporterEnabled = true
 @prometheusCollectorHealthEnabled = true
 @noDefaultsEnabled = false
-@windowsexporterEnabled = false
-@windowskubeproxyEnabled = false
+@windowsexporterEnabled = true
+@windowskubeproxyEnabled = true
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -89,11 +89,11 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if controllerType == "DaemonSet" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
-      elsif controllerType == "ReplicaSet" && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
+      elsif controllerType == "ReplicaSet" && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && @windowsexporterEnabled && @windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
       end
-    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
+    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && @windowsexporterEnabled && @windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
       @noDefaultsEnabled = true
       puts "config::No default scrape configs enabled"
     end
