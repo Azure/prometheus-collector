@@ -1,10 +1,14 @@
 name: build-and-release-mixin
 on:
-  workflow_dispatch:
-    inputs:
-      mixinName:
-        description: 'Mixin name to build & release. Allowed mixins are "kubernetes", "node-exporter", "coredns" '
-        required: true
+  push:
+    branches:
+      - vishwa/dash
+#on:
+#  workflow_dispatch:
+#    inputs:
+#      mixinName:
+#        description: 'Mixin name to build & release. Allowed mixins are "kubernetes", "node-exporter", "coredns" '
+#        required: true
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
@@ -27,15 +31,19 @@ jobs:
         uses: actions/checkout@v2
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version
+      - name: Set-MixinName
+        run: echo "MIXIN_NAME=kubernetes" >> $GITHUB_ENV
+      - name: Set-MixinName2
+        run: echo "MIXIN_NAME2=${{ github.event.inputs.mixinName }}" >> $GITHUB_ENV
       - name: Build-mixin
-        run: cd ./mixins/${{ github.event.inputs.mixinName }}/ && make && zip ${{ github.event.inputs.mixinName }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
+        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && make && zip ${{ env.MIXIN_NAME }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
       - name: List-build-output
-        run: cd ./mixins/${{ github.event.inputs.mixinName }}/ && ls -lt && ls -lt ./dashboards_out
+        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && ls -lt && ls -lt ./dashboards_out
       - name: Run-trivy-scanner-on-mixin
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
-          scan-ref: "./mixins/${{ github.event.inputs.mixinName }}/"
+          scan-ref: "./mixins/${{ env.MIXIN_NAME }}/"
           format: 'table'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
@@ -47,7 +55,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}-${{ env.BRANCH_NAME }}-${{ env.DATE_TIME_PST }}
-          release_name: mixin-${{ github.event.inputs.mixinName }}-release-${{ github.ref }}-${{ env.BRANCH_NAME }}-${{ env.DATE_TIME_PST }}
+          release_name: mixin-${{ env.MIXIN_NAME }}-release-${{ github.ref }}-${{ env.BRANCH_NAME }}-${{ env.DATE_TIME_PST }}
           body: |
              Release_Date : ${{ env.DATE_TIME_PST }}
              Branch_Name  : ${{ env.BRANCH_NAME }}
@@ -61,8 +69,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: "./mixins/${{ github.event.inputs.mixinName }}/"
-          asset_name: "${{ github.event.inputs.mixinName }}-mixins.zip"
+          asset_path: "./mixins/${{ env.MIXIN_NAME }}/"
+          asset_name: "${{ env.MIXIN_NAME }}-mixins.zip"
           asset_content_type: application/zip
       #- name: Tag-this-push
       #  uses: actions-ecosystem/action-push-tag@v1
