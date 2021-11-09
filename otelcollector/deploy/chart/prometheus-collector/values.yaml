@@ -54,25 +54,25 @@ mode:
   advanced: false
 
 image:
-  repository: ${MCR_REGISTRY}${MCR_REPOSITORY}
-  tag: ${IMAGE_TAG}
+  repository: "mcr.microsoft.com/azuremonitor/containerinsights/cidev" # /prometheus-collector/images" # ${MCR_REGISTRY}${MCR_REPOSITORY}
+  tag: "winkaveesh10212021"
   pullPolicy: IfNotPresent
 
 resources:
  deployment:
    limits:
-     cpu: 4
-     memory: 7Gi
-   requests:
-     cpu: 1
-     memory: 2Gi
- daemonSet:
-   limits:
-     cpu: 1
-     memory: 2Gi
+     cpu: 500m
+     memory: 500Mi
    requests:
      cpu: 500m
-     memory: 1Gi
+     memory: 500Mi
+ daemonSet:
+   limits:
+     cpu: 500m
+     memory: 500Mi
+   requests:
+     cpu: 500m
+     memory: 500Mi
 kube-state-metrics:
   nodeSelector:
     kubernetes.io/os: linux

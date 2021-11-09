@@ -152,17 +152,22 @@ function Set-EnvironmentVariablesAndConfigParser {
         }
     }
 
-    if ( $env:AZMON_USE_DEFAULT_PROMETHEUS_CONFIG -ne "true" -Or $env:AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED -ne "true") {
-        ruby /opt/microsoft/configmapparser/tomlparser-prometheus-config.rb
-        foreach ($line in Get-Content /opt/microsoft/configmapparser/config_prometheus_collector_prometheus_config_env_var) {
-            if ($line.Contains('=')) {
-                $key = ($line -split '=')[0];
-                $value = ($line -split '=')[1];
-                # can do some error handling here for checking if the key and value are properly formatted
-                [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
-                [System.Environment]::SetEnvironmentVariable($key, $value, "Machine")
-            }
+    ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
+    if (Test-Path -Path '/opt/promMergedConfig.yml') {
+        /opt/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"+
+        if ( ( $? -eq "False" ) -or (!(Test-Path -Path "/opt/microsoft/otelcollector/collector-config.yml" ))) {
+            Write-Output "Prometheus custom config validation failed, using defaults"
+            [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
+            [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
+            # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
+            [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Process")
+            [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Machine")
         }
+    }
+    else {
+        Write-Output "No custom config found, using defaults"
+        [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
+        [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
     }
 
     # #start cron daemon for logrotate
