@@ -45,7 +45,7 @@ jobs:
       - name: Set-MixinName2
         run: echo "MIXIN_NAME2=${{ github.event.inputs.mixinName }}" >> $GITHUB_ENV
       - name: Build-kubernetes-mixin
-        if: env.MIXIN_NAME == 'kubernetes'
+        if: env.MIXIN_NAME == 'node'
         run: cd ./mixins/${{ env.MIXIN_NAME }}/ && make && zip ${{ env.MIXIN_NAME }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
       - name: Get-Prereqs-To-Build-node-mixin
         if: env.MIXIN_NAME == 'node'
@@ -67,7 +67,7 @@ jobs:
       - name: Create-release
         id: create-release
         uses: actions/create-release@v1
-        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'vishwa-dash'
+        if: github.event_name != 'pull_request' # && env.BRANCH_NAME == 'vishwa-dash'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -83,7 +83,7 @@ jobs:
       - name: Upload-Release-Asset
         id: upload-Release-Asset
         uses: actions/upload-release-asset@v1
-        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'vishwa-dash'
+        if: github.event_name != 'pull_request' # && env.BRANCH_NAME == 'vishwa-dash'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
