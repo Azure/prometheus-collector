@@ -111,7 +111,11 @@ fi
 # Parse the settings for default targets metrics keep list config
 ruby /opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb
 if [ -e "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_env_var" ]; then
+      cat /opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_env_var | while read line; do
+            echo $line >> ~/.bashrc
+      done
       source /opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_env_var
+      source ~/.bashrc
 fi
 
 ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
