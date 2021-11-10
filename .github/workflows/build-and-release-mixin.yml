@@ -10,7 +10,7 @@ on:
 #        description: 'Mixin name to build & release. Allowed mixins are "kubernetes", "node-exporter", "coredns" '
 #        required: true
 jobs:
-  build-and-push-image:
+  build-and-release-mixin:
     runs-on: ubuntu-latest
     steps:
       - name: Set-workflow-initiator
@@ -39,15 +39,15 @@ jobs:
         run: cd ./mixins/${{ env.MIXIN_NAME }}/ && make && zip ${{ env.MIXIN_NAME }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
       - name: List-build-output
         run: cd ./mixins/${{ env.MIXIN_NAME }}/ && ls -lt && ls -lt ./dashboards_out
-      - name: Run-trivy-scanner-on-mixin
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: "./mixins/${{ env.MIXIN_NAME }}/"
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
-          timeout: '5m0s'
+      #- name: Run-trivy-scanner-on-mixin
+      #  uses: aquasecurity/trivy-action@master
+      #  with:
+      #    scan-type: 'fs'
+      #    scan-ref: "./mixins/${{ env.MIXIN_NAME }}/"
+      #    format: 'table'
+      #    severity: 'CRITICAL,HIGH'
+      #    exit-code: '1'
+      #    timeout: '5m0s'
       - name: Create-release
         id: create-release
         uses: actions/create-release@v1
