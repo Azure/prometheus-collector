@@ -6,7 +6,7 @@ on:
   #workflow_dispatch:
   #  inputs:
   #    mixinName:
-  #      description: 'Mixin name to build & release. Allowed mixins are "kubernetes", "node-exporter", "coredns" '
+  #      description: 'Mixin name to build & release. Allowed mixins are "kubernetes", "node", "coredns" '
   #      required: true
 jobs:
   build-and-release-mixin:
@@ -37,11 +37,15 @@ jobs:
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version
       - name: Set-MixinName
-        run: echo "MIXIN_NAME=kubernetes" >> $GITHUB_ENV
+        run: echo "MIXIN_NAME=node" >> $GITHUB_ENV
       - name: Set-MixinName2
         run: echo "MIXIN_NAME2=${{ github.event.inputs.mixinName }}" >> $GITHUB_ENV
-      - name: Build-mixin
+      - name: Build-kubernetes-mixin
+        if: env.MIXIN_NAME == 'kubernetes'
         run: cd ./mixins/${{ env.MIXIN_NAME }}/ && make && zip ${{ env.MIXIN_NAME }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
+      - name: Build-node-mixin
+        if: env.MIXIN_NAME == 'node'
+        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && go get github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb && brew install jsonnet && jb install && go get github.com/prometheus/prometheus/cmd/promtool && make all && zip ${{ env.MIXIN_NAME }}-mixins ./node_alerts.yaml ./node_rules.yaml ./dashboards_out/ -r
       - name: List-build-output
         run: cd ./mixins/${{ env.MIXIN_NAME }}/ && ls -lt && ls -lt ./dashboards_out
       #- name: Run-trivy-scanner-on-mixin

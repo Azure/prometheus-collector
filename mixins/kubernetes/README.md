@@ -2,7 +2,7 @@
 [![CircleCI](https://circleci.com/gh/kubernetes-monitoring/kubernetes-mixin/tree/master.svg?style=shield)](https://circleci.com/gh/kubernetes-monitoring/kubernetes-mixin)
 
 > NOTE: This project is *pre-release* stage. Flags, configuration, behaviour and design may change significantly in following releases.
-> Last synced to commit - https://github.com/kubernetes-monitoring/kubernetes-mixin/commit/e43fe7c1ecf3d4a5f9ac752b039780922e04341a
+> Last synced on 11/8/2021 to commit - https://github.com/kubernetes-monitoring/kubernetes-mixin/commit/e43fe7c1ecf3d4a5f9ac752b039780922e04341a
 
 
 
