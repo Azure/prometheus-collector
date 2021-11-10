@@ -27,6 +27,12 @@ gem install tomlrb
 gem install deep_merge
 gem install re2
 
+
+#Uninstalling packages after gem install re2
+sudo apt-get remove build-essential -y
+sudo apt-get remove libre2-dev -y
+sudo apt-get remove ruby-dev -y
+
 #used to setcaps for ruby process to read /proc/env
 #echo "installing libcap2-bin"
 #sudo apt-get install libcap2-bin -y

@@ -64,20 +64,20 @@ jobs:
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
-      # - name: Dependency Detection setup
-      #   uses: actions/checkout@v2
-      #   with:
-      #     repository: github/dependency-detection
-      #     ref: releases/v1
-      #     token: ${{ secrets.GH_PRIVATE_REPO_PAT }}
-      #     path: .github/actions/dependency-detection
-      #   # This is an experimental action that Microsoft OSE + GH Dependency Graph are piloting.
-      #   #
-      #   # If it ever encounters issues, feel free to disable this step to unblock builds.
-      # - name: Dependency Detection
-      #   uses: ./.github/actions/dependency-detection
-      #   with:
-      #     token: ${{ github.token }}
+      - name: Dependency Detection setup
+        uses: actions/checkout@v2
+        with:
+          repository: github/dependency-detection
+          ref: releases/v1
+          token: ${{ secrets.GH_PRIVATE_REPO_PAT }}
+          path: .github/actions/dependency-detection
+        # This is an experimental action that Microsoft OSE + GH Dependency Graph are piloting.
+        #
+        # If it ever encounters issues, feel free to disable this step to unblock builds.
+      - name: Dependency Detection
+        uses: ./.github/actions/dependency-detection
+        with:
+          token: ${{ github.token }}
       - name: Create-docker-image
         run: |
             cd ./otelcollector/ && docker build . --file Dockerfile -t $IMAGE_FULL_TAG
