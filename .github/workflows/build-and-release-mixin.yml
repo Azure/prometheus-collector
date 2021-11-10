@@ -63,7 +63,7 @@ jobs:
           body: |
              Release_Date : ${{ env.DATE_TIME_PST }}
              Branch_Name  : ${{ env.BRANCH_NAME }}
-             Released_By  : ${{ GITHUB_ACTOR }}
+             Released_By  : "${GITHUB_ACTOR}""
           draft: false
           prerelease: true
       - name: Upload-Release-Asset
