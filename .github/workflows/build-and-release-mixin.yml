@@ -24,7 +24,7 @@ jobs:
       - name: Set-Env
         run: echo "ENV=dev" >> $GITHUB_ENV
       - name: Set-date-time-in-PST
-        run: echo "DATE_TIME_PST=$(TZ=America/Los_Angeles date +%m-%d-%Y-%H:%M:%S)" >> $GITHUB_ENV
+        run: echo "DATE_TIME_PST=$(TZ=America/Los_Angeles date +%m-%d-%Y-%H+%M+%S)" >> $GITHUB_ENV
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
       - name: Checkout-code
