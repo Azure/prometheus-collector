@@ -16,6 +16,8 @@ chmod 775 $TMPDIR/microsoft/configmapparser/*.rb
 
 chmod 777 /usr/sbin/
 
+sudo apt --fix-broken install -y
+
 #Install ME
 /usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
@@ -72,8 +74,8 @@ sudo apt-get update
 #sudo apt-get install td-agent-bit=1.6.8 -y
 
 
-sudo apt --fix-broken install -y
-sudo apt-get install inotify-tools -y
+# sudo apt --fix-broken install -y
+# sudo apt-get install inotify-tools -y
 
 
 # Some dependencies were fixed with sudo apt --fix-broken, try installing td-agent-bit again
