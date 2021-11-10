@@ -27,12 +27,12 @@ jobs:
         run: echo "DATE_TIME_PST=$(TZ=America/Los_Angeles date +%m-%d-%Y-%H:%M:%S)" >> $GITHUB_ENV
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
+      - name: Checkout-code
+        uses: actions/checkout@v2
       - name: Set-HELM-Chart-Version
         run: version=$(cat ./otelcollector/VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
       - name: Set-HELM-chart-semver
         run: echo "HELM_SEMVER=${HELM_CHART_VERSION}-${BRANCH_NAME}-${DATE_TIME_PST}-${COMMIT_SHA}" >> $GITHUB_ENV
-      - name: Checkout-code
-        uses: actions/checkout@v2
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version
       - name: Set-MixinName
