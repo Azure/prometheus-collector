@@ -72,8 +72,8 @@ sudo apt-get update
 #sudo apt-get install td-agent-bit=1.6.8 -y
 
 
-sudo apt --fix-broken install -y
-sudo apt-get install inotify-tools -y
+# sudo apt --fix-broken install -y
+# sudo apt-get install inotify-tools -y
 
 
 # Some dependencies were fixed with sudo apt --fix-broken, try installing td-agent-bit again
@@ -82,6 +82,14 @@ sudo apt-get install td-agent-bit=1.6.8 -y
 
 # setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
+
+wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2021.901.1511-69f7bf-_focal_amd64.deb
+#Install ME
+/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+
+sudo apt --fix-broken install -y
+
+/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 #cleanup all install
 rm -f $TMPDIR/metricsext2*.deb
