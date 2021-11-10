@@ -115,7 +115,6 @@ if [ -e "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_env
             echo $line >> ~/.bashrc
       done
       source /opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_env_var
-      source ~/.bashrc
 fi
 
 ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
