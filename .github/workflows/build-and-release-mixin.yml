@@ -41,11 +41,11 @@ jobs:
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version
       - name: Set-MixinName
-        run: echo "MIXIN_NAME=kubernetes" >> $GITHUB_ENV
+        run: echo "MIXIN_NAME=node" >> $GITHUB_ENV
       - name: Set-MixinName2
         run: echo "MIXIN_NAME2=${{ github.event.inputs.mixinName }}" >> $GITHUB_ENV
       - name: Build-kubernetes-mixin
-        if: env.MIXIN_NAME == 'node'
+        if: env.MIXIN_NAME == 'kubernetes'
         run: cd ./mixins/${{ env.MIXIN_NAME }}/ && make && zip ${{ env.MIXIN_NAME }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
       - name: Get-Prereqs-To-Build-node-mixin
         if: env.MIXIN_NAME == 'node'
