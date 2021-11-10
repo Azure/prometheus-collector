@@ -49,7 +49,7 @@ jobs:
         run: cd ./mixins/${{ env.MIXIN_NAME }}/ && make && zip ${{ env.MIXIN_NAME }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
       - name: Get-Prereqs-To-Build-node-mixin
         if: env.MIXIN_NAME == 'node'
-        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && go get github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb && go get github.com/prometheus/prometheus/cmd/promtool && brew install jsonnet
+        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && go install github.com/google/go-jsonnet/cmd/jsonnet@latest && go install github.com/google/go-jsonnet/cmd/jsonnetfmt@latest && go install github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest && go install github.com/prometheus/prometheus/cmd/promtool@latest
       - name: Build-node-mixin
         if: env.MIXIN_NAME == 'node'
         run: cd ./mixins/${{ env.MIXIN_NAME }}/ && jb install && make all && zip ${{ env.MIXIN_NAME }}-mixins ./node_alerts.yaml ./node_rules.yaml ./dashboards_out/ -r
