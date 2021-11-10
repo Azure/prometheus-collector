@@ -41,7 +41,7 @@ jobs:
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version
       - name: Set-MixinName
-        run: echo "MIXIN_NAME=node" >> $GITHUB_ENV
+        run: echo "MIXIN_NAME=kubernetes" >> $GITHUB_ENV
       - name: Set-MixinName2
         run: echo "MIXIN_NAME2=${{ github.event.inputs.mixinName }}" >> $GITHUB_ENV
       - name: Build-kubernetes-mixin
@@ -72,7 +72,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ env.SEMVER }}
-          release_name: mixin-${{ env.MIXIN_NAME }}-release-${{ env.SEMVER }}
+          release_name: mixins-${{ env.MIXIN_NAME }}-release-${{ env.SEMVER }}
           body: |
              Release_Date : ${{ env.DATE_TIME_PST }}
              Branch_Name  : ${{ env.BRANCH_NAME }}
