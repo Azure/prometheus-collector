@@ -1,8 +1,10 @@
-
 > [!Note]
-> Prometheus metrics in MDM is still in active development. It is only available for a very small set of customers to provide very early feedback - limited private preview. Geneva will open this up for broader preview, after we've had a chance to address feedback received in the current limited preview. If your team has not already been contacted for the limited preview, then you are not yet eligible for this preview. You can also join the [K8s Observability Updates](https://idwebelements/GroupManagement.aspx?Group=K8sObsUpdates&Operation=join) alias for updates on this feature, including when this will roll out more broadly.
+> Prometheus metrics in MDM is still in active development and is offered as a Private Preview. You can join the [K8s Observability Updates](https://idwebelements/GroupManagement.aspx?Group=K8sObsUpdates&Operation=join) alias for updates on this feature, including when this will roll out more broadly in Public Preview.
 
 # Prometheus data source
+
+
+In the Prometheus Private Preview we use Azure Managed Grafana as our user interface to interact with the Prometheus metrics you have collected. If you have not already done so, please [sign up for the Managed Grafana Private Preview](../../dashboards/grafana/Tutorial0SetUpGrafanaAMG.md).
 
 For Grafana to access your Prometheus metrics it needs to know where the data is and be able to access it with the right authentication. This is accomplished by a data source. Prometheus data source is supported natively in Grafana. We need to have this be configured to pull metrics from your MDM account instead of a Prometheus tsdb.  
   
@@ -63,6 +65,6 @@ In the data source configuration fill in the fields per guidance below.
 
 --------------------------------------
 
-In this step you set up Grafana to access Prometheus metrics from your MDM metrics account.  
+In this step you set up Grafana to access Prometheus metrics from your MDM metrics account. Go to this [link](https://grafana.com/docs/grafana/v7.5/datasources/prometheus/) for more information on Prometheus for Grafana  
 
-Next, you will look at how to use the several [built-in dashboards](~/metrics/prometheus/PromMDMTutorial6ReuseExistingDashboard.md) that are available for you out of the box.
+Next, you will look at how to use the several [built-in dashboards](~/metrics/Prometheus/PromMDMTutorial6ReuseExistingDashboard.md) that are available for you out of the box.
