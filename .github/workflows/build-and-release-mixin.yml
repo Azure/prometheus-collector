@@ -41,7 +41,7 @@ jobs:
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version
       - name: Set-MixinName
-        run: echo "MIXIN_NAME=node" >> $GITHUB_ENV
+        run: echo "MIXIN_NAME=coredns" >> $GITHUB_ENV
       - name: Set-MixinName2
         run: echo "MIXIN_NAME2=${{ github.event.inputs.mixinName }}" >> $GITHUB_ENV
       - name: Get-Prereqs-To-Build-node-or-coredns-mixin
