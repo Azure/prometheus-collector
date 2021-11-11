@@ -52,4 +52,4 @@ SHELL ["powershell"]
 RUN ./opt/microsoft/scripts/setup.ps1
 
 
-ENTRYPOINT ["powershell", "C:\\opt\\scripts\\main.ps1"]
+ENTRYPOINT ["powershell", "C:\\opt\\microsoft\\scripts\\main.ps1"]
