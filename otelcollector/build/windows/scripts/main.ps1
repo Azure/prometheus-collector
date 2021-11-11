@@ -231,7 +231,7 @@ function Start-Telegraf {
     if ($? -eq $false) {
         Write-Host "trying to start telegraf in again in 30 seconds, since fluentbit might not have been ready..."
         Start-Sleep -s 30
-        /opt/telegraf/telegraf.exe --service start
+        /opt/microsoft/telegraf/telegraf.exe --service start
         Get-Service telegraf
     }
 }
@@ -271,7 +271,7 @@ function Set-CertificateForME {
 }
 
 function Start-FileSystemWatcher {
-    Start-Process powershell -NoNewWindow .\filesystemwatcher.ps1
+    Start-Process powershell -NoNewWindow /opt/microsoft/scripts/filesystemwatcher.ps1
 }
 
 Start-Transcript -Path main.txt
