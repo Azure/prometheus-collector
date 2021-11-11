@@ -9,6 +9,7 @@ ENV APPLICATIONINSIGHTS_AUTH "MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
 
 COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/main.ps1 $tmpdir/scripts/
+COPY ./build/windows/scripts/filesystemwatcher.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/livenessprobe.cmd $tmpdir/scripts/
 
 COPY ./configmapparser/*.rb $tmpdir/configmapparser/

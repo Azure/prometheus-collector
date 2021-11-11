@@ -55,7 +55,7 @@ mode:
 
 image:
   repository: "mcr.microsoft.com/azuremonitor/containerinsights/cidev" # /prometheus-collector/images" # ${MCR_REGISTRY}${MCR_REPOSITORY}
-  tag: "winkaveesh10212021"
+  tag: "winkaveesh11102021"
   pullPolicy: IfNotPresent
 
 resources:

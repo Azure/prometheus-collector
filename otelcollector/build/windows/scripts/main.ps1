@@ -270,12 +270,16 @@ function Set-CertificateForME {
     }
 }
 
+function Start-FileSystemWatcher {
+    Start-Process powershell -NoNewWindow .\filesystemwatcher.ps1
+}
+
 Start-Transcript -Path main.txt
 
 Set-CertificateForME
 Set-EnvironmentVariablesAndConfigParser
 
-# # Start-FileSystemWatcher
+Start-FileSystemWatcher
 
 Start-Fluentbit
 Start-Telegraf
