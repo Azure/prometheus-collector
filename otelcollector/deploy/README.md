@@ -83,7 +83,7 @@ Provide the default MDM account name in the config map (prometheus-collector-set
   Note that if you are using  
       1. quotes in the regex you will need to escape them using a backslash. Example - keepListRegexes.kubelet = `"test\'smetric\"s\""`  
       2. backslash in the regex, you will need to replace a single instance of `\` with `\\\\\\\\\`. This is because of the multiple environment variable substitutions that happen before this goes into effect in the configuration.
-
+  
 - 6.3) Apply the configmap to the cluster
     ```shell
     kubectl apply -f prometheus-collector-settings-configmap.yaml
@@ -113,6 +113,8 @@ By default and for testing purposes, the provided configmap has scrape config to
     You can also copy this tool and the collector config template using kubectl cp from paths /opt/promconfigvalidator and /opt/microsoft/otelcollector/collector-config-template.yml from within the prometheus-collector container and run this command for your prometheus config before adding to the configmap, to save some time.
     This by default generates the otel collector configuration file 'merged-otel-config.yaml' if no paramater is provided using the optional --output paramater.
     This is the otel config that will be applied to the prometheus collector which includes the custom prometheus config
+
+**Note** The job names `kubelet`, `cadvisor`, `kube-dns`, `kube-proxy`, `kube-apiserver`, `kube-state-metrics`, `node`, `prometheus_collector_health`, `windows-exporter(disabled by default)` and `kube-proxy-windows(disabled by default)` are reserved and if they were to be present in the custom configuration, the otelcollector will fail to start because of the duplicate job name. Please refrain from using these for the job names. If you were to use these, please disable the corresponding default targets as mentioned in the previous section and then you can use these names as the job names in the custom prometheus configuration.
 
 #### Step 8 : Deploy prometheus-node-exporter and kube-state-metrics in your cluster
 
