@@ -42,9 +42,9 @@ helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-pr
 #### Step 5 : Apply the secretProviderClass.yaml that you updated step-2
 ```shell kubectl apply -f secretProviderClass.yaml ```
 
-#### Step 6 : Update configmap to provide default MDM Account name and enable/disable default scrape targets
+#### Step 6 : Update configmap to provide default MDM Account name, enable/disable default scrape targets or allow only the metric names matching regexes for default targets 
 
-Provide the default MDM account name in the config map (prometheus-collector-settings-configmap.yaml), optionally enable/disable default scrape targets for your cluster(kubelet, coredns, etc.) using the configmap settings, and apply the configmap to your kubernetes cluster (see below steps)
+Provide the default MDM account name in the config map (prometheus-collector-settings-configmap.yaml), optionally enable/disable default scrape targets for your cluster(kubelet, coredns, etc.) using the configmap settings or optionally configure certain metric(s) collection from default targets using regex based filtering, and apply the configmap to your kubernetes cluster (see below steps)
 
 - 6.1) Ensure the line below in the configmap has your MDM account name (which will be used as the default MDM account to send metrics to)
 
@@ -66,6 +66,23 @@ Provide the default MDM account name in the config map (prometheus-collector-set
       nodeexporter = true
     ```
 
+- 6.3) Specify if you'd like to filter out metrics collected for the default targets using regex based filtering.
+
+    ```yaml
+    default-targets-metrics-keep-list: |-
+      kubelet = "<regex>"
+      coredns= "<regex>"
+      cadvisor = "<regex>"
+      kubeproxy = "<regex>"
+      apiserver = "<regex>"
+      kubestate = "<regex>"
+      nodeexporter = "<regex>"
+      windowsexporter = "<regex>"
+      windowskubeproxy = "<regex>"
+    ```
+  Note that if you are using  
+      1. quotes in the regex you will need to escape them using a backslash. Example - keepListRegexes.kubelet = `"test\'smetric\"s\""`  
+      2. backslash in the regex, you will need to replace a single instance of `\` with `\\\\\\\\\`. This is because of the multiple environment variable substitutions that happen before this goes into effect in the configuration.
 
 - 6.3) Apply the configmap to the cluster
     ```shell
