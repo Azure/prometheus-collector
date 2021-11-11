@@ -58,8 +58,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         if isValidRegex(kubeletRegex) == true
           # replacing double quotes and single quotes with escape sequences so that the quotes are retained in the regex,
           # which might otherwise be lost during environment varible assignment.
-          kubeletRegex = kubeletRegex.gsub("\"", "\\\"")
-          kubeletRegex = kubeletRegex.gsub("\'", "\\\\'")
+          kubeletRegex = kubeletRegex.gsub("\"", "\\\\\\\\\\\"")
+          kubeletRegex = kubeletRegex.gsub("'", "\\\\\\\\\\\\'")
           @kubeletRegex = kubeletRegex
           puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for kubelet"
         end
@@ -72,9 +72,9 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !corednsRegex.nil? && corednsRegex.kind_of?(String)
       if !corednsRegex.empty?
         if isValidRegex(corednsRegex) == true
+          corednsRegex = corednsRegex.gsub("\"", "\\\\\\\\\\\"")
+          corednsRegex = corednsRegex.gsub("'", "\\\\\\\\\\\\'")
           @corednsRegex = corednsRegex
-          corednsRegex = corednsRegex.gsub("\"", "\\\"")
-          corednsRegex = corednsRegex.gsub("\'", "\\\\'")
           puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for coredns"
         else
           puts "def-target-metrics-keep-list-config::invalid keep list regex for coredns"
@@ -88,8 +88,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !cadvisorRegex.nil? && cadvisorRegex.kind_of?(String)
       if !cadvisorRegex.empty?
         if isValidRegex(cadvisorRegex) == true
-          cadvisorRegex = cadvisorRegex.gsub("\"", "\\\"")
-          cadvisorRegex = cadvisorRegex.gsub("\'", "\\\\'")
+          cadvisorRegex = cadvisorRegex.gsub("\"", "\\\\\\\\\\\"")
+          cadvisorRegex = cadvisorRegex.gsub("'", "\\\\\\\\\\\\'")
           @cadvisorRegex = cadvisorRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for cadvisor"
         else
@@ -104,8 +104,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !kubeproxyRegex.nil? && kubeproxyRegex.kind_of?(String)
       if !kubeproxyRegex.empty?
         if isValidRegex(kubeproxyRegex) == true
-          kubeproxyRegex = kubeproxyRegex.gsub("\"", "\\\"")
-          kubeproxyRegex = kubeproxyRegex.gsub("\'", "\\\\'")
+          kubeproxyRegex = kubeproxyRegex.gsub("\"", "\\\\\\\\\\\"")
+          kubeproxyRegex = kubeproxyRegex.gsub("'", "\\\\\\\\\\\\'")
           @kubeproxyRegex = kubeproxyRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for kubeproxy"
         else
@@ -120,8 +120,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !apiserverRegex.nil? && apiserverRegex.kind_of?(String)
       if !apiserverRegex.empty?
         if isValidRegex(apiserverRegex) == true
-          apiserverRegex = apiserverRegex.gsub("\"", "\\\"")
-          apiserverRegex = apiserverRegex.gsub("\'", "\\\\'")
+          apiserverRegex = apiserverRegex.gsub("\"", "\\\\\\\\\\\"")
+          apiserverRegex = apiserverRegex.gsub("'", "\\\\\\\\\\\\'")
           @apiserverRegex = apiserverRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for apiserver"
         else
@@ -136,8 +136,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !kubestateRegex.nil? && kubestateRegex.kind_of?(String)
       if !kubestateRegex.empty?
         if isValidRegex(kubestateRegex) == true
-          kubestateRegex = kubestateRegex.gsub("\"", "\\\"")
-          kubestateRegex = kubestateRegex.gsub("\'", "\\\\'")
+          kubestateRegex = kubestateRegex.gsub("\"", "\\\\\\\\\\\"")
+          kubestateRegex = kubestateRegex.gsub("'", "\\\\\\\\\\\\'")
           @kubestateRegex = kubestateRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for kubestate"
         else
@@ -152,8 +152,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !nodeexporterRegex.nil? && nodeexporterRegex.kind_of?(String)
       if !nodeexporterRegex.empty?
         if isValidRegex(nodeexporterRegex) == true
-          kubestateRegex = nodeexporterRegex.gsub("\"", "\\\"")
-          kubestateRegex = nodeexporterRegex.gsub("\'", "\\\\'")
+          kubestateRegex = nodeexporterRegex.gsub("\"", "\\\\\\\\\\\"")
+          kubestateRegex = nodeexporterRegex.gsub("'", "\\\\\\\\\\\\'")
           @nodeexporterRegex = nodeexporterRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for nodeexporter"
         else
@@ -168,8 +168,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !windowsexporterRegex.nil? && windowsexporterRegex.kind_of?(String)
       if !windowsexporterRegex.empty?
         if isValidRegex(windowsexporterRegex) == true
-          windowsexporterRegex = windowsexporterRegex.gsub("\"", "\\\"")
-          windowsexporterRegex = windowsexporterRegex.gsub("\'", "\\\\'")
+          windowsexporterRegex = windowsexporterRegex.gsub("\"", "\\\\\\\\\\\"")
+          windowsexporterRegex = windowsexporterRegex.gsub("'", "\\\\\\\\\\\\'")
           @windowsexporterRegex = windowsexporterRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for windowsexporter"
         else
@@ -184,8 +184,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !windowskubeproxyRegex.nil? && windowskubeproxyRegex.kind_of?(String)
       if !windowskubeproxyRegex.empty?
         if isValidRegex(windowskubeproxyRegex) == true
-          windowskubeproxyRegex = windowskubeproxyRegex.gsub("\"", "\\\"")
-          windowskubeproxyRegex = windowskubeproxyRegex.gsub("\'", "\\\\'")
+          windowskubeproxyRegex = windowskubeproxyRegex.gsub("\"", "\\\\\\\\\\\"")
+          windowskubeproxyRegex = windowskubeproxyRegex.gsub("'", "\\\\\\\\\\\\'")
           @windowskubeproxyRegex = windowskubeproxyRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for windowskubeproxy"
         else
