@@ -119,7 +119,7 @@ echo "Cleaning up packages used for re2 gem install..."
 
 #Uninstalling packages after gem install re2
 sudo apt-get remove build-essential -y
-sudo apt-get remove libre2-dev -y
+# sudo apt-get remove libre2-dev -y
 sudo apt-get remove ruby-dev -y
 
 echo "auto removing unused packages..."
