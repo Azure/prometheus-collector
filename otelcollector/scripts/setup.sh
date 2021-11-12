@@ -113,7 +113,7 @@ sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
 
 # Cleaning up unused packages
 echo "Cleaning up unused packages..."
-sudo apt autoremove -y
+sudo apt-get autoremove -y
 sudo apt-get update
 
 #Uninstalling packages after gem install re2
