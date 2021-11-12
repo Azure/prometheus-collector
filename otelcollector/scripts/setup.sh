@@ -15,18 +15,14 @@ chmod 775 $TMPDIR/microsoft/configmapparser/*.rb
 chmod 777 /usr/sbin/
 
 #download inotify tools for watching configmap changes
+echo "Installing inotify..."
 sudo apt-get update
 sudo apt-get install inotify-tools -y
 
+echo "Installing tomlrb, deep_merge and re2 gems..."
 gem install tomlrb
 gem install deep_merge
 gem install re2
-
-
-#Uninstalling packages after gem install re2
-sudo apt-get remove build-essential -y
-sudo apt-get remove libre2-dev -y
-sudo apt-get remove ruby-dev -y
 
 #used to setcaps for ruby process to read /proc/env
 #echo "installing libcap2-bin"
@@ -54,12 +50,14 @@ sudo apt-get remove ruby-dev -y
 #chmod 777 /opt/microsoft/otelcollector29/otelcollector
 
 # Install Telegraf
+echo "Installing telegraf..."
 wget https://dl.influxdata.com/telegraf/releases/telegraf-1.19.1_linux_amd64.tar.gz
 tar -zxvf telegraf-1.19.1_linux_amd64.tar.gz
 mv /opt/telegraf-1.19.1/usr/bin/telegraf /opt/telegraf/telegraf
 chmod 777 /opt/telegraf/telegraf
 
 # Install fluent-bit
+echo "Installing fluent-bit..."
 wget -qO - https://packages.fluentbit.io/fluentbit.key | sudo apt-key add -
 sudo echo "deb https://packages.fluentbit.io/ubuntu/xenial xenial main" >> /etc/apt/sources.list
 sudo echo "deb http://security.ubuntu.com/ubuntu bionic-security main" >> /etc/apt/sources.list.d/bionic.list
@@ -86,6 +84,7 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 # /usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 # Installing ME
+echo "Installing Metrics Extension..."
 sudo apt-get install -y apt-transport-https gnupg
 
 # Accept Microsoft public keys
@@ -110,6 +109,17 @@ sudo apt-get update
 
 # Pinning to the latest stable version of ME
 sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
+
+
+# Cleaning up unused packages
+echo "Cleaning up unused packages..."
+sudo apt autoremove
+sudo apt-get update
+
+#Uninstalling packages after gem install re2
+sudo apt-get remove build-essential -y
+sudo apt-get remove libre2-dev -y
+sudo apt-get remove ruby-dev -y
 
 #cleanup all install
 rm -f $TMPDIR/metricsext2*.deb
