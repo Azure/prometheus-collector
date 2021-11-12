@@ -112,20 +112,20 @@ sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
 
 
 # Cleaning up unused packages
-echo "Cleaning up unused packages..."
-sudo apt-get autoremove -y
+echo "Cleaning up packages used for re2 gem install..."
 
 #Uninstalling packages after gem install re2
-# sudo apt-get remove build-essential -y
-# sudo apt-get remove libre2-dev -y
-# sudo apt-get remove ruby-dev -y
+sudo apt-get remove build-essential -y
+sudo apt-get remove libre2-dev -y
+sudo apt-get remove ruby-dev -y
+
+echo "auto removing unused packages..."
+sudo apt-get autoremove -y
 
 #cleanup all install
+echo "cleaning up all install.."
 rm -f $TMPDIR/metricsext2*.deb
 rm -f $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz
 rm -rf $TMPDIR/prometheus-2.25.2.linux-amd64
 rm -f $TMPDIR/telegraf*.gz
 rm -rf $TMPDIR/telegraf-1.19.1/
-
-echo "second cleanup"
-sudo apt-get autoremove -y 
