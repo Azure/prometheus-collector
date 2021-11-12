@@ -19,6 +19,9 @@ echo "Installing inotify..."
 sudo apt-get update
 sudo apt-get install inotify-tools -y
 
+echo "Installing packages for re2 gem install..."
+sudo apt-get install -y build-essential libre2-dev ruby-dev
+
 echo "Installing tomlrb, deep_merge and re2 gems..."
 gem install tomlrb
 gem install deep_merge
