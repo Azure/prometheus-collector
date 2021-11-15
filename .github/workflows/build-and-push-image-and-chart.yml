@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - grace/sdl-scan
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
@@ -13,6 +14,10 @@ jobs:
     steps:
       - name: Set-workflow-initiator
         run: echo "Initiated by - ${GITHUB_ACTOR}"
+      - name: Initialize-CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: go, javascript, ruby
       - name: Set-branch-name-for-non-pr
         if: ${{ github.event_name != 'pull_request' }}
         run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
@@ -63,6 +68,8 @@ jobs:
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
       - name: Dependency Detection setup
         uses: actions/checkout@v2
         with:
