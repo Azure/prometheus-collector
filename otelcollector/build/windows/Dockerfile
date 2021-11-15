@@ -43,7 +43,6 @@ RUN refreshenv \
 && gem install windows-pr -v 1.2.6 \
 && gem install tomlrb -v 1.3.0 \
 && gem install deep_merge -v 1.2.1\
-&& gem install gyoku -v 1.3.1 \
 && gem sources --clear-all
 
 # Remove gem cache and chocolatey

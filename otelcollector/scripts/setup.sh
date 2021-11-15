@@ -23,8 +23,8 @@ chmod 777 /usr/sbin/
 sudo apt-get update
 sudo apt-get install inotify-tools -y
 
-gem install tomlrb
-gem install deep_merge
+gem install tomlrb -v 1.3.0
+gem install deep_merge -v 1.2.1
 
 #used to setcaps for ruby process to read /proc/env
 #echo "installing libcap2-bin"
