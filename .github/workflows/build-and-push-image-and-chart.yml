@@ -68,6 +68,12 @@ jobs:
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
+      - name: DevSkim Scan
+        uses: microsoft/DevSkim-Action@v1
+      - name: Upload DevSkim Scan Results
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: devskim-results.sarif
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v1
       - name: Dependency Detection setup
