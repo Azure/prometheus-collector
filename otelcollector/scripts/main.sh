@@ -110,9 +110,9 @@ fi
 
 ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
 
-if [ -e "/opt/promMergedConfig.yml" ]; then
+if [ -e "/opt/microsoft/promMergedConfig.yml" ]; then
       # promconfigvalidator validates by generating an otel config and running through receiver's config load and validate method
-      /opt/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+      /opt/microsoft/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
             # Use default config if specified config is invalid
             echo "Prometheus custom config validation failed, using defaults"

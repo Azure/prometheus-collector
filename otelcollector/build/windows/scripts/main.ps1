@@ -153,8 +153,8 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
 
     ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
-    if (Test-Path -Path '/opt/promMergedConfig.yml') {
-        /opt/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"+
+    if (Test-Path -Path '/opt/microsoft/promMergedConfig.yml') {
+        /opt/microsoft/promconfigvalidator --config "/opt/microsoft/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"+
         if ( ( $? -eq "False" ) -or (!(Test-Path -Path "/opt/microsoft/otelcollector/collector-config.yml" ))) {
             Write-Output "Prometheus custom config validation failed, using defaults"
             [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
@@ -193,26 +193,26 @@ function Set-EnvironmentVariablesAndConfigParser {
 function Start-Fluentbit {
     # Run fluent-bit service first so that we do not miss any logs being forwarded by the fluentd service and telegraf service.
     # Run fluent-bit as a background job. Switch this to a windows service once fluent-bit supports natively running as a windows service
-    Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "opt/fluent-bit/bin/fluent-bit.exe" -ArgumentList @("-c", "opt/fluent-bit/fluent-bit.conf", "-e", "/opt/fluent-bit/bin/out_appinsights.so") }
+    Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\microsoft\fluent-bit\bin\fluent-bit.exe" -ArgumentList @("-c", "C:\opt\microsoft\fluent-bit\fluent-bit.conf", "-e", "C:\opt\microsoft\fluent-bit\bin\out_appinsights.so") }
 
 }
 
 function Start-Telegraf {
     Write-Host "Installing telegraf service"
-    /opt/microsoft/telegraf/telegraf.exe --service install --config "/etc/telegraf/telegraf.conf"
+    /opt/microsoft/telegraf/telegraf.exe --service install --config "/opt/microsoft/telegraf/telegraf-prometheus-collector-windows.conf"
 
     # Setting delay auto start for telegraf since there have been known issues with windows server and telegraf -
     # https://github.com/influxdata/telegraf/issues/4081
     # https://github.com/influxdata/telegraf/issues/3601
     try {
-        $serverName = [System.Environment]::GetEnvironmentVariable("PODNAME", "process")
+        $serverName = [System.Environment]::GetEnvironmentVariable("POD_NAME", "process")
         if (![string]::IsNullOrEmpty($serverName)) {
             sc.exe \\$serverName config telegraf start= delayed-auto
             Write-Host "Successfully set delayed start for telegraf"
 
         }
         else {
-            Write-Host "Failed to get environment variable PODNAME to set delayed telegraf start"
+            Write-Host "Failed to get environment variable POD_NAME to set delayed telegraf start"
         }
     }
     catch {
@@ -221,10 +221,10 @@ function Start-Telegraf {
         Write-Host "exception occured in delayed telegraf start.. continuing without exiting"
     }
     Write-Host "Running telegraf service in test mode"
-    /opt/microsoft/telegraf/telegraf.exe --config "/opt/microsoft/telegraf/telegraf-prometheus-collector.conf" --test
+    /opt/microsoft/telegraf/telegraf.exe --config "/opt/microsoft/telegraf/telegraf-prometheus-collector-windows.conf" --test
     Write-Host "Starting telegraf service"
     # C:\opt\telegraf\telegraf.exe --service start
-    /opt/microsoft/telegraf/telegraf.exe --config "/opt/telegraf/telegraf-prometheus-collector.conf" --service start
+    /opt/microsoft/telegraf/telegraf.exe --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf" --service start
 
     # Trying to start telegraf again if it did not start due to fluent bit not being ready at startup
     Get-Service telegraf | findstr Running
