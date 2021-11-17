@@ -161,6 +161,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	if err != nil {
 		fmt.Printf("Error while opening regex hash file - %v\n", err)
 	} else {
+		fmt.Printf("Successfully read regex hash file contents for telemetry\n")
 		var regexHash map[string]string
 		err = yaml.Unmarshal([]byte(regexFileContents), &regexHash)
 		if err != nil {
