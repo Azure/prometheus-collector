@@ -6,6 +6,7 @@ New-Item -Type Directory -Path /opt/microsoft/fluent-bit/ -ErrorAction SilentlyC
 New-Item -Type Directory -Path /opt/microsoft/telegraf/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/microsoft/otelcollector/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/microsoft/certificate/ -ErrorAction SilentlyContinue
+New-Item -Type Directory -Path /opt/microsoft/state/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/microsoft/ruby
 ###########################################################################################
 Write-Host ('Installing Metrics Extension');
