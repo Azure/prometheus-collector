@@ -3,6 +3,7 @@
 
 require "tomlrb"
 require "re2"
+require "yaml"
 require_relative "ConfigParseErrorLogger"
 
 @configMapMountPath = "/etc/config/settings/default-targets-metrics-keep-list"
@@ -56,10 +57,6 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !kubeletRegex.nil? && kubeletRegex.kind_of?(String)
       if !kubeletRegex.empty?
         if isValidRegex(kubeletRegex) == true
-          # replacing double quotes and single quotes with escape sequences so that the quotes are retained in the regex,
-          # which might otherwise be lost during environment varible assignment.
-          kubeletRegex = kubeletRegex.gsub("\"", "\\\\\\\\\\\"")
-          kubeletRegex = kubeletRegex.gsub("'", "\\\\\\\\\\\\'")
           @kubeletRegex = kubeletRegex
           puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for kubelet"
         end
@@ -72,8 +69,6 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !corednsRegex.nil? && corednsRegex.kind_of?(String)
       if !corednsRegex.empty?
         if isValidRegex(corednsRegex) == true
-          corednsRegex = corednsRegex.gsub("\"", "\\\\\\\\\\\"")
-          corednsRegex = corednsRegex.gsub("'", "\\\\\\\\\\\\'")
           @corednsRegex = corednsRegex
           puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for coredns"
         else
@@ -88,8 +83,6 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !cadvisorRegex.nil? && cadvisorRegex.kind_of?(String)
       if !cadvisorRegex.empty?
         if isValidRegex(cadvisorRegex) == true
-          cadvisorRegex = cadvisorRegex.gsub("\"", "\\\\\\\\\\\"")
-          cadvisorRegex = cadvisorRegex.gsub("'", "\\\\\\\\\\\\'")
           @cadvisorRegex = cadvisorRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for cadvisor"
         else
@@ -104,8 +97,6 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !kubeproxyRegex.nil? && kubeproxyRegex.kind_of?(String)
       if !kubeproxyRegex.empty?
         if isValidRegex(kubeproxyRegex) == true
-          kubeproxyRegex = kubeproxyRegex.gsub("\"", "\\\\\\\\\\\"")
-          kubeproxyRegex = kubeproxyRegex.gsub("'", "\\\\\\\\\\\\'")
           @kubeproxyRegex = kubeproxyRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for kubeproxy"
         else
@@ -120,8 +111,6 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !apiserverRegex.nil? && apiserverRegex.kind_of?(String)
       if !apiserverRegex.empty?
         if isValidRegex(apiserverRegex) == true
-          apiserverRegex = apiserverRegex.gsub("\"", "\\\\\\\\\\\"")
-          apiserverRegex = apiserverRegex.gsub("'", "\\\\\\\\\\\\'")
           @apiserverRegex = apiserverRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for apiserver"
         else
@@ -136,8 +125,6 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !kubestateRegex.nil? && kubestateRegex.kind_of?(String)
       if !kubestateRegex.empty?
         if isValidRegex(kubestateRegex) == true
-          kubestateRegex = kubestateRegex.gsub("\"", "\\\\\\\\\\\"")
-          kubestateRegex = kubestateRegex.gsub("'", "\\\\\\\\\\\\'")
           @kubestateRegex = kubestateRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for kubestate"
         else
@@ -152,8 +139,6 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !nodeexporterRegex.nil? && nodeexporterRegex.kind_of?(String)
       if !nodeexporterRegex.empty?
         if isValidRegex(nodeexporterRegex) == true
-          kubestateRegex = nodeexporterRegex.gsub("\"", "\\\\\\\\\\\"")
-          kubestateRegex = nodeexporterRegex.gsub("'", "\\\\\\\\\\\\'")
           @nodeexporterRegex = nodeexporterRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for nodeexporter"
         else
@@ -168,8 +153,6 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !windowsexporterRegex.nil? && windowsexporterRegex.kind_of?(String)
       if !windowsexporterRegex.empty?
         if isValidRegex(windowsexporterRegex) == true
-          windowsexporterRegex = windowsexporterRegex.gsub("\"", "\\\\\\\\\\\"")
-          windowsexporterRegex = windowsexporterRegex.gsub("'", "\\\\\\\\\\\\'")
           @windowsexporterRegex = windowsexporterRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for windowsexporter"
         else
@@ -184,8 +167,6 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !windowskubeproxyRegex.nil? && windowskubeproxyRegex.kind_of?(String)
       if !windowskubeproxyRegex.empty?
         if isValidRegex(windowskubeproxyRegex) == true
-          windowskubeproxyRegex = windowskubeproxyRegex.gsub("\"", "\\\\\\\\\\\"")
-          windowskubeproxyRegex = windowskubeproxyRegex.gsub("'", "\\\\\\\\\\\\'")
           @windowskubeproxyRegex = windowskubeproxyRegex
           puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for windowskubeproxy"
         else
@@ -214,22 +195,26 @@ else
 end
 
 # Write the settings to file, so that they can be set as environment variables
-file = File.open("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_env_var", "w")
+file = File.open("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash", "w")
+
+regexHash = {}
+regexHash["KUBELET_METRICS_KEEP_LIST_REGEX"] = @kubeletRegex
+regexHash["COREDNS_METRICS_KEEP_LIST_REGEX"] = @corednsRegex
+regexHash["CADVISOR_METRICS_KEEP_LIST_REGEX"] = @cadvisorRegex
+regexHash["KUBEPROXY_METRICS_KEEP_LIST_REGEX"] = @kubeproxyRegex
+regexHash["APISERVER_METRICS_KEEP_LIST_REGEX"] = @apiserverRegex
+regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"] = @kubestateRegex
+regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"] = @nodeexporterRegex
+regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"] = @windowsexporterRegex
+regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"] = @windowskubeproxyRegex
 
 if !file.nil?
-  file.write("export AZMON_PROMETHEUS_KUBELET_METRICS_KEEP_LIST_REGEX=#{@kubeletRegex}\n")
-  file.write("export AZMON_PROMETHEUS_COREDNS_METRICS_KEEP_LIST_REGEX=#{@corednsRegex}\n")
-  file.write("export AZMON_PROMETHEUS_CADVISOR_METRICS_KEEP_LIST_REGEX=#{@cadvisorRegex}\n")
-  file.write("export AZMON_PROMETHEUS_KUBEPROXY_METRICS_KEEP_LIST_REGEX=#{@kubeproxyRegex}\n")
-  file.write("export AZMON_PROMETHEUS_APISERVER_METRICS_KEEP_LIST_REGEX=#{@apiserverRegex}\n")
-  file.write("export AZMON_PROMETHEUS_KUBESTATE_METRICS_KEEP_LIST_REGEX=#{@kubestateRegex}\n")
-  file.write("export AZMON_PROMETHEUS_NODEEXPORTER_METRICS_KEEP_LIST_REGEX=#{@nodeexporterRegex}\n")
-  file.write("export AZMON_PROMETHEUS_WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX=#{@windowsexporterRegex}\n")
-  file.write("export AZMON_PROMETHEUS_WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX=#{@windowskubeproxyRegex}\n")
-  # Close file after writing all metric keep list setting environment variables
+  # Close file after writing regex keep list hash
+  # Writing it as yaml as it is easy to read and write hash
+  file.write(regexHash.to_yaml)
   file.close
   puts "****************End default-targets-metrics-keep-list Processing********************"
 else
-  puts "Exception while opening file for writing default-targets-metrics-keep-list config environment variables"
+  puts "Exception while opening file for writing default-targets-metrics-keep-list regex config hash"
   puts "****************End default-targets-metrics-keep-list Processing********************"
 end
