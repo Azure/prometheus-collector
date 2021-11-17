@@ -4,10 +4,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
@@ -68,6 +71,7 @@ const (
 	fluentbitEventsProcessedLastPeriodTag = "prometheus.log.eventsprocessedlastperiod"
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
+	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -151,15 +155,28 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 
 	InvalidCustomPrometheusConfig = os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG")
 	DefaultPrometheusConfig = os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG")
-	KubeletKeepListRegex = os.Getenv("AZMON_PROMETHEUS_KUBELET_METRICS_KEEP_LIST_REGEX")
-	CoreDNSKeepListRegex = os.Getenv("AZMON_PROMETHEUS_COREDNS_METRICS_KEEP_LIST_REGEX")
-	CAdvisorKeepListRegex = os.Getenv("AZMON_PROMETHEUS_CADVISOR_METRICS_KEEP_LIST_REGEX")
-	KubeProxyKeepListRegex = os.Getenv("AZMON_PROMETHEUS_KUBEPROXY_METRICS_KEEP_LIST_REGEX")
-	ApiServerKeepListRegex = os.Getenv("AZMON_PROMETHEUS_APISERVER_METRICS_KEEP_LIST_REGEX")
-	KubeStateKeepListRegex = os.Getenv("AZMON_PROMETHEUS_KUBESTATE_METRICS_KEEP_LIST_REGEX")
-	NodeExporterKeepListRegex = os.Getenv("AZMON_PROMETHEUS_NODEEXPORTER_METRICS_KEEP_LIST_REGEX")
-	WinExporterKeepListRegex = os.Getenv("AZMON_PROMETHEUS_WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX")
-	WinKubeProxyKeepListRegex = os.Getenv("AZMON_PROMETHEUS_WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX")
+
+	// Reading regex hash file for telemetry
+	regexFileContents, err := ioutil.ReadFile(keepListRegexHashFilePath)
+	if err != nil {
+		fmt.Printf("Error while opening regex hash file - %v\n", err)
+	} else {
+		var regexHash map[string]string
+		err = yaml.Unmarshal([]byte(regexFileContents), &regexHash)
+		if err != nil {
+			fmt.Printf("Error while unmarshalling regex hash file - %v\n", err)
+		} else {
+			KubeletKeepListRegex = regexHash["KUBELET_METRICS_KEEP_LIST_REGEX"]
+			CoreDNSKeepListRegex = regexHash["COREDNS_METRICS_KEEP_LIST_REGEX"]
+			CAdvisorKeepListRegex = regexHash["CADVISOR_METRICS_KEEP_LIST_REGEX"]
+			KubeProxyKeepListRegex = regexHash["KUBEPROXY_METRICS_KEEP_LIST_REGEX"]
+			ApiServerKeepListRegex = regexHash["APISERVER_METRICS_KEEP_LIST_REGEX"]
+			KubeStateKeepListRegex = regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
+			NodeExporterKeepListRegex = regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
+			WinExporterKeepListRegex = regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
+			WinKubeProxyKeepListRegex = regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
+		}
+	}
 
 	return 0, nil
 }
