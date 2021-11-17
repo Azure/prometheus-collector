@@ -81,8 +81,8 @@ Provide the default MDM account name in the config map (prometheus-collector-set
       windowskubeproxy = "<regex>"
     ```
   Note that if you are using  
-      1. quotes in the regex you will need to escape them using a backslash. Example - keepListRegexes.kubelet = `"test\'smetric\"s\""`  
-      2. backslash in the regex, you will need to replace a single instance of `\` with `\\\\\\\\\`. This is because of the multiple environment variable substitutions that happen before this goes into effect in the configuration.
+      1. quotes in the regex you will need to escape them using a backslash. Example - keepListRegexes.kubelet = `"test\'smetric\"s\""`  instead of `"test'smetric"s""`
+      2. backslashes in the regex, you will need to escape them. Example - keepListRegexes.kubelet = `testbackslash\\*` instead of `testbackslash\*`
   
 - 6.3) Apply the configmap to the cluster
     ```shell
