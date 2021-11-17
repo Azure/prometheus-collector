@@ -15,6 +15,7 @@ require_relative "ConfigParseErrorLogger"
 @daemonsetControllerType = "daemonset"
 @supportedSchemaVersion = true
 @defaultPromConfigPathPrefix = "/opt/microsoft/otelcollector/default-prom-configs/"
+@regexHashFile = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 @regexHash = {}
 
 @kubeletDefaultFileRsSimple = @defaultPromConfigPathPrefix + "kubeletDefaultRsSimple.yml"
@@ -56,7 +57,7 @@ end
 def loadRegexHash
   begin
     puts "prometheus-config-merger::Loading regex hash..."
-    @regexHash = YAML.load_file("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_env_var")
+    @regexHash = YAML.load_file(@regexHashFile)
     puts "prometheus-config-merger::Done loading regex hash!"
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception in loadRegexHash for prometheus config : #{errorStr}, using defaults")
