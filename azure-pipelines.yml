@@ -1,0 +1,31 @@
+trigger:
+- main
+
+resources:
+- repo: self
+
+variables:
+  tag: '$(Build.BuildId)'
+
+stages:
+- stage: Build
+  displayName: Build image
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - script: |
+        sudo apt-get install build-essential -y
+      displayName: 'Get build dependencies'
+    - script: |
+        cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ && make
+      displayName: 'make'
+    - task: Docker@2
+      displayName: Build an image
+      inputs:
+        command: build
+        dockerfile: '$(Build.SourcesDirectory)/otelcollector/Dockerfile'
+        tags: |
+          $(tag)
