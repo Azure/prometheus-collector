@@ -29,3 +29,9 @@ stages:
         dockerfile: '$(Build.SourcesDirectory)/otelcollector/Dockerfile'
         tags: |
           $(tag)
+    - task: ComponentGovernanceComponentDetection@0
+      inputs:
+        scanType: 'LogOnly'
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(tag)'
+        alertWarningLevel: 'High'
