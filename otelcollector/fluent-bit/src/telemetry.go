@@ -159,13 +159,13 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	// Reading regex hash file for telemetry
 	regexFileContents, err := ioutil.ReadFile(keepListRegexHashFilePath)
 	if err != nil {
-		fmt.Printf("Error while opening regex hash file - %v\n", err)
+		Log("Error while opening regex hash file - %v\n", err)
 	} else {
-		fmt.Printf("Successfully read regex hash file contents for telemetry\n")
+		Log("Successfully read regex hash file contents for telemetry\n")
 		var regexHash map[string]string
 		err = yaml.Unmarshal([]byte(regexFileContents), &regexHash)
 		if err != nil {
-			fmt.Printf("Error while unmarshalling regex hash file - %v\n", err)
+			Log("Error while unmarshalling regex hash file - %v\n", err)
 		} else {
 			KubeletKeepListRegex = regexHash["KUBELET_METRICS_KEEP_LIST_REGEX"]
 			CoreDNSKeepListRegex = regexHash["COREDNS_METRICS_KEEP_LIST_REGEX"]
