@@ -20,6 +20,16 @@ data:
     windowsexporter = false
     windowskubeproxy = false
     prometheuscollectorhealth = true
+  default-targets-metrics-keep-list: |-
+    kubelet = ""
+    coredns = ""
+    cadvisor = ""
+    kubeproxy = ""
+    apiserver = ""
+    kubestate = ""
+    nodeexporter = ""
+    windowsexporter = ""
+    windowskubeproxy = ""
 metadata:
   name: prometheus-collector-settings-configmap
   namespace: kube-system

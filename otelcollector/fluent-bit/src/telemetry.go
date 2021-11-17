@@ -4,10 +4,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
@@ -21,6 +24,26 @@ var (
 	TelemetryClient appinsights.TelemetryClient
 	// Invalid Prometheus config validation environemnt variable used for telemetry
 	InvalidCustomPrometheusConfig string
+	// Default Collector config
+	DefaultPrometheusConfig string
+	// Kubelet metrics keep list regex
+	KubeletKeepListRegex string
+	// CoreDNS metrics keep list regex
+	CoreDNSKeepListRegex string
+	// CAdvisor metrics keep list regex
+	CAdvisorKeepListRegex string
+	// KubeProxy metrics keep list regex
+	KubeProxyKeepListRegex string
+	// API Server metrics keep list regex
+	ApiServerKeepListRegex string
+	// KubeState metrics keep list regex
+	KubeStateKeepListRegex string
+	// Node Exporter metrics keep list regex
+	NodeExporterKeepListRegex string
+	// Windows Exporter metrics keep list regex
+	WinExporterKeepListRegex string
+	// Windows KubeProxy metrics keep list regex
+	WinKubeProxyKeepListRegex string
 )
 
 const (
@@ -48,6 +71,7 @@ const (
 	fluentbitEventsProcessedLastPeriodTag = "prometheus.log.eventsprocessedlastperiod"
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
+	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -130,6 +154,31 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	TelemetryClient.Context().CommonProperties = CommonProperties
 
 	InvalidCustomPrometheusConfig = os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG")
+	DefaultPrometheusConfig = os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG")
+
+	// Reading regex hash file for telemetry
+	regexFileContents, err := ioutil.ReadFile(keepListRegexHashFilePath)
+	if err != nil {
+		Log("Error while opening regex hash file - %v\n", err)
+	} else {
+		Log("Successfully read regex hash file contents for telemetry\n")
+		var regexHash map[string]string
+		err = yaml.Unmarshal([]byte(regexFileContents), &regexHash)
+		if err != nil {
+			Log("Error while unmarshalling regex hash file - %v\n", err)
+		} else {
+			KubeletKeepListRegex = regexHash["KUBELET_METRICS_KEEP_LIST_REGEX"]
+			CoreDNSKeepListRegex = regexHash["COREDNS_METRICS_KEEP_LIST_REGEX"]
+			CAdvisorKeepListRegex = regexHash["CADVISOR_METRICS_KEEP_LIST_REGEX"]
+			KubeProxyKeepListRegex = regexHash["KUBEPROXY_METRICS_KEEP_LIST_REGEX"]
+			ApiServerKeepListRegex = regexHash["APISERVER_METRICS_KEEP_LIST_REGEX"]
+			KubeStateKeepListRegex = regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
+			NodeExporterKeepListRegex = regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
+			WinExporterKeepListRegex = regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
+			WinKubeProxyKeepListRegex = regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
+		}
+	}
+
 	return 0, nil
 }
 
@@ -173,6 +222,36 @@ func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{
 				if InvalidCustomPrometheusConfig != "" {
 					metric.Properties["InvalidCustomPrometheusConfig"] = InvalidCustomPrometheusConfig
 				}
+				if DefaultPrometheusConfig != "" {
+					metric.Properties["DefaultPrometheusConfig"] = DefaultPrometheusConfig
+				}
+				if KubeletKeepListRegex != "" {
+					metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
+				}
+				if CoreDNSKeepListRegex != "" {
+					metric.Properties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
+				}
+				if CAdvisorKeepListRegex != "" {
+					metric.Properties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
+				}
+				if KubeProxyKeepListRegex != "" {
+					metric.Properties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
+				}
+				if ApiServerKeepListRegex != "" {
+					metric.Properties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
+				}
+				if KubeStateKeepListRegex != "" {
+					metric.Properties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
+				}
+				if NodeExporterKeepListRegex != "" {
+					metric.Properties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
+				}
+				if WinExporterKeepListRegex != "" {
+					metric.Properties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
+				}
+				if WinKubeProxyKeepListRegex != "" {
+					metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
+				}
 				TelemetryClient.Track(metric)
 			}
 
@@ -192,7 +271,7 @@ func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{
 					BytesSentTotal += bytesSentToPubCount
 					TimeseriesVolumeMutex.Unlock()
 				}
-		 	}
+			}
 		}
 	}
 
