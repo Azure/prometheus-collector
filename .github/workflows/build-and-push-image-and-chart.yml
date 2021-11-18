@@ -73,7 +73,7 @@ jobs:
         #with:
           #output-directory: /home/runner/work/prometheus-collector/results/
       - name: BinSkim Scan
-        run: dotnet add package Microsoft.CodeAnalysis.BinSkim --version 1.9.0 && binskim analyze ./otelcollector/opentelemetry-collector-builder/otelcollector ./otelcollector/opentelemetry-collector-builder/promconfigvalidator --output binskim.sarif 
+        run: dotnet tool install --global Microsoft.CodeAnalysis.BinSkim --version 1.9.0 && binskim analyze ./otelcollector/opentelemetry-collector-builder/otelcollector ./otelcollector/opentelemetry-collector-builder/promconfigvalidator --output binskim.sarif 
       #- name: Perform CodeQL Analysis
         #uses: github/codeql-action/analyze@v1
       - name: Upload SDL Tool Results
