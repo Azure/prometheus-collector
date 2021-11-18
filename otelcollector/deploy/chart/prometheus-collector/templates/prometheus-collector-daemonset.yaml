@@ -371,7 +371,7 @@ spec:
       serviceAccountName: {{ template "prometheus-collector.fullname" . }}-serviceaccount
       containers:
         - name: prometheus-collector-win
-          image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev:winkaveesh11172021-2"
+          image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev:winkaveesh11172021-3"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           resources:
             {{- toYaml .Values.resources.daemonSet | nindent 12 }}
@@ -425,7 +425,7 @@ spec:
             - name: HELM_RELEASE_NAME
               value: "{{ .Release.Name }}"
             - name: AGENT_VERSION
-              value: "winkaveesh11172021-2" # *collectorimagetag
+              value: "winkaveesh11172021-3" # *collectorimagetag
             {{- if .Values.mode.advanced  }}
             - name: MODE
               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
@@ -451,16 +451,16 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
-          # livenessProbe:
-          #   exec:
-          #     command:
-          #       - /bin/bash
-          #       - -c
-          #       - /opt/microsoft/liveness/livenessprobe.sh
-          #   initialDelaySeconds: 60
-          #   periodSeconds: 15
-          #   timeoutSeconds: 5
-          #   failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - cmd
+                - /c
+                - C:\opt\microsoft\scripts\livenessprobe.cmd
+            periodSeconds: 15
+            initialDelaySeconds: 300
+            timeoutSeconds: 15
+            failureThreshold: 3
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

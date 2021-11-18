@@ -24,3 +24,17 @@ Set-Location ..
 Set-Location opentelemetry-collector-builder
 
 Write-Output "FINISHED building fluent-bit plugin"
+
+Write-Output "building promconfigvalidator"
+
+Set-Location ..
+Set-Location prom-config-validator-builder
+
+.\makefile_windows.ps1
+
+Set-Location ..
+Set-Location opentelemetry-collector-builder
+
+Write-Output "FINISHED building promconfigvalidator"
+
+make -C ../prom-config-validator-builder

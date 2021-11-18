@@ -28,13 +28,13 @@ Your prometheus-config file now contains the additional scrape targets you want.
 For the prometheus collector to consume these additional scrape configs, you create and deploy this config file as a configmap in your cluster in the same namespace that you deployed your prometheus collector. Note that your configuration file name must be `prometheus-config` for the configmap to be setup properly. See example below as well.
 
 ```shell
-kubectl create configmap <prometheus_collector_chart_release_name>-prometheus-config --from-file=prometheus-config -n <same_namespace_as_prometheus_collector_namespace>
+kubectl create configmap <prometheus_collector_chart_release_name>-prometheus-config-node --from-file=prometheus-config -n <same_namespace_as_prometheus_collector_namespace>
 ```
 
 **Example** :-
 
 ```shell
-kubectl create configmap my-collector-dev-release-prometheus-config --from-file=prometheus-config -n prom-collector
+kubectl create configmap my-collector-dev-release-prometheus-config-node --from-file=prometheus-config -n prom-collector
 ```  
 
 > [!Note]
