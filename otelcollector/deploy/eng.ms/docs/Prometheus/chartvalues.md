@@ -33,5 +33,15 @@
 | scrapeTargets.prometheusCollectorHealth | bool | Optional | `true` | when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped |
 | scrapeTargets.windowsExporter | bool | Optional | `false` | `windows only` - when true, will scrape windows node exporter in every windows node discovered in the cluster, without requiring any additional scrape configuration. Note:- Windows-exporter is not installed by this tool on windows node(s). You would need to install it by yourselves, before turning this ON |
 | scrapeTargets.windowsKubeProxy | bool | Optional | `false` | `windows only` - when true, will scrape windows node's kubeproxy service, without requiring any additional scrape configuration, in every windows node discovered in the cluster. Note:- Windows kube-proxy metrics will soon be enabled on windows nodes for AKS clusters |
-
+| keepListRegexes.coreDns | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for the coreDns service
+| keepListRegexes.kubelet | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for kubelet
+| keepListRegexes.cAdvisor | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for cAdvisor
+| keepListRegexes.kubeProxy | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for kube-proxy
+| keepListRegexes.apiServer | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for the kubernetes api server
+| keepListRegexes.kubeState | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for kube-state metrics
+| keepListRegexes.nodeExporter | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for node-exporter
+| keepListRegexes.windowsExporter | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for windows exporter
+| keepListRegexes.windowsKubeProxy | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for windows kube-proxy
+| prometheus-node-exporter.service.targetPort | INT | Optional | `true` | `linux only` - when a port is specified, node exporter uses this as bind/listen port, both prometheus-node-exporter.service.targetPort and prometheus-node-exporter.service.port should be set for this to work. |
+| prometheus-node-exporter.service.port | INT | Optional | `true` | `linux only` - when a port is specified, node exporter uses this as bind/listen port |
 ----------------------------------------------
