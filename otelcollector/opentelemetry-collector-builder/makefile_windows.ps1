@@ -37,5 +37,3 @@ Set-Location ..
 Set-Location opentelemetry-collector-builder
 
 Write-Output "FINISHED building promconfigvalidator"
-
-make -C ../prom-config-validator-builder
