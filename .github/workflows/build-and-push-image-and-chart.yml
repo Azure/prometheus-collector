@@ -15,10 +15,10 @@ jobs:
         run: echo "Initiated by - ${GITHUB_ACTOR}"
       - name: Set-branch-name-for-non-pr
         if: ${{ github.event_name != 'pull_request' }}
-        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / - | tr . - | tr _ - | cut -c1-90)" >> $GITHUB_ENV
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
-        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / -)" >> $GITHUB_ENV
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / - | tr . - | tr _ - | cut -c1-90)" >> $GITHUB_ENV
       - name: Set-Env
         run: echo "ENV=dev" >> $GITHUB_ENV
       - name: Set-ACR-Registry
