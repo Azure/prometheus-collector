@@ -1,0 +1,40 @@
+exporters:
+  file:
+    path: /opt/microsoft/otelcollector/promotel.json
+  #influx:
+  #  loglevel: debug
+  otlp:
+    endpoint: 127.0.0.1:55680
+    insecure: true
+    compression: "gzip"
+    retry_on_failure:
+      enabled: false
+    timeout: 12s
+processors:
+  batch:
+    send_batch_size: 7000
+    timeout: 200ms
+    send_batch_max_size: 7000
+  resource:
+    attributes:
+    - key: cluster
+      value: "$customResourceId"
+      action: "upsert"
+receivers:
+    prometheus:
+      config:
+        scrape_configs:
+        # scrape_configs must be non-null for collector to start
+        - job_name: empty_job
+        # only adding this in the default yml for test purposes, remove this when making the PR
+        # - job_name: 'me_blackbox_test'
+        #   scrape_interval: 5s
+        #   static_configs:
+        #     - targets:
+        #       - 'demo.robustperception.io:9093'
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      exporters: [otlp]
+      processors: [batch,resource]

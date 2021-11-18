@@ -3,6 +3,7 @@
 # building otelcollector
 Write-Output "building otelcollector"
 Remove-Item .\otelcollector
+Remove-Item .\otelcollector.exe
 go get
 go build -o otelcollector .
 Move-Item .\otelcollector .\otelcollector.exe
