@@ -68,16 +68,18 @@ jobs:
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
-      - name: DevSkim Scan
-        uses: microsoft/DevSkim-Action@v1
+      #- name: DevSkim Scan
+        #uses: microsoft/DevSkim-Action@v1
         #with:
           #output-directory: /home/runner/work/prometheus-collector/results/
+      - name: BinSkim Scan
+        run: dotnet add package Microsoft.CodeAnalysis.BinSkim --version 1.9.0 && binskim analyze ./otelcollector/opentelemetry-collector-builder/otelcollector ./otelcollector/opentelemetry-collector-builder/promconfigvalidator --output binskim.sarif 
       #- name: Perform CodeQL Analysis
         #uses: github/codeql-action/analyze@v1
       - name: Upload SDL Tool Results
         uses: github/codeql-action/upload-sarif@v1
         with:
-          sarif_file: devskim-results.sarif
+          sarif_file: binskim.sarif
       - name: Dependency Detection setup
         uses: actions/checkout@v2
         with:
