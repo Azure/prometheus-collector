@@ -14,5 +14,5 @@ require (
 	go.mongodb.org/mongo-driver v1.5.1
 	github.com/containerd/containerd v1.4.11
   github.com/gorilla/websocket v1.4.2
-  github.com/miekg/dns v1.1.25
+  github.com/miekg/dns v1.1.26
 )
