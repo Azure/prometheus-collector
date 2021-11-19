@@ -16,8 +16,6 @@ require (
 	go.mongodb.org/mongo-driver v1.5.1 // indirect
 	//github.com/vishiy/influxexporter v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/collector v0.27.0
-  github.com/gorilla/websocket v1.4.2
-  github.com/miekg/dns v1.1.26
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )

@@ -18,6 +18,4 @@ require (
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-  github.com/gorilla/websocket v1.4.2
-  github.com/miekg/dns v1.1.26
 )
