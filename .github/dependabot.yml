@@ -6,22 +6,34 @@
 version: 2
 updates:
   - package-ecosystem: "gomod"
-    directory: "/otelcollector/prom-config-validator-builder" # Location of prom-config tool package manifests
+    directory: "/otelcollector/prom-config-validator-builder" # prom-config tool package manifests
     schedule:
       interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
     open-pull-requests-limit: 2
+    rebase-strategy: "auto"
   - package-ecosystem: "gomod"
-    directory: "/otelcollector/opentelemetry-collector-builder" # Location of otel collector package manifests
+    directory: "/otelcollector/opentelemetry-collector-builder" # otel collector package manifests
     schedule:
       interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
     open-pull-requests-limit: 2
+    rebase-strategy: "auto"
   - package-ecosystem: "gomod"
-    directory: "/otelcollector/fluent-bit/src" # Location of out_appinsights package manifests
+    directory: "/otelcollector/fluent-bit/src" # out_appinsights package manifests
     schedule:
       interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
     open-pull-requests-limit: 2
+    rebase-strategy: "auto"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
     open-pull-requests-limit: 2
+    rebase-strategy: "auto"
