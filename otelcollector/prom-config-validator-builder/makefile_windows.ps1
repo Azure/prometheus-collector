@@ -10,3 +10,5 @@ go get
 Write-Output "========================= go build  ========================="
 
 go build -o promconfigvalidator .
+
+Move-Item promconfigvalidator promconfigvalidator.exe
