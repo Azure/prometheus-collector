@@ -14,7 +14,7 @@ COPY ./build/windows/scripts/livenessprobe.cmd $tmpdir/scripts/
 
 COPY ./configmapparser/*.rb $tmpdir/configmapparser/
 COPY ./opentelemetry-collector-builder/otelcollector.exe ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/otelcollector/
-COPY ./prom-config-validator-builder/promconfigvalidator $tmpdir/
+COPY ./prom-config-validator-builder/promconfigvalidator.exe $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_ds.config $tmpdir/metricextension/
 COPY ./telegraf/telegraf-prometheus-collector-windows.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit-windows.conf $tmpdir/fluent-bit/
