@@ -42,9 +42,9 @@ helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-pr
 #### Step 5 : Apply the secretProviderClass.yaml that you updated step-2
 ```shell kubectl apply -f secretProviderClass.yaml ```
 
-#### Step 6 : Update configmap to provide default MDM Account name and enable/disable default scrape targets
+#### Step 6 : Update configmap to provide default MDM Account name, enable/disable default scrape targets or allow only the metric names matching regexes for default targets 
 
-Provide the default MDM account name in the config map (prometheus-collector-settings-configmap.yaml), optionally enable/disable default scrape targets for your cluster(kubelet, coredns, etc.) using the configmap settings, and apply the configmap to your kubernetes cluster (see below steps)
+Provide the default MDM account name in the config map (prometheus-collector-settings-configmap.yaml), optionally enable/disable default scrape targets for your cluster(kubelet, coredns, etc.) using the configmap settings or optionally configure certain metric(s) collection from default targets using regex based filtering, and apply the configmap to your kubernetes cluster (see below steps)
 
 - 6.1) Ensure the line below in the configmap has your MDM account name (which will be used as the default MDM account to send metrics to)
 
@@ -66,7 +66,24 @@ Provide the default MDM account name in the config map (prometheus-collector-set
       nodeexporter = true
     ```
 
+- 6.3) Specify if you'd like to filter out metrics collected for the default targets using regex based filtering.
 
+    ```yaml
+    default-targets-metrics-keep-list: |-
+      kubelet = "<regex>"
+      coredns= "<regex>"
+      cadvisor = "<regex>"
+      kubeproxy = "<regex>"
+      apiserver = "<regex>"
+      kubestate = "<regex>"
+      nodeexporter = "<regex>"
+      windowsexporter = "<regex>"
+      windowskubeproxy = "<regex>"
+    ```
+  Note that if you are using  
+      1. quotes in the regex you will need to escape them using a backslash. Example - keepListRegexes.kubelet = `"test\'smetric\"s\""`  instead of `"test'smetric"s""`
+      2. backslashes in the regex, you will need to escape them. Example - keepListRegexes.kubelet = `testbackslash\\*` instead of `testbackslash\*`
+  
 - 6.3) Apply the configmap to the cluster
     ```shell
     kubectl apply -f prometheus-collector-settings-configmap.yaml
@@ -96,6 +113,8 @@ By default and for testing purposes, the provided configmap has scrape config to
     You can also copy this tool and the collector config template using kubectl cp from paths /opt/promconfigvalidator and /opt/microsoft/otelcollector/collector-config-template.yml from within the prometheus-collector container and run this command for your prometheus config before adding to the configmap, to save some time.
     This by default generates the otel collector configuration file 'merged-otel-config.yaml' if no paramater is provided using the optional --output paramater.
     This is the otel config that will be applied to the prometheus collector which includes the custom prometheus config
+
+**Note** The job names `kubelet`, `cadvisor`, `kube-dns`, `kube-proxy`, `kube-apiserver`, `kube-state-metrics`, `node`, `prometheus_collector_health`, `windows-exporter(disabled by default)` and `kube-proxy-windows(disabled by default)` are reserved and if they were to be present in the custom configuration, the otelcollector will fail to start because of the duplicate job name. Please refrain from using these for the job names. If you were to use these, please disable the corresponding default targets as mentioned in the previous section and then you can use these names as the job names in the custom prometheus configuration.
 
 #### Step 8 : Deploy prometheus-node-exporter and kube-state-metrics in your cluster
 
