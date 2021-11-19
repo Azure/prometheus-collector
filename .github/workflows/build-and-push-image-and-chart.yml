@@ -68,18 +68,21 @@ jobs:
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
-      #- name: DevSkim Scan
-        #uses: microsoft/DevSkim-Action@v1
-        #with:
-          #output-directory: /home/runner/work/prometheus-collector/results/
       - name: BinSkim Scan
-        run: dotnet tool install --global Microsoft.CodeAnalysis.BinSkim --version 1.7.1 && binskim analyze ./otelcollector/opentelemetry-collector-builder/otelcollector ./otelcollector/opentelemetry-collector-builder/promconfigvalidator --output binskim.sarif --verbose && ls && echo ${{ env.PWD }} && cat binskim.sarif
-      #- name: Perform CodeQL Analysis
-        #uses: github/codeql-action/analyze@v1
+        run: dotnet tool install --global Microsoft.CodeAnalysis.BinSkim --version 1.7.1 && binskim analyze ./otelcollector/opentelemetry-collector-builder/otelcollector ./otelcollector/opentelemetry-collector-builder/promconfigvalidator --output binskim.sarif --verbose
+      - name: DevSkim Scan
+        uses: microsoft/DevSkim-Action@v1
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
+        with:
+          output: ./
+          upload: "false"
+      - name: Output current directory
+        run: ls && echo ${{ env.PWD }}
       - name: Upload SDL Tool Results
         uses: github/codeql-action/upload-sarif@v1
         with:
-          sarif_file: binskim.sarif
+          sarif_file: /home/runner/work/prometheus-collector/prometheus-collector
       - name: Dependency Detection setup
         uses: actions/checkout@v2
         with:
