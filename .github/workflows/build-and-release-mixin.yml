@@ -1,13 +1,13 @@
 name: build-and-release-mixin
 on:
-  push:
-    branches:
-      - vishwa/dash
-  #workflow_dispatch:
-  #  inputs:
-  #    mixinName:
-  #      description: 'Mixin name to build & release. Allowed mixins are "kubernetes", "node", "coredns" '
-  #      required: true
+  #push:
+  #  branches:
+  #    - main
+  workflow_dispatch:
+    inputs:
+      mixinName:
+        description: 'Mixin name to build & release. Allowed mixins are "kubernetes", "node", "coredns" '
+        required: true
 jobs:
   build-and-release-mixin:
     runs-on: ubuntu-latest
