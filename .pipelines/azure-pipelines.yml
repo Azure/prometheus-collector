@@ -1,3 +1,5 @@
+# Go to https://github-private.visualstudio.com/microsoft/_build?definitionId=405 and manually run the pipeline for CG detection
+# Then find the results here: https://github-private.visualstudio.com/microsoft/_componentGovernance/188700
 resources:
 - repo: self
 
