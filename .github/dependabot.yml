@@ -9,11 +9,14 @@ updates:
     directory: "/otelcollector/prom-config-validator-builder" # Location of package manifests
     schedule:
       interval: "daily"
+    open-pull-requests-limit: 5
   - package-ecosystem: "gomod"
     directory: "/otelcollector/opentelemetry-collector-builder" # Location of package manifests
     schedule:
       interval: "daily"
+    open-pull-requests-limit: 5
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
+    open-pull-requests-limit: 5
