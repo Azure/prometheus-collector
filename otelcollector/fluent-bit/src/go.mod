@@ -9,5 +9,5 @@ require (
 	github.com/prometheus/client_golang v1.11.0
 	github.com/ugorji/go v1.1.2-0.20180813092308-00b869d2f4a5 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0-20170531160350-a96e63847dc3
-	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v2 v2.4.0
 )
