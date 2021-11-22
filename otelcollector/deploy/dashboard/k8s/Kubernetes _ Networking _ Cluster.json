@@ -1873,7 +1873,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info, cluster)",
+          "query": "label_values(up{job=\"cadvisor\"}, cluster)",
           "refId": "Prometheus-INT-Cluster-cluster-Variable-Query"
         },
         "refresh": 2,

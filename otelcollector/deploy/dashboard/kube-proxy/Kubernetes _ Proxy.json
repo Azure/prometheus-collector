@@ -1183,7 +1183,7 @@
           "value": "$__all"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(kubeproxy_sync_proxy_rules_duration_seconds_count, cluster)",
+        "definition": "label_values(up{job=\"kube-proxy\"}, cluster)",
         "description": "Source-https://github.com/monitoring-mixins/website/blob/master/assets/kubernetes/dashboards/proxy.json",
         "error": null,
         "hide": 0,
@@ -1193,7 +1193,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info, cluster)",
+          "query": "label_values(up{job=\"kube-proxy\"}, cluster)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

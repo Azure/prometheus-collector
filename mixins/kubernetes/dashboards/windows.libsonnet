@@ -18,6 +18,8 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       dashboard.new(
         '%(dashboardNamePrefix)sCompute Resources / Cluster(Windows)' % $._config.grafanaK8s,
         uid=($._config.grafanaDashboardIDs['k8s-resources-windows-cluster.json']),
+        refresh=($._config.grafanaK8s.refresh),
+        time_from='now-1h',
         tags=($._config.grafanaK8s.dashboardTags),
       ).addTemplate(
         {
@@ -135,6 +137,8 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       dashboard.new(
         '%(dashboardNamePrefix)sCompute Resources / Namespace(Windows)' % $._config.grafanaK8s,
         uid=($._config.grafanaDashboardIDs['k8s-resources-windows-namespace.json']),
+        refresh=($._config.grafanaK8s.refresh),
+        time_from='now-1h',
         tags=($._config.grafanaK8s.dashboardTags),
       ).addTemplate(
         {
@@ -228,6 +232,8 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       dashboard.new(
         '%(dashboardNamePrefix)sCompute Resources / Pod(Windows)' % $._config.grafanaK8s,
         uid=($._config.grafanaDashboardIDs['k8s-resources-windows-pod.json']),
+        refresh=($._config.grafanaK8s.refresh),
+        time_from='now-1h',
         tags=($._config.grafanaK8s.dashboardTags),
       ).addTemplate(
         {
@@ -349,6 +355,8 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       dashboard.new(
         '%(dashboardNamePrefix)sUSE Method / Cluster(Windows)' % $._config.grafanaK8s,
         uid=($._config.grafanaDashboardIDs['k8s-windows-cluster-rsrc-use.json']),
+        refresh=($._config.grafanaK8s.refresh),
+        time_from='now-1h',
         tags=($._config.grafanaK8s.dashboardTags),
       ).addTemplate(
         {
@@ -434,6 +442,8 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       dashboard.new(
         '%(dashboardNamePrefix)sUSE Method / Node(Windows)' % $._config.grafanaK8s,
         uid=($._config.grafanaDashboardIDs['k8s-windows-node-rsrc-use.json']),
+        refresh=($._config.grafanaK8s.refresh),
+        time_from='now-1h',
         tags=($._config.grafanaK8s.dashboardTags),
       ).addTemplate(
         {

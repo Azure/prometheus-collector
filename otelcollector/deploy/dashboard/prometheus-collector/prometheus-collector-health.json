@@ -306,7 +306,7 @@
           "query": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\"}, controller_type)",
           "refId": "StandardVariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -329,7 +329,7 @@
           "query": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\"}, computer)",
           "refId": "StandardVariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
