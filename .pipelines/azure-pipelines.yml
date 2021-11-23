@@ -25,9 +25,10 @@ stages:
       inputs:
         InputType: 'Basic'
         Function: 'analyze'
-        TargetPattern: 'guardianGlob'
-        AnalyzeTargetGlob: '$(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector;$(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/promconfigvalidator'
-
+        TargetPattern: 'binskimPattern'
+        AnalyzeTargetBinskim: |
+          $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector
+          $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/promconfigvalidator'
     - task: Docker@2
       displayName: Build an image
       inputs:
