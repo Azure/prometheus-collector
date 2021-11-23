@@ -21,6 +21,13 @@ stages:
     - script: |
         cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ && make
       displayName: 'make'
+    - task: BinSkim@4
+      inputs:
+        InputType: 'Basic'
+        Function: 'analyze'
+        TargetPattern: 'guardianGlob'
+        AnalyzeTargetGlob: '$(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector;$(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/promconfigvalidator'
+
     - task: Docker@2
       displayName: Build an image
       inputs:
