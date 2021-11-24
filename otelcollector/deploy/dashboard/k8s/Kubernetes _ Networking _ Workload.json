@@ -1260,7 +1260,7 @@
         "options": [],
         "query": "prometheus",
         "queryValue": "",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
@@ -1273,7 +1273,7 @@
           "value": "$__all"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(kube_pod_info, cluster)",
+        "definition": "label_values(kube_pod_info{job=\"kube-state-metrics\"}, cluster)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1283,7 +1283,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info, cluster)",
+          "query": "label_values(kube_pod_info{job=\"kube-state-metrics\"}, cluster)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

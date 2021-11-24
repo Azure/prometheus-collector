@@ -913,7 +913,7 @@
           "value": "$__all"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(kube_pod_info, cluster)",
+        "definition": "label_values(up{job=\"kube-state-metrics\"}, cluster)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -923,7 +923,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info, cluster)",
+          "query": "label_values(up{job=\"kube-state-metrics\"}, cluster)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -950,7 +950,7 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info{cluster=~\"$cluster\"}, node)",
+          "query": "label_values(kube_node_info{cluster=~\"$cluster\"}, node)",
           "refId": "Prometheus-INT-Cluster-node-Variable-Query"
         },
         "refresh": 2,

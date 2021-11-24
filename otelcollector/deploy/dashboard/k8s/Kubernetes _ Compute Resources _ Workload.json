@@ -2108,7 +2108,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info, cluster)",
+          "query": "label_values(up{job=\"kube-state-metrics\"}, cluster)",
           "refId": "Prometheus-INT-Cluster-cluster-Variable-Query"
         },
         "refresh": 2,
@@ -2135,7 +2135,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info{cluster=~\"$cluster\"}, namespace)",
+          "query": "label_values(kube_namespace_status_phase{job=\"kube-state-metrics\", cluster=\"$cluster\"}, namespace)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

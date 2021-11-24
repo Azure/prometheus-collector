@@ -2279,7 +2279,7 @@
         "allValue": ".*",
         "current": {},
         "datasource": "$datasource",
-        "definition": "label_values(kubelet_node_name, cluster)",
+        "definition": "label_values(up{job=\"kubelet\"}, cluster)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -2289,7 +2289,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info, cluster)",
+          "query": "label_values(up{job=\"kubelet\"}, cluster)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -2315,7 +2315,7 @@
         "name": "instance",
         "options": [],
         "query": {
-          "query": "label_values(kubelet_runtime_operations_total{cluster=~\"$cluster\", job=\"kubelet\"}, instance)",
+          "query": "label_values(up{job=\"kubelet\",cluster=\"$cluster\"}, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

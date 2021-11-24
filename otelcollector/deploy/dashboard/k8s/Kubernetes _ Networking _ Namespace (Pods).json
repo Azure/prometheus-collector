@@ -1318,7 +1318,7 @@
           "value": "$__all"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(kube_pod_info, cluster)",
+        "definition": "label_values(up{job=\"cadvisor\"}, cluster)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1328,7 +1328,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info, cluster)",
+          "query": "label_values(up{job=\"cadvisor\"}, cluster)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

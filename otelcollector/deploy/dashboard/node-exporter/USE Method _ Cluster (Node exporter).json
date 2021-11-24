@@ -1081,7 +1081,7 @@
           "value": "$__all"
         },
         "datasource": "${datasource}",
-        "definition": "label_values(node_filesystem_size_bytes{job=\"node\"},cluster)",
+        "definition": "label_values(node_time_seconds{job=\"node\"},cluster)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -1091,7 +1091,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(node_filesystem_size_bytes{job=\"node\"},cluster)",
+          "query": "label_values(node_time_seconds{job=\"node\"},cluster)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
