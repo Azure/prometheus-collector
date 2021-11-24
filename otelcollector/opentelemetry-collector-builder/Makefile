@@ -6,7 +6,7 @@ all: otelcollector fluentbitplugin promconfigvalidator
 otelcollector:
 	rm -rf otelcollector
 	go get
-	go build -ldflags "-s -w" -buildmode=pie -o otelcollector .
+	go build -buildmode=pie -o otelcollector .
 
 fluentbitplugin:
 	make -C ../fluent-bit/src
