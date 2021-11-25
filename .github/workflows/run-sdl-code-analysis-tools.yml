@@ -17,7 +17,7 @@ jobs:
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
       - name: BinSkim Scan
-        run: dotnet tool install --global Microsoft.CodeAnalysis.BinSkim --version 1.7.1 && binskim analyze ./otelcollector/opentelemetry-collector-builder/otelcollector ./otelcollector/opentelemetry-collector-builder/promconfigvalidator --output binskim.sarif --verbose
+        run: dotnet tool install --global Microsoft.CodeAnalysis.BinSkim --version 1.7.1 && binskim analyze ./otelcollector/opentelemetry-collector-builder/otelcollector ./otelcollector/prom-config-validator-builder/promconfigvalidator ./otelcollector/fluent-bit/src/out_appinsights.so --verbose
       - name: DevSkim Scan
         uses: microsoft/DevSkim-Action@v1
       - name: Perform CodeQL Analysis
