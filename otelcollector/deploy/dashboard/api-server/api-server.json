@@ -1686,7 +1686,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(up{job=\"kube-apiserver\", cluster)",
+          "query": "label_values(up{job=\"kube-apiserver\"}, cluster)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
