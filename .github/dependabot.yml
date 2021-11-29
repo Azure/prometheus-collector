@@ -1,0 +1,50 @@
+# To get started with Dependabot version updates, we will need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://help.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/prom-config-validator-builder" # prom-config tool package manifests
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/opentelemetry-collector-builder" # otel collector package manifests
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+  - package-ecosystem: "gomod"
+    directory: "/otelcollector/fluent-bit/src" # out_appinsights package manifests
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+  - package-ecosystem: "gomod"
+    directory: "/mixins/kubernetes/scripts" # ignore all here as this is promtool that we use to validate rules, and we don't ship the tool.
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    ignore:
+      - dependency-name: "containerd"
+      - dependency-name: "image-spec"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 2
+    rebase-strategy: "auto"
