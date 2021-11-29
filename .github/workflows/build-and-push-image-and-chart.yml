@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - grace/binskim
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
