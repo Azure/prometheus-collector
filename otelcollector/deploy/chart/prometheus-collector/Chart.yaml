@@ -25,10 +25,10 @@ appVersion: "kaveesh-win-test"
 kubeVersion: ">=1.16.0-0"
 dependencies:
 - name: kube-state-metrics
-  version: "3.1.*"
-  repository: https://prometheus-community.github.io/helm-charts
+  version: "3.5.2"
+  repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
   condition: scrapeTargets.kubeState
 - name: prometheus-node-exporter
-  version: "1.18.*"
-  repository: https://prometheus-community.github.io/helm-charts
+  version: "2.2.0"
+  repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
   condition: scrapeTargets.nodeExporter

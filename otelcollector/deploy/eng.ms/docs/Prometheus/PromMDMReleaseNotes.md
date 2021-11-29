@@ -1,9 +1,24 @@
 # Working with Prometheus metrics in MDM
 
+## Release 11-01-2021 
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:1.0.0-main-11-01-2021-e86fc50d`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:1.0.0-main-11-01-2021-e86fc50d`
+* Change Log -
+  * Support for HELM versions >= 3.7.0 
+    * This is a breaking change, this chart and image versions only work with helm versions >= 3.7.0
+  * Target UX to visualize the config, targets and service discovery  
+  * Validate otel config after default and custom scrape configurations are merged
+  * Move to MCR for dependent charts
+  * Fix telemetry image tag to have registry info
+  * Remove ruby-full which reduces image size by 30MB
+  * Trivy scan issue fix for skip-dirs
+  * Update mongo-driver and containerd to use non vulnerable versions
+
 ## Release 09-25-2021 
 
-* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.5-09-25-2021-e1c22c8`
-* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-main-0.0.5-09-25-2021-e1c22c8`
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-chart-main-0.0.5-09-25-2021-e1c22c83`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector-main-0.0.5-09-25-2021-e1c22c83`
 * Change Log -
   * Add support for sending staleness markers (MDM store has this support added as well to co-ordinate with this release)
   * Configuration Parsing -

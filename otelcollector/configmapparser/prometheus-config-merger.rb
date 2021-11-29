@@ -4,17 +4,22 @@
 require "tomlrb"
 require "deep_merge"
 require "yaml"
+require "re2"
 require_relative "ConfigParseErrorLogger"
 
 @configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
-@collectorConfigTemplatePath = "/opt/microsoft/otelcollector/collector-config-template.yml"
-@collectorConfigWithDefaultPromConfigs = "/opt/microsoft/otelcollector/collector-config-default.yml"
+# @collectorConfigTemplatePath = "/opt/microsoft/otelcollector/collector-config-template.yml"
+# @collectorConfigWithDefaultPromConfigs = "/opt/microsoft/otelcollector/collector-config-default.yml"
+# @promMergedConfigPath = "/opt/microsoft/promMergedConfig.yml"
 @promMergedConfigPath = "/opt/microsoft/promMergedConfig.yml"
+@mergedDefaultConfigPath = "/opt/microsoft/defaultsMergedConfig.yml"
 @configSchemaVersion = ""
 @replicasetControllerType = "replicaset"
 @daemonsetControllerType = "daemonset"
 @supportedSchemaVersion = true
 @defaultPromConfigPathPrefix = "/opt/microsoft/otelcollector/default-prom-configs/"
+@regexHashFile = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
+@regexHash = {}
 
 @kubeletDefaultFileRsSimple = @defaultPromConfigPathPrefix + "kubeletDefaultRsSimple.yml"
 @kubeletDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "kubeletDefaultRsAdvanced.yml"
@@ -58,6 +63,43 @@ def parseConfigMap
   end
 end
 
+def loadRegexHash
+  begin
+    puts "prometheus-config-merger::Loading regex hash..."
+    @regexHash = YAML.load_file(@regexHashFile)
+    puts "prometheus-config-merger::Done loading regex hash!"
+  rescue => errorStr
+    ConfigParseErrorLogger.logError("Exception in loadRegexHash for prometheus config : #{errorStr}, using defaults")
+  end
+end
+
+def AppendMetricRelabelConfig(yamlConfigFile, keepListRegex)
+  begin
+    puts "prometheus-config-merger::In AppendMetricRelabelConfig for #{yamlConfigFile}"
+    config = YAML.load(File.read(yamlConfigFile))
+    keepListMetricRelabelConfig = [{ "source_labels" => ["__name__"], "action" => "keep", "regex" => keepListRegex }]
+
+    # Iterate through each scrape config and append metric relabel config for keep list
+    if !config.nil?
+      scrapeConfigs = config["scrape_configs"]
+      if !scrapeConfigs.nil? && !scrapeConfigs.empty?
+        scrapeConfigs.each { |scfg|
+          metricRelabelCfgs = scfg["metric_relabel_configs"]
+          if metricRelabelCfgs.nil?
+            scfg["metric_relabel_configs"] = keepListMetricRelabelConfig
+          else
+            scfg["metric_relabel_configs"] = metricRelabelCfgs.concat(keepListMetricRelabelConfig)
+          end
+        }
+        cfgYamlWithMetricRelabelConfig = YAML::dump(config)
+        File.open(yamlConfigFile, "w") { |file| file.puts cfgYamlWithMetricRelabelConfig }
+      end
+    end
+  rescue => errorStr
+    ConfigParseErrorLogger.logError("Exception while appending metric relabel config in default target file - #{yamlConfigFile} : #{errorStr}, using defaults")
+  end
+end
+
 # Get the list of default configs to be included in the otel's prometheus config
 def populateDefaultPrometheusConfig
   begin
@@ -74,14 +116,21 @@ def populateDefaultPrometheusConfig
 
     defaultConfigs = []
     if !ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].downcase == "true"
+      kubeletMetricsKeepListRegex = @regexHash["KUBELET_METRICS_KEEP_LIST_REGEX"]
       if currentControllerType == @replicasetControllerType
         if advancedMode == false
+          if !kubeletMetricsKeepListRegex.nil? && !kubeletMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@kubeletDefaultFileRsSimple, kubeletMetricsKeepListRegex)
+          end
           defaultConfigs.push(@kubeletDefaultFileRsSimple)
         else
           defaultConfigs.push(@kubeletDefaultFileRsAdvanced)
         end
       else
         if advancedMode == true
+          if !kubeletMetricsKeepListRegex.nil? && !kubeletMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@kubeletDefaultFileDs, kubeletMetricsKeepListRegex)
+          end
           contents = File.read(@kubeletDefaultFileDs)
           contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
           contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
@@ -91,17 +140,28 @@ def populateDefaultPrometheusConfig
       end
     end
     if !ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+      corednsMetricsKeepListRegex = @regexHash["COREDNS_METRICS_KEEP_LIST_REGEX"]
+      if !corednsMetricsKeepListRegex.nil? && !corednsMetricsKeepListRegex.empty?
+        AppendMetricRelabelConfig(@corednsDefaultFile, corednsMetricsKeepListRegex)
+      end
       defaultConfigs.push(@corednsDefaultFile)
     end
     if !ENV["AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED"].downcase == "true"
+      cadvisorMetricsKeepListRegex = @regexHash["CADVISOR_METRICS_KEEP_LIST_REGEX"]
       if currentControllerType == @replicasetControllerType
         if advancedMode == false
+          if !cadvisorMetricsKeepListRegex.nil? && !cadvisorMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@cadvisorDefaultFileRsSimple, cadvisorMetricsKeepListRegex)
+          end
           defaultConfigs.push(@cadvisorDefaultFileRsSimple)
         else
           defaultConfigs.push(@cadvisorDefaultFileRsAdvanced)
         end
       else
         if advancedMode == true
+          if !cadvisorMetricsKeepListRegex.nil? && !cadvisorMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@cadvisorDefaultFileDs, cadvisorMetricsKeepListRegex)
+          end
           contents = File.read(@cadvisorDefaultFileDs)
           contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
           contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
@@ -111,12 +171,24 @@ def populateDefaultPrometheusConfig
       end
     end
     if !ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+      kubeproxyMetricsKeepListRegex = @regexHash["KUBEPROXY_METRICS_KEEP_LIST_REGEX"]
+      if !kubeproxyMetricsKeepListRegex.nil? && !kubeproxyMetricsKeepListRegex.empty?
+        AppendMetricRelabelConfig(@kubeproxyDefaultFile, kubeproxyMetricsKeepListRegex)
+      end
       defaultConfigs.push(@kubeproxyDefaultFile)
     end
     if !ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+      apiserverMetricsKeepListRegex = @regexHash["APISERVER_METRICS_KEEP_LIST_REGEX"]
+      if !apiserverMetricsKeepListRegex.nil? && !apiserverMetricsKeepListRegex.empty?
+        AppendMetricRelabelConfig(@apiserverDefaultFile, apiserverMetricsKeepListRegex)
+      end
       defaultConfigs.push(@apiserverDefaultFile)
     end
     if !ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+      kubestateMetricsKeepListRegex = @regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
+      if !kubestateMetricsKeepListRegex.nil? && !kubestateMetricsKeepListRegex.empty?
+        AppendMetricRelabelConfig(@kubestateDefaultFile, kubestateMetricsKeepListRegex)
+      end
       contents = File.read(@kubestateDefaultFile)
       contents = contents.gsub("$$KUBE_STATE_NAME$$", ENV["KUBE_STATE_NAME"])
       contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
@@ -124,6 +196,8 @@ def populateDefaultPrometheusConfig
       defaultConfigs.push(@kubestateDefaultFile)
     end
     if !ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].downcase == "true"
+      nodeexporterMetricsKeepListRegex = @regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
+
       if currentControllerType == @replicasetControllerType
         if advancedMode == true
           contents = File.read(@nodeexporterDefaultFileRsAdvanced)
@@ -132,6 +206,9 @@ def populateDefaultPrometheusConfig
           File.open(@nodeexporterDefaultFileRsAdvanced, "w") { |file| file.puts contents }
           defaultConfigs.push(@nodeexporterDefaultFileRsAdvanced)
         else
+          if !nodeexporterMetricsKeepListRegex.nil? && !nodeexporterMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@nodeexporterDefaultFileRsSimple, nodeexporterMetricsKeepListRegex)
+          end
           contents = File.read(@nodeexporterDefaultFileRsSimple)
           contents = contents.gsub("$$NODE_EXPORTER_NAME$$", ENV["NODE_EXPORTER_NAME"])
           contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
@@ -140,6 +217,9 @@ def populateDefaultPrometheusConfig
         end
       else
         if advancedMode == true
+          if !nodeexporterMetricsKeepListRegex.nil? && !nodeexporterMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@nodeexporterDefaultFileDs, nodeexporterMetricsKeepListRegex)
+          end
           contents = File.read(@nodeexporterDefaultFileDs)
           contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
           contents = contents.gsub("$$NODE_EXPORTER_TARGETPORT$$", ENV["NODE_EXPORTER_TARGETPORT"])
@@ -153,10 +233,18 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].downcase == "true"
       defaultConfigs.push(@prometheusCollectorHealthDefaultFile)
     end
-    if currentControllerType == @daemonsetControllerType  && advancedMode == true && !ENV["OS_TYPE"].nil? && ENV["OS_TYPE"].downcase == "windows" && !ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].downcase == "true"
+    if !ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @@daemonsetControllerType && advancedMode == true && !ENV["OS_TYPE"].nil? && ENV["OS_TYPE"].downcase == "windows"
+      winexporterMetricsKeepListRegex = @regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
+      if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
+        AppendMetricRelabelConfig(@windowsexporterDefaultFile, winexporterMetricsKeepListRegex)
+      end
       defaultConfigs.push(@windowsexporterDefaultFile)
     end
     if !ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+      winkubeproxyMetricsKeepListRegex = @regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
+      if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
+        AppendMetricRelabelConfig(@windowskubeproxyDefaultFile, winkubeproxyMetricsKeepListRegex)
+      end
       defaultConfigs.push(@windowskubeproxyDefaultFile)
     end
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
@@ -207,19 +295,17 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
 end
 
 puts "****************Start Merging Default and Custom Prometheus Config********************"
-
 # Populate default scrape config(s) if AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED is set to false
 # and write them as a collector config file, in case the custom config validation fails,
 # and we need to fall back to defaults
 if !ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].downcase == "false"
   begin
+    loadRegexHash
     populateDefaultPrometheusConfig
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
       puts "prometheus-config-merger::Starting to merge default prometheus config values in collector template as backup"
-      collectorTemplate = YAML.load(File.read(@collectorConfigTemplatePath))
-      collectorTemplate["receivers"]["prometheus"]["config"] = @mergedDefaultConfigs
-      collectorNewConfig = YAML::dump(collectorTemplate)
-      File.open(@collectorConfigWithDefaultPromConfigs, "w") { |file| file.puts collectorNewConfig }
+      mergedDefaultConfigYaml = YAML::dump(@mergedDefaultConfigs)
+      File.open(@mergedDefaultConfigPath, "w") { |file| file.puts mergedDefaultConfigYaml }
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError("prometheus-config-merger::Error while populating defaults and writing them to the defaults file")
