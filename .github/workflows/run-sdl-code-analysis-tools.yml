@@ -1,3 +1,4 @@
+# See results in the tab Security > Code scanning alerts
 name: run-sdl-code-analysis-tools
 on: workflow_dispatch
 jobs:
@@ -16,8 +17,10 @@ jobs:
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
+      # Check the output of this step to see if there are any alerts, the sarif is missing properties required by github:
+      # https://github.com/microsoft/binskim/issues/509
       - name: BinSkim Scan
-        run: dotnet tool install --global Microsoft.CodeAnalysis.BinSkim --version 1.7.1 && binskim analyze ./otelcollector/opentelemetry-collector-builder/otelcollector ./otelcollector/opentelemetry-collector-builder/promconfigvalidator --output binskim.sarif --verbose
+        run: dotnet tool install --global Microsoft.CodeAnalysis.BinSkim --version 1.7.1 && binskim analyze ./otelcollector/opentelemetry-collector-builder/otelcollector ./otelcollector/prom-config-validator-builder/promconfigvalidator ./otelcollector/fluent-bit/src/out_appinsights.so
       - name: DevSkim Scan
         uses: microsoft/DevSkim-Action@v1
       - name: Perform CodeQL Analysis
