@@ -52,5 +52,4 @@ RUN powershell -Command "Remove-Item -Force C:\ruby26\lib\ruby\gems\2.6.0\cache\
 SHELL ["powershell"]
 RUN ./opt/microsoft/scripts/setup.ps1
 
-
 ENTRYPOINT ["powershell", "C:\\opt\\microsoft\\scripts\\main.ps1"]

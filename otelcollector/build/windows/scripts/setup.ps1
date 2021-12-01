@@ -9,6 +9,18 @@ New-Item -Type Directory -Path /opt/microsoft/certificate/ -ErrorAction Silently
 New-Item -Type Directory -Path /opt/microsoft/state/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/microsoft/ruby
 ###########################################################################################
+# Write-Host ('Installing RE2');
+# try {
+# Invoke-WebRequest -Uri https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/re2win/re2-2011-09-30-src-win32.zip -OutFile ./re2-2011-09-30-src-win32.zip
+# Expand-Archive -Path .\re2-2011-09-30-src-win32.zip -DestinationPath .\
+# } 
+# catch {
+#     $e = $_.Exception
+#     Write-Host "exception when installing RE2"
+#     Write-Host $e
+#     exit 1
+# }
+###########################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
     Invoke-WebRequest -Uri https://github.com/microsoft/Docker-Provider/releases/download/ME-OTEL-WINDOWS-TEST/mdmmetricsextension.2.2021.714.2112.nupkg -OutFile /installation/ME/mdmmetricsextension.2.2021.714.2112.zip

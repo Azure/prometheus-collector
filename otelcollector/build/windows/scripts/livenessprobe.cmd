@@ -14,13 +14,23 @@ IF EXIST C:\opt\microsoft\scripts\filesystemwatcher.txt (
     exit /b  1
 )
 
-@REM REM "Checking if fluentd service is running"
-@REM sc query fluentdwinaks | findstr /i STATE | findstr RUNNING
+@REM REM "Checking if Telegraf is running"
 
-@REM IF ERRORLEVEL 1 (
-@REM     echo "Fluentd Service is NOT Running"
-@REM     exit /b  1
-@REM )
+tasklist /fi "imagename eq telegraf.exe" /fo "table"  | findstr telegraf
 
+IF ERRORLEVEL 1 (
+    echo "Telegraf is not running"
+    exit /b 1
+)
+
+
+@REM REM "Checking if Telegraf is running"
+
+tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
+
+IF ERRORLEVEL 1 (
+    echo "MetricsExtension is not running"
+    exit /b 1
+)
 
 exit /b 0
