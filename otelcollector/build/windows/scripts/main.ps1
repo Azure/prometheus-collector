@@ -1,5 +1,5 @@
 #setting it to replicaset by default
-$me_config_file = '/opt/microsoft/metricextension/me.config'
+$me_config_file = '/opt/microsoft/metricextension/me_ds.config'
 
 function Set-EnvironmentVariablesAndConfigParser {
 
@@ -99,30 +99,7 @@ function Set-EnvironmentVariablesAndConfigParser {
     #       fi
     # fi
 
-    # Set ME Config file
-    if (![string]::IsNullOrEmpty($env:CONTROLLER_TYPE)) {
-        Write-Output "Setting the environment variable ME_CONFIG_FILE"
-        [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $me_config_file, "Process")
-        [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $me_config_file, "Machine")
-    }
-
-    # needs to be done before the ruby toml configmapparsing files are called
-    if (Test-Path -Path '/etc/config/settings/prometheus/prometheus-config') {
-        # Kaveesh TODO : test promtool
-        # # Currently only logs the success or failure
-        # /opt/microsoft/promtool check config /etc/config/settings/prometheus/prometheus-config
-        # if ($?) {
-
-        # } else {
-        [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
-        [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
-        # }
-    }
-    else {
-        [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
-        [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
-    }
-
+    
     # run config parser
     ruby /opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb
 
@@ -131,7 +108,6 @@ function Set-EnvironmentVariablesAndConfigParser {
             if ($line.Contains('=')) {
                 $key = ($line -split '=')[0];
                 $value = ($line -split '=')[1];
-                # can do some error handling here for checking if the key and value are properly formatted
                 [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
                 [System.Environment]::SetEnvironmentVariable($key, $value, "Machine")
             }
@@ -145,26 +121,53 @@ function Set-EnvironmentVariablesAndConfigParser {
             if ($line.Contains('=')) {
                 $key = ($line -split '=')[0];
                 $value = ($line -split '=')[1];
-                # can do some error handling here for checking if the key and value are properly formatted
                 [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
                 [System.Environment]::SetEnvironmentVariable($key, $value, "Machine")
             }
         }
     }
 
+    # Parse the settings for default targets metrics keep list config
+    ruby /opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb
+
+    # Merge default anf custom prometheus config
     ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
+
     if (Test-Path -Path '/opt/microsoft/promMergedConfig.yml') {
         C:\opt\microsoft\promconfigvalidator --config "/opt/microsoft/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
         if ( ( $? -eq "False" ) -or (!(Test-Path -Path "/opt/microsoft/otelcollector/collector-config.yml" ))) {
             Write-Output "Prometheus custom config validation failed, using defaults"
-            [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
-            [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
             # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Process")
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Machine")
+            if (Test-Path -Path '/opt/microsoft/defaultsMergedConfig.yml') {
+                C:\opt\microsoft\promconfigvalidator --config "/opt/microsoft/defaultsMergedConfig.yml" --output "/opt/microsoft/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+                if ( ( $? -eq "False" ) -or (!(Test-Path -Path "/opt/microsoft/collector-config-with-defaults.yml" ))) {
+                    Write-Output "Prometheus default config validation failed, using empty job as collector config"
+                }
+                else {
+                    Copy-Item "/opt/microsoft/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
+                }
+            }
+            [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
+            [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
         }
     }
+    elseif (Test-Path -Path '/opt/microsoft/defaultsMergedConfig.yml') {
+        Write-Output "No custom config found, using defaults"
+        C:\opt\microsoft\promconfigvalidator --config "/opt/microsoft/defaultsMergedConfig.yml" --output "/opt/microsoft/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+        if ( ( $? -eq "False" ) -or (!(Test-Path -Path "/opt/microsoft/collector-config-with-defaults.yml" ))) {
+            Write-Output "Prometheus default config validation failed, using empty job as collector config"
+        }
+        else {
+            Write-Output "Prometheus default config validation succeeded, using this as collector config"
+            Copy-Item "/opt/microsoft/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
+        }
+        [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
+        [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
+    }
     else {
+        # This else block is needed, when there is no custom config mounted as config map or default configs enabled
         Write-Output "No custom config found, using defaults"
         [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
         [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
@@ -187,6 +190,14 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
     [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $meConfigFile, "Process")
     [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $meConfigFile, "Machine")
+
+
+    # Set ME Config file
+    if (![string]::IsNullOrEmpty($env:CONTROLLER_TYPE)) {
+        Write-Output "Setting the environment variable ME_CONFIG_FILE"
+        [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $me_config_file, "Process")
+        [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $me_config_file, "Machine")
+    }
 
 }
 
