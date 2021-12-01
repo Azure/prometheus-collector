@@ -11,6 +11,12 @@
     - action: keep
       source_labels: [__meta_kubernetes_endpoints_name]
       regex: $$NODE_EXPORTER_NAME$$
+    - source_labels: [__metrics_path__]
+      regex: (.*)
+      target_label: metrics_path
+    - source_labels: [__meta_kubernetes_endpoint_node_name]
+      regex: (.*)
+      target_label: instance
     metric_relabel_configs:
     - source_labels: [__name__]
       action: keep
