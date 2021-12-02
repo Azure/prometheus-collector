@@ -65,19 +65,30 @@ mode:
   advanced: false
 
 image:
-  repository: "mcr.microsoft.com/azuremonitor/containerinsights/cidev" # /prometheus-collector/images" # ${MCR_REGISTRY}${MCR_REPOSITORY}
-  tag: "winkaveesh12022021"
+  repository: ${MCR_REGISTRY}${MCR_REPOSITORY}
+  tag: ${IMAGE_TAG}
+  windows: 
+    tag: ${IMAGE_TAG_WINDOWS}
+  # repository: "mcr.microsoft.com/azuremonitor/containerinsights/cidev" # /prometheus-collector/images" # ${MCR_REGISTRY}${MCR_REPOSITORY}
+  # tag: "winkaveesh12022021-1"
   pullPolicy: IfNotPresent
 
 resources:
  deployment:
    limits:
-     cpu: 500m
-     memory: 500Mi
+     cpu: 4
+     memory: 7Gi
+   requests:
+     cpu: 1
+     memory: 2Gi
+ daemonSet:
+   limits:
+     cpu: 1
+     memory: 2Gi
    requests:
      cpu: 500m
-     memory: 500Mi
- daemonSet:
+     memory: 1Gi
+ daemonSetWindows:
    limits:
      cpu: 500m
      memory: 500Mi

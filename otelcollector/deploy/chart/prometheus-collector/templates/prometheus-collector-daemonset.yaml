@@ -201,10 +201,10 @@ spec:
       serviceAccountName: {{ template "prometheus-collector.fullname" . }}-serviceaccount
       containers:
         - name: prometheus-collector-win
-          image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev:winkaveesh12022021"
+          image: &collectorimagewindowstag "{{ .Values.image.repository }}:{{ .Values.image.windows.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           resources:
-            {{- toYaml .Values.resources.daemonSet | nindent 12 }}
+            {{- toYaml .Values.resources.daemonSetWindows | nindent 12 }}
           env:
             - name: CLUSTER
               value: {{ required "clusterName is required" .Values.clusterName | toString | quote }}
@@ -255,7 +255,7 @@ spec:
             - name: HELM_RELEASE_NAME
               value: "{{ .Release.Name }}"
             - name: AGENT_VERSION
-              value: "winkaveesh12022021" # *collectorimagetag
+              value: *collectorimagewindowstag
             {{- if .Values.mode.advanced  }}
             - name: MODE
               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
