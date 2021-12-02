@@ -16,9 +16,9 @@ require_relative "ConfigParseErrorLogger"
 @kubestateEnabled = true
 @nodeexporterEnabled = true
 @prometheusCollectorHealthEnabled = true
-@noDefaultsEnabled = false
 @windowsexporterEnabled = true
 @windowskubeproxyEnabled = true
+@noDefaultsEnabled = false
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -86,14 +86,14 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
-      if controllerType == "DaemonSet" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled
+      if controllerType == "DaemonSet" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
-      elsif controllerType == "ReplicaSet" && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && @windowsexporterEnabled && @windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
+      elsif controllerType == "ReplicaSet" && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
       end
-    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && @windowsexporterEnabled && @windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
+    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
       @noDefaultsEnabled = true
       puts "config::No default scrape configs enabled"
     end

@@ -19,13 +19,10 @@ echo "Installing inotify..."
 sudo apt-get update
 sudo apt-get install inotify-tools -y
 
-echo "Installing packages for re2 gem install..."
-sudo apt-get install -y build-essential libre2-dev ruby-dev
 
 echo "Installing tomlrb, deep_merge and re2 gems..."
 gem install tomlrb
 gem install deep_merge
-gem install re2
 
 #used to setcaps for ruby process to read /proc/env
 #echo "installing libcap2-bin"
@@ -113,13 +110,8 @@ sudo apt-get update
 # Pinning to the latest stable version of ME
 sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
 
-
 # Cleaning up unused packages
 echo "Cleaning up packages used for re2 gem install..."
-
-#Uninstalling packages after gem install re2
-sudo apt-get remove build-essential -y
-sudo apt-get remove ruby-dev -y
 
 echo "auto removing unused packages..."
 sudo apt-get autoremove -y

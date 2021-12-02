@@ -1,0 +1,6 @@
+scrape_configs:
+  - job_name: kube-proxy-windows
+    scheme: http
+    scrape_interval: 30s
+    static_configs:
+    - targets: ['$$NODE_IP$$:10249']

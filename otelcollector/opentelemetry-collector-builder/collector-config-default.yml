@@ -26,12 +26,6 @@ receivers:
         scrape_configs:
         # scrape_configs must be non-null for collector to start
         - job_name: empty_job
-        # only adding this in the default yml for test purposes, remove this when making the PR
-        # - job_name: 'me_blackbox_test'
-        #   scrape_interval: 5s
-        #   static_configs:
-        #     - targets:
-        #       - 'demo.robustperception.io:9093'
 service:
   pipelines:
     metrics:

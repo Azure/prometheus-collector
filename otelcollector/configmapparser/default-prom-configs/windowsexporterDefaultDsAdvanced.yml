@@ -1,0 +1,6 @@
+scrape_configs:
+  - job_name: windows-exporter
+    scheme: http
+    scrape_interval: 30s
+    static_configs:
+    - targets: ['$$NODE_IP$$:9182']
