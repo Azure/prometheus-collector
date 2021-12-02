@@ -265,7 +265,7 @@ def populateDefaultPrometheusConfig
       elsif currentControllerType == @@replicasetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "windows"
         winkubeproxyMetricsKeepListRegex = @regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
         if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
-          AppendMetricRelabelConfig(@, winkubeproxyMetricsKeepListRegex)
+          AppendMetricRelabelConfig(@windowskubeproxyDefaultRsAdvancedFile, winkubeproxyMetricsKeepListRegex)
         end
         defaultConfigs.push(@windowskubeproxyDefaultRsAdvancedFile)
       end
