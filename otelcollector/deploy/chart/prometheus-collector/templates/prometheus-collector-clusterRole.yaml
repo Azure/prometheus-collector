@@ -26,3 +26,7 @@ rules:
     verbs: ["list", "get", "watch"]
   - nonResourceURLs: ["/metrics"]
     verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["prometheus-collector-msi-token"]
+    verbs: ["get", "watch"]

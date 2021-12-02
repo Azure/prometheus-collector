@@ -22,6 +22,36 @@ spec:
     spec:
       serviceAccountName: {{ template "prometheus-collector.fullname" . }}-serviceaccount
       containers:
+        - name: addon-token-adapter
+          command:
+            - /addon-token-adapter
+          args:
+            - --secret-namespace={{ .Release.Namespace }}
+            - --secret-name=prometheus-collector-msi-token
+            - --token-server-listening-port=8889
+            - --health-server-listening-port=9999
+          image: "mcr.microsoft.com/aks/hcp/addon-token-adapter:master.211104.1"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9999
+            initialDelaySeconds: 10
+            periodSeconds: 60
+          resources:
+            limits:
+              cpu: 500m
+              memory: 500Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
+                - NET_RAW
         - name: prometheus-collector
           image: &collectorimagetag "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
