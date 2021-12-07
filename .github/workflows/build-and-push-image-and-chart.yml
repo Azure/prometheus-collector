@@ -162,7 +162,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Set-workflow-initiator
-        run: echo "Initiated by - $env:{GITHUB_ACTOR}"
+        run: echo ("Initiated by -" + $env:GITHUB_ACTOR) # echo "Initiated by - $env:{GITHUB_ACTOR}"
       - name: Set-branch-name-for-non-pr
         if: ${{ github.event_name != 'pull_request' }}
         run: echo ("BRANCH_NAME=" + $env:{GITHUB_REF#refs/heads/}.replace('/','_')) >> $GITHUB_ENV
