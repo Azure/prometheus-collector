@@ -204,9 +204,9 @@ jobs:
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $env:GITHUB_ENV
       - name: Set-Helm-chart-in-template
-        run: envsubst ./otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml ./otelcollector/deploy/chart/prometheus-collector/Chart.yaml
+        run: envsubst < ./otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/Chart.yaml
       - name: Set-Helm-version-in-template
-        run: envsubst ./otelcollector/deploy/chart/prometheus-collector/values-template.yaml ./otelcollector/deploy/chart/prometheus-collector/values.yaml
+        run: envsubst < ./otelcollector/deploy/chart/prometheus-collector/values-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/values.yaml
       - name: Show-versions-On-build-machine
         run: systeminfo ; go version ; helm version ; docker version # lsb_release -a && go version && helm version && docker version
       - name: Run-Helm-lint
