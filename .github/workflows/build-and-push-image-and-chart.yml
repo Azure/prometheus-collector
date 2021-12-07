@@ -165,12 +165,12 @@ jobs:
         run: echo ("Initiated by -" + $env:GITHUB_ACTOR) # echo "Initiated by - $env:{GITHUB_ACTOR}"
       - name: Set-branch-name-for-non-pr
         if: ${{ github.event_name != 'pull_request' }}
-        run: echo ("BRANCH_NAME=" + $env:{GITHUB_REF#refs/heads/}.replace('/','-')) >> $GITHUB_ENV
+        run: echo ("BRANCH_NAME=" + $env:{GITHUB_REF#refs/heads/}.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
-        run: echo ("BRANCH_NAME=" + $env:GITHUB_HEAD_REF.replace('/','-')) >> $env:GITHUB_ENV
+        run: echo ("BRANCH_NAME=" + $env:GITHUB_HEAD_REF.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
       - name: Set-Env
-        run: echo "ENV=dev" >> $GITHUB_ENV
+        run: echo "ENV=dev" >> $env:GITHUB_ENV
       - name: Set-ACR-Registry
         run: echo "ACR_REGISTRY=containerinsightsprod.azurecr.io" >> $env:GITHUB_ENV
       - name: Set-ACR-Repository-Image
