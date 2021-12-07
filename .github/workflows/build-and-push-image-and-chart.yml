@@ -196,11 +196,11 @@ jobs:
       - name: Set-Helm-chart-version
         run: $version = Get-Content ./otelcollector/VERSION ; echo "HELM_CHART_VERSION=${version}" >> $env:GITHUB_ENV
       - name: Set-HELM-chart-semver
-        run: echo "HELM_SEMVER=${HELM_CHART_VERSION}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $env:GITHUB_ENV
+        run: echo ("HELM_SEMVER=" + $env:HELM_CHART_VERSION + "-" + $env:BRANCH_NAME + "-" + $env:IMAGE_TAG_DATE + "-" + $env:COMMIT_SHA) >> $env:GITHUB_ENV
       - name: Set-image-tag
-        run: echo "IMAGE_TAG=${HELM_SEMVER}-win" >> $env:GITHUB_ENV
+        run: echo ("IMAGE_TAG=" + $env:HELM_SEMVER + "-win") >> $env:GITHUB_ENV
       - name: Set-image-full-tag
-        run: echo "IMAGE_FULL_TAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG}" >> $env:GITHUB_ENV
+        run: echo ("IMAGE_FULL_TAG=" + $env:ACR_REGISTRY + $env:ACR_REPOSITORY + ":" + $env:IMAGE_TAG) >> $env:GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $env:GITHUB_ENV
       - name: Set-Helm-chart-in-template
