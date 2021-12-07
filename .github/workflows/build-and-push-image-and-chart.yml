@@ -198,15 +198,15 @@ jobs:
       - name: Set-HELM-chart-semver
         run: echo ("HELM_SEMVER=" + $env:HELM_CHART_VERSION + "-" + $env:BRANCH_NAME + "-" + $env:IMAGE_TAG_DATE + "-" + $env:COMMIT_SHA) >> $env:GITHUB_ENV
       - name: Set-image-tag
-        run: echo ("IMAGE_TAG=" + $env:HELM_SEMVER) >> $env:GITHUB_ENV # echo ("IMAGE_TAG=" + $env:HELM_SEMVER + "-win") >> $env:GITHUB_ENV
+        run: echo ("IMAGE_TAG=" + $env:HELM_SEMVER + "-win") >> $env:GITHUB_ENV
       - name: Set-image-full-tag
         run: echo ("IMAGE_FULL_TAG=" + $env:ACR_REGISTRY + $env:ACR_REPOSITORY + ":" + $env:IMAGE_TAG) >> $env:GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $env:GITHUB_ENV
       - name: Set-Helm-chart-in-template
-        run: mv ./otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml ./otelcollector/deploy/chart/prometheus-collector/Chart.yaml
+        run: envsubst ./otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml ./otelcollector/deploy/chart/prometheus-collector/Chart.yaml
       - name: Set-Helm-version-in-template
-        run: mv ./otelcollector/deploy/chart/prometheus-collector/values-template.yaml ./otelcollector/deploy/chart/prometheus-collector/values.yaml
+        run: envsubst ./otelcollector/deploy/chart/prometheus-collector/values-template.yaml ./otelcollector/deploy/chart/prometheus-collector/values.yaml
       - name: Show-versions-On-build-machine
         run: systeminfo ; go version ; helm version ; docker version # lsb_release -a && go version && helm version && docker version
       - name: Run-Helm-lint
