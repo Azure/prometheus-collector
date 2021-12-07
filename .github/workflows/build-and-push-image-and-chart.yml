@@ -254,12 +254,12 @@ jobs:
         if: github.event_name != 'pull_request'
         run: cd ./otelcollector/deploy/chart/ ; helm push ${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY_HELM }}
       - name: Login-to-Azure-Key-Vault
-        if: github.event_name != 'pull_request' ; env.BRANCH_NAME == 'main'
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         uses: Azure/login@v1
         with:
           creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
       - name: Get-kube-config-from-Key-Vault
-        if: github.event_name != 'pull_request' ; env.BRANCH_NAME == 'main'
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         uses: Azure/get-keyvault-secrets@v1
         with:
           keyvault: "cdpxacrcredskv"
