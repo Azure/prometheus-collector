@@ -16,8 +16,8 @@ require_relative "ConfigParseErrorLogger"
 @kubestateEnabled = true
 @nodeexporterEnabled = true
 @prometheusCollectorHealthEnabled = true
-@windowsexporterEnabled = true
-@windowskubeproxyEnabled = true
+@windowsexporterEnabled = false
+@windowskubeproxyEnabled = false
 @noDefaultsEnabled = false
 
 # Use parser to parse the configmap toml file to a ruby structure
@@ -124,17 +124,17 @@ if !ENV['OS_TYPE'].nil? && ENV['OS_TYPE'].downcase == "windows"
 end
 
 if !file.nil?
-  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED=#{@kubeletEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLEDAZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED=#{@corednsEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLEDAZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED=#{@cadvisorEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLEDAZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED=#{@kubeproxyEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLEDAZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED=#{@apiserverEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLEDAZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED=#{@kubestateEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLEDAZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED=#{@nodeexporterEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLEDAZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=#{@noDefaultsEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLEDAZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED=#{@prometheusCollectorHealthEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLEDAZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=#{@windowsexporterEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLEDAZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED=#{@kubeletEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED=#{@corednsEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED=#{@cadvisorEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED=#{@kubeproxyEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED=#{@apiserverEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED=#{@kubestateEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED=#{@nodeexporterEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=#{@noDefaultsEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED=#{@prometheusCollectorHealthEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=#{@windowsexporterEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
   puts "****************End default-scrape-settings Processing********************"

@@ -2,5 +2,9 @@ scrape_configs:
   - job_name: windows-exporter
     scheme: http
     scrape_interval: 30s
+    relabel_configs:
+    - source_labels: [__address__]
+      replacement: '$$NODE_NAME$$'
+      target_label: instance
     static_configs:
     - targets: ['$$NODE_IP$$:9182']

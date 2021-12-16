@@ -65,8 +65,8 @@ def isValidRegex_windows(str)
   end
 end
 
-def isValidRegex(str, os_type)
-  if os_type == "linux"
+def isValidRegex(str)
+  if ENV['OS_TYPE'] == "linux"
     return isValidRegex_linux(str)
   else
     return isValidRegex_windows(str)
@@ -79,7 +79,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     kubeletRegex = parsedConfig[:kubelet]
     if !kubeletRegex.nil? && kubeletRegex.kind_of?(String)
       if !kubeletRegex.empty?
-        if isValidRegex(kubeletRegex, ENV['OS_TYPE']) == true
+        if isValidRegex(kubeletRegex) == true
           @kubeletRegex = kubeletRegex
           puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for kubelet"
         end

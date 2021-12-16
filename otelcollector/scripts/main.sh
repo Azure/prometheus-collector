@@ -140,7 +140,7 @@ elif [ -e "/opt/microsoft/defaultsMergedConfig.yml" ]; then
             echo "Prometheus default config validation failed, using empty job as collector config"
       else
             echo "Prometheus default config validation succeeded, using this as collector config"
-            cp "/opt/microsoft/collector-config-with-defaults.yml" "/opt/microsoft/microsoft/otelcollector/collector-config-default.yml"
+            cp "/opt/microsoft/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
       fi
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true

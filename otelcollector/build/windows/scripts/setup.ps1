@@ -26,8 +26,8 @@ Write-Host ('Finished installing Metrics Extension')
 Write-Host ('Installing Fluent Bit');
 try {
     # Keep version in sync with linux in setup.sh file
-    # $fluentBitUri = 'https://fluentbit.io/releases/1.6/td-agent-bit-1.6.8-win64.zip'$fluentBitUri =
-    $fluentBitUri = 'https://github.com/microsoft/OMS-docker/releases/download/winakslogagent/td-agent-bit-1.4.0-win64.zip'
+    # $fluentBitUri = 'https://github.com/microsoft/OMS-docker/releases/download/winakslogagent/td-agent-bit-1.4.0-win64.zip'
+    $fluentBitUri = 'https://fluentbit.io/releases/1.7/td-agent-bit-1.7.8-win64.zip'
     Invoke-WebRequest -Uri $fluentBitUri -OutFile /installation/td-agent-bit.zip
     Expand-Archive -Path /installation/td-agent-bit.zip -Destination /installation/fluent-bit
     Move-Item -Path /installation/fluent-bit/*/bin/* -Destination /opt/microsoft/fluent-bit/bin/ -ErrorAction SilentlyContinue

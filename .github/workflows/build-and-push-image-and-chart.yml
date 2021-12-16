@@ -158,7 +158,7 @@ jobs:
       #  with:
       #    tag: ${{ env.IMAGETAG_TELEMETRY }}
       #    message: "Created tag ${{ env.IMAGETAG_TELEMETRY }} for CommitID: ${{ env.GITHUB_SHA }}"
-  WINDOWS-build:
+  WINDOWS-build-and-push-image:
     runs-on: windows-latest
     steps:
       - name: Set-workflow-initiator
