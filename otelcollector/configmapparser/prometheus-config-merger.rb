@@ -229,44 +229,40 @@ def populateDefaultPrometheusConfig
       defaultConfigs.push(@prometheusCollectorHealthDefaultFile)
     end
     if !ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].downcase == "true"
+      winexporterMetricsKeepListRegex = @regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
       if currentControllerType == @@replicasetControllerType && advancedMode == false && ENV["OS_TYPE"].downcase == "linux"
-        winexporterMetricsKeepListRegex = @regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
         if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowsexporterDefaultRsSimpleFile, winexporterMetricsKeepListRegex)
         end
         defaultConfigs.push(@windowsexporterDefaultRsSimpleFile)
       elsif currentControllerType == @@daemonsetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "windows"
-        winexporterMetricsKeepListRegex = @regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
         if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowsexporterDefaultDsAdvancedFile, winexporterMetricsKeepListRegex)
         end
         defaultConfigs.push(@windowsexporterDefaultDsAdvancedFile)
-      elsif currentControllerType == @@replicasetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "windows"
-        winexporterMetricsKeepListRegex = @regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
-        if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
-          AppendMetricRelabelConfig(@windowsexporterDefaultRsAdvancedFile, winexporterMetricsKeepListRegex)
-        end
+      elsif currentControllerType == @@replicasetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "linux"
+        # if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
+        #   AppendMetricRelabelConfig(@windowsexporterDefaultRsAdvancedFile, winexporterMetricsKeepListRegex)
+        # end
         defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
       end
     end
     if !ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].downcase == "true"
+      winkubeproxyMetricsKeepListRegex = @regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
       if currentControllerType == @replicasetControllerType && advancedMode == false && ENV["OS_TYPE"].downcase == "linux"
-        winkubeproxyMetricsKeepListRegex = @regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
         if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowskubeproxyDefaultFileRsSimpleFile, winkubeproxyMetricsKeepListRegex)
         end
         defaultConfigs.push(@windowskubeproxyDefaultFileRsSimpleFile)
       elsif currentControllerType == @@daemonsetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "windows"
-        winkubeproxyMetricsKeepListRegex = @regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
         if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowskubeproxyDefaultDsFile, winkubeproxyMetricsKeepListRegex)
         end
         defaultConfigs.push(@windowskubeproxyDefaultDsFile)
-      elsif currentControllerType == @@replicasetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "windows"
-        winkubeproxyMetricsKeepListRegex = @regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
-        if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
-          AppendMetricRelabelConfig(@windowskubeproxyDefaultRsAdvancedFile, winkubeproxyMetricsKeepListRegex)
-        end
+      elsif currentControllerType == @@replicasetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "linux"
+        # if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
+        #   AppendMetricRelabelConfig(@windowskubeproxyDefaultRsAdvancedFile, winkubeproxyMetricsKeepListRegex)
+        # end
         defaultConfigs.push(@windowskubeproxyDefaultRsAdvancedFile)
       end
     end

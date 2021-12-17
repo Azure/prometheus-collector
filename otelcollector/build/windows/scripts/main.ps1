@@ -298,4 +298,5 @@ Start-OTEL-Collector
 Start-ME
 
 # Notepad.exe | Out-Null
+Write-Output "Starting ping to keep the container running"
 ping -t 127.0.0.1 | Out-Null
