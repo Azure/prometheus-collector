@@ -123,7 +123,7 @@ if [ -e "/opt/microsoft/promMergedConfig.yml" ]; then
             echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
             if [ -e "/opt/microsoft/defaultsMergedConfig.yml" ]; then
-                  /opt/promconfigvalidator --config "/opt/microsoft/defaultsMergedConfig.yml" --output "/opt/microsoft/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+                  /opt/microsoft/promconfigvalidator --config "/opt/microsoft/defaultsMergedConfig.yml" --output "/opt/microsoft/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
                   if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/collector-config-with-defaults.yml" ]; then
                         echo "Prometheus default config validation failed, using empty job as collector config"
                   else
@@ -135,7 +135,7 @@ if [ -e "/opt/microsoft/promMergedConfig.yml" ]; then
       fi
 elif [ -e "/opt/microsoft/defaultsMergedConfig.yml" ]; then
       echo "No custom config found, using defaults"
-      /opt/promconfigvalidator --config "/opt/microsoft/defaultsMergedConfig.yml" --output "/opt/microsoft/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+      /opt/microsoft/promconfigvalidator --config "/opt/microsoft/defaultsMergedConfig.yml" --output "/opt/microsoft/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/collector-config-with-defaults.yml" ]; then
             echo "Prometheus default config validation failed, using empty job as collector config"
       else

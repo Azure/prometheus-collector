@@ -13,6 +13,7 @@ COPY ./build/windows/scripts/filesystemwatcher.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/livenessprobe.cmd $tmpdir/scripts/
 
 COPY ./configmapparser/*.rb $tmpdir/configmapparser/
+COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/otelcollector.exe ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/otelcollector/
 COPY ./prom-config-validator-builder/promconfigvalidator.exe $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_ds.config $tmpdir/metricextension/
