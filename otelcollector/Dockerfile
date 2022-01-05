@@ -27,4 +27,5 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 
 RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
-CMD [ "/opt/main.sh" ]
+# CMD [ "/opt/main.sh" ]
+CMD [ "/opt/microsoft/otelcollector/otelcollector" ]
