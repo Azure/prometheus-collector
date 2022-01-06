@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: win-prometheus-reference-app
+spec:
+  selector:
+    matchLabels:
+      app: win-prometheus-reference-app
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: win-prometheus-reference-app
+    spec:
+      containers:
+        - name: win-prometheus-reference-app-golang
+          image: docker.io/gracewehner/win-prometheus-reference-app:golang
+          env:
+            - name: RUN_PERF_TEST
+              value: "false"
+            - name: SCRAPE_INTERVAL
+              value: "15"
+            - name: METRIC_COUNT
+              value: "125000"
+          ports:
+            - containerPort: 2112
+              protocol: TCP
+            - containerPort: 2113
+              protocol: TCP
+        - name: win-prometheus-reference-app-python
+          image: docker.io/gracewehner/win-prometheus-reference-app:python
+          ports:
+          - containerPort: 2114
+            protocol: TCP
+      nodeSelector:
+          kubernetes.io/os: windows
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: win-prometheus-reference-service
+spec:
+  selector:
+    app: win-prometheus-reference-app
+  ports:
+    - name: "weather-app"
+      protocol: TCP
+      port: 2112
+      targetPort: 2112
+    - name: "untyped-metrics"
+      protocol: TCP
+      port: 2113
+      targetPort: 2113
+    - name: "python-client"
+      protocol: TCP
+      port: 2114
+      targetPort: 2114
+  internalTrafficPolicy: Local
