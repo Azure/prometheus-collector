@@ -3,7 +3,7 @@
 # building otelcollector
 Write-Output "building otelcollector"
 #Remove-Item .\otelcollector
-if (Test-Path "otelcollector.exe" = True) {
+if (Test-Path "otelcollector.exe") {
   Remove-Item "otelcollector.exe"
 }
 go get

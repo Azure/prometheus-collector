@@ -1,5 +1,5 @@
 Write-Output "========================= cleanup existing promconfigvalidator ========================="
-if (Test-Path "promconfigvalidator.exe" = True) {
+if (Test-Path "promconfigvalidator.exe") {
   Remove-Item "promconfigvalidator.exe"
 }
 Write-Output "========================= Building prom config validator ========================="
