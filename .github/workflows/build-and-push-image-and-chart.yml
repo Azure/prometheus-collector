@@ -62,7 +62,7 @@ jobs:
           token: ${{ github.token }}
       - name: Create-docker-image
         run: |
-            cd ./otelcollector/ ; docker build . --file ./build/windows/Dockerfile -t $IMAGE_FULL_TAG
+            cd ./otelcollector/ ; docker build . --file ./build/windows/Dockerfile -t $env:IMAGE_FULL_TAG
       - name: List-docker-images
         run: docker images --digests --all
       - name: Login-to-ACR-thru-Docker
