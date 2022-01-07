@@ -13,10 +13,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Set-workflow-initiator
-        run: echo ("Initiated by -" + $env:GITHUB_ACTOR)
+        run: echo ("Initiated by -" + $env:GITHUB_ACTOR + $env:GITHUB_REF)
       - name: Set-branch-name-for-non-pr
         if: ${{ github.event_name != 'pull_request' }}
-        run: echo ("BRANCH_NAME=" + $env:GITHUB_REF#refs/heads/.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
+        run: echo ("BRANCH_NAME=grace-win-changes") >> $env:GITHUB_ENV
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
         run: echo ("BRANCH_NAME=" + $env:GITHUB_HEAD_REF.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
