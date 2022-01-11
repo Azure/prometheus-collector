@@ -199,6 +199,17 @@ function Set-EnvironmentVariablesAndConfigParser {
         [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $me_config_file, "Machine")
     }
 
+    # Set variables for telegraf (runs in machine environment)
+    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:AGENT_VERSION, "Machine")
+    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:customResourceId, "Machine")
+    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:NODE_NAME, "Machine")
+    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:NODE_IP, "Machine")
+    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:MODE, "Machine")
+    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:CONTROLLER_TYPE, "Machine")
+    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:POD_NAMESPACE, "Machine")
+    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:POD_NAME, "Machine")
+    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:OS_TYPE, "Machine")
+
 }
 
 function Start-Fluentbit {
