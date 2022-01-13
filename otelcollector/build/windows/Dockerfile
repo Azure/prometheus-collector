@@ -10,11 +10,11 @@ ENV APPLICATIONINSIGHTS_AUTH "MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
 COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/main.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/filesystemwatcher.ps1 $tmpdir/scripts/
-COPY ./build/windows/scripts/livenessprobe.cmd $tmpdir/scripts/
+COPY ./build/windows/scripts/livenessprobe.cmd $tmpdir/microsoft/scripts/
 
-COPY ./configmapparser/*.rb $tmpdir/configmapparser/
-COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/otelcollector/default-prom-configs/
-COPY ./opentelemetry-collector-builder/otelcollector.exe ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/otelcollector/
+COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
+COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
+COPY ./opentelemetry-collector-builder/otelcollector.exe ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/microsoft/otelcollector/
 COPY ./prom-config-validator-builder/promconfigvalidator.exe $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_ds.config $tmpdir/metricextension/
 COPY ./telegraf/telegraf-prometheus-collector-windows.conf $tmpdir/telegraf/
@@ -55,4 +55,4 @@ RUN powershell -Command "Remove-Item -Force C:\ruby26\lib\ruby\gems\2.6.0\cache\
 SHELL ["powershell"]
 RUN ./opt/scripts/setup.ps1
 
-ENTRYPOINT ["powershell", "C:\\opt\\microsoft\\scripts\\main.ps1"]
+ENTRYPOINT ["powershell", "C:\\opt\\scripts\\main.ps1"]

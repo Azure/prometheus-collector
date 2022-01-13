@@ -1,5 +1,5 @@
 #setting it to replicaset by default
-$me_config_file = '/opt/microsoft/metricextension/me_ds.config'
+$me_config_file = '/opt/metricextension/me_ds.config'
 
 function Set-EnvironmentVariablesAndConfigParser {
 
@@ -133,35 +133,35 @@ function Set-EnvironmentVariablesAndConfigParser {
     # Merge default anf custom prometheus config
     ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
 
-    if (Test-Path -Path '/opt/microsoft/promMergedConfig.yml') {
-        C:\opt\microsoft\promconfigvalidator --config "/opt/microsoft/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+    if (Test-Path -Path '/opt/promMergedConfig.yml') {
+        C:\opt\microsoft\promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
         if ( (!($?)) -or (!(Test-Path -Path "/opt/microsoft/otelcollector/collector-config.yml" ))) {
             Write-Output "Prometheus custom config validation failed, using defaults"
             # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Process")
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Machine")
-            if (Test-Path -Path '/opt/microsoft/defaultsMergedConfig.yml') {
-                C:\opt\microsoft\promconfigvalidator --config "/opt/microsoft/defaultsMergedConfig.yml" --output "/opt/microsoft/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
-                if ( (!($?)) -or (!(Test-Path -Path "/opt/microsoft/collector-config-with-defaults.yml" ))) {
+            if (Test-Path -Path '/opt/defaultsMergedConfig.yml') {
+                C:\opt\microsoft\promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+                if ( (!($?)) -or (!(Test-Path -Path "/opt/collector-config-with-defaults.yml" ))) {
                     Write-Output "Prometheus default config validation failed, using empty job as collector config"
                 }
                 else {
-                    Copy-Item "/opt/microsoft/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
+                    Copy-Item "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
                 }
             }
             [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
             [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
         }
     }
-    elseif (Test-Path -Path '/opt/microsoft/defaultsMergedConfig.yml') {
+    elseif (Test-Path -Path '/opt/defaultsMergedConfig.yml') {
         Write-Output "No custom config found, using defaults"
-        C:\opt\microsoft\promconfigvalidator --config "/opt/microsoft/defaultsMergedConfig.yml" --output "/opt/microsoft/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
-        if ( (!($?)) -or (!(Test-Path -Path "/opt/microsoft/collector-config-with-defaults.yml" ))) {
+        C:\opt\microsoft\promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+        if ( (!($?)) -or (!(Test-Path -Path "/opt/collector-config-with-defaults.yml" ))) {
             Write-Output "Prometheus default config validation failed, using empty job as collector config"
         }
         else {
             Write-Output "Prometheus default config validation succeeded, using this as collector config"
-            Copy-Item "/opt/microsoft/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
+            Copy-Item "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
         }
         [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
         [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
@@ -183,10 +183,10 @@ function Set-EnvironmentVariablesAndConfigParser {
     $controllerType = $env:CONTROLLER_TYPE
     $controllerType = $controllerType.Trim()
     if ($controllerType -eq "replicaset") {
-        $meConfigFile = "/opt/microsoft/metricextension/me.config"
+        $meConfigFile = "/opt/metricextension/me.config"
     }
     else {
-        $meConfigFile = "/opt/microsoft/metricextension/me_ds.config"
+        $meConfigFile = "/opt/metricextension/me_ds.config"
     }
     [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $meConfigFile, "Process")
     [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $meConfigFile, "Machine")
@@ -215,13 +215,13 @@ function Set-EnvironmentVariablesAndConfigParser {
 function Start-Fluentbit {
     # Run fluent-bit service first so that we do not miss any logs being forwarded by the fluentd service and telegraf service.
     # Run fluent-bit as a background job. Switch this to a windows service once fluent-bit supports natively running as a windows service
-    Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\microsoft\fluent-bit\bin\fluent-bit.exe" -ArgumentList @("-c", "C:\opt\microsoft\fluent-bit\fluent-bit-windows.conf", "-e", "C:\opt\microsoft\fluent-bit\bin\out_appinsights.so") }
+    Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\fluent-bit\bin\fluent-bit.exe" -ArgumentList @("-c", "C:\opt\fluent-bit\fluent-bit-windows.conf", "-e", "C:\opt\fluent-bit\bin\out_appinsights.so") }
 
 }
 
 function Start-Telegraf {
     Write-Host "Installing telegraf service"
-    /opt/microsoft/telegraf/telegraf.exe --service install --config "/opt/microsoft/telegraf/telegraf-prometheus-collector-windows.conf"
+    /opt/telegraf/telegraf.exe --service install --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf"
 
     # Setting delay auto start for telegraf since there have been known issues with windows server and telegraf -
     # https://github.com/influxdata/telegraf/issues/4081
@@ -243,17 +243,17 @@ function Start-Telegraf {
         Write-Host "exception occured in delayed telegraf start.. continuing without exiting"
     }
     Write-Host "Running telegraf service in test mode"
-    /opt/microsoft/telegraf/telegraf.exe --config "/opt/microsoft/telegraf/telegraf-prometheus-collector-windows.conf" --test
+    /opt/telegraf/telegraf.exe --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf" --test
     Write-Host "Starting telegraf service"
     # C:\opt\telegraf\telegraf.exe --service start
-    /opt/microsoft/telegraf/telegraf.exe --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf" --service start
+    /opt/telegraf/telegraf.exe --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf" --service start
 
     # Trying to start telegraf again if it did not start due to fluent bit not being ready at startup
     Get-Service telegraf | findstr Running
     if ($? -eq $false) {
         Write-Host "trying to start telegraf in again in 30 seconds, since fluentbit might not have been ready..."
         Start-Sleep -s 30
-        /opt/microsoft/telegraf/telegraf.exe --service start
+        /opt/telegraf/telegraf.exe --service start
         Get-Service telegraf
     }
 }
@@ -265,7 +265,7 @@ function Start-ME {
     Start-Job -ScriptBlock { 
         $me_config_file = $env:ME_CONFIG_FILE
         $AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME
-        Start-Process -NoNewWindow -FilePath "/opt/microsoft/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file) 
+        Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file) 
     }
     tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
 }
@@ -284,8 +284,8 @@ function Start-OTEL-Collector {
 
 function Set-CertificateForME {
     # Make a copy of the mounted akv directory to see if it changes
-    mkdir -p /opt/microsoft/akv-copy
-    Copy-Item -r /etc/config/settings/akv /opt/microsoft/akv-copy
+    mkdir -p /opt/akv-copy
+    Copy-Item -r /etc/config/settings/akv /opt/akv-copy
 
     Get-ChildItem "C:\etc\config\settings\akv\" |  Foreach-Object { 
         if (!($_.Name.startswith('..'))) {
@@ -295,7 +295,7 @@ function Set-CertificateForME {
 }
 
 function Start-FileSystemWatcher {
-    Start-Process powershell -NoNewWindow /opt/microsoft/scripts/filesystemwatcher.ps1
+    Start-Process powershell -NoNewWindow /opt/scripts/filesystemwatcher.ps1
 }
 
 Start-Transcript -Path main.txt
