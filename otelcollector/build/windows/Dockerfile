@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/windows/servercore:ltsc2019
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="omscontainers@microsoft.com"
 ENV OS_TYPE "windows"
-ENV tmpdir /opt/microsoft/
+ENV tmpdir /opt/
 
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH "MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
@@ -21,6 +21,9 @@ COPY ./telegraf/telegraf-prometheus-collector-windows.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit-windows.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
+COPY ./react /static/react
+COPY ./LICENSE $tmpdir/microsoft
+COPY ./NOTICE $tmpdir/microsoft
 
 # Do not split this into multiple RUN!
 # Docker creates a layer for every RUN-Statement
@@ -50,6 +53,6 @@ RUN refreshenv \
 RUN powershell -Command "Remove-Item -Force C:\ruby26\lib\ruby\gems\2.6.0\cache\*.gem; Remove-Item -Recurse -Force 'C:\ProgramData\chocolatey'"
 
 SHELL ["powershell"]
-RUN ./opt/microsoft/scripts/setup.ps1
+RUN ./opt/scripts/setup.ps1
 
 ENTRYPOINT ["powershell", "C:\\opt\\microsoft\\scripts\\main.ps1"]

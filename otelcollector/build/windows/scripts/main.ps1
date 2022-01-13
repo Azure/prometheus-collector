@@ -273,11 +273,11 @@ function Start-ME {
 function Start-OTEL-Collector {
     if ($env:AZMON_USE_DEFAULT_PROMETHEUS_CONFIG -eq "true") {
         Write-Output "starting otelcollector with DEFAULT prometheus configuration...."
-        Start-Job -ScriptBlock { Start-Process -RedirectStandardOutput /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/otelcollector.exe" -ArgumentList @("--config", "/opt/microsoft/otelcollector/collector-config-default.yml", "--log-level", "WARN", "--log-format", "json", "--metrics-level", "detailed") }
+        Start-Job -ScriptBlock { Start-Process -RedirectStandardError /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/otelcollector.exe" -ArgumentList @("--config", "/opt/microsoft/otelcollector/collector-config-default.yml", "--log-level", "WARN", "--log-format", "json", "--metrics-level", "detailed") }
     }
     else {
         Write-Output "starting otelcollector...."
-        Start-Job -ScriptBlock { Start-Process -RedirectStandardOutput /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/otelcollector.exe" -ArgumentList @("--config", "/opt/microsoft/otelcollector/collector-config.yml", "--log-level", "WARN", "--log-format", "json", "--metrics-level", "detailed") }
+        Start-Job -ScriptBlock { Start-Process -RedirectStandardError /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/otelcollector.exe" -ArgumentList @("--config", "/opt/microsoft/otelcollector/collector-config.yml", "--log-level", "WARN", "--log-format", "json", "--metrics-level", "detailed") }
     }
     tasklist /fi "imagename eq otelcollector.exe" /fo "table"  | findstr otelcollector
 }
@@ -288,7 +288,9 @@ function Set-CertificateForME {
     Copy-Item -r /etc/config/settings/akv /opt/microsoft/akv-copy
 
     Get-ChildItem "C:\etc\config\settings\akv\" |  Foreach-Object { 
+        if (!($_.Name.startswith('..'))) {
         Import-PfxCertificate -FilePath $_.FullName -CertStoreLocation Cert:\CurrentUser\My
+        }
     }
 }
 
