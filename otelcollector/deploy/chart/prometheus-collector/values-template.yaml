@@ -46,10 +46,12 @@ azureKeyVault:
   name: "" #required
   # -- tenantid for the azure key vault resource
   tenantId: "" #required
+  # -- clientId for a managed identity that has access to read the Pfx certificates from keyvault specified above
+  msiClientId: "" #required if using managed identities, uses sp if empty
   # -- clientid for a service principal that has access to read the Pfx certificates from keyvault specified above
-  clientId: "" #required
+  clientId: "" #required if using service principal 
   # -- client secret for the above service principal
-  clientSecret: "" #required
+  clientSecret: "" #required if using service principal 
   # -- name of the Pfx certificate(s) - one per metric account
   pfxCertNames: [] #required
 

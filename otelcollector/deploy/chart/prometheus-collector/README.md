@@ -52,10 +52,16 @@ helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-pr
 - **Step 5** : Pull & Install prometheus-collector chart in your cluster
 ```shell
 helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector --version 1.0.0-main-11-01-2021-e86fc50d
-
+```
+If using service principal:
+```shell
 helm upgrade --install <chart_release_name> ./prometheus-collector-1.0.0-main-11-01-2021-e86fc50d.tgz --dependency-update --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --namespace=<my_prom_collector_namespace> --create-namespace
 ```
-  **Example** :-
+If using managed identity:
+```shell
+helm upgrade --install <chart_release_name> ./prometheus-collector-1.0.0-main-11-01-2021-e86fc50d.tgz --dependency-update --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.msiClientId="**" --namespace=<my_prom_collector_namespace> --create-namespace
+```
+  **Example with service principal** :-
 ```shell
 helm upgrade --install my-collector-dev-release ./prometheus-collector-1.0.0-main-11-01-2021-e86fc50d.tgz --dependency-update --set azureKeyVault.name="containerinsightstest1kv" --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId="72f988bf-****-41af-****-2d7cd011db47" --set clusterName="mydevcluster" --set azureMetricAccount.defaultAccountName="containerinsightsgenevaaccount1" --set azureKeyVault.clientId="70937f05-****-4fc0-****-de917f2a9402" --set azureKeyVault.clientSecret="**********************************" --namespace=prom-collector --create-namespace
 ```
