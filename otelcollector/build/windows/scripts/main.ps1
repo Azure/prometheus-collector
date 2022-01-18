@@ -134,14 +134,14 @@ function Set-EnvironmentVariablesAndConfigParser {
     ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
 
     if (Test-Path -Path '/opt/promMergedConfig.yml') {
-        C:\opt\microsoft\promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+        C:\opt\promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
         if ( (!($?)) -or (!(Test-Path -Path "/opt/microsoft/otelcollector/collector-config.yml" ))) {
             Write-Output "Prometheus custom config validation failed, using defaults"
             # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Process")
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Machine")
             if (Test-Path -Path '/opt/defaultsMergedConfig.yml') {
-                C:\opt\microsoft\promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+                C:\opt\promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
                 if ( (!($?)) -or (!(Test-Path -Path "/opt/collector-config-with-defaults.yml" ))) {
                     Write-Output "Prometheus default config validation failed, using empty job as collector config"
                 }
@@ -155,7 +155,7 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
     elseif (Test-Path -Path '/opt/defaultsMergedConfig.yml') {
         Write-Output "No custom config found, using defaults"
-        C:\opt\microsoft\promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+        C:\opt\promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
         if ( (!($?)) -or (!(Test-Path -Path "/opt/collector-config-with-defaults.yml" ))) {
             Write-Output "Prometheus default config validation failed, using empty job as collector config"
         }
