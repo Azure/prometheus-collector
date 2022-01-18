@@ -2,11 +2,11 @@
 
 # building otelcollector
 Write-Output "building otelcollector"
-Remove-Item .\otelcollector
-Remove-Item .\otelcollector.exe
+if (Test-Path "otelcollector.exe") {
+    Remove-Item .\otelcollector.exe
+}
 go get
-go build -o otelcollector .
-Move-Item .\otelcollector .\otelcollector.exe
+go build -o otelcollector.exe .
 
 Write-Output "FINISHED building otelcollector"
 
