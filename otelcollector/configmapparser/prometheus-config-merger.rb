@@ -32,7 +32,7 @@ require_relative "ConfigParseErrorLogger"
 @nodeexporterDefaultFileDs = @defaultPromConfigPathPrefix + "nodeexporterDefaultDs.yml"
 @prometheusCollectorHealthDefaultFile = @defaultPromConfigPathPrefix + "prometheusCollectorHealth.yml"
 @windowsexporterDefaultRsSimpleFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultRsSimple.yml"
-@windowsexporterDefaultDsAdvancedFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultDsAdvanced.yml"
+@windowsexporterDefaultDsFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultDs.yml"
 @windowsexporterDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultRsAdvanced.yml"
 @windowskubeproxyDefaultFileRsSimpleFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsSimple.yml"
 @windowskubeproxyDefaultDsFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultDs.yml"
@@ -237,9 +237,9 @@ def populateDefaultPrometheusConfig
         defaultConfigs.push(@windowsexporterDefaultRsSimpleFile)
       elsif currentControllerType == @daemonsetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "windows"
         if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
-          AppendMetricRelabelConfig(@windowsexporterDefaultDsAdvancedFile, winexporterMetricsKeepListRegex)
+          AppendMetricRelabelConfig(@windowsexporterDefaultDsFile, winexporterMetricsKeepListRegex)
         end
-        defaultConfigs.push(@windowsexporterDefaultDsAdvancedFile)
+        defaultConfigs.push(@windowsexporterDefaultDsFile)
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "linux"
         # if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
         #   AppendMetricRelabelConfig(@windowsexporterDefaultRsAdvancedFile, winexporterMetricsKeepListRegex)

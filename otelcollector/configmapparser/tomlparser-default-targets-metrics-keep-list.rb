@@ -82,6 +82,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         if isValidRegex(kubeletRegex) == true
           @kubeletRegex = kubeletRegex
           puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for kubelet"
+        else
+          puts "def-target-metrics-keep-list-config::invalid keep list regex for kubelet"
         end
       end
     else
@@ -107,7 +109,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !cadvisorRegex.empty?
         if isValidRegex(cadvisorRegex) == true
           @cadvisorRegex = cadvisorRegex
-          puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for cadvisor"
+          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for cadvisor"
         else
           puts "def-target-metrics-keep-list-config::invalid keep list regex for cadvisor"
         end
@@ -121,7 +123,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !kubeproxyRegex.empty?
         if isValidRegex(kubeproxyRegex) == true
           @kubeproxyRegex = kubeproxyRegex
-          puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for kubeproxy"
+          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for kubeproxy"
         else
           puts "def-target-metrics-keep-list-config::invalid keep list regex for kubeproxy"
         end
@@ -135,7 +137,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !apiserverRegex.empty?
         if isValidRegex(apiserverRegex) == true
           @apiserverRegex = apiserverRegex
-          puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for apiserver"
+          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for apiserver"
         else
           puts "def-target-metrics-keep-list-config::invalid keep list regex for apiserver"
         end
@@ -149,7 +151,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !kubestateRegex.empty?
         if isValidRegex(kubestateRegex) == true
           @kubestateRegex = kubestateRegex
-          puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for kubestate"
+          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for kubestate"
         else
           puts "def-target-metrics-keep-list-config::invalid keep list regex for kubestate"
         end
@@ -163,7 +165,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !nodeexporterRegex.empty?
         if isValidRegex(nodeexporterRegex) == true
           @nodeexporterRegex = nodeexporterRegex
-          puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for nodeexporter"
+          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for nodeexporter"
         else
           puts "def-target-metrics-keep-list-config::invalid keep list regex for nodeexporter"
         end
@@ -177,7 +179,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !windowsexporterRegex.empty?
         if isValidRegex(windowsexporterRegex) == true
           @windowsexporterRegex = windowsexporterRegex
-          puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for windowsexporter"
+          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for windowsexporter"
         else
           puts "def-target-metrics-keep-list-config::invalid keep list regex for windowsexporter"
         end
@@ -191,7 +193,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !windowskubeproxyRegex.empty?
         if isValidRegex(windowskubeproxyRegex) == true
           @windowskubeproxyRegex = windowskubeproxyRegex
-          puts "def-target-metrics-keep-list-config::Using configmap default scrape settings for windowskubeproxy"
+          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for windowskubeproxy"
         else
           puts "def-target-metrics-keep-list-config::invalid keep list regex for windowskubeproxy"
         end
