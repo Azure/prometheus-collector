@@ -2,7 +2,7 @@ name: build-and-release-mixin
 on:
   #push:
   #  branches:
-  #    - vishwa/jan2022msi
+  #    - main
   workflow_dispatch:
     inputs:
       mixinName:

@@ -19,6 +19,7 @@ To deploy the agent we will leverage HELM again. At this step you will need to p
 
 ```shell
 helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 1.0.0-main-11-01-2021-e86fc50d
+```
 
 If using Service principal:
 ```shell
