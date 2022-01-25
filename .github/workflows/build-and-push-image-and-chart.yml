@@ -27,7 +27,7 @@ jobs:
       - name: Set-ACR-Repository-Image
         run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $env:GITHUB_ENV
       - name: Set-image-tag-date
-        run: echo ("IMAGE_TAG_DATE="+ (Get-Date -Date ([System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId((Get-Date), 'Pacific Standard Time')) -Format "MM-dd-yyyy") >> $env:GITHUB_ENV
+        run: echo ("IMAGE_TAG_DATE="+ (Get-Date -Date ([System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId((Get-Date), 'Pacific Standard Time')) -Format "MM-dd-yyyy")) >> $env:GITHUB_ENV
       - name: Set-commit-sha
         run: echo ("COMMIT_SHA=" + $env:GITHUB_SHA.SubString(0,8)) >> $env:GITHUB_ENV
       - name: Checkout-code
