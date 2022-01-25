@@ -30,11 +30,17 @@ Kubernetes: `>=1.16.0-0`
      - KeyVault TenantId
      - Certificate Name (for each of the account's certificate (thats exportable with private key) that you uploaded to KeyVault in this step)
 
-- **Step 3** : Provide access to KeyVault using service principal
-    Prometheus-collector will need a service principal and secret to access key vault and pull the certificate(s) to use for ingesting metrics into MDM account(s). For this purpose, you will need to create/use a service principal and do the following -
+- **Step 3** : Provide access to KeyVault using service principal or MSI
+    Service Principal:
+        As one of the methods to fetch certificates from Azure Keyvault, Prometheus-collector needs a service principal and secret to access key vault and pull the certificate(s) to use for ingesting metrics into MDM account(s). For this purpose, you will need to create/use a service principal and do the following -
      - 3.1) Create a new service principal & secret (or) use an existing service principal with its secret
      - 3.2) For the KeyVault resource, grant 'Key Vault Secrets User' built-in role for your service principal (from step 3.1)
      - 3.3) Copy the service principal app/clientid & its secret
+    Managed Identity:
+        Prometheus collector also supports both User Assigned Managed Identity & System Assigned Managed Identity to access key vault and pull the certificate(s) to use for ingesting metrics into MDM. For this, you will need to grant access to the appropriate managed identity used by/in your kubernetes cluster(s) to the Azure Key Vault. Check [here](https://docs.microsoft.com/en-us/azure/aks/csi-secrets-store-identity-access) for instructions how to grant access to an identity for your key vault.
+
+
+    
 
 ## Install
 
@@ -52,13 +58,35 @@ helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-pr
 - **Step 5** : Pull & Install prometheus-collector chart in your cluster
 ```shell
 helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev:prometheus-collector --version 1.0.0-main-11-01-2021-e86fc50d
+```
 
+If using Service principal:
+```shell
 helm upgrade --install <chart_release_name> ./prometheus-collector-1.0.0-main-11-01-2021-e86fc50d.tgz --dependency-update --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --namespace=<my_prom_collector_namespace> --create-namespace
 ```
-  **Example** :-
+  **Example (Service principal)** :-
 ```shell
 helm upgrade --install my-collector-dev-release ./prometheus-collector-1.0.0-main-11-01-2021-e86fc50d.tgz --dependency-update --set azureKeyVault.name="containerinsightstest1kv" --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId="72f988bf-****-41af-****-2d7cd011db47" --set clusterName="mydevcluster" --set azureMetricAccount.defaultAccountName="containerinsightsgenevaaccount1" --set azureKeyVault.clientId="70937f05-****-4fc0-****-de917f2a9402" --set azureKeyVault.clientSecret="**********************************" --namespace=prom-collector --create-namespace
 ```
+
+If using Managed Identity (User Assigned): [See specifically, azureKeyVault.useManagedIdentity & azureKeyVault.userAssignedIdentityID parameters below]
+```shell
+helm upgrade --install <chart_release_name> ./prometheus-collector-1.0.0-main-11-01-2021-e86fc50d.tgz --dependency-update --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.useManagedIdentity=true --set azureKeyVault.userAssignedIdentityID="59677e05-****-4ea1-****-ed976f2b2049" --namespace=<my_prom_collector_namespace> --create-namespace
+```
+  **Example (Managed identity-user defined)** :-
+```shell
+helm upgrade --install my-collector-dev-release ./prometheus-collector-1.0.0-main-11-01-2021-e86fc50d.tgz --dependency-update --set azureKeyVault.name="containerinsightstest1kv" --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId="72f988bf-****-41af-****-2d7cd011db47" --set clusterName="mydevcluster" --set azureMetricAccount.defaultAccountName="containerinsightsgenevaaccount1" --set azureKeyVault.useManagedIdentity=true --set azureKeyVault.userAssignedIdentityID="59677e05-****-4ea1-****-ed976f2b2049" --namespace=prom-collector --create-namespace
+```
+
+If using Managed Identity (System Assigned): [See specifically, azureKeyVault.useManagedIdentity parameter below]
+```shell
+helm upgrade --install <chart_release_name> ./prometheus-collector-1.0.0-main-11-01-2021-e86fc50d.tgz --dependency-update --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.useManagedIdentity=true --namespace=<my_prom_collector_namespace> --create-namespace
+```
+  **Example (Managed identity-system)** :-
+```shell
+helm upgrade --install my-collector-dev-release ./prometheus-collector-1.0.0-main-11-01-2021-e86fc50d.tgz --dependency-update --set azureKeyVault.name="containerinsightstest1kv" --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId="72f988bf-****-41af-****-2d7cd011db47" --set clusterName="mydevcluster" --set azureMetricAccount.defaultAccountName="containerinsightsgenevaaccount1" --set azureKeyVault.useManagedIdentity=true --namespace=prom-collector --create-namespace
+```
+
 - **Step 6** : [Optional] - Apply aditional prometheus scrape configuration as configmap
   Any additional prometheus scrape configuration (for your applications/services/other exporters etc..), you can author the config apply it as config map using the below instructions. See the provided sample prometheus scrape config [prometheus-config](../sample-scrape-configs/prometheus-config) as an example.
   
@@ -86,10 +114,12 @@ kubectl create configmap my-collector-dev-release-prometheus-config --from-file=
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
 | azureKeyVault.name | string | <mark>`Required`</mark> | `""` | name of the azure key vault resource |
-| azureKeyVault.clientId | string | <mark>`Required`</mark> | `""` | clientid for a service principal that has access to read the Pfx certificates from keyvault specified above |
-| azureKeyVault.clientSecret | string | <mark>`Required`</mark> | `""` | client secret for the above service principal |
+| azureKeyVault.clientId | string | Optional | `""` | clientid for a service principal that has access to read the Pfx certificates from keyvault specified above. Required when using service principal based auth to access keyvault |
+| azureKeyVault.clientSecret | string | Optional | `""` | client secret for the above service principal. Required when using service principal |
 | azureKeyVault.pfxCertNames | list of comma seperated strings | <mark>`Required`</mark> | `"{}"` | name of the Pfx certificate(s) - one per metric account |
 | azureKeyVault.tenantId | string | <mark>`Required`</mark> | `""` | tenantid for the azure key vault resource |
+| azureKeyVault.useManagedIdentity | string | Optional | `false` | enable/disable managed identity to access keyvault |
+| azureKeyVault.userAssignedIdentityID | string | Optional | `""` | used when useManagedIdentity parameter is set to true. This specifies which user assigned managed identity to use when acccesing keyvault. If you are using a user assigned identity as managed identity, then specify the identity's client id. If empty, AND 'useManagedIdentity' is true, then defaults to use the system assigned identity on the VM |
 | azureMetricAccount.defaultAccountName | string | <mark>`Required`</mark> | `""` | default metric account name to ingest metrics into. This will be the account used if metric itself does not have account 'hinting' label. The certificate for this account should be specified in one of the further arguments below here |
 | clusterName | string | <mark>`Required`</mark> | `""` | name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped |
 | image.pullPolicy | string | Optional | `"IfNotPresent"` |  |
@@ -109,13 +139,24 @@ kubectl create configmap my-collector-dev-release-prometheus-config --from-file=
 | scrapeTargets.coreDns | bool | Optional | `true` | when true, automatically scrape coredns service in the k8s cluster without any additional scrape config |
 | scrapeTargets.kubelet | bool | Optional | `true` | when true, automatically scrape kubelet in every node in the k8s cluster without any additional scrape config |
 | scrapeTargets.cAdvisor | bool | Optional | `true` | when true, automatically scrape cAdvisor in every node in the k8s cluster without any additional scrape config |
-| scrapeTargets.kubeProxy | bool | Optional | `true` | when true, automatically scrape kube-proxy in every node in the k8s cluster without any additional scrape config |
+| scrapeTargets.kubeProxy | bool | Optional | `true` | `linux only` - when true, automatically scrape kube-proxy in every linux node discovered in the k8s cluster without any additional scrape config |
 | scrapeTargets.apiServer | bool | Optional | `true` | when true, automatically scrape the kubernetes api server in the k8s cluster without any additional scrape config |
 | scrapeTargets.kubeState | bool | Optional | `true` | when true, automatically install kube-state-metrics and scrape kube-state-metrics in the k8s cluster without any additional scrape config |
-| scrapeTargets.nodeExporter | bool | Optional | `true` | when true, automatically install prometheus-node-exporter in every node in the k8s cluster and scrape node metrics without any additional scrape config |
+| scrapeTargets.nodeExporter | bool | Optional | `true` | `linux only` - when true, automatically install prometheus-node-exporter in every linux node in the k8s cluster and scrape node metrics without any additional scrape config |
 | scrapeTargets.prometheusCollectorHealth | bool | Optional | `true` | when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped |
-| scrapeTargets.windowsExporter | bool | Optional | `false` | when true, will scrape windows node exporter, without requiring any additional scrape configuration, in every windows node discovered in the cluster. Note:- Windows-exporter is not installed by this tool on windows node(s). You would need to install it by yourselves, before turning this ON |
-| scrapeTargets.windowsKubeProxy | bool | Optional | `false` | when true, will scrape windows node's kubeproxy service, without requiring any additional scrape configuration, in every windows node discovered in the cluster |
+| scrapeTargets.windowsExporter | bool | Optional | `false` | `windows only` - when true, will scrape windows node exporter in every windows node discovered in the cluster, without requiring any additional scrape configuration. Note:- Windows-exporter is not installed by this tool on windows node(s). You would need to install it by yourselves, before turning this ON |
+| scrapeTargets.windowsKubeProxy | bool | Optional | `false` | `windows only` - when true, will scrape windows node's kubeproxy service, without requiring any additional scrape configuration, in every windows node discovered in the cluster. Note:- Windows kube-proxy metrics will soon be enabled on windows nodes for AKS clusters |
+| keepListRegexes.coreDns | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for the coreDns service
+| keepListRegexes.kubelet | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for kubelet
+| keepListRegexes.cAdvisor | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for cAdvisor
+| keepListRegexes.kubeProxy | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for kube-proxy
+| keepListRegexes.apiServer | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for the kubernetes api server
+| keepListRegexes.kubeState | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for kube-state metrics
+| keepListRegexes.nodeExporter | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for node-exporter
+| keepListRegexes.windowsExporter | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for windows exporter
+| keepListRegexes.windowsKubeProxy | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for windows kube-proxy
+| prometheus-node-exporter.service.targetPort | INT | Optional | `true` | `linux only` - when a port is specified, node exporter uses this as bind/listen port, both prometheus-node-exporter.service.targetPort and prometheus-node-exporter.service.port should be set for this to work. |
+| prometheus-node-exporter.service.port | INT | Optional | `true` | `linux only` - when a port is specified, node exporter uses this as bind/listen port |
 
 
 ----------------------------------------------

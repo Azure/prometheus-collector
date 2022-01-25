@@ -30,6 +30,7 @@
         ```
         kubectl create secret generic akv-creds --from-literal clientid="<service_principal_client_id>" --from-literal clientsecret="<service_principal_client_secret>" -n=kube-system 
         ```
+        If you are using MSI, see [here](https://docs.microsoft.com/en-us/azure/aks/csi-secrets-store-identity-access) on how to provide an identity to access Azure Keyvault
 
 #### Step 4 : Install csi driver & secrets store provider for azure KeyVault in your cluster
 ```shell 
