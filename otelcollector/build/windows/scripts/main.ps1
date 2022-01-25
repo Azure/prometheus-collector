@@ -134,7 +134,7 @@ function Set-EnvironmentVariablesAndConfigParser {
     ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
 
     if (Test-Path -Path '/opt/promMergedConfig.yml') {
-        C:\opt\promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+        C:\opt\promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
         if ( (!($?)) -or (!(Test-Path -Path "/opt/microsoft/otelcollector/collector-config.yml" ))) {
             Write-Output "Prometheus custom config validation failed, using defaults"
             # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
@@ -200,15 +200,15 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
 
     # Set variables for telegraf (runs in machine environment)
-    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:AGENT_VERSION, "Machine")
-    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:customResourceId, "Machine")
-    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:NODE_NAME, "Machine")
-    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:NODE_IP, "Machine")
-    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:MODE, "Machine")
+    [System.Environment]::SetEnvironmentVariable("AGENT_VERSION", $env:AGENT_VERSION, "Machine")
+    [System.Environment]::SetEnvironmentVariable("customResourceId", $env:customResourceId, "Machine")
+    [System.Environment]::SetEnvironmentVariable("NODE_NAME", $env:NODE_NAME, "Machine")
+    [System.Environment]::SetEnvironmentVariable("NODE_IP", $env:NODE_IP, "Machine")
+    [System.Environment]::SetEnvironmentVariable("MODE", $env:MODE, "Machine")
     [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:CONTROLLER_TYPE, "Machine")
-    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:POD_NAMESPACE, "Machine")
-    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:POD_NAME, "Machine")
-    [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:OS_TYPE, "Machine")
+    [System.Environment]::SetEnvironmentVariable("POD_NAMESPACE", $env:POD_NAMESPACE, "Machine")
+    [System.Environment]::SetEnvironmentVariable("POD_NAME", $env:POD_NAME, "Machine")
+    [System.Environment]::SetEnvironmentVariable("OS_TYPE", $env:OS_TYPE, "Machine")
 
 }
 
