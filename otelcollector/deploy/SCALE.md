@@ -8,11 +8,18 @@
     scrape_interval: 30s
     scheme: http
     metrics_path: /metrics
+    relabel_configs:
+    - source_labels: [__metrics_path__]
+      regex: (.*)
+      target_label: metrics_path
+    - source_labels: [__address__]
+      replacement: '$NODE_NAME'
+      target_label: instance
     static_configs:
     - targets: ['$NODE_IP:9100']
   ```
 * Custom scrape targets can follow the same format using `static_configs` with targets using the `$NODE_IP` environment variable and specifying the port to scrape. Each pod of the daemonset will take the config and scrape and send the metrics for that node.
-* Add the configmap by creating your Prometheus config in a file called prometheus-config and run:
+* Add the configmap by creating your Prometheus config in a file called prometheus-config and run :
   ```
   kubectl create configmap <prometheus collector chart release name>-prometheus-config-node --from-file=prometheus-config -n <same namespace as prometheus collector namespace>
   ```
