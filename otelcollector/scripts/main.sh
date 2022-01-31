@@ -1,5 +1,3 @@
-#!/bin/bash
-
 #Run inotify as a daemon to track changes to the mounted configmap.
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
@@ -84,7 +82,8 @@ if [ ${#APPLICATIONINSIGHTS_AUTH_URL} -ge 1 ]; then  # (check if APPLICATIONINSI
       fi
 fi
 
-aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 --decode)	
+aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 -d)	
+
 export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey	
 echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc	
 
@@ -116,7 +115,7 @@ ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
 
 if [ -e "/opt/microsoft/promMergedConfig.yml" ]; then
       # promconfigvalidator validates by generating an otel config and running through receiver's config load and validate method
-      /opt/microsoft/promconfigvalidator --config "/opt/microsoft/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
+      /opt/promconfigvalidator --config "/opt/microsoft/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
             # Use default config if specified config is invalid
             echo "Prometheus custom config validation failed, using defaults"
@@ -235,6 +234,7 @@ ruby --version
 
 echo "starting telegraf"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+#telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
 
 echo "starting fluent-bit"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &

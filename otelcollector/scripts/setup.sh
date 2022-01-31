@@ -3,6 +3,12 @@
 TMPDIR="/opt"
 cd $TMPDIR
 
+export releasever="1.0"
+
+tdnf install ca-certificates-microsoft -y
+
+#tdnf check-update && tdnf install -y libc-bin wget openssl curl sudo init-system-helpers net-tools cronie vim apt-transport-https locales ruby gnupg logrotate sed chmod gem procps-ng
+
 sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \
     update-locale LANG=en_US.UTF-8
@@ -16,16 +22,18 @@ chmod 777 /usr/sbin/
 
 #download inotify tools for watching configmap changes
 echo "Installing inotify..."
-sudo apt-get update
-sudo apt-get install inotify-tools -y
+sudo tdnf check-update
+sudo tdnf install --disablerepo="mariner-official-base-2" inotify-tools -y
 
 echo "Installing packages for re2 gem install..."
-sudo apt-get install -y build-essential libre2-dev ruby-dev
+sudo tdnf install --disablerepo="mariner-official-base-2" -y build-essential libre2-dev ruby-dev
 
 echo "Installing tomlrb, deep_merge and re2 gems..."
-gem install tomlrb
-gem install deep_merge
-gem install re2
+sudo gem install tomlrb
+sudo gem install deep_merge
+#gem install re2
+
+#sudo tdnf upgrade
 
 #used to setcaps for ruby process to read /proc/env
 #echo "installing libcap2-bin"
@@ -56,20 +64,23 @@ gem install re2
 echo "Installing telegraf..."
 wget https://dl.influxdata.com/telegraf/releases/telegraf-1.18.0_linux_amd64.tar.gz
 tar -zxvf telegraf-1.18.0_linux_amd64.tar.gz
-mv /opt/telegraf-1.18.0/usr/bin/telegraf /opt/telegraf/telegraf
+mv telegraf-1.18.0/usr/bin/telegraf /opt/telegraf/telegraf
 chmod 777 /opt/telegraf/telegraf
+#sudo tdnf --disablerepo="*" --enablerepo=influxdb install telegraf-1.18.0-1 -y
+#sudo tdnf install telegraf -y
 
 # Install fluent-bit
 echo "Installing fluent-bit..."
-wget -qO - https://packages.fluentbit.io/fluentbit.key | sudo apt-key add -
-sudo echo "deb https://packages.fluentbit.io/ubuntu/xenial xenial main" >> /etc/apt/sources.list
-sudo echo "deb http://security.ubuntu.com/ubuntu bionic-security main" >> /etc/apt/sources.list.d/bionic.list
-sudo apt-get update
+#wget -qO - https://packages.fluentbit.io/fluentbit.key | sudo apt-key add -
+#sudo echo "deb https://packages.fluentbit.io/ubuntu/xenial xenial main" >> /etc/apt/sources.list
+#sudo echo "deb http://security.ubuntu.com/ubuntu bionic-security main" >> /etc/apt/sources.list.d/bionic.list
+#sudo apt-get update
+sudo tdnf install --disablerepo="*" --enablerepo="mariner-official-base-2"   fluent-bit -y
 
 
 # Some dependencies were fixed with sudo apt --fix-broken, try installing td-agent-bit again
 # This is because we are keeping the same fluentbit version but have upgraded ubuntu
-sudo apt-get install td-agent-bit=1.7.8 -y
+#sudo apt-get install td-agent-bit=1.7.8 -y
 
 # setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
@@ -88,41 +99,45 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Installing ME
 echo "Installing Metrics Extension..."
-sudo apt-get install -y apt-transport-https gnupg
+#sudo tdnf install -y apt-transport-https gnupg
 
 # Accept Microsoft public keys
-wget -qO - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-wget -qO - https://packages.microsoft.com/keys/msopentech.asc | sudo apt-key add -
+#wget -qO - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+#wget -qO - https://packages.microsoft.com/keys/msopentech.asc | sudo apt-key add -
 
 # Source information on OS distro and code name
-. /etc/os-release
+#. /etc/os-release
 
-if [ "$ID" = ubuntu ]; then
-    REPO_NAME=azurecore
-elif [ "$ID" = debian ]; then
-    REPO_NAME=azurecore-debian
-else
-    echo "Unsupported distribution: $ID"
-    exit 1
-fi
+#if [ "$ID" = ubuntu ]; then
+    #REPO_NAME=azurecore
+#elif [ "$ID" = debian ]; then
+    #REPO_NAME=azurecore-debian
+#else
+    #echo "Unsupported distribution: $ID"
+    #exit 1
+#fi
 
 # Add azurecore repo and update package list
-echo "deb [arch=amd64] https://packages.microsoft.com/repos/$REPO_NAME $VERSION_CODENAME main" | sudo tee -a /etc/apt/sources.list.d/azure.list
-sudo apt-get update
+#echo "deb [arch=amd64] https://packages.microsoft.com/repos/$REPO_NAME $VERSION_CODENAME main" | sudo tee -a /etc/apt/sources.list.d/azure.list
+#sudo apt-get update
 
 # Pinning to the latest stable version of ME
-sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
+#sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
+
+#sudo curl https://raw.githubusercontent.com/microsoft/CBL-Mariner/1.0/SPECS/mariner-repos/mariner-extras.repo -o /etc/yum.repos.d/mariner-extras.repo
+sudo tdnf install cpprest grpc -y
+sudo tdnf --disablerepo="*" --enablerepo=mariner-official-extras install metricsext2 -y
 
 
 # Cleaning up unused packages
 echo "Cleaning up packages used for re2 gem install..."
 
 #Uninstalling packages after gem install re2
-sudo apt-get remove build-essential -y
-sudo apt-get remove ruby-dev -y
+sudo tdnf remove build-essential -y
+sudo tdnf remove ruby-dev -y
 
 echo "auto removing unused packages..."
-sudo apt-get autoremove -y
+sudo tdnf autoremove -y
 
 #cleanup all install
 echo "cleaning up all install.."
