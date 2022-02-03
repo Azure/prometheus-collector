@@ -28,6 +28,9 @@ sudo tdnf install --disablerepo="mariner-official-base-2" inotify-tools -y
 echo "Installing packages for re2 gem install..."
 sudo tdnf install --disablerepo="mariner-official-base-2" -y build-essential libre2-dev ruby-dev
 
+sudo gem update
+sudo gem cleanup
+
 echo "Installing tomlrb, deep_merge and re2 gems..."
 sudo gem install tomlrb
 sudo gem install deep_merge
@@ -62,12 +65,13 @@ sudo gem install deep_merge
 
 # Install Telegraf
 echo "Installing telegraf..."
-wget https://dl.influxdata.com/telegraf/releases/telegraf-1.18.0_linux_amd64.tar.gz
-tar -zxvf telegraf-1.18.0_linux_amd64.tar.gz
-mv telegraf-1.18.0/usr/bin/telegraf /opt/telegraf/telegraf
-chmod 777 /opt/telegraf/telegraf
+#wget https://dl.influxdata.com/telegraf/releases/telegraf-1.18.0_linux_amd64.tar.gz
+#tar -zxvf telegraf-1.18.0_linux_amd64.tar.gz
+#mv telegraf-1.18.0/usr/bin/telegraf /opt/telegraf/telegraf
+#chmod 777 /opt/telegraf/telegraf
 #sudo tdnf --disablerepo="*" --enablerepo=influxdb install telegraf-1.18.0-1 -y
-#sudo tdnf install telegraf -y
+sudo tdnf install telegraf -y
+#cp /usr/bin/telegraf /opt/telegraf/telegraf
 
 # Install fluent-bit
 echo "Installing fluent-bit..."

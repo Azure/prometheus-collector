@@ -1,5 +1,7 @@
+
 #Run inotify as a daemon to track changes to the mounted configmap.
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
+
 
 echo "MODE="$MODE
 echo "CONTROLLER_TYPE="$CONTROLLER_TYPE
@@ -154,7 +156,8 @@ fi
 source ~/.bashrc
 
 #start cron daemon for logrotate
-service cron restart
+#service cron restart
+crond -n -s &
 
 #start otelcollector
 echo "Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
