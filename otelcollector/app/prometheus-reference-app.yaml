@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: prometheus-reference-app-golang
-          image: docker.io/gracewehner/prometheus-reference-app:golang-082521
+          image: gracepromacr.azurecr.io/prometheus-reference-app:golang-082521
           env:
             - name: RUN_PERF_TEST
               value: "false"
@@ -28,7 +28,7 @@ spec:
             - containerPort: 2113
               protocol: TCP
         - name: prometheus-reference-app-python
-          image: docker.io/gracewehner/prometheus-reference-app:python-082521
+          image: gracepromacr.azurecr.io/prometheus-reference-app:python-082521
           ports:
           - containerPort: 2114
             protocol: TCP

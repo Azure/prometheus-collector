@@ -85,6 +85,18 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
+            {{- if .Values.azureKeyVault.useManagedIdentity  }}
+              {{- if .Values.azureKeyVault.userAssignedIdentityID }}
+            - name: AKVAUTH
+              value: "mi-ua" # managed identity-user assigned
+              {{- else }}
+            - name: AKVAUTH
+              value: "mi-sa" # managed identity-system assigned
+              {{- end }}
+            {{- else }}
+            - name: AKVAUTH
+              value: "sp" # service principal
+            {{- end }}
           securityContext:
             privileged: false
           volumeMounts:
