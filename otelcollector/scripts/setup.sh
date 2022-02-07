@@ -3,6 +3,7 @@
 TMPDIR="/opt"
 cd $TMPDIR
 
+
 export releasever="1.0"
 
 tdnf install ca-certificates-microsoft -y
@@ -26,7 +27,7 @@ sudo tdnf check-update
 sudo tdnf install --disablerepo="mariner-official-base-2" inotify-tools -y
 
 echo "Installing packages for re2 gem install..."
-sudo tdnf install --disablerepo="mariner-official-base-2" -y build-essential libre2-dev ruby-dev
+sudo tdnf install --disablerepo="mariner-official-base-2" -y build-essential re2-devel ruby-devel
 
 sudo gem update
 sudo gem cleanup
@@ -34,7 +35,7 @@ sudo gem cleanup
 echo "Installing tomlrb, deep_merge and re2 gems..."
 sudo gem install tomlrb
 sudo gem install deep_merge
-#gem install re2
+sudo gem install re2
 
 #sudo tdnf upgrade
 
@@ -139,9 +140,10 @@ echo "Cleaning up packages used for re2 gem install..."
 #Uninstalling packages after gem install re2
 sudo tdnf remove build-essential -y
 sudo tdnf remove ruby-dev -y
+sudo tdnf remove binutils binutils-common binutils-x86-64-linux-gnu cpp cpp-9 dpkg-devel fakeroot g++ g++-9 gcc gcc-9 gcc-9-base libalgorithm-diff-perl libalgorithm-diff-xs-perl libalgorithm-merge-perl libasan5 libatomic1 libbinutils libc-dev-bin libc6-dev libcc1-0 libcrypt-devel libctf-nobfd0 libctf0 libdpkg-perl libfakeroot libfile-fcntllock-perl libgcc-9-devel libgmp-devel libgmpxx4ldbl libgomp1 libisl22 libitm1 liblocale-gettext-perl liblsan0 libmpc3 libmpfr6 libperl5.30 libquadmath0 libstdc++-9-dev libtsan0 libubsan1 linux-libc-dev make manpages manpages-dev netbase patch perl perl-modules-5.30 ruby2.6-devel ruby2.6-doc -y
 
 echo "auto removing unused packages..."
-sudo tdnf autoremove -y
+#sudo tdnf autoremove -y
 
 #cleanup all install
 echo "cleaning up all install.."
