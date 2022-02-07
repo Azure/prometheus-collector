@@ -93,6 +93,13 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
+            {{- if .Values.windowsDaemonset  }}
+            - name: WINMODE
+              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- else }}
+            - name: WINMODE
+              value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- end }}
           securityContext:
             privileged: false
           volumeMounts:
@@ -170,7 +177,7 @@ spec:
             {{- end }}
 {{- end }}        
 ---     
-{{- if .Values.mode.advanced  }}
+{{- if and (eq .Values.mode.advanced true) (eq .Values.windowsDaemonset true) -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -264,6 +271,13 @@ spec:
             {{- else }}
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- end }}
+            {{- if .Values.windowsDaemonset  }}
+            - name: WINMODE
+              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- else }}
+            - name: WINMODE
+              value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
           securityContext:
             privileged: false

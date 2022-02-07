@@ -68,6 +68,9 @@ internalSettings:
 mode:
   advanced: false
 
+#if windowsDaemonset==true (default is false) AND mode.advanced==true (default is false), then it will deploy a windows daemonset on windows nodes, and move some of the default node targets (windows-kube-procy and windowsexporter) to windows daemonset
+windowsDaemonset: false
+
 image:
   repository: ${MCR_REGISTRY}${MCR_REPOSITORY}
   tag: ${IMAGE_TAG}
