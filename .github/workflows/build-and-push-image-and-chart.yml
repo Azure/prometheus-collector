@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - kaveesh/win_11192021
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
