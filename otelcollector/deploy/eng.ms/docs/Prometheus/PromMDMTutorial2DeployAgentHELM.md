@@ -54,7 +54,7 @@ Note: The deployment will also automatically install [kube-state-metrics](https:
 
 You can verify that there are not any configuration or authentication issues by looking at the prometheus-collector logs. See the [FAQ](~/metrics/Prometheus/PromMDMfaq.md#how-do-i-check-the-prometheus-collector-logs) for how to do so.
 
-Setting `--set advanced.mode=true` for large clusters with more than 50 nodes and 1500 pods is highly recommended. See [here](~/metrics/Prometheus/advanced-mode.md) for more information about advanced mode.
+Enabling `--set advanced.mode=true` for large clusters with more than 50 nodes and 1500 pods is highly recommended. See [here](~/metrics/Prometheus/advanced-mode.md) for more information about advanced mode. If the cluster has greater than 25 Windows nodes, enabling advanced mode and `--set windowsDaemonset=true` is recommended. See [here](~/metrics/Prometheus/windows.md) for more information about collecting Windows metrics.
 
 > If you want to have your metrics be sent to multiple metrics accounts, follow the guidelines for [multiple accounts](~/metrics/Prometheus/configuration.md#multiple-metric-accounts) that outlines how Prometheus collector works with multiple metrics accounts.  
 
