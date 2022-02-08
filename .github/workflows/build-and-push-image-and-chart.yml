@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      -vishwa/02082022release
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
@@ -36,7 +37,7 @@ jobs:
       - name: Set-Helm-chart-version
         run: $version = Get-Content ./otelcollector/VERSION ; echo "HELM_CHART_VERSION=${version}" >> $env:GITHUB_ENV
       - name: Set-HELM-chart-semver
-        run: echo ("HELM_SEMVER=" + $env:HELM_CHART_VERSION + "-" + $env:BRANCH_NAME.replace('/','-').replace('.','-').replace('_','-') + "-" + $env:IMAGE_TAG_DATE + "-" + $env:COMMIT_SHA) >> $env:GITHUB_ENV
+        run: echo "HELM_SEMVER=${HELM_CHART_VERSION}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-image-tag
         run: echo ("IMAGE_TAG=" + $env:HELM_SEMVER + "-win") >> $env:GITHUB_ENV
       - name: Set-image-full-tag
