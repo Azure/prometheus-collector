@@ -76,8 +76,6 @@ image:
   tag: ${IMAGE_TAG}
   windows: 
     tag: ${IMAGE_TAG_WINDOWS}
-  # repository: "mcr.microsoft.com/azuremonitor/containerinsights/cidev" # /prometheus-collector/images" # ${MCR_REGISTRY}${MCR_REPOSITORY}
-  # tag: "winkaveesh12022021-1"
   pullPolicy: IfNotPresent
 
 resources:

@@ -15,7 +15,7 @@ jobs:
         run: echo ("Initiated by -" + $env:GITHUB_ACTOR + $env:GITHUB_REF)
       - name: Set-branch-name-for-non-pr
         if: ${{ github.event_name != 'pull_request' }}
-        run: echo ("BRANCH_NAME=kaveesh/win_11192021") >> $env:GITHUB_ENV
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / - | tr . - | tr _ - | cut -c1-90)" >> $GITHUB_ENV
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
         run: echo ("BRANCH_NAME=" + $env:GITHUB_HEAD_REF.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
