@@ -128,4 +128,4 @@ By default and for testing purposes, the provided configmap has scrape config to
 Provide your cluster name as value for ```CLUSTER``` environment variable in deployment file (prometheus-collector.yaml). This will be added as a label ```cluster``` to every metric collected from this cluster. 
 Provider your release names for kube-state-metrics and node-exporter deployments in the env vars '
 Now you are ready to deploy the prometheus collector (prometheus-collector.yaml) by running the below kubectl commsnd. [Prometheus-collector will run in kube-system namespace as a singleton replica]
-```shell kubectl apply -f prometheus-collector.yaml ```
+```shell kubectl apply -f prometheus-collector.yaml ``` 
