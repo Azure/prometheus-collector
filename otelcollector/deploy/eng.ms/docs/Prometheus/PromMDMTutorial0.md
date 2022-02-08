@@ -17,6 +17,7 @@ Here are steps we will walk through.
 4. [Set up Azure Grafana Service](~/metrics/Prometheus/PromMDMTutorial4SetUpGrafana.md)  
 5. [Configure Prometheus data source](~/metrics/Prometheus/PromMDMTutorial5AddPromDataSource.md)  
 6. [Use built-in dashboards](~/metrics/Prometheus/PromMDMTutorial6ReuseExistingDashboard.md)
+7. [Windows Kubernetes metrics](~/metrics/Prometheus/windows.md)
 
 ## Prerequisites
 
