@@ -85,6 +85,13 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
+            {{- if .Values.windowsDaemonset  }}
+            - name: WINMODE
+              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- else }}
+            - name: WINMODE
+              value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- end }}
             {{- if .Values.azureKeyVault.useManagedIdentity  }}
               {{- if .Values.azureKeyVault.userAssignedIdentityID }}
             - name: AKVAUTH
@@ -140,7 +147,7 @@ spec:
             nodeSelectorTerms:
               - labelSelector:
                 matchExpressions:
-                  - key: beta.kubernetes.io/os
+                  - key: kubernetes.io/os
                     operator: In
                     values:
                     - linux

@@ -1,5 +1,5 @@
   scrape_configs:
-    - job_name: windows-exporter
+    - job_name: kube-proxy-windows
       scheme: http
       scrape_interval: 30s
       tls_config:
@@ -12,9 +12,16 @@
       - action: keep
         source_labels: [__meta_kubernetes_node_label_kubernetes_io_os]
         regex: windows
+      - source_labels: [__address__]
+        replacement: '$$NODE_NAME$$'
+        target_label: instance
       - source_labels:
         - __address__
         action: replace
         target_label: __address__
         regex: (.+?)(\:\d+)?
-        replacement: $$1:9182
+        replacement: $$1:10249
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        action: keep
+        regex: "up"

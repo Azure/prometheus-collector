@@ -121,6 +121,8 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["defaultmetricaccountname"] = os.Getenv(envDefaultMetricAccountName)
 	CommonProperties["podname"] = os.Getenv(envPodName)
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
+	CommonProperties["osType"] = os.Getenv("OS_TYPE")
+
 
 	aksResourceID := os.Getenv(envAKSResourceID)
 	// if the aks resource id is not defined, it is most likely an ACS Cluster
