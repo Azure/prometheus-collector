@@ -16,7 +16,7 @@ jobs:
         run: echo ("Initiated by -" + $env:GITHUB_ACTOR + $env:GITHUB_REF)
       - name: Set-branch-name-for-non-pr
         if: ${{ github.event_name != 'pull_request' }}
-        run: echo $env:GITHUB_REF.substring(11); echo ("BRANCH_NAME=" + $env:GITHUB_REF.subString(11).replace('/','-').replace('.','-').replace('_','-').subString(0, [System.Math]::Min(90, $env:GITHUB_HEAD_REF.subString(11).Length))) >> $env:GITHUB_ENV
+        run: echo $env:GITHUB_REF.substring(11); echo ("BRANCH_NAME=" + $env:GITHUB_REF.substring(11).replace('/','-').replace('.','-').replace('_','-').subString(0, [System.Math]::Min(90, $env:GITHUB_REF.substring(11).Length))) >> $env:GITHUB_ENV
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
         run: echo ("BRANCH_NAME=" + $env:GITHUB_HEAD_REF.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
