@@ -15,7 +15,7 @@ To create account in the 'Prom1' stamp, specify that stamp explicitly during the
 
 ## Set up KeyVault authentication
 
-Prometheus metrics will be collected from your Kubernetes cluster by an agent, and stored in the Geneva Metrics (MDM) account you created. To ensure the agent can authenticate to Geneva Metrics (MDM), we will set up KeyVault authentication with an RBAC-enabled KeyVault. This will involve, creating the certificate and making it available to the agent (client side) and MDM (server side).
+Prometheus metrics will be collected from your Kubernetes cluster by an agent, and stored in the Geneva Metrics (MDM) account you created. To ensure the agent can authenticate to Geneva Metrics (MDM), we will set up KeyVault authentication. This will involve, creating the certificate and making it available to the agent (client side) and MDM (server side).
 
 At this point, only KeyVault authentication is supported for Prometheus metrics ingestion.  
 
@@ -29,51 +29,73 @@ With your certificate created, you want to save some information that we will ne
 
 - KeyVault Name
 - KeyVault TenantId
-- Certificate Name  
+- Certificate Name 
+
+### Install Azure KeyVault driver in your cluster
+
+To be able to mount secrets and certificates as storage volumes, you will need to install the csi driver & secrets store provider for Azure KeyVault in your cluster.
+For this we will installl the AKS addon by running the following commands.
+
+```shell
+az aks enable-addons --addons azure-keyvault-secrets-provider --name <AKS cluster name> --resource-group <resource group name> --enable-secret-rotation
+```
+
+See the [documentation](https://docs.microsoft.com/en-us/azure/aks/csi-secrets-store-driver) for more information.
 
 ### Set up permissions for agent to pull certificate from KeyVault
 
-Next, lets ensure the agent has the right authorization to pull the certificate from KeyVault. To do this we will need to use a service principal.
+Next, lets ensure the agent and Azure Key Vault driver have the right authorization to pull the certificate from KeyVault. To do this we will need to use either a service principal or a managed identity.
 
-To do so using the Azure Portal:
+#### Service Principal
 
-* You can [create a new service principal & secret](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal), OR use an existing service principal with its secret.  
+You can create a service principal or use an existing one with its secert.
 
-* Once you have a service principal and secret, it needs to be tagged as a valid KeyVault user. To do this,  
-    - Go to the KeyVault resource  
-    - Grant your service principal the 'Key Vault Secrets User' built-in role  
+* You can either [create a new service principal & secret](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) using the Azure Portal.
 
-Alternatively, you can use a CLI:
-* Replace `<service prinipal name>` with the name you'd like for the service principal. From the values printed out, the `appId` value is the service principal client ID. The `password` is the service principal secret. Save these for the prometheus-collector deployment in the Deploy Agent step.
+* Alternatively, you can use a CLI by replacing `<service principal name>` with the name you'd like for the service principal. From the values printed out, the `appId` value is the service principal client ID. The `password` is the service principal secret. Save these for the prometheus-collector deployment in the Deploy Agent step.
 
     ```bash
     az ad sp create-for-rbac --skip-assignment --name <service principal name>
     ```
-*  Then run the following and replace the `<service principal appId>` with the value from the step above and specify the resource ID of the KeyVault for the `--scope` parameter:
-    ```bash
-    az role assignment create --role "Key Vault Secrets User" --assignee <service principal appId> --scope /subscriptions/<subscriptionid>/resourcegroups/<resourcegroup>/providers/Microsoft.KeyVault/vaults/<keyvaultname>
-    ```
 
-Now, save the service principal app/clientID & its secret, as we will need this in a subsequent step.  
+Save the service principal app/client ID & its secret, as we will need this in a subsequent step when deploying the agent.
 
-### Install Azure KeyVault driver in your cluster
+#### Managed Identity
 
-To be able to mount secrets and certificates as storage volumes, you will need to install the csi driver & secrets store provider for Azure KeyVault in your cluster.  
-For this we will leverage [HELM](https://kubernetes.io/blog/2016/10/helm-charts-making-it-simple-to-package-and-deploy-apps-on-kubernetes/). The following commands can be used for this. See an example of this below.  
+To use a User-Assigned Managed Identity for Key Vault access:
+* Get the client ID of the User-Assigned Managed Identity you would like to use. You can use an existing managed identity or use the client ID of the identity of the Azure Key Vault Secrets Provider by running:
 
-```shell
-helm repo add csi-secrets-store-provider-azure https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/charts 
-helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --set secrets-store-csi-driver.enableSecretRotation=true --namespace <my_any_namespace> --create-namespace
-```
+  ```shell
+  az aks show -g <resource-group> -n <cluster-name> --query addonProfiles.azureKeyvaultSecretsProvider.identity.clientId -o tsv
+  ```
+* Save the identity client ID, as this is needed in a subsequent step.
 
-**Example** :-
+To use a System-Assigned Managed Idenity:
+* Enable System-Assigned Managed Identity by following [these instructions](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/qs-configure-cli-windows-vm#enable-system-assigned-managed-identity-on-an-existing-azure-vm).
+* Get the principal ID of the System-Assigned Managed Identity:
+  ```shell
+  az vmss identity show -g <resource group>  -n <vmss scaleset name> -o yaml
+  az vm identity show -g <resource group> -n <vm name> -o yaml
+  ```
 
-```shell
-helm repo add csi-secrets-store-provider-azure https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/charts
-helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --set secrets-store-csi-driver.enableSecretRotation=true --namespace csi --create-namespace
-```
+See more details about configuring identity access [here](https://docs.microsoft.com/en-us/azure/aks/csi-secrets-store-identity-access).
 
-#### Register certificate with Geneva Metrics
+### Grant Permissions:
+Depending on the permission model of your Key Vault, grant permission to get the certificate by running the following and replacing <id> with the service principal ID, the User-Assigned managed identity client ID, or the System-Assigned managed identity principal ID
+* For Key Vaults that use Access Policy:
+
+  ```shell
+  az keyvault set-policy -n <keyvaultname> --secret-permissions get --spn <id>
+  ```
+
+* For Key Vaults that are RBAC-enabled:
+
+  ```shell
+  az role assignment create --role "Key Vault Secrets User" --assignee <id> --scope /subscriptions/<subscriptionid>/resourcegroups/<resourcegroup>/providers/Microsoft.KeyVault/vaults/<keyvaultname>
+  ```
+* Alternatively, you can assign these roles through the Azure Portal with `Access policies` or `Access control (RBAC)` in the sidebar when viewing your Key Vault.
+
+### Register certificate with Geneva Metrics
 
 With the certificate configuration done on the agent side, we will now let Geneva Metrics (MDM) know about the certificate. To do this follow the steps at [Authorize the new certificate in your Geneva Metrics account](~/collect/authentication/keyvaultmetricsauthorize.md)  
   
