@@ -1,6 +1,9 @@
 > [!Note]
 > Prometheus metrics in MDM is still in active development and is offered as a Private Preview. You can join the [K8s Observability Updates](https://idwebelements/GroupManagement.aspx?Group=K8sObsUpdates&Operation=join) alias for updates on this feature, including when this will roll out more broadly in Public Preview.
 
+[Prometheus metrics in MDM - FAQ](~/metrics/Prometheus/PromMDMFAQ.md)  
+[Prometheus metrics in MDM - Getting help](https://teams.microsoft.com/l/channel/19%3a0ee871c52d1744b0883e2d07f2066df0%40thread.skype/Prometheus%2520metrics%2520in%2520MDM%2520(Limited%2520Preview)?groupId=5658f840-c680-4882-93be-7cc69578f94e&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
+
 # Working with Prometheus metrics in MDM
 
 This tutorial is an introduction to working with Prometheus based metrics in MDM.
@@ -29,8 +32,10 @@ Please ensure you have the following set up before continuing with this tutorial
 
     ```Note: Our charts will not work on HELM clients < 3.7.0```  
  
-* Access to a dogfood subscription of Azure Grafana Service. If you do not yet have one, [please request one via](mailto:ad4g@microsoft.com)  
-* Permission to set up data sources and dashboards in Azure Grafana. To do this [join the Azure Dashboard for Grafana Dogfood (Admin) group](https://idweb/identitymanagement/aspx/groups/MyGroups.aspx?popupFromClipboard=%2Fidentitymanagement%2Faspx%2FGroups%2FEditGroup.aspx%3Fid%3Daa23b20a-f5ef-485d-94bd-468bbf2346fb) via IDWeb.
+* Join the Private Preview of Azure Managed Workspaces for Grafana and deploy an instance. If you are not already part of the Private Preview, please send your Azure subscription ID to [this email](mailto:ad4g@microsoft.com) with a subject line Request to join private preview and see the full instructions below.
+
+  [Set up Azure Grafana Service](~/metrics/Prometheus/PromMDMTutorial4SetUpGrafana.md)  
+
 
 --------------------------------------
 
