@@ -5,13 +5,13 @@
 
 ## Create metrics account
 
-Prometheus metrics that you want to work with, will be stored in a Geneva metrics (MDM) account. If you don't have an existing metrics account in Geneva, follow the instructions to create a [metrics account](~/getting_started/v2/createaccounts_basic.md). Logs account is not needed for Prometheus metrics collection.
+All Prometheus metrics will be stored in a Geneva metrics (MDM) account. The current private preview for Prometheus only works with metrics accounts hosted on [shared MDM stamps](~/metrics/concepts/stampsandaccounts.md#stamps-and-accounts).  
 
-If you are part of the [Limited Preview](~/metrics/Prometheus/PromMDMLimitedPreview.md) , please create a new account in the 'Prom1' shared stamp, as this has been specifically set up for Limited preview evaluations.
+If you don't have an existing metrics account in a shared MDM stamp, follow the instructions to create a [metrics account](~/getting_started/v2/createaccounts_basic.md), and choose a shared stamp as part of the account creation process. A Logs account is not strictly required for Prometheus metrics collection.  
 
-To create account in the 'Prom1' stamp, specify that stamp explicitly during the account creation wizard, as shown below  
+    *Dedicated stamps will also be supported for Prometheus (ETA March 2022).
 
-![Prom1](~/metrics/images/prometheus/PromCreateAccountLimitedPreview.png)
+If you already have an existing metrics account on a shared MDM stamp, you can reuse that account for Prometheus. 
 
 ## Set up KeyVault authentication
 

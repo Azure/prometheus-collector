@@ -6,9 +6,9 @@
 
 In the Prometheus Private Preview we use Azure Managed Grafana as our user interface to interact with the Prometheus metrics you have collected. If you have not already done so, please [sign up for the Managed Grafana Private Preview](../../dashboards/grafana/Tutorial0SetUpGrafanaAMG.md).
 
-For Grafana to access your Prometheus metrics it needs to know where the data is and be able to access it with the right authentication. This is accomplished by a data source. Prometheus data source is supported natively in Grafana. We need to have this be configured to pull metrics from your MDM account instead of a Prometheus tsdb.  
+For Grafana to access your Prometheus metrics it needs to know where the data is and be able to access it with the right authentication. This is accomplished by a data source. Prometheus data source is supported natively in Grafana. We need to have this be configured to pull metrics from your MDM account instead of a Prometheus tsdb.
   
-If you are using the Azure Managed Workspace for Grafana preview, refer to [this doc](https://github.com/microsoft/azure-grafana-preview-doc/blob/main/ConfigureDataSources.md) to setup your Prometheus data source. For Dogfood users, follow the instructions below.  
+Follow the instructions below to setup your Prometheus data source.  
     
 * Go to the cog icon in the Grafana side menu. If the side menu is not visible click the Grafana icon in the upper left corner.  
 
@@ -17,10 +17,11 @@ If you are using the Azure Managed Workspace for Grafana preview, refer to [this
 
 * Click on **Data Sources**. The data sources page opens up, showing a list of all currently configured data sources for the Grafana instance.
 
+![Add datasource4](~/metrics/images/prometheus/oob-data-sources.png)  
+Notice that Azure Managed Grafana includes a Prometheus datasource pre-configured to access Container Insights demo data and to provide a working example of the required configuration for Azure Prometheus. Feel free to view the config before adding your own or editing this existing datasource.
 * Click **Add data source**  
-![Add datasource4](~/metrics/images/prometheus/AMGAddDatasource4.png)  
 
-* You will see the Prometheus data source listed (if it doesn't show up you can search for it). Hover over it and click **Select**.  
+* Here are the steps for adding your own. Search for the Prometheus Datasource. Hover over it and click **Select**.  
 ![Add datasource4](~/metrics/images/prometheus/AMGAddDatasource5.png)  
 
 * Configure data source to pull from your MDM account
@@ -30,7 +31,7 @@ In the data source configuration fill in the fields per guidance below.
 - Set **Name** to what you want your data source to be called. Also you can make this the 'default' for the Grafana cluster by enabling the Default toggle By default the Azure Monitor-Prometheus data source is configured to pull metrics from a sample Geneva Metrics (MDM) account.  
 > [!Note]
 > Please make sure to use a new name for the data source. Reusing previous data source names will result in errors during saving the datasource.
-- Under HTTP section, set **URL** to 'https://az-eus.prod.prometheusmetrics.trafficmanager.net' . This is the end point used by Grafana to pull metrics from the MDM tsdb.  
+- Under HTTP section, you the  **URL** is set to 'https://az-ncus.prod.prometheusmetrics.trafficmanager.net' . This is the an end point used by Grafana to pull metrics from the MDM tsdb.  
 
 - If you are using Azure Managed Grafana Private preview version, you have two options to enable authentication
     - **Managed Identity**: This is the easiest way.
@@ -48,12 +49,6 @@ In the data source configuration fill in the fields per guidance below.
       - AAD Resource Id: https://management.azure.com
     
      ![Add AMGAddDatasourcePP4](~/metrics/images/prometheus/AMGAddDatasourcePP4.png)
-
-> [!Note]
-> If you are using Grafana dogfood version, use this step for Authentication
->  Under Auth section, enable the **Forward OAuth Identity** toggle. This enables with AAD auth from Grafana to MDM to work.  
-  
-![Add datasource6](~/metrics/images/prometheus/AMGAddDatasource6.png)  
   
 - Finally, you need to let the data source know your specific MDM account. This is passed via a custom header. In Custom HTTP headers section, click **+ Add header**  
     - For **Header** enter 'mdmAccountName'  
