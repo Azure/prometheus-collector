@@ -5,9 +5,9 @@
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:1.1.0-main-02-08-2022-573d3086`
 * image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:1.1.0-main-02-08-2022-573d3086`
 * Change Log -
-  * [Support for MSI for accessing Azure Key Vault]((~/metrics/Prometheus/PromMDMTutorial2DeployAgentHELM.md))
+  * [Support for MSI for accessing Azure Key Vault]((~/metrics/Prometheus/PromMDMTutorial2DeployAgentHELM.md)
     * Both User Assigned & System MSIs are supported
-  * [Run collector natively on Windowd nodes](~/metrics/Prometheus/windows.md)
+  * [Run collector natively on Windows nodes](~/metrics/Prometheus/windows.md)
     * Optionally run collector on Windows nodes as a Daemonset.
   * Replace IP address with node name for nodeexporter scrapes
   
