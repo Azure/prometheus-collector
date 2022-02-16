@@ -1,0 +1,97 @@
+name: build-and-release-mixin
+on:
+  #push:
+  #  branches:
+  #    - main
+  workflow_dispatch:
+    inputs:
+      mixinName:
+        description: 'Mixin name to build & release. Allowed mixins are "kubernetes", "node", "coredns" '
+        required: true
+jobs:
+  build-and-release-mixin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set-workflow-initiator
+        run: echo "Initiated by - ${GITHUB_ACTOR}"
+      - name: Set-User
+        run: echo "USER=$(echo ${GITHUB_ACTOR})" >> $GITHUB_ENV
+      - name: Set-branch-name-for-non-pr
+        if: ${{ github.event_name != 'pull_request' }}
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
+      - name: Set-branch-name-for-pr
+        if: ${{ github.event_name == 'pull_request' }}
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / -)" >> $GITHUB_ENV
+      - name: Set-Env
+        run: echo "ENV=dev" >> $GITHUB_ENV
+      - name: Set-date-time-in-PST
+        run: echo "DATE_TIME_PST=$(TZ=America/Los_Angeles date +%m-%d-%Y-%H-%M-%S)" >> $GITHUB_ENV
+      - name: Set-commit-sha
+        run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
+      - name: get-go-version-greater-than-1-16
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.17.3' 
+      - name: Checkout-code
+        uses: actions/checkout@v2
+      - name: Set-HELM-Chart-Version
+        run: version=$(cat ./otelcollector/VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
+      - name: Set-semver
+        run: echo "SEMVER=${HELM_CHART_VERSION}-${BRANCH_NAME}-${DATE_TIME_PST}-${COMMIT_SHA}" >> $GITHUB_ENV
+      - name: Show-versions-On-build-machine
+        run: lsb_release -a && go version
+      - name: Set-MixinName
+        run: echo "MIXIN_NAME=coredns" >> $GITHUB_ENV
+      - name: Set-MixinName2
+        run: echo "MIXIN_NAME2=${{ github.event.inputs.mixinName }}" >> $GITHUB_ENV
+      - name: Get-Prereqs-To-Build-node-or-coredns-mixin
+        if: env.MIXIN_NAME != 'kubernetes'
+        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && go install github.com/google/go-jsonnet/cmd/jsonnet@latest && go install github.com/google/go-jsonnet/cmd/jsonnetfmt@latest && go install github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest && GO111MODULE=on go get -v github.com/prometheus/prometheus/cmd/promtool@master
+      - name: Build-kubernetes-mixin
+        if: env.MIXIN_NAME == 'kubernetes'
+        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && make all && zip ${{ env.MIXIN_NAME }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
+      - name: Build-node-mixin
+        if: env.MIXIN_NAME == 'node'
+        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && jb install && make all && zip ${{ env.MIXIN_NAME }}-mixins ./node_alerts.yaml ./node_rules.yaml ./dashboards_out/ -r
+      - name: Build-coredns-mixin
+        if: env.MIXIN_NAME == 'coredns'
+        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && jb install && make all && zip ${{ env.MIXIN_NAME }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
+      - name: List-build-output
+        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && ls -lt && ls -lt ./dashboards_out
+      #- name: Run-trivy-scanner-on-mixin
+      #  uses: aquasecurity/trivy-action@master
+      #  with:
+      #    scan-type: 'fs'
+      #    scan-ref: "./mixins/${{ env.MIXIN_NAME }}/"
+      #    format: 'table'
+      #    severity: 'CRITICAL,HIGH'
+      #    exit-code: '1'
+      #    timeout: '5m0s'
+      - name: Create-release
+        id: create-release
+        uses: actions/create-release@v1
+        if: github.event_name != 'pull_request' # && env.BRANCH_NAME == 'vishwa-dash'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.SEMVER }}
+          release_name: mixins-${{ env.MIXIN_NAME }}-release-${{ env.SEMVER }}
+          body: |
+             Release_Date : ${{ env.DATE_TIME_PST }}
+             Branch_Name  : ${{ env.BRANCH_NAME }}
+             Released_By  : ${{ env.USER }}
+             Mixin        : ${{ env.MIXIN_NAME }}
+          draft: false
+          prerelease: true
+      - name: Upload-Release-Asset
+        id: upload-Release-Asset
+        uses: actions/upload-release-asset@v1
+        if: github.event_name != 'pull_request' # && env.BRANCH_NAME == 'vishwa-dash'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: "./mixins/${{ env.MIXIN_NAME }}/${{ env.MIXIN_NAME }}-mixins.zip"
+          asset_name: "${{ env.MIXIN_NAME }}-mixins.zip"
+          asset_content_type: application/zip
+     

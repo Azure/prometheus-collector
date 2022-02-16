@@ -17,6 +17,24 @@ scrapeTargets:
   kubeState: true
   # -- when true, automatically install prometheus-node-exporter chart and then scrape node exporters (linux only) in the k8s cluster without any additional scrape config
   nodeExporter: true
+   # -- when true, scrape windows exporter (windows only) in every windows node in the k8s cluster without any additional scrape config. Note:- windows exporter currently needs to be setup outside/seperately/manually with default port defaulting to 8192. Please see docs on this.
+  windowsExporter: false
+   # -- when true, scrape kube proxy endpoint (windows only) in every windows node in the k8s cluster without any additional scrape config
+  windowsKubeProxy: false
+  # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
+  prometheusCollectorHealth: true
+  
+# The following setting will allow only the metrics for each target whose names match the regex string
+keepListRegexes:
+  coreDns: "" 
+  kubelet: "" 
+  cAdvisor: "" 
+  kubeProxy: "" 
+  apiServer: "" 
+  kubeState: "" 
+  nodeExporter: "" 
+  windowsExporter: "" 
+  windowsKubeProxy: "" 
 
 azureMetricAccount:
   # -- default metric account name to ingest metrics into. This will be the account used if metric itself does not have account 'hinting' label. The certificate for this account should be specified in one of the further arguments below here
@@ -29,11 +47,15 @@ azureKeyVault:
   # -- tenantid for the azure key vault resource
   tenantId: "" #required
   # -- clientid for a service principal that has access to read the Pfx certificates from keyvault specified above
-  clientId: "" #required
+  clientId: "" #required when using service principal to access keyvault
   # -- client secret for the above service principal
-  clientSecret: "" #required
+  clientSecret: "" #required when using service principal to access keyvault
   # -- name of the Pfx certificate(s) - one per metric account
   pfxCertNames: [] #required
+  # -- enable/disable managed identity to access keyvault
+  useManagedIdentity: false
+  # -- use the client id to specify which user assigned managed identity to use when acccesing keyvault. If using a user assigned identity as the VM's managed identity, then specify the identity's client id. If empty, AND 'useManagedIdentity' is true, then defaults to use the system assigned identity on the VM
+  userAssignedIdentityID: ""
 
 # -- name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped
 clusterName: "" #required
@@ -46,9 +68,14 @@ internalSettings:
 mode:
   advanced: false
 
+#if windowsDaemonset==true (default is false) AND mode.advanced==true (default is false), then it will deploy a windows daemonset on windows nodes, and move some of the default node targets (windows-kube-procy and windowsexporter) to windows daemonset
+windowsDaemonset: false
+
 image:
   repository: ${MCR_REGISTRY}${MCR_REPOSITORY}
-  tag: ${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}
+  tag: ${IMAGE_TAG}
+  windows: 
+    tag: ${IMAGE_TAG_WINDOWS}
   pullPolicy: IfNotPresent
 
 resources:
@@ -66,6 +93,10 @@ resources:
    requests:
      cpu: 500m
      memory: 1Gi
+ daemonSetWindows:
+   limits:
+     cpu: 500m
+     memory: 500Mi
 kube-state-metrics:
   nodeSelector:
     kubernetes.io/os: linux

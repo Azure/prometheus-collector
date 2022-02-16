@@ -1,0 +1,13 @@
+  scrape_configs:
+  - job_name: node
+    scheme: http
+    scrape_interval: 30s
+    relabel_configs:
+    - source_labels: [__metrics_path__]
+      regex: (.*)
+      target_label: metrics_path
+    - source_labels: [__address__]
+      replacement: '$$NODE_NAME$$'
+      target_label: instance
+    static_configs:
+    - targets: ['$$NODE_IP$$:$$NODE_EXPORTER_TARGETPORT$$']

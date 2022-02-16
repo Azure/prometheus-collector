@@ -95,6 +95,9 @@ func InitializePlugin(agentVersion string) {
 		}
 	}()
 
+	os_type := os.Getenv("OS_TYPE")
+	Log("OS_TYPE=%s", os_type)
+
 	ResourceID = os.Getenv(envAKSResourceID)
 	Computer = os.Getenv(envComputerName)
 

@@ -1,0 +1,32 @@
+{
+  "Registrations":[ 
+  {
+    "component": { 
+     "type": "git", 
+     "git": { 
+       "repositoryUrl": "https://github.com/fluent/fluent-bit", 
+       "commitHash": "33be5a4d501d2c5f7501ea6e8e94bece1e3a533d" 
+       }
+     }
+  },
+  {
+    "component": { 
+     "type": "git", 
+     "git": { 
+       "repositoryUrl": "https://github.com/influxdata/telegraf", 
+       "commitHash": "9f8be0473260e321dbbcd6670356f0e37ee9a05f" 
+       }
+     }
+  },
+  {
+    "component": { 
+     "type": "git", 
+     "git": { 
+       "repositoryUrl": "https://github.com/prometheus/prometheus", 
+       "commitHash": "411021ada9ab41095923b8d2df9365b632fd40c3" 
+       }
+     }
+  }
+],
+"Version": 1
+}

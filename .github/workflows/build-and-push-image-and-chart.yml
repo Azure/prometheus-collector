@@ -8,46 +8,118 @@ on:
     branches:
       - main
 jobs:
-  build-and-push-image:
+  WINDOWS-build-and-push-image:
+    runs-on: windows-latest
+    steps:
+      - name: Set-workflow-initiator
+        run: echo ("Initiated by -" + $env:GITHUB_ACTOR + $env:GITHUB_REF)
+      - name: Set-branch-name-for-non-pr
+        if: ${{ github.event_name != 'pull_request' }}
+        run: echo $env:GITHUB_REF.substring(11); echo ("BRANCH_NAME=" + $env:GITHUB_REF.substring(11).replace('/','-').replace('.','-').replace('_','-').subString(0, [System.Math]::Min(90, $env:GITHUB_REF.substring(11).Length))) >> $env:GITHUB_ENV
+      - name: Set-branch-name-for-pr
+        if: ${{ github.event_name == 'pull_request' }}
+        run: echo ("BRANCH_NAME=" + $env:GITHUB_HEAD_REF.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
+      - name: Set-Env
+        run: echo "ENV=dev" >> $env:GITHUB_ENV
+      - name: Set-ACR-Registry
+        run: echo "ACR_REGISTRY=containerinsightsprod.azurecr.io" >> $env:GITHUB_ENV
+      - name: Set-ACR-Repository-Image
+        run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $env:GITHUB_ENV
+      - name: Set-image-tag-date
+        run: echo ("IMAGE_TAG_DATE="+ (Get-Date -Date ([System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId((Get-Date), 'Pacific Standard Time')) -Format "MM-dd-yyyy")) >> $env:GITHUB_ENV
+      - name: Set-commit-sha
+        run: echo ("COMMIT_SHA=" + $env:GITHUB_SHA.SubString(0,8)) >> $env:GITHUB_ENV
+      - name: Checkout-code
+        uses: actions/checkout@v2
+      - name: Set-HELM-Chart-name
+        run: echo "HELM_CHART_NAME=prometheus-collector" >> $env:GITHUB_ENV
+      - name: Set-Helm-chart-version
+        run: $version = Get-Content ./otelcollector/VERSION ; echo "HELM_CHART_VERSION=${version}" >> $env:GITHUB_ENV
+      - name: Set-HELM-chart-semver
+        run: echo ("HELM_SEMVER=" + $env:HELM_CHART_VERSION + "-" + $env:BRANCH_NAME.replace('/','-').replace('.','-').replace('_','-') + "-" + $env:IMAGE_TAG_DATE + "-" + $env:COMMIT_SHA) >> $env:GITHUB_ENV
+      - name: Set-image-tag
+        run: echo ("IMAGE_TAG=" + $env:HELM_SEMVER + "-win") >> $env:GITHUB_ENV
+      - name: Set-image-full-tag
+        run: echo ("IMAGE_FULL_TAG=" + $env:ACR_REGISTRY + $env:ACR_REPOSITORY + ":" + $env:IMAGE_TAG) >> $env:GITHUB_ENV
+      - name: Show-versions-On-build-machine
+        run: systeminfo ; go version ; helm version ; docker version
+      - name: Build-source-code
+        run: cd ./otelcollector/opentelemetry-collector-builder/ ; ./makefile_windows.ps1
+      - name: Dependency Detection setup
+        uses: actions/checkout@v2
+        with:
+          repository: github/dependency-detection
+          ref: releases/v1
+          token: ${{ secrets.GH_PRIVATE_REPO_PAT }}
+          path: .github/actions/dependency-detection
+        # This is an experimental action that Microsoft OSE + GH Dependency Graph are piloting.
+        #
+        # If it ever encounters issues, feel free to disable this step to unblock builds.
+      - name: Dependency Detection
+        uses: ./.github/actions/dependency-detection
+        with:
+          token: ${{ github.token }}
+      - name: Create-docker-image
+        run: |
+            cd ./otelcollector/ ; docker build . --file ./build/windows/Dockerfile -t $env:IMAGE_FULL_TAG
+      - name: List-docker-images
+        run: docker images --digests --all
+      - name: Login-to-ACR-thru-Docker
+        if: github.event_name != 'pull_request'
+        run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
+      - name: Publish-docker-image-to-ACR
+        if: github.event_name != 'pull_request'
+        run: |
+            docker push ${{ env.IMAGE_FULL_TAG }}
+  LINUX-build-and-push-image-and-chart:
+    needs: WINDOWS-build-and-push-image
     runs-on: ubuntu-latest
     steps:
       - name: Set-workflow-initiator
         run: echo "Initiated by - ${GITHUB_ACTOR}"
       - name: Set-branch-name-for-non-pr
         if: ${{ github.event_name != 'pull_request' }}
-        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _)" >> $GITHUB_ENV
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / - | tr . - | tr _ - | cut -c1-90)" >> $GITHUB_ENV
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
-        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / _)" >> $GITHUB_ENV
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / - | tr . - | tr _ - | cut -c1-90)" >> $GITHUB_ENV
       - name: Set-Env
         run: echo "ENV=dev" >> $GITHUB_ENV
       - name: Set-ACR-Registry
         run: echo "ACR_REGISTRY=containerinsightsprod.azurecr.io" >> $GITHUB_ENV
-      - name: Set-ACR-Repository
-        run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
+      - name: Set-ACR-Repository-Image
+        run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $GITHUB_ENV
+      - name: Set-ACR-Repository-HELM-Chart
+        run: echo "ACR_REPOSITORY_HELM=/public/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
       - name: Set-MCR-Registry
         run: echo "MCR_REGISTRY=mcr.microsoft.com" >> $GITHUB_ENV
       - name: Set-MCR-Repository
-        run: echo "MCR_REPOSITORY=/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
-      - name: Set-image-tag-name
-        run: echo "IMAGE_TAG_NAME=prometheus-collector" >> $GITHUB_ENV
-      - name: Set-image-tag-suffix
+        run: echo "MCR_REPOSITORY=/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $GITHUB_ENV
+      - name: Set-MCR-HELM-CHART-Repository-Dependent-Charts
+        run: echo "MCR_REPOSITORY_HELM_DEPENDENCIES=/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
+      - name: Set-MCR-HELM-CHART-Repository
+        run: echo "MCR_REPOSITORY_HELM=/azuremonitor/containerinsights/cidev/prometheus-collector" >> $GITHUB_ENV
+      - name: Set-image-tag-date
         run: echo "IMAGE_TAG_DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)" >> $GITHUB_ENV
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
       - name: Checkout-code
         uses: actions/checkout@v2
+      - name: Set-HELM-Chart-name
+        run: echo "HELM_CHART_NAME=prometheus-collector" >> $GITHUB_ENV
       - name: Set-Helm-chart-version
         run: version=$(cat ./otelcollector/VERSION) && echo "HELM_CHART_VERSION=${version}" >> $GITHUB_ENV
+      - name: Set-HELM-chart-semver
+        run: echo "HELM_SEMVER=${HELM_CHART_VERSION}-${BRANCH_NAME}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
       - name: Set-image-tag
-        run: echo "IMAGETAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
-      - name: Set-image-telemetry-tag
-        run: echo "IMAGETAG_TELEMETRY=${IMAGE_TAG_NAME}-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
+        run: echo "IMAGE_TAG=${HELM_SEMVER}" >> $GITHUB_ENV
+      - name: Set-image-tag-windows
+        run: echo "IMAGE_TAG_WINDOWS=${HELM_SEMVER}-win" >> $GITHUB_ENV
+      - name: Set-image-full-tag
+        run: echo "IMAGE_FULL_TAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG}" >> $GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
-      - name: Set-Helm-tag
-        run: echo "HELMTAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG_NAME}-chart-${BRANCH_NAME}-${HELM_CHART_VERSION}-${IMAGE_TAG_DATE}-${COMMIT_SHA}" >> $GITHUB_ENV
-      - name: Set-Helm-chart-versioning
+      - name: Set-Helm-chart-version-in-template
         run: envsubst < ./otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < ./otelcollector/deploy/chart/prometheus-collector/values-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/values.yaml
       - name: Show-versions-On-build-machine
         run: lsb_release -a && go version && helm version && docker version
@@ -73,58 +145,69 @@ jobs:
           token: ${{ github.token }}
       - name: Create-docker-image
         run: |
-            cd ./otelcollector/ && docker build . --file Dockerfile -t $IMAGETAG --build-arg IMAGE_TAG=$IMAGETAG_TELEMETRY
+            cd ./otelcollector/ && docker build . --file ./build/linux/Dockerfile -t $IMAGE_FULL_TAG
       - name: List-docker-images
         run: docker images --digests --all
       - name: Run-trivy-scanner-on-docker-image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "${{ env.IMAGETAG }}"
+          image-ref: "${{ env.IMAGE_FULL_TAG }}"
           format: 'table'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
-          skip-dirs: 'opt/telegraf/telegraf,opt/microsoft/otelcollector/otelcollector'
+          skip-dirs: '/opt/telegraf'
           exit-code: '1'
           timeout: '5m0s'
-      - name: Save-Helm-chart-to-local-cache
-        run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm chart save . ${{ env.HELMTAG }}
-      - name: List-local-Helm-Charts
-        run: helm chart list
+      - name: Update-HELM-dependencies
+        run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm dep update
+      - name: List-dependent-HELM-Charts
+        run: ls -la ./otelcollector/deploy/chart/prometheus-collector/charts/
+      - name: Package-HELM-chart
+        run: cd ./otelcollector/deploy/chart/ && helm package ./prometheus-collector/
+      - name: List-packaged-HELM-chart
+        run: ls -la ./otelcollector/deploy/chart/
       - name: Login-to-ACR-thru-Docker
         if: github.event_name != 'pull_request'
         run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
       - name: Publish-docker-image-to-ACR
         if: github.event_name != 'pull_request'
         run: |
-            docker push ${{ env.IMAGETAG }}
+            docker push ${{ env.IMAGE_FULL_TAG }}
       - name: Login-to-ACR-thru-Helm
         if: github.event_name != 'pull_request'
         run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
       - name: Publish-Helm-chart-to-ACR
         if: github.event_name != 'pull_request'
-        run: helm chart push ${{ env.HELMTAG }}
+        run: cd ./otelcollector/deploy/chart/ && helm push ${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY_HELM }}
       - name: Login-to-Azure-Key-Vault
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         uses: Azure/login@v1
         with:
           creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
-      - name: Get-kube-config-from-Key-Vault
+      - name: Get-kube-config-from-Key-Vault-sp
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         uses: Azure/get-keyvault-secrets@v1
         with:
           keyvault: "cdpxacrcredskv"
           secrets: 'ci-dev-aks-wcus-kubeconfig'
-        id: GetKubeConfig
-      - name: Get-kube-config
+        id: GetKubeConfig-sp
+      - name: Get-kube-config-from-Key-Vault-msi
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
-        run: mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ci-dev-aks-wcus-kubeconfig }}" > ~/.kube/config
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "cdpxacrcredskv"
+          secrets: 'ci-dev-aks-msi-eus2-kubeconfig'
+        id: GetKubeConfig-msi
+      - name: Get-kube-config-for-dev-cluster-sp
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-sp.outputs.ci-dev-aks-wcus-kubeconfig }}" > ~/.kube/config
       - name: Wait-for-mcr-image
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         run: |
           for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 30
-            if docker manifest inspect mcr.microsoft.com/azuremonitor/containerinsights/cidev:${IMAGETAG_TELEMETRY}
+            if docker manifest inspect ${MCR_REGISTRY}${MCR_REPOSITORY}:${IMAGE_TAG}
             then
               echo "Image published to mcr"
               exit 0
@@ -132,16 +215,22 @@ jobs:
           done
           echo "Image not published to mcr within 5 minutes"
           exit 1
-      - name: Deploy-to-cluster
+      - name: Deploy-to-dev-cluster-sp
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
-        run: cd ./otelcollector/deploy/chart/ && helm upgrade prom-dev ./prometheus-collector --reuse-values --set image.tag=${{ env.IMAGETAG_TELEMETRY }} -n monitoring
+        run: helm pull oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} && helm upgrade --install prom-dev ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-wcus" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.clientId=${{ secrets.CI_PROMETHEUS_KV_CLIENTID }} --set azureKeyVault.clientSecret=${{ secrets.CI_PROMETHEUS_KV_CLIENTSECRET }} --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" -n monitoring --create-namespace
+      - name: Get-kube-config-for-dev-cluster-msi
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-msi.outputs.ci-dev-aks-msi-eus2-kubeconfig }}" > ~/.kube/config
+      - name: Deploy-to-dev-cluster-msi
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        run: helm pull oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} && helm upgrade --install prom-dev-msi ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-msi-eus2" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.useManagedIdentity=true --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" -n monitoring --create-namespace
       - name: Tag-this-push
         id: tag_version
-        uses: mathieudutour/github-tag-action@v5.6
+        uses: mathieudutour/github-tag-action@v6.0
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ env.HELM_CHART_VERSION }}-${{ env.IMAGE_TAG_DATE }}-${{ env.COMMIT_SHA }}
+          custom_tag: ${{ env.HELM_SEMVER }}
       #- name: Tag-this-push
       #  uses: actions-ecosystem/action-push-tag@v1
       #  if: github.event_name != 'pull_request'
