@@ -1,5 +1,12 @@
 # Working with Prometheus metrics in MDM
 
+## Release 02-15-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:1.1.1-main-02-15-2022-81539095`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:1.1.1-main-02-15-2022-81539095`
+* Change Log -
+  * Fix for CSI driver's secret missing label [Bug](https://msazure.visualstudio.com/InfrastructureInsights/_workitems/edit/13386952)
+
 ## Release 02-08-2022
 
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:1.1.0-main-02-08-2022-573d3086`
