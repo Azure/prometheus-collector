@@ -2,10 +2,11 @@
 
 ## Release 02-15-2022
 
-* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:1.1.1-main-02-15-2022-81539095`
-* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:1.1.1-main-02-15-2022-81539095`
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:1.1.1-main-02-17-2022-d225f7bf`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:1.1.1-main-02-17-2022-d225f7bf`
 * Change Log -
   * Fix for CSI driver's secret missing label [Bug](https://msazure.visualstudio.com/InfrastructureInsights/_workitems/edit/13386952)
+  * Fix for passing INT FLAG to ME for ingestion to INT environments (internal product team use)
 
 ## Release 02-08-2022
 
