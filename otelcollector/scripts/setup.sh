@@ -69,7 +69,7 @@ sudo apt-get update
 
 # Some dependencies were fixed with sudo apt --fix-broken, try installing td-agent-bit again
 # This is because we are keeping the same fluentbit version but have upgraded ubuntu
-sudo apt-get install td-agent-bit=1.7.8 -y
+sudo apt-get install td-agent-bit=1.8.12 -y
 
 # setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
