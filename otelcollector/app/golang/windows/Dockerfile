@@ -1,4 +1,4 @@
-FROM golang:1.16.12-nanoserver-1809
+FROM golang:1.16-nanoserver-ltsc2022
 
 # Set necessary environmet variables needed for our image
 ENV GO111MODULE=on \
@@ -12,7 +12,7 @@ WORKDIR /build
 # Copy and download dependency using go mod
 COPY go.mod .
 COPY go.sum .
-RUN go mod download
+#RUN go mod download
 
 # Copy the code into the container
 COPY . .

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.9.9-windowsservercore-1809
+FROM python:3.9-windowsservercore-ltsc2022
 
 # Move to working directory /build
 WORKDIR /build
