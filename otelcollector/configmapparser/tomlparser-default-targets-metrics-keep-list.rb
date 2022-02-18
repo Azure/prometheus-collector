@@ -21,6 +21,7 @@ require_relative "ConfigParseErrorLogger"
 @nodeexporterRegex = ""
 @windowsexporterRegex = ""
 @windowskubeproxyRegex = ""
+@windowskubeletRegex = ""
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -201,6 +202,21 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     else
       puts "def-target-metrics-keep-list-config::windowskubeproxyRegex either not specified or not of type string"
     end
+
+    windowskubeletRegex = parsedConfig[:windowskubelet]
+    if !windowskubeletRegex.nil? && windowskubeletRegex.kind_of?(String)
+      if !windowskubeletRegex.empty?
+        if isValidRegex(windowskubeletRegex) == true
+          @windowskubeletRegex = windowskubeletRegex
+          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for windowskubelet"
+        else
+          puts "def-target-metrics-keep-list-config::invalid keep list regex for windowskubelet"
+        end
+      end
+    else
+      puts "def-target-metrics-keep-list-config::windowskubeletRegex either not specified or not of type string"
+    end
+
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while reading config map settings for default targets metrics keep list - #{errorStr}, using defaults, please check config map for errors")
   end
@@ -232,6 +248,7 @@ regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"] = @kubestateRegex
 regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"] = @nodeexporterRegex
 regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"] = @windowsexporterRegex
 regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"] = @windowskubeproxyRegex
+regexHash["WINDOWSKUBELET_METRICS_KEEP_LIST_REGEX"] = @windowskubeletRegex
 
 if !file.nil?
   # Close file after writing regex keep list hash

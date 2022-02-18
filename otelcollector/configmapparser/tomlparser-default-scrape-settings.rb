@@ -18,6 +18,7 @@ require_relative "ConfigParseErrorLogger"
 @prometheusCollectorHealthEnabled = true
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
+@windowskubeletEnabled = false
 @noDefaultsEnabled = false
 
 # Use parser to parse the configmap toml file to a ruby structure
@@ -83,20 +84,24 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @windowskubeproxyEnabled = parsedConfig[:windowskubeproxy]
       puts "config::Using configmap default scrape settings for windowskubeproxy"
     end
+    if !parsedConfig[:windowskubelet].nil?
+      @windowskubeletEnabled = parsedConfig[:windowskublet]
+      puts "config::Using configmap default scrape settings for windowskubelet"
+    end
 
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
-      if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled
+      if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled! && !@windowskubeletEnabled && @prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
       elsif controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "linux" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
-      elsif controllerType == "ReplicaSet" && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
+      elsif controllerType == "ReplicaSet" && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && ~@windowskubeletEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
       end
-    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
+    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@windowskubeletEnabled !@prometheusCollectorHealthEnabled
       @noDefaultsEnabled = true
       puts "config::No default scrape configs enabled"
     end
@@ -138,6 +143,7 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED=#{@prometheusCollectorHealthEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=#{@windowsexporterEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBELET_SCRAPING_ENABLED=#{@windowskubeletEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
   puts "****************End default-scrape-settings Processing********************"
