@@ -100,7 +100,7 @@ The CPU and memory needed are correlated with the number of bytes each timeserie
 
   | Timeseries Sent / Minute | Bytes Sent / Minute | Prometheus-Collector CPU Usage |Prometheus-Collector Memory Usage
   | --- | --- | --- | --- |
-  | 0.98 million | 553 MB | 0.61 cores | 1.32 GB |
+  | 1.05 million | 409 MB | 0.69 cores | 1.60 GB |
   | 1.65 million | 641 MB | 1.23 cores | 2.41 GB |
   | 2.0 million | 803 MB | 1.65 cores | 2.92 GB |
 
