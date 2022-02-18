@@ -91,17 +91,17 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
-      if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled! && !@windowskubeletEnabled && @prometheusCollectorHealthEnabled
+      if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@windowskubeletEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
       elsif controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "linux" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
-      elsif controllerType == "ReplicaSet" && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && ~@windowskubeletEnabled && !@prometheusCollectorHealthEnabled
+      elsif controllerType == "ReplicaSet" && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@windowskubeletEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
         puts "config::No default scrape configs enabled"
       end
-    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@windowskubeletEnabled !@prometheusCollectorHealthEnabled
+    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@windowskubeletEnabled && !@prometheusCollectorHealthEnabled
       @noDefaultsEnabled = true
       puts "config::No default scrape configs enabled"
     end

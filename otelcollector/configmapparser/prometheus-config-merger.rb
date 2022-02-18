@@ -163,7 +163,7 @@ def populateDefaultPrometheusConfig
           defaultConfigs.push(@cadvisorDefaultFileRsAdvanced)
         end
       else
-        if advancedMode == true && && ENV["OS_TYPE"].downcase == "linux"
+        if advancedMode == true && ENV["OS_TYPE"].downcase == "linux"
           if !cadvisorMetricsKeepListRegex.nil? && !cadvisorMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@cadvisorDefaultFileDs, cadvisorMetricsKeepListRegex)
           end
