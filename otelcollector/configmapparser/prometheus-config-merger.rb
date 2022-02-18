@@ -4,7 +4,6 @@
 require "tomlrb"
 require "deep_merge"
 require "yaml"
-require "re2"
 require_relative "ConfigParseErrorLogger"
 
 @configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
@@ -32,8 +31,13 @@ require_relative "ConfigParseErrorLogger"
 @nodeexporterDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "nodeexporterDefaultRsAdvanced.yml"
 @nodeexporterDefaultFileDs = @defaultPromConfigPathPrefix + "nodeexporterDefaultDs.yml"
 @prometheusCollectorHealthDefaultFile = @defaultPromConfigPathPrefix + "prometheusCollectorHealth.yml"
-@windowsexporterDefaultFile = @defaultPromConfigPathPrefix + "windowsexporterDefault.yml"
-@windowskubeproxyDefaultFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefault.yml"
+@windowsexporterDefaultRsSimpleFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultRsSimple.yml"
+@windowsexporterDefaultDsFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultDs.yml"
+@windowsexporterDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultRsAdvanced.yml"
+@windowskubeproxyDefaultFileRsSimpleFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsSimple.yml"
+@windowskubeproxyDefaultDsFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultDs.yml"
+@windowskubeproxyDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
+
 
 def parseConfigMap
   begin
@@ -98,11 +102,18 @@ def populateDefaultPrometheusConfig
     currentControllerType = ENV["CONTROLLER_TYPE"].strip.downcase
 
     advancedMode = false #default is false
+    windowsDaemonset = false #default is false
 
     # get current mode (advanced or not...)
     currentMode = ENV["MODE"].strip.downcase
     if currentMode == "advanced"
       advancedMode = true
+    end
+
+    # get if windowsdaemonset is enabled or not (ie. WINMODE env = advanced or not...)
+    winMode = ENV["WINMODE"].strip.downcase
+    if winMode == "advanced" 
+      windowsDaemonset = true
     end
 
     defaultConfigs = []
@@ -207,7 +218,7 @@ def populateDefaultPrometheusConfig
           defaultConfigs.push(@nodeexporterDefaultFileRsSimple)
         end
       else
-        if advancedMode == true
+        if advancedMode == true && ENV["OS_TYPE"].downcase == "linux"
           if !nodeexporterMetricsKeepListRegex.nil? && !nodeexporterMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@nodeexporterDefaultFileDs, nodeexporterMetricsKeepListRegex)
           end
@@ -225,19 +236,67 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].downcase == "true"
       defaultConfigs.push(@prometheusCollectorHealthDefaultFile)
     end
-    if !ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+    if !ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].downcase == "true"
       winexporterMetricsKeepListRegex = @regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
-      if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
-        AppendMetricRelabelConfig(@windowsexporterDefaultFile, winexporterMetricsKeepListRegex)
+      if currentControllerType == @replicasetControllerType && advancedMode == false && ENV["OS_TYPE"].downcase == "linux"
+        if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
+          AppendMetricRelabelConfig(@windowsexporterDefaultRsSimpleFile, winexporterMetricsKeepListRegex)
+        end
+        contents = File.read(@windowsexporterDefaultRsSimpleFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowsexporterDefaultRsSimpleFile, "w") { |file| file.puts contents }
+        defaultConfigs.push(@windowsexporterDefaultRsSimpleFile)
+      elsif currentControllerType == @daemonsetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "windows"
+        if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
+          AppendMetricRelabelConfig(@windowsexporterDefaultDsFile, winexporterMetricsKeepListRegex)
+        end
+        contents = File.read(@windowsexporterDefaultDsFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowsexporterDefaultDsFile, "w") { |file| file.puts contents }
+        defaultConfigs.push(@windowsexporterDefaultDsFile)
+      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
+        # if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
+        #   AppendMetricRelabelConfig(@windowsexporterDefaultRsAdvancedFile, winexporterMetricsKeepListRegex)
+        # end
+        contents = File.read(@windowsexporterDefaultRsAdvancedFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowsexporterDefaultRsAdvancedFile, "w") { |file| file.puts contents }
+        defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
       end
-      defaultConfigs.push(@windowsexporterDefaultFile)
     end
-    if !ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+    if !ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].downcase == "true"
       winkubeproxyMetricsKeepListRegex = @regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
-      if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
-        AppendMetricRelabelConfig(@windowskubeproxyDefaultFile, winkubeproxyMetricsKeepListRegex)
+      if currentControllerType == @replicasetControllerType && advancedMode == false && ENV["OS_TYPE"].downcase == "linux"
+        if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
+          AppendMetricRelabelConfig(@windowskubeproxyDefaultFileRsSimpleFile, winkubeproxyMetricsKeepListRegex)
+        end
+        contents = File.read(@windowskubeproxyDefaultFileRsSimpleFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowskubeproxyDefaultFileRsSimpleFile, "w") { |file| file.puts contents }
+        defaultConfigs.push(@windowskubeproxyDefaultFileRsSimpleFile)
+      elsif currentControllerType == @daemonsetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "windows"
+        if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
+          AppendMetricRelabelConfig(@windowskubeproxyDefaultDsFile, winkubeproxyMetricsKeepListRegex)
+        end
+        contents = File.read(@windowskubeproxyDefaultDsFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowskubeproxyDefaultDsFile, "w") { |file| file.puts contents }
+        defaultConfigs.push(@windowskubeproxyDefaultDsFile)
+      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
+        # if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
+        #   AppendMetricRelabelConfig(@windowskubeproxyDefaultRsAdvancedFile, winkubeproxyMetricsKeepListRegex)
+        # end
+        contents = File.read(@windowskubeproxyDefaultRsAdvancedFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowskubeproxyDefaultRsAdvancedFile, "w") { |file| file.puts contents }
+        defaultConfigs.push(@windowskubeproxyDefaultRsAdvancedFile)
       end
-      defaultConfigs.push(@windowskubeproxyDefaultFile)
     end
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
   rescue => errorStr

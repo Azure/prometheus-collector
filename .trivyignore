@@ -1,0 +1,2 @@
+# ignore this vulnerability (in otelcollector), but continue scanning to catch other vulns. Note : this will ignore this vuln globally
+CVE-2020-13949

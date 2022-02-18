@@ -561,7 +561,7 @@
           "step": 60
         },
         {
-          "expr": "histogram_quantile(0.50, sum(rate(coredns_dns_request_size_bytes_bucket{instance=~\"$instance\",proto=\"udp\"}[5m])) by (le,proto))",
+          "expr": "histogram_quantile(0.50, sum(rate(coredns_dns_request_size_bytes_bucket{instance=~\"$instance\",proto=\"udp\", cluster=~\"$cluster\"}[5m])) by (le,proto))",
           "intervalFactor": 2,
           "legendFormat": "{{proto}}:50",
           "refId": "C",
@@ -692,7 +692,7 @@
           "step": 60
         },
         {
-          "expr": "histogram_quantile(0.50, sum(rate(coredns_dns_request_size_bytes_bucket{instance=~\"$instance\",proto=\"tcp\"}[5m])) by (le,proto))",
+          "expr": "histogram_quantile(0.50, sum(rate(coredns_dns_request_size_bytes_bucket{instance=~\"$instance\",proto=\"tcp\", cluster=~\"$cluster\"}[5m])) by (le,proto))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1048,7 +1048,7 @@
           "step": 40
         },
         {
-          "expr": "histogram_quantile(0.50, sum(rate(coredns_dns_response_size_bytes_bucket{instance=~\"$instance\",proto=\"udp\"}[5m])) by (le,proto)) ",
+          "expr": "histogram_quantile(0.50, sum(rate(coredns_dns_response_size_bytes_bucket{instance=~\"$instance\",proto=\"udp\", cluster=~\"$cluster\"}[5m])) by (le,proto)) ",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "{{proto}}:50%",
@@ -1185,7 +1185,7 @@
           "step": 40
         },
         {
-          "expr": "histogram_quantile(0.50, sum(rate(coredns_dns_response_size_bytes_bucket{instance=~\"$instance\",proto=\"tcp\"}[5m])) by (le, proto)) ",
+          "expr": "histogram_quantile(0.50, sum(rate(coredns_dns_response_size_bytes_bucket{instance=~\"$instance\",proto=\"tcp\", cluster=~\"$cluster\"}[5m])) by (le, proto)) ",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{proto}}:50%",
@@ -1554,6 +1554,6 @@
   },
   "timezone": "utc",
   "title": "CoreDNS",
-  "uid": "vkQ0UHxik",
+  "uid": "vkQ0UHxiddk",
   "version": 5
 }

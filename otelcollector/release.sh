@@ -14,5 +14,5 @@ fi
 
 semver_regex="[0-9.]-main-\+"
 echo "Replacing $previous_semver globally with $current_semver"
-for file in $(find ../ -name "*.md" -o -name "*.yaml" -o -name "*.yml" -type f); do echo -e "\n$file: "; sed -i "s/$previous_semver/$current_semver/g" $file; done
+for file in $(find ../docs/ ! -name "PromMDMReleaseNotes.md" -name "*.md" -o -name "*.yaml" -o -name "*.yml" -type f); do echo -e "\n$file: "; sed -i "s/$previous_semver/$current_semver/g" $file; done
 

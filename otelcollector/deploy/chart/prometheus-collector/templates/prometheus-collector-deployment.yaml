@@ -85,6 +85,25 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
+            {{- if .Values.windowsDaemonset  }}
+            - name: WINMODE
+              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- else }}
+            - name: WINMODE
+              value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- end }}
+            {{- if .Values.azureKeyVault.useManagedIdentity  }}
+              {{- if .Values.azureKeyVault.userAssignedIdentityID }}
+            - name: AKVAUTH
+              value: "mi-ua" # managed identity-user assigned
+              {{- else }}
+            - name: AKVAUTH
+              value: "mi-sa" # managed identity-system assigned
+              {{- end }}
+            {{- else }}
+            - name: AKVAUTH
+              value: "sp" # service principal
+            {{- end }}
           securityContext:
             privileged: false
           volumeMounts:
@@ -128,7 +147,7 @@ spec:
             nodeSelectorTerms:
               - labelSelector:
                 matchExpressions:
-                  - key: beta.kubernetes.io/os
+                  - key: kubernetes.io/os
                     operator: In
                     values:
                     - linux
@@ -170,5 +189,7 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: "{{ template "prometheus-collector.fullname" . }}-azure-kv-metricstore"
+            {{- if not .Values.azureKeyVault.useManagedIdentity }}
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds   # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
+            {{- end }}

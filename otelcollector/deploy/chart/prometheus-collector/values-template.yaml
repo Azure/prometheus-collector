@@ -47,11 +47,15 @@ azureKeyVault:
   # -- tenantid for the azure key vault resource
   tenantId: "" #required
   # -- clientid for a service principal that has access to read the Pfx certificates from keyvault specified above
-  clientId: "" #required
+  clientId: "" #required when using service principal to access keyvault
   # -- client secret for the above service principal
-  clientSecret: "" #required
+  clientSecret: "" #required when using service principal to access keyvault
   # -- name of the Pfx certificate(s) - one per metric account
   pfxCertNames: [] #required
+  # -- enable/disable managed identity to access keyvault
+  useManagedIdentity: false
+  # -- use the client id to specify which user assigned managed identity to use when acccesing keyvault. If using a user assigned identity as the VM's managed identity, then specify the identity's client id. If empty, AND 'useManagedIdentity' is true, then defaults to use the system assigned identity on the VM
+  userAssignedIdentityID: ""
 
 # -- name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped
 clusterName: "" #required
@@ -64,9 +68,14 @@ internalSettings:
 mode:
   advanced: false
 
+#if windowsDaemonset==true (default is false) AND mode.advanced==true (default is false), then it will deploy a windows daemonset on windows nodes, and move some of the default node targets (windows-kube-procy and windowsexporter) to windows daemonset
+windowsDaemonset: false
+
 image:
   repository: ${MCR_REGISTRY}${MCR_REPOSITORY}
   tag: ${IMAGE_TAG}
+  windows: 
+    tag: ${IMAGE_TAG_WINDOWS}
   pullPolicy: IfNotPresent
 
 resources:
@@ -84,6 +93,10 @@ resources:
    requests:
      cpu: 500m
      memory: 1Gi
+ daemonSetWindows:
+   limits:
+     cpu: 500m
+     memory: 500Mi
 kube-state-metrics:
   nodeSelector:
     kubernetes.io/os: linux
