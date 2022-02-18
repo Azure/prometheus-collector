@@ -20,6 +20,7 @@ data:
     prometheuscollectorhealth = {{ .Values.scrapeTargets.prometheusCollectorHealth }}
     windowsexporter = {{ .Values.scrapeTargets.windowsExporter }}
     windowskubeproxy = {{ .Values.scrapeTargets.windowsKubeProxy }}
+    windowskubelet = {{ .Values.scrapeTargets.windowsKubelet }}
   default-targets-metrics-keep-list: |-
     kubelet = {{ .Values.keepListRegexes.kubelet | toString | quote }}
     coredns = {{ .Values.keepListRegexes.coreDns | toString | quote }}
@@ -30,6 +31,7 @@ data:
     nodeexporter = {{ .Values.keepListRegexes.nodeExporter | toString | quote }}
     windowsexporter = {{ .Values.keepListRegexes.windowsExporter | toString | quote }}
     windowskubeproxy = {{ .Values.keepListRegexes.windowsKubeProxy | toString | quote }}
+    windowskubelet = {{ .Values.keepListRegexes.windowsKubelet | toString | quote }}
 metadata:
   name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
   namespace: {{ .Release.Namespace }}
