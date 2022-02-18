@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - rashmi/mac-3p
+      - rashmi/mac-3p-new
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
