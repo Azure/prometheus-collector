@@ -37,7 +37,7 @@ require_relative "ConfigParseErrorLogger"
 @windowskubeproxyDefaultFileRsSimpleFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsSimple.yml"
 @windowskubeproxyDefaultDsFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultDs.yml"
 @windowskubeproxyDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
-@windowskubeletDefaultFileRsSimpleFile = @defaultPromConfigPathPrefix + "kubeletWindowsDefaultRsSimple.yml"
+@windowskubeletDefaultRsSimpleFile = @defaultPromConfigPathPrefix + "kubeletWindowsDefaultRsSimple.yml"
 @windowskubeletDefaultDsFile = @defaultPromConfigPathPrefix + "kubeletWindowsDefaultDs.yml"
 @windowskubeletDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "kubeletWindowsDefaultRsAdvanced.yml"
 
@@ -308,13 +308,9 @@ def populateDefaultPrometheusConfig
       winkubeletMetricsKeepListRegex = @regexHash["WINDOWSKUBELET_METRICS_KEEP_LIST_REGEX"]
       if currentControllerType == @replicasetControllerType && advancedMode == false && ENV["OS_TYPE"].downcase == "linux"
         if !winkubeletMetricsKeepListRegex.nil? && !winkubeletMetricsKeepListRegex.empty?
-          AppendMetricRelabelConfig(@windowskubeletDefaultFileRsSimpleFile, winkubeletMetricsKeepListRegex)
+          AppendMetricRelabelConfig(@windowskubeletDefaultRsSimpleFile, winkubeletMetricsKeepListRegex)
         end
-        contents = File.read(@windowskubeletDefaultFileRsSimpleFile)
-        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
-        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
-        File.open(@windowskubeletDefaultFileRsSimpleFile, "w") { |file| file.puts contents }
-        defaultConfigs.push(@windowskubeletDefaultFileRsSimpleFile)
+        defaultConfigs.push(@windowskubeletDefaultRsSimpleFile)
       elsif currentControllerType == @daemonsetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "windows"
         if !winkubeletMetricsKeepListRegex.nil? && !winkubeletMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowskubeletDefaultDsFile, winkubeletMetricsKeepListRegex)
@@ -325,20 +321,12 @@ def populateDefaultPrometheusConfig
         File.open(@windowskubeletDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeletDefaultDsFile)
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "linux"
-        contents = File.read(@windowskubeletDefaultRsAdvancedFile)
-        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
-        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
-        File.open(@windowskubeletDefaultRsAdvancedFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeletDefaultRsAdvancedFile)
       # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
         if !winkubeletMetricsKeepListRegex.nil? && !winkubeletMetricsKeepListRegex.empty?
-          AppendMetricRelabelConfig(@windowskubeletDefaultDsFile, winkubeletMetricsKeepListRegex)
+          AppendMetricRelabelConfig(@windowskubeletDefaultRsSimpleFile, winkubeletMetricsKeepListRegex)
         end
-        contents = File.read(@windowskubeletDefaultRsAdvancedFile)
-        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
-        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
-        File.open(@windowskubeletDefaultRsAdvancedFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeletDefaultRsSimpleFile)
       end
     end

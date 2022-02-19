@@ -85,7 +85,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       puts "config::Using configmap default scrape settings for windowskubeproxy"
     end
     if !parsedConfig[:windowskubelet].nil?
-      @windowskubeletEnabled = parsedConfig[:windowskublet]
+      @windowskubeletEnabled = parsedConfig[:windowskubelet]
       puts "config::Using configmap default scrape settings for windowskubelet"
     end
 
