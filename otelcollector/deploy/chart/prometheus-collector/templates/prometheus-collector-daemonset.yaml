@@ -336,7 +336,7 @@ spec:
             optional: true
         - name: prometheus-config-vol
           configMap:
-            name: {{ .Release.Name }}-prometheus-config-node
+            name: {{ .Release.Name }}-prometheus-config-node-windows
             optional: true
         - name: host-log-containers
           hostPath:
