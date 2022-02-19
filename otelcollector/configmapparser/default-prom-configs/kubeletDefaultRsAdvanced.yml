@@ -11,6 +11,9 @@
     - source_labels: [__metrics_path__]
       regex: (.*)
       target_label: metrics_path
+    - source_labels: [__meta_kubernetes_node_label_kubernetes_io_os]
+      action: keep
+      regex: "linux"
     metric_relabel_configs:
     - source_labels: [__name__]
       action: keep
