@@ -323,7 +323,6 @@ def populateDefaultPrometheusConfig
         defaultConfigs.push(@windowskubeproxyDefaultFileRsSimpleFile)
       end
     end
-    end
 
     if !ENV["AZMON_PROMETHEUS_WINDOWSKUBELET_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSKUBELET_SCRAPING_ENABLED"].downcase == "true"
       winkubeletMetricsKeepListRegex = @regexHash["WINDOWSKUBELET_METRICS_KEEP_LIST_REGEX"]
