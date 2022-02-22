@@ -271,12 +271,8 @@ def populateDefaultPrometheusConfig
         defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
         if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
-          AppendMetricRelabelConfig(@windowsexporterDefaultRsAdvancedFile, winexporterMetricsKeepListRegex)
+          AppendMetricRelabelConfig(@windowsexporterDefaultRsSimpleFile, winexporterMetricsKeepListRegex)
         end
-        contents = File.read(@windowsexporterDefaultRsSimpleFile)
-        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
-        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
-        File.open(@windowsexporterDefaultRsSimpleFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowsexporterDefaultRsSimpleFile)
       end
     end
@@ -314,12 +310,8 @@ def populateDefaultPrometheusConfig
       # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
         if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
-          AppendMetricRelabelConfig(@windowskubeproxyDefaultRsAdvancedFile, winkubeproxyMetricsKeepListRegex)
+          AppendMetricRelabelConfig(@windowskubeproxyDefaultRsSimpleFile, winkubeproxyMetricsKeepListRegex)
         end
-        contents = File.read(@windowskubeproxyDefaultRsSimpleFile)
-        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
-        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
-        File.open(@windowskubeproxyDefaultFileRsSimpleFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeproxyDefaultFileRsSimpleFile)
       end
     end
