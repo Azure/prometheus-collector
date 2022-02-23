@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - grace/bugs-021822
   pull_request:
     types: [opened, synchronize, reopened]
     branches:

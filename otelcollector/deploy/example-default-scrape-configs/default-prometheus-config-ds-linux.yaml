@@ -27,13 +27,13 @@ scrape_configs:
     regex: (.*)
     target_label: metrics_path
   - source_labels: [__address__]
-    replacement: '$$NODE_NAME$$'
+    replacement: '$NODE_NAME'
     target_label: instance
   - source_labels: [__address__]
-    replacement: '$$OS_TYPE$$'
+    replacement: '$OS_TYPE'
     target_label: "kubernetes_io_os"
   static_configs:
-  - targets: ['$$NODE_IP$$:10250']
+  - targets: ['$NODE_IP:10250']
 
 - job_name: node
   scrape_interval: 30s
