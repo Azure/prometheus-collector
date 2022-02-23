@@ -19,7 +19,6 @@ data:
     nodeexporter = true
     windowsexporter = false
     windowskubeproxy = false
-    windowskubelet = false
     prometheuscollectorhealth = true
   default-targets-metrics-keep-list: |-
     kubelet = ""
@@ -31,7 +30,6 @@ data:
     nodeexporter = ""
     windowsexporter = ""
     windowskubeproxy = ""
-    windowskubelet = ""
 metadata:
   name: prometheus-collector-settings-configmap
   namespace: kube-system
