@@ -1,7 +1,7 @@
 # Collecting Kubernetes metrics from Windows pods/nodes
 
 #### Collecting Windows Prometheus metrics
-    By default Prometheus collector does not collect Windows metrics for Windows pods & Windows nodes in the cluster. To enable Windows metrics collection from default targets, each Windows target need to be enabled by default through the following chart parameters
+    By default the Prometheus collector only collects Kubelet Windows metrics and does not collect any other Windows metrics for Windows pods & Windows nodes in the cluster. To enable Windows metrics collection from default targets, each Windows target need to be enabled by default through the following chart parameters
 
         - scrapeTargets.windowsExporter
         - scrapeTargets.windowsKubeProxy
@@ -18,6 +18,6 @@
         - Windows exporter
         - Windows kube-proxy
         - Windows Kubelet
-    By default these targets are disabled, and you need to enable each of the above, to collect metrics from them. 
+    By default only Windows Kubelet is enabled, and you will need to enable Windows exporter and kube-proxy to collect metrics from them. 
     
-    Note:- If you have custom metrics exposed by Windows pods, you can always author them to be collected by providing custom scrape job configurations, irrespective of the above Windows specific settings.
+    Note:- If you have custom metrics exposed by Windows pods, you can always author them to be collected by providing custom scrape job configurations, irrespective of the above Windows specific settings. Instructions are [here]((~/metrics/Prometheus/advanced-mode.md)) about how to do so.
