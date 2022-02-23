@@ -1,5 +1,5 @@
   scrape_configs:
-  - job_name: kubelet-windows
+  - job_name: kubelet
     scheme: https
     metrics_path: /metrics
     scrape_interval: 30s
@@ -12,8 +12,7 @@
       regex: (.*)
       target_label: metrics_path
     - source_labels: [__meta_kubernetes_node_label_kubernetes_io_os]
-      action: keep
-      regex: "windows"
+      target_label: "kubernetes_io_os"
     metric_relabel_configs:
     - source_labels: [__name__]
       action: keep
