@@ -131,7 +131,7 @@ def populateDefaultPrometheusConfig
           defaultConfigs.push(@kubeletDefaultFileRsAdvanced)
         end
       else
-        if advancedMode == true && (windowsDameonset == true || ENV["OS_TYPE"].downcase == "linux")
+        if advancedMode == true && (windowsDaemonset == true || ENV["OS_TYPE"].downcase == "linux")
           if !kubeletMetricsKeepListRegex.nil? && !kubeletMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@kubeletDefaultFileDs, kubeletMetricsKeepListRegex)
           end

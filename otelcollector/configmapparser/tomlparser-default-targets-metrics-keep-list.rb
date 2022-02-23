@@ -21,7 +21,6 @@ require_relative "ConfigParseErrorLogger"
 @nodeexporterRegex = ""
 @windowsexporterRegex = ""
 @windowskubeproxyRegex = ""
-@windowskubeletRegex = ""
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -202,7 +201,6 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     else
       puts "def-target-metrics-keep-list-config::windowskubeproxyRegex either not specified or not of type string"
     end
-
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while reading config map settings for default targets metrics keep list - #{errorStr}, using defaults, please check config map for errors")
   end
