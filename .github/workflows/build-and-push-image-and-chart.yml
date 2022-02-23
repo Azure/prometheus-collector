@@ -119,12 +119,6 @@ jobs:
         run: echo "IMAGE_FULL_TAG=${ACR_REGISTRY}${ACR_REPOSITORY}:${IMAGE_TAG}" >> $GITHUB_ENV
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
-      - name: Set-Helm-chart-version-in-template
-        run: envsubst < ./otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < ./otelcollector/deploy/chart/prometheus-collector/values-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/values.yaml
-      - name: Show-versions-On-build-machine
-        run: lsb_release -a && go version && helm version && docker version
-      - name: Run-Helm-lint
-        run: helm dependency update ./otelcollector/deploy/chart/prometheus-collector/ && helm lint ./otelcollector/deploy/chart/prometheus-collector/ --set "azureKeyVault.name=containerinsightstest1kv,azureKeyVault.pfxCertNames={containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx},azureKeyVault.tenantId=72f988bf-****-41af-****-2d7cd011db47,clusterName=mydevcluster,azureMetricAccount.defaultAccountName=containerinsightsgenevaaccount1,azureKeyVault.clientId=70937f05-****-4fc0-****-de917f2a9402,azureKeyVault.clientSecret=**********************************" --with-subcharts
       - name: Install-build-dependencies
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
@@ -204,6 +198,12 @@ jobs:
         run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $GITHUB_ENV
       - name: Set-ACR-Repository-HELM-Chart
         run: echo "ACR_REPOSITORY_HELM=/public/azuremonitor/containerinsights/cidev" >> $GITHUB_ENV
+      - name: Set-Helm-chart-version-in-template
+        run: envsubst < ./otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < ./otelcollector/deploy/chart/prometheus-collector/values-template.yaml > ./otelcollector/deploy/chart/prometheus-collector/values.yaml
+      - name: Show-versions-On-build-machine
+        run: lsb_release -a && go version && helm version && docker version
+      - name: Run-Helm-lint
+        run: helm dependency update ./otelcollector/deploy/chart/prometheus-collector/ && helm lint ./otelcollector/deploy/chart/prometheus-collector/ --set "azureKeyVault.name=containerinsightstest1kv,azureKeyVault.pfxCertNames={containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx},azureKeyVault.tenantId=72f988bf-****-41af-****-2d7cd011db47,clusterName=mydevcluster,azureMetricAccount.defaultAccountName=containerinsightsgenevaaccount1,azureKeyVault.clientId=70937f05-****-4fc0-****-de917f2a9402,azureKeyVault.clientSecret=**********************************" --with-subcharts
       - name: Update-HELM-dependencies
         run: cd ./otelcollector/deploy/chart/prometheus-collector/ && helm dep update
       - name: List-dependent-HELM-Charts
