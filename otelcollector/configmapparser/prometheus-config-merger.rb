@@ -136,9 +136,8 @@ def populateDefaultPrometheusConfig
             AppendMetricRelabelConfig(@kubeletDefaultFileDs, kubeletMetricsKeepListRegex)
           end
           contents = File.read(@kubeletDefaultFileDs)
-          contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
           contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
-          contents = contents.gsub("$OS_TYPE$$", ENV["OS_TYPE"])
+          contents = contents.gsub("$$OS_TYPE$$", ENV["OS_TYPE"])
           File.open(@kubeletDefaultFileDs, "w") { |file| file.puts contents }
           defaultConfigs.push(@kubeletDefaultFileDs)
         end
