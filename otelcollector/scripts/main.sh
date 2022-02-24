@@ -213,6 +213,12 @@ do
  fi
 done
 
+#MDSD
+cat /etc/mdsd.d/envmdsd | while read line; do
+   echo $line >> ~/.bashrc
+done
+source /etc/mdsd.d/envmdsd
+
 
 export AZMON_METRIC_ACCOUNTS_AKV_FILES=$(echo $decodedFiles)
 echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
