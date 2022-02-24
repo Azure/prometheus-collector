@@ -54,9 +54,9 @@ gem install re2
 
 echo "Downloading MDSD"
 wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/azure-mdsd_1.16.0-build.develop.2626_x86_64.deb
-# /usr/bin/dpkg -i $TMPDIR/azure-mdsd*.deb
+/usr/bin/dpkg -i $TMPDIR/azure-mdsd*.deb
 # cp -f $TMPDIR/mdsd.xml /etc/mdsd.d
-# cp -f $TMPDIR/envmdsd /etc/mdsd.d
+cp -f $TMPDIR/envmdsd /etc/mdsd.d
 
 # Install Telegraf
 echo "Installing telegraf..."
@@ -121,8 +121,9 @@ wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/metricsext2_2.2022.201
 # /usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 # Pinning to the latest stable version of ME
-# sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
+#sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
 
+sudo apt-get install -y metricsext2=2.2022.201.001-9e07c0-~focal
 
 # Cleaning up unused packages
 echo "Cleaning up packages used for re2 gem install..."

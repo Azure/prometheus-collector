@@ -26,6 +26,7 @@ COPY ./fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
+COPY envmdsd $tmpdir/
 
 RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
 CMD [ "/opt/main.sh" ]
