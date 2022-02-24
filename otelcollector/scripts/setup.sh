@@ -136,7 +136,7 @@ sudo apt-get autoremove -y
 
 #cleanup all install
 echo "cleaning up all install.."
-rm -f $TMPDIR/metricsext2*.deb
+#rm -f $TMPDIR/metricsext2*.deb
 rm -f $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz
 rm -rf $TMPDIR/prometheus-2.25.2.linux-amd64
 rm -f $TMPDIR/telegraf*.gz
