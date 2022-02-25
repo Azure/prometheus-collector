@@ -19,6 +19,12 @@ jobs:
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
         run: echo ("BRANCH_NAME=" + $env:GITHUB_HEAD_REF.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
+      - name: Set-Go-Version
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.17'
+      - name: Print-Go-Version
+        run: go version
       - name: Set-Env
         run: echo "ENV=dev" >> $env:GITHUB_ENV
       - name: Set-ACR-Registry
@@ -82,6 +88,12 @@ jobs:
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
         run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / - | tr . - | tr _ - | cut -c1-90)" >> $GITHUB_ENV
+      - name: Set-Go-Version
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.17'
+      - name: Print-Go-Version
+        run: go version
       - name: Set-Env
         run: echo "ENV=dev" >> $GITHUB_ENV
       - name: Set-ACR-Registry
