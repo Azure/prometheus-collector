@@ -177,7 +177,7 @@ func main() {
 		configFlagEx := new(stringArrayValue)
 		flags.Var(configFlagEx, "config", "Locations to the config file(s), note that only a"+
 		" single location can be set per flag entry e.g. `-config=file:/path/to/first --config=file:path/to/second`.")
-		configFlag := fmt.Sprintf("--config=merged-otel-config.yaml")
+		configFlag := fmt.Sprintf("--config=%s", outputFilePath)
 
 		err = flags.Parse([]string{
 			configFlag,
@@ -193,7 +193,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		ret, err := configmapprovider.NewFile().Retrieve(context.Background(), "file:merged-otel-config.yaml", nil)
+		ret, err := configmapprovider.NewFile().Retrieve(context.Background(), fmt.Sprintf("file:%s", outputFilePath), nil)
 		cp := ret.Map
 
 		//colParserProvider := parserProvider.Default()
