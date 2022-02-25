@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - grace/latest-otelcollector
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
@@ -72,7 +73,7 @@ jobs:
         run: |
             docker push ${{ env.IMAGE_FULL_TAG }}
   LINUX-build-and-push-image-and-chart:
-    needs: WINDOWS-build-and-push-image
+    #needs: WINDOWS-build-and-push-image
     runs-on: ubuntu-latest
     steps:
       - name: Set-workflow-initiator
