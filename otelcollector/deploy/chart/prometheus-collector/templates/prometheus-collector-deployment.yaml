@@ -138,7 +138,7 @@ spec:
           args:
             - --secret-namespace=kube-system
             - --secret-name=omsagent-aad-msi-token
-            - --token-server-listening-port=8888
+            - --token-server-listening-port=7777
             - --health-server-listening-port=9999
           image: "mcr.microsoft.com/aks/hcp/addon-token-adapter:master.211104.1"
           imagePullPolicy: IfNotPresent
