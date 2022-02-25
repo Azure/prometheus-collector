@@ -1,11 +1,8 @@
 exporters:
-  file:
-    path: /opt/microsoft/otelcollector/promotel.json
-  #influx:
-  #  loglevel: debug
   otlp:
     endpoint: 127.0.0.1:55680
-    insecure: true
+    tls:
+      insecure: true
     compression: "gzip"
     retry_on_failure:
       enabled: false

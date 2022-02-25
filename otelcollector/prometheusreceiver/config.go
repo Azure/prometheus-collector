@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package prometheusreceiver
+package prometheusreceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 
 import (
 	"encoding/json"
@@ -27,13 +27,11 @@ import (
 
 	commonconfig "github.com/prometheus/common/config"
 	promconfig "github.com/prometheus/prometheus/config"
-	"github.com/spf13/cast"
-	"gopkg.in/yaml.v2"
-
 	"github.com/prometheus/prometheus/discovery/file"
 	"github.com/prometheus/prometheus/discovery/kubernetes"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"go.opentelemetry.io/collector/config"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -47,8 +45,14 @@ type Config struct {
 	PrometheusConfig        *promconfig.Config       `mapstructure:"-"`
 	BufferPeriod            time.Duration            `mapstructure:"buffer_period"`
 	BufferCount             int                      `mapstructure:"buffer_count"`
-	UseStartTimeMetric      bool                     `mapstructure:"use_start_time_metric"`
-	StartTimeMetricRegex    string                   `mapstructure:"start_time_metric_regex"`
+	// UseStartTimeMetric enables retrieving the start time of all counter metrics
+	// from the process_start_time_seconds metric. This is only correct if all counters on that endpoint
+	// started after the process start time, and the process is the only actor exporting the metric after
+	// the process started. It should not be used in "exporters" which export counters that may have
+	// started before the process itself. Use only if you know what you are doing, as this may result
+	// in incorrect rate calculations.
+	UseStartTimeMetric   bool   `mapstructure:"use_start_time_metric"`
+	StartTimeMetricRegex string `mapstructure:"start_time_metric_regex"`
 
 	// ConfigPlaceholder is just an entry to make the configuration pass a check
 	// that requires that all keys present in the config actually exist on the
@@ -57,7 +61,7 @@ type Config struct {
 }
 
 var _ config.Receiver = (*Config)(nil)
-var _ config.CustomUnmarshable = (*Config)(nil)
+var _ config.Unmarshallable = (*Config)(nil)
 
 func checkFile(fn string) error {
 	// Nothing set, nothing to error on.
@@ -81,7 +85,6 @@ func checkTLSConfig(tlsConfig commonconfig.TLSConfig) error {
 	if len(tlsConfig.KeyFile) > 0 && len(tlsConfig.CertFile) == 0 {
 		return fmt.Errorf("client key file %q specified without client cert file", tlsConfig.KeyFile)
 	}
-
 	return nil
 }
 
@@ -202,12 +205,11 @@ func (cfg *Config) Validate() error {
 			}
 		}
 	}
-
 	return nil
 }
 
 // Unmarshal a config.Parser into the config struct.
-func (cfg *Config) Unmarshal(componentParser *config.Parser) error {
+func (cfg *Config) Unmarshal(componentParser *config.Map) error {
 	if componentParser == nil {
 		return nil
 	}
@@ -220,11 +222,11 @@ func (cfg *Config) Unmarshal(componentParser *config.Parser) error {
 	}
 
 	// Unmarshal prometheus's config values. Since prometheus uses `yaml` tags, so use `yaml`.
-	promCfgMap := cast.ToStringMap(componentParser.Get(prometheusConfigKey))
-	if len(promCfgMap) == 0 {
-		return nil
+	promCfg, err := componentParser.Sub(prometheusConfigKey)
+	if err != nil || len(promCfg.ToStringMap()) == 0 {
+		return err
 	}
-	out, err := yaml.Marshal(promCfgMap)
+	out, err := yaml.Marshal(promCfg.ToStringMap())
 	if err != nil {
 		return fmt.Errorf("prometheus receiver failed to marshal config to yaml: %s", err)
 	}
@@ -233,5 +235,6 @@ func (cfg *Config) Unmarshal(componentParser *config.Parser) error {
 	if err != nil {
 		return fmt.Errorf("prometheus receiver failed to unmarshal yaml to prometheus config: %s", err)
 	}
+
 	return nil
 }

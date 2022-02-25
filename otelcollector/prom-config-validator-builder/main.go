@@ -6,11 +6,12 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"context"
 
 	"strings"
 
-	"go.opentelemetry.io/collector/config/configloader"
-	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
+	"go.opentelemetry.io/collector/config/configunmarshaler"
+	"go.opentelemetry.io/collector/config/configmapprovider"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -133,6 +134,19 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	return nil
 }
 
+type stringArrayValue struct {
+	values []string
+}
+
+func (s *stringArrayValue) Set(val string) error {
+	s.values = append(s.values, val)
+	return nil
+}
+
+func (s *stringArrayValue) String() string {
+	return "[" + strings.Join(s.values, ", ") + "]"
+}
+
 func main() {
 	configFilePtr := flag.String("config", "", "Config file to validate")
 	outFilePtr := flag.String("output", "", "Output file path for writing collector config")
@@ -159,8 +173,11 @@ func main() {
 		}
 
 		flags := new(flag.FlagSet)
-		parserProvider.Flags(flags)
-		configFlag := fmt.Sprintf("--config=%s", outputFilePath)
+		//parserProvider.Flags(flags)
+		configFlagEx := new(stringArrayValue)
+		flags.Var(configFlagEx, "config", "Locations to the config file(s), note that only a"+
+		" single location can be set per flag entry e.g. `-config=file:/path/to/first --config=file:path/to/second`.")
+		configFlag := fmt.Sprintf("--config=merged-otel-config.yaml")
 
 		err = flags.Parse([]string{
 			configFlag,
@@ -176,16 +193,20 @@ func main() {
 			os.Exit(1)
 		}
 
-		colParserProvider := parserProvider.Default()
+		ret, err := configmapprovider.NewFile().Retrieve(context.Background(), "file:merged-otel-config.yaml", nil)
+		cp := ret.Map
 
-		cp, err := colParserProvider.Get()
+		//colParserProvider := parserProvider.Default()
+
+		//cp, err := colParserProvider.Get()
 		if err != nil {
-			fmt.Errorf("prom-config-validator::Cannot load configuration's parser: %w\n", err)
+			log.Fatalf("prom-config-validator::Cannot load configuration's parser: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Printf("prom-config-validator::Loading configuration...\n")
 
-		cfg, err := configloader.Load(cp, factories)
+		cfg, err := configunmarshaler.NewDefault().Unmarshal(cp, factories)
+		//cfg, err := configunmarshaler.Unmarshal(cp, factories)
 		if err != nil {
 			log.Fatalf("prom-config-validator::Cannot load configuration: %v", err)
 			os.Exit(1)
@@ -193,7 +214,7 @@ func main() {
 
 		err = cfg.Validate()
 		if err != nil {
-			fmt.Printf("prom-config-validator::Invalid configuration: %w\n", err)
+			log.Fatalf("prom-config-validator::Invalid configuration: %v\n", err)
 			os.Exit(1)
 		}
 	} else {

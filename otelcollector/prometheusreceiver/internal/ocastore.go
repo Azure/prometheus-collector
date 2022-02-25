@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package internal // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
 
 import (
 	"context"
 	"errors"
 	"sync/atomic"
+	"time"
 
-	"github.com/prometheus/prometheus/pkg/exemplar"
-	"github.com/prometheus/prometheus/pkg/labels"
+	"github.com/prometheus/prometheus/model/exemplar"
+	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
-	"go.uber.org/zap"
-
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 )
@@ -45,30 +45,34 @@ type OcaStore struct {
 	running              int32 // access atomically
 	sink                 consumer.Metrics
 	mc                   *metadataService
-	jobsMap              *JobsMap
+	jobsMap              *JobsMapPdata
 	useStartTimeMetric   bool
 	startTimeMetricRegex string
 	receiverID           config.ComponentID
 	externalLabels       labels.Labels
 
-	logger *zap.Logger
+	settings component.ReceiverCreateSettings
 }
 
 // NewOcaStore returns an ocaStore instance, which can be acted as prometheus' scrape.Appendable
 func NewOcaStore(
 	ctx context.Context,
 	sink consumer.Metrics,
-	logger *zap.Logger,
-	jobsMap *JobsMap,
+	set component.ReceiverCreateSettings,
+	gcInterval time.Duration,
 	useStartTimeMetric bool,
 	startTimeMetricRegex string,
 	receiverID config.ComponentID,
 	externalLabels labels.Labels) *OcaStore {
+	var jobsMap *JobsMapPdata
+	if !useStartTimeMetric {
+		jobsMap = NewJobsMapPdata(gcInterval)
+	}
 	return &OcaStore{
 		running:              runningStateInit,
 		ctx:                  ctx,
 		sink:                 sink,
-		logger:               logger,
+		settings:             set,
 		jobsMap:              jobsMap,
 		useStartTimeMetric:   useStartTimeMetric,
 		startTimeMetricRegex: startTimeMetricRegex,
@@ -88,16 +92,18 @@ func (o *OcaStore) SetScrapeManager(scrapeManager *scrape.Manager) {
 func (o *OcaStore) Appender(context.Context) storage.Appender {
 	state := atomic.LoadInt32(&o.running)
 	if state == runningStateReady {
-		return newTransaction(
+		return newTransactionPdata(
 			o.ctx,
-			o.jobsMap,
-			o.useStartTimeMetric,
-			o.startTimeMetricRegex,
-			o.receiverID,
-			o.mc,
-			o.sink,
-			o.externalLabels,
-			o.logger,
+			&txConfig{
+				jobsMap:              o.jobsMap,
+				useStartTimeMetric:   o.useStartTimeMetric,
+				startTimeMetricRegex: o.startTimeMetricRegex,
+				receiverID:           o.receiverID,
+				ms:                   o.mc,
+				sink:                 o.sink,
+				externalLabels:       o.externalLabels,
+				settings:             o.settings,
+			},
 		)
 	} else if state == runningStateInit {
 		panic("ScrapeManager is not set")
@@ -106,9 +112,11 @@ func (o *OcaStore) Appender(context.Context) storage.Appender {
 	return noop
 }
 
-func (o *OcaStore) Close() error {
-	atomic.CompareAndSwapInt32(&o.running, runningStateReady, runningStateStop)
-	return nil
+// Close OcaStore as well as the internal metadataService.
+func (o *OcaStore) Close() {
+	if atomic.CompareAndSwapInt32(&o.running, runningStateReady, runningStateStop) {
+		o.mc.Close()
+	}
 }
 
 // noopAppender, always return error on any operations
@@ -116,11 +124,11 @@ type noopAppender struct{}
 
 var errAlreadyStopped = errors.New("already stopped")
 
-func (*noopAppender) Append(uint64, labels.Labels, int64, float64) (uint64, error) {
+func (*noopAppender) Append(storage.SeriesRef, labels.Labels, int64, float64) (storage.SeriesRef, error) {
 	return 0, errAlreadyStopped
 }
 
-func (*noopAppender) AppendExemplar(ref uint64, l labels.Labels, e exemplar.Exemplar) (uint64, error) {
+func (*noopAppender) AppendExemplar(ref storage.SeriesRef, l labels.Labels, e exemplar.Exemplar) (storage.SeriesRef, error) {
 	return 0, errAlreadyStopped
 }
 
