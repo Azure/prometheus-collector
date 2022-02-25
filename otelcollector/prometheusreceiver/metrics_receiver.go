@@ -133,6 +133,7 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 			GoVersion: version.GoVersion,
 		},
 		MaxConnections: maxConnections,
+		IsAgent: true,
 	}
 	go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 	webHandler := web.New(go_kit_logger, &webOptions)
