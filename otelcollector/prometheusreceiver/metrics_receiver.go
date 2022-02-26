@@ -111,7 +111,7 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 		}
 	}()
 
-	var flags map[string]string
+	//var flags map[string]string
 	// Setup settings and logger and create Prometheus web handler
 	webOptions := web.Options{
 		ScrapeManager: r.scrapeManager,
@@ -133,7 +133,7 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 			BuildDate: version.BuildDate,
 			GoVersion: version.GoVersion,
 		},
-		Flags: flags,
+		Flags: make(map[string]string),
 		MaxConnections: maxConnections,
 		IsAgent: true,
 	}
