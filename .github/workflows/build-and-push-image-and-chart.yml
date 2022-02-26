@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - vishwa/02242022
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
