@@ -132,6 +132,7 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 			BuildDate: version.BuildDate,
 			GoVersion: version.GoVersion,
 		},
+		Flags: *new(map[string]string),
 		MaxConnections: maxConnections,
 		IsAgent: true,
 	}
