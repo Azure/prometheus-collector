@@ -30,7 +30,7 @@ jobs:
       - name: Set-commit-sha
         run: echo ("COMMIT_SHA=" + $env:GITHUB_SHA.SubString(0,8)) >> $env:GITHUB_ENV
       - name: Checkout-code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set-HELM-Chart-name
         run: echo "HELM_CHART_NAME=prometheus-collector" >> $env:GITHUB_ENV
       - name: Set-Helm-chart-version
@@ -46,7 +46,7 @@ jobs:
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ ; ./makefile_windows.ps1
       - name: Dependency Detection setup
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: github/dependency-detection
           ref: releases/v1
@@ -104,7 +104,7 @@ jobs:
       - name: Set-commit-sha
         run: echo "COMMIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
       - name: Checkout-code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set-HELM-Chart-name
         run: echo "HELM_CHART_NAME=prometheus-collector" >> $GITHUB_ENV
       - name: Set-Helm-chart-version
@@ -130,7 +130,7 @@ jobs:
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
       - name: Dependency Detection setup
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: github/dependency-detection
           ref: releases/v1
