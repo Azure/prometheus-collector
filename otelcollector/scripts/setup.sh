@@ -57,7 +57,7 @@ echo "Installing telegraf..."
 wget https://dl.influxdata.com/telegraf/releases/telegraf-1.18.0_linux_amd64.tar.gz
 tar -zxvf telegraf-1.18.0_linux_amd64.tar.gz
 mv /opt/telegraf-1.18.0/usr/bin/telegraf /opt/telegraf/telegraf
-chmod 777 /opt/telegraf/telegraf
+chmod 544 /opt/telegraf/telegraf
 
 # Install fluent-bit
 echo "Installing fluent-bit..."
