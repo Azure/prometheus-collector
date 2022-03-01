@@ -208,6 +208,7 @@ function Set-EnvironmentVariablesAndConfigParser {
     [System.Environment]::SetEnvironmentVariable("CONTROLLER_TYPE", $env:CONTROLLER_TYPE, "Machine")
     [System.Environment]::SetEnvironmentVariable("POD_NAMESPACE", $env:POD_NAMESPACE, "Machine")
     [System.Environment]::SetEnvironmentVariable("POD_NAME", $env:POD_NAME, "Machine")
+    [System.Environment]::SetEnvironmentVariable("OS_TYPE", $env:OS_TYPE, "Machine")
     [System.Environment]::SetEnvironmentVariable("CONTAINER_CPU_LIMIT", $env:CONTAINER_CPU_LIMIT, "Machine")
     [System.Environment]::SetEnvironmentVariable("CONTAINER_MEMORY_LIMIT", $env:CONTAINER_MEMORY_LIMIT, "Machine")
 
