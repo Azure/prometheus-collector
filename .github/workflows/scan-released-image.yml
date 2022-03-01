@@ -1,7 +1,7 @@
 name: scan-last-released-image
 on:
   schedule:
-  // At the end of every day
+  # At the end of every day
   - cron: "0 0 * * *"
 jobs:
   scan-image:
