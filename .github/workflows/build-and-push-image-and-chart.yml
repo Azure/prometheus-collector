@@ -10,7 +10,7 @@ on:
       - main
 jobs:
   WINDOWS-build-and-push-image:
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
       - name: Set-workflow-initiator
         run: echo ("Initiated by -" + $env:GITHUB_ACTOR + $env:GITHUB_REF)
