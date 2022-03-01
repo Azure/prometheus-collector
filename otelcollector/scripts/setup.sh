@@ -75,43 +75,44 @@ sudo apt-get install td-agent-bit=1.7.8 -y
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Moving ME installation to the end until we fix the broken dependencies issue
-# wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2021.901.1511-69f7bf-_focal_amd64.deb
+sudo apt-get install -y apt-transport-https gnupg
+wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2022.226.044-8040d8-_focal_amd64.deb
 
 # # Install ME
-# /usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 # # Fixing broken installations in order to get a clean ME install
-# sudo apt --fix-broken install -y
+sudo apt --fix-broken install -y
 
 # # Installing ME again after fixing broken dependencies
-# /usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 # Installing ME
-echo "Installing Metrics Extension..."
+#echo "Installing Metrics Extension..."
 sudo apt-get install -y apt-transport-https gnupg
 
 # Accept Microsoft public keys
-wget -qO - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-wget -qO - https://packages.microsoft.com/keys/msopentech.asc | sudo apt-key add -
+#wget -qO - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+#wget -qO - https://packages.microsoft.com/keys/msopentech.asc | sudo apt-key add -
 
 # Source information on OS distro and code name
-. /etc/os-release
+#. /etc/os-release
 
-if [ "$ID" = ubuntu ]; then
-    REPO_NAME=azurecore
-elif [ "$ID" = debian ]; then
-    REPO_NAME=azurecore-debian
-else
-    echo "Unsupported distribution: $ID"
-    exit 1
-fi
+#if [ "$ID" = ubuntu ]; then
+#    REPO_NAME=azurecore
+#elif [ "$ID" = debian ]; then
+#    REPO_NAME=azurecore-debian
+#else
+#    echo "Unsupported distribution: $ID"
+#    exit 1
+#fi
 
 # Add azurecore repo and update package list
-echo "deb [arch=amd64] https://packages.microsoft.com/repos/$REPO_NAME $VERSION_CODENAME main" | sudo tee -a /etc/apt/sources.list.d/azure.list
-sudo apt-get update
+#echo "deb [arch=amd64] https://packages.microsoft.com/repos/$REPO_NAME $VERSION_CODENAME main" | sudo tee -a /etc/apt/sources.list.d/azure.list
+#sudo apt-get update
 
 # Pinning to the latest stable version of ME
-sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
+#sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
 
 
 # Cleaning up unused packages
