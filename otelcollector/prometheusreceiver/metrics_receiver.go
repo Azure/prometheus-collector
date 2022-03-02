@@ -20,6 +20,7 @@ import (
 	"time"
 	"net/url"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/web"
 	"github.com/prometheus/prometheus/config"
@@ -136,6 +137,7 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 		Flags: make(map[string]string),
 		MaxConnections: maxConnections,
 		IsAgent: true,
+		Gatherer:   prometheus.DefaultGatherer,
 	}
 	go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 	webHandler := web.New(go_kit_logger, &webOptions)
