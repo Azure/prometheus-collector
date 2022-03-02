@@ -12,8 +12,7 @@
     "static/css/2.cede384b.chunk.css.map": "./static/css/2.cede384b.chunk.css.map",
     "static/css/main.8f11b0d2.chunk.css.map": "./static/css/main.8f11b0d2.chunk.css.map",
     "static/js/2.4db762d9.chunk.js.LICENSE.txt": "./static/js/2.4db762d9.chunk.js.LICENSE.txt",
-    "static/media/app.scss": "./static/media/codicon.b3726f01.ttf",
-    "static/media/prometheus_logo_grey.3cf697e5.svg": "./static/media/prometheus_logo_grey.3cf697e5.svg"
+    "static/media/app.scss": "./static/media/codicon.b3726f01.ttf"
   },
   "entrypoints": [
     "static/js/runtime-main.9b474c39.js",
