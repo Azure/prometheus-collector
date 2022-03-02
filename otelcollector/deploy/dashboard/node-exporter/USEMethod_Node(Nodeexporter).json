@@ -106,7 +106,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "\r 1 - avg without (cpu, mode) (\r\n                rate(node_cpu_seconds_total{job=~\"node\", cluster=~\"$cluster\",instance=~\"$instance\", mode=~\"idle\"}[5m]))",
+          "expr": "\r 1 - avg without (cpu, mode) (\r\n                rate(node_cpu_seconds_total{job=\"node\", cluster=\"$cluster\",instance=\"$instance\", mode=\"idle\"}[5m]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -205,7 +205,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "  (\r\n                node_load1{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"}\r\n              /\r\n                count without (cpu) (\r\n                count without (mode) (\r\n                  node_cpu_seconds_total{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"}\r\n                )\r\n              )\r\n              ) ",
+          "expr": "  (\r\n                node_load1{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"}\r\n              /\r\n                count without (cpu) (\r\n                count without (mode) (\r\n                  node_cpu_seconds_total{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"}\r\n                )\r\n              )\r\n              ) ",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -319,7 +319,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "  1 - (node_memory_MemAvailable_bytes{job=\"node\",instance=~\"$instance\",cluster=~\"$cluster\"}\n   /\r\n       node_memory_MemTotal_bytes{job=\"node\", instance=~\"$instance\",cluster=~\"$cluster\"})",
+          "expr": "  1 - (node_memory_MemAvailable_bytes{job=\"node\",instance=\"$instance\",cluster=\"$cluster\"}\n   /\r\n       node_memory_MemTotal_bytes{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -418,7 +418,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_vmstat_pgmajfault{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"}[5m])",
+          "expr": "rate(node_vmstat_pgmajfault{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"}[5m])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -542,7 +542,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum without (device) (\r\n                rate(node_network_receive_bytes_total{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\", device!=\"lo\"}[5m])\r\n              )",
+          "expr": "sum without (device) (\r\n                rate(node_network_receive_bytes_total{job=\"node\", instance=\"$instance\",cluster=\"$cluster\", device!=\"lo\"}[5m])\r\n              )",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -553,7 +553,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum without (device) (\r\n                rate(node_network_transmit_bytes_total{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\", device!=\"lo\"}[5m])\r\n              )",
+          "expr": "sum without (device) (\r\n                rate(node_network_transmit_bytes_total{job=\"node\", instance=\"$instance\",cluster=\"$cluster\", device!=\"lo\"}[5m])\r\n              )",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -662,7 +662,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum without (device) (\r\n          rate(node_network_receive_drop_total{job=~\"node\", device!=\"lo\",job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"}[5m]))",
+          "expr": "sum without (device) (\r\n          rate(node_network_receive_drop_total{job=\"node\", device!=\"lo\", instance=\"$instance\",cluster=\"$cluster\"}[5m]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -673,7 +673,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum without (device) (\r\n                rate(node_network_transmit_drop_total{job=~\"node\", instance=~\"$instance\", cluster=~\"$cluster\",device!=\"lo\"}[5m])\r\n              )",
+          "expr": "sum without (device) (\r\n                rate(node_network_transmit_drop_total{job=\"node\", instance=\"$instance\", cluster=\"$cluster\",device!=\"lo\"}[5m])\r\n              )",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -787,7 +787,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_disk_io_time_seconds_total{job=~\"node\",instance=~\"$instance\",device=~\"nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+\", cluster=~\"$cluster\"}[5m])",
+          "expr": "rate(node_disk_io_time_seconds_total{job=\"node\",instance=\"$instance\",device=~\"nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+\", cluster=\"$cluster\"}[5m])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -886,7 +886,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_disk_io_time_weighted_seconds_total{job=~\"node\",instance=~\"$instance\", cluster=~\"$cluster\",device=~\"nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+\"}[5m])",
+          "expr": "rate(node_disk_io_time_weighted_seconds_total{job=\"node\",instance=\"$instance\", cluster=\"$cluster\",device=~\"nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|dasd.+\"}[5m])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1000,7 +1000,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "1 -\n(\n  max without (mountpoint, fstype) (node_filesystem_avail_bytes{job=~\"node\", fstype!=\"\", instance=~\"$instance\",cluster=~\"$cluster\"})\n/\n  max without (mountpoint, fstype) (node_filesystem_size_bytes{job=~\"node\", fstype!=\"\", instance=~\"$instance\",cluster=~\"$cluster\"})\n)\n",
+          "expr": "1 -\n(\n  max without (mountpoint, fstype) (node_filesystem_avail_bytes{job=\"node\", fstype!=\"\", instance=\"$instance\",cluster=\"$cluster\"})\n/\n  max without (mountpoint, fstype) (node_filesystem_size_bytes{job=\"node\", fstype!=\"\", instance=\"$instance\",cluster=\"$cluster\"})\n)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,

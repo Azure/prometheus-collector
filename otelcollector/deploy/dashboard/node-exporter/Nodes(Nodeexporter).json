@@ -125,7 +125,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "(\n  (1 - rate(node_cpu_seconds_total{job=~\"node\", mode=~\"idle\", instance=~\"$instance\",cluster=~\"$cluster\"}[$__rate_interval]))\n/ ignoring(cpu) group_left\n  count without (cpu)( node_cpu_seconds_total{job=~\"node\", mode=~\"idle\", instance=~\"$instance\",cluster=~\"$cluster\"})\n)\n",
+          "expr": "(\n  (1 - rate(node_cpu_seconds_total{job=\"node\", mode=\"idle\", instance=\"$instance\",cluster=\"$cluster\"}[$__rate_interval]))\n/ ignoring(cpu) group_left\n  count without (cpu)( node_cpu_seconds_total{job=\"node\", mode=\"idle\", instance=\"$instance\",cluster=\"$cluster\"})\n)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 5,
@@ -190,7 +190,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "node_load1{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"}",
+          "expr": "node_load1{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -199,7 +199,7 @@
         },
         {
           "exemplar": true,
-          "expr": "node_load5{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"}",
+          "expr": "node_load5{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -208,7 +208,7 @@
         },
         {
           "exemplar": true,
-          "expr": "node_load15{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"}",
+          "expr": "node_load15{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -217,7 +217,7 @@
         },
         {
           "exemplar": true,
-          "expr": "count(node_cpu_seconds_total{job=~\"node\", instance=~\"$instance\", mode=~\"idle\",cluster=~\"$cluster\"})",
+          "expr": "count(node_cpu_seconds_total{job=\"node\", instance=\"$instance\", mode=\"idle\",cluster=\"$cluster\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -318,7 +318,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "(\n  node_memory_MemTotal_bytes{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"}\n-\n  node_memory_MemFree_bytes{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"}\n-\n  node_memory_Buffers_bytes{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"}\n-\n  node_memory_Cached_bytes{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"}\n)\n",
+          "expr": "(\n  node_memory_MemTotal_bytes{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"}\n-\n  node_memory_MemFree_bytes{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"}\n-\n  node_memory_Buffers_bytes{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"}\n-\n  node_memory_Cached_bytes{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"}\n)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -454,7 +454,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "100 -\n(\n  avg(node_memory_MemAvailable_bytes{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"})\n/\n  avg(node_memory_MemTotal_bytes{job=~\"node\", instance=~\"$instance\",cluster=~\"$cluster\"})\n* 100\n)\n",
+          "expr": "100 -\n(\n  avg(node_memory_MemAvailable_bytes{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"})\n/\n  avg(node_memory_MemTotal_bytes{job=\"node\", instance=\"$instance\",cluster=\"$cluster\"})\n* 100\n)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -558,7 +558,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_disk_read_bytes_total{job=~\"node\", instance=~\"$instance\", device!=\"\",cluster=~\"$cluster\"}[$__rate_interval])",
+          "expr": "rate(node_disk_read_bytes_total{job=\"node\", instance=\"$instance\", device!=\"\",cluster=\"$cluster\"}[$__rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -567,7 +567,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(node_disk_written_bytes_total{job=~\"node\", instance=~\"$instance\", device!=\"\",cluster=~\"$cluster\"}[$__rate_interval])",
+          "expr": "rate(node_disk_written_bytes_total{job=\"node\", instance=\"$instance\", device!=\"\",cluster=\"$cluster\"}[$__rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -576,7 +576,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(node_disk_io_time_seconds_total{job=~\"node\", instance=~\"$instance\", device!=\"\",cluster=~\"$cluster\"}[$__rate_interval])",
+          "expr": "rate(node_disk_io_time_seconds_total{job=\"node\", instance=\"$instance\", device!=\"\",cluster=\"$cluster\"}[$__rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -650,7 +650,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(\n  max by (device) (\n    node_filesystem_size_bytes{job=~\"node\", instance=~\"$instance\", fstype!=\"\",cluster=~\"$cluster\"}\n  -\n    node_filesystem_avail_bytes{job=~\"node\", instance=~\"$instance\", fstype!=\"\",cluster=~\"$cluster\"}\n  )\n)\n",
+          "expr": "sum(\n  max by (device) (\n    node_filesystem_size_bytes{job=\"node\", instance=\"$instance\", fstype!=\"\",cluster=\"$cluster\"}\n  -\n    node_filesystem_avail_bytes{job=\"node\", instance=\"$instance\", fstype!=\"\",cluster=\"$cluster\"}\n  )\n)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -777,7 +777,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_network_receive_bytes_total{job=~\"node\", instance=~\"$instance\", device!=\"lo\",cluster=~\"$cluster\"}[$__rate_interval])",
+          "expr": "rate(node_network_receive_bytes_total{job=\"node\", instance=\"$instance\", device!=\"lo\",cluster=\"$cluster\"}[$__rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -861,7 +861,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_network_transmit_bytes_total{job=~\"node\", instance=~\"$instance\", device!=\"lo\",cluster=~\"$cluster\"}[$__rate_interval])",
+          "expr": "rate(node_network_transmit_bytes_total{job=\"node\", instance=\"$instance\", device!=\"lo\",cluster=\"$cluster\"}[$__rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -939,7 +939,7 @@
         "allValue": null,
         "current": {},
         "datasource": "$datasource",
-        "definition": "label_values(node_exporter_build_info{job=\"node\",cluster=~\"$cluster\"}, instance)",
+        "definition": "label_values(node_exporter_build_info{job=\"node\",cluster=\"$cluster\"}, instance)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -949,7 +949,7 @@
         "name": "instance",
         "options": [],
         "query": {
-          "query": "label_values(node_exporter_build_info{job=\"node\",cluster=~\"$cluster\"}, instance)",
+          "query": "label_values(node_exporter_build_info{job=\"node\",cluster=\"$cluster\"}, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
