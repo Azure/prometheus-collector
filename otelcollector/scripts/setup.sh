@@ -8,11 +8,11 @@ sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     update-locale LANG=en_US.UTF-8
 
 #Need this for newer scripts
-chmod 775 $TMPDIR/*.sh
-chmod 775 $TMPDIR/microsoft/liveness/*.sh
-chmod 775 $TMPDIR/microsoft/configmapparser/*.rb
+chmod 544 $TMPDIR/*.sh
+chmod 544 $TMPDIR/microsoft/liveness/*.sh
+chmod 544 $TMPDIR/microsoft/configmapparser/*.rb
 
-chmod 777 /usr/sbin/
+chmod 744 /usr/sbin/
 
 #download inotify tools for watching configmap changes
 echo "Installing inotify..."
