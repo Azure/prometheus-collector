@@ -50,7 +50,7 @@ helm upgrade --install my-collector-dev-release ./prometheus-collector-1.1.1-mai
 
 See [chart values for Prometheus-collector](~/metrics/prometheus/chartvalues.md) for additional reference on how to customize more parameters like cpu/memory requests/limits etc..
 
-Note: The deployment will also automatically install [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) and [node exporter](https://github.com/prometheus/node_exporter) which are popular tools to collect infrastructure metrics. These will be shown in the default dashboards that we will look at later in this tutorial.
+Note: The deployment will also automatically install [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) and [node exporter](https://github.com/prometheus/node_exporter) which are popular tools to collect infrastructure metrics. These will be shown in the default dashboards that we will look at later in this tutorial. Please check the [chartValues](~/metrics/prometheus/chartvalues.md) page to see how to override the default ports for node exporter.
 
 You can verify that there are not any configuration or authentication issues by looking at the prometheus-collector logs. See the [FAQ](~/metrics/Prometheus/PromMDMfaq.md#how-do-i-check-the-prometheus-collector-logs) for how to do so.
 
