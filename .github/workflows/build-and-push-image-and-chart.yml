@@ -52,6 +52,10 @@ jobs:
         run: systeminfo ; go version ; helm version ; docker version
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ ; ./makefile_windows.ps1
+      - uses: actions/upload-artifact@v3
+        with:
+          name: windows-otelcollector
+          path: ./otelcollector/opentelemetry-collector-builder/otelcollector.exe
       - name: Dependency Detection setup
         uses: actions/checkout@v2
         with:
