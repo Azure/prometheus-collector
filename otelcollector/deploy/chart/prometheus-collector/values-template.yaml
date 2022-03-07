@@ -60,6 +60,10 @@ azureKeyVault:
 # -- name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped
 clusterName: "" #required
 
+aksResourceId: "" #required
+
+aksRegion: "" #region
+
 #do not use any of the internal settings. This is for testing purposes
 internalSettings:
   intEnvironment: false

@@ -220,6 +220,12 @@ cat /etc/mdsd.d/envmdsd | while read line; do
 done
 source /etc/mdsd.d/envmdsd
 
+export customRegion=$AKS_REGION
+echo "export customRegion=$AKS_REGION" >> ~/.bashrc
+source ~/.bashrc
+echo "customRegion:$customRegion"
+
+
 # if [ -z $customResourceId ]; then
 #       echo "Error-AKS_RESOURCE_ID is empty or not set, MDSD and ME will not be able to fetch the configuration for MAC routing..."
 # fi
