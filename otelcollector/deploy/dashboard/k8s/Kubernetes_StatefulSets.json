@@ -112,7 +112,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", cluster=~\"$cluster\", container!=\"\", namespace=\"$namespace\", pod=~\"$statefulset.*\"}[3m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", cluster=\"$cluster\", container!=\"\", namespace=\"$namespace\", pod=~\"$statefulset.*\"}[3m]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -189,7 +189,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(container_memory_usage_bytes{job=\"cadvisor\", cluster=~\"$cluster\", container!=\"\", namespace=\"$namespace\", pod=~\"$statefulset.*\"}) / 1024^3",
+          "expr": "sum(container_memory_usage_bytes{job=\"cadvisor\", cluster=\"$cluster\", container!=\"\", namespace=\"$namespace\", pod=~\"$statefulset.*\"}) / 1024^3",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -266,7 +266,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(container_network_transmit_bytes_total{job=\"cadvisor\", cluster=~\"$cluster\", namespace=\"$namespace\", pod=~\"$statefulset.*\"}[3m])) + sum(rate(container_network_receive_bytes_total{job=\"cadvisor\", cluster=~\"$cluster\", namespace=\"$namespace\",pod=~\"$statefulset.*\"}[3m]))",
+          "expr": "sum(rate(container_network_transmit_bytes_total{job=\"cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\", pod=~\"$statefulset.*\"}[3m])) + sum(rate(container_network_receive_bytes_total{job=\"cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\",pod=~\"$statefulset.*\"}[3m]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -342,7 +342,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max(kube_statefulset_replicas{job=\"kube-state-metrics\", cluster=~\"$cluster\", namespace=\"$namespace\", statefulset=\"$statefulset\"}) without (instance, pod)",
+          "expr": "max(kube_statefulset_replicas{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\", statefulset=\"$statefulset\"}) without (instance, pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -418,7 +418,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "min(kube_statefulset_status_replicas_current{job=\"kube-state-metrics\", cluster=~\"$cluster\", namespace=\"$namespace\", statefulset=\"$statefulset\"}) without (instance, pod)",
+          "expr": "min(kube_statefulset_status_replicas_current{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\", statefulset=\"$statefulset\"}) without (instance, pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -494,7 +494,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max(kube_statefulset_status_observed_generation{job=\"kube-state-metrics\", cluster=~\"$cluster\", namespace=\"$namespace\", statefulset=\"$statefulset\"}) without (instance, pod)",
+          "expr": "max(kube_statefulset_status_observed_generation{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\", statefulset=\"$statefulset\"}) without (instance, pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -570,7 +570,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max(kube_statefulset_metadata_generation{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=~\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
+          "expr": "max(kube_statefulset_metadata_generation{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -629,7 +629,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max(kube_statefulset_replicas{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=~\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
+          "expr": "max(kube_statefulset_replicas{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -638,7 +638,7 @@
         },
         {
           "exemplar": true,
-          "expr": "max(kube_statefulset_status_replicas{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=~\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
+          "expr": "max(kube_statefulset_status_replicas{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -647,7 +647,7 @@
         },
         {
           "exemplar": true,
-          "expr": "min(kube_statefulset_status_replicas_ready{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=~\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
+          "expr": "min(kube_statefulset_status_replicas_ready{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -656,7 +656,7 @@
         },
         {
           "exemplar": true,
-          "expr": "min(kube_statefulset_status_replicas_current{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=~\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
+          "expr": "min(kube_statefulset_status_replicas_current{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -665,7 +665,7 @@
         },
         {
           "exemplar": true,
-          "expr": "min(kube_statefulset_status_replicas_updated{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=~\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
+          "expr": "min(kube_statefulset_status_replicas_updated{job=\"kube-state-metrics\", statefulset=\"$statefulset\", cluster=\"$cluster\", namespace=\"$namespace\"}) without (instance, pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -783,7 +783,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(kube_statefulset_metadata_generation{job=\"kube-state-metrics\", cluster=~\"$cluster\"}, namespace)",
+          "query": "label_values(kube_statefulset_metadata_generation{job=\"kube-state-metrics\", cluster=\"$cluster\"}, namespace)",
           "refId": "Prometheus-namespace-Variable-Query"
         },
         "refresh": 2,
@@ -809,7 +809,7 @@
         "name": "statefulset",
         "options": [],
         "query": {
-          "query": "label_values(kube_statefulset_metadata_generation{job=\"kube-state-metrics\", cluster=~\"$cluster\", namespace=\"$namespace\"}, statefulset)",
+          "query": "label_values(kube_statefulset_metadata_generation{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\"}, statefulset)",
           "refId": "Prometheus-statefulset-Variable-Query"
         },
         "refresh": 2,
