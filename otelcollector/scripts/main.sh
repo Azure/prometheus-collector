@@ -214,17 +214,25 @@ do
 done
 
 #MDSD
+echo "Setting env variables from envmdsd file"
 cat /etc/mdsd.d/envmdsd | while read line; do
    echo $line >> ~/.bashrc
 done
 source /etc/mdsd.d/envmdsd
 
+# if [ -z $customResourceId ]; then
+#       echo "Error-AKS_RESOURCE_ID is empty or not set, MDSD and ME will not be able to fetch the configuration for MAC routing..."
+# fi
 
-export AZMON_METRIC_ACCOUNTS_AKV_FILES=$(echo $decodedFiles)
-echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
-source ~/.bashrc
+echo "Starting MDSD..."
+# Use options -T 0x1 for debug logging
+mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 
-echo "AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
+#export AZMON_METRIC_ACCOUNTS_AKV_FILES=$(echo $decodedFiles)
+#echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
+#source ~/.bashrc
+
+#echo "AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
 
 echo "starting metricsextension"
 
@@ -233,6 +241,9 @@ echo "ME_CONFIG_FILE"$ME_CONFIG_FILE
 # will need to remove accountname fetching from env
 # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
 #/usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS &
+
+#TODO - Confirm is Monitoring account information is needed here - current understanding not required since ME doesnt know about MAC and MAC mapping is in DCR config that GIG gets from AMCS
+/usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS &
 
 #get ME version
 dpkg -l | grep metricsext | awk '{print $2 " " $3}'
