@@ -57,34 +57,34 @@ helm upgrade --install csi csi-secrets-store-provider-azure/csi-secrets-store-pr
 
 - **Step 5** : Pull & Install prometheus-collector chart in your cluster
 ```shell
-helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 1.1.1-main-02-17-2022-d225f7bf
+helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 1.1.2-main-03-06-2022-1df56ae8
 ```
 
 If using Service principal:
 ```shell
-helm upgrade --install <chart_release_name> ./prometheus-collector-1.1.1-main-02-17-2022-d225f7bf.tgz --dependency-update --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --namespace=<my_prom_collector_namespace> --create-namespace
+helm upgrade --install <chart_release_name> ./prometheus-collector-1.1.2-main-03-06-2022-1df56ae8.tgz --dependency-update --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --namespace=<my_prom_collector_namespace> --create-namespace
 ```
   **Example (Service principal)** :-
 ```shell
-helm upgrade --install my-collector-dev-release ./prometheus-collector-1.1.1-main-02-17-2022-d225f7bf.tgz --dependency-update --set azureKeyVault.name="containerinsightstest1kv" --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId="72f988bf-****-41af-****-2d7cd011db47" --set clusterName="mydevcluster" --set azureMetricAccount.defaultAccountName="containerinsightsgenevaaccount1" --set azureKeyVault.clientId="70937f05-****-4fc0-****-de917f2a9402" --set azureKeyVault.clientSecret="**********************************" --namespace=prom-collector --create-namespace
+helm upgrade --install my-collector-dev-release ./prometheus-collector-1.1.2-main-03-06-2022-1df56ae8.tgz --dependency-update --set azureKeyVault.name="containerinsightstest1kv" --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId="72f988bf-****-41af-****-2d7cd011db47" --set clusterName="mydevcluster" --set azureMetricAccount.defaultAccountName="containerinsightsgenevaaccount1" --set azureKeyVault.clientId="70937f05-****-4fc0-****-de917f2a9402" --set azureKeyVault.clientSecret="**********************************" --namespace=prom-collector --create-namespace
 ```
 
 If using Managed Identity (User Assigned): [See specifically, azureKeyVault.useManagedIdentity & azureKeyVault.userAssignedIdentityID parameters below]
 ```shell
-helm upgrade --install <chart_release_name> ./prometheus-collector-1.1.1-main-02-17-2022-d225f7bf.tgz --dependency-update --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.useManagedIdentity=true --set azureKeyVault.userAssignedIdentityID="59677e05-****-4ea1-****-ed976f2b2049" --namespace=<my_prom_collector_namespace> --create-namespace
+helm upgrade --install <chart_release_name> ./prometheus-collector-1.1.2-main-03-06-2022-1df56ae8.tgz --dependency-update --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.useManagedIdentity=true --set azureKeyVault.userAssignedIdentityID="59677e05-****-4ea1-****-ed976f2b2049" --namespace=<my_prom_collector_namespace> --create-namespace
 ```
   **Example (Managed identity-user defined)** :-
 ```shell
-helm upgrade --install my-collector-dev-release ./prometheus-collector-1.1.1-main-02-17-2022-d225f7bf.tgz --dependency-update --set azureKeyVault.name="containerinsightstest1kv" --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId="72f988bf-****-41af-****-2d7cd011db47" --set clusterName="mydevcluster" --set azureMetricAccount.defaultAccountName="containerinsightsgenevaaccount1" --set azureKeyVault.useManagedIdentity=true --set azureKeyVault.userAssignedIdentityID="59677e05-****-4ea1-****-ed976f2b2049" --namespace=prom-collector --create-namespace
+helm upgrade --install my-collector-dev-release ./prometheus-collector-1.1.2-main-03-06-2022-1df56ae8.tgz --dependency-update --set azureKeyVault.name="containerinsightstest1kv" --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId="72f988bf-****-41af-****-2d7cd011db47" --set clusterName="mydevcluster" --set azureMetricAccount.defaultAccountName="containerinsightsgenevaaccount1" --set azureKeyVault.useManagedIdentity=true --set azureKeyVault.userAssignedIdentityID="59677e05-****-4ea1-****-ed976f2b2049" --namespace=prom-collector --create-namespace
 ```
 
 If using Managed Identity (System Assigned): [See specifically, azureKeyVault.useManagedIdentity parameter below]
 ```shell
-helm upgrade --install <chart_release_name> ./prometheus-collector-1.1.1-main-02-17-2022-d225f7bf.tgz --dependency-update --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.useManagedIdentity=true --namespace=<my_prom_collector_namespace> --create-namespace
+helm upgrade --install <chart_release_name> ./prometheus-collector-1.1.2-main-03-06-2022-1df56ae8.tgz --dependency-update --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.useManagedIdentity=true --namespace=<my_prom_collector_namespace> --create-namespace
 ```
   **Example (Managed identity-system)** :-
 ```shell
-helm upgrade --install my-collector-dev-release ./prometheus-collector-1.1.1-main-02-17-2022-d225f7bf.tgz --dependency-update --set azureKeyVault.name="containerinsightstest1kv" --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId="72f988bf-****-41af-****-2d7cd011db47" --set clusterName="mydevcluster" --set azureMetricAccount.defaultAccountName="containerinsightsgenevaaccount1" --set azureKeyVault.useManagedIdentity=true --namespace=prom-collector --create-namespace
+helm upgrade --install my-collector-dev-release ./prometheus-collector-1.1.2-main-03-06-2022-1df56ae8.tgz --dependency-update --set azureKeyVault.name="containerinsightstest1kv" --set azureKeyVault.pfxCertNames="{containerinsightsgenevaaccount1-pfx,containerinsightsgenevaaccount2-pfx}" --set azureKeyVault.tenantId="72f988bf-****-41af-****-2d7cd011db47" --set clusterName="mydevcluster" --set azureMetricAccount.defaultAccountName="containerinsightsgenevaaccount1" --set azureKeyVault.useManagedIdentity=true --namespace=prom-collector --create-namespace
 ```
 
 - **Step 6** : [Optional] - Apply aditional prometheus scrape configuration as configmap
@@ -124,7 +124,7 @@ kubectl create configmap my-collector-dev-release-prometheus-config --from-file=
 | clusterName | string | <mark>`Required`</mark> | `""` | name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped |
 | image.pullPolicy | string | Optional | `"IfNotPresent"` |  |
 | image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images"` |  |
-| image.tag | string | Optional | `"1.1.1-main-02-17-2022-d225f7bf"` |  |
+| image.tag | string | Optional | `"1.1.2-main-03-06-2022-1df56ae8"` |  |
 | internalSettings.intEnvironment | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes |
 | mode.advanced | bool | Optional | `false` | if mode.advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset. On bigger clusters (> 50+ nodes and > 1500+ pods), it is highly recommended to set this to `true`, as this will distribute the metric volumes to individual nodes as nodes & pods scale out & grow. Note:- When this is set to `true`, the `up` metric for the node target will be generated from the replica, so when the node (and daemonset in the node) becomes unvailable), the target availability can still be tracked.
 | windowsDaemonset | bool | Optional | `false` | if mode.advanced==true (default is false), and windowsDaemonset==true (default is false) then it will deploy a windows daemonset on windows nodes, and move the default windows node targets (windowsexporter, windows-kube-proxy) to windows daemonset. On bigger windows clusters (> 50+ windows nodes and > 1500+ windows pods), it is highly recommended to set this to `true`, as this will distribute the metric volumes to individual windows nodes, as windows nodes & windows pods scale out & grow. Note:- When this is set to `true`, the `up` metric for the windows node targets will be generated from the replica, so when the windows node (and daemonset in the windows node) becomes unvailable), the target availability can still be tracked. Note:- This setting will be effective only when mode.advanced==true.
