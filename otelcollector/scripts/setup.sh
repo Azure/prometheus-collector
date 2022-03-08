@@ -53,10 +53,10 @@ gem install re2
 #chmod 777 /opt/microsoft/otelcollector29/otelcollector
 
 echo "Downloading MDSD"
-wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/azuremonitoragent_1.16.0-build.develop.2741_x86_64.deb
-/usr/bin/dpkg -i $TMPDIR/azure-mdsd*.deb
+wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/azuremonitoragent_1.16.0-build.develop.2750_x86_64.deb
+/usr/bin/dpkg -i $TMPDIR/azuremonitoragent*.deb
 # cp -f $TMPDIR/mdsd.xml /etc/mdsd.d
-cp -f $TMPDIR/envmdsd /etc/mdsd.d
+cp -f $TMPDIR/envmdsd /etc/mdsd.d/
 # Create the following dorectory for logs
 mkdir /opt/microsoft/linuxmonagent
 
