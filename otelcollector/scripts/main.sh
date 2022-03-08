@@ -220,8 +220,9 @@ cat /etc/mdsd.d/envmdsd | while read line; do
 done
 source /etc/mdsd.d/envmdsd
 
-export customRegion=$AKS_REGION
-echo "export customRegion=$AKS_REGION" >> ~/.bashrc
+trimmedRegion=trimmedRegion=$(echo $AKS_REGION | sed 's/ //g' | awk '{print tolower($0)}')
+export customRegion=$trimmedRegion
+echo "export customRegion=$trimmedRegion" >> ~/.bashrc
 source ~/.bashrc
 echo "customRegion:$customRegion"
 
