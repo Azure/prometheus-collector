@@ -105,7 +105,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "1 - avg by (instance) (\n                rate(windows_cpu_time_total{cluster=~\"$cluster\",job=\"windows-exporter\",mode=\"idle\"}[1m])\n              ) *  count by (instance) (sum by (instance, core) (\n                windows_cpu_time_total{cluster=~\"$cluster\",job=\"windows-exporter\"}\n              )) / scalar(sum(count by (instance) (sum by (instance, core) (\n                windows_cpu_time_total{cluster=~\"$cluster\",job=\"windows-exporter\"}\n              ))))",
+          "expr": "1 - avg by (instance) (\n                rate(windows_cpu_time_total{cluster=\"$cluster\",job=\"windows-exporter\",mode=\"idle\"}[1m])\n              ) *  count by (instance) (sum by (instance, core) (\n                windows_cpu_time_total{cluster=\"$cluster\",job=\"windows-exporter\"}\n              )) / scalar(sum(count by (instance) (sum by (instance, core) (\n                windows_cpu_time_total{cluster=\"$cluster\",job=\"windows-exporter\"}\n              ))))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -215,7 +215,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": " (sum by (instance) (\n                windows_os_visible_memory_bytes{cluster=~\"$cluster\", job=\"windows-exporter\"}\n              ) - sum by (instance) (\n                (windows_memory_available_bytes{cluster=~\"$cluster\", job=\"windows-exporter\"})\n              ))\n              /\n              scalar(sum(sum by (instance) (\n                windows_os_visible_memory_bytes{cluster=~\"$cluster\", job=\"windows-exporter\"}\n              )))",
+          "expr": " (sum by (instance) (\n                windows_os_visible_memory_bytes{cluster=\"$cluster\", job=\"windows-exporter\"}\n              ) - sum by (instance) (\n                (windows_memory_available_bytes{cluster=\"$cluster\", job=\"windows-exporter\"})\n              ))\n              /\n              scalar(sum(sum by (instance) (\n                windows_os_visible_memory_bytes{cluster=\"$cluster\", job=\"windows-exporter\"}\n              )))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -310,7 +310,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "irate(windows_memory_swap_page_operations_total{cluster=~\"$cluster\", job=\"windows-exporter\"}[5m])",
+          "expr": "irate(windows_memory_swap_page_operations_total{cluster=\"$cluster\", job=\"windows-exporter\"}[5m])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -420,7 +420,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": " avg by (instance) (\n                (irate(windows_logical_disk_read_seconds_total{cluster=~\"$cluster\", job=\"windows-exporter\"}[1m]) +\n                 irate(windows_logical_disk_write_seconds_total{cluster=~\"$cluster\", job=\"windows-exporter\"}[1m]))\n              ) / scalar(count (\n                windows_system_system_up_time{cluster=~\"$cluster\", job=\"windows-exporter\"}\n              ))",
+          "expr": " avg by (instance) (\n                (irate(windows_logical_disk_read_seconds_total{cluster=\"$cluster\", job=\"windows-exporter\"}[1m]) +\n                 irate(windows_logical_disk_write_seconds_total{cluster=\"$cluster\", job=\"windows-exporter\"}[1m]))\n              ) / scalar(count (\n                windows_system_system_up_time{cluster=\"$cluster\", job=\"windows-exporter\"}\n              ))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -530,7 +530,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (instance) (\n                (irate(windows_net_bytes_total{cluster=~\"$cluster\", job=\"windows-exporter\"}[1m]))\n              )",
+          "expr": "sum by (instance) (\n                (irate(windows_net_bytes_total{cluster=\"$cluster\", job=\"windows-exporter\"}[1m]))\n              )",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -625,7 +625,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (instance) (\n                (irate(windows_net_packets_received_discarded_total{cluster=~\"$cluster\", job=\"windows-exporter\"}[1m]) +\n                irate(windows_net_packets_outbound_discarded_total{cluster=~\"$cluster\", job=\"windows-exporter\"}[1m]))\n              )",
+          "expr": "sum by (instance) (\n                (irate(windows_net_packets_received_discarded_total{cluster=\"$cluster\", job=\"windows-exporter\"}[1m]) +\n                irate(windows_net_packets_outbound_discarded_total{cluster=\"$cluster\", job=\"windows-exporter\"}[1m]))\n              )",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -735,7 +735,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (instance)(max by (instance,volume)(\n                (windows_logical_disk_size_bytes{cluster=~\"$cluster\", job=\"windows-exporter\"}\n              - windows_logical_disk_free_bytes{cluster=~\"$cluster\", job=\"windows-exporter\"})\n              / windows_logical_disk_size_bytes{cluster=~\"$cluster\", job=\"windows-exporter\"}\n              ))\n",
+          "expr": "sum by (instance)(max by (instance,volume)(\n                (windows_logical_disk_size_bytes{cluster=\"$cluster\", job=\"windows-exporter\"}\n              - windows_logical_disk_free_bytes{cluster=\"$cluster\", job=\"windows-exporter\"})\n              / windows_logical_disk_size_bytes{cluster=\"$cluster\", job=\"windows-exporter\"}\n              ))\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,

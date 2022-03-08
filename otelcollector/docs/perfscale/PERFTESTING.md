@@ -4,28 +4,19 @@
 
 ### Deploy the Prometheus Collectors
 
-Run two deployments of the prometheus-collector. One with all the default scrape configs enabled and the other with all default scrape configs disabled and the custom scrape config below with the reference app as a target. The first will observe the second, which will be scraping the heavy load.
-```
-scrape_configs:
-- job_name: prometheus_ref_app
-  scrape_interval: 15s
-  scheme: http
-  kubernetes_sd_configs:
-    - role: pod
-  relabel_configs:
-    - source_labels: [__meta_kubernetes_pod_label_app]
-      action: keep
-      regex: "prometheus-reference-app"
-  metric_relabel_configs:
-    - source_labels: [__name__]
-      action: keep
-      regex: "myapp_temperature_.*"
-```
+Run two deployments of the prometheus-collector. One with all the default scrape configs enabled and the other with all default scrape configs disabled and just the reference app as the target. The first will observe the second, which will be scraping the heavy load.
 
-Note: For scraping a single target with a very large amount of metrics, the `send_batch_max_size` setting in [collector-config-template.yml](../opentelemetry-collector-builder/collector-config-template.yml) for the OpenTelemetry Collector will need to be lowered or you will see errors for the OTLP exporter that the message size is too large.
+You can find the linux scrape config [here]((../../referenceapp/linux-scrape-config.yaml)) and the windows scrape config [here](../../referenceapp/windows-scrape-config.yaml)
+
+### Building the Reference App
+
+Note: This step is only necessary if making changes to the app. Otherwise, the yamls below will have the latest image.
+
+To build the reference app, go to the directory `cd otelcollector/referenceapp/<golang or python>` and run `docker build -f ./<linux or windows>/Dockerfile -t <your image tag> .` depending on which OS you want to build.
 
 ### Deploy the Reference App
-Deploy the [reference app](../app/prometheus-reference-app.yaml) with `RUN_PERF_TEST` set to `true` to generate the specified number of metrics at a specified interval. Specify how many replicas should be scraped in the yaml spec. In the environment variables, set `SCRAPE_INTERVAL` to be an integer in seconds of how often the metrics should be generated. Set `METRIC_COUNT` to be the number of OTLP metrics to generate. Note that OTLP counts metrics by name. Multiply this by the number of timeseries of that metric to get the total number of timeseries that will be generated. For example, the reference app has 8 timeseries for the metric `myapp_temperature`. If we want 1,000,000 of these metrics to be generated every 15 seconds, the environment variables set in the yaml would be:
+
+Deploy the [linux reference app](../../referenceapp/prometheus-reference-app.yaml) or the [windows reference app](../../referenceapp/win-prometheus-reference-app.yaml) with `RUN_PERF_TEST` set to `true` to generate the specified number of metrics at a specified interval. Specify how many replicas should be scraped in the yaml spec. In the environment variables, set `SCRAPE_INTERVAL` to be an integer in seconds of how often the metrics should be generated. Set `METRIC_COUNT` to be the number of OTLP metrics to generate. Note that OTLP counts metrics by name. Multiply this by the number of timeseries of that metric to get the total number of timeseries that will be generated. For example, the reference app has 8 timeseries for the metric `myapp_temperature`. If we want 1,000,000 of these metrics to be generated every 15 seconds, the environment variables set in the yaml would be:
 
 ```
 env:
@@ -39,31 +30,35 @@ env:
 
 ### View the Performance Results
 
-Use the out-of-the-box dashboards in grafana to view the cpu, memory, and disk metrics (sent from the other deployment) for the deployment scraping the large load.
+* Use the out-of-the-box dashboards in Grafana to view the cpu, memory, and disk metrics (sent from the other deployment) for the deployment scraping the large load.
 
-Use our telemetry to view the number of metrics being received, processed, and dropped by ME:
-```
-customMetrics
-| where customDimensions.cluster == "<cluster-name>"
-| where name startswith "meMetrics"
-| extend value = iff(name == "meMetricsDroppedCount", toreal(customDimensions.aggregatedMetricsDropped), value)
-| summarize sum(value) by name, bin(timestamp, 1m)
-| render timechart
-```
+* For Windows perf, the following queries can be used by replacing `<container_id>` with the ID of the windows agent container:
 
-Use our telemetry to view the cpu and memory usage of the OpenTelemetry Collector and ME individually:
-```
-customMetrics
-| where customDimensions.cluster == "<cluster-name>"
-| where name contains 'cpu'
-| render timechart
-```
-```
-customMetrics
-| where customDimensions.cluster == "<cluster-name>"
-| where name contains 'memory'
-| render timechart
-```
+    ```
+    rate(windows_container_cpu_usage_seconds_total{container_id="<container_id>"}[5m])
+    ```
+
+    ```
+    windows_container_memory_usage_private_working_set_bytes{container_id="<container_id"} / 1000000000
+    ```
+
+* Use the `Prometheus-Collector Health` dashboard to view the number of metrics being received, processed, and dropped by ME.
+
+* Use our telemetry to view the cpu and memory usage of the OpenTelemetry Collector and ME individually:
+
+    ```
+    customMetrics
+    | where customDimensions.cluster == "<cluster-name>"
+    | where name contains 'cpu'
+    | render timechart
+    ```
+
+    ```
+    customMetrics
+    | where customDimensions.cluster == "<cluster-name>"
+    | where name contains 'memory'
+    | render timechart
+    ```
 
 ## OpenTelemetry Collector Performance Test Instructions
 
