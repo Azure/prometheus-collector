@@ -1,6 +1,6 @@
 #export MDSD_ROLE_PREFIX="/var/run/mdsd/default"
 #export MDSD_OPTIONS="-d -A -r ${MDSD_ROLE_PREFIX}"
-export MDSD_LOG="/opt/microsoft/linuxmonagent/log"
+export MDSD_LOG="/opt/microsoft/linuxmonagent"
 export SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
 export MDSD_FLUENT_SOCKET_PORT="28230"
 export ENABLE_MCS="true"

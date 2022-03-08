@@ -57,6 +57,8 @@ wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/azure-mdsd_1.16.0-buil
 /usr/bin/dpkg -i $TMPDIR/azure-mdsd*.deb
 # cp -f $TMPDIR/mdsd.xml /etc/mdsd.d
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
+# Create the following dorectory for logs
+mkdir /opt/microsoft/linuxmonagent
 
 # Install Telegraf
 echo "Installing telegraf..."
