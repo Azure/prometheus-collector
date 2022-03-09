@@ -227,19 +227,20 @@ source ~/.bashrc
 echo "customRegion:$customRegion"
 
 
-# if [ -z $customResourceId ]; then
-#       echo "Error-AKS_RESOURCE_ID is empty or not set, MDSD and ME will not be able to fetch the configuration for MAC routing..."
-# fi
+export AZMON_METRIC_ACCOUNTS_AKV_FILES=$(echo $decodedFiles)
+echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
+source ~/.bashrc
+
+echo "AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
+
 
 echo "Starting MDSD..."
-# Use options -T 0x1 for debug logging
+# Use options -T 0x1 or -T 0xFFFF for debug logging
 mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 
-#export AZMON_METRIC_ACCOUNTS_AKV_FILES=$(echo $decodedFiles)
-#echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
-#source ~/.bashrc
-
-#echo "AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
+echo "Waiting for 30s for MDSD to get the config and put them in place for ME..."
+# sleep for 30 seconds
+sleep 30
 
 echo "starting metricsextension"
 

@@ -7,12 +7,20 @@ then
   exit 1
 fi
 
-# (ps -ef | grep MetricsExt | grep -v "grep")
-# if [ $? -ne 0 ]
-# then
-#   echo "Metrics Extension is not running" > /dev/termination-log
-#   exit 1
-# fi
+(ps -ef | grep MetricsExt | grep -v "grep")
+if [ $? -ne 0 ]
+then
+  echo "Metrics Extension is not running" > /dev/termination-log
+  exit 1
+fi
+
+# Excluding MetricsExtenstion too since grep returns ME process since mdsd is in the config file path
+(ps -ef | grep "mdsd" | grep -vE 'grep|MetricsExtension')
+if [ $? -ne 0 ]
+then
+  echo "mdsd is not running" > /dev/termination-log
+  exit 1
+fi
 
 # The mounted cert files are modified by the keyvault provider every time it probes for new certs
 # even if the actual contents don't change. Need to check if actual contents changed.
