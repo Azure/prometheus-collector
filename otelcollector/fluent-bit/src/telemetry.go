@@ -122,10 +122,11 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["podname"] = os.Getenv(envPodName)
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
+	CommonProperties["macmode"] = os.Getenv("MAC")
 
 
 	aksResourceID := os.Getenv(envAKSResourceID)
-	// if the aks resource id is not defined, it is most likely an ACS Cluster
+	// if the aks resource id is not defined, it is most likely an ACS Cluster -- clean this up
 	//todo
 	//fix all the casing issues below for property names and also revist these telemetry before productizing as AKS addon
 	if aksResourceID == "" && os.Getenv(envACSResourceName) != "" {

@@ -12,8 +12,13 @@ For deploying the metrics collection agent, we will leverage [HELM](https://kube
 The prometheus-collector is the name of the agent pod (replica set) that will collect Prometheus metrics from your Kubernetes cluster.
 
 > If you've worked with Geneva Metrics before, you maybe familiar with the Geneva Metrics Extension [ME]. ME will be used for Prometheus collection as well, and is a sub-component of the prometheus-collector
+> You can either deploy by specifying geneva account(s) and their certificates (or) you can deploy by requiring to use a Monitoring Account (MAC), in which case it doesn't require certificates and it will use Azure Resource's System Managed Identity, which also requires setting up MAC account(s) and configuring DCR* (Data collection rules*)
 
-To deploy the agent we will leverage HELM again. At this step you will need to provide the KeyVault certificate information that you saved in the previous step.  The following commands can be used for this. See an example of this below.  
+To deploy the agent we will leverage HELM again. 
+
+### Using geneva account & certificates (in key vault)
+
+At this step you will need to provide the KeyVault certificate information that you saved in the previous step.  The following commands can be used for this. See an example of this below.  
 
 > Note you must set the following environment variable for the below commands to work: HELM_EXPERIMENTAL_OCI=1
 
@@ -57,6 +62,18 @@ You can verify that there are not any configuration or authentication issues by 
 Enabling `--set advanced.mode=true` for large clusters with more than 50 nodes and 1500 pods is highly recommended. See [here](~/metrics/Prometheus/advanced-mode.md) for more information about advanced mode. If the cluster has greater than 25 Windows nodes, enabling advanced mode and `--set windowsDaemonset=true` is recommended. See [here](~/metrics/Prometheus/windows.md) for more information about collecting Windows metrics.
 
 > If you want to have your metrics be sent to multiple metrics accounts, follow the guidelines for [multiple accounts](~/metrics/Prometheus/configuration.md#multiple-metric-accounts) that outlines how Prometheus collector works with multiple metrics accounts.  
+
+### Using geneva account & certificates (in key vault)
+
+```shell
+helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 1.1.2-main-03-07-2022-df71b65a
+```
+ **Example (using Monitoring account)**
+
+```shell
+helm upgrade --install <chart_release_name> ./prometheus-collector-1.1.2-main-03-07-2022-df71b65a.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="/subscriptions/<my_cluster_sub_id>/resourceGroups/<my_cluster_resource_group>/providers/Microsoft.ContainerService/managedClusters/<my_cluster>" --set azureResourceRegion="eastus" --namespace=<my_prom_collector_namespace> --create-namespace
+```
+
 
 --------------------------------------
 
