@@ -38,6 +38,10 @@ spec:
               value: {{ required "azureResourceRegion is required when using monitoring account" .Values.azureResourceRegion | toString | trim | lower | quote }}
             - name: MAC
               value: "true"
+            - name: customEnvironment
+              value: "azurepubliccloud"
+            - name: OMS_TLD
+              value: "opinsights.azure.com"
             {{- end }}
             {{- if and (.Values.internalSettings.intEnvironment) (not .Values.useMonitoringAccount) }}
             - name: ME_ADDITIONAL_FLAGS
@@ -87,22 +91,6 @@ spec:
               value: "{{ .Release.Name }}"
             - name: AGENT_VERSION
               value: *collectorimagetag
-            #Required for MDSD and ME
-            {{- if .Values.CloudEnvironment  }}
-            - name: customEnvironment
-              value: .Values.CloudEnvironment | toString | quote
-            {{- else }}
-            - name: customEnvironment
-              value: "azurepubliccloud"
-            {{- end }}
-            #Required for MDSD and ME
-            {{- if .Values.Domain  }}
-            - name: OMS_TLD
-              value: .Values.Domain | toString | quote
-            {{- else }}
-            - name: OMS_TLD
-              value: "opinsights.azure.com"
-            {{- end }}
             {{- if .Values.mode.advanced  }}
             - name: MODE
               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode

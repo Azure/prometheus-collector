@@ -6,9 +6,20 @@ inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyout
 echo "MODE="$MODE
 echo "CONTROLLER_TYPE="$CONTROLLER_TYPE
 
-#resourceid override.
-if [ -z $AKS_RESOURCE_ID ]; then
-      echo "AKS_RESOURCE_ID is empty or not set."
+#get controller kind in lowercase, trimmed
+controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
+if [ $controllerType = "replicaset" ]; then
+      meConfigFile="/usr/sbin/me.config"
+else
+      meConfigFile="/usr/sbin/me_ds.config"
+fi
+
+export ME_CONFIG_FILE=$meConfigFile	
+echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
+source ~/.bashrc
+echo "ME_CONFIG_FILE"$ME_CONFIG_FILE
+
+if [ "${MAC}" != "true" ]; then
       if [ -z $CLUSTER ]; then
             echo "CLUSTER is empty or not set. Using $NODE_NAME as CLUSTER"
             export customResourceId=$NODE_NAME
@@ -22,11 +33,76 @@ if [ -z $AKS_RESOURCE_ID ]; then
             source ~/.bashrc
             echo "customResourceId:$customResourceId"
       fi
+
+      # Make a copy of the mounted akv directory to see if it changes
+      mkdir -p /opt/akv-copy
+      cp -r /etc/config/settings/akv /opt/akv-copy
+
+      echo "finding files from akv in /etc/config/settings/akv to decode..."
+      decodeLocation="/opt/akv/decoded"
+      # secrets can only be alpha numeric chars and dashes
+      ENCODEDFILES=/etc/config/settings/akv/*
+      mkdir -p $decodeLocation
+      for ef in $ENCODEDFILES
+      do
+            name="$(basename -- $ef)"
+            echo "decoding $name into $decodeLocation ..."
+            base64 -d $ef > $decodeLocation/$name
+      done
+
+      echo "finding decoded files from $decodeLocation ..."
+      DECODEDFILES=$decodeLocation/*
+      decodedFiles=""
+      for df in $DECODEDFILES
+      do
+            echo "found $df"
+            if [ ${#decodedFiles} -ge 1 ]; then
+                  decodedFiles=$decodedFiles:$df
+            else
+                  decodedFiles=$df
+            fi
+      done
+
+      export AZMON_METRIC_ACCOUNTS_AKV_FILES=$(echo $decodedFiles)
+      echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
+      source ~/.bashrc
+
+      echo "AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
+      
+      echo "starting metricsextension"
+      # will need to rotate the entire log location
+      # will need to remove accountname fetching from env
+      # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
+      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS &
 else
-      export customResourceId=$AKS_RESOURCE_ID
-      echo "export customResourceId=$AKS_RESOURCE_ID" >> ~/.bashrc
+      echo "Setting customResourceId for MAC mode..."
+      export customResourceId=$CLUSTER
+      echo "export customResourceId=$CLUSTER" >> ~/.bashrc
       source ~/.bashrc
       echo "customResourceId:$customResourceId"
+
+      echo "Setting customRegion for MAC mode..."
+      trimmedRegion=$(echo $AKSREGION | sed 's/ //g' | awk '{print tolower($0)}')
+      export customRegion=$trimmedRegion
+      echo "export customRegion=$trimmedRegion" >> ~/.bashrc
+      source ~/.bashrc
+      echo "customRegion:$customRegion"
+
+      echo "Setting env variables from envmdsd file for MDSD"
+      cat /etc/mdsd.d/envmdsd | while read line; do
+            echo $line >> ~/.bashrc
+      done
+      source /etc/mdsd.d/envmdsd
+      echo "Starting MDSD..."
+      # Use options -T 0x1 or -T 0xFFFF for debug logging
+      mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
+
+      echo "Waiting for 30s for MDSD to get the config and put them in place for ME..."
+      # sleep for 30 seconds
+      sleep 30
+
+      echo "starting metricsextension"
+      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc -ConfigOverridesFilePath $ME_CONFIG_FILE &
 fi
 
 #set agent config schema version
@@ -160,18 +236,6 @@ service cron restart
 #start otelcollector
 echo "Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
 
-#get controller kind in lowercase, trimmed
-controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
-if [ $controllerType = "replicaset" ]; then
-      meConfigFile="/usr/sbin/me.config"
-else
-      meConfigFile="/usr/sbin/me_ds.config"
-fi
-
-export ME_CONFIG_FILE=$meConfigFile	
-echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
-source ~/.bashrc
-
 # will need to rotate log file
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
       echo "starting otelcollector with DEFAULT prometheus configuration...."
@@ -182,76 +246,6 @@ else
 fi
 
 echo "started otelcollector"
-
-# Make a copy of the mounted akv directory to see if it changes
-mkdir -p /opt/akv-copy
-cp -r /etc/config/settings/akv /opt/akv-copy
-
-echo "finding files from akv in /etc/config/settings/akv to decode..."
-decodeLocation="/opt/akv/decoded"
-# secrets can only be alpha numeric chars and dashes
-ENCODEDFILES=/etc/config/settings/akv/*
-mkdir -p $decodeLocation
-for ef in $ENCODEDFILES
-do
- name="$(basename -- $ef)"
- echo "decoding $name into $decodeLocation ..."
- base64 -d $ef > $decodeLocation/$name
-done
-
-
-echo "finding decoded files from $decodeLocation ..."
-DECODEDFILES=$decodeLocation/*
-decodedFiles=""
-for df in $DECODEDFILES
-do
- echo "found $df"
- if [ ${#decodedFiles} -ge 1 ]; then
-  decodedFiles=$decodedFiles:$df
- else
-  decodedFiles=$df
- fi
-done
-
-#MDSD
-echo "Setting env variables from envmdsd file"
-cat /etc/mdsd.d/envmdsd | while read line; do
-   echo $line >> ~/.bashrc
-done
-source /etc/mdsd.d/envmdsd
-
-trimmedRegion=$(echo $AKS_REGION | sed 's/ //g' | awk '{print tolower($0)}')
-export customRegion=$trimmedRegion
-echo "export customRegion=$trimmedRegion" >> ~/.bashrc
-source ~/.bashrc
-echo "customRegion:$customRegion"
-
-
-export AZMON_METRIC_ACCOUNTS_AKV_FILES=$(echo $decodedFiles)
-echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
-source ~/.bashrc
-
-echo "AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
-
-
-echo "Starting MDSD..."
-# Use options -T 0x1 or -T 0xFFFF for debug logging
-mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
-
-echo "Waiting for 30s for MDSD to get the config and put them in place for ME..."
-# sleep for 30 seconds
-sleep 30
-
-echo "starting metricsextension"
-
-echo "ME_CONFIG_FILE"$ME_CONFIG_FILE
-# will need to rotate the entire log location
-# will need to remove accountname fetching from env
-# Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
-#/usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS &
-
-#TODO - Confirm is Monitoring account information is needed here - current understanding not required since ME doesnt know about MAC and MAC mapping is in DCR config that GIG gets from AMCS
-/usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS &
 
 #get ME version
 dpkg -l | grep metricsext | awk '{print $2 " " $3}'
