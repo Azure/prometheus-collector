@@ -105,7 +105,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": " 1 - avg by (instance) (\n                rate(windows_cpu_time_total{cluster=~\"$cluster\",job=\"windows-exporter\",mode=\"idle\",instance=\"$instance\"}[1m]))",
+          "expr": " 1 - avg by (instance) (\n                rate(windows_cpu_time_total{cluster=\"$cluster\",job=\"windows-exporter\",mode=\"idle\",instance=\"$instance\"}[1m]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -200,7 +200,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (core) (irate(windows_cpu_time_total{cluster=~\"$cluster\", job=\"windows-exporter\",mode!=\"idle\", instance=\"$instance\"}[5m]))",
+          "expr": "sum by (core) (irate(windows_cpu_time_total{cluster=\"$cluster\", job=\"windows-exporter\",mode!=\"idle\", instance=\"$instance\"}[5m]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -310,7 +310,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "1 - ((windows_memory_available_bytes{cluster=~\"$cluster\",job=\"windows-exporter\",instance=\"$instance\"}) / windows_os_visible_memory_bytes{cluster=~\"$cluster\",job=\"windows-exporter\",instance=\"$instance\"})",
+          "expr": "1 - ((windows_memory_available_bytes{cluster=\"$cluster\",job=\"windows-exporter\",instance=\"$instance\"}) / windows_os_visible_memory_bytes{cluster=\"$cluster\",job=\"windows-exporter\",instance=\"$instance\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -409,7 +409,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max(\n  windows_os_visible_memory_bytes{job=\"windows-exporter\", instance=\"$instance\", cluster=~\"$cluster\"}\n  - windows_memory_available_bytes{job=\"windows-exporter\", instance=\"$instance\", cluster=~\"$cluster\"}\n)\n",
+          "expr": "max(\n  windows_os_visible_memory_bytes{job=\"windows-exporter\", instance=\"$instance\", cluster=\"$cluster\"}\n  - windows_memory_available_bytes{job=\"windows-exporter\", instance=\"$instance\", cluster=\"$cluster\"}\n)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -418,7 +418,7 @@
         },
         {
           "exemplar": true,
-          "expr": "max((windows_memory_cache_bytes{job=\"windows-exporter\", cluster=~\"$cluster\",instance=\"$instance\"} + windows_memory_modified_page_list_bytes{job=\"windows-exporter\", cluster=~\"$cluster\",instance=\"$instance\"} + windows_memory_standby_cache_core_bytes{job=\"windows-exporter\", cluster=~\"$cluster\",instance=\"$instance\"} + windows_memory_standby_cache_normal_priority_bytes{job=\"windows-exporter\", cluster=~\"$cluster\",instance=\"$instance\"} + windows_memory_standby_cache_reserve_bytes{job=\"windows-exporter\", cluster=~\"$cluster\",instance=\"$instance\"}))",
+          "expr": "max((windows_memory_cache_bytes{job=\"windows-exporter\", cluster=\"$cluster\",instance=\"$instance\"} + windows_memory_modified_page_list_bytes{job=\"windows-exporter\", cluster=\"$cluster\",instance=\"$instance\"} + windows_memory_standby_cache_core_bytes{job=\"windows-exporter\", cluster=\"$cluster\",instance=\"$instance\"} + windows_memory_standby_cache_normal_priority_bytes{job=\"windows-exporter\", cluster=\"$cluster\",instance=\"$instance\"} + windows_memory_standby_cache_reserve_bytes{job=\"windows-exporter\", cluster=\"$cluster\",instance=\"$instance\"}))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -427,7 +427,7 @@
         },
         {
           "exemplar": true,
-          "expr": "max(windows_memory_available_bytes{job=\"windows-exporter\", cluster=~\"$cluster\", instance=\"$instance\"})",
+          "expr": "max(windows_memory_available_bytes{job=\"windows-exporter\", cluster=\"$cluster\", instance=\"$instance\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -520,7 +520,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "irate(windows_memory_swap_page_operations_total{cluster=~\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}[5m])",
+          "expr": "irate(windows_memory_swap_page_operations_total{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}[5m])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -630,7 +630,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "avg by (instance) (\n                (irate(windows_logical_disk_read_seconds_total{cluster=~\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}[1m]) +\n                 irate(windows_logical_disk_write_seconds_total{cluster=~\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}[1m]))\n              )",
+          "expr": "avg by (instance) (\n                (irate(windows_logical_disk_read_seconds_total{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}[1m]) +\n                 irate(windows_logical_disk_write_seconds_total{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}[1m]))\n              )",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -738,7 +738,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max(rate(windows_logical_disk_read_bytes_total{job=\"windows-exporter\", cluster=~\"$cluster\",instance=\"$instance\"}[2m]))",
+          "expr": "max(rate(windows_logical_disk_read_bytes_total{job=\"windows-exporter\", cluster=\"$cluster\",instance=\"$instance\"}[2m]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -747,7 +747,7 @@
         },
         {
           "exemplar": true,
-          "expr": "max(rate(windows_logical_disk_write_bytes_total{job=\"windows-exporter\", cluster=~\"$cluster\",instance=\"$instance\"}[2m]))",
+          "expr": "max(rate(windows_logical_disk_write_bytes_total{job=\"windows-exporter\", cluster=\"$cluster\",instance=\"$instance\"}[2m]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -756,7 +756,7 @@
         },
         {
           "exemplar": true,
-          "expr": "max(rate(windows_logical_disk_read_seconds_total{job=\"windows-exporter\", cluster=~\"$cluster\",  instance=\"$instance\"}[2m]) + rate(windows_logical_disk_write_seconds_total{job=\"windows-exporter\", cluster=~\"$cluster\", instance=\"$instance\"}[2m]))",
+          "expr": "max(rate(windows_logical_disk_read_seconds_total{job=\"windows-exporter\", cluster=\"$cluster\",  instance=\"$instance\"}[2m]) + rate(windows_logical_disk_write_seconds_total{job=\"windows-exporter\", cluster=\"$cluster\", instance=\"$instance\"}[2m]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -864,7 +864,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (instance) (\n                (irate(windows_net_bytes_total{job=\"windows-exporter\", cluster=~\"$cluster\", instance=\"$instance\"}[1m]))\n              )",
+          "expr": "sum by (instance) (\n                (irate(windows_net_bytes_total{job=\"windows-exporter\", cluster=\"$cluster\", instance=\"$instance\"}[1m]))\n              )",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -959,7 +959,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (instance) (\n                (irate(windows_net_packets_received_discarded_total{cluster=~\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}[1m]) +\n                irate(windows_net_packets_outbound_discarded_total{cluster=~\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}[1m]))\n              )",
+          "expr": "sum by (instance) (\n                (irate(windows_net_packets_received_discarded_total{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}[1m]) +\n                irate(windows_net_packets_outbound_discarded_total{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}[1m]))\n              )",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1069,7 +1069,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": " max by (instance,volume)(\n                (windows_logical_disk_size_bytes{cluster=~\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}\n              - windows_logical_disk_free_bytes{cluster=~\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"})\n              / windows_logical_disk_size_bytes{cluster=~\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}\n              )\n",
+          "expr": " max by (instance,volume)(\n                (windows_logical_disk_size_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}\n              - windows_logical_disk_free_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"})\n              / windows_logical_disk_size_bytes{cluster=\"$cluster\", job=\"windows-exporter\", instance=\"$instance\"}\n              )\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,

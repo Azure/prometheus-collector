@@ -22,6 +22,7 @@ then
   exit 1
 fi
 
+if [ "${MAC}" != "true" ]; then
 # The mounted cert files are modified by the keyvault provider every time it probes for new certs
 # even if the actual contents don't change. Need to check if actual contents changed.
 if [ -d "/etc/config/settings/akv" ] && [ -d "/opt/akv-copy/akv" ]
@@ -32,6 +33,7 @@ then
     echo "A Metrics Account certificate has changed" > /dev/termination-log
     exit 1
   fi
+fi
 fi
 
 if [ ! -s "/opt/inotifyoutput.txt" ] #file doesn't exists or size == 0

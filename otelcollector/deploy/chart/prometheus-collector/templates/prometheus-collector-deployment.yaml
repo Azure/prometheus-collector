@@ -28,13 +28,18 @@ spec:
           resources:
             {{- toYaml .Values.resources.deployment | nindent 12 }}
           env:
+            {{- if not .Values.useMonitoringAccount }}
             - name: CLUSTER
-              value: {{ required "clusterName is required" .Values.clusterName | toString | quote }}
-            - name: AKS_RESOURCE_ID
-              value: {{ required "AKS Resource ID is required" .Values.aksResourceId | toString | quote }}
-            - name: AKS_REGION
-              value: {{ required "AKS Region is required" .Values.aksRegion | toString | quote }}
-            {{- if .Values.internalSettings.intEnvironment  }}
+              value: {{ required "clusterName is required" .Values.clusterName | toString | trim | quote }}
+            {{- else }}
+            - name: CLUSTER
+              value: {{ required "azureResourceId is required when using monitoring account" .Values.azureResourceId | toString | quote }}
+            - name: AKSREGION
+              value: {{ required "azureResourceRegion is required when using monitoring account" .Values.azureResourceRegion | toString | trim | lower | quote }}
+            - name: MAC
+              value: "true"
+            {{- end }}
+            {{- if and (.Values.internalSettings.intEnvironment) (not .Values.useMonitoringAccount) }}
             - name: ME_ADDITIONAL_FLAGS
               value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
             {{- end }}
@@ -105,13 +110,14 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
-            {{- if .Values.windowsDaemonset  }}
+            {{- if and (.Values.windowsDaemonset) (not .Values.useMonitoringAccount) }}
             - name: WINMODE
-              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+              value: "advanced" # WINDOWS: only supported mode is 'advanced' [when not using MAC], any other value will be the default/non-advance mode
             {{- else }}
             - name: WINMODE
               value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
+            {{- if not .Values.useMonitoringAccount }}
             {{- if .Values.azureKeyVault.useManagedIdentity  }}
               {{- if .Values.azureKeyVault.userAssignedIdentityID }}
             - name: AKVAUTH
@@ -124,6 +130,7 @@ spec:
             - name: AKVAUTH
               value: "sp" # service principal
             {{- end }}
+            {{- end }}
           securityContext:
             privileged: false
           volumeMounts:
@@ -133,9 +140,11 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
+            {{- if not .Values.useMonitoringAccount }}
             - mountPath: /etc/config/settings/akv
               name: secrets-store-inline
               readOnly: true
+            {{- end }}
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
@@ -236,6 +245,7 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
+        {{- if not .Values.useMonitoringAccount }}
         - name: secrets-store-inline
           csi:
             driver: secrets-store.csi.k8s.io
@@ -246,3 +256,4 @@ spec:
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds   # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
             {{- end }}
+        {{- end }}

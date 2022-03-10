@@ -113,7 +113,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(timeseries_sent_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
+          "expr": "sum(timeseries_sent_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "timeseries sent per minute",
@@ -121,7 +121,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
+          "expr": "sum(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
@@ -206,7 +206,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(bytes_sent_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
+          "expr": "sum(bytes_sent_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
           "interval": "",
           "legendFormat": "bytes sent per minute",
           "refId": "A"
@@ -247,7 +247,7 @@
         "allValue": null,
         "current": {},
         "datasource": "${datasource}",
-        "definition": "label_values(timeseries_received_per_minute, cluster)",
+        "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\"}, cluster)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -257,7 +257,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(timeseries_received_per_minute, cluster)",
+          "query": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\"}, cluster)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -270,7 +270,7 @@
         "allValue": null,
         "current": {},
         "datasource": "${datasource}",
-        "definition": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\"}, release)",
+        "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\"}, release)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -280,7 +280,7 @@
         "name": "release",
         "options": [],
         "query": {
-          "query": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\"}, release)",
+          "query": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\"}, release)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -293,7 +293,7 @@
         "allValue": null,
         "current": {},
         "datasource": "${datasource}",
-        "definition": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\"}, controller_type)",
+        "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\"}, controller_type)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -303,7 +303,7 @@
         "name": "controller_type",
         "options": [],
         "query": {
-          "query": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\"}, controller_type)",
+          "query": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\"}, controller_type)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -316,7 +316,7 @@
         "allValue": null,
         "current": {},
         "datasource": "${datasource}",
-        "definition": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\"}, computer)",
+        "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\"}, computer)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -326,7 +326,7 @@
         "name": "computer",
         "options": [],
         "query": {
-          "query": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\"}, computer)",
+          "query": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\"}, computer)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
