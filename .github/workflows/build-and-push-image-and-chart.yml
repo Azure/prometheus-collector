@@ -245,7 +245,7 @@ jobs:
           for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 30
-            if [ docker manifest inspect ${MCR_REGISTRY}${MCR_REPOSITORY}:${IMAGE_TAG} ] && [ docker manifest inspect ${MCR_REGISTRY}${MCR_REPOSITORY}:${IMAGE_TAG_WINDOWS} ]
+            if docker manifest inspect ${MCR_REGISTRY}${MCR_REPOSITORY}:${IMAGE_TAG} && docker manifest inspect ${MCR_REGISTRY}${MCR_REPOSITORY}:${IMAGE_TAG_WINDOWS}
             then
               echo "Image published to mcr"
               exit 0
