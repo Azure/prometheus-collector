@@ -46,6 +46,10 @@ spec:
               value: {{ required "azureResourceRegion is required when using monitoring account" .Values.azureResourceRegion | toString | trim | lower | quote }}
             - name: MAC
               value: "true"
+            - name: customEnvironment
+              value: "azurepubliccloud"
+            - name: OMS_TLD
+              value: "opinsights.azure.com"
             {{- end }}
             {{- if and (.Values.internalSettings.intEnvironment) (not .Values.useMonitoringAccount) }}
             - name: ME_ADDITIONAL_FLAGS
