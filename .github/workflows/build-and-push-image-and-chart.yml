@@ -151,6 +151,7 @@ jobs:
           skip-dirs: ''
           exit-code: '1'
           timeout: '5m0s'
+          ignore-unfixed: true
       - name: Login-to-ACR-thru-Docker
         if: github.event_name != 'pull_request'
         run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
