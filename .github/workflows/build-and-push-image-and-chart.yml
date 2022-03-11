@@ -151,13 +151,6 @@ jobs:
           skip-dirs: ''
           exit-code: '1'
           timeout: '5m0s'
-      - name: Run-trivy-scanner-in-repo mode
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          ignore-unfixed: true
-          exit-code: '1'
-          severity: 'CRITICAL,HIGH'
       - name: Login-to-ACR-thru-Docker
         if: github.event_name != 'pull_request'
         run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
