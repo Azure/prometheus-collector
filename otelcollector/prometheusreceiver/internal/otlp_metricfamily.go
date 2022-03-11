@@ -147,11 +147,12 @@ func (mg *metricGroupPdata) toDistributionPoint(orderedLabelKeys []string, dest 
 	if value.IsStaleNaN(mg.sum) || value.IsStaleNaN(mg.count) {
 		point.SetFlags(pdataStaleFlags)
 	} else {
-		point.SetExplicitBounds(bounds)
 		point.SetCount(uint64(mg.count))
 		point.SetSum(mg.sum)
-		point.SetBucketCounts(bucketCounts)
 	}
+
+	point.SetExplicitBounds(bounds)
+	point.SetBucketCounts(bucketCounts)
 
 	// The timestamp MUST be in retrieved from milliseconds and converted to nanoseconds.
 	tsNanos := pdataTimestampFromMs(mg.ts)
@@ -183,14 +184,14 @@ func (mg *metricGroupPdata) toSummaryPoint(orderedLabelKeys []string, dest *pdat
 	if value.IsStaleNaN(mg.sum) || value.IsStaleNaN(mg.count) {
 		point.SetFlags(pdataStaleFlags)
 	} else {
-		quantileValues := point.QuantileValues()
-		for _, p := range mg.complexValue {
-			quantile := quantileValues.AppendEmpty()
-			quantile.SetValue(p.value)
-			quantile.SetQuantile(p.boundary)
-		}
 		point.SetSum(mg.sum)
 		point.SetCount(uint64(mg.count))
+	}
+	quantileValues := point.QuantileValues()
+	for _, p := range mg.complexValue {
+		quantile := quantileValues.AppendEmpty()
+		quantile.SetValue(p.value)
+		quantile.SetQuantile(p.boundary)
 	}
 
 	// Based on the summary description from https://prometheus.io/docs/concepts/metric_types/#summary
