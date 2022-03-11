@@ -54,9 +54,9 @@ gem install re2
 
 # Install Telegraf
 echo "Installing telegraf..."
-wget https://dl.influxdata.com/telegraf/releases/telegraf-1.18.0_linux_amd64.tar.gz
-tar -zxvf telegraf-1.18.0_linux_amd64.tar.gz
-mv /opt/telegraf-1.18.0/usr/bin/telegraf /opt/telegraf/telegraf
+wget https://dl.influxdata.com/telegraf/releases/telegraf-1.21.4_linux_amd64.tar.gz
+tar -zxvf telegraf-1.21.4_linux_amd64.tar.gz
+mv /opt/telegraf-1.21.4/usr/bin/telegraf /opt/telegraf/telegraf
 chmod 544 /opt/telegraf/telegraf
 
 # Install fluent-bit
