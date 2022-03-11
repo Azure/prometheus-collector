@@ -111,7 +111,9 @@ echo "deb [arch=amd64] https://packages.microsoft.com/repos/$REPO_NAME $VERSION_
 sudo apt-get update
 
 # Pinning to the latest stable version of ME
-sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
+#sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
+wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2022.309.1319-a0a45f-_focal_amd64.deb
+/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 
 # Cleaning up unused packages
