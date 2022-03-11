@@ -149,6 +149,7 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
+        {{- if .Values.useMonitoringAccount }}
         - name: addon-token-adapter
           command:
             - /addon-token-adapter
@@ -182,6 +183,7 @@ spec:
               add:
                 - NET_ADMIN
                 - NET_RAW
+        {{- end }}
       affinity:
         nodeAffinity:
           # affinity to schedule on to ephemeral os node if its available
