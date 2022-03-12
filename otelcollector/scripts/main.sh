@@ -163,13 +163,13 @@ echo "Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
 #get controller kind in lowercase, trimmed
 controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
 if [ $controllerType = "replicaset" ]; then
-   if [ $CLUSTER_OVERRIDE = "true" ]; then
+   if [ "$CLUSTER_OVERRIDE" = "true" ]; then
       meConfigFile="/usr/sbin/me_internal.config"
    else
       meConfigFile="/usr/sbin/me.config"
    fi
 else
-   if [ $CLUSTER_OVERRIDE = "true" ]; then
+   if [ "$CLUSTER_OVERRIDE" = "true" ]; then
       meConfigFile="/usr/sbin/me_ds_internal.config"
    else
       meConfigFile="/usr/sbin/me_ds.config"
