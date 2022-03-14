@@ -3,7 +3,11 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: {{ .Release.Name }}-prometheus-config
+  {{- if not .Values.useMonitoringAccount }}
   namespace: {{ .Release.Namespace }}
+  {{- else }}
+  namespace: kube-system
+  {{- end }}
   labels:
     {{- include "prometheus-collector.labels" . | nindent 4 }}
 data:

@@ -3,7 +3,11 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ template "prometheus-collector.fullname" . }}-node
+  {{- if not .Values.useMonitoringAccount }}
   namespace: {{ .Release.Namespace }}
+  {{- else }}
+  namespace: kube-system
+  {{- end }}
   labels:
     component: {{ template "prometheus-collector.fullname" . }}
 spec:
