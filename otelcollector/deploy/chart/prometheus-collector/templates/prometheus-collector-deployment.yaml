@@ -5,7 +5,7 @@ metadata:
   {{- if not .Values.useMonitoringAccount }}
   namespace: {{ .Release.Namespace }}
   {{- else }}
-  {{ include "mac-namespace-validate" . | required "namespace value is incorrect. The valid value is 'kube-system' " }} }}
+  {{ include "mac-namespace-validate" . | required "namespace value is incorrect. The valid value is 'kube-system' " }}
   {{- end }}
   labels:
     component: {{ template "prometheus-collector.fullname" . }}

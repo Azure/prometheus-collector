@@ -73,6 +73,6 @@ Validate namespace for MAC mode
 {{- define "mac-namespace-validate" -}}
   {{ $namespace := .Release.Namespace }}
   {{- if eq $namespace "kube-system" -}}
-  namespace: $namespace
+  namespace: {{ $namespace }}
   {{- end -}}
 {{- end -}}
