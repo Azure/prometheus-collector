@@ -66,3 +66,13 @@ Get kube-state-metrics fullname
 {{- printf "%s-%s" $releasename $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Validate namespace for MAC mode
+*/}}
+{{- define "mac-namespace-validate" -}}
+  {{ $namespace := .Release.Namespace }}
+  {{- if eq $namespace "kube-system" -}}
+    true
+  {{- end -}}
+{{- end -}}

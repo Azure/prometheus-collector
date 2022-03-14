@@ -5,11 +5,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: {{ template "prometheus-collector.fullname" . }}-serviceaccount
-    {{- if not .Values.useMonitoringAccount }}
     namespace: {{ .Release.Namespace }}
-    {{- else }}
-    namespace: kube-system
-    {{- end }}
 roleRef:
   kind: ClusterRole
   name: {{ template "prometheus-collector.fullname" . }}-reader
