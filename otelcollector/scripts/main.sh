@@ -230,8 +230,11 @@ else
       # sleep for 30 seconds
       sleep 30
 
+      echo "Reading me config file as a string for configOverrides paramater"
+      cat $ME_CONFIG_FILE | tr '\r' ' ' |  tr '\n' ' ' | sed "s/[']/\\\'/g" | sed 's/\"/\\"/g' | sed 's/ \{3,\}/ /g' | sed 's/   / /g' | sed 's/ //g' > meConfigString
+      export meConfigStringVal=`cat meConfigString`
       echo "starting metricsextension"
-      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc -ConfigOverridesFilePath $ME_CONFIG_FILE &
+      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc -ConfigOverrides $meConfigStringVal &
 fi
 
 #get ME version
