@@ -143,41 +143,41 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
-        {{- if .Values.useMonitoringAccount }}
-        - name: addon-token-adapter
-          command:
-            - /addon-token-adapter
-          args:
-            - --secret-namespace=kube-system
-            - --secret-name=omsagent-aad-msi-token
-            - --token-server-listening-port=7777
-            - --health-server-listening-port=9999
-          image: "mcr.microsoft.com/aks/hcp/addon-token-adapter:master.211104.1"
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: AZMON_COLLECT_ENV
-              value: "false"
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 9999
-            initialDelaySeconds: 10
-            periodSeconds: 60
-          resources:
-            limits:
-              cpu: 500m
-              memory: 500Mi
-            requests:
-              cpu: 100m
-              memory: 100Mi
-          securityContext:
-            capabilities:
-              drop:
-                - ALL
-              add:
-                - NET_ADMIN
-                - NET_RAW
-        {{- end }}
+        # {{- if .Values.useMonitoringAccount }}
+        # - name: addon-token-adapter
+        #   command:
+        #     - /addon-token-adapter
+        #   args:
+        #     - --secret-namespace=kube-system
+        #     - --secret-name=omsagent-aad-msi-token
+        #     - --token-server-listening-port=7777
+        #     - --health-server-listening-port=9999
+        #   image: "mcr.microsoft.com/aks/hcp/addon-token-adapter:master.211104.1"
+        #   imagePullPolicy: IfNotPresent
+        #   env:
+        #     - name: AZMON_COLLECT_ENV
+        #       value: "false"
+        #   livenessProbe:
+        #     httpGet:
+        #       path: /healthz
+        #       port: 9999
+        #     initialDelaySeconds: 10
+        #     periodSeconds: 60
+        #   resources:
+        #     limits:
+        #       cpu: 500m
+        #       memory: 500Mi
+        #     requests:
+        #       cpu: 100m
+        #       memory: 100Mi
+        #   securityContext:
+        #     capabilities:
+        #       drop:
+        #         - ALL
+        #       add:
+        #         - NET_ADMIN
+        #         - NET_RAW
+        # {{- end }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
