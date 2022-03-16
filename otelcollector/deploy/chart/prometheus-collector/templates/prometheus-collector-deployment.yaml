@@ -16,6 +16,9 @@ spec:
     metadata:
       labels:
         rsName: {{ template "prometheus-collector.fullname" . }}
+        {{- if ne $.Values.azureKeyVault.podManagedIdentity ""}}
+        aadpodidbinding: {{ .Values.azureKeyVault.podManagedIdentity }}
+        {{- end }}
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
