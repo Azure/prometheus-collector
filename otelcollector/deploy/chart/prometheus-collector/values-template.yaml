@@ -54,7 +54,7 @@ azureKeyVault:
   pfxCertNames: [] #required
   # -- enable/disable managed identity to access keyvault
   useManagedIdentity: false
-  # -- enable/disable pod managed identity to access keyvault, requires useManagedIdentity true
+  # -- name of the azure pod managed identity to access keyvault, requires useManagedIdentity true
   podManagedIdentity: ""
   # -- use the client id to specify which user assigned managed identity to use when acccesing keyvault. If using a user assigned identity as the VM's managed identity, then specify the identity's client id. If empty, AND 'useManagedIdentity' is true, then defaults to use the system assigned identity on the VM
   userAssignedIdentityID: ""
