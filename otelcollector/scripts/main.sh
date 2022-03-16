@@ -217,6 +217,10 @@ else
       source ~/.bashrc
       echo "customRegion:$customRegion"
 
+      echo "Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests..."
+      # sleep for 10 seconds
+      sleep 10
+
       echo "Setting env variables from envmdsd file for MDSD"
       cat /etc/mdsd.d/envmdsd | while read line; do
             echo $line >> ~/.bashrc
