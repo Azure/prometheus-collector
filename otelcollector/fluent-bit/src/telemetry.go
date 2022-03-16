@@ -122,36 +122,21 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["podname"] = os.Getenv(envPodName)
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
-	CommonProperties["macmode"] = os.Getenv("MAC")
 
-
-	aksResourceID := os.Getenv(envAKSResourceID)
-	// if the aks resource id is not defined, it is most likely an ACS Cluster -- clean this up
-	//todo
-	//fix all the casing issues below for property names and also revist these telemetry before productizing as AKS addon
-	if aksResourceID == "" && os.Getenv(envACSResourceName) != "" {
-		CommonProperties["ACSResourceName"] = os.Getenv(envACSResourceName)
-		CommonProperties["ClusterType"] = clusterTypeACS
-
-		CommonProperties["SubscriptionID"] = ""
-		CommonProperties["ResourceGroupName"] = ""
-		CommonProperties["ClusterName"] = ""
-		CommonProperties["Region"] = ""
-		CommonProperties["AKS_RESOURCE_ID"] = ""
-
-	} else if aksResourceID != "" {
-		CommonProperties["ACSResourceName"] = ""
+	isMacMode := os.Getenv("MAC")
+	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
+		CommonProperties["macmode"] = isMacMode
+		aksResourceID := os.Getenv("CLUSTER")
+		// When we support ARC add a way to identify and send telemetry that it is an ARC cluster
 		CommonProperties["AKS_RESOURCE_ID"] = aksResourceID
+		CommonProperties["ClusterType"] = clusterTypeAKS
+		CommonProperties["Region"] = os.Getenv("AKSREGION")
 		splitStrings := strings.Split(aksResourceID, "/")
 		if len(splitStrings) >= 9 {
 			CommonProperties["SubscriptionID"] = splitStrings[2]
 			CommonProperties["ResourceGroupName"] = splitStrings[4]
 			CommonProperties["ClusterName"] = splitStrings[8]
 		}
-		CommonProperties["ClusterType"] = clusterTypeAKS
-
-		region := os.Getenv("AKS_REGION")
-		CommonProperties["Region"] = region
 	}
 
 	TelemetryClient.Context().CommonProperties = CommonProperties
