@@ -47,10 +47,8 @@ var (
 )
 
 const (
-	clusterTypeACS                        = "ACS"
 	clusterTypeAKS                        = "AKS"
 	envAKSResourceID                      = "AKS_RESOURCE_ID"
-	envACSResourceName                    = "ACS_RESOURCE_NAME"
 	envAgentVersion                       = "AGENT_VERSION"
 	envControllerType                     = "CONTROLLER_TYPE"
 	envNodeIP                             = "NODE_IP"
