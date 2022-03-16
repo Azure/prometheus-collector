@@ -47,5 +47,8 @@
 | keepListRegexes.windowsKubeProxy | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for windows kube-proxy
 | prometheus-node-exporter.service.targetPort | INT | Optional | `true` | `linux only` - when a port is specified, node exporter uses this as bind/listen port, both prometheus-node-exporter.service.targetPort and prometheus-node-exporter.service.port should be set for this to work. |
 | prometheus-node-exporter.service.port | INT | Optional | `true` | `linux only` - when a port is specified, node exporter uses this as bind/listen port |
+| prometheus-node-exporter.service.port | INT | Optional | `true` | `linux only` - when a port is specified, node exporter uses this as bind/listen port |
+| kube-state-metrics.metricAnnotationsAllowList | [string] | Optional | `[]` | `requires scrapeTargets.kubeState` - adds annotations as scrape labels to kube-state-metrics specify array of `objects=<comma separated list>` use `*` for all(has perf impact), example `["pods=annotation1,annotation2", "namespaces=*"]` [annotations are subject to coercion](https://github.com/kubernetes/kube-state-metrics#conflict-resolution-in-label-names) |
+| kube-state-metrics.metricLabelsAllowlist | [string] | Optional | `[]` | `requires scrapeTargets.kubeState` - adds labels as scrape labels to kube-state-metrics specify array of `objects=<comma separated list>` use `*` for all(has perf impact), example `["pods=label1,label2", "namespaces=*"]` [labels are subject to coercion](https://github.com/kubernetes/kube-state-metrics#conflict-resolution-in-label-names) |
 
 ----------------------------------------------
