@@ -12,8 +12,7 @@
       - action: keep
         source_labels: [__meta_kubernetes_node_label_kubernetes_io_os]
         regex: windows
-      - source_labels: [__address__]
-        replacement: '$$NODE_NAME$$'
+      - source_labels: [__meta_kubernetes_node_name]
         target_label: instance
       - source_labels:
         - __address__
