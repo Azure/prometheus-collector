@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -70,6 +71,7 @@ const (
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
+	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -134,6 +136,41 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			CommonProperties["SubscriptionID"] = splitStrings[2]
 			CommonProperties["ResourceGroupName"] = splitStrings[4]
 			CommonProperties["ClusterName"] = splitStrings[8]
+		}
+		// Reading AMCS config file for telemetry
+		amcsConfigFile, err := os.Open(amcsConfigFilePath)
+		if err != nil {
+			Log("Error while opening AMCS config file - %v\n", err)
+		}
+		Log("Successfully read AMCS config file contents for telemetry\n")
+		defer amcsConfigFile.Close()
+
+		amcsConfigFileContents, err := ioutil.ReadAll(amcsConfigFile)
+		if err != nil {
+			Log("Error while reading AMCS config file contents - %v\n", err)
+		}
+
+		var amcsConfig map[string]interface{}
+
+		err = json.Unmarshal([]byte(amcsConfigFileContents), &amcsConfig)
+		if err != nil {
+			Log("Error while unmarshaling AMCS config file contents - %v\n", err)
+		}
+		// iterate through keys and parse dcr name
+		for key, _ := range amcsConfig {
+			Log("Parsing %v for extracting DCR:", key)
+			splitKey := strings.Split(key, "/")
+			// Expecting a key in this format to extract out DCR Id -
+			// https://<dce>.eastus2euap-1.metrics.ingest.monitor.azure.com/api/v1/dataCollectionRules/<dcrid>/streams/Microsoft-PrometheusMetrics
+			if len(splitKey) == 9 {
+				dcrId := splitKey[6]
+				CommonProperties["DCRId"] = splitKey[6]
+			} else {
+				message := fmt.Sprintf("AMCS token config json key contract has changed, unable to get DCR ID. Logging the entire key as DCRId")
+				Log(message)
+				SendException(message)
+				CommonProperties["DCRId"] = key
+			}
 		}
 	}
 
