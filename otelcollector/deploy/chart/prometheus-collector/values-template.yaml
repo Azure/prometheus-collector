@@ -73,9 +73,10 @@ aksResourceId: "" #required
 
 aksRegion: "" #region
 
-#do not use any of the internal settings. This is for testing purposes
+#do not use any of the internal settings. This is for testing purposes to be used by Geneva team only
 internalSettings:
   intEnvironment: false
+  clusterOverride: false
 
 #if advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset
 mode:

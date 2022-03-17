@@ -55,6 +55,10 @@ spec:
             - name: ME_ADDITIONAL_FLAGS
               value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
             {{- end }}  
+            {{- if .Values.internalSettings.clusterOverride  }}
+            - name: CLUSTER_OVERRIDE
+              value: "true"
+            {{- end }}  
             - name: CONTROLLER_TYPE
               value: "DaemonSet"
             - name: NODE_IP
@@ -272,7 +276,11 @@ spec:
             {{- if .Values.internalSettings.intEnvironment  }}
             - name: ME_ADDITIONAL_FLAGS
               value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
-            {{- end }}  
+            {{- end }}
+            {{- if .Values.internalSettings.clusterOverride  }}
+            - name: CLUSTER_OVERRIDE
+              value: "true"
+            {{- end }}   
             - name: CONTROLLER_TYPE
               value: "DaemonSet"
             - name: NODE_IP
@@ -388,7 +396,7 @@ spec:
             optional: true
         - name: prometheus-config-vol
           configMap:
-            name: {{ .Release.Name }}-prometheus-config-node
+            name: {{ .Release.Name }}-prometheus-config-node-windows
             optional: true
         - name: host-log-containers
           hostPath:

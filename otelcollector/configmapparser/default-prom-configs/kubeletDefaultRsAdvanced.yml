@@ -11,9 +11,11 @@
     - source_labels: [__metrics_path__]
       regex: (.*)
       target_label: metrics_path
+    - source_labels: [__meta_kubernetes_node_label_kubernetes_io_os]
+      target_label: "kubernetes_io_os"
     metric_relabel_configs:
-    - source_labels: [__name__]
+    - source_labels: [kubernetes_io_os]
+      regex: "windows"
       action: keep
-      regex: "up"
     kubernetes_sd_configs:
     - role: node

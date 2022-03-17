@@ -14,5 +14,8 @@
     - source_labels: [__address__]
       replacement: '$$NODE_NAME$$'
       target_label: instance
+    - source_labels: [__address__]
+      replacement: '$$OS_TYPE$$'
+      target_label: "kubernetes_io_os"
     static_configs:
     - targets: ['$$NODE_IP$$:10250']

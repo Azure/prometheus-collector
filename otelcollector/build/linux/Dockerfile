@@ -18,7 +18,7 @@ COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollecto
 COPY ./opentelemetry-collector-builder/otelcollector ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/microsoft/otelcollector/
 COPY ./prom-config-validator-builder/promconfigvalidator $tmpdir/
 COPY ./scripts/setup.sh ./scripts/main.sh $tmpdir/
-COPY ./metricextension/me.config ./metricextension/me_ds.config /usr/sbin/
+COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
 COPY ./telegraf/telegraf-prometheus-collector.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
