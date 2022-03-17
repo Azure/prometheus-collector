@@ -163,7 +163,6 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			// Expecting a key in this format to extract out DCR Id -
 			// https://<dce>.eastus2euap-1.metrics.ingest.monitor.azure.com/api/v1/dataCollectionRules/<dcrid>/streams/Microsoft-PrometheusMetrics
 			if len(splitKey) == 9 {
-				dcrId := splitKey[6]
 				CommonProperties["DCRId"] = splitKey[6]
 			} else {
 				message := fmt.Sprintf("AMCS token config json key contract has changed, unable to get DCR ID. Logging the entire key as DCRId")
