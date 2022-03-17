@@ -182,11 +182,22 @@ function Set-EnvironmentVariablesAndConfigParser {
     #get controller kind in lowercase, trimmed
     $controllerType = $env:CONTROLLER_TYPE
     $controllerType = $controllerType.Trim()
+    $cluster_override = $env:CLUSTER_OVERRIDE
     if ($controllerType -eq "replicaset") {
-        $meConfigFile = "/opt/metricextension/me.config"
+        if ($cluster_override -eq "true") {
+           $meConfigFile = "/opt/metricextension/me_internal.config" 
+        }
+        else {
+           $meConfigFile = "/opt/metricextension/me.config"
+        }
     }
     else {
-        $meConfigFile = "/opt/metricextension/me_ds.config"
+        if ($cluster_override -eq "true") {
+           $meConfigFile = "/opt/metricextension/me_ds_internal.config" 
+        }
+        else {
+           $meConfigFile = "/opt/metricextension/me_ds.config"
+        }
     }
     [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $meConfigFile, "Process")
     [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $meConfigFile, "Machine")
