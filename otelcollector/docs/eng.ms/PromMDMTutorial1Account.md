@@ -5,13 +5,7 @@
 
 ## Create metrics account
 
-All Prometheus metrics will be stored in a Geneva metrics (MDM) account. The current private preview for Prometheus only works with metrics accounts hosted on [shared MDM stamps](~/metrics/concepts/stampsandaccounts.md#stamps-and-accounts).  
-
-If you don't have an existing metrics account in a shared MDM stamp, follow the instructions to create a [metrics account](~/getting_started/v2/createaccounts_basic.md), and choose a shared stamp as part of the account creation process. A Logs account is not strictly required for Prometheus metrics collection.  
-
-    *Dedicated stamps will also be supported for Prometheus (ETA March 2022).
-
-If you already have an existing metrics account on a shared MDM stamp, you can reuse that account for Prometheus. 
+All Prometheus metrics will be stored in a Geneva metrics (MDM) account. If you already have an existing metrics account, you can reuse that account for Prometheus metrics as well. If you don't have an existing metrics account, or want to store your Prometheus metrics in a separate account, follow the instructions to create a [metrics account](~/getting_started/v2/createaccounts_basic.md) for storing your metrics. A Logs account is not strictly required for Prometheus metrics collection.  
 
 ## Set up KeyVault authentication
 
@@ -34,7 +28,7 @@ With your certificate created, you want to save some information that we will ne
 ### Install Azure KeyVault driver in your cluster
 
 To be able to mount secrets and certificates as storage volumes, you will need to install the csi driver & secrets store provider for Azure KeyVault in your cluster.
-For this we will installl the AKS addon by running the following commands.
+For this we will install the AKS addon by running the following commands.
 
 ```shell
 az aks enable-addons --addons azure-keyvault-secrets-provider --name <AKS cluster name> --resource-group <resource group name> --enable-secret-rotation
@@ -48,7 +42,7 @@ Next, lets ensure the agent and Azure Key Vault driver have the right authorizat
 
 #### Service Principal
 
-You can create a service principal or use an existing one with its secert.
+You can create a service principal or use an existing one with its secret.
 
 * You can either [create a new service principal & secret](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) using the Azure Portal.
 
@@ -70,7 +64,7 @@ To use a User-Assigned Managed Identity for Key Vault access:
   ```
 * Save the identity client ID, as this is needed in a subsequent step.
 
-To use a System-Assigned Managed Idenity:
+To use a System-Assigned Managed Identity:
 * Enable System-Assigned Managed Identity by following [these instructions](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/qs-configure-cli-windows-vm#enable-system-assigned-managed-identity-on-an-existing-azure-vm).
 * Get the principal ID of the System-Assigned Managed Identity:
   ```shell
