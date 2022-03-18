@@ -6,7 +6,7 @@
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:2.0.0-main-03-17-2022-dfef2a5d`
 * image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:2.0.0-main-03-17-2022-dfef2a5d`
 * Change Log -
-  * BREAKING CHANGE -- Ingest Prometheus metrics to a new mdm namespace (move from `prometheus` namespace to `_azure_managed_prometheus` namespace). See more details [here](https://eng.ms/docs/products/geneva/metrics/prometheus/prometheusnamespace)
+  * BREAKING CHANGE -- Ingest Prometheus metrics to a new mdm namespace (move from `prometheus` namespace to `_azure_managed_prometheus` namespace). See more details [here](./PrometheusNamespace.md)
   * Bug fix - Target windows kubelets from replica in advanved mode when windowsDaemonset=false
   * Bug fix - Fix NODE_NAME (to be windows node's name rather than replica/linux node's name) for windows-exporter & wndows-kube-proxy targets when scraped from replica (i.e mode.advanced=false)
   * Bug fix - Do not scrape cadvisor target for windows nodes, when mode.advanced=false
