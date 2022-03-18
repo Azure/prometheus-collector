@@ -1,0 +1,19 @@
+#export MDSD_ROLE_PREFIX="/var/run/mdsd/default"
+#export MDSD_OPTIONS="-d -A -r ${MDSD_ROLE_PREFIX}"
+export MDSD_LOG="/opt/microsoft/linuxmonagent"
+export SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
+export MDSD_FLUENT_SOCKET_PORT="28230"
+export ENABLE_MCS="true"
+export MONITORING_USE_GENEVA_CONFIG_SERVICE="false"
+export MDSD_USE_LOCAL_PERSISTENCY="false"
+#export MDSD_SPOOL_DIRECTORY="/opt/microsoft/linuxmonagent"
+#export MDSD_OPTIONS="-A -c /etc/mdsd.d/mdsd.xml -r ${MDSD_ROLE_PREFIX} -S ${MDSD_SPOOL_DIRECTORY}/eh -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos"
+#export ENABLE_ODS_TELEMETRY_FILE="true"
+#export HOSTNAME_OVERRIDE="${NODE_NAME}"
+#export MDSD_TCMALLOC_RELEASE_FREQ_SEC=1
+#export MDSD_COMPRESSION_ALGORITHM=LZ4
+#export SSL_CERT_DIR="/etc/ssl/certs"
+# increase the size of msgpack items mdsd will accept, otherwise they will be silently dropped. These values were arbitrairly chosen to be 10 or 100 times larger than the defaults.
+#export MDSD_MSGPACK_ARRAY_SIZE_ITEMS=10000000
+#export MDSD_MSGPACK_MAP_SIZE_ITEMS=10000000
+#export MDSD_MSGPACK_NESTING_LEVEL=100

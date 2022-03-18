@@ -52,6 +52,13 @@ gem install re2
 #mv ./otelcol_linux_amd64 /opt/microsoft/otelcollector29/otelcollector
 #chmod 777 /opt/microsoft/otelcollector29/otelcollector
 
+echo "Downloading MDSD"
+wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/azure-mdsd_1.16.0-build.develop.2750_x86_64.deb
+/usr/bin/dpkg -i $TMPDIR/azure-mdsd*.deb
+cp -f $TMPDIR/envmdsd /etc/mdsd.d
+# Create the following directory for logs
+mkdir /opt/microsoft/linuxmonagent
+
 # Install Telegraf
 echo "Installing telegraf..."
 wget https://dl.influxdata.com/telegraf/releases/telegraf-1.21.4_linux_amd64.tar.gz
@@ -110,13 +117,18 @@ fi
 echo "deb [arch=amd64] https://packages.microsoft.com/repos/$REPO_NAME $VERSION_CODENAME main" | sudo tee -a /etc/apt/sources.list.d/azure.list
 sudo apt-get update
 
+
+wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/metricsext2_2.2022.201.001-9e07c0-_focal_amd64.deb
+/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+
+sudo apt --fix-broken install -y
+/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+
+
 # Pinning to the latest stable version of ME
 #sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
-wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2022.309.1319-a0a45f-_focal_amd64.deb
-/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
-sudo apt --fix-broken install -y
-#/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb   -- dont need reinstall (for now)
 
+# sudo apt-get install -y metricsext2=2.2022.201.001-9e07c0-~focal
 
 # Cleaning up unused packages
 echo "Cleaning up packages used for re2 gem install..."

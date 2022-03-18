@@ -4,30 +4,6 @@
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
 echo "MODE="$MODE
-echo "CONTROLLER_TYPE="$CONTROLLER_TYPE
-
-#resourceid override.
-if [ -z $AKS_RESOURCE_ID ]; then
-      echo "AKS_RESOURCE_ID is empty or not set."
-      if [ -z $CLUSTER ]; then
-            echo "CLUSTER is empty or not set. Using $NODE_NAME as CLUSTER"
-            export customResourceId=$NODE_NAME
-            echo "export customResourceId=$NODE_NAME" >> ~/.bashrc
-            source ~/.bashrc
-            echo "customResourceId:$customResourceId"
-      else
-            echo "Using CLUSTER as $CLUSTER"
-            export customResourceId=$CLUSTER
-            echo "export customResourceId=$CLUSTER" >> ~/.bashrc
-            source ~/.bashrc
-            echo "customResourceId:$customResourceId"
-      fi
-else
-      export customResourceId=$AKS_RESOURCE_ID
-      echo "export customResourceId=$AKS_RESOURCE_ID" >> ~/.bashrc
-      source ~/.bashrc
-      echo "customResourceId:$customResourceId"
-fi
 
 #set agent config schema version
 if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
@@ -153,13 +129,12 @@ else
 fi 
 
 source ~/.bashrc
+echo "Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
 
 #start cron daemon for logrotate
 service cron restart
 
-#start otelcollector
-echo "Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
-
+echo "CONTROLLER_TYPE="$CONTROLLER_TYPE
 #get controller kind in lowercase, trimmed
 controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
 if [ $controllerType = "replicaset" ]; then
@@ -179,7 +154,104 @@ fi
 export ME_CONFIG_FILE=$meConfigFile	
 echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
 source ~/.bashrc
+echo "ME_CONFIG_FILE"$ME_CONFIG_FILE
 
+if [ "${MAC}" != "true" ]; then
+      if [ -z $CLUSTER ]; then
+            echo "CLUSTER is empty or not set. Using $NODE_NAME as CLUSTER"
+            export customResourceId=$NODE_NAME
+            echo "export customResourceId=$NODE_NAME" >> ~/.bashrc
+            source ~/.bashrc
+            echo "customResourceId:$customResourceId"
+      else
+            echo "Using CLUSTER as $CLUSTER"
+            export customResourceId=$CLUSTER
+            echo "export customResourceId=$CLUSTER" >> ~/.bashrc
+            source ~/.bashrc
+            echo "customResourceId:$customResourceId"
+      fi
+
+      # Make a copy of the mounted akv directory to see if it changes
+      mkdir -p /opt/akv-copy
+      cp -r /etc/config/settings/akv /opt/akv-copy
+
+      echo "finding files from akv in /etc/config/settings/akv to decode..."
+      decodeLocation="/opt/akv/decoded"
+      # secrets can only be alpha numeric chars and dashes
+      ENCODEDFILES=/etc/config/settings/akv/*
+      mkdir -p $decodeLocation
+      for ef in $ENCODEDFILES
+      do
+            name="$(basename -- $ef)"
+            echo "decoding $name into $decodeLocation ..."
+            base64 -d $ef > $decodeLocation/$name
+      done
+
+      echo "finding decoded files from $decodeLocation ..."
+      DECODEDFILES=$decodeLocation/*
+      decodedFiles=""
+      for df in $DECODEDFILES
+      do
+            echo "found $df"
+            if [ ${#decodedFiles} -ge 1 ]; then
+                  decodedFiles=$decodedFiles:$df
+            else
+                  decodedFiles=$df
+            fi
+      done
+
+      export AZMON_METRIC_ACCOUNTS_AKV_FILES=$(echo $decodedFiles)
+      echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
+      source ~/.bashrc
+
+      echo "AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
+      
+      echo "starting metricsextension"
+      # will need to rotate the entire log location
+      # will need to remove accountname fetching from env
+      # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
+      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS &
+else
+      echo "Setting customResourceId for MAC mode..."
+      export customResourceId=$CLUSTER
+      echo "export customResourceId=$CLUSTER" >> ~/.bashrc
+      source ~/.bashrc
+      echo "customResourceId:$customResourceId"
+
+      echo "Setting customRegion for MAC mode..."
+      trimmedRegion=$(echo $AKSREGION | sed 's/ //g' | awk '{print tolower($0)}')
+      export customRegion=$trimmedRegion
+      echo "export customRegion=$trimmedRegion" >> ~/.bashrc
+      source ~/.bashrc
+      echo "customRegion:$customRegion"
+
+      echo "Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests..."
+      # sleep for 10 seconds
+      sleep 10
+
+      echo "Setting env variables from envmdsd file for MDSD"
+      cat /etc/mdsd.d/envmdsd | while read line; do
+            echo $line >> ~/.bashrc
+      done
+      source /etc/mdsd.d/envmdsd
+      echo "Starting MDSD..."
+      # Use options -T 0x1 or -T 0xFFFF for debug logging
+      mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
+
+      echo "Waiting for 30s for MDSD to get the config and put them in place for ME..."
+      # sleep for 30 seconds
+      sleep 30
+
+      echo "Reading me config file as a string for configOverrides paramater"
+      export meConfigString=`cat $ME_CONFIG_FILE | tr '\r' ' ' |  tr '\n' ' ' | sed 's/\"/\\"/g' | sed 's/ //g'`
+      echo "starting metricsextension"
+      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc -ConfigOverrides $meConfigString &
+fi
+
+#get ME version
+dpkg -l | grep metricsext | awk '{print $2 " " $3}'
+
+#start otelcollector
 # will need to rotate log file
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
       echo "starting otelcollector with DEFAULT prometheus configuration...."
@@ -191,53 +263,6 @@ fi
 
 echo "started otelcollector"
 
-# Make a copy of the mounted akv directory to see if it changes
-mkdir -p /opt/akv-copy
-cp -r /etc/config/settings/akv /opt/akv-copy
-
-echo "finding files from akv in /etc/config/settings/akv to decode..."
-decodeLocation="/opt/akv/decoded"
-# secrets can only be alpha numeric chars and dashes
-ENCODEDFILES=/etc/config/settings/akv/*
-mkdir -p $decodeLocation
-for ef in $ENCODEDFILES
-do
- name="$(basename -- $ef)"
- echo "decoding $name into $decodeLocation ..."
- base64 -d $ef > $decodeLocation/$name
-done
-
-
-echo "finding decoded files from $decodeLocation ..."
-DECODEDFILES=$decodeLocation/*
-decodedFiles=""
-for df in $DECODEDFILES
-do
- echo "found $df"
- if [ ${#decodedFiles} -ge 1 ]; then
-  decodedFiles=$decodedFiles:$df
- else
-  decodedFiles=$df
- fi
-done
-
-
-export AZMON_METRIC_ACCOUNTS_AKV_FILES=$(echo $decodedFiles)
-echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
-source ~/.bashrc
-
-echo "AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
-
-echo "starting metricsextension"
-
-echo "ME_CONFIG_FILE"$ME_CONFIG_FILE
-# will need to rotate the entire log location
-# will need to remove accountname fetching from env
-# Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
-/usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS &
-
-#get ME version
-dpkg -l | grep metricsext | awk '{print $2 " " $3}'
 #get ruby version
 ruby --version
 
