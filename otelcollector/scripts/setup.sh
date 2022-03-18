@@ -123,7 +123,6 @@ wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/metricsext2_2.2022.201
 /usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 sudo apt --fix-broken install -y
-
 /usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 
@@ -144,7 +143,7 @@ sudo apt-get autoremove -y
 
 #cleanup all install
 echo "cleaning up all install.."
-#rm -f $TMPDIR/metricsext2*.deb
+rm -f $TMPDIR/metricsext2*.deb
 rm -f $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz
 rm -rf $TMPDIR/prometheus-2.25.2.linux-amd64
 rm -f $TMPDIR/telegraf*.gz

@@ -69,9 +69,9 @@ Enabling `--set advanced.mode=true` for large clusters with more than 50 nodes a
 helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 1.1.2-main-03-07-2022-df71b65a
 ```
  **Example (using Monitoring account)**
-
+#### **Note that the chart deployment has to be in the kube-system namespace, else the deployment will fail**  
 ```shell
-helm upgrade --install <chart_release_name> ./prometheus-collector-1.1.2-main-03-07-2022-df71b65a.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="/subscriptions/<my_cluster_sub_id>/resourceGroups/<my_cluster_resource_group>/providers/Microsoft.ContainerService/managedClusters/<my_cluster>" --set azureResourceRegion="eastus" --namespace=<my_prom_collector_namespace> --create-namespace
+helm upgrade --install <chart_release_name> ./prometheus-collector-1.1.2-main-03-07-2022-df71b65a.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="/subscriptions/<my_cluster_sub_id>/resourceGroups/<my_cluster_resource_group>/providers/Microsoft.ContainerService/managedClusters/<my_cluster>" --set azureResourceRegion="eastus" --namespace=kube-system --create-namespace
 ```
 
 
