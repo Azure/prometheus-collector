@@ -117,18 +117,13 @@ fi
 echo "deb [arch=amd64] https://packages.microsoft.com/repos/$REPO_NAME $VERSION_CODENAME main" | sudo tee -a /etc/apt/sources.list.d/azure.list
 sudo apt-get update
 
-
-wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/metricsext2_2.2022.201.001-9e07c0-_focal_amd64.deb
-/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
-
-sudo apt --fix-broken install -y
-/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
-
-
 # Pinning to the latest stable version of ME
 #sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
 
-# sudo apt-get install -y metricsext2=2.2022.201.001-9e07c0-~focal
+wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/metricsext2_2.2022.201.001-9e07c0-_focal_amd64.deb
+/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+sudo apt --fix-broken install -y
+/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 # Cleaning up unused packages
 echo "Cleaning up packages used for re2 gem install..."
