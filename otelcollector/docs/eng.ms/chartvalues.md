@@ -13,7 +13,7 @@
 | clusterName | string | <mark>`Required`</mark> | `""` | name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped |
 | image.pullPolicy | string | Optional | `"IfNotPresent"` |  |
 | image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images"` |  |
-| image.tag | string | Optional | `"1.1.2-main-03-07-2022-df71b65a"` |  |
+| image.tag | string | Optional | `"2.0.0-main-03-17-2022-dfef2a5d"` |  |
 | internalSettings.intEnvironment | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes for Geneva team |
 | internalSettings.clusterOverride | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes for Geneva team |
 | mode.advanced | bool | Optional | `false` | if mode.advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset. On bigger clusters (> 50+ nodes and > 1500+ pods), it is highly recommended to set this to `true`, as this will distribute the metric volumes to individual nodes as nodes & pods scale out & grow. Note:- When this is set to `true`, the `up` metric for the node target will be generated from the replica, so when the node (and daemonset in the node) becomes unvailable), the target availability can still be tracked.
@@ -93,5 +93,7 @@
 | keepListRegexes.windowsKubeProxy | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for windows kube-proxy
 | prometheus-node-exporter.service.targetPort | INT | Optional | `true` | `linux only` - when a port is specified, node exporter uses this as bind/listen port, both prometheus-node-exporter.service.targetPort and prometheus-node-exporter.service.port should be set for this to work. |
 | prometheus-node-exporter.service.port | INT | Optional | `true` | `linux only` - when a port is specified, node exporter uses this as bind/listen port |
+| kube-state-metrics.metricAnnotationsAllowList | [string] | Optional | `{}` | `requires scrapeTargets.kubeState` - adds annotations as scrape labels to kube-state-metrics comma separated list of `objects\=\[annotation1\,annotation1\,...\]` (*note `=`,`[`, `]`,`,` for each item need to be escaped) use `*` for all(has perf impact), example `{pods\=annotation1\,annotation2\],namespaces\=\[*\]}` [annotations are subject to coercion](https://github.com/kubernetes/kube-state-metrics#conflict-resolution-in-label-names) |
+| kube-state-metrics.metricLabelsAllowlist | [string] | Optional | `{}` | `requires scrapeTargets.kubeState` - adds labels as scrape labels to kube-state-metrics comma separated list of `objects\=\[label1\,label2\,...\]` (*note `=`,`[`, `]`,`,` for each item need to be escaped, however not between items) use `*` for all(has perf impact), example `{pods\=label1\,label2\],namespaces\=\[*\]}` [labels are subject to coercion](https://github.com/kubernetes/kube-state-metrics#conflict-resolution-in-label-names) |
 
 ----------------------------------------------
