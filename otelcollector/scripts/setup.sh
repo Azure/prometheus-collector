@@ -53,7 +53,7 @@ gem install re2
 #chmod 777 /opt/microsoft/otelcollector29/otelcollector
 
 echo "Downloading MDSD"
-wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/azure-mdsd_1.16.0-build.develop.2750_x86_64.deb
+wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-support-official/azure-mdsd_1.17.1-build.master.377_x86_64.deb
 /usr/bin/dpkg -i $TMPDIR/azure-mdsd*.deb
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for logs
@@ -118,12 +118,12 @@ echo "deb [arch=amd64] https://packages.microsoft.com/repos/$REPO_NAME $VERSION_
 sudo apt-get update
 
 # Pinning to the latest stable version of ME
-#sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
+sudo apt-get install -y metricsext2=2.2022.312.2300-d1b4f6-~focal
 
-wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/metricsext2_2.2022.201.001-9e07c0-_focal_amd64.deb
-/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
-sudo apt --fix-broken install -y
-/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+#wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/metricsext2_2.2022.201.001-9e07c0-_focal_amd64.deb
+#/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+#sudo apt --fix-broken install -y
+#/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 # Cleaning up unused packages
 echo "Cleaning up packages used for re2 gem install..."
