@@ -119,15 +119,20 @@ func (mg *metricGroupPdata) sortPoints() {
 }
 
 func (mg *metricGroupPdata) toDistributionPoint(orderedLabelKeys []string, dest *pdata.HistogramDataPointSlice) bool {
-	if !mg.hasCount || len(mg.complexValue) == 0 {
+	fmt.Printf("%d", len(mg.complexValue))
+	if !mg.hasCount {
 		return false
 	}
-
 	mg.sortPoints()
+
+	boundsSize := len(mg.complexValue)-1
+	if len(mg.complexValue) != 0 {
+		boundsSize = 0
+	}
 
 	// for OCAgent Proto, the bounds won't include +inf
 	// TODO: (@odeke-em) should we also check OpenTelemetry Pdata for bucket bounds?
-	bounds := make([]float64, len(mg.complexValue)-1)
+	bounds := make([]float64, boundsSize)
 	bucketCounts := make([]uint64, len(mg.complexValue))
 
 	pointIsStale := value.IsStaleNaN(mg.sum) || value.IsStaleNaN(mg.count)
@@ -279,6 +284,11 @@ func (mf *metricFamilyPdata) loadMetricGroupOrCreate(groupKey string, ls labels.
 func (mf *metricFamilyPdata) Add(metricName string, ls labels.Labels, t int64, v float64) error {
 	groupKey := mf.getGroupKey(ls)
 	mg := mf.loadMetricGroupOrCreate(groupKey, ls, t)
+
+	if strings.HasPrefix(metricName, "myapp_temperature_histogram") {
+		fmt.Printf(metricName)
+	}
+
 	switch mf.mtype {
 	case pdata.MetricDataTypeHistogram, pdata.MetricDataTypeSummary:
 		switch {
