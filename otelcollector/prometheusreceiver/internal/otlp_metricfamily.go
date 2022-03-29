@@ -119,7 +119,7 @@ func (mg *metricGroupPdata) sortPoints() {
 }
 
 func (mg *metricGroupPdata) toDistributionPoint(orderedLabelKeys []string, dest *pdata.HistogramDataPointSlice) bool {
-	fmt.Printf("%d", len(mg.complexValue))
+	fmt.Printf("complex value: %d", len(mg.complexValue))
 	if !mg.hasCount {
 		return false
 	}
@@ -137,6 +137,7 @@ func (mg *metricGroupPdata) toDistributionPoint(orderedLabelKeys []string, dest 
 
 	pointIsStale := value.IsStaleNaN(mg.sum) || value.IsStaleNaN(mg.count)
 
+	if boundsSize != 0 {
 	for i := 0; i < len(mg.complexValue); i++ {
 		if i != len(mg.complexValue)-1 {
 			// not need to add +inf as bound to oc proto
@@ -152,6 +153,7 @@ func (mg *metricGroupPdata) toDistributionPoint(orderedLabelKeys []string, dest 
 			adjustedCount -= mg.complexValue[i-1].value
 		}
 		bucketCounts[i] = uint64(adjustedCount)
+	}
 	}
 
 	point := dest.AppendEmpty()
@@ -284,10 +286,6 @@ func (mf *metricFamilyPdata) loadMetricGroupOrCreate(groupKey string, ls labels.
 func (mf *metricFamilyPdata) Add(metricName string, ls labels.Labels, t int64, v float64) error {
 	groupKey := mf.getGroupKey(ls)
 	mg := mf.loadMetricGroupOrCreate(groupKey, ls, t)
-
-	if strings.HasPrefix(metricName, "myapp_temperature_histogram") {
-		fmt.Printf(metricName)
-	}
 
 	switch mf.mtype {
 	case pdata.MetricDataTypeHistogram, pdata.MetricDataTypeSummary:
