@@ -119,16 +119,17 @@ func (mg *metricGroupPdata) sortPoints() {
 }
 
 func (mg *metricGroupPdata) toDistributionPoint(orderedLabelKeys []string, dest *pdata.HistogramDataPointSlice) bool {
-	fmt.Printf("complex value: %d", len(mg.complexValue))
+	fmt.Printf("complex value: %d\n", len(mg.complexValue))
 	if !mg.hasCount {
 		return false
 	}
 	mg.sortPoints()
 
 	boundsSize := len(mg.complexValue)-1
-	if len(mg.complexValue) != 0 {
+	if len(mg.complexValue) == 0 {
 		boundsSize = 0
 	}
+	fmt.Printf("bounds size: %d", boundsSize)
 
 	// for OCAgent Proto, the bounds won't include +inf
 	// TODO: (@odeke-em) should we also check OpenTelemetry Pdata for bucket bounds?
@@ -144,6 +145,7 @@ func (mg *metricGroupPdata) toDistributionPoint(orderedLabelKeys []string, dest 
 			bounds[i] = mg.complexValue[i].boundary
 		}
 		adjustedCount := mg.complexValue[i].value
+		fmt.Printf("adjustedCount: %d", adjustedCount)
 		// Buckets still need to be sent to know to set them as stale,
 		// but a staleness NaN converted to uint64 would be an extremely large number.
 		// Setting to 0 instead.
