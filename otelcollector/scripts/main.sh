@@ -4,7 +4,7 @@
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
 #Run inotify as a daemon to track changes to the dcr/dce config.
-inotifywait /etc/mdsd.d/config-cache/metricsextension --daemon --recursive --outfile "/opt/inotifyoutput-mdsd-config.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
+inotifywait /etc/mdsd.d/config-cache/metricsextension --daemon --recursive --outfile "/opt/inotifyoutput-mdsd-config.txt" --event create,delete,modify --format '%e : %T' --timefmt '+%s'
 
 
 echo "MODE="$MODE
