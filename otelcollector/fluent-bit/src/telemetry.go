@@ -140,22 +140,29 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 		// Reading AMCS config file for telemetry
 		amcsConfigFile, err := os.Open(amcsConfigFilePath)
 		if err != nil {
-			Log("Error while opening AMCS config file - %v\n", err)
+			message := fmt.Sprintf("Error while opening AMCS config file - %v\n", err)
+			Log(message)
+			SendException(message)
 		}
 		Log("Successfully read AMCS config file contents for telemetry\n")
 		defer amcsConfigFile.Close()
 
 		amcsConfigFileContents, err := ioutil.ReadAll(amcsConfigFile)
 		if err != nil {
-			Log("Error while reading AMCS config file contents - %v\n", err)
+			message := fmt.Sprintf("Error while reading AMCS config file contents - %v\n", err)
+			Log(message)
+			SendException(message)
 		}
 
 		var amcsConfig map[string]interface{}
 
 		err = json.Unmarshal([]byte(amcsConfigFileContents), &amcsConfig)
 		if err != nil {
-			Log("Error while unmarshaling AMCS config file contents - %v\n", err)
+			message := fmt.Sprintf("Error while unmarshaling AMCS config file contents - %v\n", err)
+			Log(message)
+			SendException(message)
 		}
+
 		// iterate through keys and parse dcr name
 		for key, _ := range amcsConfig {
 			Log("Parsing %v for extracting DCR:", key)
@@ -163,12 +170,24 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			// Expecting a key in this format to extract out DCR Id -
 			// https://<dce>.eastus2euap-1.metrics.ingest.monitor.azure.com/api/v1/dataCollectionRules/<dcrid>/streams/Microsoft-PrometheusMetrics
 			if len(splitKey) == 9 {
-				CommonProperties["DCRId"] = splitKey[6]
+				dcrId := CommonProperties["DCRId"]
+				if dcrId == "" {
+					CommonProperties["DCRId"] = splitKey[6]
+				} else {
+					dcrIdArray := dcrId + ";" + splitKey[6]
+					CommonProperties["DCRId"] = dcrIdArray
+				}
 			} else {
 				message := fmt.Sprintf("AMCS token config json key contract has changed, unable to get DCR ID. Logging the entire key as DCRId")
 				Log(message)
 				SendException(message)
-				CommonProperties["DCRId"] = key
+				dcrId := CommonProperties["DCRId"]
+				if dcrId == "" {
+					CommonProperties["DCRId"] = key
+				} else {
+					dcrIdArray := dcrId + ";" + key
+					CommonProperties["DCRId"] = dcrIdArray
+				}
 			}
 		}
 	}
