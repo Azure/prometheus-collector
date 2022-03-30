@@ -37,13 +37,6 @@ else
   fi
 fi
 
-# Adding livess probe check for AMCS config update by MDSD
-if [ -s "/opt/inotifyoutput-mdsd-config.txt" ]  #file exists and size > 0
-then
-  echo "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed" > /dev/termination-log
-  exit 1
-fi
-
 
 if [ ! -s "/opt/inotifyoutput.txt" ] #file doesn't exists or size == 0
 then
