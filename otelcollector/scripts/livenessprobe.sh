@@ -48,3 +48,14 @@ else
   fi
 fi
 
+if [ ! -s "/opt/inotifyoutput-mdsd-config.txt" ] #file doesn't exists or size == 0
+then
+  exit 0
+else
+  if [ -s "/opt/inotifyoutput-mdsd-config.txt" ]  #file exists and size > 0
+  then
+    echo "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed" > /dev/termination-log
+    exit 1
+  fi
+fi
+
