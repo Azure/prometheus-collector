@@ -1,11 +1,7 @@
 #!/bin/bash
 
 #Run inotify as a daemon to track changes to the mounted configmap.
-inotifywait /etc/config/settings /etc/mdsd.d/config-cache/metricsextension --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
-
-#Run inotify as a daemon to track changes to the dcr/dce config.
-inotifywait /etc/mdsd.d/config-cache/metricsextension --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event create,delete,modify --format '%e : %T' --timefmt '+%s'
-
+inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
 echo "MODE="$MODE
 
@@ -276,6 +272,10 @@ echo "starting telegraf"
 echo "starting fluent-bit"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
 dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'
+
+#Run inotify as a daemon to track changes to the dcr/dce config.
+echo "starting inotify for watching mdsd logs"
+inotifywait /etc/mdsd.d/config-cache/metricsextension --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event create,delete,modify --format '%e : %T' --timefmt '+%s'
 
 shutdown() {
 	echo "shutting down"
