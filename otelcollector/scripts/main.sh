@@ -275,7 +275,7 @@ dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'
 
 #Run inotify as a daemon to track changes to the dcr/dce config.
 echo "starting inotify for watching mdsd config update"
-inotifywait /etc/mdsd.d/config-cache/metricsextension/_default_MonitoringAccount_Configuration.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event create,delete,modify --format '%e : %T' --timefmt '+%s'
+inotifywait /etc/mdsd.d/config-cache/metricsextension/_default_MonitoringAccount_Configuration.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
 
 shutdown() {
 	echo "shutting down"
