@@ -233,6 +233,12 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 			logEntry = fmt.Sprintf("%s %s", ToString(record["caller"]), ToString(record["msg"]))
 		} else if tag == fluentbitContainerLogsTag {
 			logEntry = ToString(record["log"])
+			if strings.Contains(logEntry, "cmd.go") {
+				Log("time: %v", record["time"])
+				Log("stream: %v", record["stream"])
+				Log("logtag: %v", record["logtag"])
+				Log("log: %v", record["log"])
+			}
 		}
 		logLines = append(logLines, logEntry)
 	}
