@@ -11,7 +11,7 @@ There are 4 possible cases to customize this behavior -
 
 ```shell
 Note: 
-`up` metric is not part of the list because, they will be ingested per scrape,per target, ir-respective of keepLists specified, as `up` metric is actually not scraped but mproduced as result of scrape by the collector.
+`up` metric is not part of the list because, they will be ingested per scrape,per target, ir-respective of keepLists specified, as `up` metric is actually not scraped but produced as result of scrape by the collector.
 For histograms & summaries, each series has to be included explicitly in the list (*bucket, *sum, *count)
 ```
 
