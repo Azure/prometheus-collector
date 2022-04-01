@@ -1,6 +1,6 @@
 # Minimal Ingestion Profile
 
-To ingest only minimal data (series/metrics used by our dashboards/rec.rules & default alerts) from default scrape targets , this setting (`minimalIngestionProfile="true"`) is enabled by deafult. This will help reduce/control ingestion volume for default targets.
+To ingest only minimal data (series/metrics used by our dashboards/rec.rules & default alerts) from default scrape targets , this setting (`minimalIngestionProfile="true"`) is enabled by default. This will help reduce/control ingestion volume for default targets.
 
 There are 4 possible cases to customize this behavior -
 
