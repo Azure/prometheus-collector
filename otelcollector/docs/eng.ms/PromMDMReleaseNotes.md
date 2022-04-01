@@ -1,5 +1,11 @@
 # Working with Prometheus metrics in MDM
 
+## Release TBD [Breaking changes]
+
+* chart - `TBD`
+* image - `TBD`
+* Change Log -
+  * BREAKING CHANGE -- To reduce ingestion volume,with this release, by default we will be ingesting only metrics consumed by default dashboards for defaut targets (no change to your custom targets). If you were using metrics scraped by our default targets (dns,kubelet,cadvisor,kube-state-metrics,kube-proxy,node-exporter,api-server) which were not covered in our default dashboards you need to whilt-list them. Please see [here](./PromIngestionVolume.md) for more details and also how to disable this behavior if you need to.
 
 ## Release 02-15-2022 [Breaking changes]
 

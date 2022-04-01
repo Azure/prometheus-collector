@@ -24,7 +24,7 @@ scrapeTargets:
   # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   prometheusCollectorHealth: true
 
-# when minimalIngestionProfile is enabled, we will ingest only hand-picked/selected metrics per default target. see the list here : 
+# when minimalIngestionProfile is enabled, we will ingest only hand-picked/selected metrics per default target. see the list of metrics included per default target in our docs.
 minimalIngestionProfile: true
   
 # The following setting will allow only the metrics for each target whose names match the regex string. When this list is specified with minimalIngestionProfile=true, then this will be in addition to the metrics collected by the profile
