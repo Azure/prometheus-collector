@@ -1,0 +1,67 @@
+name: run-comparison-perf-test
+on:
+  workflow_dispatch:
+    inputs:
+      helmChartTag1:
+        description: 'SemVer of helm chart to deploy first in the format of 0.0.6-main-09-12-2021-4a8de406'
+        required: true
+      helmChartTag2:
+        description: 'SemVer of helm chart to deploy second in the format of 0.0.6-main-09-12-2021-4a8de406'
+        required: true
+jobs:
+  run-with-first-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set-workflow-initiator
+        run: echo "Initiated by - ${GITHUB_ACTOR}"
+      - name: Show-versions-On-deployment-machine
+        run: lsb_release -a && helm version
+      - name: Set-Helm-OCI-Experimental-feature
+        run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
+      - name: Set-MCR-HELM-CHART-Repository
+        run: echo "MCR_REPOSITORY_HELM=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector" >> $GITHUB_ENV 
+      - name: Login-to-Azure-Key-Vault
+        uses: Azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
+      - name: Get-kube-config-from-Key-Vault
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "cdpxacrcredskv"
+          secrets: 'ci-perf-aks-kubeconfig'
+        id: GetKubeConfig
+      - name: Checkout-code
+        uses: actions/checkout@v2
+      - name: Get-kube-config
+        run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ci-perf-aks-kubeconfig }}" > ~/.kube/config
+      - name: Run-reference-app-perf-mode
+        run: kubectl apply -f ./otelcollector/referenceapp/prometheus-reference-app-perf.yaml
+      - name: Pull-HELM-chart-and-Deploy-to-perf-cluster
+        run: helm pull oci://${{ env.MCR_REPOSITORY_HELM }} --version ${{ github.event.inputs.helmChartTag1 }} && helm upgrade --install prom-perf ./prometheus-collector-${{ github.event.inputs.helmChartTag1 }}.tgz --dependency-update --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsprodaccount2}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-perf-aks" --set azureMetricAccount.defaultAccountName="containerinsightsprodaccount2" --set azureKeyVault.clientId=${{ secrets.CI_PROMETHEUS_KV_CLIENTID }} --set azureKeyVault.clientSecret=${{ secrets.CI_PROMETHEUS_KV_CLIENTSECRET }} --set resources.deployment.limits.cpu=10 --set resources.deployment.limits.memory=20Gi -n monitoring --create-namespace
+  run-with-second-chart:
+    runs-on: ubuntu-latest
+    needs: run-with-first-chart
+    environment: wait-6-hours
+    steps:
+      - name: Set-workflow-initiator
+        run: echo "Initiated by - ${GITHUB_ACTOR}"
+      - name: Show-versions-On-deployment-machine
+        run: lsb_release -a && helm version
+      - name: Set-Helm-OCI-Experimental-feature
+        run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
+      - name: Set-MCR-HELM-CHART-Repository
+        run: echo "MCR_REPOSITORY_HELM=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector" >> $GITHUB_ENV 
+      - name: Login-to-Azure-Key-Vault
+        uses: Azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
+      - name: Get-kube-config-from-Key-Vault-sp
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "cdpxacrcredskv"
+          secrets: 'ci-perf-aks-kubeconfig'
+        id: GetKubeConfig-sp
+      - name: Get-kube-config
+        run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-sp.outputs.ci-perf-aks-kubeconfig }}" > ~/.kube/config
+      - name: Pull-HELM-chart-and-Deploy-to-perf-cluster
+        run: helm pull oci://${{ env.MCR_REPOSITORY_HELM }} --version ${{ github.event.inputs.helmChartTag2 }} && helm upgrade --install prom-perf ./prometheus-collector-${{ github.event.inputs.helmChartTag1 }}.tgz --dependency-update --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsprodaccount2}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-perf-aks" --set azureMetricAccount.defaultAccountName="containerinsightsprodaccount2" --set azureKeyVault.clientId=${{ secrets.CI_PROMETHEUS_KV_CLIENTID }} --set azureKeyVault.clientSecret=${{ secrets.CI_PROMETHEUS_KV_CLIENTSECRET }} --set resources.deployment.limits.cpu=10 --set resources.deployment.limits.memory=20Gi -n monitoring --create-namespace

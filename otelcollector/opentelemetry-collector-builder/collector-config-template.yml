@@ -26,3 +26,7 @@ service:
       receivers: [prometheus]
       exporters: [otlp]
       processors: [batch, resource]
+  telemetry:
+    logs:
+      level: debug
+      encoding: json
