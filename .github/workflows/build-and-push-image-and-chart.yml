@@ -148,7 +148,8 @@ jobs:
           format: 'table'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
-          skip-dirs: ''
+          #below files needs to be excluded on 04/04/2022 due to the newest CVE == avd.aquasec.com/nvd/cve-2022-23648.
+          skip-files: 'opt/microsoft/otelcollector/otelcollector,opt/promconfigvalidator,opt/telegraf/telegraf'
           exit-code: '1'
           timeout: '5m0s'
           ignore-unfixed: true
