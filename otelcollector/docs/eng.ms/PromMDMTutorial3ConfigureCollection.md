@@ -13,6 +13,26 @@ If you'd like to scrape additional custom targets, then create a Prometheus conf
 
 ### Customizing default targets
 If you'd like to customize any of the default targets to filter out the metrics by their names you can use the chart value settings ([ChartValues](https://eng.ms/docs/products/geneva/metrics/prometheus/chartvalues)) - keepListRegexes. This setting is per job, for example keepListRegexes.apiServer is the metric filtering setting for the default target - api server.
+
+By default we ingest only minimal metrics as required by dashboards, rec.rules & alerts. Read about ingestion volume control & customizations [here](./PromIngestionVolume.md)
+
+Specify if you'd like to filter IN metrics collected for the default targets using regex based filtering.
+
+    ```shell
+    --set keeplistRegexes.kubelet = "metricX|metricY"
+    --set keeplistRegexes.coredns= "<regex>"
+    --set keeplistRegexes.cadvisor = "<regex>"
+    --set keeplistRegexes.kubeproxy = "<regex>"
+    --set keeplistRegexes.apiserver = "<regex>"
+    --set keeplistRegexes.kubestate = "<regex>"
+    --set keeplistRegexes.nodeexporter = "<regex>"
+    --set keeplistRegexes.windowsexporter = "<regex>"
+    --set keeplistRegexes.windowskubeproxy = "<regex>"
+    ```
+  Note that if you are using  
+      1. quotes in the regex you will need to escape them using a backslash. Example - keepListRegexes.kubelet = `"test\'smetric\"s\""`  instead of `"test'smetric"s""`
+      2. backslashes in the regex, you will need to escape them. Example - keepListRegexes.kubelet = `testbackslash\\*` instead of `testbackslash\*`
+
 If you would like to further customize the default jobs to customize the collection frequency or labels etc, you could disable the corresponding default target by setting the chart value for the target to false (ex -scrapeTargets.apiServer to false) and then applying the job using custom configmap. [Here](https://github.com/Azure/prometheus-collector/tree/main/otelcollector/configmapparser/default-prom-configs) is the repository link for all the default target configurations. 
 Please see this section 'Create a configmap from your configuration file' below on how to create configmap for custom targets.
 
