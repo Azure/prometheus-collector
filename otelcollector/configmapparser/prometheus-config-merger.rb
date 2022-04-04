@@ -32,7 +32,7 @@ require_relative "ConfigParseErrorLogger"
 @nodeexporterDefaultFileDs = @defaultPromConfigPathPrefix + "nodeexporterDefaultDs.yml"
 @prometheusCollectorHealthDefaultFile = @defaultPromConfigPathPrefix + "prometheusCollectorHealth.yml"
 @windowsexporterDefaultRsSimpleFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultRsSimple.yml"
-@windowsexporterDefaultDsAdvancedFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultDsAdvanced.yml"
+@windowsexporterDefaultDsFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultDs.yml"
 @windowsexporterDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultRsAdvanced.yml"
 @windowskubeproxyDefaultFileRsSimpleFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsSimple.yml"
 @windowskubeproxyDefaultDsFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultDs.yml"
@@ -102,11 +102,18 @@ def populateDefaultPrometheusConfig
     currentControllerType = ENV["CONTROLLER_TYPE"].strip.downcase
 
     advancedMode = false #default is false
+    windowsDaemonset = false #default is false
 
     # get current mode (advanced or not...)
     currentMode = ENV["MODE"].strip.downcase
     if currentMode == "advanced"
       advancedMode = true
+    end
+
+    # get if windowsdaemonset is enabled or not (ie. WINMODE env = advanced or not...)
+    winMode = ENV["WINMODE"].strip.downcase
+    if winMode == "advanced" 
+      windowsDaemonset = true
     end
 
     defaultConfigs = []
@@ -211,13 +218,14 @@ def populateDefaultPrometheusConfig
           defaultConfigs.push(@nodeexporterDefaultFileRsSimple)
         end
       else
-        if advancedMode == true
+        if advancedMode == true && ENV["OS_TYPE"].downcase == "linux"
           if !nodeexporterMetricsKeepListRegex.nil? && !nodeexporterMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@nodeexporterDefaultFileDs, nodeexporterMetricsKeepListRegex)
           end
           contents = File.read(@nodeexporterDefaultFileDs)
           contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
           contents = contents.gsub("$$NODE_EXPORTER_TARGETPORT$$", ENV["NODE_EXPORTER_TARGETPORT"])
+          contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
           File.open(@nodeexporterDefaultFileDs, "w") { |file| file.puts contents }
           defaultConfigs.push(@nodeexporterDefaultFileDs)
         end
@@ -234,16 +242,28 @@ def populateDefaultPrometheusConfig
         if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowsexporterDefaultRsSimpleFile, winexporterMetricsKeepListRegex)
         end
+        contents = File.read(@windowsexporterDefaultRsSimpleFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowsexporterDefaultRsSimpleFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowsexporterDefaultRsSimpleFile)
-      elsif currentControllerType == @daemonsetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "windows"
+      elsif currentControllerType == @daemonsetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "windows"
         if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
-          AppendMetricRelabelConfig(@windowsexporterDefaultDsAdvancedFile, winexporterMetricsKeepListRegex)
+          AppendMetricRelabelConfig(@windowsexporterDefaultDsFile, winexporterMetricsKeepListRegex)
         end
-        defaultConfigs.push(@windowsexporterDefaultDsAdvancedFile)
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "linux"
+        contents = File.read(@windowsexporterDefaultDsFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowsexporterDefaultDsFile, "w") { |file| file.puts contents }
+        defaultConfigs.push(@windowsexporterDefaultDsFile)
+      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
         # if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
         #   AppendMetricRelabelConfig(@windowsexporterDefaultRsAdvancedFile, winexporterMetricsKeepListRegex)
         # end
+        contents = File.read(@windowsexporterDefaultRsAdvancedFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowsexporterDefaultRsAdvancedFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
       end
     end
@@ -253,16 +273,28 @@ def populateDefaultPrometheusConfig
         if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowskubeproxyDefaultFileRsSimpleFile, winkubeproxyMetricsKeepListRegex)
         end
+        contents = File.read(@windowskubeproxyDefaultFileRsSimpleFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowskubeproxyDefaultFileRsSimpleFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeproxyDefaultFileRsSimpleFile)
-      elsif currentControllerType == @daemonsetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "windows"
+      elsif currentControllerType == @daemonsetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "windows"
         if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowskubeproxyDefaultDsFile, winkubeproxyMetricsKeepListRegex)
         end
+        contents = File.read(@windowskubeproxyDefaultDsFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowskubeproxyDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeproxyDefaultDsFile)
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && ENV["OS_TYPE"].downcase == "linux"
+      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
         # if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
         #   AppendMetricRelabelConfig(@windowskubeproxyDefaultRsAdvancedFile, winkubeproxyMetricsKeepListRegex)
         # end
+        contents = File.read(@windowskubeproxyDefaultRsAdvancedFile)
+        contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+        contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+        File.open(@windowskubeproxyDefaultRsAdvancedFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeproxyDefaultRsAdvancedFile)
       end
     end

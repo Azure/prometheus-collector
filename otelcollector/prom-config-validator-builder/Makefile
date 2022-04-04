@@ -6,4 +6,4 @@ promconfigvalidator:
 	@echo "========================= go get  ========================="
 	go get
 	@echo "========================= go build  ========================="
-	go build -o promconfigvalidator .
+	go build -buildmode=pie -o promconfigvalidator .

@@ -15,7 +15,7 @@ import (
 	//"github.com/vishiy/influxexporter"
 	//"go.opentelemetry.io/collector/receiver/prometheusreceiver"
 	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
-	"go.opentelemetry.io/collector/extension/healthcheckextension"
+	//"go.opentelemetry.io/collector/extension/healthcheckextension"
 	"go.opentelemetry.io/collector/extension/pprofextension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
 )
@@ -56,7 +56,7 @@ func components() (component.Factories, error) {
 	}
 
 	extensions, err := component.MakeExtensionFactoryMap (
-		healthcheckextension.NewFactory(),
+		//healthcheckextension.NewFactory(),
 		pprofextension.NewFactory(),
 		zpagesextension.NewFactory(),
 	)

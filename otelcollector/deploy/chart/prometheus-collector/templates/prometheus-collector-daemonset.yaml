@@ -93,6 +93,13 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
+            {{- if .Values.windowsDaemonset  }}
+            - name: WINMODE
+              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- else }}
+            - name: WINMODE
+              value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- end }}
           securityContext:
             privileged: false
           volumeMounts:
@@ -164,11 +171,13 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: "{{ template "prometheus-collector.fullname" . }}-azure-kv-metricstore"
+            {{- if not .Values.azureKeyVault.useManagedIdentity }}  
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
+            {{- end }}
 {{- end }}        
 ---     
-{{- if .Values.mode.advanced  }}
+{{- if and (eq .Values.mode.advanced true) (eq .Values.windowsDaemonset true) -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -263,6 +272,13 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
+            {{- if .Values.windowsDaemonset  }}
+            - name: WINMODE
+              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- else }}
+            - name: WINMODE
+              value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- end }}
           securityContext:
             privileged: false
           volumeMounts:
@@ -334,7 +350,9 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: "{{ template "prometheus-collector.fullname" . }}-azure-kv-metricstore"
+            {{- if not .Values.azureKeyVault.useManagedIdentity }}
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
+            {{- end }}
 {{- end }}       
 ---

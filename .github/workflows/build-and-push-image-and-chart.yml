@@ -16,7 +16,7 @@ jobs:
         run: echo ("Initiated by -" + $env:GITHUB_ACTOR + $env:GITHUB_REF)
       - name: Set-branch-name-for-non-pr
         if: ${{ github.event_name != 'pull_request' }}
-        run: echo ("BRANCH_NAME=grace-win-changes") >> $env:GITHUB_ENV
+        run: echo $env:GITHUB_REF.substring(11); echo ("BRANCH_NAME=" + $env:GITHUB_REF.substring(11).replace('/','-').replace('.','-').replace('_','-').subString(0, [System.Math]::Min(90, $env:GITHUB_REF.substring(11).Length))) >> $env:GITHUB_ENV
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
         run: echo ("BRANCH_NAME=" + $env:GITHUB_HEAD_REF.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
@@ -27,7 +27,7 @@ jobs:
       - name: Set-ACR-Repository-Image
         run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $env:GITHUB_ENV
       - name: Set-image-tag-date
-        run: echo ("IMAGE_TAG_DATE="+ (Get-Date -Format "MM-dd-yyyy")) >> $env:GITHUB_ENV
+        run: echo ("IMAGE_TAG_DATE="+ (Get-Date -Date ([System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId((Get-Date), 'Pacific Standard Time')) -Format "MM-dd-yyyy")) >> $env:GITHUB_ENV
       - name: Set-commit-sha
         run: echo ("COMMIT_SHA=" + $env:GITHUB_SHA.SubString(0,8)) >> $env:GITHUB_ENV
       - name: Checkout-code
@@ -37,7 +37,7 @@ jobs:
       - name: Set-Helm-chart-version
         run: $version = Get-Content ./otelcollector/VERSION ; echo "HELM_CHART_VERSION=${version}" >> $env:GITHUB_ENV
       - name: Set-HELM-chart-semver
-        run: echo ("HELM_SEMVER=" + $env:HELM_CHART_VERSION + "-" + $env:BRANCH_NAME + "-" + $env:IMAGE_TAG_DATE + "-" + $env:COMMIT_SHA) >> $env:GITHUB_ENV
+        run: echo ("HELM_SEMVER=" + $env:HELM_CHART_VERSION + "-" + $env:BRANCH_NAME.replace('/','-').replace('.','-').replace('_','-') + "-" + $env:IMAGE_TAG_DATE + "-" + $env:COMMIT_SHA) >> $env:GITHUB_ENV
       - name: Set-image-tag
         run: echo ("IMAGE_TAG=" + $env:HELM_SEMVER + "-win") >> $env:GITHUB_ENV
       - name: Set-image-full-tag
@@ -156,7 +156,7 @@ jobs:
           format: 'table'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
-          skip-dirs: '/opt/telegraf,/opt/microsoft/otelcollector'
+          skip-dirs: '/opt/telegraf'
           exit-code: '1'
           timeout: '5m0s'
       - name: Update-HELM-dependencies
@@ -185,16 +185,23 @@ jobs:
         uses: Azure/login@v1
         with:
           creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
-      - name: Get-kube-config-from-Key-Vault
+      - name: Get-kube-config-from-Key-Vault-sp
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         uses: Azure/get-keyvault-secrets@v1
         with:
           keyvault: "cdpxacrcredskv"
           secrets: 'ci-dev-aks-wcus-kubeconfig'
-        id: GetKubeConfig
-      - name: Get-kube-config
+        id: GetKubeConfig-sp
+      - name: Get-kube-config-from-Key-Vault-msi
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
-        run: mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ci-dev-aks-wcus-kubeconfig }}" > ~/.kube/config
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "cdpxacrcredskv"
+          secrets: 'ci-dev-aks-msi-eus2-kubeconfig'
+        id: GetKubeConfig-msi
+      - name: Get-kube-config-for-dev-cluster-sp
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-sp.outputs.ci-dev-aks-wcus-kubeconfig }}" > ~/.kube/config
       - name: Wait-for-mcr-image
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
         run: |
@@ -209,9 +216,15 @@ jobs:
           done
           echo "Image not published to mcr within 5 minutes"
           exit 1
-      - name: Deploy-to-cluster
+      - name: Deploy-to-dev-cluster-sp
         if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
-        run: helm pull oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} && helm upgrade --install prom-dev ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-wcus" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.clientId=${{ secrets.CI_PROMETHEUS_KV_CLIENTID }} --set azureKeyVault.clientSecret=${{ secrets.CI_PROMETHEUS_KV_CLIENTSECRET }} --set mode.advanced=true --set internalSettings.intEnvironment=true -n monitoring --create-namespace
+        run: helm pull oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} && helm upgrade --install prom-dev ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-wcus" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.clientId=${{ secrets.CI_PROMETHEUS_KV_CLIENTID }} --set azureKeyVault.clientSecret=${{ secrets.CI_PROMETHEUS_KV_CLIENTSECRET }} --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" -n monitoring --create-namespace
+      - name: Get-kube-config-for-dev-cluster-msi
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-msi.outputs.ci-dev-aks-msi-eus2-kubeconfig }}" > ~/.kube/config
+      - name: Deploy-to-dev-cluster-msi
+        if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
+        run: helm pull oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} && helm upgrade --install prom-dev-msi ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-msi-eus2" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.useManagedIdentity=true --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" -n monitoring --create-namespace
       - name: Tag-this-push
         id: tag_version
         uses: mathieudutour/github-tag-action@v6.0
