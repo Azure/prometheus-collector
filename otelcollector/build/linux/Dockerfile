@@ -1,4 +1,4 @@
-FROM cblmariner.azurecr.io/base/core:1.0 as builder
+FROM cblmariner2preview.azurecr.io/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="omscontainers@microsoft.com"
 # ARG IMAGE_TAG="test"
@@ -12,7 +12,7 @@ ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
 COPY ./logrotate/prometheus-collector /etc/logrotate.d/
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
-RUN tdnf install -y libc-bin wget openssl curl sudo init-system-helpers net-tools cronie vim apt-transport-https locales ruby gnupg logrotate sed chmod gem procps-ng dnf busybox
+RUN tdnf install -y wget openssl curl sudo net-tools cronie vim ruby gnupg logrotate sed procps-ng dnf busybox
 RUN mkdir /busybin && busybox --install /busybin
 
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
@@ -29,9 +29,9 @@ COPY ./scripts/setup.sh ./scripts/main.sh $tmpdir/
 COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
-COPY ./build/linux/influxdb.repo /etc/yum.repos.d/influxdb.repo
+#COPY ./build/linux/influxdb.repo /etc/yum.repos.d/influxdb.repo
 COPY ./build/linux/mariner-official-extras.repo /etc/yum.repos.d/mariner-official-extras.repo
-COPY ./build/linux/tdnf.conf /etc/tdnf/tdnf.conf
+#COPY ./build/linux/tdnf.conf /etc/tdnf/tdnf.conf
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
 CMD [ "/opt/main.sh" ]

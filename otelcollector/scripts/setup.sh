@@ -80,7 +80,7 @@ echo "Installing fluent-bit..."
 #sudo echo "deb https://packages.fluentbit.io/ubuntu/xenial xenial main" >> /etc/apt/sources.list
 #sudo echo "deb http://security.ubuntu.com/ubuntu bionic-security main" >> /etc/apt/sources.list.d/bionic.list
 #sudo apt-get update
-sudo tdnf install --disablerepo="*" --enablerepo="mariner-official-base-2"   fluent-bit -y
+sudo tdnf install fluent-bit -y
 
 
 # Some dependencies were fixed with sudo apt --fix-broken, try installing td-agent-bit again
@@ -130,7 +130,7 @@ echo "Installing Metrics Extension..."
 #sudo apt-get install -y metricsext2=2.2021.924.1646-2df972-~focal
 
 #sudo curl https://raw.githubusercontent.com/microsoft/CBL-Mariner/1.0/SPECS/mariner-repos/mariner-extras.repo -o /etc/yum.repos.d/mariner-extras.repo
-sudo tdnf install cpprest grpc -y
+sudo tdnf install cpprest grpc grpc-cpp -y
 sudo tdnf --disablerepo="*" --enablerepo=mariner-official-extras install metricsext2 -y
 
 
@@ -138,9 +138,9 @@ sudo tdnf --disablerepo="*" --enablerepo=mariner-official-extras install metrics
 echo "Cleaning up packages used for re2 gem install..."
 
 #Uninstalling packages after gem install re2
-sudo tdnf remove build-essential -y
-sudo tdnf remove ruby-dev -y
-sudo tdnf remove binutils binutils-common binutils-x86-64-linux-gnu cpp cpp-9 dpkg-devel fakeroot g++ g++-9 gcc gcc-9 gcc-9-base libalgorithm-diff-perl libalgorithm-diff-xs-perl libalgorithm-merge-perl libasan5 libatomic1 libbinutils libc-dev-bin libc6-dev libcc1-0 libcrypt-devel libctf-nobfd0 libctf0 libdpkg-perl libfakeroot libfile-fcntllock-perl libgcc-9-devel libgmp-devel libgmpxx4ldbl libgomp1 libisl22 libitm1 liblocale-gettext-perl liblsan0 libmpc3 libmpfr6 libperl5.30 libquadmath0 libstdc++-9-dev libtsan0 libubsan1 linux-libc-dev make manpages manpages-dev netbase patch perl perl-modules-5.30 ruby2.6-devel ruby2.6-doc -y
+#sudo tdnf remove build-essential -y
+#sudo tdnf remove ruby-dev -y
+#sudo tdnf remove binutils binutils-common binutils-x86-64-linux-gnu cpp cpp-9 dpkg-devel fakeroot g++ g++-9 gcc gcc-9 gcc-9-base libalgorithm-diff-perl libalgorithm-diff-xs-perl libalgorithm-merge-perl libasan5 libatomic1 libbinutils libc-dev-bin libc6-dev libcc1-0 libcrypt-devel libctf-nobfd0 libctf0 libdpkg-perl libfakeroot libfile-fcntllock-perl libgcc-9-devel libgmp-devel libgmpxx4ldbl libgomp1 libisl22 libitm1 liblocale-gettext-perl liblsan0 libmpc3 libmpfr6 libperl5.30 libquadmath0 libstdc++-9-dev libtsan0 libubsan1 linux-libc-dev make manpages manpages-dev netbase patch perl perl-modules-5.30 ruby2.6-devel ruby2.6-doc -y
 
 echo "auto removing unused packages..."
 #sudo tdnf autoremove -y

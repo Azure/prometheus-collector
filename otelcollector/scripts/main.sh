@@ -237,11 +237,12 @@ dpkg -l | grep metricsext | awk '{print $2 " " $3}'
 ruby --version
 
 echo "starting telegraf"
-/opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
-#telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+#/opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
 
 echo "starting fluent-bit"
-/opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
+#/opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
+fluent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
 dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'
 
 shutdown() {
