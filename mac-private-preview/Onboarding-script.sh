@@ -29,6 +29,9 @@
 #
 # eastus2 -
 # bash Onboarding-script.sh "0e4773a2-8221-441a-a06f-17db16ab16d4" "rashmi-eus2-template" "rashmi-mac-eus2-1" "rashmi-eus2-grafana" "eastus2" "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourcegroups/rashmi-eastus2-template/providers/Microsoft.ContainerService/managedClusters/rashmi-eastus2-template"
+#
+# eastus2-1 -
+# bash Onboarding-script.sh "0e4773a2-8221-441a-a06f-17db16ab16d4" "rashmi-eus2-1-rg" "rashmi-eus2-1-mac" "rashmi-eus2-1-grafana" "eastus2" "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourcegroups/rashmi-eastus2-1/providers/Microsoft.ContainerService/managedClusters/rashmi-eastus2-1"
 
 echo "subscriptionId"= ${1}
 echo "resourceGroup" = ${2}
@@ -100,6 +103,9 @@ echo "Got System Assigned Identity for Grafana instance: $grafanaSmsi"
 echo "Removing quotes from MSI"
 grafanaSmsi=$(sed -e 's/^"//' -e 's/"$//' <<<"$grafanaSmsi")
 
+echo "Creating role definition to be able to read data from MAC"
+az deployment sub create --location $trimmedLocation --template-file RoleDefinition.json 
+
 #Template to create all resources required for MAC ingestion e2e
 echo "Creating all resources required for MAC ingestion"
 az deployment group create --resource-group $resourceGroup --template-file RootTemplate.json \
@@ -112,7 +118,7 @@ echo "Removing quotes from MAC Id"
 macId=$(sed -e 's/^"//' -e 's/"$//' <<<"$macId")
 
 echo "Assigning MAC reader role to grafana's system assigned MSI"
-az role assignment create --assignee-object-id $grafanaSmsi --assignee-principal-type ServicePrincipal --scope $macId --role "Monitoring Data Reader MAC2"
+az role assignment create --assignee-object-id $grafanaSmsi --assignee-principal-type ServicePrincipal --scope $macId --role "Monitoring Data Reader-"${subscriptionId}
 
 promQLEndpoint=$(az resource show -g $resourceGroup -n $monitoringAccountName --resource-type "Microsoft.Monitor/Accounts" --query 'properties.metrics.prometheusQueryEndpoint')
 echo "PromQLEndpoint: $promQLEndpoint"

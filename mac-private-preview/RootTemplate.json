@@ -15,12 +15,6 @@
                 "eastus2euap"
             ]
         },
-        "roleDefinitionName": {
-            "type": "string",
-            "defaultValue": "[guid(resourceGroup().id)]"
-            // [guid(subscription().subscriptionId)]
-            // "[guid(resourceGroup().id)]"
-        },
         "dceName": {
             "type": "string",
             "defaultValue": "[concat('dce-', parameters('monitoringAccountName'), '-', uniqueString(parameters('targetAKSResource')))]"
@@ -44,32 +38,6 @@
         }
     },
     "resources": [
-        {
-            "type": "Microsoft.Authorization/roleDefinitions",
-            "apiVersion": "2018-01-01-preview",
-            "name": "[parameters('roleDefinitionName')]",
-            "location": "[parameters('monitoringAccountLocation')]",
-            "properties": {
-                "assignableScopes": [
-                    "[resourceGroup().id]"
-                ],
-                "description": "Custom role Definition to allow users to query data stored in a Monitoring Account",
-                "permissions": [
-                    {
-                        "actions": [
-                            "*/read"
-                        ],
-                        "dataActions": [
-                            "*/read",
-                            "*/write"
-                        ]
-                    }
-                ],
-                // To do figure out unique names for role
-                "roleName": "Monitoring Data Reader MAC2",
-                "type": "CustomRole"
-            }
-        },
         {
             "type": "microsoft.monitor/accounts",
             "apiVersion": "2021-06-03-preview",
