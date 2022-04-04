@@ -17,7 +17,7 @@ spec:
           image: gracepromacr.azurecr.io/prometheus-reference-app:golang-082521
           env:
             - name: RUN_PERF_TEST
-              value: "false"
+              value: "true"
             - name: SCRAPE_INTERVAL
               value: "15"
             - name: METRIC_COUNT
