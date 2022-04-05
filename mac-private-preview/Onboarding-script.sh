@@ -159,7 +159,7 @@ macPromDataSourceConfig='{
 
 populatedMACPromDataSourceConfig=${macPromDataSourceConfig//PROM_QL_PLACEHOLDER/$promQLEndpoint}
 
-az grafana data-source create -n $grafanaName --definition "$populatedMACPromDataSourceConfig"
+az grafana data-source create -n $grafanaName --definition "$populatedMACPromDataSourceConfig" 
 
 echo "Downloading dashboards package"
 wget https://github.com/microsoft/Docker-Provider/raw/prometheus-collector/prometheus-collector/dashboards.tar.gz
@@ -167,7 +167,7 @@ tar -zxvf dashboards.tar.gz
 
 echo "Creating dashboards"
 for FILE in dashboards/*.json; do
-    az grafana dashboard import -g $resourceGroup -n $grafanaName --overwrite --definition $FILE
+    az grafana dashboard import -g $resourceGroup -n $grafanaName --overwrite --definition $FILE --folder "Azure Monitor Container Insights"
 done;
 
 echo "Onboarding was completed successfully, please deploy the prometheus-collector helm chart for data collection"
