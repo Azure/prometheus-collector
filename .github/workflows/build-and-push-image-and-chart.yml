@@ -148,7 +148,6 @@ jobs:
           format: 'table'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
-          skip-dirs: ''
           exit-code: '1'
           timeout: '5m0s'
           ignore-unfixed: true
