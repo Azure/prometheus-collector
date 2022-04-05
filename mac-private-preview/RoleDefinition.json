@@ -28,7 +28,6 @@
                         ]
                     }
                 ],
-                // To do figure out unique names for role
                 "roleName": "[concat('Monitoring Data Reader-', subscription().subscriptionId)]",
                 "type": "CustomRole"
             }
