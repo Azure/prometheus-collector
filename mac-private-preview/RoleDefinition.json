@@ -20,11 +20,11 @@
                 "permissions": [
                     {
                         "actions": [
-                            "*/read"
+                            "microsoft.monitor/accounts/*/read"
                         ],
                         "dataActions": [
-                            "*/read",
-                            "*/write"
+                            "microsoft.monitor/accounts/data/metrics/read",
+                            "microsoft.monitor/accounts/data/metrics/write"
                         ]
                     }
                 ],

@@ -60,7 +60,7 @@ fi
 
 trimmedLocation=$(echo $location | sed 's/ //g' | awk '{print tolower($0)}')
 echo $trimmedLocation
-if [ $trimmedLocation != "eastus2euap" ] && [ $trimmedLocation != "eastus" ] && [ $trimmedLocation != "eastus2" ] && [ $trimmedLocation != "weseurope" ]
+if [ $trimmedLocation != "eastus2euap" ] && [ $trimmedLocation != "eastus" ] && [ $trimmedLocation != "eastus2" ] && [ $trimmedLocation != "westeurope" ]
 then
     echo "Location not in a supported region - eastus, eastus2, westeurope"
     exit 1
