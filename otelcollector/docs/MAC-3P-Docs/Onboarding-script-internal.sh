@@ -146,7 +146,8 @@ macId=$(sed -e 's/^"//' -e 's/"$//' <<<"$macId")
 
 # Creating role assignment
 echo "Assigning MAC reader role to grafana's system assigned MSI"
-az role assignment create --assignee-object-id $grafanaSmsi --assignee-principal-type ServicePrincipal --scope $macId --role "Monitoring Data Reader"
+# 4b3f7944-d681-4f4a-bc9b-f992fb774b6c(Monitoring Data Reader) is the role name for custom role owned by MAC team
+az role assignment create --assignee-object-id $grafanaSmsi --assignee-principal-type ServicePrincipal --scope $macId --role "4b3f7944-d681-4f4a-bc9b-f992fb774b6c"
 
 if [ $? -ne 0 ]
 then
