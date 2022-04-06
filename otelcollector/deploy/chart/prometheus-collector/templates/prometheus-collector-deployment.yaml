@@ -130,6 +130,7 @@ spec:
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
             {{- end }}
+            {{- end }}
           securityContext:
             privileged: false
           volumeMounts:
