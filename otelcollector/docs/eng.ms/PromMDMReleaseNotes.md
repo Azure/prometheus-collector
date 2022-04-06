@@ -1,7 +1,13 @@
 # Working with Prometheus metrics in MDM
 
+## Release 04-04-2022 [Breaking changes]
 
-## Release 02-15-2022 [Breaking changes]
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.0.0-main-04-04-2022-dd20b426`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.0.0-main-04-04-2022-dd20b426`
+* Change Log -
+  * BREAKING CHANGE -- To reduce deafult ingestion volume,with this release, by default we will be ingesting only metrics consumed by default dashboards for all defaut targets (no change to your custom targets). If you were using metrics scraped by our default targets (dns,kubelet,cadvisor,kube-state-metrics,kube-proxy,node-exporter,api-server) which were not covered in our default dashboards you need to add them to keepList.* (depending on the target). Please see [here](./PromIngestionVolume.md) for more details and also how to modify/disable this behavior if you need to.
+
+## Release 03-17-2022 [Breaking changes]
 
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:2.0.0-main-03-17-2022-dfef2a5d`
 * image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:2.0.0-main-03-17-2022-dfef2a5d`

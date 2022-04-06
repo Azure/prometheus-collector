@@ -13,7 +13,7 @@
 | clusterName | string | <mark>`Required`</mark> | `""` | name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped |
 | image.pullPolicy | string | Optional | `"IfNotPresent"` |  |
 | image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images"` |  |
-| image.tag | string | Optional | `"2.0.0-main-03-17-2022-dfef2a5d"` |  |
+| image.tag | string | Optional | `"3.0.0-main-04-04-2022-dd20b426"` |  |
 | internalSettings.intEnvironment | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes for Geneva team |
 | internalSettings.clusterOverride | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes for Geneva team |
 | mode.advanced | bool | Optional | `false` | if mode.advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset. On bigger clusters (> 50+ nodes and > 1500+ pods), it is highly recommended to set this to `true`, as this will distribute the metric volumes to individual nodes as nodes & pods scale out & grow. Note:- When this is set to `true`, the `up` metric for the node target will be generated from the replica, so when the node (and daemonset in the node) becomes unvailable), the target availability can still be tracked.
@@ -82,6 +82,7 @@
 | scrapeTargets.prometheusCollectorHealth | bool | Optional | `true` | when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped |
 | scrapeTargets.windowsExporter | bool | Optional | `false` | `windows only` - when true, will scrape windows node exporter in every windows node discovered in the cluster, without requiring any additional scrape configuration. Note:- Windows-exporter is not installed by this tool on windows node(s). You would need to install it by yourselves, before turning this ON |
 | scrapeTargets.windowsKubeProxy | bool | Optional | `false` | `windows only` - when true, will scrape windows node's kubeproxy service, without requiring any additional scrape configuration, in every windows node discovered in the cluster. Note:- Windows kube-proxy metrics will soon be enabled on windows nodes for AKS clusters |
+| minimalIngestionProfile | bool | Optional | `true` | when true (which is the default), will filter metrics from all default targtes to allow only metrics used by default dashboards. see [here](./PromIngestionVolume.md) for list of metrics collected per default target when this option is enabled |
 | keepListRegexes.coreDns | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for the coreDns service
 | keepListRegexes.kubelet | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for kubelet
 | keepListRegexes.cAdvisor | string | Optional | `""` | when set to a regex string, the collector only collects the metrics whose names match the regex pattern for cAdvisor

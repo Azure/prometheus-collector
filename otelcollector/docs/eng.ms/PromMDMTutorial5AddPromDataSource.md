@@ -31,12 +31,14 @@ In the data source configuration fill in the fields per guidance below.
 - Set **Name** to what you want your data source to be called. Also you can make this the 'default' for the Grafana cluster by enabling the Default toggle By default the Azure Monitor-Prometheus data source is configured to pull metrics from a sample Geneva Metrics (MDM) account.  
 > [!Note]
 > Please make sure to use a new name for the data source. Reusing previous data source names will result in errors during saving the datasource.
-- Under HTTP section, you the  **URL** is set to 'https://az-ncus.prod.prometheusmetrics.trafficmanager.net' . This is the an end point used by Grafana to pull metrics from the MDM tsdb.  
+- Under HTTP section, populate **URL** field with the query endpoint that will be used by Grafana to pull metrics from the MDM tsdb. The URL should be:
+    - if you are just starting, you know your MDM account name, and don't worry about query performance: _https://az-ncus.prod.prometheusmetrics.trafficmanager.net_
+    - Else, refer to _Query endpoint_ section at [this page](ConsumePromWebApi.md) to figure out your query endpoint.
 
 - If you are using Azure Managed Grafana Private preview version, you have two options to enable authentication
     - **Managed Identity**: This is the easiest way.
     - System Managed Identity is enabled by default on the Grafana resource.
-    - Enable **Azure Authentication** during above data source setup, select “Managed Identity” from drop down and provide **AAD Resource Id** as https://management.azure.com
+    - Enable **Azure Authentication** during above data source setup, select “Managed Identity” from drop down and provide **AAD Resource Id** as _https://prometheus.monitor.azure.com_
    
    ![Add AMGAddDatasourcePP3](~/metrics/images/prometheus/AMGAddDatasourcePP3.png)
 
@@ -46,16 +48,18 @@ In the data source configuration fill in the fields per guidance below.
       - Directory (tenant) ID: Go to AAD APP in portal, overview page and copy the tenant Id. 
       - Application (client) ID: Go to AAD APP in portal, overview page and copy the Application (client) ID.
       - Client Secret: Go to AAD APP in portal, create a new secret and copy it. You will get 1 time opportunity to copy it after creation.
-      - AAD Resource Id: https://management.azure.com
+      - AAD Resource Id: _https://prometheus.monitor.azure.com_
     
      ![Add AMGAddDatasourcePP4](~/metrics/images/prometheus/AMGAddDatasourcePP4.png)
   
-- Finally, you need to let the data source know your specific MDM account. This is passed via a custom header. In Custom HTTP headers section, click **+ Add header**  
-    - For **Header** enter 'mdmAccountName'  
-    - For **Value** enter your actual MDM metrics account  
+- Finally, you need to let the data source know your specific MDM account. If you are using MAC based query endpoint, this step is not required and query service ignores this header if passed with MAC based query URL. Otherwise, pass via a custom header during data source setup. In Custom HTTP headers section, click **+ Add header**  
+    - For **Header** enter 'X-Ms-Mdm-Account-Name'.
+    - For **Value** enter your actual MDM metrics account
+
+Note: Few customers have already used old header name **mdmAccountName** for this which we will continue to support. The new new name is more aligned towards Microsoft naming convention.
 
 ![Add datasource7](~/metrics/images/prometheus/AMGAddDatasource7.png)  
-  
+
 * Click **Save and test** to validate the data source. You are ready once you see a 'Data source is working' confirmation.  
 
 --------------------------------------
@@ -63,3 +67,5 @@ In the data source configuration fill in the fields per guidance below.
 In this step you set up Grafana to access Prometheus metrics from your MDM metrics account. Go to this [link](https://grafana.com/docs/grafana/v7.5/datasources/prometheus/) for more information on Prometheus for Grafana  
 
 Next, you will look at how to use the several [built-in dashboards](~/metrics/Prometheus/PromMDMTutorial6ReuseExistingDashboard.md) that are available for you out of the box.
+
+Lastly, please refer to [this](ConsumePromWebApi.md) page for limitations on case sensitivity, time range etc. and other details.
