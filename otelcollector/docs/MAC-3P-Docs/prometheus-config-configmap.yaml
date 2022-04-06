@@ -15,5 +15,5 @@ data:
           action: keep
           regex: "prometheus-reference-service"
 metadata:
-  name: prometheus-config
+  name: {releaseName}-prometheus-config
   namespace: kube-system

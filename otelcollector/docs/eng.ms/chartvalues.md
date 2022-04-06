@@ -1,4 +1,4 @@
-# Chart Values for Prometheus-collector (when using geneva account and theor certificates)
+# Chart Values for Prometheus-collector (when using geneva account and their certificates)
 
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|

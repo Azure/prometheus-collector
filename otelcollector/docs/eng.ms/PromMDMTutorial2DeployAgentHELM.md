@@ -63,18 +63,6 @@ Enabling `--set advanced.mode=true` for large clusters with more than 50 nodes a
 
 > If you want to have your metrics be sent to multiple metrics accounts, follow the guidelines for [multiple accounts](~/metrics/Prometheus/configuration.md#multiple-metric-accounts) that outlines how Prometheus collector works with multiple metrics accounts.  
 
-### Using geneva account & certificates (in key vault)
-
-```shell
-helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 1.1.2-main-03-07-2022-df71b65a
-```
- **Example (using Monitoring account)**
-#### **Note that the chart deployment has to be in the kube-system namespace, else the deployment will fail**  
-```shell
-helm upgrade --install <chart_release_name> ./prometheus-collector-1.1.2-main-03-07-2022-df71b65a.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="/subscriptions/<my_cluster_sub_id>/resourceGroups/<my_cluster_resource_group>/providers/Microsoft.ContainerService/managedClusters/<my_cluster>" --set azureResourceRegion="eastus" --namespace=kube-system --create-namespace
-```
-
-
 --------------------------------------
 
 In this step you deployed the agent and exporters for for collecting metrics from your Kubernetes cluster.  
