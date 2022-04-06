@@ -39,7 +39,7 @@
     },
     "resources": [
         {
-            "type": "microsoft.monitor/accounts",
+            "type": "Microsoft.Monitor/Accounts",
             "apiVersion": "2021-06-03-preview",
             "name": "[parameters('monitoringAccountName')]",
             "location": "[parameters('monitoringAccountLocation')]"

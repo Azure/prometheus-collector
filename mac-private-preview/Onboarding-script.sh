@@ -11,7 +11,7 @@
 #   [Required]  ${2}  resourceGroup              Resource group where resources(MAC, DCR, Grafana) are created
 #   [Required]  ${3}  monitoringAccountName      Name of the Monitoring Account that will be created
 #   [Required]  ${4}  grafanaName                Name of the Grafana instance that will be created
-#   [Required]  ${5}  location                   Location where resources(MAC, DCR, Grafana) are created
+#   [Required]  ${5}  azureRegion                Region where resources(MAC, DCR, Grafana) are created
 #   [Required]  ${6}  aksResourceId              Azure resource id of the AKS Cluster ("/subscriptions/subid/resourcegroups/rg-name/providers/Microsoft.ContainerService/managedClusters/clustername")
 
 #
@@ -37,16 +37,26 @@ echo "subscriptionId"= ${1}
 echo "resourceGroup" = ${2}
 echo "monitoringAccountName"= ${3}
 echo "grafanaName"= ${4}
-echo "location" = ${5}
+echo "azureRegion" = ${5}
 echo "aksResourceId" = ${6}
 
-# az login --use-device-code
+echo "Checking azure cli version"
+currentVer=$(az version --query '"azure-cli"')
+requiredVer="2.30.0"
+ if [ "$(printf '%s\n' "$requiredVer" "$currentVer" | sort -V | head -n1)" = "$requiredVer" ]; then 
+        echo "az cli version greater than or equal to required version - ${requiredVer}, continuing..."
+ else
+        echo "az cli version lower than required version- ${requiredVer}, please upgrade to a version > 2.30.0"
+        exit 1
+ fi
+
+az login
 
 subscriptionId=${1}
 resourceGroup=${2}
 monitoringAccountName=${3}
 grafanaName=${4}
-location=${5}
+azureRegion=${5}
 aksResourceId=${6}
 
 macAccountLength=${#3}
@@ -54,15 +64,15 @@ macAccountLength=${#3}
 # Checking for length of MAC name, since it is used in dc artifacts creation (max is 44)
 if [ $macAccountLength -gt 24 ]
 then
-    echo "Monitoring account name is longer than 35 characters, please use a shorter name, exiting."
+    echo "Monitoring account name is longer than 24 characters, please use a shorter name, exiting."
     exit 1
 fi
 
-trimmedLocation=$(echo $location | sed 's/ //g' | awk '{print tolower($0)}')
-echo $trimmedLocation
-if [ $trimmedLocation != "eastus2euap" ] && [ $trimmedLocation != "eastus" ] && [ $trimmedLocation != "eastus2" ] && [ $trimmedLocation != "westeurope" ]
+trimmedRegion=$(echo $azureRegion | sed 's/ //g' | awk '{print tolower($0)}')
+echo $trimmedRegion
+if [ $trimmedRegion != "eastus2euap" ] && [ $trimmedRegion != "eastus" ] && [ $trimmedRegion != "eastus2" ] && [ $trimmedRegion != "westeurope" ]
 then
-    echo "Location not in a supported region - eastus, eastus2, westeurope"
+    echo "azureRegion not in a supported region - eastus, eastus2, westeurope"
     exit 1
 fi
 
@@ -85,40 +95,74 @@ echo "AKSRg: $aksRgName"
 az extension add -n amg
 az account set -s $subscriptionId
 
-az group create --location $trimmedLocation --name $resourceGroup
+az group create --location $trimmedRegion --name $resourceGroup
+if [ $? -ne 0 ]
+then
+    echo "Unable to create resource group"
+    exit 1
+fi
+
+# Creating role definition
+echo "Creating role definition to be able to read data from MAC"
+az deployment sub create --location $trimmedRegion --name role-def-$trimmedRegion --template-file RoleDefinition.json
+
+if [ $? -ne 0 ]
+then
+    echo "Unable to create custom role definition"
+    exit 1
+fi
+
+#Template to create all resources required for MAC ingestion e2e
+echo "Creating all resources required for MAC ingestion"
+az deployment group create --resource-group $resourceGroup --template-file RootTemplate.json \
+--parameters monitoringAccountName=$monitoringAccountName monitoringAccountLocation=$trimmedRegion \
+targetAKSResource=$aksResourceId AKSSubId=$aksSubId AKSRg=$aksRgName
+
+if [ $? -ne 0 ]
+then
+    echo "Unable to create resources required for MAC ingestion"
+    exit 1
+fi
 
 echo "Creating Grafana instance, if it doesnt exist: $grafanaName" 
-if [ $trimmedLocation == "eastus2" ]
+if [ $trimmedRegion == "eastus2" ]
 then
     echo "Using EastUS for Grafana instance creation since EASTUS2 is not supported"
     grafanalocation="eastus"
 else
-    echo "Using $trimmedLocation for Grafana instance creation"
-    grafanalocation=$trimmedLocation
+    echo "Using $trimmedRegion for Grafana instance creation"
+    grafanalocation=$trimmedRegion
 fi
+
+# Creating grafana instance
 az grafana create -g $resourceGroup -n $grafanaName -l $grafanalocation
+if [ $? -ne 0 ]
+then
+    echo "Unable to create Grafana instance"
+    exit 1
+fi
+echo "Grafana instance created successfully - $grafanaName"
 
 grafanaSmsi=$(az grafana show -g $resourceGroup -n $grafanaName --query 'identity.principalId')
 echo "Got System Assigned Identity for Grafana instance: $grafanaSmsi"
 echo "Removing quotes from MSI"
 grafanaSmsi=$(sed -e 's/^"//' -e 's/"$//' <<<"$grafanaSmsi")
 
-echo "Creating role definition to be able to read data from MAC"
-az deployment sub create --location $trimmedLocation --template-file RoleDefinition.json 
-
-#Template to create all resources required for MAC ingestion e2e
-echo "Creating all resources required for MAC ingestion"
-az deployment group create --resource-group $resourceGroup --template-file RootTemplate.json \
---parameters monitoringAccountName=$monitoringAccountName monitoringAccountLocation=$trimmedLocation \
-targetAKSResource=$aksResourceId AKSSubId=$aksSubId AKSRg=$aksRgName
 
 macId=$(az resource show -g $resourceGroup -n $monitoringAccountName --resource-type "Microsoft.Monitor/Accounts" --query 'id')
 echo "Got MAC id: $macId"
 echo "Removing quotes from MAC Id"
 macId=$(sed -e 's/^"//' -e 's/"$//' <<<"$macId")
 
+# Creating role assignment
 echo "Assigning MAC reader role to grafana's system assigned MSI"
 az role assignment create --assignee-object-id $grafanaSmsi --assignee-principal-type ServicePrincipal --scope $macId --role "Monitoring Data Reader-"${subscriptionId}
+
+if [ $? -ne 0 ]
+then
+    echo "Unable to create role assignment to query MAC from Grafana instance"
+    exit 1
+fi
 
 promQLEndpoint=$(az resource show -g $resourceGroup -n $monitoringAccountName --resource-type "Microsoft.Monitor/Accounts" --query 'properties.metrics.prometheusQueryEndpoint')
 echo "PromQLEndpoint: $promQLEndpoint"
@@ -139,7 +183,7 @@ macPromDataSourceConfig='{
     "basicAuthUser": "",
     "basicAuthPassword": "",
     "withCredentials": false,
-    "isDefault": false,
+    "isDefault": true,
     "jsonData": {
         "azureAuth": true,
         "azureCredentials": {
@@ -160,6 +204,7 @@ macPromDataSourceConfig='{
 populatedMACPromDataSourceConfig=${macPromDataSourceConfig//PROM_QL_PLACEHOLDER/$promQLEndpoint}
 
 az grafana data-source create -n $grafanaName --definition "$populatedMACPromDataSourceConfig" 
+# Not adding exit here since if this script is rerun it can fail with data source exists error, which is benign and can be ignored
 
 echo "Downloading dashboards package"
 wget https://github.com/microsoft/Docker-Provider/raw/prometheus-collector/prometheus-collector/dashboards.tar.gz
