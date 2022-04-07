@@ -160,7 +160,7 @@ spec:
             - --secret-name=omsagent-aad-msi-token
             - --token-server-listening-port=7777
             - --health-server-listening-port=9999
-          image: "mcr.microsoft.com/aks/hcp/addon-token-adapter:master.220318.3"
+          image: "mcr.microsoft.com/aks/hcp/addon-token-adapter:master.220325.1"
           imagePullPolicy: IfNotPresent
           env:
             - name: AZMON_COLLECT_ENV
