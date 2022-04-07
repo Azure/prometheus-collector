@@ -2,6 +2,15 @@
 # This is a YAML-formatted file .
 # Declare variables to be passed into your templates.
 
+# -- when true, ingestion will be based on Monitor account & DCR(s)
+useMonitoringAccount: false
+
+# -- required & used only when useMonitoringAccount=true. This is the full ARM ResourceId for the Kubernetes cluster that is going to be monitoring with this chart
+azureResourceId: ""
+
+# -- required & used only when useMonitoringAccount=true. This is the Azure region for the Kubernetes cluster that is going to be monitoring with this chart
+azureResourceRegion: ""
+
 scrapeTargets:
   # -- when true, automatically scrape coredns service in the k8s cluster without any additional scrape config
   coreDns: true
