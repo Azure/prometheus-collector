@@ -23,8 +23,8 @@
                             "microsoft.monitor/accounts/*/read"
                         ],
                         "dataActions": [
-                            "microsoft.monitor/accounts/data/metrics/read",
-                            "microsoft.monitor/accounts/data/metrics/write"
+                            "microsoft.monitor/*/read",
+                            "microsoft.monitor/*/write"
                         ]
                     }
                 ],
