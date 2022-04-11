@@ -37,20 +37,20 @@ Ex: bash Onboarding-script.sh "00000000-0000-0000-0000-000000000000" "rg-name" "
 Cloud shell doesn’t let you replace the exe in location /usr/local/bin/helm.
 You can instead run the helm commands from the path ~/linux-amd64. Prefix the helm with “./” for it to pick up helm from this folder.**
 
-**Ex - ./helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 2.0.0-feature-mac-04-01-2022-c079ac36**
+**Ex - ./helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 3.0.0-main-04-07-2022-33676484**
 
 1.	Download the helm chart - 
 
         set HELM_EXPERIMENTAL_OCI=1
 
-        helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 2.0.0-feature-mac-04-01-2022-c079ac36
+        helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 3.0.0-main-04-07-2022-33676484
 
 2.  Install the helm chart with the following parameters -
     
-        helm upgrade –-install <release-name> ./prometheus-collector-2.0.0-feature-mac-04-01-2022-c079ac36.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId=”AKS-Resource-Id” –-set azureResourceRegion=<aks-resource-location> --namespace=kube-system --create-namespace
+        helm upgrade –-install <release-name> ./prometheus-collector-3.0.0-main-04-07-2022-33676484.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId=”AKS-Resource-Id” –-set azureResourceRegion=<aks-resource-location> --namespace=kube-system --create-namespace
 
 
-Ex - helm upgrade --install my-collector-dev-release ./prometheus-collector-2.0.0-feature-mac-04-01-2022-c079ac36.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId= “/subscriptions/subid/resourcegroups/rg-name/providers/Microsoft.ContainerService/managedClusters/clustername " --set azureResourceRegion="eastus2" --set mode.advanced=true --namespace=kube-system --create-namespace
+Ex - helm upgrade --install my-collector-dev-release ./prometheus-collector-3.0.0-main-04-07-2022-33676484.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId= “/subscriptions/subid/resourcegroups/rg-name/providers/Microsoft.ContainerService/managedClusters/clustername " --set azureResourceRegion="eastus2" --set mode.advanced=true --namespace=kube-system --create-namespace
 
 
 ### **Step 3**: Navigate to the Grafana UX. An initial set of default dashboards are created under the folder  ‘Azure Monitor Container Insights’. Browse through these dashboards by picking the Monitoring Account data source to see the cluster you just started collecting metrics from.
