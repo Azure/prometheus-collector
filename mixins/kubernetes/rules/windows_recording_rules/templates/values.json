@@ -1,0 +1,6 @@
+{
+    "location": "eastus2euap",
+    "mac": "/subscriptions/ad2f1a83-caac-4e21-9d2a-9ca3f87105e2/resourcegroups/divyaj-test/providers/microsoft.monitor/accounts/containerinsightsprodclusteraccounteus2euap",
+    "cluster": "ci-prod-aks-msi-eus2",
+    "resource_group": "divyaj-test"
+}

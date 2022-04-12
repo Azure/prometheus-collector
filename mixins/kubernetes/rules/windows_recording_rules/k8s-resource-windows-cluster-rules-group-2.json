@@ -1,0 +1,97 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "variables": {},
+    "resources": [
+        {
+            "name": "k8s_resource_windows_rules_group_2",
+            "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+            "apiVersion": "2021-07-22-preview",
+            "location": "eastus2euap",
+            "properties": {
+                "scopes": [
+                    "/subscriptions/ad2f1a83-caac-4e21-9d2a-9ca3f87105e2/resourcegroups/divyaj-test/providers/microsoft.monitor/accounts/containerinsightsprodclusteraccounteus2euap"
+                ],
+                "rules": [
+                    {
+                        "record": "windows_pod_container_available_2",
+                        "expression": "windows_container_available{job = \"windows-exporter\", cluster = \"ci-prod-aks-msi-eus2\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\", cluster = \"ci-prod-aks-msi-eus2\"}) by(container, container_id, pod, namespace, cluster)"
+                    },
+                    {
+                        "record": ":windows_node_memory_MemTotal_bytes_2:sum",
+                        "expression": "sum(windows_os_visible_memory_bytes{job = \"windows-exporter\", cluster = \"ci-prod-aks-msi-eus2\" })"
+                    },
+                    {
+                        "record": "kube_pod_windows_container_resource_memory_request",
+                        "expression": "max by (namespace, pod, container, cluster) (kube_pod_container_resource_requests{resource = \"memory\",job = \"kube-state-metrics\", cluster = \"ci-prod-aks-msi-eus2\"}) * on (container, pod, namespace, cluster) (windows_pod_container_available_2{cluster = \"ci-prod-aks-msi-eus2\"})"
+                    },
+                    {
+                        "record": "memory_requests_commitment",
+                        "expression": "sum( max by (namespace, pod, container, cluster) (kube_pod_container_resource_requests{resource = \"memory\",job = \"kube-state-metrics\", cluster = \"ci-prod-aks-msi-eus2\"}) * on (container, pod, namespace, cluster) (windows_container_available{job = \"windows-exporter\", cluster = \"ci-prod-aks-msi-eus2\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\", cluster = \"ci-prod-aks-msi-eus2\"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job = \"windows-exporter\", cluster = \"ci-prod-aks-msi-eus2\" }))"
+                    },
+                    {
+                        "record": "kube_pod_windows_container_resource_memory_limit",
+                        "expression": "kube_pod_container_resource_limits{resource = \"memory\", job = \"kube-state-metrics\", cluster = \"ci-prod-aks-msi-eus2\"} * on(container, pod, namespace, cluster) (windows_pod_container_available_2{cluster = \"ci-prod-aks-msi-eus2\"})"
+                    },
+                    {
+                        "record": "memory_limits_commitment",
+                        "expression": "sum(kube_pod_container_resource_limits{resource = \"memory\", job = \"kube-state-metrics\", cluster = \"ci-prod-aks-msi-eus2\"} * on(container, pod, namespace, cluster) (windows_container_available{job = \"windows-exporter\", cluster = \"ci-prod-aks-msi-eus2\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\", cluster = \"ci-prod-aks-msi-eus2\"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job = \"windows-exporter\", cluster = \"ci-prod-aks-msi-eus2\" }))"
+                    },
+                    {
+                        "record": "windows_container_total_runtime",
+                        "expression": "windows_container_cpu_usage_seconds_total{ job = \"windows-exporter\", cluster = \"ci-prod-aks-msi-eus2\" } * on (container_id) group_left(container, pod, namespace, cluster) max( kube_pod_container_info{ job = \"kube-state-metrics\", cluster = \"ci-prod-aks-msi-eus2\"}) by (container, container_id, pod, namespace, cluster)"
+                    },
+                    {
+                        "record": "namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate",
+                        "expression": "sum by (namespace, pod, container, cluster) (rate(windows_container_total_runtime{cluster = \"ci-prod-aks-msi-eus2\"} [5m]))"
+                    },
+                    {
+                        "record": "cpu_usage_1",
+                        "expression": "sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster = \"ci-prod-aks-msi-eus2\"} ) by ( namespace, cluster)"
+                    },
+                    {
+                        "record": "cpu_quota_1",
+                        "expression": "sum(kube_pod_windows_container_resource_cpu_cores_request{cluster = \"ci-prod-aks-msi-eus2\"}) by (namespace, cluster)"
+                    },
+                    {
+                        "record": "cpu_quota_2",
+                        "expression": "cpu_usage_1{cluster = \"ci-prod-aks-msi-eus2\"} / cpu_quota_1{cluster = \"ci-prod-aks-msi-eus2\"}"
+                    },
+                    {
+                        "record": "cpu_quota_3",
+                        "expression": "sum(kube_pod_windows_container_resource_cpu_cores_limit{cluster = \"ci-prod-aks-msi-eus2\"}) by (namespace, cluster)"
+                    },
+                    {
+                        "record": "cpu_quota_4",
+                        "expression": "cpu_usage_1{cluster = \"ci-prod-aks-msi-eus2\"} / cpu_quota_3{cluster = \"ci-prod-aks-msi-eus2\"}"
+                    },
+                    {
+                        "record": "windows_container_private_working_set_usage",
+                        "expression": "windows_container_memory_usage_private_working_set_bytes{job = \"windows-exporter\", cluster =\"ci-prod-aks-msi-eus2\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\", cluster = \"ci-prod-aks-msi-eus2\"}) by(container, container_id, pod, namespace, cluster)"
+                    },
+                    {
+                        "record": "memory_usage_private_working_set",
+                        "expression": "sum(windows_container_private_working_set_usage{cluster = \"ci-prod-aks-msi-eus2\"}) by (namespace, cluster)"
+                    },
+                    {
+                        "record": "req_by_namespace_1",
+                        "expression": "sum(kube_pod_windows_container_resource_memory_request{cluster = \"ci-prod-aks-msi-eus2\"}) by (namespace, cluster)"
+                    },
+                    {
+                        "record": "req_by_namespace_2",
+                        "expression": "memory_usage_private_working_set{cluster = \"ci-prod-aks-msi-eus2\"} / req_by_namespace_1{cluster = \"ci-prod-aks-msi-eus2\"}"
+                    },
+                    {
+                        "record": "req_by_namespace_3",
+                        "expression": "sum(kube_pod_windows_container_resource_memory_limit{cluster = \"ci-prod-aks-msi-eus2\"}) by (namespace, cluster)"
+                    },
+                    {
+                        "record": "req_by_namespace_3",
+                        "expression": "memory_usage_private_working_set{cluster = \"ci-prod-aks-msi-eus2\"} / req_by_namespace_3{cluster = \"ci-prod-aks-msi-eus2\"}"
+                    }
+                ]
+            }
+        }
+    ]
+}
