@@ -246,4 +246,12 @@ shutdown() {
 
 trap "shutdown" SIGTERM
 
+echo "Sleeping before starting gdb"
+sleep 60
+
+echo "Starting gdb"
+pid=`ps -ef | grep MetricsExt | grep -v "grep"|  awk '{print $2}'`
+printf  "generate-core-file\nquit" > gdb-commands
+gdb -p $pid --command=gdb-commands &
+
 sleep inf & wait
