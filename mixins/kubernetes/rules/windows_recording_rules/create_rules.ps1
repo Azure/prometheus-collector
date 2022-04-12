@@ -32,7 +32,6 @@ Write-Output "The following values were read from the supplied values.json file.
 Write-Output $values_ps_object.location
 Write-Output $values_ps_object.mac
 Write-Output $values_ps_object.cluster
-Write-Output $values_ps_object.resource_group
 
 Write-Output "-----------------------------------------------------------------------------------"
 
@@ -69,19 +68,21 @@ az account set --subscription $sub_id_from_mac
 
 Write-Output "-----------------------------------------------------------------------------------"
 
+$resource_group_from_mac = $values_ps_object.mac.split('/')[4]
+
 Write-Output "Deploying $rules_group_1"
 
-az deployment group create --resource-group $values_ps_object.resource_group --template-file .\$rules_group_1
+az deployment group create --resource-group $resource_group_from_mac --template-file .\$rules_group_1
 
 Write-Output "-----------------------------------------------------------------------------------"
 
 Write-Output "Deploying $rules_group_2"
 
-az deployment group create --resource-group $values_ps_object.resource_group --template-file .\$rules_group_2
+az deployment group create --resource-group $resource_group_from_mac --template-file .\$rules_group_2
 
 
 Write-Output "-----------------------------------------------------------------------------------"
 
 Write-Output "Deploying $rules_group_3"
 
-az deployment group create --resource-group $values_ps_object.resource_group --template-file .\$rules_group_3
+az deployment group create --resource-group $resource_group_from_mac --template-file .\$rules_group_3
