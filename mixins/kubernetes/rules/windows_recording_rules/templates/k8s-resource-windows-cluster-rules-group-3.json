@@ -16,7 +16,7 @@
                 "rules": [
                     {
                         "record": "windows_container_network_received_bytes_total",
-                        "expression": "windows_container_network_receive_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"} * on(container_id) group_left(container, pod, namespace, cluster, job) max(kube_pod_container_info{job = \"kube-state-metrics\", cluster = \"$cluster\"}) by(container, container_id, pod, namespace, cluster, job)"
+                        "expression": "windows_container_network_receive_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\", cluster = \"$cluster\"}) by(container, container_id, pod, namespace, cluster)"
                     },
                     {
                         "record": "network_io_1",
@@ -24,7 +24,7 @@
                     },
                     {
                         "record": "windows_container_network_transmitted_bytes_total",
-                        "expression": "windows_container_network_transmit_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"} * on(container_id) group_left(container, pod, namespace, cluster, job) max(kube_pod_container_info{job = \"kube-state-metrics\", cluster = \"$cluster\"}) by(container, container_id, pod, namespace, cluster, job)"
+                        "expression": "windows_container_network_transmit_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\", cluster = \"$cluster\"}) by(container, container_id, pod, namespace, cluster)"
                     },
                     {
                         "record": "network_io_2",
