@@ -23,7 +23,7 @@
 
 To run the script execute - 
 
-    bash Onboarding-script.sh <sub-id> <rg-name> <mac-name> <grafana-instance-name> <location/region> <aks-resource-id>
+    bash Onboarding-script.sh "<sub-id>" "<rg-name>" "<mac-name>" "<grafana-instance-name>" "<location/region>" "<aks-resource-id>"
 
 Ex: bash Onboarding-script.sh "00000000-0000-0000-0000-000000000000" "rg-name" "mac-name" "grafana-name" "eastus2" "/subscriptions/subid/resourcegroups/rg-name/providers/Microsoft.ContainerService/managedClusters/clustername"
 
@@ -47,7 +47,7 @@ You can instead run the helm commands from the path ~/linux-amd64. Prefix the he
 
 2.  Install the helm chart with the following parameters -
     
-        helm upgrade --install <release-name> ./prometheus-collector-3.0.0-main-04-07-2022-33676484.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId=<aks-resource-id> --set azureResourceRegion=<aks-resource-location> --namespace=kube-system --create-namespace
+        helm upgrade --install <release-name> ./prometheus-collector-3.0.0-main-04-07-2022-33676484.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="<aks-resource-id>" --set azureResourceRegion="<aks-resource-location>" --namespace="kube-system" --create-namespace
 
 
 Ex - helm upgrade --install my-collector-dev-release ./prometheus-collector-3.0.0-main-04-07-2022-33676484.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="/subscriptions/subid/resourcegroups/rg-name/providers/Microsoft.ContainerService/managedClusters/clustername" --set azureResourceRegion="eastus2" --set mode.advanced=true --namespace=kube-system --create-namespace
