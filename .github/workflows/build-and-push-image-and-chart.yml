@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - rashmi/mac-cleanup
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
@@ -239,6 +240,13 @@ jobs:
           keyvault: "cdpxacrcredskv"
           secrets: 'ci-dev-aks-msi-eus2-kubeconfig'
         id: GetKubeConfig-msi
+      - name: Get-kube-config-from-Key-Vault-mac
+        if: env.BRANCH_NAME == 'rashmi/mac-cleanup'
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "cdpxacrcredskv"
+          secrets: 'ci-dev-aks-mac-eus-kubeconfig'
+        id: GetKubeConfig-mac
       - name: Get-kube-config-for-dev-cluster-sp
         if: env.BRANCH_NAME == 'main'
         run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-sp.outputs.ci-dev-aks-wcus-kubeconfig }}" > ~/.kube/config
@@ -265,8 +273,11 @@ jobs:
       - name: Deploy-to-dev-cluster-msi
         if: env.BRANCH_NAME == 'main'
         run: helm pull oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} && helm upgrade --install prom-dev-msi ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-msi-eus2" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.useManagedIdentity=true --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set minimalIngestionProfile="false" -n monitoring --create-namespace
+      - name: Get-kube-config-for-dev-cluster-mac
+        if: env.BRANCH_NAME == 'rashmi/mac-cleanup'
+        run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-mac.outputs.ci-dev-aks-mac-eus-kubeconfig }}" > ~/.kube/config
       - name: Deploy-to-dev-cluster-mac
-        if: env.BRANCH_NAME == 'main'
+        if: env.BRANCH_NAME == 'rashmi/mac-cleanup'
         run: helm pull oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} && helm upgrade --install prom-dev-mac ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set useMonitoringAccount=true --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set mode.advanced=true --set windowsDaemonset=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set minimalIngestionProfile="false" --set azureResourceId="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus" --set azureResourceRegion="eastus" -n kube-system --create-namespace
       - name: Tag-this-push
         if: env.BRANCH_NAME == 'main'
