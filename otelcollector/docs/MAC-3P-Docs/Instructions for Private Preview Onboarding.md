@@ -28,7 +28,7 @@ To run the script execute -
 Ex: bash Onboarding-script.sh "00000000-0000-0000-0000-000000000000" "rg-name" "mac-name" "grafana-name" "eastus2" "/subscriptions/subid/resourcegroups/rg-name/providers/Microsoft.ContainerService/managedClusters/clustername"
 
 
-4.	Check to make sure the script run completed without any errors.
+4.	Check to make sure the script run completed without any errors. This step also outputs the helm command that needs to be used in Step 2.
 
 
 ### **Step 2**: Install the helm chart on the AKS cluster to collect metrics and send them to the MAC account
