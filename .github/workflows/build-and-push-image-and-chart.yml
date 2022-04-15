@@ -222,7 +222,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: cd ./otelcollector/deploy/chart/ && helm push ${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY_HELM }}
       - name: Login-to-Azure-Key-Vault
-        if: env.BRANCH_NAME == 'main'
+        if: env.BRANCH_NAME == 'rashmi/mac-cleanup'
         uses: Azure/login@v1
         with:
           creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
@@ -251,7 +251,7 @@ jobs:
         if: env.BRANCH_NAME == 'main'
         run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-sp.outputs.ci-dev-aks-wcus-kubeconfig }}" > ~/.kube/config
       - name: Wait-for-mcr-image
-        if: env.BRANCH_NAME == 'main'
+        if: env.BRANCH_NAME == 'rashmi/mac-cleanup'
         run: |
           for i in 1 2 3 4 5 6 7 8 9 10
           do
