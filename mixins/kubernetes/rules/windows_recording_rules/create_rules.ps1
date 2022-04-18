@@ -29,7 +29,7 @@ $values_ps_object = Get-Content .\templates\values.json -Raw | ConvertFrom-Json
 
 Write-Output "The following values were read from the supplied values.json file..."
 
-Write-Output $values_ps_object.location
+Write-Output $values_ps_object.MACLocation
 Write-Output $values_ps_object.mac
 Write-Output $values_ps_object.cluster
 
@@ -37,17 +37,17 @@ Write-Output "------------------------------------------------------------------
 
 Write-Output "Replacing location, mac and cluster in the template files..."
 
-(Get-Content -path .\templates\$rules_group_1).replace('$location', $values_ps_object.location) | Set-Content -Path .\$rules_group_1
+(Get-Content -path .\templates\$rules_group_1).replace('$MACLocation', $values_ps_object.MACLocation) | Set-Content -Path .\$rules_group_1
 (Get-Content -path .\$rules_group_1).replace('$mac', $values_ps_object.mac) | Set-Content -Path .\$rules_group_1
 (Get-Content -path .\$rules_group_1).replace('$cluster', $values_ps_object.cluster) | Set-Content -Path .\$rules_group_1
 
 
-(Get-Content -path .\templates\$rules_group_2).replace('$location', $values_ps_object.location) | Set-Content -Path .\$rules_group_2
+(Get-Content -path .\templates\$rules_group_2).replace('$MACLocation', $values_ps_object.MACLocation) | Set-Content -Path .\$rules_group_2
 (Get-Content -path .\$rules_group_2).replace('$mac', $values_ps_object.mac) | Set-Content -Path .\$rules_group_2
 (Get-Content -path .\$rules_group_2).replace('$cluster', $values_ps_object.cluster) | Set-Content -Path .\$rules_group_2
 
 
-(Get-Content -path .\templates\$rules_group_3).replace('$location', $values_ps_object.location) | Set-Content -Path .\$rules_group_3
+(Get-Content -path .\templates\$rules_group_3).replace('$MACLocation', $values_ps_object.MACLocation) | Set-Content -Path .\$rules_group_3
 (Get-Content -path .\$rules_group_3).replace('$mac', $values_ps_object.mac) | Set-Content -Path .\$rules_group_3
 (Get-Content -path .\$rules_group_3).replace('$cluster', $values_ps_object.cluster) | Set-Content -Path .\$rules_group_3
 
