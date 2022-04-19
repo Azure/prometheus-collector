@@ -23,15 +23,15 @@ Below is a sample list of values:
 
 Run the `.\create_rules.ps1` script to deploy the recording rules to your cluster.
 
-`Note: This script uses the az cli for logging in and deploying the recording rules to the cluster.`
+`Note: This script uses the az cli for logging in and deploying the recording rules to the cluster. Please use the latest version of the az cli for the best experience.`
 
 The dashboards can be found checked in the `\otelcollector\deploy\dashboard\dashboards` folder.
 
 Please import the below mentioned files to see the metrics from the recording rules deployed using the script.
 
--   k8s-resources-windows-cluster
--   k8s-resources-windows-namespace
--   k8s-resources-windows-pod
+-   Kubernetes _ Compute Resources _ Cluster(Windows)
+-   Kubernetes _ Compute Resources _ Cluster(Windows)
+-   Kubernetes / Compute Resources / Pod(Windows)
 
 
 
