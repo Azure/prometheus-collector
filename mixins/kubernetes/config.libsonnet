@@ -30,7 +30,7 @@
     hostNetworkInterfaceSelector: 'device!~"veth.+"',
     hostMountpointSelector: 'mountpoint="/"',
     wmiExporterSelector: 'job="windows-exporter"',
-    clusterSelector: 'cluster="\$cluster"',
+    clusterSelector: 'cluster="replace_cluster_name_here"',
 
     // Grafana dashboard IDs are necessary for stable links for dashboards
     grafanaDashboardIDs: {
