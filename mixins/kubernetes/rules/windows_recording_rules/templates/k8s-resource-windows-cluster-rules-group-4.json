@@ -1,0 +1,22 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "variables": {},
+    "resources": [
+        {
+            "name": "k8s_resource_windows_rules_group_3",
+            "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+            "apiVersion": "2021-07-22-preview",
+            "location": "$MACLocation",
+            "properties": {
+                "scopes": [
+                    "$mac"
+                ],
+                "rules": [
+                    
+                ]
+            }
+        }
+    ]
+}

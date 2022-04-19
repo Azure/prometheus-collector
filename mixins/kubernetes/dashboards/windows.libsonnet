@@ -55,27 +55,27 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
          })
         .addPanel(
           g.panel('CPU Utilisation') +
-          g.statPanel('1 - avg(rate(windows_cpu_time_total{job="windows-exporter", mode="idle",cluster="$cluster"}[2m]))')
+          g.statPanel('1 - avg(rate(windows_cpu_time_total{%(wmiExporterSelector)s, mode="idle", %(clusterSelector)s}[2m]))')
         )
         .addPanel(
           g.panel('CPU Requests Commitment') +
-          g.statPanel('sum(kube_pod_windows_container_resource_cpu_cores_request{cluster="$cluster"}) / sum(node:windows_node_num_cpu:sum{cluster="$cluster"})')
+          g.statPanel('sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterSelector)s}) / sum(node:windows_node_num_cpu:sum{%(wmiExporterSelector)s, %(clusterSelector)s})')
         )
         .addPanel(
           g.panel('CPU Limits Commitment') +
-          g.statPanel('sum(kube_pod_windows_container_resource_cpu_cores_limit{cluster="$cluster"}) / sum(node:windows_node_num_cpu:sum{cluster="$cluster"})')
+          g.statPanel('sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterSelector)s}) / sum(node:windows_node_num_cpu:sum{%(wmiExporterSelector)s, %(clusterSelector)s})')
         )
         .addPanel(
           g.panel('Memory Utilisation') +
-          g.statPanel('1 - sum(sum(windows_memory_available_bytes{job = "windows-exporter", cluster = "$cluster" } + windows_memory_cache_bytes{job = "windows-exporter", cluster = "$cluster" })) / sum(sum(windows_os_visible_memory_bytes{job = "windows-exporter", cluster = "$cluster" }))')
+          g.statPanel('1 - sum(sum(windows_memory_available_bytes{%(wmiExporterSelector)s, cluster = "$cluster" } + windows_memory_cache_bytes{%(wmiExporterSelector)s, cluster = "$cluster" })) / sum(sum(windows_os_visible_memory_bytes{%(wmiExporterSelector)s, cluster = "$cluster" }))')
         )
         .addPanel(
           g.panel('Memory Requests Commitment') +
-          g.statPanel('sum( max by (namespace, pod, container, cluster) (kube_pod_container_resource_requests{resource = "memory",job = "kube-state-metrics", cluster = "$cluster"}) * on (container, pod, namespace, cluster) (windows_container_available{job = "windows-exporter", cluster = "$cluster"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = "kube-state-metrics", cluster = "$cluster"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job = "windows-exporter", cluster = "$cluster" }))')
+          g.statPanel('sum( max by (namespace, pod, container, cluster) (kube_pod_container_resource_requests{resource = "memory",%(kubeStateMetricsSelector)s, cluster = "$cluster"}) * on (container, pod, namespace, cluster) (windows_container_available{%(wmiExporterSelector)s, cluster = "$cluster"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{%(kubeStateMetricsSelector)s, cluster = "$cluster"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{%(wmiExporterSelector)s, cluster = "$cluster" }))')
         )
         .addPanel(
           g.panel('Memory Limits Commitment') +
-          g.statPanel('sum(kube_pod_container_resource_limits{resource = "memory", job = "kube-state-metrics", cluster = "$cluster"} * on(container, pod, namespace, cluster) (windows_container_available{job = "windows-exporter", cluster = "$cluster"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = "kube-state-metrics", cluster = "$cluster"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job = "windows-exporter", cluster = "$cluster" }))')
+          g.statPanel('sum(kube_pod_container_resource_limits{resource = "memory", %(kubeStateMetricsSelector)s, cluster = "$cluster"} * on(container, pod, namespace, cluster) (windows_container_available{%(wmiExporterSelector)s, cluster = "$cluster"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{%(kubeStateMetricsSelector)s, cluster = "$cluster"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{%(wmiExporterSelector)s, cluster = "$cluster" }))')
         )
       )
       .addRow(
@@ -110,7 +110,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         .addPanel(
           g.panel('Memory Usage (Private Working Set)') +
           // Not using container_memory_usage_bytes here because that includes page cache
-          g.queryPanel('sum(windows_container_private_working_set_usage{job = \"windows-exporter\", cluster = "$cluster"}) by (cluster, namespace)', '{{namespace}}') +
+          g.queryPanel('sum(windows_container_private_working_set_usage{%(wmiExporterSelector), cluster = "$cluster"}) by (cluster, namespace)', '{{namespace}}') +
           g.stack +
           { yaxes: g.yaxes('decbytes') },
         )
@@ -121,11 +121,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
           g.panel('Requests by Namespace') +
           g.tablePanel([
             // Not using container_memory_usage_bytes here because that includes page cache
-            'sum(windows_container_private_working_set_usage{job = \"windows-exporter\", cluster = "$cluster"}) by (cluster, namespace)',
+            'sum(windows_container_private_working_set_usage{%(wmiExporterSelector)s, cluster = "$cluster"}) by (cluster, namespace)',
             'sum(kube_pod_windows_container_resource_memory_request{cluster = "$cluster"}) by (cluster, namespace)',
-            'sum(windows_container_private_working_set_usage{job = \"windows-exporter\", cluster = "$cluster"}) by (cluster, namespace) / sum(kube_pod_windows_container_resource_memory_request{cluster = "$cluster"}) by (cluster, namespace)',
+            'sum(windows_container_private_working_set_usage{%(wmiExporterSelector)s, cluster = "$cluster"}) by (cluster, namespace) / sum(kube_pod_windows_container_resource_memory_request{cluster = "$cluster"}) by (cluster, namespace)',
             'sum(kube_pod_windows_container_resource_memory_limit{cluster = "$cluster"}) by (cluster, namespace)',
-            'sum(windows_container_private_working_set_usage{job = \"windows-exporter\", cluster = "$cluster"}) by (cluster, namespace) / sum(kube_pod_windows_container_resource_memory_limit{cluster = "$cluster"}) by (cluster, namespace)',
+            'sum(windows_container_private_working_set_usage{%(wmiExporterSelector)s, cluster = "$cluster"}) by (cluster, namespace) / sum(kube_pod_windows_container_resource_memory_limit{cluster = "$cluster"}) by (cluster, namespace)',
           ], tableStyles {
             'Value #A': { alias: 'Memory Usage', unit: 'decbytes' },
             'Value #B': { alias: 'Memory Requests', unit: 'decbytes' },
@@ -217,7 +217,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('Memory Usage')
         .addPanel(
           g.panel('Memory Usage') +
-          g.queryPanel('sum(windows_container_private_working_set_usage{job="windows-exporter", cluster = "$cluster", namespace="$namespace"}) by (pod)', '{{pod}}') +
+          g.queryPanel('sum(windows_container_private_working_set_usage{%(wmiExporterSelector)s, cluster = "$cluster", namespace="$namespace"}) by (pod)', '{{pod}}') +
           g.stack +
           { yaxes: g.yaxes('decbytes') },
         )
@@ -227,11 +227,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         .addPanel(
           g.panel('Memory Quota') +
           g.tablePanel([
-            'sum(windows_container_private_working_set_usage{job="windows-exporter", cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod)',
+            'sum(windows_container_private_working_set_usage{%(wmiExporterSelector)s, cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod)',
             'sum(kube_pod_windows_container_resource_memory_request{cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod)',
-            'sum(windows_container_private_working_set_usage{job="windows-exporter", cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_memory_request{cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod)',
+            'sum(windows_container_private_working_set_usage{%(wmiExporterSelector)s, cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_memory_request{cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod)',
             'sum(kube_pod_windows_container_resource_memory_limit{cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod)',
-            'sum(windows_container_private_working_set_usage{job="windows-exporter", cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_memory_limit{cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod)',
+            'sum(windows_container_private_working_set_usage{%(wmiExporterSelector)s, cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_memory_limit{cluster = "$cluster", namespace="$namespace"}) by (cluster, namespace, pod)',
           ], tableStyles {
             'Value #A': { alias: 'Memory Usage', unit: 'decbytes' },
             'Value #B': { alias: 'Memory Requests', unit: 'decbytes' },
@@ -305,7 +305,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('CPU Usage')
         .addPanel(
           g.panel('CPU Usage') +
-          g.queryPanel('sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)', '{{container}}') +
+          g.queryPanel('sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)', '{{container}}') +
           g.stack,
         )
       )
@@ -314,11 +314,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         .addPanel(
           g.panel('CPU Quota') +
           g.tablePanel([
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
-            'sum(kube_pod_windows_container_resource_cpu_cores_request{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_cpu_cores_request{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
-            'sum(kube_pod_windows_container_resource_cpu_cores_limit{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_cpu_cores_limit{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
+            'sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
+            'sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
           ], tableStyles {
             'Value #A': { alias: 'CPU Usage' },
             'Value #B': { alias: 'CPU Requests' },
@@ -332,7 +332,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('Memory Usage')
         .addPanel(
           g.panel('Memory Usage') +
-          g.queryPanel('sum(windows_container_private_working_set_usage{job="windows-exporter", cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)', '{{container}}') +
+          g.queryPanel('sum(windows_container_private_working_set_usage{%(wmiExporterSelector)s, %(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)', '{{container}}') +
           g.stack,
         )
       )
@@ -341,11 +341,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         .addPanel(
           g.panel('Memory Quota') +
           g.tablePanel([
-            'sum(windows_container_private_working_set_usage{job="windows-exporter", cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
-            'sum(kube_pod_windows_container_resource_memory_request{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
-            'sum(windows_container_private_working_set_usage{job="windows-exporter", cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_memory_request{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
-            'sum(kube_pod_windows_container_resource_memory_limit{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
-            'sum(windows_container_private_working_set_usage{job="windows-exporter", cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_memory_limit{cluster="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
+            'sum(windows_container_private_working_set_usage{%(wmiExporterSelector)s, %(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
+            'sum(kube_pod_windows_container_resource_memory_request{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
+            'sum(windows_container_private_working_set_usage{%(wmiExporterSelector)s, %(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_memory_request{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
+            'sum(kube_pod_windows_container_resource_memory_limit{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
+            'sum(windows_container_private_working_set_usage{%(wmiExporterSelector)s, %(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_memory_limit{%(clusterSelector)s, namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)',
           ], tableStyles {
             'Value #A': { alias: 'Memory Usage', unit: 'decbytes' },
             'Value #B': { alias: 'Memory Requests', unit: 'decbytes' },
@@ -369,11 +369,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
             legend_avg=true,
           )
           .addTarget(prometheus.target(
-            'sort_desc(sum by (container) (rate(windows_container_network_received_bytes_total{job = "windows-exporter", cluster = "$cluster", namespace="$namespace", pod="$pod"}[1m])))' % $._config,
+            'sort_desc(sum by (container) (rate(windows_container_network_received_bytes_total{%(wmiExporterSelector)s, cluster = "$cluster", namespace="$namespace", pod="$pod"}[1m])))' % $._config,
             legendFormat='Received : {{ container }}',
           ))
           .addTarget(prometheus.target(
-            'sort_desc(sum by (container) (rate(windows_container_network_transmitted_bytes_total{job = "windows-exporter", cluster = "$cluster", namespace="$namespace", pod="$pod"}[1m])))' % $._config,
+            'sort_desc(sum by (container) (rate(windows_container_network_transmitted_bytes_total{%(wmiExporterSelector)s, cluster = "$cluster", namespace="$namespace", pod="$pod"}[1m])))' % $._config,
             legendFormat='Transmitted : {{ container }}',
           ))
         )
@@ -404,11 +404,21 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
           type: 'datasource',
         },
       )
+      .addTemplate(
+        template.new(
+          'cluster',
+          '$datasource',
+          'label_values(windows_system_system_up_time, cluster)',
+          label='Cluster',
+          refresh='time',
+          sort=1,
+        )
+      )
       .addRow(
         g.row('CPU')
         .addPanel(
           g.panel('CPU Utilisation') +
-          g.queryPanel('node:windows_node_cpu_utilisation:avg1m * node:windows_node_num_cpu:sum / scalar(sum(node:windows_node_num_cpu:sum))', '{{instance}}', legendLink) +
+          g.queryPanel('node:windows_node_cpu_utilisation:avg1m{%(wmiExporterSelector)s, %(clusterSelector)s} * node:windows_node_num_cpu:sum{%(clusterSelector)s} / scalar(sum(node:windows_node_num_cpu:sum{%(wmiExporterSelector)s, cluster=$cluster}))', '{{instance}}', legendLink) +
           g.stack +
           { yaxes: g.yaxes({ format: 'percentunit', max: 1 }) },
         )
@@ -417,13 +427,13 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('Memory')
         .addPanel(
           g.panel('Memory Utilisation') +
-          g.queryPanel('node:windows_node_memory_utilisation:ratio', '{{instance}}', legendLink) +
+          g.queryPanel('node:windows_node_memory_utilisation:ratio{%(wmiExporterSelector)s, %(clusterSelector)s}', '{{instance}}', legendLink) +
           g.stack +
           { yaxes: g.yaxes({ format: 'percentunit', max: 1 }) },
         )
         .addPanel(
           g.panel('Memory Saturation (Swap I/O Pages)') +
-          g.queryPanel('node:windows_node_memory_swap_io_pages:irate', '{{instance}}', legendLink) +
+          g.queryPanel('node:windows_node_memory_swap_io_pages:irate{%(wmiExporterSelector)s, %(clusterSelector)s}', '{{instance}}', legendLink) +
           g.stack +
           { yaxes: g.yaxes('short') },
         )
@@ -434,7 +444,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
           g.panel('Disk IO Utilisation') +
           // Full utilisation would be all disks on each node spending an average of
           // 1 sec per second doing I/O, normalize by node count for stacked charts
-          g.queryPanel('node:windows_node_disk_utilisation:avg_irate / scalar(node:windows_node:sum)', '{{instance}}', legendLink) +
+          g.queryPanel('node:windows_node_disk_utilisation:avg_irate{%(wmiExporterSelector)s, %(clusterSelector)s} / scalar(node:windows_node:sum{%(wmiExporterSelector)s, %(clusterSelector)s})', '{{instance}}', legendLink) +
           g.stack +
           { yaxes: g.yaxes({ format: 'percentunit', max: 1 }) },
         )
@@ -443,13 +453,13 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('Network')
         .addPanel(
           g.panel('Net Utilisation (Transmitted)') +
-          g.queryPanel('node:windows_node_net_utilisation:sum_irate', '{{instance}}', legendLink) +
+          g.queryPanel('node:windows_node_net_utilisation:sum_irate{%(wmiExporterSelector)s, %(clusterSelector)s}', '{{instance}}', legendLink) +
           g.stack +
           { yaxes: g.yaxes('Bps') },
         )
         .addPanel(
           g.panel('Net Saturation (Dropped)') +
-          g.queryPanel('node:windows_node_net_saturation:sum_irate', '{{instance}}', legendLink) +
+          g.queryPanel('node:windows_node_net_saturation:sum_irate{%(wmiExporterSelector)s, %(clusterSelector)s}', '{{instance}}', legendLink) +
           g.stack +
           { yaxes: g.yaxes('Bps') },
         )
@@ -460,7 +470,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
           g.panel('Disk Capacity') +
           g.queryPanel(
             |||
-              sum by (instance)(node:windows_node_filesystem_usage:)
+              sum by (instance, cluster)(node:windows_node_filesystem_usage:{%(wmiExporterSelector)s, %(clusterSelector)s})
             ||| % $._config, '{{instance}}', legendLink
           ) +
           g.stack +
@@ -501,11 +511,21 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
           sort=1,
         )
       )
+      .addTemplate(
+        template.new(
+          'cluster',
+          '$datasource',
+          'label_values(windows_system_system_up_time, cluster)',
+          label='Cluster',
+          refresh='time',
+          sort=1,
+        )
+      )
       .addRow(
         g.row('CPU')
         .addPanel(
           g.panel('CPU Utilisation') +
-          g.queryPanel('node:windows_node_cpu_utilisation:avg1m{instance="$instance"}', 'Utilisation') +
+          g.queryPanel('node:windows_node_cpu_utilisation:avg1m{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}', 'Utilisation') +
           { yaxes: g.yaxes('percentunit') },
         )
         .addPanel(
@@ -518,7 +538,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('Memory')
         .addPanel(
           g.panel('Memory Utilisation %') +
-          g.queryPanel('node:windows_node_memory_utilisation:{instance="$instance"}', 'Memory') +
+          g.queryPanel('node:windows_node_memory_utilisation:{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}', 'Memory') +
           { yaxes: g.yaxes('percentunit') },
         )
         .addPanel(
@@ -528,17 +548,17 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
           .addTarget(prometheus.target(
             |||
               max(
-                windows_os_visible_memory_bytes{%(wmiExporterSelector)s, instance="$instance"}
-                - windows_memory_available_bytes{%(wmiExporterSelector)s, instance="$instance"}
+                windows_os_visible_memory_bytes{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}
+                - windows_memory_available_bytes{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}
               )
             ||| % $._config, legendFormat='memory used'
           ))
-          .addTarget(prometheus.target('max(node:windows_node_memory_totalCached_bytes:sum{%(wmiExporterSelector)s, instance="$instance"})' % $._config, legendFormat='memory cached'))
-          .addTarget(prometheus.target('max(windows_memory_available_bytes{%(wmiExporterSelector)s, instance="$instance"})' % $._config, legendFormat='memory free'))
+          .addTarget(prometheus.target('max(node:windows_node_memory_totalCached_bytes:sum{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"})' % $._config, legendFormat='memory cached'))
+          .addTarget(prometheus.target('max(windows_memory_available_bytes{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"})' % $._config, legendFormat='memory free'))
         )
         .addPanel(
           g.panel('Memory Saturation (Swap I/O) Pages') +
-          g.queryPanel('node:windows_node_memory_swap_io_pages:irate{instance="$instance"}', 'Swap IO') +
+          g.queryPanel('node:windows_node_memory_swap_io_pages:irate{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}', 'Swap IO') +
           { yaxes: g.yaxes('short') },
         )
       )
@@ -546,14 +566,14 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('Disk')
         .addPanel(
           g.panel('Disk IO Utilisation') +
-          g.queryPanel('node:windows_node_disk_utilisation:avg_irate{instance="$instance"}', 'Utilisation') +
+          g.queryPanel('node:windows_node_disk_utilisation:avg_irate{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}', 'Utilisation') +
           { yaxes: g.yaxes('percentunit') },
         )
         .addPanel(
           graphPanel.new('Disk I/O', datasource='$datasource')
-          .addTarget(prometheus.target('max(rate(windows_logical_disk_read_bytes_total{%(wmiExporterSelector)s, instance="$instance"}[2m]))' % $._config, legendFormat='read'))
-          .addTarget(prometheus.target('max(rate(windows_logical_disk_write_bytes_total{%(wmiExporterSelector)s, instance="$instance"}[2m]))' % $._config, legendFormat='written'))
-          .addTarget(prometheus.target('max(rate(windows_logical_disk_read_seconds_total{%(wmiExporterSelector)s,  instance="$instance"}[2m]) + rate(windows_logical_disk_write_seconds_total{%(wmiExporterSelector)s,  instance="$instance"}[2m]))' % $._config, legendFormat='io time')) +
+          .addTarget(prometheus.target('max(rate(windows_logical_disk_read_bytes_total{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}[2m]))' % $._config, legendFormat='read'))
+          .addTarget(prometheus.target('max(rate(windows_logical_disk_write_bytes_total{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}[2m]))' % $._config, legendFormat='written'))
+          .addTarget(prometheus.target('max(rate(windows_logical_disk_read_seconds_total{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}[2m]) + rate(windows_logical_disk_write_seconds_total{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}[2m]))' % $._config, legendFormat='io time')) +
           {
             seriesOverrides: [
               {
@@ -576,12 +596,12 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('Net')
         .addPanel(
           g.panel('Net Utilisation (Transmitted)') +
-          g.queryPanel('node:windows_node_net_utilisation:sum_irate{instance="$instance"}', 'Utilisation') +
+          g.queryPanel('node:windows_node_net_utilisation:sum_irate{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}', 'Utilisation') +
           { yaxes: g.yaxes('Bps') },
         )
         .addPanel(
           g.panel('Net Saturation (Dropped)') +
-          g.queryPanel('node:windows_node_net_saturation:sum_irate{instance="$instance"}', 'Saturation') +
+          g.queryPanel('node:windows_node_net_saturation:sum_irate{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}', 'Saturation') +
           { yaxes: g.yaxes('Bps') },
         )
       )
@@ -591,7 +611,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
           g.panel('Disk Utilisation') +
           g.queryPanel(
             |||
-              node:windows_node_filesystem_usage:{instance="$instance"}
+              node:windows_node_filesystem_usage:{%(wmiExporterSelector)s, %(clusterSelector)s, instance="$instance"}
             ||| % $._config,
             '{{volume}}',
           ) +
