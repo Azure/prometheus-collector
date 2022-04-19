@@ -60,7 +60,7 @@ if [ ${#APPLICATIONINSIGHTS_AUTH_URL} -ge 1 ]; then  # (check if APPLICATIONINSI
       fi
 fi
 
-aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 --decode)	
+aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 -d)	
 export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey	
 echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc	
 
@@ -132,7 +132,7 @@ source ~/.bashrc
 echo "Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
 
 #start cron daemon for logrotate
-service cron restart
+/usr/sbin/crond -n -s &
 
 echo "CONTROLLER_TYPE="$CONTROLLER_TYPE
 #get controller kind in lowercase, trimmed
@@ -249,7 +249,7 @@ else
 fi
 
 #get ME version
-dpkg -l | grep metricsext | awk '{print $2 " " $3}'
+#dpkg -l | grep metricsext | awk '{print $2 " " $3}'
 
 #start otelcollector
 # will need to rotate log file
@@ -267,11 +267,12 @@ echo "started otelcollector"
 ruby --version
 
 echo "starting telegraf"
-/opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
 
 echo "starting fluent-bit"
-/opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
-dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'
+mkdir /opt/microsoft/fluent-bit
+touch /opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log
+fluent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
 
 #Run inotify as a daemon to track changes to the dcr/dce config.
 echo "starting inotify for watching mdsd config update"

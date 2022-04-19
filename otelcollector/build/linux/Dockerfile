@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM cblmariner2preview.azurecr.io/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="omscontainers@microsoft.com"
 # ARG IMAGE_TAG="test"
@@ -10,8 +10,10 @@ ENV tmpdir /opt
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
 COPY ./logrotate/prometheus-collector /etc/logrotate.d/
-RUN apt-get update && apt-get install -y libc-bin wget openssl curl sudo init-system-helpers net-tools cron vim apt-transport-https locales ruby gnupg logrotate ucf
-RUN apt-get upgrade libsystemd0 -y
+COPY ./logrotate/logrotate /etc/cron.daily/logrotate
+COPY ./logrotate/crontab /etc/crontab
+RUN tdnf install -y wget openssl curl sudo net-tools cronie vim ruby gnupg logrotate sed procps-ng dnf busybox
+RUN mkdir /busybin && busybox --install /busybin
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
 COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
@@ -27,6 +29,58 @@ COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
+COPY ./build/linux/mariner-official-extras.repo /etc/yum.repos.d/mariner-official-extras.repo
 
+RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
-CMD [ "/opt/main.sh" ]
+RUN ldd /lib/libc.so.6
+#CMD [ "/opt/main.sh" ]
+
+FROM cblmariner2preview.azurecr.io/distroless/base:2.0
+ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+ENV PATH="/busybin:${PATH}"
+ENV OS_TYPE "linux"
+
+# files
+COPY --from=builder /opt /opt
+COPY --from=builder /etc/ssl /etc/ssl
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /busybin /busybin
+COPY --from=builder /static/react /static/react
+
+# executables
+COPY --from=builder /usr/sbin/me.config /usr/sbin/me_ds.config /usr/sbin/
+#COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
+COPY --from=builder /usr/bin/ruby /usr/bin/ruby
+COPY --from=builder /usr/lib/ruby /usr/lib/ruby
+COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
+COPY --from=builder /usr/bin/bash /usr/bin/bash
+COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
+COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
+COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
+COPY --from=builder /usr/sbin/crond /usr/sbin/crond
+
+# bash dependencies
+COPY --from=builder /lib/libreadline.so.8 /lib
+COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib
+
+#COPY --from=builder /lib64/ld-linux-x86-64.so.2 /lib64/libc.so.6 /lib64
+#COPY --from=builder /usr/lib/ld-linux-x86-64.so.2 /usr/lib
+# inotifywait dependencies
+COPY --from=builder /lib/libinotifytools.so.0 /lib/
+# crond dependencies
+COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libpcre.so.1 /lib/libaudit.so.1 /lib/
+# ruby dependencies
+COPY --from=builder /usr/lib/libruby.so.2.7 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
+# ruby re2 dependencies
+COPY --from=builder /usr/lib/ruby/gems/gems/re2-1.4.0/lib/re2.so /usr/lib/ruby/gems/gems/re2-1.4.0/lib/re2.so
+COPY --from=builder /usr/lib/libre2.so.0a /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
+# metricsextension dependencies
+#COPY --from=builder /lib/libprotobuf.so.25 /lib/libgrpc++.so.1 /lib/libboost_filesystem.so.1.66.0 /lib/libboost_system.so.1.66.0 /lib/libboost_system.so.1.66.0 /lib/libcpprest.so.2.10 /lib/libpthread.so.0 /lib/libssl.so.1.1 /lib/libuuid.so.1 /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libgpr.so.14 /lib/libupb.so.14 /lib/libabsl_strings.so.2111.0.0  /lib/librt.so.1 /lib/libboost_chrono.so.1.66.0 /lib/libboost_context.so.1.66.0 /lib/libboost_thread.so.1.66.0 /lib/libdl.so.2  /lib/libcares.so.2 /lib/libaddress_sorting.so.14 /lib/libabsl_statusor.so.2111.0.0 /lib/libabsl_status.so.2111.0.0 /lib/libre2.so.0a /lib/libabsl_str_format_internal.so.2111.0.0 /lib/libabsl_cord.so.2111.0.0 /lib/libabsl_raw_hash_set.so.2111.0.0 /lib/libabsl_bad_optional_access.so.2111.0.0 /lib/libabsl_time.so.2111.0.0 /lib/libabsl_throw_delegate.so.2111.0.0  /lib/libabsl_time_zone.so.2111.0.0 /lib/libabsl_synchronization.so.2111.0.0 /lib/libabsl_spinlock_wait.so.2111.0.0 /lib/libabsl_strings_internal.so.2111.0.0 /lib/libabsl_cordz_info.so.2111.0.0 /lib/libabsl_int128.so.2111.0.0 /lib/libabsl_cord_internal.so.2111.0.0 /lib/libabsl_cordz_functions.so.2111.0.0 /lib/libabsl_base.so.2111.0.0 /lib/libabsl_stacktrace.so.2111.0.0  /lib/libabsl_symbolize.so.2111.0.0 /lib/libabsl_malloc_internal.so.2111.0.0 /lib/libabsl_cordz_handle.so.2111.0.0 /lib/libabsl_exponential_biased.so.2111.0.0  /lib/libboost_coroutine.so.1.66.0 /lib/libz.so.1 /lib/libgrpc.so.14  /lib/libabsl_raw_logging_internal.so.2111.0.0 /lib/libabsl_debugging_internal.so.2111.0.0 /lib/ /lib/libabsl_demangle_internal.so.2111.0.0 /lib/
+# telegraf dependencies
+#COPY --from=builder /lib/libc.so.6 /lib
+# fluent-bit dependencies
+COPY --from=builder /lib/libssl.so.1.1 /lib/libcrypto.so.1.1 /lib/libsystemd.so.0 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/liblzma.so.5 /lib/liblz4.so.1 /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libgpg-error.so.0 /lib
+
+#RUN chmod 775 /etc/cron.daily/logrotate
+CMD [ "usr/bin/bash", "-c", "/opt/main.sh" ]

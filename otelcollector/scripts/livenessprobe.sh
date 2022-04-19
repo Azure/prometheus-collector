@@ -7,12 +7,12 @@ then
   exit 1
 fi
 
-(ps -ef | grep MetricsExt | grep -v "grep")
-if [ $? -ne 0 ]
-then
-  echo "Metrics Extension is not running" > /dev/termination-log
-  exit 1
-fi
+#(ps -ef | grep MetricsExt | grep -v "grep")
+#if [ $? -ne 0 ]
+#then
+#  echo "Metrics Extension is not running" > /dev/termination-log
+#  exit 1
+#fi
 
 if [ "${MAC}" != "true" ]; then
   # The mounted cert files are modified by the keyvault provider every time it probes for new certs
