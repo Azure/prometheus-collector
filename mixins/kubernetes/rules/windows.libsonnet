@@ -90,9 +90,9 @@
             // Memory utilisation per node, normalized by per-node memory
             record: 'node:windows_node_memory_utilisation:ratio',
             expr: |||
-              (node:windows_node_memory_bytes_total:sum{ %(wmiExporterSelector)s , %(clusterSelector)s } - node:windows_node_memory_bytes_available:sum{ %(wmiExporterSelector)s, %(clusterSelector)s})
+              (node:windows_node_memory_bytes_total:sum - node:windows_node_memory_bytes_available:sum)
               /
-              scalar(sum(node:windows_node_memory_bytes_total:sum{ %(wmiExporterSelector)s, %(clusterSelector)s}))
+              scalar(sum(node:windows_node_memory_bytes_total:sum))
             |||,
           },
           {
