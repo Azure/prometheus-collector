@@ -418,7 +418,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('CPU')
         .addPanel(
           g.panel('CPU Utilisation') +
-          g.queryPanel('node:windows_node_cpu_utilisation:avg1m{%(wmiExporterSelector)s, %(clusterSelector)s} * node:windows_node_num_cpu:sum{%(clusterSelector)s} / scalar(sum(node:windows_node_num_cpu:sum{%(wmiExporterSelector)s, cluster=$cluster}))', '{{instance}}', legendLink) +
+          g.queryPanel('node:windows_node_cpu_utilisation:avg1m{%(wmiExporterSelector)s, %(clusterSelector)s} * node:windows_node_num_cpu:sum{%(clusterSelector)s} / scalar(sum(node:windows_node_num_cpu:sum{%(wmiExporterSelector)s, %(clusterSelector)s}))', '{{instance}}', legendLink) +
           g.stack +
           { yaxes: g.yaxes({ format: 'percentunit', max: 1 }) },
         )
