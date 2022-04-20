@@ -6,9 +6,9 @@ cd $TMPDIR
 export releasever="2.0"
 tdnf install ca-certificates-microsoft -y
 
-sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
-    dpkg-reconfigure --frontend=noninteractive locales && \
-    update-locale LANG=en_US.UTF-8
+#sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
+#    dpkg-reconfigure --frontend=noninteractive locales && \
+#    update-locale LANG=en_US.UTF-8
 
 #Need this for newer scripts
 chmod 544 $TMPDIR/*.sh
@@ -55,9 +55,10 @@ gem install re2
 #mv ./otelcol_linux_amd64 /opt/microsoft/otelcollector29/otelcollector
 #chmod 777 /opt/microsoft/otelcollector29/otelcollector
 
+echo "Installing MDSD dependencies"
+sudo tdnf install -y which
 echo "Downloading MDSD"
-#wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-support-official/azure-mdsd_1.17.1-build.master.377_x86_64.deb
-#/usr/bin/dpkg -i $TMPDIR/azure-mdsd*.deb
+sudo tdnf --disablerepo="*" --enablerepo=packages-microsoft-com-azurecore install azure-mdsd -y
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for logs
 mkdir /opt/microsoft/linuxmonagent
