@@ -207,4 +207,5 @@ done;
 
 echo "Onboarding was completed successfully, please deploy the prometheus-collector helm chart for data collection using the following command -"
 echo "helm upgrade --install prometheus-collector-release ./prometheus-collector-3.0.0-main-04-07-2022-33676484.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId=\"$aksResourceId\" --set azureResourceRegion=\"$trimmedRegion\" --set mode.advanced=true --namespace=\"kube-system\" --create-namespace"
+echo "Please ensure to set the right cluster context before running the helm install command - See Step #2 in the instructions on how to set this."
 
