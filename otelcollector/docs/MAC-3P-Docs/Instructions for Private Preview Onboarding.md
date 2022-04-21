@@ -10,9 +10,7 @@
 
 **5. az cli version needs to be >= 2.30.0**
 
-**6. Azure Managed Grafana instance creation is only supported for AAD tenants right now, so please use an account linked to an AAD tenant - https://docs.microsoft.com/en-us/azure/managed-grafana/how-to-share-grafana-workspace#supported-grafana-roles**
-
-**7. Ingesting data from one cluster to multiple MAC accounts (multi homing) is not supported for private preview.**
+**6. Ingesting data from one cluster to multiple MAC accounts (multi homing) is not supported for private preview.**
 
 ### **Step 1**: Download and run the script (Recommended to use Azure cloud shell) to create the required resources for metric ingestion and query. Please note the script takes about 10 to 15 minutes because of the various resource creation templates. Please make sure the session doesn’t timeout so that you don’t miss out on the errors. 
 1.	Download the Onboarding-script.sh, RootTemplate.json and RoleDefinition.json from https://github.com/Azure/prometheus-collector/tree/feature/mac/otelcollector/docs/MAC-3P-Docs 
