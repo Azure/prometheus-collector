@@ -71,11 +71,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         )
         .addPanel(
           g.panel('Memory Requests Commitment') +
-          g.statPanel('sum( max by (namespace, pod, container, cluster) (kube_pod_container_resource_requests{resource = "memory",%(kubeStateMetricsSelector)s, cluster = "$cluster"}) * on (container, pod, namespace, cluster) (windows_container_available{job="windows-exporter", cluster = "$cluster"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{%(kubeStateMetricsSelector)s, cluster = "$cluster"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job="windows-exporter", cluster = "$cluster" }))')
+          g.statPanel('sum( max by (namespace, pod, container, cluster) (kube_pod_container_resource_requests{resource = "memory",job="kube-state-metrics", cluster = "$cluster"}) * on (container, pod, namespace, cluster) (windows_container_available{job="windows-exporter", cluster = "$cluster"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job="kube-state-metrics", cluster = "$cluster"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job="windows-exporter", cluster = "$cluster" }))')
         )
         .addPanel(
           g.panel('Memory Limits Commitment') +
-          g.statPanel('sum(kube_pod_container_resource_limits{resource = "memory", %(kubeStateMetricsSelector)s, cluster = "$cluster"} * on(container, pod, namespace, cluster) (windows_container_available{job="windows-exporter", cluster = "$cluster"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{%(kubeStateMetricsSelector)s, cluster = "$cluster"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job="windows-exporter", cluster = "$cluster" }))')
+          g.statPanel('sum(kube_pod_container_resource_limits{resource = "memory", job="kube-state-metrics", cluster = "$cluster"} * on(container, pod, namespace, cluster) (windows_container_available{job="windows-exporter", cluster = "$cluster"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job="kube-state-metrics", cluster = "$cluster"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job="windows-exporter", cluster = "$cluster" }))')
         )
       )
       .addRow(
