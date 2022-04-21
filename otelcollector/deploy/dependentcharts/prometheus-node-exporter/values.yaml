@@ -4,7 +4,7 @@
 image:
   repository: mcr.microsoft.com/oss/prometheus/node-exporter
   # Overrides the image tag whose default is {{ printf "v%s" .Chart.AppVersion }}
-  tag: ""
+  tag: "v1.3.1"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
