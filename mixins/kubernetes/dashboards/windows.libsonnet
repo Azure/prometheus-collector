@@ -110,7 +110,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         .addPanel(
           g.panel('Memory Usage (Private Working Set)') +
           // Not using container_memory_usage_bytes here because that includes page cache
-          g.queryPanel('sum(windows_container_private_working_set_usage{%(wmiExporterSelector), cluster = "$cluster"}) by (cluster, namespace)', '{{namespace}}') +
+          g.queryPanel('sum(windows_container_private_working_set_usage{job="windows-exporter", cluster = "$cluster"}) by (cluster, namespace)', '{{namespace}}') +
           g.stack +
           { yaxes: g.yaxes('decbytes') },
         )
