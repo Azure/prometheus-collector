@@ -31,10 +31,6 @@
                         "expression": "count by (instance, cluster) (sum by (instance, core, cluster) (windows_cpu_time_total{job = \"windows-exporter\", cluster = \"$cluster\"}))"
                     },
                     {
-                        // Does this need to be a recording rule since its dividing two other recording rules previously defined
-                        // Sometimes I don't see data when I put the below query in grafana explorer (for a cluster with the rules deployed)
-                        // ************************************************ REMOVE BEFORE MERGE ************************************************
-                        // ************************************************ COMMENTS ARE NOT ALLOWED IN JSON ************************************************
                         "record": "cpu_requests_commitment",
                         "expression": "sum(kube_pod_windows_container_resource_cpu_cores_request{cluster = \"$cluster\"}) / sum(node:windows_node_num_cpu:sum{cluster = \"$cluster\"})"
                     },
@@ -51,7 +47,6 @@
                         "expression": "sum(windows_os_visible_memory_bytes{job = \"windows-exporter\", cluster = \"$cluster\" })"
                     },
                     {
-                        // Similar to above -> Do I need to add this rule in mixins\kubernetes\rules\windows.libsonnet
                         "record": "memory_utilization",
                         "expression": "1 - sum(sum(windows_memory_available_bytes{job = \"windows-exporter\", cluster = \"$cluster\" } + windows_memory_cache_bytes{job = \"windows-exporter\", cluster = \"$cluster\" })) / sum(sum(windows_os_visible_memory_bytes{job = \"windows-exporter\", cluster = \"$cluster\" }))"
                     }
