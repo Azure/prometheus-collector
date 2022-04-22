@@ -10,6 +10,8 @@
 
 **5. az cli version needs to be >= 2.30.0**
 
+**6. Ingesting data from one cluster to multiple MAC accounts (multi homing) is not supported for private preview.**
+
 ### **Step 1**: Download and run the script (Recommended to use Azure cloud shell) to create the required resources for metric ingestion and query. Please note the script takes about 10 to 15 minutes because of the various resource creation templates. Please make sure the session doesn’t timeout so that you don’t miss out on the errors. 
 1.	Download the Onboarding-script.sh, RootTemplate.json and RoleDefinition.json from https://github.com/Azure/prometheus-collector/tree/feature/mac/otelcollector/docs/MAC-3P-Docs 
 2.	Update the script to have execute permissions. 
@@ -45,12 +47,19 @@ You can instead run the helm commands from the path ~/linux-amd64. Prefix the he
 
         helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 3.0.0-main-04-07-2022-33676484
 
-2.  Install the helm chart with the following parameters -
+2.  Install the helm chart with the following parameters  -
     
         helm upgrade --install <release-name> ./prometheus-collector-3.0.0-main-04-07-2022-33676484.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="<aks-resource-id>" --set azureResourceRegion="<aks-resource-location>" --set mode.advanced=true --namespace="kube-system" --create-namespace
 
 
 Ex - helm upgrade --install my-collector-dev-release ./prometheus-collector-3.0.0-main-04-07-2022-33676484.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="/subscriptions/subid/resourcegroups/rg-name/providers/Microsoft.ContainerService/managedClusters/clustername" --set azureResourceRegion="eastus2" --set mode.advanced=true --namespace="kube-system" --create-namespace
+
+    Please make sure you have set the right context for the AKS cluster you want to install the chart on
+    - az aks get-credentials -g <aks-rg-name> -n <aks-cluster-name> (This gets the cluster kubeconfig and sets it as the current context)
+    - or, If you already have the kubeconfig downloaded, set it as current-context 
+        kubectl config use-context <aks-cluster-name>
+    - Make sure you have the right context set by running
+        kubectl cluster-info
 
 
 ### **Step 3**: Navigate to the Grafana UX. An initial set of default dashboards are created under the folder  ‘Azure Monitor Container Insights’. Browse through these dashboards by picking the Monitoring Account data source to see the cluster you just started collecting metrics from.
