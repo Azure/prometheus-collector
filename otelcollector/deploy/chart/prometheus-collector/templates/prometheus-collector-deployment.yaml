@@ -126,10 +126,10 @@ spec:
             - name: AKVAUTH
               value: "sp" # service principal
             {{- end }}
+            {{- end }}
             {{- if .Values.minimalIngestionProfile  }}
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
-            {{- end }}
             {{- end }}
           securityContext:
             privileged: false
