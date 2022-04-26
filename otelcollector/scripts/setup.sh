@@ -3,12 +3,9 @@
 TMPDIR="/opt"
 cd $TMPDIR
 
-export releasever="2.0"
 sudo tdnf install ca-certificates-microsoft -y
 
-#sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
-#    dpkg-reconfigure --frontend=noninteractive locales && \
-#    update-locale LANG=en_US.UTF-8
+localedef -v -c -i en_US -f UTF-8 en_US.UTF-8
 
 #Need this for newer scripts
 chmod 544 $TMPDIR/*.sh
@@ -119,27 +116,9 @@ echo "Installing Metrics Extension..."
 #sudo apt --fix-broken install -y
 #/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
-sudo tdnf install cpprest grpc grpc-cpp -y
-sudo tdnf --disablerepo="*" --enablerepo=mariner-official-extras install metricsext2 -y
+# This is the ME install with Mariner 1.0 repository. Keeping here until 2.0 package is available.
+# However, there are conflicting dependencies so ME package does not work with 2.0 base image
+#sudo tdnf install cpprest grpc grpc-cpp -y
+#sudo tdnf --disablerepo="*" --enablerepo=mariner-official-extras install metricsext2 -y
 
-# Cleaning up unused packages
-#echo "Cleaning up packages used for re2 gem install..."
-
-#Uninstalling packages after gem install re2
-#sudo apt-get remove build-essential -y
-#sudo apt-get remove ruby-dev -y
-
-echo "listing unused packages..."
-#sudo apt-get autoremove -y
-#sudo dnf list --extras -y
-echo "auto removing unused packages..."
-#sudo dnf autoremove -y
-
-#cleanup all install
-echo "cleaning up all install.."
-#rm -f $TMPDIR/metricsext2*.deb
-#rm -f $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz
-#rm -rf $TMPDIR/prometheus-2.25.2.linux-amd64
-#rm -f $TMPDIR/telegraf*.gz
-#rm -rf $TMPDIR/telegraf-1.18.0/
-#rm -rf $TMPDIR/azure-mdsd*.deb
+# tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build.

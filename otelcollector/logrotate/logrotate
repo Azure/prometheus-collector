@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/busybin/sh
 
 # skip in favour of systemd timer
 if [ -d /run/systemd/system ]; then
