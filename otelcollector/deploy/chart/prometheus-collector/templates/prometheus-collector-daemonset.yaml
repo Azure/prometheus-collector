@@ -96,9 +96,9 @@ spec:
             - name: NODE_EXPORTER_TARGETPORT
               value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
             - name: KUBE_STATE_VERSION
-              value: "{{ index .Values "kube-state-metrics" "image" "repository" }}:{{ index .Values "kube-state-metrics" "image" "tag" }}"
+              value: "{{ index .Values "kube-state-metrics" "image" }}"
             - name: NODE_EXPORTER_VERSION
-              value: "{{ index .Values "prometheus-node-exporter" "image" "repository" }}:{{ index .Values "prometheus-node-exporter" "image" "tag" }}"
+              value: "{{ index .Values "prometheus-node-exporter" "image" }}"
             - name: HELM_RELEASE_NAME
               value: "{{ .Release.Name }}"
             - name: AGENT_VERSION
@@ -326,9 +326,9 @@ spec:
             - name: NODE_EXPORTER_TARGETPORT
               value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
             - name: KUBE_STATE_VERSION
-              value: "{{ index .Values "kube-state-metrics" "image" "repository" }}:{{ index .Values "kube-state-metrics" "image" "tag" }}"
+              value: "{{ index .Values "kube-state-metrics" "image" }}"
             - name: NODE_EXPORTER_VERSION
-              value: "{{ index .Values "prometheus-node-exporter" "image" "repository" }}:{{ index .Values "prometheus-node-exporter" "image" "tag" }}"
+              value: "{{ index .Values "prometheus-node-exporter" "image" }}"
             - name: HELM_RELEASE_NAME
               value: "{{ .Release.Name }}"
             - name: AGENT_VERSION
