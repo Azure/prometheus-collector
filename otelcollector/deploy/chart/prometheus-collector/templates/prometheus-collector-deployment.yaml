@@ -94,7 +94,7 @@ spec:
             - name: KUBE_STATE_VERSION
               value: "{{ index .Values "kube-state-metrics" "image" "repository" }}:{{ index .Values "kube-state-metrics" "image" "tag" }}"
             - name: NODE_EXPORTER_VERSION
-              value: {{ include "prometheus-node-exporter.image" . }}
+              value: "{{ index .Values "prometheus-node-exporter" "image" "repository" }}:{{ index .Values "prometheus-node-exporter" "image" "tag" }}"
             - name: HELM_RELEASE_NAME
               value: "{{ .Release.Name }}"
             - name: AGENT_VERSION
