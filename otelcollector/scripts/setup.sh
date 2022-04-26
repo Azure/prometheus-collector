@@ -4,7 +4,7 @@ TMPDIR="/opt"
 cd $TMPDIR
 
 export releasever="2.0"
-tdnf install ca-certificates-microsoft -y
+sudo tdnf install ca-certificates-microsoft -y
 
 #sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
 #    dpkg-reconfigure --frontend=noninteractive locales && \
@@ -20,6 +20,7 @@ chmod 744 /usr/sbin/
 #download inotify tools for watching configmap changes
 echo "Installing inotify..."
 sudo tdnf check-update
+sudo tdnf repolist --refresh
 sudo tdnf install inotify-tools -y
 
 echo "Installing packages for re2 gem install..."
@@ -122,14 +123,17 @@ sudo tdnf install cpprest grpc grpc-cpp -y
 sudo tdnf --disablerepo="*" --enablerepo=mariner-official-extras install metricsext2 -y
 
 # Cleaning up unused packages
-echo "Cleaning up packages used for re2 gem install..."
+#echo "Cleaning up packages used for re2 gem install..."
 
 #Uninstalling packages after gem install re2
-sudo apt-get remove build-essential -y
-sudo apt-get remove ruby-dev -y
+#sudo apt-get remove build-essential -y
+#sudo apt-get remove ruby-dev -y
 
+echo "listing unused packages..."
+#sudo apt-get autoremove -y
+#sudo dnf list --extras -y
 echo "auto removing unused packages..."
-sudo apt-get autoremove -y
+#sudo dnf autoremove -y
 
 #cleanup all install
 echo "cleaning up all install.."

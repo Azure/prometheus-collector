@@ -12,7 +12,8 @@ ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
 COPY ./logrotate/prometheus-collector /etc/logrotate.d/
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
-RUN tdnf install -y wget openssl curl sudo net-tools cronie vim ruby gnupg logrotate sed procps-ng dnf busybox
+RUN sudo tdnf repolist --refresh
+RUN sudo tdnf install -y wget openssl curl sudo net-tools cronie vim ruby gnupg logrotate sed procps-ng dnf busybox
 RUN mkdir /busybin && busybox --install /busybin
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
 COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
@@ -29,11 +30,10 @@ COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
-COPY ./build/linux/mariner-official-extras.repo ./build/linux/azurecore.repo /etc/yum.repos.d/mariner-official-extras.repo
+COPY ./build/linux/mariner-official-extras.repo ./build/linux/azurecore.repo /etc/yum.repos.d/
 
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
-RUN ldd /lib/libc.so.6
 #CMD [ "/opt/main.sh" ]
 
 FROM cblmariner2preview.azurecr.io/distroless/base:2.0
@@ -92,6 +92,6 @@ COPY --from=builder /usr/local/lib/libtcmalloc_minimal.so.4 /usr/local/lib/
 # mdsd telegraf dependencies
 COPY --from=builder /lib/libpthread.so.0 /lib/
 
-#RUN chmod 775 /etc/cron.daily/logrotate
+RUN chmod 775 /etc/cron.daily/logrotate
 ENTRYPOINT [ "/bin/bash" ]
 CMD [ "/opt/main.sh" ]
