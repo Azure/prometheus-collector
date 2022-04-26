@@ -56,18 +56,18 @@ gem install re2
 echo "Installing MDSD dependencies"
 sudo tdnf install -y which
 echo "Downloading MDSD"
-sudo tdnf --disablerepo="*" --enablerepo=packages-microsoft-com-azurecore install azure-mdsd -y
+sudo tdnf --disablerepo="*" --enablerepo=packages-microsoft-com-azurecore install azure-mdsd-1.18.0 -y
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for logs
 mkdir /opt/microsoft/linuxmonagent
 
 # Install Telegraf
 echo "Installing telegraf..."
-sudo tdnf install telegraf -y
+sudo tdnf install telegraf-1.21.2 -y
 
 # Install fluent-bit
 echo "Installing fluent-bit..."
-sudo tdnf install fluent-bit -y
+sudo tdnf install fluent-bit-1.8.12 -y
 
 # setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/

@@ -211,15 +211,6 @@ if [ "${MAC}" != "true" ]; then
       # will need to remove accountname fetching from env
       # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
       /usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS &
-
-      echo "Setting env variables from envmdsd file for MDSD"
-      cat /etc/mdsd.d/envmdsd | while read line; do
-            echo $line >> ~/.bashrc
-      done
-      source /etc/mdsd.d/envmdsd
-      echo "Starting MDSD..."
-      # Use options -T 0x1 or -T 0xFFFF for debug logging
-      mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 else
       echo "Setting customResourceId for MAC mode..."
       export customResourceId=$CLUSTER
