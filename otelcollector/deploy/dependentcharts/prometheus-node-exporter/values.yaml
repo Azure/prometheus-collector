@@ -3,8 +3,12 @@
 # Declare variables to be passed into your templates.
 image:
   repository: mcr.microsoft.com/oss/prometheus/node-exporter
-  tag: v1.2.2
+  # Overrides the image tag whose default is {{ printf "v%s" .Chart.AppVersion }}
+  tag: "v1.3.1"
   pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+# - name: "image-pull-secret"
 
 service:
   type: ClusterIP
@@ -16,11 +20,19 @@ service:
   annotations:
     prometheus.io/scrape: "true"
 
+# Additional environment variables that will be passed to the daemonset
+env: {}
+##  env:
+##    VARIABLE: value
+
 prometheus:
   monitor:
     enabled: false
     additionalLabels: {}
     namespace: ""
+
+    jobLabel: ""
+
     scheme: http
     bearerTokenFile:
     tlsConfig: {}
@@ -29,7 +41,13 @@ prometheus:
     ##
     proxyUrl: ""
 
+    ## Override serviceMonitor selector
+    ##
+    selectorOverride: {}
+
     relabelings: []
+    metricRelabelings: []
+    interval: ""
     scrapeTimeout: 10s
 
 ## Customize the updateStrategy if set
@@ -90,9 +108,15 @@ hostNetwork: true
 # Share the host process ID namespace
 hostPID: true
 
-## If true, node-exporter pods mounts host / at /host/root
-##
-hostRootFsMount: true
+# Mount the node's root file system (/) at /host/root in the container
+hostRootFsMount:
+  enabled: true
+  # Defines how new mounts in existing mounts on the node or in the container
+  # are propagated to the container or node, respectively. Possible values are
+  # None, HostToContainer, and Bidirectional. If this field is omitted, then
+  # None is used. More information on:
+  # https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation
+  mountPropagation: HostToContainer
 
 ## Assign a group of affinity scheduling rules
 ##
@@ -129,8 +153,8 @@ dnsConfig: {}
 ## Assign a nodeSelector if operating a hybrid cluster
 ##
 nodeSelector: {}
-#   kubernetes.io/arch: amd64
-#   kubernetes.io/os: linux
+#   beta.kubernetes.io/arch: amd64
+#   beta.kubernetes.io/os: linux
 
 tolerations:
   - effect: NoSchedule
