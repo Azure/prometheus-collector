@@ -123,13 +123,17 @@ echo "Grafana instance created successfully - $grafanaName"
 grafanaSmsi=$(az grafana show -g $resourceGroup -n $grafanaName --query 'identity.principalId')
 echo "Got System Assigned Identity for Grafana instance: $grafanaSmsi"
 echo "Removing quotes from MSI"
-grafanaSmsi=$(sed -e 's/^"//' -e 's/"$//' <<<"$grafanaSmsi")
+grafanaSmsi=$(echo $grafanaSmsi | tr -d '"')
+echo "Removing carriage returns from MSI"
+grafanaSmsi=$(echo $grafanaSmsi | tr -d '\r')
 
 
 macId=$(az resource show -g $resourceGroup -n $monitoringAccountName --resource-type "Microsoft.Monitor/Accounts" --query 'id')
 echo "Got MAC id: $macId"
 echo "Removing quotes from MAC Id"
-macId=$(sed -e 's/^"//' -e 's/"$//' <<<"$macId")
+macId=$(echo $macId | tr -d '"')
+echo "Removing carriage returns for MAC Id"
+macId=$(echo $macId | tr -d '\r')
 
 # Creating role assignment
 echo "Assigning MAC reader role to grafana's system assigned MSI"
@@ -194,4 +198,6 @@ for FILE in dashboards/*.json; do
 done;
 
 echo "Onboarding was completed successfully, please deploy the prometheus-collector helm chart for data collection"
+echo "helm upgrade --install prometheus-collector-release ./prometheus-collector-3.0.0-main-04-07-2022-33676484.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId=\"$aksResourceId\" --set azureResourceRegion=\"$trimmedRegion\" --set mode.advanced=true --namespace=\"kube-system\" --create-namespace"
+
 
