@@ -132,13 +132,17 @@ echo "Grafana instance created successfully - $grafanaName"
 grafanaSmsi=$(az grafana show -g $resourceGroup -n $grafanaName --query 'identity.principalId')
 echo "Got System Assigned Identity for Grafana instance: $grafanaSmsi"
 echo "Removing quotes from MSI"
-grafanaSmsi=$(sed -e 's/^"//' -e 's/"$//' <<<"$grafanaSmsi")
+grafanaSmsi=$(echo $grafanaSmsi | tr -d '"')
+echo "Removing carriage returns from MSI"
+grafanaSmsi=$(echo $grafanaSmsi | tr -d '\r')
 
 
 macId=$(az resource show -g $resourceGroup -n $monitoringAccountName --resource-type "Microsoft.Monitor/Accounts" --query 'id')
 echo "Got MAC id: $macId"
 echo "Removing quotes from MAC Id"
-macId=$(sed -e 's/^"//' -e 's/"$//' <<<"$macId")
+macId=$(echo $macId | tr -d '"')
+echo "Removing carriage returns for MAC Id"
+macId=$(echo $macId | tr -d '\r')
 
 # Creating role assignment
 echo "Assigning MAC reader role to grafana's system assigned MSI"
@@ -201,5 +205,7 @@ for FILE in dashboards/*.json; do
     az grafana dashboard import -g $resourceGroup -n $grafanaName --overwrite --definition $FILE --folder "Azure Monitor Container Insights"
 done;
 
-echo "Onboarding was completed successfully, please deploy the prometheus-collector helm chart for data collection"
+echo "Onboarding was completed successfully, please deploy the prometheus-collector helm chart for data collection using the helm command below."
+echo "Please ensure to set the right cluster context before running the helm install command - See Step #2 in the instructions on how to set this."
+echo "helm upgrade --install prometheus-collector-release ./prometheus-collector-3.0.0-main-04-21-2022-9c0c3a39.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId=\"$aksResourceId\" --set azureResourceRegion=\"$trimmedRegion\" --set mode.advanced=true --namespace=\"kube-system\" --create-namespace"
 
