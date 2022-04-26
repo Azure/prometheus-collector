@@ -8,25 +8,13 @@
 <br/>
 
 ## Prometheus Collector Agent limitations:
-* A single instance of the prometheus collector has a limit of 2.7 million timeseries per minute( ~ 4 GB timeseries per minute ) 
 
-* To know how many timeseries and bytes you are sending, you can check usage by instance in the Prometheus-Collector Health default dashboard. This shows the historical number of timeseries and bytes that have been scraped and sent.
-
-* The variable selectors can be adjusted to view the total timeseries and bytes scraped for the whole cluster, for an individual release, the replicaset and individual nodes. To view if you are close to the single instance limit of 2.7 million timeseries per minute and 4 GB of timeseries per minute, select the release name for that instance and replicaset as the controller_type.
-
-* If the amount of metrics sent is already high enough that it may be over the limit, you can also port-forward to check the number of timeseries and bytes the instance is sending for that previous minute.
-
-        kubectl port-forward <prometheus-collector replicaset pod name> -n <prometheus-collector pod namespace> 2234:2234
-
-Curl http://127.0.0.1:2234/metrics to see the volume metrics for that minute.
-
-* The metrics are:
-
-  | Name | Description
-  | --- | --- |
-  | `timeseries_received_per_minute` | Number of timseries scraped
-  | `timeseries_sent_per_minute`  | Number of timeseries sent to storage
-  | `bytes_sent_per_minute` | Number of bytes of timeseries sent to storage
+* Metrics with +-Inf and NaN values will be dropped (by design)
+* 'job' and 'instance' labels are reserved and cannot be relabled. If you either try to relabel 'job' & 'instance' labels, or try adding a label called 'job' or 'instance' (through re-labeling or external labels), it will fail the entire scrape output for that job, and no metrics will be ingested for that job. 
+* In the scrape config, `remote_write` and `groups` ( rule groups for recording & alerting rules) sections are un-supported. Please remove them from your custom scrape configuration, or else config validation will fail.
+* A single instance of the prometheus collector has a limit of 2.7 million timeseries per minute( ~ 4 GB timeseries per minute ).
+* Metric names longer than 255 characters cannot be ingested currently. If there are any metrics with names longer than 255 characters the entire batch containing the metric will be dropped.
+* Cluster's K8s versions should be > **1.16.x**
 
 <br/>
 
