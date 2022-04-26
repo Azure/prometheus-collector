@@ -13,10 +13,15 @@
 **6. Ingesting data from one cluster to multiple MAC accounts (multi homing) is not supported for private preview.**
 
 ### **Step 1**: Download and run the script (Recommended to use Azure cloud shell) to create the required resources for metric ingestion and query. Please note the script takes about 10 to 15 minutes because of the various resource creation templates. Please make sure the session doesn’t timeout so that you don’t miss out on the errors. 
-1.	Download the Onboarding-script.sh, RootTemplate.json and RoleDefinition.json using the following links -  
-wget https://raw.githubusercontent.com/microsoft/Docker-Provider/prometheus-collector/prometheus-collector/MAC-3P-Docs/Onboarding-script.sh  
-wget https://raw.githubusercontent.com/microsoft/Docker-Provider/prometheus-collector/prometheus-collector/MAC-3P-Docs/RoleDefinition.json  
-wget https://raw.githubusercontent.com/microsoft/Docker-Provider/prometheus-collector/prometheus-collector/MAC-3P-Docs/RootTemplate.json
+1.	Download the Onboarding-script.sh, RootTemplate.json and RoleDefinition.json using the following links -
+
+        wget https://raw.githubusercontent.com/microsoft/Docker-Provider/prometheus-collector/prometheus-collector/MAC-3P-Docs/Onboarding-script.sh
+<br/> 
+
+        wget https://raw.githubusercontent.com/microsoft/Docker-Provider/prometheus-collector/prometheus-collector/MAC-3P-Docs/RoleDefinition.json
+<br/>
+
+        wget https://raw.githubusercontent.com/microsoft/Docker-Provider/prometheus-collector/prometheus-collector/MAC-3P-Docs/RootTemplate.json
 
 2.	Update the script to have execute permissions. 
 3.	Run the bash script with the parameters specified for the below in double quotes("")
