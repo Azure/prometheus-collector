@@ -1,5 +1,5 @@
 # Check for HIGH/CRITICAL & MEDIUM CVEs. HIGH/CRITICAL to be fixed asap, MEDIUM is best effort
-# ignore these CVEs, but continue scanning to catch other vulns. Note : this will ignore this vuln globally
+# ignore these CVEs, but continue scanning to catch other vulns. Note : this will ignore these cves globally
 
 # CRITICAL/HIGH
 CVE-2020-13949
