@@ -8,7 +8,7 @@ jobs:
       - name: Set-workflow-initiator
         run: echo "Initiated by - ${GITHUB_ACTOR}"
       - name: Initialize-CodeQL
-        uses: github/codeql-action/init@v1
+        uses: github/codeql-action/init@v2
         with:
           languages: go, javascript, ruby
       - name: Checkout-code
@@ -24,11 +24,11 @@ jobs:
       - name: DevSkim Scan
         uses: microsoft/DevSkim-Action@v1
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v1
+        uses: github/codeql-action/analyze@v2
         with:
           output: ./
           upload: "false"
       - name: Upload SDL Tool Results
-        uses: github/codeql-action/upload-sarif@v1
+        uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: /home/runner/work/prometheus-collector/prometheus-collector
