@@ -2,9 +2,20 @@
 
 
 ## MAC (Monitoring Account) limitations: 
-The default limit on the number of timeseries is 50000.  
-The default limit on the number of events is 250000  
+* The default limit on the number of timeseries is 50000.  
+* The default limit on the number of events is 250000  
   
+<br/>
+
+## Prometheus Collector Agent limitations:
+
+* Metrics with +-Inf and NaN values will be dropped (by design)
+* 'job' and 'instance' labels are reserved and cannot be relabled. If you either try to relabel 'job' & 'instance' labels, or try adding a label called 'job' or 'instance' (through re-labeling or external labels), it will fail the entire scrape output for that job, and no metrics will be ingested for that job. 
+* In the scrape config, `remote_write` and `groups` ( rule groups for recording & alerting rules) sections are un-supported. Please remove them from your custom scrape configuration, or else config validation will fail.
+* A single instance of the prometheus collector has a limit of 2.7 million timeseries per minute( ~ 4 GB timeseries per minute ).
+* Metric names longer than 255 characters cannot be ingested currently. If there are any metrics with names longer than 255 characters the entire batch containing the metric will be dropped.
+* Cluster's K8s versions should be > **1.16.x**
+
 <br/>
 
 ## Prometheus Query Service limitations:  
