@@ -184,9 +184,6 @@ To scrape only certain pods, specify the port, path, and http/https through anno
 - `prometheus.io/port`: Specify a single, desired port to scrape
 
   ```yaml
-  global:
-    scrape_interval: 5s
-    evaluation_interval: 5s
     scrape_configs:
       - job_name: 'kubernetes-pods'
 
@@ -197,7 +194,7 @@ To scrape only certain pods, specify the port, path, and http/https through anno
         # Scrape only pods with the annotation: prometheus.io/scrape = true
         - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
           action: keep
-          regex: "true"
+          regex: true
 
         # If prometheus.io/path is specified, scrape this path instead of /metrics
         - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
@@ -209,10 +206,10 @@ To scrape only certain pods, specify the port, path, and http/https through anno
         - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
           action: replace
           regex: ([^:]+)(?::\d+)?;(\d+)
-          replacement: $$1:$$2
+          replacement: $1:$2
           target_label: __address__
         
-        # If prometheus.io/port is specified, scrape this port instead of the default
+        # If prometheus.io/scheme is specified, scrape with this scheme instead of http
         - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scheme]
           action: replace
           regex: (http|https)
