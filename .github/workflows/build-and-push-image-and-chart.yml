@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - vishwa/kubestateupgradefix
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
