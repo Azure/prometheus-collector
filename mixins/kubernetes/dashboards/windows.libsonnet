@@ -55,7 +55,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
          })
         .addPanel(
           g.panel('CPU Utilisation') +
-          g.statPanel('1 - avg(rate(windows_cpu_time_total{job="windows-exporter", mode="idle", cluster="$cluster"}[2m]))')
+          g.statPanel('1 - avg(rate(windows_cpu_time_total{job="windows-exporter", mode="idle", cluster="$cluster"}[3m]))')
         )
         .addPanel(
           g.panel('CPU Requests Commitment') +
@@ -180,7 +180,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         template.new(
           'namespace',
           '$datasource',
-          'label_values(windows_pod_container_available, namespace)',
+          'label_values(windows_pod_container_available{cluster = "$cluster"}, namespace)',
           label='Namespace',
           refresh='time',
           sort=1,
@@ -285,7 +285,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         template.new(
           'namespace',
           '$datasource',
-          'label_values(windows_pod_container_available, namespace)',
+          'label_values(windows_pod_container_available{cluster = "$cluster"}, namespace)',
           label='Namespace',
           refresh='time',
           sort=1,
@@ -295,7 +295,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         template.new(
           'pod',
           '$datasource',
-          'label_values(windows_pod_container_available{namespace="$namespace"}, pod)',
+          'label_values(windows_pod_container_available{cluster = "$cluster", namespace = "$namespace"}, pod)',
           label='Pod',
           refresh='time',
           sort=1,
@@ -503,20 +503,20 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       )
       .addTemplate(
         template.new(
-          'instance',
+          'cluster',
           '$datasource',
-          'label_values(windows_system_system_up_time, instance)',
-          label='Instance',
+          'label_values(windows_system_system_up_time, cluster)',
+          label='Cluster',
           refresh='time',
           sort=1,
         )
       )
       .addTemplate(
         template.new(
-          'cluster',
+          'instance',
           '$datasource',
-          'label_values(windows_system_system_up_time, cluster)',
-          label='Cluster',
+          'label_values(windows_system_system_up_time{cluster = "$cluster"}, instance)',
+          label='Instance',
           refresh='time',
           sort=1,
         )

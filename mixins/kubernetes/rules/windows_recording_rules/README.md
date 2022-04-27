@@ -2,9 +2,19 @@
 
 ## Pre-requisite 
 
-Setup your subscription to be able to use alerts using the following [documentation](https://eng.ms/docs/products/geneva/metrics/prometheus/prommdmtutorial7setupalerts)
+- Setup your subscription to be able to use alerts using the following [documentation](https://eng.ms/docs/products/geneva/metrics/prometheus/prommdmtutorial7setupalerts)
 
-Please also run this script in a location where you have access to the az cli.
+- Please also run this script in a location where you have access to the az cli.
+
+- Please install windows-exporter on your AKS nodes. To do so you'll need to ssh/RDP into your AKS nodes using the following [documentation](https://docs.microsoft.com/en-us/azure/aks/node-access) and then install windows exporter using the following [instructions](https://github.com/prometheus-community/windows_exporter#installation)
+
+The steps will look something like this:
+
+1. SSH into each individual AKS node
+2. Run powershell
+3. Call `Invoke-WebRequest -Uri https://github.com/microsoft/Docker-Provider/releases/download/windows-exporter-releases/windows_exporter-0.16.0-amd64.3.msi -OutFile c:\test.msi`
+4. Call `msiexec /i C:\test.msi ENABLED_COLLECTORS="[defaults],process,container,tcp,os,memory" /quiet`
+5. Call `netstat -na | findstr 9182` to see wether the exporter is running as expected.
 
 ## Steps to deploy
 
@@ -32,7 +42,6 @@ Please import the below mentioned files to see the metrics from the recording ru
 -   Kubernetes _ Compute Resources _ Cluster(Windows)
 -   Kubernetes _ Compute Resources _ Cluster(Windows)
 -   Kubernetes / Compute Resources / Pod(Windows)
-
 
 
 If you're account is already added in the cimonitoring grafana instance then you can also use the following link to view the dashboards once the script succeeds:

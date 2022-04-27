@@ -5,7 +5,7 @@
     "variables": {},
     "resources": [
         {
-            "name": "k8s_resource_windows_rules_group_1",
+            "name": "$name",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
             "location": "$MACLocation",
@@ -15,8 +15,8 @@
                 ],
                 "rules": [
                     {
-                        "record": ":windows_node_cpu_utilisation:avg1m",
-                        "expression": "1 - avg(rate(windows_cpu_time_total{job = \"windows-exporter\", mode = \"idle\", cluster = \"$cluster\"}[1m]))"
+                        "record": ":windows_node_cpu_utilisation:avg3m",
+                        "expression": "1 - avg(rate(windows_cpu_time_total{job = \"windows-exporter\", mode = \"idle\", cluster = \"$cluster\"}[3m]))"
                     },
                     {
                         "record": "windows_pod_container_available",
@@ -28,7 +28,7 @@
                     },
                     {
                         "record": "node:windows_node_num_cpu:sum",
-                        "expression": "count by (instance, cluster) (sum by (instance, core, cluster) (windows_cpu_time_total{job = \"windows-exporter\", cluster = \"$cluster\"}))"
+                        "expression": "count by (instance, cluster, job) (sum by (instance, core, cluster, job) (windows_cpu_time_total{job = \"windows-exporter\", cluster = \"$cluster\"}))"
                     },
                     {
                         "record": "cpu_requests_commitment",

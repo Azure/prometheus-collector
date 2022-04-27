@@ -17,16 +17,16 @@
             // This rule gives the number of CPUs per node.
             record: 'node:windows_node_num_cpu:sum',
             expr: |||
-              count by (instance,cluster) (sum by (instance, core, cluster) (
+              count by (instance,cluster,job) (sum by (instance, core, cluster, job) (
                 windows_cpu_time_total{ %(wmiExporterSelector)s, %(clusterSelector)s}
               ))
             ||| % $._config,
           },
           {
             // CPU utilisation is % CPU is not idle.
-            record: ':windows_node_cpu_utilisation:avg1m',
+            record: ':windows_node_cpu_utilisation:avg3m',
             expr: |||
-              1 - avg(rate(windows_cpu_time_total{ %(wmiExporterSelector)s, %(clusterSelector)s,mode="idle"}[1m]))
+              1 - avg(rate(windows_cpu_time_total{ %(wmiExporterSelector)s, %(clusterSelector)s,mode="idle"}[3m]))
             ||| % $._config,
           },
           {
@@ -53,6 +53,12 @@
             record: ':windows_node_memory_MemFreeCached_bytes:sum',
             expr: |||
               sum(windows_memory_available_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s} + windows_memory_cache_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s})
+            ||| % $._config,
+          },
+          {
+            record: 'memory_utilization',
+            expr: |||
+              1 - sum(sum(windows_memory_available_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s } + windows_memory_cache_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s })) / sum(sum(windows_os_visible_memory_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s }))
             ||| % $._config,
           },
           {
@@ -220,6 +226,12 @@
                 kube_pod_container_resource_requests{resource="memory", %(kubeStateMetricsSelector)s, %(clusterSelector)s}
               ) * on(container,pod,namespace, cluster) (windows_pod_container_available{ %(clusterSelector)s})
             ||| % $._config,
+          },
+          {
+            record: 'memory_requests_commitment',
+            expr: |||
+              sum( max by (namespace, pod, container, cluster) (kube_pod_container_resource_requests{resource = "memory",job="kube-state-metrics", %(clusterSelector)s}) * on (container, pod, namespace, cluster) (windows_container_available{job="windows-exporter", %(clusterSelector)s} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job="kube-state-metrics", %(clusterSelector)s}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job="windows-exporter", %(clusterSelector)s }))
+            ||| % $._config
           },
           {
             record: 'kube_pod_windows_container_resource_memory_limit',

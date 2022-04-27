@@ -5,7 +5,7 @@
     "variables": {},
     "resources": [
         {
-            "name": "k8s_resource_windows_rules_group_2",
+            "name": "$name",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
             "location": "$MACLocation",
