@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - rashmi/april-bug-fixes
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
