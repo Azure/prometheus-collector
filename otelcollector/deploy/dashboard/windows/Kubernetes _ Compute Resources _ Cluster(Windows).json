@@ -49,7 +49,7 @@
                "steppedLine": false,
                "targets": [
                   {
-                     "expr": "1 - avg(rate(windows_cpu_time_total{job=\"windows-exporter\", mode=\"idle\",cluster=\"$cluster\"}[2m]))",
+                     "expr": "1 - avg(rate(windows_cpu_time_total{job=\"windows-exporter\", mode=\"idle\",cluster=\"$cluster\"}[3m]))",
                      "format": "time_series",
                      "instant": true,
                      "intervalFactor": 2,

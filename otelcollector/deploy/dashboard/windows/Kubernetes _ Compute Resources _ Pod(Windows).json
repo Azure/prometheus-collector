@@ -699,14 +699,14 @@
                "steppedLine": false,
                "targets": [
                   {
-                     "expr": "sort_desc(sum by (container) (rate(windows_container_network_received_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\", namespace=\"$namespace\", pod=\"$pod\"}[2m])))",
+                     "expr": "sort_desc(sum by (container) (rate(windows_container_network_received_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\", namespace=\"$namespace\", pod=\"$pod\"}[3m])))",
                      "format": "time_series",
                      "intervalFactor": 2,
                      "legendFormat": "Received : {{ container }}",
                      "refId": "A"
                   },
                   {
-                     "expr": "sort_desc(sum by (container) (rate(windows_container_network_transmitted_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\", namespace=\"$namespace\", pod=\"$pod\"}[2m])))",
+                     "expr": "sort_desc(sum by (container) (rate(windows_container_network_transmitted_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\", namespace=\"$namespace\", pod=\"$pod\"}[3m])))",
                      "format": "time_series",
                      "intervalFactor": 2,
                      "legendFormat": "Transmitted : {{ container }}",

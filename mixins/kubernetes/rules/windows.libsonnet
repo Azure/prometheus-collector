@@ -31,10 +31,10 @@
           },
           {
             // CPU utilisation is % CPU is not idle.
-            record: 'node:windows_node_cpu_utilisation:avg1m',
+            record: 'node:windows_node_cpu_utilisation:avg3m',
             expr: |||
               1 - avg by (instance) (
-                rate(windows_cpu_time_total{ %(wmiExporterSelector)s, %(clusterSelector)s,mode="idle"}[1m])
+                rate(windows_cpu_time_total{ %(wmiExporterSelector)s, %(clusterSelector)s,mode="idle"}[3m])
               )
             ||| % $._config,
           },
@@ -117,8 +117,8 @@
             // Disk utilisation (ms spent, by rate() it's bound by 1 second)
             record: ':windows_node_disk_utilisation:avg_irate',
             expr: |||
-              avg(irate(windows_logical_disk_read_seconds_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[1m]) + 
-                  irate(windows_logical_disk_write_seconds_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[1m])
+              avg(irate(windows_logical_disk_read_seconds_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]) + 
+                  irate(windows_logical_disk_write_seconds_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m])
                 )
             ||| % $._config,
           },
@@ -127,8 +127,8 @@
             record: 'node:windows_node_disk_utilisation:avg_irate',
             expr: |||
               avg by (instance) (
-                (irate(windows_logical_disk_read_seconds_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[1m]) +
-                 irate(windows_logical_disk_write_seconds_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[1m]))
+                (irate(windows_logical_disk_read_seconds_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]) +
+                 irate(windows_logical_disk_write_seconds_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]))
               )
             ||| % $._config,
           },
@@ -151,30 +151,30 @@
           {
             record: ':windows_node_net_utilisation:sum_irate',
             expr: |||
-              sum(irate(windows_net_bytes_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[1m]))
+              sum(irate(windows_net_bytes_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]))
             ||| % $._config,
           },
           {
             record: 'node:windows_node_net_utilisation:sum_irate',
             expr: |||
               sum by (instance) (
-                (irate(windows_net_bytes_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[1m]))
+                (irate(windows_net_bytes_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]))
               )
             ||| % $._config,
           },
           {
             record: ':windows_node_net_saturation:sum_irate',
             expr: |||
-              sum(irate(windows_net_packets_received_discarded_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[1m])) +
-              sum(irate(windows_net_packets_outbound_discarded_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[1m]))
+              sum(irate(windows_net_packets_received_discarded_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m])) +
+              sum(irate(windows_net_packets_outbound_discarded_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]))
             ||| % $._config,
           },
           {
             record: 'node:windows_node_net_saturation:sum_irate',
             expr: |||
               sum by (instance) (
-                (irate(windows_net_packets_received_discarded_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[1m]) +
-                irate(windows_net_packets_outbound_discarded_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[1m]))
+                (irate(windows_net_packets_received_discarded_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]) +
+                irate(windows_net_packets_outbound_discarded_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]))
               )
             ||| % $._config,
           },

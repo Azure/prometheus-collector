@@ -20,7 +20,7 @@
                     },
                     {
                         "record": "network_io_1",
-                        "expression": "sort_desc(sum by (cluster, namespace, pod, container) (rate(windows_container_network_received_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"}[2m])))"
+                        "expression": "sort_desc(sum by (cluster, namespace, pod, container) (rate(windows_container_network_received_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"}[3m])))"
                     },
                     {
                         "record": "windows_container_network_transmitted_bytes_total",
@@ -28,7 +28,7 @@
                     },
                     {
                         "record": "network_io_2",
-                        "expression": "sort_desc(sum by (cluster, namespace, pod, container) (rate(windows_container_network_transmitted_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"}[2m])))"
+                        "expression": "sort_desc(sum by (cluster, namespace, pod, container) (rate(windows_container_network_transmitted_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"}[3m])))"
                     }
                 ]
             }
