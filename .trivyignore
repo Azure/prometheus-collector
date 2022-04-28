@@ -1,4 +1,20 @@
-# ignore this vulnerability (in otelcollector), but continue scanning to catch other vulns. Note : this will ignore this vuln globally
+# Check for HIGH/CRITICAL & MEDIUM CVEs. HIGH/CRITICAL to be fixed asap, MEDIUM is best effort
+# ignore these CVEs, but continue scanning to catch other vulns. Note : this will ignore these cves globally
+
+# CRITICAL/HIGH
 CVE-2020-13949
 CVE-2022-23648
 CVE-2022-27191
+# usr/sbin/telegraf
+CVE-2021-42836
+
+# MEDIUM
+# opt/microsoft/otelcollector/otelcollector
+CVE-2019-3826
+# opt/promconfigvalidator
+CVE-2019-3826
+CVE-2021-20329
+# opt/telegraf/telegraf
+CVE-2019-3826
+# usr/sbin/telegraf
+CVE-2019-11254

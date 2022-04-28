@@ -146,11 +146,11 @@ jobs:
         with:
           image-ref: "${{ env.IMAGE_FULL_TAG }}"
           format: 'table'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           vuln-type: 'os,library'
           skip-dirs: ''
           # Ignoring this binary since it is installed by mdsd and has vulnerability
-          skip-files: 'usr/sbin/telegraf'
+          #skip-files: 'usr/sbin/telegraf'
           exit-code: '1'
           timeout: '5m0s'
           ignore-unfixed: true
@@ -163,7 +163,7 @@ jobs:
         with:
           image-ref: "${{ env.K-S-M-IMAGE }}"
           format: 'table'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           vuln-type: 'os,library'
           skip-dirs: ''
           exit-code: '1'
@@ -174,7 +174,7 @@ jobs:
         with:
           image-ref: "${{ env.NODE-EXPORTER-IMAGE }}"
           format: 'table'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           vuln-type: 'os,library'
           skip-dirs: ''
           exit-code: '1'
