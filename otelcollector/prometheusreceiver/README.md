@@ -54,7 +54,7 @@ receivers:
             - role: pod
             relabel_configs:
             - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
-              regex: "true"
+              regex: true
               action: keep
             metric_relabel_configs:
             - source_labels: [__name__]
