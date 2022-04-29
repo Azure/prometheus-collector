@@ -133,7 +133,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(\n   sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", container!=\"POD\",cluster=\"$cluster\", namespace=\"$namespace\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info)\r\n        )\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n",
+          "expr": "sum(\n   sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", container!=\"POD\",cluster=\"$cluster\", namespace=\"$namespace\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{cluster=\"$cluster\", namespace=\"$namespace\"})\r\n        )\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -489,7 +489,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(\n   sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", container!=\"POD\",cluster=\"$cluster\", namespace=\"$namespace\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info)\r\n        )\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n",
+          "expr": "sum(\n   sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", container!=\"POD\",cluster=\"$cluster\", namespace=\"$namespace\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{cluster=\"$cluster\", namespace=\"$namespace\"})\r\n        )\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -511,7 +511,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(\n   sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", container!=\"POD\",cluster=\"$cluster\", namespace=\"$namespace\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info)\r\n        )\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n/sum(\n  kube_pod_container_resource_requests{cluster=\"$cluster\", namespace=\"$namespace\", resource=\"cpu\"}\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n",
+          "expr": "sum(\n   sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", container!=\"POD\",cluster=\"$cluster\", namespace=\"$namespace\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{cluster=\"$cluster\", namespace=\"$namespace\"})\r\n        )\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n/sum(\n  kube_pod_container_resource_requests{cluster=\"$cluster\", namespace=\"$namespace\", resource=\"cpu\"}\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -533,7 +533,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(\n   sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", container!=\"POD\",cluster=\"$cluster\", namespace=\"$namespace\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info)\r\n        )\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n/sum(\n  kube_pod_container_resource_limits{cluster=\"$cluster\", namespace=\"$namespace\", resource=\"cpu\"}\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n",
+          "expr": "sum(\n   sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", container!=\"POD\",cluster=\"$cluster\", namespace=\"$namespace\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{cluster=\"$cluster\", namespace=\"$namespace\"})\r\n        )\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n/sum(\n  kube_pod_container_resource_limits{cluster=\"$cluster\", namespace=\"$namespace\", resource=\"cpu\"}\n* on(namespace,pod)\n  group_left(owner_name, owner_kind) kube_pod_owner{cluster=\"$cluster\", namespace=\"$namespace\", owner_kind=\"$type\"}\n) by (owner_name, owner_kind)\n",
           "format": "table",
           "instant": true,
           "interval": "",
