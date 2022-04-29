@@ -1,11 +1,24 @@
 # Working with Prometheus metrics in MDM
 
+## Release 04-28-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.1.0-tbd`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.1.0-tbd`
+* Change Log -
+  * Update kube-state-metrics (from:3.5.2 to:4.7.0)
+  * Update node-exporter (from:2.2.0 to 3.1.1)
+  * MAC account based ingestion support (only for private preview)
+  * Fix dashboard queries for perf issues
+  * Fix scrape config true v. "true" bug for boolean regex (both are supported now)
+  * Windows dashboards (3) for cluster, namespace & pod are now added with support recording rules & cluster filter
+    * These dashboards are not part of default dashboards. If you have windows nodes in youe cluster and want to try these dashboards & their recording rules, please ping us over teams channel.
+
 ## Release 04-04-2022 [Breaking changes]
 
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.0.0-main-04-04-2022-dd20b426`
 * image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.0.0-main-04-04-2022-dd20b426`
 * Change Log -
-  * BREAKING CHANGE -- To reduce deafult ingestion volume,with this release, by default we will be ingesting only metrics consumed by default dashboards for all defaut targets (no change to your custom targets). If you were using metrics scraped by our default targets (dns,kubelet,cadvisor,kube-state-metrics,kube-proxy,node-exporter,api-server) which were not covered in our default dashboards you need to add them to keepList.* (depending on the target). Please see [here](./PromIngestionVolume.md) for more details and also how to modify/disable this behavior if you need to.
+  * BREAKING CHANGE -- To reduce default ingestion volume,with this release, by default we will be ingesting only metrics consumed by default dashboards for all defaut targets (no change to your custom targets). If you were using metrics scraped by our default targets (dns,kubelet,cadvisor,kube-state-metrics,kube-proxy,node-exporter,api-server) which were not covered in our default dashboards you need to add them to keepList.* (depending on the target). Please see [here](./PromIngestionVolume.md) for more details and also how to modify/disable this behavior if you need to.
 
 ## Release 03-17-2022 [Breaking changes]
 
