@@ -48,20 +48,20 @@ Ex: bash Onboarding-script.sh "00000000-0000-0000-0000-000000000000" "rg-name" "
 Cloud shell doesn’t let you replace the exe in location /usr/local/bin/helm.
 You can instead run the helm commands from the path ~/linux-amd64. Prefix the helm with "./" for it to pick up helm from this folder.**
 
-**Ex - ./helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 3.0.0-main-04-21-2022-9c0c3a39**
+**Ex - ./helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 3.1.0-main-04-29-2022-0a7092d3**
 
 1.	Download the helm chart - 
 
         set HELM_EXPERIMENTAL_OCI=1
 
-        helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 3.0.0-main-04-21-2022-9c0c3a39
+        helm pull oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector --version 3.1.0-main-04-29-2022-0a7092d3
 
 2.  Install the helm chart with the following parameters  -
     
-        helm upgrade --install <release-name> ./prometheus-collector-3.0.0-main-04-21-2022-9c0c3a39.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="<aks-resource-id>" --set azureResourceRegion="<aks-resource-location>" --set mode.advanced=true --namespace="kube-system" --create-namespace
+        helm upgrade --install <release-name> ./prometheus-collector-3.1.0-main-04-29-2022-0a7092d3.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="<aks-resource-id>" --set azureResourceRegion="<aks-resource-location>" --set mode.advanced=true --namespace="kube-system" --create-namespace
 
 
-Ex - helm upgrade --install my-collector-dev-release ./prometheus-collector-3.0.0-main-04-21-2022-9c0c3a39.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="/subscriptions/subid/resourcegroups/rg-name/providers/Microsoft.ContainerService/managedClusters/clustername" --set azureResourceRegion="eastus2" --set mode.advanced=true --namespace="kube-system" --create-namespace
+Ex - helm upgrade --install my-collector-dev-release ./prometheus-collector-3.1.0-main-04-29-2022-0a7092d3.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId="/subscriptions/subid/resourcegroups/rg-name/providers/Microsoft.ContainerService/managedClusters/clustername" --set azureResourceRegion="eastus2" --set mode.advanced=true --namespace="kube-system" --create-namespace
 
     Please make sure you have set the right context for the AKS cluster you want to install the chart on
     - az aks get-credentials -g <aks-rg-name> -n <aks-cluster-name> (This gets the cluster kubeconfig and sets it as the current context)

@@ -1,9 +1,9 @@
 # Working with Prometheus metrics in MDM
 
-## Release 04-28-2022
+## Release 04-29-2022
 
-* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.1.0-tbd`
-* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.1.0-tbd`
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.1.0-main-04-29-2022-0a7092d3`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.1.0-main-04-29-2022-0a7092d3`
 * Change Log -
   * Update kube-state-metrics (from:3.5.2 to:4.7.0)
   * Update node-exporter (from:2.2.0 to 3.1.1)

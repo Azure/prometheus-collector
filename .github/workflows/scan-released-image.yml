@@ -10,7 +10,7 @@ jobs:
       - name: Run-trivy-scanner-on-last-released-docker-image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.0.0-main-04-04-2022-dd20b426"
+          image-ref: "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.1.0-main-04-29-2022-0a7092d3"
           format: 'table'
           severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
