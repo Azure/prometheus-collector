@@ -13,7 +13,7 @@ The prometheus-collector is the name of the agent pod (replica set) that will co
 
 > If you've worked with Geneva Metrics before, you maybe familiar with the Geneva Metrics Extension [ME]. ME will be used for Prometheus collection as well, and is a sub-component of the prometheus-collector
 
-To deploy the agent we will leverage HELM again. At this step you will need to provide the KeyVault certificate information that you saved in the previous step.  The following commands can be used for this. See an example of this below.  
+To deploy the agent we will leverage HELM again. 
 
 ### Using geneva account & certificates (in key vault)
 
