@@ -1,17 +1,17 @@
 # Working with Prometheus metrics in MDM
 
-## Release 04-28-2022
+## Release 04-29-2022
 
-* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.1.0-tbd`
-* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.1.0-tbd`
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.1.0-main-04-29-2022-0a7092d3`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.1.0-main-04-29-2022-0a7092d3`
 * Change Log -
   * Update kube-state-metrics (from:3.5.2 to:4.7.0)
   * Update node-exporter (from:2.2.0 to 3.1.1)
   * MAC account based ingestion support (only for private preview)
   * Fix dashboard queries for perf issues
   * Fix scrape config true v. "true" bug for boolean regex (both are supported now)
-  * Windows dashboards (3) for cluster, namespace & pod are now added with support recording rules & cluster filter
-    * These dashboards are not part of default dashboards. If you have windows nodes in youe cluster and want to try these dashboards & their recording rules, please ping us over teams channel.
+  * Windows dashboards (3) for cluster, namespace & pod are now added with support for recording rules & cluster filter
+    * These dashboards are not part of default dashboards. If you have windows nodes in your cluster and want to try these windows dashboards & their recording rules, please ping us over teams channel.
 
 ## Release 04-04-2022 [Breaking changes]
 

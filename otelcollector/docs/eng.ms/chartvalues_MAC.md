@@ -1,19 +1,13 @@
-# Chart Values for Prometheus-collector (when using geneva account and their certificates)
+# Chart Values for Prometheus-collector (when using monitoring account)
 
 | Key | Type | Required | Default | Description |
 |-----|------|----------|---------|-------------|
-| azureKeyVault.name | string | <mark>`Required`</mark> | `""` | name of the azure key vault resource |
-| azureKeyVault.clientId | string | Optional | `""` | clientid for a service principal that has access to read the Pfx certificates from keyvault specified above. Required when using service principal based auth to access keyvault |
-| azureKeyVault.clientSecret | string | Optional | `""` | client secret for the above service principal. Required when using service principal |
-| azureKeyVault.pfxCertNames | list of comma seperated strings | <mark>`Required`</mark> | `"{}"` | name of the Pfx certificate(s) - one per metric account |
-| azureKeyVault.tenantId | string | <mark>`Required`</mark> | `""` | tenantid for the azure key vault resource |
-| azureKeyVault.useManagedIdentity | string | Optional | `false` | enable/disable managed identity to access keyvault |
-| azureKeyVault.userAssignedIdentityID | string | Optional | `""` | used when useManagedIdentity parameter is set to true. This specifies which user assigned managed identity to use when acccesing keyvault. If you are using a user assigned identity as managed identity, then specify the identity's client id. If empty, AND 'useManagedIdentity' is true, then defaults to use the system assigned identity on the VM |
-| azureMetricAccount.defaultAccountName | string | <mark>`Required`</mark> | `""` | default metric account name to ingest metrics into. This will be the account used if metric itself does not have account 'hinting' label. The certificate for this account should be specified in one of the further arguments below here |
-| clusterName | string | <mark>`Required`</mark> | `""` | name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped |
+| useMonitoringAccount | bool | <mark> `required` </mark> | `true` | ingest metrics into monitoring account(s) |
+| azureResourceId | string | <mark> `Required` </mark> | `""` | Azure ARM resource id for AKS cluster that will be monitored by this install |
+| azureResourceRegion | string | <mark> `Required` </mark> | `""` | Azure region for the AKS resource spricied in `azureResourceId` |
 | image.pullPolicy | string | Optional | `"IfNotPresent"` |  |
 | image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images"` |  |
-| image.tag | string | Optional | `"3.1.0-main-04-29-2022-0a7092d3"` |  |
+| image.tag | string | Optional | `"1.1.2-main-03-07-2022-df71b65a"` |  |
 | internalSettings.intEnvironment | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes for Geneva team |
 | internalSettings.clusterOverride | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes for Geneva team |
 | mode.advanced | bool | Optional | `false` | if mode.advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset. On bigger clusters (> 50+ nodes and > 1500+ pods), it is highly recommended to set this to `true`, as this will distribute the metric volumes to individual nodes as nodes & pods scale out & grow. Note:- When this is set to `true`, the `up` metric for the node target will be generated from the replica, so when the node (and daemonset in the node) becomes unvailable), the target availability can still be tracked.
@@ -29,7 +23,7 @@
 | updateStrategy.daemonSet.maxUnavailable | string | Optional | `"1"` | This can be a number or percentage of pods |
 | scrapeTargets.coreDns | bool | Optional | `true` | when true, automatically scrape coredns service in the k8s cluster without any additional scrape config |
 | scrapeTargets.kubelet | bool | Optional | `true` | when true, automatically scrape kubelet in every node in the k8s cluster without any additional scrape config |
-| scrapeTargets.cAdvisor | bool | Optional | `true` | when true, automatically scrape cAdvisor in every node in the k8s cluster without any additional scrape config |
+| scrapeTargets.cAdvisor | bool | Optional | `true` | `linux only` - when true, automatically scrape cAdvisor in every node in the k8s cluster without any additional scrape config |
 | scrapeTargets.kubeProxy | bool | Optional | `true` | `linux only` - when true, automatically scrape kube-proxy in every linux node discovered in the k8s cluster without any additional scrape config |
 | scrapeTargets.apiServer | bool | Optional | `true` | when true, automatically scrape the kubernetes api server in the k8s cluster without any additional scrape config |
 | scrapeTargets.kubeState | bool | Optional | `true` | when true, automatically install kube-state-metrics and scrape kube-state-metrics in the k8s cluster without any additional scrape config |
