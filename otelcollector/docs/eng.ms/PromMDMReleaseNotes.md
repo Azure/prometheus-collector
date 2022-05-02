@@ -10,8 +10,8 @@
   * MAC account based ingestion support (only for private preview)
   * Fix dashboard queries for perf issues
   * Fix scrape config true v. "true" bug for boolean regex (both are supported now)
-  * Windows dashboards (3) for cluster, namespace & pod are now added with support recording rules & cluster filter
-    * These dashboards are not part of default dashboards. If you have windows nodes in youe cluster and want to try these dashboards & their recording rules, please ping us over teams channel.
+  * Windows dashboards (3) for cluster, namespace & pod are now added with support for recording rules & cluster filter
+    * These dashboards are not part of default dashboards. If you have windows nodes in your cluster and want to try these windows dashboards & their recording rules, please ping us over teams channel.
 
 ## Release 04-04-2022 [Breaking changes]
 
