@@ -12,9 +12,8 @@ For deploying the metrics collection agent, we will leverage [HELM](https://kube
 The prometheus-collector is the name of the agent pod (replica set) that will collect Prometheus metrics from your Kubernetes cluster.
 
 > If you've worked with Geneva Metrics before, you maybe familiar with the Geneva Metrics Extension [ME]. ME will be used for Prometheus collection as well, and is a sub-component of the prometheus-collector
-> You can either deploy by specifying geneva account(s) and their certificates (or) you can deploy by requiring to use a Monitoring Account (MAC), in which case it doesn't require certificates and it will use Azure Resource's System Managed Identity, which also requires setting up MAC account(s) and configuring DCR* (Data collection rules*)
 
-To deploy the agent we will leverage HELM again. 
+To deploy the agent we will leverage HELM again. At this step you will need to provide the KeyVault certificate information that you saved in the previous step.  The following commands can be used for this. See an example of this below.  
 
 ### Using geneva account & certificates (in key vault)
 
