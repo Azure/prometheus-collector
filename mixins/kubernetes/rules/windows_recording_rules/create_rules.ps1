@@ -38,24 +38,32 @@ $rulegroupname1 = $mac_name + '_' + $values_ps_object.cluster + 'ci_rulegroup_1'
 $rulegroupname2 = $mac_name + '_' + $values_ps_object.cluster + 'ci_rulegroup_2'
 $rulegroupname3 = $mac_name + '_' + $values_ps_object.cluster + 'ci_rulegroup_3'
 
+$rulegroupname1 = $rulegroupname1.replace('-', '_')
+$rulegroupname2 = $rulegroupname2.replace('-', '_')
+$rulegroupname3 = $rulegroupname3.replace('-', '_')
+
+Write-output $rulegroupname1
+Write-output $rulegroupname2
+Write-output $rulegroupname3
+
 Write-Output "-----------------------------------------------------------------------------------"
 
 Write-Output "Replacing location, mac and cluster in the template files..."
 
 (Get-Content -path .\templates\$rules_group_1).replace('$MACLocation', $values_ps_object.MACLocation) | Set-Content -Path .\$rules_group_1
-(Get-Content -path .\$rules_group_1).replace('$name', $values_ps_object.rulegroupname1) | Set-Content -Path .\$rules_group_1
+(Get-Content -path .\$rules_group_1).replace('$name', $rulegroupname1) | Set-Content -Path .\$rules_group_1
 (Get-Content -path .\$rules_group_1).replace('$mac', $values_ps_object.mac) | Set-Content -Path .\$rules_group_1
 (Get-Content -path .\$rules_group_1).replace('$cluster', $values_ps_object.cluster) | Set-Content -Path .\$rules_group_1
 
 
 (Get-Content -path .\templates\$rules_group_2).replace('$MACLocation', $values_ps_object.MACLocation) | Set-Content -Path .\$rules_group_2
-(Get-Content -path .\$rules_group_1).replace('$name', $values_ps_object.rulegroupname2) | Set-Content -Path .\$rules_group_2
+(Get-Content -path .\$rules_group_2).replace('$name', $rulegroupname2) | Set-Content -Path .\$rules_group_2
 (Get-Content -path .\$rules_group_2).replace('$mac', $values_ps_object.mac) | Set-Content -Path .\$rules_group_2
 (Get-Content -path .\$rules_group_2).replace('$cluster', $values_ps_object.cluster) | Set-Content -Path .\$rules_group_2
 
 
 (Get-Content -path .\templates\$rules_group_3).replace('$MACLocation', $values_ps_object.MACLocation) | Set-Content -Path .\$rules_group_3
-(Get-Content -path .\$rules_group_1).replace('$name', $values_ps_object.rulegroupname3) | Set-Content -Path .\$rules_group_3
+(Get-Content -path .\$rules_group_3).replace('$name', $rulegroupname3) | Set-Content -Path .\$rules_group_3
 (Get-Content -path .\$rules_group_3).replace('$mac', $values_ps_object.mac) | Set-Content -Path .\$rules_group_3
 (Get-Content -path .\$rules_group_3).replace('$cluster', $values_ps_object.cluster) | Set-Content -Path .\$rules_group_3
 
