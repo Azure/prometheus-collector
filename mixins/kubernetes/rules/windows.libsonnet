@@ -232,7 +232,7 @@
             record: 'memory_requests_commitment',
             expr: |||
               sum( max by (namespace, pod, container, cluster) (kube_pod_container_resource_requests{resource = "memory",job="kube-state-metrics", %(clusterSelector)s}) * on (container, pod, namespace, cluster) (windows_container_available{job="windows-exporter", %(clusterSelector)s} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job="kube-state-metrics", %(clusterSelector)s}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job="windows-exporter", %(clusterSelector)s }))
-            ||| % $._config
+            ||| % $._config,
           },
           {
             record: 'kube_pod_windows_container_resource_memory_limit',
