@@ -55,7 +55,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
          })
         .addPanel(
           g.panel('CPU Utilisation') +
-          g.statPanel('1 - avg(rate(windows_cpu_time_total{job="windows-exporter", mode="idle", cluster="$cluster"}[3m]))')
+          g.statPanel('1 - avg by (job, cluster) (rate(windows_cpu_time_total{job="windows-exporter", mode="idle", cluster="$cluster"}[3m]))')
         )
         .addPanel(
           g.panel('CPU Requests Commitment') +
@@ -369,11 +369,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
             legend_avg=true,
           )
           .addTarget(prometheus.target(
-            'sort_desc(sum by (container) (rate(windows_container_network_received_bytes_total{job="windows-exporter", cluster = "$cluster", namespace="$namespace", pod="$pod"}[1m])))' % $._config,
+            'sort_desc(sum by (container) (rate(windows_container_network_received_bytes_total{job="windows-exporter", cluster = "$cluster", namespace="$namespace", pod="$pod"}[3m])))' % $._config,
             legendFormat='Received : {{ container }}',
           ))
           .addTarget(prometheus.target(
-            'sort_desc(sum by (container) (rate(windows_container_network_transmitted_bytes_total{job="windows-exporter", cluster = "$cluster", namespace="$namespace", pod="$pod"}[1m])))' % $._config,
+            'sort_desc(sum by (container) (rate(windows_container_network_transmitted_bytes_total{job="windows-exporter", cluster = "$cluster", namespace="$namespace", pod="$pod"}[3m])))' % $._config,
             legendFormat='Transmitted : {{ container }}',
           ))
         )
@@ -418,7 +418,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('CPU')
         .addPanel(
           g.panel('CPU Utilisation') +
-          g.queryPanel('node:windows_node_cpu_utilisation:avg1m{job="windows-exporter", cluster="$cluster"} * node:windows_node_num_cpu:sum{cluster="$cluster"} / scalar(sum(node:windows_node_num_cpu:sum{job="windows-exporter", cluster="$cluster"}))', '{{instance}}', legendLink) +
+          g.queryPanel('node:windows_node_cpu_utilisation:avg3m{job="windows-exporter", cluster="$cluster"} * node:windows_node_num_cpu:sum{cluster="$cluster"} / scalar(sum(node:windows_node_num_cpu:sum{job="windows-exporter", cluster="$cluster"}))', '{{instance}}', legendLink) +
           g.stack +
           { yaxes: g.yaxes({ format: 'percentunit', max: 1 }) },
         )
@@ -470,7 +470,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
           g.panel('Disk Capacity') +
           g.queryPanel(
             |||
-              sum by (instance, cluster)(node:windows_node_filesystem_usage:{job="windows-exporter", cluster="$cluster"})
+              sum by (instance, cluster, job)(node:windows_node_filesystem_usage:{job="windows-exporter", cluster="$cluster"})
             ||| % $._config, '{{instance}}', legendLink
           ) +
           g.stack +
@@ -525,7 +525,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('CPU')
         .addPanel(
           g.panel('CPU Utilisation') +
-          g.queryPanel('node:windows_node_cpu_utilisation:avg1m{job="windows-exporter", cluster="$cluster", instance="$instance"}', 'Utilisation') +
+          g.queryPanel('node:windows_node_cpu_utilisation:avg3m{job="windows-exporter", cluster="$cluster", instance="$instance"}', 'Utilisation') +
           { yaxes: g.yaxes('percentunit') },
         )
         .addPanel(
@@ -571,9 +571,9 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         )
         .addPanel(
           graphPanel.new('Disk I/O', datasource='$datasource')
-          .addTarget(prometheus.target('max(rate(windows_logical_disk_read_bytes_total{job="windows-exporter", cluster="$cluster", instance="$instance"}[2m]))' % $._config, legendFormat='read'))
-          .addTarget(prometheus.target('max(rate(windows_logical_disk_write_bytes_total{job="windows-exporter", cluster="$cluster", instance="$instance"}[2m]))' % $._config, legendFormat='written'))
-          .addTarget(prometheus.target('max(rate(windows_logical_disk_read_seconds_total{job="windows-exporter", cluster="$cluster", instance="$instance"}[2m]) + rate(windows_logical_disk_write_seconds_total{job="windows-exporter", cluster="$cluster", instance="$instance"}[2m]))' % $._config, legendFormat='io time')) +
+          .addTarget(prometheus.target('max(rate(windows_logical_disk_read_bytes_total{job="windows-exporter", cluster="$cluster", instance="$instance"}[3m]))' % $._config, legendFormat='read'))
+          .addTarget(prometheus.target('max(rate(windows_logical_disk_write_bytes_total{job="windows-exporter", cluster="$cluster", instance="$instance"}[3m]))' % $._config, legendFormat='written'))
+          .addTarget(prometheus.target('max(rate(windows_logical_disk_read_seconds_total{job="windows-exporter", cluster="$cluster", instance="$instance"}[3m]) + rate(windows_logical_disk_write_seconds_total{job="windows-exporter", cluster="$cluster", instance="$instance"}[3m]))' % $._config, legendFormat='io time')) +
           {
             seriesOverrides: [
               {
