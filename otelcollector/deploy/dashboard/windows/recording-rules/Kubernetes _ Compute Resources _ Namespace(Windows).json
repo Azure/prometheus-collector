@@ -710,7 +710,7 @@
             "multi": false,
             "name": "namespace",
             "options": [ ],
-            "query": "label_values(windows_pod_container_available, namespace)",
+            "query": "label_values(windows_pod_container_available{cluster = \"$cluster\"}, namespace)",
             "refresh": 2,
             "regex": "",
             "sort": 1,
