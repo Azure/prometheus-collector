@@ -37,6 +37,26 @@
                     {
                         "record": "node:windows_node_memory_swap_io_pages:irate",
                         "expression": "irate(windows_memory_swap_page_operations_total{ job=\"windows-exporter\", cluster=\"vishwa-s\"}[5m])"
+                    },
+                    {
+                        "record": "node:windows_node:sum",
+                        "expression": "count by (cluster, job) (windows_system_system_up_time{ job=\"windows-exporter\", cluster=\"vishwa-s\"})"
+                    },
+                    {
+                        "record": "node:windows_node_disk_utilisation:avg_irate",
+                        "expression": "avg by (instance, cluster, job) ((irate(windows_logical_disk_read_seconds_total{ job=\"windows-exporter\", cluster=\"vishwa-s\"}[3m]) + irate(windows_logical_disk_write_seconds_total{ job=\"windows-exporter\", cluster=\"vishwa-s\"}[3m])))"
+                    },
+                    {
+                        "record": "node:windows_node_net_utilisation:sum_irate",
+                        "expression": "sum by (instance, cluster, job) ((irate(windows_net_bytes_total{ job=\"windows-exporter\", cluster=\"vishwa-s\"}[3m])))"
+                    },
+                    {
+                        "record": "node:windows_node_net_saturation:sum_irate",
+                        "expression": "sum by (instance, cluster, job) ((irate(windows_net_packets_received_discarded_total{ job=\"windows-exporter\", cluster=\"vishwa-s\"}[3m]) + irate(windows_net_packets_outbound_discarded_total{ job=\"windows-exporter\", cluster=\"vishwa-s\"}[3m])))"
+                    },
+                    {
+                        "record": "node:windows_node_filesystem_usage:",
+                        "expression": "max by (instance,volume,job, cluster)((windows_logical_disk_size_bytes{ job=\"windows-exporter\", cluster=\"vishwa-s\"} - windows_logical_disk_free_bytes{ job=\"windows-exporter\", cluster=\"vishwa-s\"}) / windows_logical_disk_size_bytes{ job=\"windows-exporter\", cluster=\"vishwa-s\"})"
                     }
                 ]
             }

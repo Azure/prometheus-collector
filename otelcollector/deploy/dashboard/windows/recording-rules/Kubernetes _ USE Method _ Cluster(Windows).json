@@ -48,7 +48,7 @@
               "steppedLine": false,
               "targets": [
                  {
-                    "expr": "node:windows_node_cpu_utilisation:avg3m{job=\"windows-exporter\", cluster=\"$cluster\"} * node:windows_node_num_cpu:sum{cluster=\"$cluster\"} / scalar(sum (cluster, job) (node:windows_node_num_cpu:sum{job=\"windows-exporter\", cluster=\"$cluster\"}))",
+                    "expr": "node:windows_node_cpu_utilisation:avg3m{job=\"windows-exporter\", cluster=\"$cluster\"} * node:windows_node_num_cpu:sum{cluster=\"$cluster\"} / scalar(sum by (cluster, job) (node:windows_node_num_cpu:sum{job=\"windows-exporter\", cluster=\"$cluster\"}))",
                     "format": "time_series",
                     "intervalFactor": 2,
                     "legendFormat": "{{instance}}",

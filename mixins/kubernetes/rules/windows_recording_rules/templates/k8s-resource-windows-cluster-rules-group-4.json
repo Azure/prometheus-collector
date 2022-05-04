@@ -68,7 +68,7 @@
                     },
                     {
                         "record": "node:windows_node_filesystem_usage:",
-                        "expression": "max by (instance,volume,cluster)((windows_logical_disk_size_bytes{ job=\"windows-exporter\", cluster=\"grace-rec-rules\"} - windows_logical_disk_free_bytes{ job=\"windows-exporter\", cluster=\"grace-rec-rules\"}) / windows_logical_disk_size_bytes{ job=\"windows-exporter\", cluster=\"grace-rec-rules\"})"
+                        "expression": "max by (instance,volume,job, cluster)((windows_logical_disk_size_bytes{ job=\"windows-exporter\", cluster=\"vishwa-s\"} - windows_logical_disk_free_bytes{ job=\"windows-exporter\", cluster=\"vishwa-s\"}) / windows_logical_disk_size_bytes{ job=\"windows-exporter\", cluster=\"vishwa-s\"})"
                     }
                 ]
             }
