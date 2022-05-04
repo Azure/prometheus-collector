@@ -1,4 +1,6 @@
 exporters:
+  file:
+    path: /otelcollector-metrics.json
   otlp:
     endpoint: 127.0.0.1:55680
     tls:
@@ -24,7 +26,7 @@ service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      exporters: [otlp]
+      exporters: [otlp, file]
       processors: [batch, resource]
   telemetry:
     logs:
