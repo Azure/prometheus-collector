@@ -33,6 +33,10 @@
                     {
                         "record": "node:windows_node_memory_utilisation:ratio",
                         "expression": "(node:windows_node_memory_bytes_total:sum - node:windows_node_memory_bytes_available:sum) / scalar(sum by (job, cluster) (node:windows_node_memory_bytes_total:sum))"
+                    },
+                    {
+                        "record": "node:windows_node_memory_swap_io_pages:irate",
+                        "expression": "irate(windows_memory_swap_page_operations_total{ job=\"windows-exporter\", cluster=\"vishwa-s\"}[5m])"
                     }
                 ]
             }
