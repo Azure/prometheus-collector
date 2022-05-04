@@ -12,6 +12,7 @@ import (
 	//"go.opentelemetry.io/collector/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
 )
 
 func components() (component.Factories, error) {
@@ -36,6 +37,7 @@ func components() (component.Factories, error) {
 	factories.Exporters, err = component.MakeExporterFactoryMap(
 		loggingexporter.NewFactory(),
 		otlpexporter.NewFactory(),
+		fileexporter.NewFactory(),
 	)
 	if err != nil {
 		return component.Factories{}, err
