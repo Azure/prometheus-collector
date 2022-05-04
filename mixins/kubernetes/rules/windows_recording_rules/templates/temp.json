@@ -21,6 +21,18 @@
                     {
                         "record": "node:windows_node_num_cpu:sum",
                         "expression": "count by (instance, cluster, job) (sum by (instance, core, cluster, job) (windows_cpu_time_total{ job=\"windows-exporter\", cluster=\"vishwa-s\"}))"
+                    },
+                    {
+                        "record": "node:windows_node_memory_bytes_total:sum",
+                        "expression": "sum by (instance, cluster, job) (windows_os_visible_memory_bytes{ job=\"windows-exporter\", cluster=\"vishwa-s\"})"
+                    },
+                    {
+                        "record": "node:windows_node_memory_bytes_available:sum",
+                        "expression": "sum by (instance, cluster, job) ((windows_memory_available_bytes{ job=\"windows-exporter\", cluster=\"vishwa-s\"}))"
+                    },
+                    {
+                        "record": "node:windows_node_memory_utilisation:ratio",
+                        "expression": "(node:windows_node_memory_bytes_total:sum - node:windows_node_memory_bytes_available:sum) / scalar(sum by (job, cluster) (node:windows_node_memory_bytes_total:sum))"
                     }
                 ]
             }
