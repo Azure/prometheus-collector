@@ -160,7 +160,7 @@ spec:
             - --secret-name=omsagent-aad-msi-token
             - --token-server-listening-port=7777
             - --health-server-listening-port=9999
-          image: "mcr.microsoft.com/aks/hcp/addon-token-adapter:master.211104.1"
+          image: "mcr.microsoft.com/aks/msi/addon-token-adapter:master.220415.2"
           imagePullPolicy: IfNotPresent
           env:
             - name: AZMON_COLLECT_ENV
@@ -176,8 +176,8 @@ spec:
               cpu: 500m
               memory: 500Mi
             requests:
-              cpu: 100m
-              memory: 100Mi
+              cpu: 20m
+              memory: 30Mi
           securityContext:
             capabilities:
               drop:
