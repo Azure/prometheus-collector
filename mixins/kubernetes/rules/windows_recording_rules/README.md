@@ -35,15 +35,17 @@ Run the `.\create_rules.ps1` script to deploy the recording rules to your cluste
 
 `Note: This script uses the az cli for logging in and deploying the recording rules to the cluster. Please use the latest version of the az cli for the best experience.`
 
-The dashboards can be found checked in the `\otelcollector\deploy\dashboard\dashboards` folder.
+The dashboards can be found checked in the `\otelcollector\deploy\dashboard\windows\recording-rules` folder.
 
 Please import the below mentioned files to see the metrics from the recording rules deployed using the script.
 
 -   Kubernetes _ Compute Resources _ Cluster(Windows)
 -   Kubernetes _ Compute Resources _ Cluster(Windows)
 -   Kubernetes / Compute Resources / Pod(Windows)
+-   Kubernetes / USE Method / Cluster(Windows)
+-   Kubernetes / USE Method / Node(Windows)
 
 
 If you're account is already added in the cimonitoring grafana instance then you can also use the following link to view the dashboards once the script succeeds:
 
-https://cimonitoring.scus.azgrafana.io/dashboards/f/yLVAyAP7k/kaveesh-test
+https://cimonitoring.scus.azgrafana.io/dashboards/f/xtltXN_7k/kaveesh-test-3

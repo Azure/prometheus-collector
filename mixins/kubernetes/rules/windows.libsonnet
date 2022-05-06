@@ -8,7 +8,7 @@
             // This rule gives the number of windows nodes
             record: 'node:windows_node:sum',
             expr: |||
-              count (
+              count by (job, cluster) (
                 windows_system_system_up_time{ %(wmiExporterSelector)s, %(clusterSelector)s}
               )
             ||| % $._config,
@@ -17,7 +17,7 @@
             // This rule gives the number of CPUs per node.
             record: 'node:windows_node_num_cpu:sum',
             expr: |||
-              count by (instance,cluster,job) (sum by (instance, core, cluster, job) (
+              count by (instance, cluster, job) (sum by (instance, core, cluster, job) (
                 windows_cpu_time_total{ %(wmiExporterSelector)s, %(clusterSelector)s}
               ))
             ||| % $._config,
@@ -26,14 +26,14 @@
             // CPU utilisation is % CPU is not idle.
             record: ':windows_node_cpu_utilisation:avg3m',
             expr: |||
-              1 - avg(rate(windows_cpu_time_total{ %(wmiExporterSelector)s, %(clusterSelector)s,mode="idle"}[3m]))
+              1 - avg by (job, cluster) (rate(windows_cpu_time_total{ %(wmiExporterSelector)s, %(clusterSelector)s,mode="idle"}[3m]))
             ||| % $._config,
           },
           {
             // CPU utilisation is % CPU is not idle.
             record: 'node:windows_node_cpu_utilisation:avg3m',
             expr: |||
-              1 - avg by (instance) (
+              1 - avg by (instance, job, cluster) (
                 rate(windows_cpu_time_total{ %(wmiExporterSelector)s, %(clusterSelector)s,mode="idle"}[3m])
               )
             ||| % $._config,
@@ -41,10 +41,11 @@
           {
             record: ':windows_node_memory_utilisation:',
             expr: |||
-              1 -
-              sum(windows_memory_available_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s})
+              1 - (
+              sum by (instance, job, cluster) (windows_memory_available_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s})
               /
-              sum(windows_os_visible_memory_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s})
+              sum by (instance, job, cluster) (windows_os_visible_memory_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s})
+              )
             ||| % $._config,
           },
           // Add separate rules for Free & Total, so we can aggregate across clusters
@@ -78,7 +79,7 @@
             // SINCE 2018-02-08
             record: 'node:windows_node_memory_bytes_available:sum',
             expr: |||
-              sum by (instance) (
+              sum by (instance, cluster, job) (
                 (windows_memory_available_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s})
               )
             ||| % $._config,
@@ -87,7 +88,7 @@
             // Total memory per node
             record: 'node:windows_node_memory_bytes_total:sum',
             expr: |||
-              sum by (instance) (
+              sum by (instance, cluster, job) (
                 windows_os_visible_memory_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s }
               )
             ||| % $._config,
@@ -98,7 +99,7 @@
             expr: |||
               (node:windows_node_memory_bytes_total:sum - node:windows_node_memory_bytes_available:sum)
               /
-              scalar(sum(node:windows_node_memory_bytes_total:sum))
+              scalar(sum by (job, cluster) (node:windows_node_memory_bytes_total:sum))
             |||,
           },
           {
@@ -126,7 +127,7 @@
             // Disk utilisation (ms spent, by rate() it's bound by 1 second)
             record: 'node:windows_node_disk_utilisation:avg_irate',
             expr: |||
-              avg by (instance) (
+              avg by (instance, cluster, job) (
                 (irate(windows_logical_disk_read_seconds_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]) +
                  irate(windows_logical_disk_write_seconds_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]))
               )
@@ -135,7 +136,7 @@
           {
             record: 'node:windows_node_filesystem_usage:',
             expr: |||
-              max by (instance,volume,cluster)(
+              max by (instance,volume,job,cluster)(
                 (windows_logical_disk_size_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s}
               - windows_logical_disk_free_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s})
               / windows_logical_disk_size_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s}
@@ -145,7 +146,7 @@
           {
             record: 'node:windows_node_filesystem_avail:',
             expr: |||
-              max by (instance, volume) (windows_logical_disk_free_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s} / windows_logical_disk_size_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s})
+              max by (instance, cluster, job, volume) (windows_logical_disk_free_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s} / windows_logical_disk_size_bytes{ %(wmiExporterSelector)s, %(clusterSelector)s})
             ||| % $._config,
           },
           {
@@ -157,7 +158,7 @@
           {
             record: 'node:windows_node_net_utilisation:sum_irate',
             expr: |||
-              sum by (instance) (
+              sum by (instance, cluster, job) (
                 (irate(windows_net_bytes_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]))
               )
             ||| % $._config,
@@ -172,7 +173,7 @@
           {
             record: 'node:windows_node_net_saturation:sum_irate',
             expr: |||
-              sum by (instance) (
+              sum by (instance, cluster, job) (
                 (irate(windows_net_packets_received_discarded_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]) +
                 irate(windows_net_packets_outbound_discarded_total{ %(wmiExporterSelector)s, %(clusterSelector)s}[3m]))
               )
@@ -231,7 +232,7 @@
             record: 'memory_requests_commitment',
             expr: |||
               sum( max by (namespace, pod, container, cluster) (kube_pod_container_resource_requests{resource = "memory",job="kube-state-metrics", %(clusterSelector)s}) * on (container, pod, namespace, cluster) (windows_container_available{job="windows-exporter", %(clusterSelector)s} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job="kube-state-metrics", %(clusterSelector)s}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job="windows-exporter", %(clusterSelector)s }))
-            ||| % $._config
+            ||| % $._config,
           },
           {
             record: 'kube_pod_windows_container_resource_memory_limit',
