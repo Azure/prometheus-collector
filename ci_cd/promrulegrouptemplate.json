@@ -1,0 +1,45 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "variables": {},
+    "resources": [
+        {
+            "name": "containerinsightsprodclusteraccount_alerts",
+            "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+            "apiVersion": "2021-07-22-preview",
+            "location": "eastus2euap",
+            "properties": {
+                "description": "rule group for cluster ci-prod-aks-eus in containerinsightsprodclusteraccount",
+                "scopes": [
+                    "/subscriptions/ad2f1a83-caac-4e21-9d2a-9ca3f87105e2/resourcegroups/divyaj-test/providers/microsoft.monitor/accounts/containerinsightsprodclusteraccounteus2euap"
+                ],
+                "rules": [
+                    {
+                        "alert": "up metric missing for targets in cluster ci-prod-aks-eus",
+                        "expression": "absent(upp{cluster=\"ci-prod-aks-eus\"}) == 1",
+                        "for": "PT3M",
+                        "labels": {
+                            "cluster": "ci-prod-aks-eus"
+                        },
+                        "annotations": {
+                            "description": "up metric is not flowing for any targets in cluster ci-prod-aks-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "ActionGroupProperties": {
+                                    "Icm.Enabled": "True"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}
