@@ -12,8 +12,8 @@ ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
 COPY ./logrotate/prometheus-collector /etc/logrotate.d/
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
-RUN sudo tdnf repolist --refresh
-RUN sudo tdnf install -y wget openssl curl sudo net-tools cronie vim ruby gnupg logrotate sed procps-ng dnf busybox
+RUN tdnf repolist --refresh
+RUN tdnf install -y wget openssl curl sudo net-tools cronie vim ruby gnupg logrotate sed procps-ng dnf busybox
 RUN mkdir /busybin && busybox --install /busybin
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
 COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
