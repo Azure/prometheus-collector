@@ -121,4 +121,8 @@ echo "Installing Metrics Extension..."
 #sudo tdnf install cpprest grpc grpc-cpp -y
 #sudo tdnf --disablerepo="*" --enablerepo=mariner-official-extras install metricsext2 -y
 
+wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.506.1624-1.cm2.x86_64.1.rpm
+sudo tdnf install -y metricsext2-2.2022.506.1624-1.cm2.x86_64.1.rpm
+
+
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build.
