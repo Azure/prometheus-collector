@@ -5,25 +5,25 @@
     "variables": {},
     "resources": [
         {
-            "name": "containerinsightsprodclusteraccount_alerts",
+            "name": "containerinsightsprodclusteraccount_alerts_2",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
             "location": "eastus2euap",
             "properties": {
-                "description": "rule group for cluster ci-prod-aks-eus in containerinsightsprodclusteraccount",
+                "description": "rule group for cluster ci-prod-aks-msi-eus2 in containerinsightsprodclusteraccount",
                 "scopes": [
                     "/subscriptions/ad2f1a83-caac-4e21-9d2a-9ca3f87105e2/resourcegroups/divyaj-test/providers/microsoft.monitor/accounts/containerinsightsprodclusteraccounteus2euap"
                 ],
                 "rules": [
                     {
-                        "alert": "up metric missing for target = node in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"node\"}) == 1",
+                        "alert": "up metric missing for target = node in cluster ci-prod-aks-msi-eus2",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-msi-eus2\", job=\"node\"}) == 1",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-prod-aks-eus"
+                            "cluster": "ci-prod-aks-msi-eus2"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = node in cluster ci-prod-aks-eus"
+                            "description": "up metric is not flowing for target = node in cluster ci-prod-aks-msi-eus2"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -39,14 +39,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kubelet in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kubelet\"}) == 1",
+                        "alert": "up metric missing for target = kubelet in cluster ci-prod-aks-msi-eus2",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-msi-eus2\", job=\"kubelet\"}) == 1",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-prod-aks-eus"
+                            "cluster": "ci-prod-aks-msi-eus2"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kubelet in cluster ci-prod-aks-eus"
+                            "description": "up metric is not flowing for target = kubelet in cluster ci-prod-aks-msi-eus2"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -62,14 +62,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = windows-exporter in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"windows-exporter\"}) == 1",
+                        "alert": "up metric missing for target = windows-exporter in cluster ci-prod-aks-msi-eus2",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-msi-eus2\", job=\"windows-exporter\"}) == 1",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-prod-aks-eus"
+                            "cluster": "ci-prod-aks-msi-eus2"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = windows-exporter in cluster ci-prod-aks-eus"
+                            "description": "up metric is not flowing for target = windows-exporter in cluster ci-prod-aks-msi-eus2"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -85,14 +85,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kube-proxy in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy\"}) == 1",
+                        "alert": "up metric missing for target = kube-proxy in cluster ci-prod-aks-msi-eus2",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-msi-eus2\", job=\"kube-proxy\"}) == 1",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-prod-aks-eus"
+                            "cluster": "ci-prod-aks-msi-eus2"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kube-proxy in cluster ci-prod-aks-eus"
+                            "description": "up metric is not flowing for target = kube-proxy in cluster ci-prod-aks-msi-eus2"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -108,14 +108,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kube-apiserver in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-apiserver\"}) == 1",
+                        "alert": "up metric missing for target = kube-apiserver in cluster ci-prod-aks-msi-eus2",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-msi-eus2\", job=\"kube-apiserver\"}) == 1",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-prod-aks-eus"
+                            "cluster": "ci-prod-aks-msi-eus2"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kube-apiserver in cluster ci-prod-aks-eus"
+                            "description": "up metric is not flowing for target = kube-apiserver in cluster ci-prod-aks-msi-eus2"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -131,14 +131,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kube-proxy-windows in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy-windows\"}) == 1",
+                        "alert": "up metric missing for target = kube-proxy-windows in cluster ci-prod-aks-msi-eus2",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-msi-eus2\", job=\"kube-proxy-windows\"}) == 1",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-prod-aks-eus"
+                            "cluster": "ci-prod-aks-msi-eus2"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kube-proxy-windows in cluster ci-prod-aks-eus"
+                            "description": "up metric is not flowing for target = kube-proxy-windows in cluster ci-prod-aks-msi-eus2"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -154,14 +154,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kube-state-metrics in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-state-metrics\"}) == 1",
+                        "alert": "up metric missing for target = kube-state-metrics in cluster ci-prod-aks-msi-eus2",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-msi-eus2\", job=\"kube-state-metrics\"}) == 1",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-prod-aks-eus"
+                            "cluster": "ci-prod-aks-msi-eus2"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kube-proxy-windows in cluster ci-prod-aks-eus"
+                            "description": "up metric is not flowing for target = kube-proxy-windows in cluster ci-prod-aks-msi-eus2"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -177,14 +177,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = cadvisor in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"cadvisor\"}) == 1",
+                        "alert": "up metric missing for target = cadvisor in cluster ci-prod-aks-msi-eus2",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-msi-eus2\", job=\"cadvisor\"}) == 1",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-prod-aks-eus"
+                            "cluster": "ci-prod-aks-msi-eus2"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = cadvisor in cluster ci-prod-aks-eus"
+                            "description": "up metric is not flowing for target = cadvisor in cluster ci-prod-aks-msi-eus2"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -200,14 +200,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kube-dns in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-dns\"}) == 1",
+                        "alert": "up metric missing for target = kube-dns in cluster ci-prod-aks-msi-eus2",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-msi-eus2\", job=\"kube-dns\"}) == 1",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-prod-aks-eus"
+                            "cluster": "ci-prod-aks-msi-eus2"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kube-dns in cluster ci-prod-aks-eus"
+                            "description": "up metric is not flowing for target = kube-dns in cluster ci-prod-aks-msi-eus2"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
