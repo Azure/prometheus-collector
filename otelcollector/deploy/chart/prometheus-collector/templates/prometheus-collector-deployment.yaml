@@ -20,6 +20,7 @@ spec:
     metadata:
       labels:
         rsName: {{ template "prometheus-collector.fullname" . }}
+        {{- with .Values.podLabels }}{{ toYaml . | trim | nindent 8 }}{{- end }}
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"

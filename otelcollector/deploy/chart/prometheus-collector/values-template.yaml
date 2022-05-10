@@ -91,6 +91,9 @@ image:
     tag: ${IMAGE_TAG_WINDOWS}
   pullPolicy: IfNotPresent
 
+# -- Applies additional labels to all pods.
+podLabels: {}
+
 resources:
  deployment:
    limits:
