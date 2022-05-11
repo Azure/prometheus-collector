@@ -8,6 +8,7 @@
 | azureKeyVault.pfxCertNames | list of comma seperated strings | <mark>`Required`</mark> | `"{}"` | name of the Pfx certificate(s) - one per metric account |
 | azureKeyVault.tenantId | string | <mark>`Required`</mark> | `""` | tenantid for the azure key vault resource |
 | azureKeyVault.useManagedIdentity | string | Optional | `false` | enable/disable managed identity to access keyvault |
+| azureKeyVault.aad-pod-identity | string | Optional | `""` | name of the azure pod managed identity to access keyvault, requires useManagedIdentity true |
 | azureKeyVault.userAssignedIdentityID | string | Optional | `""` | used when useManagedIdentity parameter is set to true. This specifies which user assigned managed identity to use when acccesing keyvault. If you are using a user assigned identity as managed identity, then specify the identity's client id. If empty, AND 'useManagedIdentity' is true, then defaults to use the system assigned identity on the VM |
 | azureMetricAccount.defaultAccountName | string | <mark>`Required`</mark> | `""` | default metric account name to ingest metrics into. This will be the account used if metric itself does not have account 'hinting' label. The certificate for this account should be specified in one of the further arguments below here |
 | clusterName | string | <mark>`Required`</mark> | `""` | name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped |
