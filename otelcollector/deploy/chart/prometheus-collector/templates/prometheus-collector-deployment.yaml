@@ -21,6 +21,9 @@ spec:
       labels:
         rsName: {{ template "prometheus-collector.fullname" . }}
         {{- with .Values.podLabels }}{{ toYaml . | trim | nindent 8 }}{{- end }}
+        {{- if ne (index .Values.azureKeyVault "aad-pod-identity") ""}}
+        aadpodidbinding: {{ index .Values.azureKeyVault "aad-pod-identity" }}
+        {{- end }}
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
