@@ -24,8 +24,8 @@ spec:
     metadata:
       labels:
         dsName: {{ template "prometheus-collector.fullname" . }}-node
-        {{- if ne .Values.azureKeyVault.aad-pod-identity ""}}
-        aadpodidbinding: {{ .Values.azureKeyVault.aad-pod-identity }}
+        {{- if ne index .Values.azureKeyVault "aad-pod-identity" ""}}
+        aadpodidbinding: {{ index .Values.azureKeyVault "aad-pod-identity" }}
         {{- end }}
       annotations:
         agentVersion: "0.0.0.1"
@@ -270,8 +270,8 @@ spec:
     metadata:
       labels:
         dsName: {{ template "prometheus-collector.fullname" . }}-win-node
-        {{- if ne .Values.azureKeyVault.aad-pod-identity ""}}
-        aadpodidbinding: {{ .Values.azureKeyVault.aad-pod-identity }}
+        {{- if ne index .Values.azureKeyVault "aad-pod-identity" ""}}
+        aadpodidbinding: {{ index .Values.azureKeyVault "aad-pod-identity" }}
         {{- end }}
       annotations:
         agentVersion: "0.0.0.1"
