@@ -11,6 +11,31 @@ If these are the only targets you want to scrape, then you can proceed further t
 
 If you'd like to scrape additional custom targets, then create a Prometheus configuration file (named prometheus-config) and add any custom scrape targets to it. See the [Prometheus configuration docs](https://prometheus.io/docs/prometheus/latest/configuration/configuration/) for more information. Your config file will list the scrape configs under the section `scrape_configs` and can use the `global` section for setting the global `scrape_interval`, `scrape_timeout`, and `evaluation_interval`.
 
+### Customizing default targets
+If you'd like to customize any of the default targets to filter out the metrics by their names you can use the chart value settings ([ChartValues](https://eng.ms/docs/products/geneva/metrics/prometheus/chartvalues)) - keepListRegexes. This setting is per job, for example keepListRegexes.apiServer is the metric filtering setting for the default target - api server.
+
+By default we ingest only minimal metrics as required by dashboards, rec.rules & alerts. Read about ingestion volume control & customizations [here](./PromIngestionVolume.md)
+
+Specify if you'd like to filter IN metrics collected for the default targets using regex based filtering.
+
+    ```shell
+    --set keeplistRegexes.kubelet = "metricX|metricY"
+    --set keeplistRegexes.coredns= "<regex>"
+    --set keeplistRegexes.cadvisor = "<regex>"
+    --set keeplistRegexes.kubeproxy = "<regex>"
+    --set keeplistRegexes.apiserver = "<regex>"
+    --set keeplistRegexes.kubestate = "<regex>"
+    --set keeplistRegexes.nodeexporter = "<regex>"
+    --set keeplistRegexes.windowsexporter = "<regex>"
+    --set keeplistRegexes.windowskubeproxy = "<regex>"
+    ```
+  Note that if you are using  
+      1. quotes in the regex you will need to escape them using a backslash. Example - keepListRegexes.kubelet = `"test\'smetric\"s\""`  instead of `"test'smetric"s""`
+      2. backslashes in the regex, you will need to escape them. Example - keepListRegexes.kubelet = `testbackslash\\*` instead of `testbackslash\*`
+
+If you would like to further customize the default jobs to customize the collection frequency or labels etc, you could disable the corresponding default target by setting the chart value for the target to false (ex -scrapeTargets.apiServer to false) and then applying the job using custom configmap. [Here](https://github.com/Azure/prometheus-collector/tree/main/otelcollector/configmapparser/default-prom-configs) is the repository link for all the default target configurations. 
+Please see this section 'Create a configmap from your configuration file' below on how to create configmap for custom targets.
+
 ## Validate the custom config
 
 Now validate the prometheus configuration using the [promconfigvalidator], a command line prometheus config validation tool. This same tool is used by the agent to validate. If the config is not valid, then the custom configuration given will not be used by the agent.

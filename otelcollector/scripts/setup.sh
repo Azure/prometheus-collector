@@ -8,11 +8,11 @@ sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     update-locale LANG=en_US.UTF-8
 
 #Need this for newer scripts
-chmod 775 $TMPDIR/*.sh
-chmod 775 $TMPDIR/microsoft/liveness/*.sh
-chmod 775 $TMPDIR/microsoft/configmapparser/*.rb
+chmod 544 $TMPDIR/*.sh
+chmod 544 $TMPDIR/microsoft/liveness/*.sh
+chmod 544 $TMPDIR/microsoft/configmapparser/*.rb
 
-chmod 777 /usr/sbin/
+chmod 744 /usr/sbin/
 
 #download inotify tools for watching configmap changes
 echo "Installing inotify..."
@@ -52,12 +52,19 @@ gem install re2
 #mv ./otelcol_linux_amd64 /opt/microsoft/otelcollector29/otelcollector
 #chmod 777 /opt/microsoft/otelcollector29/otelcollector
 
+echo "Downloading MDSD"
+wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-support-official/azure-mdsd_1.17.1-build.master.377_x86_64.deb
+/usr/bin/dpkg -i $TMPDIR/azure-mdsd*.deb
+cp -f $TMPDIR/envmdsd /etc/mdsd.d
+# Create the following directory for logs
+mkdir /opt/microsoft/linuxmonagent
+
 # Install Telegraf
 echo "Installing telegraf..."
-wget https://dl.influxdata.com/telegraf/releases/telegraf-1.18.0_linux_amd64.tar.gz
-tar -zxvf telegraf-1.18.0_linux_amd64.tar.gz
-mv /opt/telegraf-1.18.0/usr/bin/telegraf /opt/telegraf/telegraf
-chmod 777 /opt/telegraf/telegraf
+wget https://dl.influxdata.com/telegraf/releases/telegraf-1.22.2_linux_amd64.tar.gz
+tar -zxvf telegraf-1.22.2_linux_amd64.tar.gz
+mv /opt/telegraf-1.22.2/usr/bin/telegraf /opt/telegraf/telegraf
+chmod 544 /opt/telegraf/telegraf
 
 # Install fluent-bit
 echo "Installing fluent-bit..."
@@ -112,8 +119,12 @@ sudo apt --fix-broken install -y
 #sudo apt-get update
 
 # Pinning to the latest stable version of ME
-#sudo apt-get install -y metricsext2=2.2022.505.1734-d239bc-~focal
+#sudo apt-get install -y metricsext2=2.2022.312.2300-d1b4f6-~focal
 
+#wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/metricsext2_2.2022.201.001-9e07c0-_focal_amd64.deb
+#/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+#sudo apt --fix-broken install -y
+#/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 # Cleaning up unused packages
 echo "Cleaning up packages used for re2 gem install..."
@@ -132,3 +143,4 @@ rm -f $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz
 rm -rf $TMPDIR/prometheus-2.25.2.linux-amd64
 rm -f $TMPDIR/telegraf*.gz
 rm -rf $TMPDIR/telegraf-1.18.0/
+rm -rf $TMPDIR/azure-mdsd*.deb

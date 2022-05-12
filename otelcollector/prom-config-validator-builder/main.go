@@ -60,10 +60,13 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					relabelConfig := relabelConfig.(map[interface{}]interface{})
 					//replace $ with $$ for regex field
 					if relabelConfig["regex"] != nil {
-						regexString := relabelConfig["regex"].(string)
-						modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-						modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-						relabelConfig["regex"] = modifiedRegexString
+						// Adding this check here since regex can be boolean and the conversion will fail
+						if _, isString := relabelConfig["regex"].(string); isString {
+							regexString := relabelConfig["regex"].(string)
+							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							relabelConfig["regex"] = modifiedRegexString
+						}
 					}
 					//replace $ with $$ for replacement field
 					if relabelConfig["replacement"] != nil {
@@ -81,10 +84,13 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					metricRelabelConfig := metricRelabelConfig.(map[interface{}]interface{})
 					//replace $ with $$ for regex field
 					if metricRelabelConfig["regex"] != nil {
-						regexString := metricRelabelConfig["regex"].(string)
-						modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-						modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-						metricRelabelConfig["regex"] = modifiedRegexString
+						// Adding this check here since regex can be boolean and the conversion will fail
+						if _, isString := metricRelabelConfig["regex"].(string); isString {
+							regexString := metricRelabelConfig["regex"].(string)
+							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							metricRelabelConfig["regex"] = modifiedRegexString
+						}
 					}
 
 					//replace $ with $$ for replacement field

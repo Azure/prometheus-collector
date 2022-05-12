@@ -227,7 +227,7 @@ local singlestat = grafana.singlestat;
         template.new(
           'instance',
           '$datasource',
-          'label_values(coredns_build_info{%(corednsSelector)s},%(clusterLabel)s="$cluster"}, %(instanceLabel)s)' % $._config,
+          'label_values(coredns_build_info{%(corednsSelector)s,%(clusterLabel)s="$cluster"}, %(instanceLabel)s)' % $._config,
           refresh='time',
           includeAll=true,
           sort=1,

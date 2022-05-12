@@ -1,5 +1,47 @@
 # Working with Prometheus metrics in MDM
 
+## Release 04-29-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.1.0-main-04-29-2022-0a7092d3`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.1.0-main-04-29-2022-0a7092d3`
+* Change Log -
+  * Update kube-state-metrics (from:3.5.2 to:4.7.0)
+  * Update node-exporter (from:2.2.0 to 3.1.1)
+  * MAC account based ingestion support (only for private preview)
+  * Fix dashboard queries for perf issues
+  * Fix scrape config true v. "true" bug for boolean regex (both are supported now)
+  * Windows dashboards (3) for cluster, namespace & pod are now added with support for recording rules & cluster filter
+    * These dashboards are not part of default dashboards. If you have windows nodes in your cluster and want to try these windows dashboards & their recording rules, please ping us over teams channel.
+
+## Release 04-04-2022 [Breaking changes]
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.0.0-main-04-04-2022-dd20b426`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.0.0-main-04-04-2022-dd20b426`
+* Change Log -
+  * BREAKING CHANGE -- To reduce default ingestion volume,with this release, by default we will be ingesting only metrics consumed by default dashboards for all defaut targets (no change to your custom targets). If you were using metrics scraped by our default targets (dns,kubelet,cadvisor,kube-state-metrics,kube-proxy,node-exporter,api-server) which were not covered in our default dashboards you need to add them to keepList.* (depending on the target). Please see [here](./PromIngestionVolume.md) for more details and also how to modify/disable this behavior if you need to.
+
+## Release 03-17-2022 [Breaking changes]
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:2.0.0-main-03-17-2022-dfef2a5d`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:2.0.0-main-03-17-2022-dfef2a5d`
+* Change Log -
+  * BREAKING CHANGE -- Ingest Prometheus metrics to a new mdm namespace (move from `prometheus` namespace to `_azure_managed_prometheus` namespace). See more details [here](./PrometheusNamespace.md)
+  * Bug fix - Target windows kubelets from replica in advanved mode when windowsDaemonset=false
+  * Bug fix - Fix NODE_NAME (to be windows node's name rather than replica/linux node's name) for windows-exporter & wndows-kube-proxy targets when scraped from replica (i.e mode.advanced=false)
+  * Bug fix - Do not scrape cadvisor target for windows nodes, when mode.advanced=false
+  * Bug fix - Telemetry metrics (Telegraf) for windows daemonset
+  * Use seperate (new) config map for Windows targets that will be picked up only by windows daemonset (see docs for more details)
+  * Build improvements [ faster/parallel builds :) ]
+  
+
+## Release 03-07-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:1.1.2-main-03-07-2022-df71b65a`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:1.1.2-main-03-07-2022-df71b65a`
+* Change Log -
+  * Fixes to patch CVEs
+
+
 ## Release 02-15-2022
 
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:1.1.1-main-02-17-2022-d225f7bf`

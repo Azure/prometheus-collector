@@ -55,7 +55,7 @@ Write-Host ('Finished Installing Visual C++ Redistributable Package')
 Write-Host ('Installing Telegraf');
 try {
     # Keep version in sync with linux in setup.sh file
-    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.18.0_windows_amd64.zip'
+    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.21.4_windows_amd64.zip'
     Invoke-WebRequest -Uri $telegrafUri -OutFile /installation/telegraf.zip
     Expand-Archive -Path /installation/telegraf.zip -Destination /installation/telegraf
     Move-Item -Path /installation/telegraf/*/* -Destination /opt/telegraf/ -ErrorAction SilentlyContinue

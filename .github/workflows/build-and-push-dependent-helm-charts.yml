@@ -22,7 +22,7 @@ jobs:
       - name: Set-MCR-HELM-CHART-Repository-Root
         run: echo "MCR_REPOSITORY_ROOT=mcr.microsoft.com/azuremonitor/containerinsights/cidev/" >> $GITHUB_ENV
       - name: Checkout-code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Lint-HELM-Chart
         run: helm lint ./otelcollector/deploy/dependentcharts/${{ github.event.inputs.dependentHelmChartName }}/
       - name: Run-trivy-scanner-on-HELM-chart-fs
@@ -31,7 +31,7 @@ jobs:
           scan-type: 'fs'
           scan-ref: "./otelcollector/deploy/dependentcharts/${{ github.event.inputs.dependentHelmChartName }}/"
           format: 'table'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           exit-code: '1'
           timeout: '5m0s'
       - name: Package-HELM-chart
