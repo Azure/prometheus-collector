@@ -20,7 +20,7 @@ spec:
     metadata:
       labels:
         rsName: {{ template "prometheus-collector.fullname" . }}
-        {{- if ne $.Values.azureKeyVault.aad-pod-identity ""}}
+        {{- if ne .Values.azureKeyVault.aad-pod-identity ""}}
         aadpodidbinding: {{ .Values.azureKeyVault.aad-pod-identity }}
         {{- end }}
       annotations:
