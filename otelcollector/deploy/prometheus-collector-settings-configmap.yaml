@@ -30,9 +30,6 @@ data:
     nodeexporter = ""
     windowsexporter = ""
     windowskubeproxy = ""
-  debug-mode: |-
-    enabled = true
-    allowed_metric_names = ["myapp_temperature", "myapp_temperature_count"]
 metadata:
   name: prometheus-collector-settings-configmap
   namespace: kube-system
