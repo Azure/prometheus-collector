@@ -225,7 +225,7 @@ Uncomment and deploy below when alerts are available in westeurope
 //                         ]
 //                     },
 //                     {
-//                         "alert": "CPU Requests % greater than 90 for prometheus-collector containers on cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
+//                         "alert": "CPU usage % greater than 90 for prometheus-collector containers on cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
 //                         "expression": "sum(sum by (cluster, namespace, pod, container) ( rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", namespace=\"monitoring\", cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", container=\"prometheus-collector\"}[5m]) ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) ( 1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\", namespace=\"monitoring\", cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\"}) )) by (container, pod) > 0.9",
 //                         "for": "PT3M",
 //                         "labels": {
@@ -248,14 +248,14 @@ Uncomment and deploy below when alerts are available in westeurope
 //                         ]
 //                     },
 //                     {
-//                         "alert": "Memory Requests % greater than 90 for prometheus-collector containers on cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
+//                         "alert": "Memory usage % greater than 90 for prometheus-collector containers on cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
 //                         "expression": "(sum(container_memory_working_set_bytes{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", namespace=\"monitoring\", container=\"prometheus-collector\", image!=\"\"}) by (container, pod) / sum(kube_pod_container_resource_requests{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", namespace=\"monitoring\", container=\"prometheus-collector\", resource=\"memory\"}) by (container, pod)) > 0.9",
 //                         "for": "PT3M",
 //                         "labels": {
 //                             "cluster": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
 //                         },
 //                         "annotations": {
-//                             "description": "Memory Requests % greater than 90 for prometheus-collector containers on cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
+//                             "description": "Memory usage % greater than 90 for prometheus-collector containers on cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
 //                         },
 //                         "severity": 4,
 //                         "resolveConfiguration": {
