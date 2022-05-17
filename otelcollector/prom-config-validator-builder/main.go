@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/collector/config/configunmarshaler"
-	"go.opentelemetry.io/collector/config/configmapprovider"
+	"go.opentelemetry.io/collector/config/mapprovider/filemapprovider"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -199,7 +199,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		ret, err := configmapprovider.NewFile().Retrieve(context.Background(), fmt.Sprintf("file:%s", outputFilePath), nil)
+		ret, err := filemapprovider.New().Retrieve(context.Background(), fmt.Sprintf("file:%s", outputFilePath), nil)
 		cp := ret.Map
 
 		//colParserProvider := parserProvider.Default()
