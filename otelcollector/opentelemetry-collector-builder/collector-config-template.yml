@@ -1,4 +1,6 @@
 exporters:
+  prometheus:
+    endpoint: "127.0.0.1:1234"
   otlphttp:
     endpoint: http://127.0.0.1:2345
   file:
