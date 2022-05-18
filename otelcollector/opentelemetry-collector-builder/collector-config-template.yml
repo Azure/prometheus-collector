@@ -1,4 +1,6 @@
 exporters:
+  otlphttp:
+    endpoint: http://127.0.0.1:2345
   file:
     path: /otelcollector-metrics.json
   otlp:
@@ -19,6 +21,16 @@ processors:
     - key: cluster
       value: "$customResourceId"
       action: "upsert"
+    - key: job
+      from_attribute: service.name
+      action: insert
+    - key: instance
+      from_attribute: service.instance.id
+      action: insert
+    - key: service.name
+      action: delete
+    - key: service.instance.id
+      action: delete
 receivers:
     prometheus:
       config:
@@ -26,7 +38,7 @@ service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      exporters: [otlp]
+      exporters: [otlp, prometheus, otlphttp]
       processors: [batch, resource]
   telemetry:
     logs:
