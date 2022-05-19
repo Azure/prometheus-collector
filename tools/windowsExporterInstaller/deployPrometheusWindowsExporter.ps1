@@ -34,7 +34,7 @@ function Deploy-PrometheusWindowsExporter([string]$subscription, [string]$resour
                 --resource-group $resourceGroup `
                 --vmss-name $vmssName `
                 --provision-after-extensions "vmssCSE" `
-                --settings '{\"wmfVersion\":\"latest\", \"configuration\":{\"url\":\"https://github.com/aidapsibr/aks-prometheus-windows-exporter/releases/download/0.2/aks_setup.zip\", \"script\":\"aksSetup.ps1\", \"function\":\"Setup\"}}' `
+                --settings '{\"wmfVersion\":\"latest\", \"configuration\":{\"url\":\"https://github.com/Azure/prometheus-collector/raw/kaveesh/windows_exporter/tools/windowsExporterInstaller/aksSetup.zip\", \"script\":\"aksSetup.ps1\", \"function\":\"Setup\"}}' `
                 --force-update;
         
             Write-Output "Updating instances on vmss $vmssName...";
