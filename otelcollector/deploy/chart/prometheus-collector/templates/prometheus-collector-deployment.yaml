@@ -232,6 +232,10 @@ spec:
                     operator: NotIn
                     values:
                       - master
+      # The following tolerations are removed for AKS, this is only required for non AKS
+      tolerations:
+        - operator: "Exists"
+          effect: "PreferNoSchedule"
       volumes:
         - name: settings-vol-config
           configMap:
