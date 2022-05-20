@@ -11,7 +11,6 @@ import (
 	"go.opentelemetry.io/collector/processor/filterprocessor"
 	"go.opentelemetry.io/collector/processor/memorylimiter"
 	"go.opentelemetry.io/collector/processor/resourceprocessor"
-	"go.opentelemetry.io/collector/exporter/prometheusexporter"
 
 	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 	"go.opentelemetry.io/collector/extension/healthcheckextension"
