@@ -87,13 +87,13 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
       /opt/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
             # Use default config if specified config is invalid
-            echo -e "${Red}Prometheus custom config validation failed, using defaults"
+            echo -e "${Red}Prometheus custom config validation failed, using defaults${Color_Off}"
             echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
             if [ -e "/opt/defaultsMergedConfig.yml" ]; then
                   /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
                   if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
-                        echo -e "${Red}Prometheus default config validation failed, using empty job as collector config"
+                        echo -e "${Red}Prometheus default config validation failed, using empty job as collector config${Color_Off}"
                   else
                         cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
                   fi
@@ -102,10 +102,10 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
             export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
       fi
 elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
-      echo -e "${Yellow}No custom config found, using defaults"
+      echo -e "${Yellow}No custom config found, using defaults${Color_Off}"
       /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
-            echo "Prometheus default config validation failed, using empty job as collector config"
+            echo -e "${Red}Prometheus default config validation failed, using empty job as collector config${Color_Off}"
       else
             echo "Prometheus default config validation succeeded, using this as collector config"
             cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
@@ -115,7 +115,7 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
 
 else
       # This else block is needed, when there is no custom config mounted as config map or default configs enabled
-      echo -e "${Red}No custom config or default configs found, using empty job as collector config"
+      echo -e "${Red}No custom config or default configs found, using empty job as collector config${Color_Off}"
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi 
@@ -167,7 +167,7 @@ if [ "${MAC}" != "true" ]; then
       mkdir -p /opt/akv-copy
       cp -r /etc/config/settings/akv /opt/akv-copy
 
-      echo -e "${Green}finding files from akv in /etc/config/settings/akv to decode..."
+      echo -e "${Green}finding files from akv in /etc/config/settings/akv to decode...${Color_Off}"
       decodeLocation="/opt/akv/decoded"
       # secrets can only be alpha numeric chars and dashes
       ENCODEDFILES=/etc/config/settings/akv/*
@@ -179,7 +179,7 @@ if [ "${MAC}" != "true" ]; then
             base64 -d $ef > $decodeLocation/$name
       done
 
-      echo -e "${Green}finding decoded files from $decodeLocation ..."
+      echo -e "${Green}finding decoded files from $decodeLocation ...${Color_Off}"
       DECODEDFILES=$decodeLocation/*
       decodedFiles=""
       for df in $DECODEDFILES
@@ -196,9 +196,9 @@ if [ "${MAC}" != "true" ]; then
       echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
       source ~/.bashrc
 
-      echo -e "${Green}AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
+      echo -e "${Green}AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES${Color_Off}"
       
-      echo -e "${Green}starting metricsextension"
+      echo -e "${Green}starting metricsextension${Color_Off}"
       # will need to rotate the entire log location
       # will need to remove accountname fetching from env
       # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
@@ -245,22 +245,22 @@ dpkg -l | grep metricsext | awk '{print $2 " " $3}'
 
 #start otelcollector
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
-      echo -e "${Yellow}starting otelcollector with DEFAULT prometheus configuration...."
+      echo -e "${Yellow}starting otelcollector with DEFAULT prometheus configuration....${Color_Off}"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 else
-      echo -e "${Green}starting otelcollector...."
+      echo -e "${Green}starting otelcollector....${Color_Off}"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
 
-echo -e "${Green}started otelcollector"
+echo -e "${Green}started otelcollector${Color_Off}"
 
 #get ruby version
 ruby --version
 
-echo -e "${Green}starting telegraf"
+echo -e "${Green}starting telegraf${Color_Off}"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
 
-echo -e "${Green}starting fluent-bit"
+echo -e "${Green}starting fluent-bit${Color_Off}"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
 dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'
 
