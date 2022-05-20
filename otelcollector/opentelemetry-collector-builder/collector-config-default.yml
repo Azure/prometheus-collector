@@ -1,8 +1,8 @@
 exporters:
-  file:
-    path: /opt/microsoft/otelcollector/promotel.json
-  #influx:
-  #  loglevel: debug
+  prometheus:
+    endpoint: "127.0.0.1:1234"
+    const_labels:
+      cluster: $customResourceId
   otlp:
     endpoint: 127.0.0.1:55680
     insecure: true

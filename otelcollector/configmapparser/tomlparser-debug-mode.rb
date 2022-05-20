@@ -4,29 +4,29 @@
 require "tomlrb"
 require_relative "ConfigParseErrorLogger"
 
-@configMapMountPath = "/etc/config/settings/prometheus-collector-settings"
+@configMapMountPath = "/etc/config/settings/debug-mode"
 @configVersion = ""
 @configSchemaVersion = ""
 
 # Setting default values which will be used in case they are not set in the configmap or if configmap doesnt exist
-@defaultMetricAccountName = "NONE"
+@defaultEnabled = false
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
   begin
     # Check to see if config map is created
-    #puts "config::configmap prometheus-collector-configmap for prometheus collector file: #{@configMapMountPath}"
+    puts "config::configmap prometheus-collector-configmap for prometheus collector file: #{@configMapMountPath}"
     if (File.file?(@configMapMountPath))
-      #puts "config::configmap prometheus-collector-configmap for prometheus collector settings mounted, parsing values"
+      puts "config::configmap prometheus-collector-configmap for debug mode mounted, parsing values"
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
-      #puts "config::Successfully parsed mounted config map"
+      puts "config::Successfully parsed mounted config map"
       return parsedConfig
     else
-      puts "config::configmapprometheus-collector-configmap for prometheus collector settings not mounted, using defaults"
+      puts "config::configmapprometheus-collector-configmap for debug mode not mounted, using defaults"
       return nil
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while parsing config map for prometheus collector settings: #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError("Exception while parsing config map for debug mode: #{errorStr}, using defaults, please check config map for errors")
     return nil
   end
 end
@@ -35,12 +35,12 @@ end
 def populateSettingValuesFromConfigMap(parsedConfig)
   # Get if otel collector prometheus scraping is enabled
   begin
-    if !parsedConfig.nil? && !parsedConfig[:default_metric_account_name].nil?
-      @defaultMetricAccountName = parsedConfig[:default_metric_account_name]
-      puts "config::Using config map setting for prometheus collector default metric account name: #{@defaultMetricAccountName}"
+    if !parsedConfig.nil? && !parsedConfig[:enabled].nil?
+      @defaultEnabled = parsedConfig[:enabled]
+      puts "config::Using config map setting for debug mode"
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while reading config map settings for prometheus collector settings- #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError("Exception while reading config map settings for debug mode- #{errorStr}, using defaults, please check config map for errors")
   end
 end
 
@@ -58,17 +58,17 @@ else
 end
 
 # Write the settings to file, so that they can be set as environment variables
-file = File.open("/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var", "w")
+file = File.open("/opt/microsoft/configmapparser/config_debug_mode_env_var", "w")
 
 if !file.nil?
   if !ENV['OS_TYPE'].nil? && ENV['OS_TYPE'].downcase == "linux"
-    file.write("export AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
+    file.write("export DEBUG_MODE_ENABLED=#{@defaultEnabled}\n")
   else
-    file.write("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
+    file.write("DEBUG_MODE_ENABLED=#{@defaultEnabled}\n")
   end
   
   file.close
 else
   puts "Exception while opening file for writing prometheus-collector config environment variables".red
 end
-puts "****************End prometheus-collector Settings Processing********************".green
+puts "****************End debug-mode Settings Processing********************".green

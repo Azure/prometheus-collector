@@ -23,6 +23,7 @@ echo "Installing packages for re2 gem install..."
 sudo apt-get install -y build-essential libre2-dev ruby-dev
 
 echo "Installing tomlrb, deep_merge and re2 gems..."
+gem install colorize
 gem install tomlrb
 gem install deep_merge
 gem install re2

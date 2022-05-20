@@ -3,6 +3,7 @@
 
 class ConfigParseErrorLogger
   require "json"
+  require "colorize"
 
   def initialize
   end
@@ -14,7 +15,7 @@ class ConfigParseErrorLogger
         jsonMessage = errorMessage.to_json
         STDERR.puts jsonMessage
       rescue => errorStr
-        puts "Error in ConfigParserErrorLogger::logError: #{errorStr}"
+        puts "Error in ConfigParserErrorLogger::logError: #{errorStr}".red
       end
     end
   end

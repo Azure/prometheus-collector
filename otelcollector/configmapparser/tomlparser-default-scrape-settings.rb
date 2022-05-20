@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require "tomlrb"
+require 'colorize'
 require_relative "ConfigParseErrorLogger"
 
 @configMapMountPath = "/etc/config/settings/default-scrape-settings-enabled"
@@ -45,60 +46,59 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   begin
     if !parsedConfig[:kubelet].nil?
       @kubeletEnabled = parsedConfig[:kubelet]
-      puts "config::Using configmap default scrape settings for kubelet"
+      puts "config::Using configmap scrape settings for kubelet: #{@kubeletEnabled}"
     end
     if !parsedConfig[:coredns].nil?
       @corednsEnabled = parsedConfig[:coredns]
-      puts "config::Using configmap default scrape settings for coredns"
+      puts "config::Using configmap scrape settings for coredns: #{@corednsEnabled}"
     end
     if !parsedConfig[:cadvisor].nil?
       @cadvisorEnabled = parsedConfig[:cadvisor]
-      puts "config::Using configmap default scrape settings for cadvisor"
+      puts "config::Using configmap scrape settings for cadvisor: #{@cadvisorEnabled}"
     end
     if !parsedConfig[:kubeproxy].nil?
       @kubeproxyEnabled = parsedConfig[:kubeproxy]
-      puts "config::Using configmap default scrape settings for kubeproxy"
+      puts "config::Using configmap scrape settings for kubeproxy: #{@kubeproxyEnabled}"
     end
     if !parsedConfig[:apiserver].nil?
       @apiserverEnabled = parsedConfig[:apiserver]
-      puts "config::Using configmap default scrape settings for apiserver"
+      puts "config::Using configmap scrape settings for apiserver: #{@apiserverEnabled}"
     end
     if !parsedConfig[:kubestate].nil?
       @kubestateEnabled = parsedConfig[:kubestate]
-      puts "config::Using configmap default scrape settings for kubestate"
+      puts "config::Using configmap scrape settings for kubestate: #{@kubestateEnabled}"
     end
     if !parsedConfig[:nodeexporter].nil?
       @nodeexporterEnabled = parsedConfig[:nodeexporter]
-      puts "config::Using configmap default scrape settings for nodeexporter"
+      puts "config::Using configmap scrape settings for nodeexporter: #{@nodeexporterEnabled}"
     end
     if !parsedConfig[:prometheuscollectorhealth].nil?
       @prometheusCollectorHealthEnabled = parsedConfig[:prometheuscollectorhealth]
-      puts "config::Using configmap default scrape settings for prometheuscollectorhealth"
+      puts "config::Using configmap scrape settings for prometheuscollectorhealth: #{@prometheusCollectorHealthEnabled}"
     end
     if !parsedConfig[:windowsexporter].nil?
       @windowsexporterEnabled = parsedConfig[:windowsexporter]
-      puts "config::Using configmap default scrape settings for windowsexporter"
+      puts "config::Using configmap scrape settings for windowsexporter: #{@windowsexporterEnabled}"
     end
     if !parsedConfig[:windowskubeproxy].nil?
       @windowskubeproxyEnabled = parsedConfig[:windowskubeproxy]
-      puts "config::Using configmap default scrape settings for windowskubeproxy"
+      puts "config::Using configmap scrape settings for windowskubeproxy: #{@windowskubeproxyEnabled}"
     end
 
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
       if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@kubeletEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
-        puts "config::No default scrape configs enabled"
       elsif controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "linux" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
-        puts "config::No default scrape configs enabled"
       elsif controllerType == "ReplicaSet" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
-        puts "config::No default scrape configs enabled"
       end
     elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
       @noDefaultsEnabled = true
-      puts "config::No default scrape configs enabled"
+    end
+    if @noDefaultsEnabled
+      puts "config::No default scrape configs enabled".yellow
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while reading config map settings for default scrape settings - #{errorStr}, using defaults, please check config map for errors")
@@ -106,7 +106,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
-puts "****************Start default-scrape-settings Processing********************"
+puts "****************Start default-scrape-settings Processing********************".green
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
   if !configMapSettings.nil?
@@ -140,8 +140,7 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
-  puts "****************End default-scrape-settings Processing********************"
 else
-  puts "Exception while opening file for writing default-scrape-settings config environment variables"
-  puts "****************End default-scrape-settings Processing********************"
+  puts "Exception while opening file for writing default-scrape-settings config environment variables".red
 end
+puts "****************End default-scrape-settings Processing********************".green

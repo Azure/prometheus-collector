@@ -6,12 +6,12 @@ import (
 	"go.opentelemetry.io/collector/exporter/fileexporter"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
-	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 	"go.opentelemetry.io/collector/exporter/prometheusexporter"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/processor/filterprocessor"
 	"go.opentelemetry.io/collector/processor/memorylimiter"
 	"go.opentelemetry.io/collector/processor/resourceprocessor"
+	"go.opentelemetry.io/collector/exporter/prometheusexporter"
 
 	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 	"go.opentelemetry.io/collector/extension/healthcheckextension"
@@ -46,7 +46,6 @@ func components() (component.Factories, error) {
 		prometheusexporter.NewFactory(),
 		fileexporter.NewFactory(),
 		otlpexporter.NewFactory(),
-		otlphttpexporter.NewFactory(),
 	)
 
 	if err != nil {

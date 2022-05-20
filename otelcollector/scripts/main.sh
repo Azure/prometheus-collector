@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# Reset
+Color_Off='\033[0m'       # Text Reset
+
+# Regular Colors
+Black='\033[0;30m'        # Black
+Red='\033[0;31m'          # Red
+Green='\033[0;32m'        # Green
+Yellow='\033[0;33m'       # Yellow
+Blue='\033[0;34m'         # Blue
+Purple='\033[0;35m'       # Purple
+Cyan='\033[0;36m'         # Cyan
+White='\033[0;37m'        # White
+
 #Run inotify as a daemon to track changes to the mounted configmap.
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
@@ -17,7 +30,7 @@ if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/
       export AZMON_AGENT_CFG_SCHEMA_VERSION=$config_schema_version
       echo "export AZMON_AGENT_CFG_SCHEMA_VERSION=$config_schema_version" >> ~/.bashrc
       source ~/.bashrc
-      echo "AZMON_AGENT_CFG_SCHEMA_VERSION:$AZMON_AGENT_CFG_SCHEMA_VERSION"
+      #echo "AZMON_AGENT_CFG_SCHEMA_VERSION:$AZMON_AGENT_CFG_SCHEMA_VERSION"
 fi
 
 #set agent config file version
@@ -32,39 +45,8 @@ if [  -e "/etc/config/settings/config-version" ] && [  -s "/etc/config/settings/
       export AZMON_AGENT_CFG_FILE_VERSION=$config_file_version
       echo "export AZMON_AGENT_CFG_FILE_VERSION=$config_file_version" >> ~/.bashrc
       source ~/.bashrc
-      echo "AZMON_AGENT_CFG_FILE_VERSION:$AZMON_AGENT_CFG_FILE_VERSION"
+      #echo "AZMON_AGENT_CFG_FILE_VERSION:$AZMON_AGENT_CFG_FILE_VERSION"
 fi
-
-# Check if the instrumentation key needs to be fetched from a storage account (as in airgapped clouds)
-if [ ${#APPLICATIONINSIGHTS_AUTH_URL} -ge 1 ]; then  # (check if APPLICATIONINSIGHTS_AUTH_URL has length >=1)
-      for BACKOFF in {1..4}; do
-            KEY=$(curl -sS $APPLICATIONINSIGHTS_AUTH_URL )
-            # there's no easy way to get the HTTP status code from curl, so just check if the result is well formatted
-            if [[ $KEY =~ ^[A-Za-z0-9=]+$ ]]; then
-                  break
-            else
-                  sleep $((2**$BACKOFF / 4))  # (exponential backoff)
-            fi
-      done
-
-      # validate that the retrieved data is an instrumentation key
-      if [[ $KEY =~ ^[A-Za-z0-9=]+$ ]]; then
-            export APPLICATIONINSIGHTS_AUTH=$(echo $KEY)
-            echo "export APPLICATIONINSIGHTS_AUTH=$APPLICATIONINSIGHTS_AUTH" >> ~/.bashrc
-            echo "Using cloud-specific instrumentation key"
-      else
-            # no ikey can be retrieved. Disable telemetry and continue
-            export DISABLE_TELEMETRY=true
-            echo "export DISABLE_TELEMETRY=true" >> ~/.bashrc
-            echo "Could not get cloud-specific instrumentation key (network error?). Disabling telemetry"
-      fi
-fi
-
-aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 --decode)	
-export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey	
-echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc	
-
-source ~/.bashrc
 
 # Parse the configmap to set the right environment variables for prometheus collector settings
 ruby /opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb
@@ -84,6 +66,16 @@ if [ -e "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var" 
       source ~/.bashrc
 fi
 
+# Parse the settings for debug mode
+ruby /opt/microsoft/configmapparser/tomlparser-debug-mode.rb
+if [ -e "/opt/microsoft/configmapparser/config_debug_mode_env_var" ]; then
+      cat /opt/microsoft/configmapparser/config_debug_mode_env_var | while read line; do
+            echo $line >> ~/.bashrc
+      done
+      source /opt/microsoft/configmapparser/config_debug_mode_env_var
+      source ~/.bashrc
+fi
+
 # Parse the settings for default targets metrics keep list config
 ruby /opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb
 
@@ -95,13 +87,13 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
       /opt/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
             # Use default config if specified config is invalid
-            echo "Prometheus custom config validation failed, using defaults"
+            echo -e "${Red}Prometheus custom config validation failed, using defaults"
             echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
             if [ -e "/opt/defaultsMergedConfig.yml" ]; then
                   /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
                   if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
-                        echo "Prometheus default config validation failed, using empty job as collector config"
+                        echo -e "${Red}Prometheus default config validation failed, using empty job as collector config"
                   else
                         cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
                   fi
@@ -110,7 +102,7 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
             export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
       fi
 elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
-      echo "No custom config found, using defaults"
+      echo -e "${Yellow}No custom config found, using defaults"
       /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
             echo "Prometheus default config validation failed, using empty job as collector config"
@@ -123,7 +115,7 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
 
 else
       # This else block is needed, when there is no custom config mounted as config map or default configs enabled
-      echo "No custom config or default configs found, using empty job as collector config"
+      echo -e "${Red}No custom config or default configs found, using empty job as collector config"
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi 
@@ -175,7 +167,7 @@ if [ "${MAC}" != "true" ]; then
       mkdir -p /opt/akv-copy
       cp -r /etc/config/settings/akv /opt/akv-copy
 
-      echo "finding files from akv in /etc/config/settings/akv to decode..."
+      echo -e "${Green}finding files from akv in /etc/config/settings/akv to decode..."
       decodeLocation="/opt/akv/decoded"
       # secrets can only be alpha numeric chars and dashes
       ENCODEDFILES=/etc/config/settings/akv/*
@@ -183,16 +175,16 @@ if [ "${MAC}" != "true" ]; then
       for ef in $ENCODEDFILES
       do
             name="$(basename -- $ef)"
-            echo "decoding $name into $decodeLocation ..."
+            echo -e "${Green}decoding $name into $decodeLocation ..."
             base64 -d $ef > $decodeLocation/$name
       done
 
-      echo "finding decoded files from $decodeLocation ..."
+      echo -e "${Green}finding decoded files from $decodeLocation ..."
       DECODEDFILES=$decodeLocation/*
       decodedFiles=""
       for df in $DECODEDFILES
       do
-            echo "found $df"
+            echo -e "${Green}found $df"
             if [ ${#decodedFiles} -ge 1 ]; then
                   decodedFiles=$decodedFiles:$df
             else
@@ -204,9 +196,9 @@ if [ "${MAC}" != "true" ]; then
       echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
       source ~/.bashrc
 
-      echo "AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
+      echo -e "${Green}AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
       
-      echo "starting metricsextension"
+      echo -e "${Green}starting metricsextension"
       # will need to rotate the entire log location
       # will need to remove accountname fetching from env
       # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
@@ -252,24 +244,23 @@ fi
 dpkg -l | grep metricsext | awk '{print $2 " " $3}'
 
 #start otelcollector
-# will need to rotate log file
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
-      echo "starting otelcollector with DEFAULT prometheus configuration...."
+      echo -e "${Yellow}starting otelcollector with DEFAULT prometheus configuration...."
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 else
-      echo "starting otelcollector...."
+      echo -e "${Green}starting otelcollector...."
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
 
-echo "started otelcollector"
+echo -e "${Green}started otelcollector"
 
 #get ruby version
 ruby --version
 
-echo "starting telegraf"
+echo -e "${Green}starting telegraf"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
 
-echo "starting fluent-bit"
+echo -e "${Green}starting fluent-bit"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
 dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'
 

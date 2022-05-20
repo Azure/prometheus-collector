@@ -35,6 +35,8 @@ data:
     nodeexporter = {{ .Values.keepListRegexes.nodeExporter | toString | quote }}
     windowsexporter = {{ .Values.keepListRegexes.windowsExporter | toString | quote }}
     windowskubeproxy = {{ .Values.keepListRegexes.windowsKubeProxy | toString | quote }}
+  debug-mode: |-
+    enabled = {{ .Values.debugMode.enabled }}
 metadata:
   name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
   namespace: {{ .Release.Namespace }}
