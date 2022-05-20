@@ -225,7 +225,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 
 @minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"] #this when enabled, will always be string "true" as we set the string value in the chart
 if @minimalIngestionProfile == "true"
-  puts "minimalIngestionProfile=true. Applying appropriate Regexes..."
+  puts "config::minimalIngestionProfile=true. Applying appropriate Regexes."
   @kubeletRegex = @kubeletRegex + "|"  + @kubeletRegex_minimal
   @corednsRegex = @corednsRegex + "|" + @corednsRegex_minimal
   @cadvisorRegex = @cadvisorRegex + "|" + @cadvisorRegex_minimal

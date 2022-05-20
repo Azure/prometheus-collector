@@ -38,7 +38,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   begin
     if !parsedConfig.nil? && !parsedConfig[:enabled].nil?
       @defaultEnabled = parsedConfig[:enabled]
-      puts "config::Using config map setting for debug mode: #{@defaultEnabled}"
+      puts "config::Using configmap setting for debug mode: #{@defaultEnabled}"
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while reading config map settings for debug mode- #{errorStr}, using defaults, please check config map for errors")

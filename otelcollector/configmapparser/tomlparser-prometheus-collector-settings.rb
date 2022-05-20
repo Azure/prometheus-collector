@@ -38,7 +38,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   begin
     if !parsedConfig.nil? && !parsedConfig[:default_metric_account_name].nil?
       @defaultMetricAccountName = parsedConfig[:default_metric_account_name]
-      puts "config::Using config map setting for prometheus collector default metric account name: #{@defaultMetricAccountName}"
+      puts "config::Using configmap setting for default metric account name: #{@defaultMetricAccountName}"
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while reading config map settings for prometheus collector settings- #{errorStr}, using defaults, please check config map for errors")

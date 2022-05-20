@@ -92,13 +92,14 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
       /opt/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
             # Use default config if specified config is invalid
-            echo -e "${Red}Prometheus custom config validation failed, using defaults${Color_Off}"
+            echo -e "${Red}prom-config-validator::Prometheus custom config validation failed. The custom config will not be used.${Color_Off}"
             echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
             if [ -e "/opt/defaultsMergedConfig.yml" ]; then
+                  echo "prom-config-validator::Running validator on just default scrape configs."
                   /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
                   if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
-                        echo -e "${Red}Prometheus default config validation failed, using empty job as collector config${Color_Off}"
+                        echo -e "${Red}prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used.${Color_Off}"
                   else
                         cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
                   fi
@@ -107,12 +108,12 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
             export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
       fi
 elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
-      echo -e "${Yellow}No custom config found, using defaults${Color_Off}"
+      echo -e "${Yellow}prom-config-validator::No custom prometheus config found. Only using default scrape configs${Color_Off}"
       /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
-            echo -e "${Red}Prometheus default config validation failed, using empty job as collector config${Color_Off}"
+            echo -e "${Red}prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used.${Color_Off}"
       else
-            echo "Prometheus default config validation succeeded, using this as collector config"
+            echo "Prometheus default scrape config validation succeeded, using this as collector config"
             cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
       fi
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
@@ -120,7 +121,7 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
 
 else
       # This else block is needed, when there is no custom config mounted as config map or default configs enabled
-      echo -e "${Red}No custom config or default configs found, using empty job as collector config${Color_Off}"
+      echo -e "${Red}prom-config-validator::No custom config or default scrape configs enabled. No scrape configs will be used.${Color_Off}"
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi 
@@ -168,7 +169,7 @@ if [ "${MAC}" != "true" ]; then
       mkdir -p /opt/akv-copy
       cp -r /etc/config/settings/akv /opt/akv-copy
 
-      echo -e "${Green}finding files from akv in /etc/config/settings/akv to decode...${Color_Off}"
+      echo -e "${Green}Finding files from akv in /etc/config/settings/akv to decode${Color_Off}"
       decodeLocation="/opt/akv/decoded"
       # secrets can only be alpha numeric chars and dashes
       ENCODEDFILES=/etc/config/settings/akv/*
@@ -245,27 +246,25 @@ dpkg -l | grep metricsext | awk '{print $2 " " $3}'
 
 #start otelcollector
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
-      echo -e "${Yellow}starting otelcollector with DEFAULT prometheus configuration....${Color_Off}"
+      echo -e "${Yellow}Starting otelcollector with only default scrape configs enabled${Color_Off}"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 else
-      echo -e "${Green}starting otelcollector....${Color_Off}"
+      echo -e "${Green}Starting otelcollector${Color_Off}"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
-
-echo -e "${Green}started otelcollector${Color_Off}"
 
 #get ruby version
 ruby --version
 
-echo -e "${Green}starting telegraf${Color_Off}"
+echo -e "${Green}Starting telegraf${Color_Off}"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
 
-echo -e "${Green}starting fluent-bit${Color_Off}"
+echo -e "${Green}Starting fluent-bit${Color_Off}"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
 dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'
 
 #Run inotify as a daemon to track changes to the dcr/dce config.
-echo "starting inotify for watching mdsd config update"
+echo "Starting inotify for watching mdsd config update"
 inotifywait /etc/mdsd.d/config-cache/metricsextension/_default_MonitoringAccount_Configuration.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
 
 shutdown() {
