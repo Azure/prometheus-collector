@@ -110,6 +110,7 @@ func PublishTimeseriesVolume() {
 			if os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG") == "true" {
 				isInvalidCustomConfig = 1
 			}
+			Log("isInvalidCustomConfig: %d", isInvalidCustomConfig)
 			invalidCustomConfigMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(float64(isInvalidCustomConfig))
 		
 			lastTickerStart = time.Now()
