@@ -12,8 +12,7 @@ class ConfigParseErrorLogger
     def logError(message)
       begin
         errorMessage = "config::error::" + message
-        jsonMessage = errorMessage.to_json
-        STDERR.puts jsonMessage.red
+        STDERR.puts errorMessage.red
       rescue => errorStr
         puts "Error in ConfigParserErrorLogger::logError: #{errorStr}".red
       end

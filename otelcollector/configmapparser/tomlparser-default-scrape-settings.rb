@@ -25,14 +25,14 @@ require_relative "ConfigParseErrorLogger"
 def parseConfigMap
   begin
     # Check to see if config map is created
-    puts "config::configmap prometheus-collector-configmap for prometheus collector file: #{@configMapMountPath}"
+    #puts "config::configmap prometheus-collector-configmap for prometheus collector file: #{@configMapMountPath}"
     if (File.file?(@configMapMountPath))
-      puts "config::configmap prometheus-collector-configmap for default scrape settings mounted, parsing values"
+      #puts "config::configmap prometheus-collector-configmap for default scrape settings mounted, parsing values"
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
-      puts "config::Successfully parsed mounted config map"
+      #puts "config::Successfully parsed mounted config map"
       return parsedConfig
     else
-      puts "config::configmapprometheus-collector-configmap for default scrape settings not mounted, using defaults"
+      puts "config::configmapprometheus-collector-configmap for scrape targets not mounted, using defaults".yellow
       return nil
     end
   rescue => errorStr

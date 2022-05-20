@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require "tomlrb"
+require "colorize"
 require_relative "ConfigParseErrorLogger"
 
 @configMapMountPath = "/etc/config/settings/prometheus-collector-settings"
@@ -45,7 +46,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
-puts "****************Start prometheus-collector Settings Processing********************"
+puts "****************Start prometheus-collector-settings Processing********************".green
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
   if !configMapSettings.nil?
@@ -71,4 +72,4 @@ if !file.nil?
 else
   puts "Exception while opening file for writing prometheus-collector config environment variables".red
 end
-puts "****************End prometheus-collector Settings Processing********************".green
+puts "****************End prometheus-collector-settings Processing********************".green

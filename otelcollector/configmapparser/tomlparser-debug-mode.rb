@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require "tomlrb"
+require "colorize"
 require_relative "ConfigParseErrorLogger"
 
 @configMapMountPath = "/etc/config/settings/debug-mode"
@@ -15,14 +16,14 @@ require_relative "ConfigParseErrorLogger"
 def parseConfigMap
   begin
     # Check to see if config map is created
-    puts "config::configmap prometheus-collector-configmap for prometheus collector file: #{@configMapMountPath}"
+    #puts "config::configmap prometheus-collector-configmap for prometheus collector file: #{@configMapMountPath}"
     if (File.file?(@configMapMountPath))
-      puts "config::configmap prometheus-collector-configmap for debug mode mounted, parsing values"
+      #puts "config::configmap prometheus-collector-configmap for debug mode mounted, parsing values"
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
-      puts "config::Successfully parsed mounted config map"
+      #puts "config::Successfully parsed mounted config map"
       return parsedConfig
     else
-      puts "config::configmapprometheus-collector-configmap for debug mode not mounted, using defaults"
+      #puts "config::configmapprometheus-collector-configmap for debug mode not mounted, using defaults".yellow
       return nil
     end
   rescue => errorStr
@@ -37,7 +38,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   begin
     if !parsedConfig.nil? && !parsedConfig[:enabled].nil?
       @defaultEnabled = parsedConfig[:enabled]
-      puts "config::Using config map setting for debug mode"
+      puts "config::Using config map setting for debug mode: #{@defaultEnabled}"
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while reading config map settings for debug mode- #{errorStr}, using defaults, please check config map for errors")
@@ -45,7 +46,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
-puts "****************Start prometheus-collector Settings Processing********************"
+puts "****************Start debug-mode Settings Processing********************".green
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
   if !configMapSettings.nil?
