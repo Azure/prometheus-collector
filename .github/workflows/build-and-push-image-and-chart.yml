@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - rashmi/mdsd-config-refresh-fix
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
