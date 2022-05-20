@@ -13,7 +13,7 @@ class ConfigParseErrorLogger
       begin
         errorMessage = "config::error::" + message
         jsonMessage = errorMessage.to_json
-        STDERR.puts jsonMessage
+        STDERR.puts jsonMessage.red
       rescue => errorStr
         puts "Error in ConfigParserErrorLogger::logError: #{errorStr}".red
       end

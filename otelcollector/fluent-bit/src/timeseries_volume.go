@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"os"
 	"net/http"
 	"sync"
 	"time"
@@ -53,6 +54,15 @@ var (
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
+
+	// timeseriesReceivedMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
+	invalidCustomConfigMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "invalid_custom_prometheus_config",
+			Help: "If an invalid custom prometheus config was given or not",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
 )
 
 const (
@@ -69,6 +79,7 @@ func PublishTimeseriesVolume() {
 	r.MustRegister(timeseriesReceivedMetric)
 	r.MustRegister(timeseriesSentMetric)
 	r.MustRegister(bytesSentMetric)
+	r.MustRegister(invalidCustomConfigMetric)
 
 	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
 	http.Handle("/metrics", handler)
@@ -94,6 +105,12 @@ func PublishTimeseriesVolume() {
 			TimeseriesSentTotal = 0.0
 			BytesSentTotal = 0.0
 			TimeseriesVolumeMutex.Unlock()
+
+			isInvalidCustomConfig := 0
+			if os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG") == "true" {
+				isInvalidCustomConfig = 1
+			}
+			invalidCustomConfigMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(isInvalidCustomConfig)
 		
 			lastTickerStart = time.Now()
 		}
