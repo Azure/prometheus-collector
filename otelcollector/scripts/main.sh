@@ -16,7 +16,12 @@ White='\033[0;37m'        # White
 #Run inotify as a daemon to track changes to the mounted configmap.
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
+if [ -z $MODE ]; then
+  MODE="simple"
+fi
 echo "MODE="$MODE
+echo "CONTROLLER_TYPE="$CONTROLLER_TYPE
+echo "CLUSTER=$CLUSTER"
 
 #set agent config schema version
 if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
@@ -124,9 +129,8 @@ source ~/.bashrc
 echo "Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
 
 #start cron daemon for logrotate
-service cron restart
+service cron restart >/dev/null
 
-echo "CONTROLLER_TYPE="$CONTROLLER_TYPE
 #get controller kind in lowercase, trimmed
 controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
 if [ $controllerType = "replicaset" ]; then
@@ -146,7 +150,7 @@ fi
 export ME_CONFIG_FILE=$meConfigFile	
 echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
 source ~/.bashrc
-echo "ME_CONFIG_FILE"$ME_CONFIG_FILE
+echo "ME_CONFIG_FILE="$ME_CONFIG_FILE
 
 if [ "${MAC}" != "true" ]; then
       if [ -z $CLUSTER ]; then
@@ -154,13 +158,10 @@ if [ "${MAC}" != "true" ]; then
             export customResourceId=$NODE_NAME
             echo "export customResourceId=$NODE_NAME" >> ~/.bashrc
             source ~/.bashrc
-            echo "customResourceId:$customResourceId"
       else
-            echo "Using CLUSTER as $CLUSTER"
             export customResourceId=$CLUSTER
             echo "export customResourceId=$CLUSTER" >> ~/.bashrc
             source ~/.bashrc
-            echo "customResourceId:$customResourceId"
       fi
 
       # Make a copy of the mounted akv directory to see if it changes
@@ -208,7 +209,6 @@ else
       export customResourceId=$CLUSTER
       echo "export customResourceId=$CLUSTER" >> ~/.bashrc
       source ~/.bashrc
-      echo "customResourceId:$customResourceId"
 
       echo "Setting customRegion for MAC mode..."
       trimmedRegion=$(echo $AKSREGION | sed 's/ //g' | awk '{print tolower($0)}')

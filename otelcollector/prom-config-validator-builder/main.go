@@ -25,6 +25,13 @@ type OtelConfig struct {
 	Service interface{} `yaml:"service"`
 }
 
+var RESET  = "\033[0m"
+var RED    = "\033[31m"
+
+func logFatalError(message string) {
+	log.Fatalf("%s%s%s", RED, message, RESET)
+}
+
 func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTemplatePath string) error {
 	var otelConfig OtelConfig
 
@@ -147,7 +154,7 @@ func main() {
 	promFilePath := *configFilePtr
 	otelConfigTemplatePath := *otelTemplatePathPtr
 	if otelConfigTemplatePath == "" {
-		log.Fatalf("prom-config-validator::Please provide otel config template path\n")
+		logFatalError("prom-config-validator::Please provide otel config template path\n")
 		os.Exit(1)
 	}
 	if promFilePath != "" {
@@ -160,7 +167,7 @@ func main() {
 
 		err := generateOtelConfig(promFilePath, outputFilePath, otelConfigTemplatePath)
 		if err != nil {
-			log.Fatalf("Generating otel config failed: %v\n", err)
+			logFatalError(fmt.Sprintf("Generating otel config failed: %v\n", err))
 			os.Exit(1)
 		}
 
@@ -172,13 +179,13 @@ func main() {
 			configFlag,
 		})
 		if err != nil {
-			fmt.Printf("prom-config-validator::Error parsing flags - %v\n", err)
+			logFatalError(fmt.Sprintf("prom-config-validator::Error parsing flags - %v\n", err))
 			os.Exit(1)
 		}
 
 		factories, err := components()
 		if err != nil {
-			log.Fatalf("prom-config-validator::Failed to build components: %v\n", err)
+			logFatalError(fmt.Sprintf("prom-config-validator::Failed to build components: %v\n", err))
 			os.Exit(1)
 		}
 
@@ -186,24 +193,24 @@ func main() {
 
 		cp, err := colParserProvider.Get()
 		if err != nil {
-			fmt.Errorf("prom-config-validator::Cannot load configuration's parser: %w\n", err)
+			logFatalError(fmt.Errorf("prom-config-validator::Cannot load configuration's parser: %w\n", err).Error())
 			os.Exit(1)
 		}
 		fmt.Printf("prom-config-validator::Loading configuration...\n")
 
 		cfg, err := configloader.Load(cp, factories)
 		if err != nil {
-			log.Fatalf("prom-config-validator::Cannot load configuration: %v", err)
+			logFatalError(fmt.Sprintf("prom-config-validator::Cannot load configuration: %v", err))
 			os.Exit(1)
 		}
 
 		err = cfg.Validate()
 		if err != nil {
-			fmt.Printf("prom-config-validator::Invalid configuration: %w\n", err)
+			logFatalError(fmt.Errorf("prom-config-validator::Invalid configuration: %w\n", err).Error())
 			os.Exit(1)
 		}
 	} else {
-		log.Fatalf("prom-config-validator::Please provide a config file using the --config flag to validate\n")
+		logFatalError("prom-config-validator::Please provide a config file using the --config flag to validate\n")
 		os.Exit(1)
 	}
 	fmt.Printf("prom-config-validator::Successfully loaded and validated custom prometheus config\n")
