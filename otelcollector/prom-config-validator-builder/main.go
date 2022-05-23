@@ -213,6 +213,6 @@ func main() {
 		logFatalError("prom-config-validator::Please provide a config file using the --config flag to validate\n")
 		os.Exit(1)
 	}
-	fmt.Printf("prom-config-validator::Successfully loaded and validated custom prometheus config\n")
+	fmt.Printf("prom-config-validator::Successfully loaded and validated prometheus config\n")
 	os.Exit(0)
 }

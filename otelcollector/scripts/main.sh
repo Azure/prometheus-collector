@@ -200,7 +200,7 @@ if [ "${MAC}" != "true" ]; then
 
       echo -e "${Green}AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES${Color_Off}"
       
-      echo -e "${Green}starting metricsextension${Color_Off}"
+      echo -e "${Green}Starting metricsextension${Color_Off}"
       # will need to rotate the entire log location
       # will need to remove accountname fetching from env
       # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
@@ -237,12 +237,13 @@ else
 
       echo "Reading me config file as a string for configOverrides paramater"
       export meConfigString=`cat $ME_CONFIG_FILE | tr '\r' ' ' |  tr '\n' ' ' | sed 's/\"/\\"/g' | sed 's/ //g'`
-      echo "starting metricsextension"
-      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc -ConfigOverrides $meConfigString &
+      echo "Starting metricsextension"
+      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc -ConfigOverrides $meConfigString > /dev/null &
 fi
 
 #get ME version
-dpkg -l | grep metricsext | awk '{print $2 " " $3}'
+ME_VERSION=`dpkg -l | grep metricsext | awk '{print $2 " " $3}'`
+echo "ME_VERSION=$ME_VERSION"
 
 #start otelcollector
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
@@ -254,14 +255,16 @@ else
 fi
 
 #get ruby version
-ruby --version
+RUBY_VERSION=`ruby --version`
+echo "RUBY_VERSION=$RUBY_VERSION"
 
 echo -e "${Green}Starting telegraf${Color_Off}"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
 
 echo -e "${Green}Starting fluent-bit${Color_Off}"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
-dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'
+FLUENT_BIT_VERSION=`dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'`
+echo "FLUENT_BIT_VERSION=$FLUENT_BIT_VERSION"
 
 #Run inotify as a daemon to track changes to the dcr/dce config.
 echo "Starting inotify for watching mdsd config update"
