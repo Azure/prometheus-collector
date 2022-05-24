@@ -34,7 +34,7 @@ function Deploy-PrometheusWindowsExporter([string]$subscription, [string]$resour
                 --resource-group $resourceGroup `
                 --vmss-name $vmssName `
                 --provision-after-extensions "vmssCSE" `
-                --settings '{\"wmfVersion\":\"latest\", \"configuration\":{\"url\":\"https://github.com/Azure/prometheus-collector/raw/kaveesh/windows_exporter/tools/windowsExporterInstaller/aksSetup.zip\", \"script\":\"aksSetup.ps1\", \"function\":\"Setup\"}}' `
+                --settings '{\"wmfVersion\":\"latest\", \"configuration\":{\"url\":\"https://github.com/bragi92/helloWorld/raw/master/aksSetup.zip\", \"script\":\"aksSetup.ps1\", \"function\":\"Setup\"}}' `
                 --force-update;
         
             Write-Output "Updating instances on vmss $vmssName...";
@@ -52,4 +52,4 @@ function Deploy-PrometheusWindowsExporter([string]$subscription, [string]$resour
     Write-Output "All windows vmss have powershell dsc extension installed in $subscription/$resourceGroup";
 }
 
-Deploy-PrometheusWindowsExporter -subscription "ce4d1293-71c0-4c72-bc55-133553ee9e50" -resourceGroup "kaveeshWinExporter";
+Deploy-PrometheusWindowsExporter -subscription "ce4d1293-71c0-4c72-bc55-133553ee9e50" -resourceGroup "MC_kaveeshWinExporter_kaveeshWinExporter_eastus";

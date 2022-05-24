@@ -15,7 +15,7 @@ Configuration Setup
 
                 function Install-Windows-Exporter
                 {
-                    msiexec /i C:\PROGRA~1\WindowsPowerShell\Modules\dscResources\windows_exporter-0.16.0-amd64.mi ENABLED_COLLECTORS=[defaults],process,container,tcp,os,memory /quiet
+                    msiexec /i C:\PROGRA~1\WindowsPowerShell\Modules\dscResources\windows_exporter-0.16.0-amd64.msi ENABLED_COLLECTORS=[defaults],process,container,tcp,os,memory /quiet
                 }
                 
                 Install-Windows-Exporter;
