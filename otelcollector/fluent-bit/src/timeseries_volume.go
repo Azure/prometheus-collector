@@ -28,6 +28,9 @@ var (
 	// TimeseriesVolumeMutex handles adding to the timeseries volume totals and setting these values as gauges for Prometheus metrics
 	TimeseriesVolumeMutex = &sync.Mutex{}
 
+	// TimeseriesVolumeMutex handles if the otelcollector has logged that exporting failed
+	ExportingFailedMutex = &sync.Mutex{}
+
 	// timeseriesReceivedMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
 	timeseriesReceivedMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -55,11 +58,20 @@ var (
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	// timeseriesReceivedMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
+	// invalidCustomConfigMetric is true if the config provided failed validation and false otherwise
 	invalidCustomConfigMetric = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "invalid_custom_prometheus_config",
 			Help: "If an invalid custom prometheus config was given or not",
+		},
+		[]string{"computer", "release", "controller_type"},
+	)
+
+	// exportingFailedMetric is true if the otelcollector was unable to export to ME and false otherwise
+	exportingFailedMetric = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "exporting_metrics_failed",
+			Help: "If exporting metrics failed or not",
 		},
 		[]string{"computer", "release", "controller_type"},
 	)
