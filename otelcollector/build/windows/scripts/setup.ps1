@@ -11,7 +11,7 @@ New-Item -Type Directory -Path /opt/ruby -ErrorAction SilentlyContinue
 ###########################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri https://github.com/microsoft/Docker-Provider/releases/download/ME-OTEL-WINDOWS-TEST/MdmMetricsExtension.2.2022.510.1053.nupkg -OutFile /installation/ME/mdmmetricsextension.2.2022.310.234.zip
+    Invoke-WebRequest -Uri https://github.com/microsoft/Docker-Provider/releases/download/ME-OTEL-WINDOWS-TEST/MdmMetricsExtension.2.2022.524.1254.nupkg -OutFile /installation/ME/mdmmetricsextension.2.2022.310.234.zip
     Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2022.310.234.zip -Destination /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
