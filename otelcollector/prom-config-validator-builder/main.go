@@ -147,6 +147,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 }
 
 func main() {
+	log.SetFlags(0)
 	configFilePtr := flag.String("config", "", "Config file to validate")
 	outFilePtr := flag.String("output", "", "Output file path for writing collector config")
 	otelTemplatePathPtr := flag.String("otelTemplate", "", "OTel Collector config template file path")

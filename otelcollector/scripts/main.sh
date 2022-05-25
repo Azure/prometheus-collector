@@ -113,7 +113,7 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
       if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
             echo -e "${Red}prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used.${Color_Off}"
       else
-            echo "Prometheus default scrape config validation succeeded, using this as collector config"
+            echo "prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config"
             cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
       fi
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
@@ -127,7 +127,7 @@ else
 fi 
 
 source ~/.bashrc
-echo "Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
+echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
 
 #start cron daemon for logrotate
 service cron restart >/dev/null
@@ -204,7 +204,7 @@ if [ "${MAC}" != "true" ]; then
       # will need to rotate the entire log location
       # will need to remove accountname fetching from env
       # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
-      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS &
+      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS > /dev/null &
 else
       echo "Setting customResourceId for MAC mode..."
       export customResourceId=$CLUSTER
@@ -262,13 +262,15 @@ echo -e "${Green}Starting telegraf${Color_Off}"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
 
 echo -e "${Green}Starting fluent-bit${Color_Off}"
-/opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
+/opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so > /dev/null &
 FLUENT_BIT_VERSION=`dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'`
 echo "FLUENT_BIT_VERSION=$FLUENT_BIT_VERSION"
 
 #Run inotify as a daemon to track changes to the dcr/dce config.
-echo "Starting inotify for watching mdsd config update"
-inotifywait /etc/mdsd.d/config-cache/metricsextension/_default_MonitoringAccount_Configuration.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
+if [ "${MAC}" == "true" ]; then
+  echo "Starting inotify for watching mdsd config update"
+  inotifywait /etc/mdsd.d/config-cache/metricsextension/_default_MonitoringAccount_Configuration.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
+fi
 
 shutdown() {
 	echo "shutting down"
