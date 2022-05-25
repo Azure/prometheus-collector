@@ -1,5 +1,16 @@
 # Working with Prometheus metrics in MDM
 
+## Release 05-25-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.2.0-main-<tbd>`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.2.0-main-<tbd>`
+* Change Log -
+  * Remove tolerations for replica & daemonset
+  * Add a new parameter for adding pod labels to collector pods (Thanks to contrinutions from peter.glotfelty@microsoft.com)
+  * Enable aad pod identity for akv access (Thanks to contributions from nicholas.maliwacki@microsoft.com)
+  * Windows USE method dashboards have recording rules support (they are not auto provisioned in Grafana)
+    * These dashboards are not part of default dashboards. If you have windows nodes in your cluster and want to try these windows dashboards & their recording rules, please ping us over teams channel.
+
 ## Release 04-29-2022
 
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.1.0-main-04-29-2022-0a7092d3`
