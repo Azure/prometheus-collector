@@ -1,9 +1,9 @@
 # Working with Prometheus metrics in MDM
 
-## Release 05-25-2022
+## Release 05-24-2022
 
-* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.2.0-main-<tbd>`
-* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.2.0-main-<tbd>`
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.2.0-main-05-24-2022-0c3a87bc`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.2.0-main-05-24-2022-0c3a87bc`
 * Change Log -
   * Remove tolerations for replica & daemonset
   * Add a new parameter for adding pod labels to collector pods (Thanks to contrinutions from peter.glotfelty@microsoft.com)
