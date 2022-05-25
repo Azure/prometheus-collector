@@ -28,8 +28,10 @@ var (
 	// TimeseriesVolumeMutex handles adding to the timeseries volume totals and setting these values as gauges for Prometheus metrics
 	TimeseriesVolumeMutex = &sync.Mutex{}
 
-	// TimeseriesVolumeMutex handles if the otelcollector has logged that exporting failed
+	// ExportingFailedMutex handles if the otelcollector has logged that exporting failed
 	ExportingFailedMutex = &sync.Mutex{}
+
+	OtelCollectorExportingFailed = 0
 
 	// timeseriesReceivedMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
 	timeseriesReceivedMetric = prometheus.NewGaugeVec(
@@ -125,6 +127,11 @@ func PublishTimeseriesVolume() {
 			Log("isInvalidCustomConfig: %d", isInvalidCustomConfig)
 			invalidCustomConfigMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(float64(isInvalidCustomConfig))
 		
+			ExportingFailedMutex.Lock()
+			exportingFailedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(float64(OtelCollectorExportingFailed))
+			OtelCollectorExportingFailed = 0
+			ExportingFailedMutex.Unlock()
+
 			lastTickerStart = time.Now()
 		}
 	}()
