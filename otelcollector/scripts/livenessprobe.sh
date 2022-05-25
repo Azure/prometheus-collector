@@ -28,8 +28,8 @@ if [ "${MAC}" != "true" ]; then
   fi
 else
   # MDSD is only running in MAC mode
-  # Excluding MetricsExtenstion too since grep returns ME process since mdsd is in the config file path
-  (ps -ef | grep "mdsd" | grep -vE 'grep|MetricsExtension')
+  # Excluding MetricsExtenstion and inotofywait too since grep returns ME and inotify processes since mdsd is in the config file path
+  (ps -ef | grep "mdsd" | grep -vE 'grep|MetricsExtension|inotifywait')
   if [ $? -ne 0 ]
   then
     echo "mdsd is not running" > /dev/termination-log
@@ -41,7 +41,7 @@ fi
 if [ -s "/opt/inotifyoutput-mdsd-config.txt" ]  #file exists and size > 0
 then
   echo "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed" > /dev/termination-log
-  exit 1
+  #exit 1
 fi
 
 
