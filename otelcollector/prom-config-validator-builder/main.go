@@ -22,7 +22,15 @@ type OtelConfig struct {
 			Config interface{} `yaml:"config"`
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
-	Service interface{} `yaml:"service"`
+	Service struct { 
+		Pipelines struct {
+			Metrics struct {
+				Exporters interface{} `yaml:"exporters"`
+				Processors interface{} `yaml:"processors"`
+				Receivers interface{} `yaml:"receivers"`
+			} `yaml:"metrics"`
+		} `yaml:"pipelines"`
+	} `yaml:"service"`
 }
 
 var RESET  = "\033[0m"
@@ -133,6 +141,10 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	}
 
 	otelConfig.Receivers.Prometheus.Config = prometheusConfig
+
+	if os.Getenv("DEBUG_MODE_ENABLED") == "true" {
+		otelConfig.Service.Pipelines.Metrics.Exporters = []interface{}{"otlp", "prometheus"}
+	}
 
 	mergedConfig, err := yaml.Marshal(otelConfig)
 	if err != nil {
