@@ -94,6 +94,7 @@ func PublishTimeseriesVolume() {
 	r.MustRegister(timeseriesSentMetric)
 	r.MustRegister(bytesSentMetric)
 	r.MustRegister(invalidCustomConfigMetric)
+	r.MustRegister(exportingFailedMetric)
 
 	handler := promhttp.HandlerFor(r, promhttp.HandlerOpts{})
 	http.Handle("/metrics", handler)

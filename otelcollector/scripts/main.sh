@@ -98,7 +98,7 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
             echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
             if [ -e "/opt/defaultsMergedConfig.yml" ]; then
-                  echo "${Red}prom-config-validator::Running validator on just default scrape configs.${Color_Off}"
+                  echo -e "${Red}prom-config-validator::Running validator on just default scrape configs.${Color_Off}"
                   /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
                   if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
                         echo -e "${Red}prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used.${Color_Off}"
