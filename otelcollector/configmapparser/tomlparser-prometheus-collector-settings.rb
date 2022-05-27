@@ -4,6 +4,8 @@
 require "tomlrb"
 require_relative "ConfigParseErrorLogger"
 
+LOGGING_PREFIX = "config"
+
 @configMapMountPath = "/etc/config/settings/prometheus-collector-settings"
 @configVersion = ""
 @configSchemaVersion = ""
@@ -19,11 +21,11 @@ def parseConfigMap
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
       return parsedConfig
     else
-      puts "config::configmapprometheus-collector-configmap for prometheus collector settings not mounted, using defaults"
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "configmapprometheus-collector-configmap for prometheus collector settings not mounted, using defaults")
       return nil
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while parsing config map for prometheus collector settings: #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing config map for prometheus collector settings: #{errorStr}, using defaults, please check config map for errors")
     return nil
   end
 end
@@ -34,15 +36,15 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   begin
     if !parsedConfig.nil? && !parsedConfig[:default_metric_account_name].nil?
       @defaultMetricAccountName = parsedConfig[:default_metric_account_name]
-      puts "config::Using configmap setting for default metric account name: #{@defaultMetricAccountName}"
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap setting for default metric account name: #{@defaultMetricAccountName}")
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while reading config map settings for prometheus collector settings- #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for prometheus collector settings- #{errorStr}, using defaults, please check config map for errors")
   end
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
-puts "****************Start prometheus-collector-settings Processing********************".green
+ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start prometheus-collector-settings Processing")
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
   if !configMapSettings.nil?
@@ -50,7 +52,7 @@ if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVe
   end
 else
   if (File.file?(@configMapMountPath))
-    ConfigParseErrorLogger.logError("config::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
   end
 end
 
@@ -66,6 +68,6 @@ if !file.nil?
   
   file.close
 else
-  ConfigParseErrorLogger.logError("Exception while opening file for writing prometheus-collector config environment variables")
+  ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while opening file for writing prometheus-collector config environment variables")
 end
-ConfigParseErrorLogger.logSection("End prometheus-collector-settings Processing")
+ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "End prometheus-collector-settings Processing")

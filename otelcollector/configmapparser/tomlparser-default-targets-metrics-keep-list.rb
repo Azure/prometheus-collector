@@ -8,6 +8,8 @@ end
 require "yaml"
 require_relative "ConfigParseErrorLogger"
 
+LOGGING_PREFIX = "default-scrape-keep-lists"
+
 @configMapMountPath = "/etc/config/settings/default-targets-metrics-keep-list"
 @configVersion = ""
 @configSchemaVersion = ""
@@ -41,11 +43,11 @@ def parseConfigMap
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
       return parsedConfig
     else
-      puts "config::configmap prometheus-collector-configmap for default-targets-metrics-keep-list not mounted, using defaults"
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "configmap prometheus-collector-configmap for default-targets-metrics-keep-list not mounted, using defaults")
       return nil
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while parsing config map for default-targets-metrics-keep-list: #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing config map for default-targets-metrics-keep-list: #{errorStr}, using defaults, please check config map for errors")
     return nil
   end
 end
@@ -57,7 +59,7 @@ def isValidRegex_linux(str)
     re2Regex = RE2::Regexp.new(str)
     return re2Regex.ok?
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while validating regex for target metric keep list - #{errorStr}, regular expression str - #{str}")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while validating regex for target metric keep list - #{errorStr}, regular expression str - #{str}")
     return false
   end
 end
@@ -68,7 +70,7 @@ def isValidRegex_windows(str)
     re2Regex = Regexp.new(str)
     return true
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while validating regex for target metric keep list - #{errorStr}, regular expression str - #{str}")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while validating regex for target metric keep list - #{errorStr}, regular expression str - #{str}")
     return false
   end
 end
@@ -89,13 +91,13 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !kubeletRegex.empty?
         if isValidRegex(kubeletRegex) == true
           @kubeletRegex = kubeletRegex
-          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for kubelet"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for kubelet")
         else
-          ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::invalid keep list regex for kubelet")
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for kubelet")
         end
       end
     else
-      ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::kubeletRegex either not specified or not of type string")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubeletRegex either not specified or not of type string")
     end
 
     corednsRegex = parsedConfig[:coredns]
@@ -103,13 +105,13 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !corednsRegex.empty?
         if isValidRegex(corednsRegex) == true
           @corednsRegex = corednsRegex
-          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for coredns"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for coredns")
         else
-          ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::invalid keep list regex for coredns")
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for coredns")
         end
       end
     else
-      ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::corednsRegex either not specified or not of type string")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "corednsRegex either not specified or not of type string")
     end
 
     cadvisorRegex = parsedConfig[:cadvisor]
@@ -117,13 +119,13 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !cadvisorRegex.empty?
         if isValidRegex(cadvisorRegex) == true
           @cadvisorRegex = cadvisorRegex
-          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for cadvisor"
+          pConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for cadvisor")
         else
-          ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::invalid keep list regex for cadvisor")
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for cadvisor")
         end
       end
     else
-      ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::cadvisorRegex either not specified or not of type string")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "cadvisorRegex either not specified or not of type string")
     end
 
     kubeproxyRegex = parsedConfig[:kubeproxy]
@@ -131,13 +133,13 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !kubeproxyRegex.empty?
         if isValidRegex(kubeproxyRegex) == true
           @kubeproxyRegex = kubeproxyRegex
-          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for kubeproxy"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for kubeproxy")
         else
-          ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::invalid keep list regex for kubeproxy")
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for kubeproxy")
         end
       end
     else
-      ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::kubeproxyRegex either not specified or not of type string")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubeproxyRegex either not specified or not of type string")
     end
 
     apiserverRegex = parsedConfig[:apiserver]
@@ -145,13 +147,13 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !apiserverRegex.empty?
         if isValidRegex(apiserverRegex) == true
           @apiserverRegex = apiserverRegex
-          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for apiserver"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for apiserver")
         else
-          ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::invalid keep list regex for apiserver")
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for apiserver")
         end
       end
     else
-      ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::apiserverRegex either not specified or not of type string")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "apiserverRegex either not specified or not of type string")
     end
 
     kubestateRegex = parsedConfig[:kubestate]
@@ -159,13 +161,13 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !kubestateRegex.empty?
         if isValidRegex(kubestateRegex) == true
           @kubestateRegex = kubestateRegex
-          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for kubestate"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for kubestate"
         else
-          ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::invalid keep list regex for kubestate")
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for kubestate")
         end
       end
     else
-      ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::kubestateRegex either not specified or not of type string")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubestateRegex either not specified or not of type string")
     end
 
     nodeexporterRegex = parsedConfig[:nodeexporter]
@@ -173,13 +175,13 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !nodeexporterRegex.empty?
         if isValidRegex(nodeexporterRegex) == true
           @nodeexporterRegex = nodeexporterRegex
-          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for nodeexporter"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for nodeexporter"
         else
-          ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::invalid keep list regex for nodeexporter")
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for nodeexporter")
         end
       end
     else
-      ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::nodeexporterRegex either not specified or not of type string")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "nodeexporterRegex either not specified or not of type string")
     end
 
     windowsexporterRegex = parsedConfig[:windowsexporter]
@@ -187,13 +189,13 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !windowsexporterRegex.empty?
         if isValidRegex(windowsexporterRegex) == true
           @windowsexporterRegex = windowsexporterRegex
-          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for windowsexporter"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for windowsexporter"
         else
-          ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::invalid keep list regex for windowsexporter")
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for windowsexporter")
         end
       end
     else
-      ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::windowsexporterRegex either not specified or not of type string")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowsexporterRegex either not specified or not of type string")
     end
 
     windowskubeproxyRegex = parsedConfig[:windowskubeproxy]
@@ -201,16 +203,16 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !windowskubeproxyRegex.empty?
         if isValidRegex(windowskubeproxyRegex) == true
           @windowskubeproxyRegex = windowskubeproxyRegex
-          puts "def-target-metrics-keep-list-config::Using configmap metrics keep list regex for windowskubeproxy"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for windowskubeproxy"
         else
-          ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::invalid keep list regex for windowskubeproxy")
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for windowskubeproxy")
         end
       end
     else
-      ConfigParseErrorLogger.logError("def-target-metrics-keep-list-config::windowskubeproxyRegex either not specified or not of type string")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowskubeproxyRegex either not specified or not of type string")
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while reading config map settings for default targets metrics keep list - #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for default targets metrics keep list - #{errorStr}, using defaults, please check config map for errors")
   end
 
 # -------Apply profile for ingestion--------
@@ -221,7 +223,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 
 @minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"] #this when enabled, will always be string "true" as we set the string value in the chart
 if @minimalIngestionProfile == "true"
-  puts "config::minimalIngestionProfile=true. Applying appropriate Regexes."
+  ConfigParseErrorLogger.log(LOGGING_PREFIX, "minimalIngestionProfile=true. Applying appropriate Regexes"
   @kubeletRegex = @kubeletRegex + "|"  + @kubeletRegex_minimal
   @corednsRegex = @corednsRegex + "|" + @corednsRegex_minimal
   @cadvisorRegex = @cadvisorRegex + "|" + @cadvisorRegex_minimal
@@ -234,7 +236,7 @@ end
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
-ConfigParseErrorLogger.logSection("Start default-targets-metrics-keep-list Processing")
+ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start default-targets-metrics-keep-list Processing")
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
   if !configMapSettings.nil?
@@ -242,7 +244,7 @@ if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVe
   end
 else
   if (File.file?(@configMapMountPath))
-    ConfigParseErrorLogger.logError("config::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
   end
 end
 
@@ -266,6 +268,6 @@ if !file.nil?
   file.write(regexHash.to_yaml)
   file.close
 else
-  ConfigParseErrorLogger.logError("Exception while opening file for writing default-targets-metrics-keep-list regex config hash")
+  ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while opening file for writing default-targets-metrics-keep-list regex config hash")
 end
-ConfigParseErrorLogger.logSection("End default-targets-metrics-keep-list Processing")
+ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "End default-targets-metrics-keep-list Processing")

@@ -9,30 +9,36 @@ class ConfigParseErrorLogger
   end
 
   class << self
-    def logError(message)
+    def logError(prefix, message)
       begin
-        errorMessage = "config::error::" + message
+        errorMessage = "#{prefix}::error::#{message}"
         STDERR.puts errorMessage.red
       rescue => errorStr
-        puts "Error in ConfigParserErrorLogger::logError: #{errorStr}".red
+        puts "#{prefix}::Error in ConfigParserErrorLogger::logError: #{errorStr}".red
       end
     end
 
-    def logWarning(message)
+    def logWarning(prefix, message)
       begin
-        warningMessage = "config::warning::" + message
-        puts warningMessage.yellow
+        puts "#{prefix}::warning::#{message}".yellow
       rescue => errorStr
-        puts "Error in ConfigParserErrorLogger::logWarning: #{errorStr}".red
+        puts "#{prefix}::Error in ConfigParserErrorLogger::logWarning: #{errorStr}".red
       end
     end
 
-    def logSection(message)
+    def logSection(prefix, message)
       begin
-        sectionMessage = "****************" + message + "********************"
-        puts sectionMessage.green
+        puts "****************#{message}********************".green
       rescue => errorStr
-        puts "Error in ConfigParserErrorLogger::logSection: #{errorStr}".red
+        puts "#{prefix}::Error in ConfigParserErrorLogger::logSection: #{errorStr}".red
+      end
+    end
+
+    def log(prefix, message)
+      begin
+        puts "#{prefix}::#{message}"
+      rescue => errorStr
+        puts "#{prefix}::Error in ConfigParserErrorLogger::log: #{errorStr}".red
       end
     end
   end

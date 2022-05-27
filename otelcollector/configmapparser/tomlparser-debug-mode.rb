@@ -4,6 +4,7 @@
 require "tomlrb"
 require_relative "ConfigParseErrorLogger"
 
+LOGGING_PREFIX = "debug-mode-config"
 @configMapMountPath = "/etc/config/settings/debug-mode"
 @configVersion = ""
 @configSchemaVersion = ""
@@ -22,7 +23,7 @@ def parseConfigMap
       return nil
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while parsing config map for debug mode: #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing config map for debug mode: #{errorStr}, using defaults, please check config map for errors")
     return nil
   end
 end
@@ -33,15 +34,15 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   begin
     if !parsedConfig.nil? && !parsedConfig[:enabled].nil?
       @defaultEnabled = parsedConfig[:enabled]
-      puts "config::Using configmap setting for debug mode: #{@defaultEnabled}"
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap setting for debug mode: #{@defaultEnabled}")
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while reading config map settings for debug mode- #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for debug mode- #{errorStr}, using defaults, please check config map for errors")
   end
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
-ConfigParseErrorLogger.logSection("Start debug-mode Settings Processing")
+ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start debug-mode Settings Processing")
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
   if !configMapSettings.nil?
@@ -49,7 +50,7 @@ if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVe
   end
 else
   if (File.file?(@configMapMountPath))
-    ConfigParseErrorLogger.logError("Unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
   end
 end
 
@@ -65,6 +66,6 @@ if !file.nil?
   
   file.close
 else
-  ConfigParseErrorLogger.logError("Exception while opening file for writing prometheus-collector config environment variables")
+  ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while opening file for writing prometheus-collector config environment variables")
 end
-ConfigParseErrorLogger.logSection("End debug-mode Settings Processing")
+ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "End debug-mode Settings Processing")

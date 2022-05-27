@@ -5,6 +5,8 @@ require "tomlrb"
 require 'colorize'
 require_relative "ConfigParseErrorLogger"
 
+LOGGING_PREFIX = "default-scrape-settings"
+
 @configMapMountPath = "/etc/config/settings/default-scrape-settings-enabled"
 @configVersion = ""
 @configSchemaVersion = ""
@@ -29,11 +31,11 @@ def parseConfigMap
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
       return parsedConfig
     else
-      ConfigParseErrorLogger.logWarning("configmapprometheus-collector-configmap for scrape targets not mounted, using defaults")
+      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "configmapprometheus-collector-configmap for scrape targets not mounted, using defaults")
       return nil
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while parsing config map for default scrape settings: #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing config map for default scrape settings: #{errorStr}, using defaults, please check config map for errors")
     return nil
   end
 end
@@ -95,15 +97,15 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @noDefaultsEnabled = true
     end
     if @noDefaultsEnabled
-      ConfigParseErrorLogger.logWarning("config::No default scrape configs enabled")
+      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "No default scrape configs enabled")
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while reading config map settings for default scrape settings - #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for default scrape settings - #{errorStr}, using defaults, please check config map for errors")
   end
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
-puts "****************Start default-scrape-settings Processing********************".green
+ConfigParseErrorLogger.logSection("Start default-scrape-settings Processing")
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
   if !configMapSettings.nil?
@@ -111,7 +113,7 @@ if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVe
   end
 else
   if (File.file?(@configMapMountPath))
-    ConfigParseErrorLogger.logError("config::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
   end
 end
 
@@ -138,6 +140,6 @@ if !file.nil?
   # Close file after writing all metric collection setting environment variables
   file.close
 else
-  ConfigParseErrorLogger.logError("Exception while opening file for writing default-scrape-settings config environment variables")
+  ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while opening file for writing default-scrape-settings config environment variables")
 end
-ConfigParseErrorLogger.logSection("End default-scrape-settings Processing")
+ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "End default-scrape-settings Processing")

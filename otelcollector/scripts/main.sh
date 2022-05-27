@@ -186,7 +186,6 @@ if [ "${MAC}" != "true" ]; then
       for ef in $ENCODEDFILES
       do
             name="$(basename -- $ef)"
-            echo -e "${Green}decoding $name into $decodeLocation ..."
             base64 -d $ef > $decodeLocation/$name
       done
 
@@ -194,7 +193,6 @@ if [ "${MAC}" != "true" ]; then
       decodedFiles=""
       for df in $DECODEDFILES
       do
-            echo -e "${Green}found $df"
             if [ ${#decodedFiles} -ge 1 ]; then
                   decodedFiles=$decodedFiles:$df
             else
@@ -206,9 +204,9 @@ if [ "${MAC}" != "true" ]; then
       echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
       source ~/.bashrc
 
-      echo -e "AKV_FILES=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
+      echo "AKV_FILES=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
       
-      echo -e "Starting metricsextension"
+      echo "Starting metricsextension"
       # will need to rotate the entire log location
       # will need to remove accountname fetching from env
       # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
@@ -268,6 +266,8 @@ echo "RUBY_VERSION=$RUBY_VERSION"
 
 echo "Starting telegraf"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+TELEGRAF_VERSION=`dpkg -l | grep telegraf | awk '{print $2 " " $3}'`
+echo "FLUENT_BIT_VERSION=$TELEGRAF_VERSION"
 
 echo "Starting fluent-bit"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so > /dev/null &
