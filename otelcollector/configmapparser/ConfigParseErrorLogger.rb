@@ -28,7 +28,7 @@ class ConfigParseErrorLogger
 
     def logSection(prefix, message)
       begin
-        puts "****************#{message}********************".green
+        puts message.center(86).cyan
       rescue => errorStr
         puts "#{prefix}::Error in ConfigParserErrorLogger::logSection: #{errorStr}".red
       end

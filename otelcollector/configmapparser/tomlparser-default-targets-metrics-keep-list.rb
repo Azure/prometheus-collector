@@ -161,7 +161,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !kubestateRegex.empty?
         if isValidRegex(kubestateRegex) == true
           @kubestateRegex = kubestateRegex
-          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for kubestate"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for kubestate")
         else
           ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for kubestate")
         end
@@ -175,7 +175,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !nodeexporterRegex.empty?
         if isValidRegex(nodeexporterRegex) == true
           @nodeexporterRegex = nodeexporterRegex
-          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for nodeexporter"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for nodeexporter")
         else
           ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for nodeexporter")
         end
@@ -189,7 +189,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !windowsexporterRegex.empty?
         if isValidRegex(windowsexporterRegex) == true
           @windowsexporterRegex = windowsexporterRegex
-          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for windowsexporter"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for windowsexporter")
         else
           ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for windowsexporter")
         end
@@ -203,7 +203,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !windowskubeproxyRegex.empty?
         if isValidRegex(windowskubeproxyRegex) == true
           @windowskubeproxyRegex = windowskubeproxyRegex
-          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for windowskubeproxy"
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for windowskubeproxy")
         else
           ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for windowskubeproxy")
         end
@@ -223,7 +223,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 
 @minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"] #this when enabled, will always be string "true" as we set the string value in the chart
 if @minimalIngestionProfile == "true"
-  ConfigParseErrorLogger.log(LOGGING_PREFIX, "minimalIngestionProfile=true. Applying appropriate Regexes"
+  ConfigParseErrorLogger.log(LOGGING_PREFIX, "minimalIngestionProfile=true. Applying appropriate Regexes")
   @kubeletRegex = @kubeletRegex + "|"  + @kubeletRegex_minimal
   @corednsRegex = @corednsRegex + "|" + @corednsRegex_minimal
   @cadvisorRegex = @cadvisorRegex + "|" + @cadvisorRegex_minimal
