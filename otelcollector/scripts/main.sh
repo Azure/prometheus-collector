@@ -17,15 +17,19 @@ echo_warning () {
   echo -e "${Yellow}$1${Color_Off}"
 }
 
+echo_var () {
+  echo -e "${Cyan}$1${Color_Off}=$2"
+}
+
 #Run inotify as a daemon to track changes to the mounted configmap.
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
 if [ -z $MODE ]; then
   MODE="simple"
 fi
-echo "MODE="$MODE
-echo "CONTROLLER_TYPE="$CONTROLLER_TYPE
-echo "CLUSTER=$CLUSTER"
+echo_var "MODE" "$MODE"
+echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
+echo_var "CLUSTER" "$CLUSTER"
 
 #set agent config schema version
 if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
@@ -161,7 +165,7 @@ fi
 export ME_CONFIG_FILE=$meConfigFile	
 echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
 source ~/.bashrc
-echo "ME_CONFIG_FILE="$ME_CONFIG_FILE
+echo_var "ME_CONFIG_FILE" "$ME_CONFIG_FILE"
 
 if [ "${MAC}" != "true" ]; then
       if [ -z $CLUSTER ]; then
@@ -204,7 +208,7 @@ if [ "${MAC}" != "true" ]; then
       echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
       source ~/.bashrc
 
-      echo "AKV_FILES=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
+      echo_var "AKV_FILES" "$AZMON_METRIC_ACCOUNTS_AKV_FILES"
       
       echo "Starting metricsextension"
       # will need to rotate the entire log location
@@ -249,7 +253,7 @@ fi
 
 # Get ME version
 ME_VERSION=`dpkg -l | grep metricsext | awk '{print $2 " " $3}'`
-echo "ME_VERSION=$ME_VERSION"
+echo_var "ME_VERSION" "$ME_VERSION"
 
 # Start otelcollector
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
@@ -262,17 +266,15 @@ fi
 
 #get ruby version
 RUBY_VERSION=`ruby --version`
-echo "RUBY_VERSION=$RUBY_VERSION"
+echo_var "RUBY_VERSION" "$RUBY_VERSION"
 
 echo "Starting telegraf"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
-TELEGRAF_VERSION=`dpkg -l | grep telegraf | awk '{print $2 " " $3}'`
-echo "TELEGRAF_VERSION=$TELEGRAF_VERSION"
 
 echo "Starting fluent-bit"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so > /dev/null &
 FLUENT_BIT_VERSION=`dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'`
-echo "FLUENT_BIT_VERSION=$FLUENT_BIT_VERSION"
+echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 
 #Run inotify as a daemon to track changes to the dcr/dce config.
 if [ "${MAC}" == "true" ]; then

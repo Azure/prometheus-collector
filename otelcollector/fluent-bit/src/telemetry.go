@@ -388,7 +388,7 @@ func PushInfiniteMetricLogToAppInsightsEvents(records []map[interface{}]interfac
 func PushExportingFailedLogToAppInsightsEvents(records []map[interface{}]interface{}) int {
 	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
 		ExportingFailedMutex.Lock()
-		OtelCollectorExportingFailed = 1
+		OtelCollectorExportingFailed += 1
 		ExportingFailedMutex.Unlock()
 	}
 	return output.FLB_OK

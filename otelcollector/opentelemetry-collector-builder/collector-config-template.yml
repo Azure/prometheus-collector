@@ -8,7 +8,7 @@ exporters:
   #influx:
   #  loglevel: debug
   otlp:
-    endpoint: 127.0.0.1:55680
+    endpoint: 127.0.0.1:5568
     insecure: true
     compression: "gzip"
     retry_on_failure:

@@ -80,13 +80,13 @@ var (
 )
 
 const (
-	timeseriesVolumeInterval = 60
-	timeseriesVolumePort = ":2234"
+	prometheusCollectorHealthInterval = 60
+	prometheusCollectorHealthPort = ":2234"
 )
 
 
-// Expose Prometheus metrics for number of timeseries and bytes scraped and sent
-func PublishTimeseriesVolume() {
+// Expose Prometheus metrics about the health of the agent
+func ExposePrometheusCollectorHealthMetrics() {
 
 	// A new registry excludes go_* and promhttp_* metrics for the endpoint
 	r := prometheus.NewRegistry()
@@ -100,12 +100,12 @@ func PublishTimeseriesVolume() {
 	http.Handle("/metrics", handler)
 
 	go func() {
-		TimeseriesVolumeTicker = time.NewTicker(time.Second * time.Duration(timeseriesVolumeInterval))
+		TimeseriesVolumeTicker = time.NewTicker(time.Second * time.Duration(prometheusCollectorHealthInterval))
 		lastTickerStart := time.Now()
 		
 		for ; true; <-TimeseriesVolumeTicker.C {
 			elapsed := time.Since(lastTickerStart)
-			timePassedInMinutes := (float64(elapsed) / float64(time.Second)) / float64(timeseriesVolumeInterval)
+			timePassedInMinutes := (float64(elapsed) / float64(time.Second)) / float64(prometheusCollectorHealthInterval)
 
 			TimeseriesVolumeMutex.Lock()
 			timeseriesReceivedRate := math.Round(TimeseriesReceivedTotal / timePassedInMinutes)
@@ -128,18 +128,21 @@ func PublishTimeseriesVolume() {
 			Log("isInvalidCustomConfig: %d", isInvalidCustomConfig)
 			invalidCustomConfigMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(float64(isInvalidCustomConfig))
 		
+			Log("About to lock for OtelcollectorExportingFailed")
 			ExportingFailedMutex.Lock()
+			Log("OtelcollectorExportingFailed: %d", OtelCollectorExportingFailed)
 			exportingFailedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(float64(OtelCollectorExportingFailed))
-			OtelCollectorExportingFailed = 0
+			//OtelCollectorExportingFailed = 0
 			ExportingFailedMutex.Unlock()
+			Log("Unlocked for OtelcollectorExportingFailed")
 
 			lastTickerStart = time.Now()
 		}
 	}()
 
-	err := http.ListenAndServe(timeseriesVolumePort, nil)
+	err := http.ListenAndServe(prometheusCollectorHealthPort, nil)
 	if err != nil {
-		Log("Error for timeseries volume endpoint: %s", err.Error())
+		Log("Error for Prometheus Collector Health endpoint: %s", err.Error())
 		exception := appinsights.NewExceptionTelemetry(err.Error())
 		TelemetryClient.Track(exception)
 	}
