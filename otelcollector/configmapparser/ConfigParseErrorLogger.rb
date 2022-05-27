@@ -30,9 +30,9 @@ class ConfigParseErrorLogger
     def logSection(message)
       begin
         sectionMessage = "****************" + message + "********************"
-        puts warningMessage.green
+        puts sectionMessage.green
       rescue => errorStr
-        puts "Error in ConfigParserErrorLogger::logWarning: #{errorStr}".red
+        puts "Error in ConfigParserErrorLogger::logSection: #{errorStr}".red
       end
     end
   end
