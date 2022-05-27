@@ -6,7 +6,9 @@ replace github.com/gracewehner/prometheusreceiver => ../prometheusreceiver
 
 require (
 	github.com/gracewehner/prometheusreceiver v0.0.0-00010101000000-000000000000
+  github.com/open-telemetry/opentelemetry-collector-contrib v0.51.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.51.0
+  github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.51.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.51.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.51.0
 	go.opentelemetry.io/collector v0.51.0

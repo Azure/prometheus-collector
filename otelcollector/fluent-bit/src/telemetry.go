@@ -74,6 +74,7 @@ const (
 	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 )
 
+
 // SendException  send an event to the configured app insights instance
 func SendException(err interface{}) {
 	if TelemetryClient != nil {
