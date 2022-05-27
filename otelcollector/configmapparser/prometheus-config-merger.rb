@@ -343,7 +343,7 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
       mergedConfigYaml = YAML::dump(mergedConfigs)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging default scrape config(s) with custom prometheus config, writing them to file")
     else
-      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "Merged default scrape config nil or empty, using custom scrape configs to write to file")
+      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "The merged default scrape config is nil or empty, using only custom scrape config")
       mergedConfigYaml = customPromConfig
     end
     File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigYaml }

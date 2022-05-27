@@ -222,7 +222,7 @@ else
       export customRegion=$trimmedRegion
       echo "export customRegion=$trimmedRegion" >> ~/.bashrc
       source ~/.bashrc
-      echo "customRegion:$customRegion"
+      echo "customRegion=$customRegion"
 
       echo "Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests..."
       # sleep for 10 seconds
@@ -267,7 +267,7 @@ echo "RUBY_VERSION=$RUBY_VERSION"
 echo "Starting telegraf"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
 TELEGRAF_VERSION=`dpkg -l | grep telegraf | awk '{print $2 " " $3}'`
-echo "FLUENT_BIT_VERSION=$TELEGRAF_VERSION"
+echo "TELEGRAF_VERSION=$TELEGRAF_VERSION"
 
 echo "Starting fluent-bit"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so > /dev/null &
