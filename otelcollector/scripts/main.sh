@@ -1,17 +1,21 @@
 #!/bin/bash
 
-# Reset
-Color_Off='\033[0m'       # Text Reset
+# Colors for Logging
+Color_Off='\033[0m'
+Red='\033[0;31m'
+Green='\033[0;32m'
+Yellow='\033[0;33m'
+Cyan='\033[0;36m'
 
-# Regular Colors
-Black='\033[0;30m'        # Black
-Red='\033[0;31m'          # Red
-Green='\033[0;32m'        # Green
-Yellow='\033[0;33m'       # Yellow
-Blue='\033[0;34m'         # Blue
-Purple='\033[0;35m'       # Purple
-Cyan='\033[0;36m'         # Cyan
-White='\033[0;37m'        # White
+# Echo text in red
+echo_error () {
+  echo -e "${Red}$1${Color_Off}"
+}
+
+# Echo text in yellow
+echo_warning () {
+  echo -e "${Yellow}$1${Color_Off}"
+}
 
 #Run inotify as a daemon to track changes to the mounted configmap.
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
@@ -35,7 +39,6 @@ if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/
       export AZMON_AGENT_CFG_SCHEMA_VERSION=$config_schema_version
       echo "export AZMON_AGENT_CFG_SCHEMA_VERSION=$config_schema_version" >> ~/.bashrc
       source ~/.bashrc
-      #echo "AZMON_AGENT_CFG_SCHEMA_VERSION:$AZMON_AGENT_CFG_SCHEMA_VERSION"
 fi
 
 #set agent config file version
@@ -50,8 +53,13 @@ if [  -e "/etc/config/settings/config-version" ] && [  -s "/etc/config/settings/
       export AZMON_AGENT_CFG_FILE_VERSION=$config_file_version
       echo "export AZMON_AGENT_CFG_FILE_VERSION=$config_file_version" >> ~/.bashrc
       source ~/.bashrc
-      #echo "AZMON_AGENT_CFG_FILE_VERSION:$AZMON_AGENT_CFG_FILE_VERSION"
 fi
+
+# Get AppInsights key
+aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 --decode)	
+export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey	
+echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc	
+source ~/.bashrc
 
 # Parse the configmap to set the right environment variables for prometheus collector settings
 ruby /opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb
@@ -94,14 +102,14 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
       /opt/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
             # Use default config if specified config is invalid
-            echo -e "${Red}prom-config-validator::Prometheus custom config validation failed. The custom config will not be used.${Color_Off}"
+            echo_error "prom-config-validator::Prometheus custom config validation failed. The custom config will not be used."
             echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
             if [ -e "/opt/defaultsMergedConfig.yml" ]; then
-                  echo -e "${Red}prom-config-validator::Running validator on just default scrape configs.${Color_Off}"
+                  echo_error "prom-config-validator::Running validator on just default scrape configs."
                   /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
                   if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
-                        echo -e "${Red}prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used.${Color_Off}"
+                        echo_error "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used."
                   else
                         cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
                   fi
@@ -110,10 +118,10 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
             export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
       fi
 elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
-      echo -e "${Yellow}prom-config-validator::No custom prometheus config found. Only using default scrape configs${Color_Off}"
+      echo_warning "prom-config-validator::No custom prometheus config found. Only using default scrape configs"
       /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
-            echo -e "${Red}prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used.${Color_Off}"
+            echo_error "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used."
       else
             echo "prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config"
             cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
@@ -123,7 +131,7 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
 
 else
       # This else block is needed, when there is no custom config mounted as config map or default configs enabled
-      echo -e "${Red}prom-config-validator::No custom config or default scrape configs enabled. No scrape configs will be used.${Color_Off}"
+      echo_error "prom-config-validator::No custom config or default scrape configs enabled. No scrape configs will be used."
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi 
@@ -132,7 +140,7 @@ source ~/.bashrc
 echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
 
 #start cron daemon for logrotate
-service cron restart >/dev/null
+service cron restart > /dev/null
 
 #get controller kind in lowercase, trimmed
 controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
@@ -171,7 +179,6 @@ if [ "${MAC}" != "true" ]; then
       mkdir -p /opt/akv-copy
       cp -r /etc/config/settings/akv /opt/akv-copy
 
-      echo -e "${Green}Finding files from akv in /etc/config/settings/akv to decode${Color_Off}"
       decodeLocation="/opt/akv/decoded"
       # secrets can only be alpha numeric chars and dashes
       ENCODEDFILES=/etc/config/settings/akv/*
@@ -183,7 +190,6 @@ if [ "${MAC}" != "true" ]; then
             base64 -d $ef > $decodeLocation/$name
       done
 
-      echo -e "${Green}finding decoded files from $decodeLocation ...${Color_Off}"
       DECODEDFILES=$decodeLocation/*
       decodedFiles=""
       for df in $DECODEDFILES
@@ -200,9 +206,9 @@ if [ "${MAC}" != "true" ]; then
       echo "export AZMON_METRIC_ACCOUNTS_AKV_FILES=$decodedFiles" >> ~/.bashrc
       source ~/.bashrc
 
-      echo -e "${Green}AKV files for metric account=$AZMON_METRIC_ACCOUNTS_AKV_FILES${Color_Off}"
+      echo -e "AKV_FILES=$AZMON_METRIC_ACCOUNTS_AKV_FILES"
       
-      echo -e "${Green}Starting metricsextension${Color_Off}"
+      echo -e "Starting metricsextension"
       # will need to rotate the entire log location
       # will need to remove accountname fetching from env
       # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
@@ -243,16 +249,16 @@ else
       /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc -ConfigOverrides $meConfigString > /dev/null &
 fi
 
-#get ME version
+# Get ME version
 ME_VERSION=`dpkg -l | grep metricsext | awk '{print $2 " " $3}'`
 echo "ME_VERSION=$ME_VERSION"
 
-#start otelcollector
+# Start otelcollector
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
-      echo -e "${Yellow}Starting otelcollector with only default scrape configs enabled${Color_Off}"
+      echo_warning "Starting otelcollector with only default scrape configs enabled"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 else
-      echo -e "${Green}Starting otelcollector${Color_Off}"
+      echo "Starting otelcollector"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
 
@@ -260,10 +266,10 @@ fi
 RUBY_VERSION=`ruby --version`
 echo "RUBY_VERSION=$RUBY_VERSION"
 
-echo -e "${Green}Starting telegraf${Color_Off}"
+echo "Starting telegraf"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
 
-echo -e "${Green}Starting fluent-bit${Color_Off}"
+echo "Starting fluent-bit"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so > /dev/null &
 FLUENT_BIT_VERSION=`dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'`
 echo "FLUENT_BIT_VERSION=$FLUENT_BIT_VERSION"
@@ -276,7 +282,7 @@ fi
 
 shutdown() {
 	echo "shutting down"
-	}
+}
 
 trap "shutdown" SIGTERM
 
