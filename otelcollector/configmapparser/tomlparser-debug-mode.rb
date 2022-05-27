@@ -2,7 +2,6 @@
 # frozen_string_literal: true
 
 require "tomlrb"
-require "colorize"
 require_relative "ConfigParseErrorLogger"
 
 @configMapMountPath = "/etc/config/settings/debug-mode"
@@ -16,14 +15,10 @@ require_relative "ConfigParseErrorLogger"
 def parseConfigMap
   begin
     # Check to see if config map is created
-    #puts "config::configmap prometheus-collector-configmap for prometheus collector file: #{@configMapMountPath}"
     if (File.file?(@configMapMountPath))
-      #puts "config::configmap prometheus-collector-configmap for debug mode mounted, parsing values"
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
-      #puts "config::Successfully parsed mounted config map"
       return parsedConfig
     else
-      #puts "config::configmapprometheus-collector-configmap for debug mode not mounted, using defaults".yellow
       return nil
     end
   rescue => errorStr
@@ -46,7 +41,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
-puts "****************Start debug-mode Settings Processing********************".green
+ConfigParseErrorLogger.logSection("Start debug-mode Settings Processing")
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
   if !configMapSettings.nil?
@@ -54,7 +49,7 @@ if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVe
   end
 else
   if (File.file?(@configMapMountPath))
-    ConfigParseErrorLogger.logError("config::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
+    ConfigParseErrorLogger.logError("Unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
   end
 end
 
@@ -70,6 +65,6 @@ if !file.nil?
   
   file.close
 else
-  puts "Exception while opening file for writing prometheus-collector config environment variables".red
+  ConfigParseErrorLogger.logError("Exception while opening file for writing prometheus-collector config environment variables")
 end
-puts "****************End debug-mode Settings Processing********************".green
+ConfigParseErrorLogger.logSection("End debug-mode Settings Processing")

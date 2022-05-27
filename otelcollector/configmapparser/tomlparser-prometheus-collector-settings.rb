@@ -2,7 +2,6 @@
 # frozen_string_literal: true
 
 require "tomlrb"
-require "colorize"
 require_relative "ConfigParseErrorLogger"
 
 @configMapMountPath = "/etc/config/settings/prometheus-collector-settings"
@@ -16,11 +15,8 @@ require_relative "ConfigParseErrorLogger"
 def parseConfigMap
   begin
     # Check to see if config map is created
-    #puts "config::configmap prometheus-collector-configmap for prometheus collector file: #{@configMapMountPath}"
     if (File.file?(@configMapMountPath))
-      #puts "config::configmap prometheus-collector-configmap for prometheus collector settings mounted, parsing values"
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
-      #puts "config::Successfully parsed mounted config map"
       return parsedConfig
     else
       puts "config::configmapprometheus-collector-configmap for prometheus collector settings not mounted, using defaults"
@@ -70,6 +66,6 @@ if !file.nil?
   
   file.close
 else
-  puts "Exception while opening file for writing prometheus-collector config environment variables".red
+  ConfigParseErrorLogger.logError("Exception while opening file for writing prometheus-collector config environment variables")
 end
-puts "****************End prometheus-collector-settings Processing********************".green
+ConfigParseErrorLogger.logSection("End prometheus-collector-settings Processing")

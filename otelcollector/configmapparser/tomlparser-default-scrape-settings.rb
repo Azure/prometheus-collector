@@ -25,14 +25,11 @@ require_relative "ConfigParseErrorLogger"
 def parseConfigMap
   begin
     # Check to see if config map is created
-    #puts "config::configmap prometheus-collector-configmap for prometheus collector file: #{@configMapMountPath}"
     if (File.file?(@configMapMountPath))
-      #puts "config::configmap prometheus-collector-configmap for default scrape settings mounted, parsing values"
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
-      #puts "config::Successfully parsed mounted config map"
       return parsedConfig
     else
-      puts "config::configmapprometheus-collector-configmap for scrape targets not mounted, using defaults".yellow
+      ConfigParseErrorLogger.logWarning("configmapprometheus-collector-configmap for scrape targets not mounted, using defaults")
       return nil
     end
   rescue => errorStr
@@ -98,7 +95,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @noDefaultsEnabled = true
     end
     if @noDefaultsEnabled
-      puts "config::No default scrape configs enabled".yellow
+      ConfigParseErrorLogger.logWarning("config::No default scrape configs enabled")
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError("Exception while reading config map settings for default scrape settings - #{errorStr}, using defaults, please check config map for errors")
@@ -141,6 +138,6 @@ if !file.nil?
   # Close file after writing all metric collection setting environment variables
   file.close
 else
-  puts "Exception while opening file for writing default-scrape-settings config environment variables".red
+  ConfigParseErrorLogger.logError("Exception while opening file for writing default-scrape-settings config environment variables")
 end
-puts "****************End default-scrape-settings Processing********************".green
+ConfigParseErrorLogger.logSection("End default-scrape-settings Processing")
