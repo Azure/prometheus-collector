@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - grace/latest-otelcollector
+      - rashmi/otel-10-ta
   pull_request:
     types: [opened, synchronize, reopened]
     branches:

@@ -29,4 +29,4 @@ COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 
 RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
-CMD [ "/opt/main.sh" ]
+ENTRYPOINT [ "/opt/main.sh" ]
