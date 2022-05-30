@@ -272,7 +272,7 @@ echo "Starting telegraf"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
 
 echo "Starting fluent-bit"
-/opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so > /dev/null &
+/opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
 FLUENT_BIT_VERSION=`dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 
