@@ -1,0 +1,1 @@
+Update the bottom of the `deployPrometheusWindowsExporter.ps1` script with the subscription and cluster resource group (starting with `MC_`) that you want to install the VMSS extension for auto-deploying windows-exporter on.
