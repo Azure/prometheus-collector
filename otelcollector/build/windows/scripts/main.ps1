@@ -10,7 +10,6 @@ function Set-EnvironmentVariablesAndConfigParser {
 
     #resourceid override.
     if ([string]::IsNullOrEmpty($env:AKS_RESOURCE_ID)) {
-        Write-Output "AKS_RESOURCE_ID is empty or not set."
         if ([string]::IsNullOrEmpty($env:CLUSTER)) {
             Write-Output "CLUSTER is empty or not set. Using $env:NODE_NAME as CLUSTER"
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:NODE_NAME, "Process")
@@ -18,14 +17,12 @@ function Set-EnvironmentVariablesAndConfigParser {
             Write-Output "customResourceId:$env:customResourceId"
         }
         else {
-            Write-Output "Using CLUSTER as $env:CLUSTER"
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Process")
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Machine")
             Write-Output "customResourceId:$env:customResourceId"
         }
     }
     else {
-        Write-Output "AKS_RESOURCE_ID is set already so setting customResourceId=$env:AKS_RESOURCE_ID"
         [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Process")
         [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Machine")
         Write-Output "customResourceId:$customResourceId"
@@ -63,7 +60,6 @@ function Set-EnvironmentVariablesAndConfigParser {
     $appInsightsAuth = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH", "process")
     if (![string]::IsNullOrEmpty($appInsightsAuth)) {
         [System.Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH", $appInsightsAuth, "machine")
-        Write-Host "Successfully set environment variable APPLICATIONINSIGHTS_AUTH - $($appInsightsAuth) for target 'machine'..."
     }
     else {
         Write-Host "Failed to set environment variable APPLICATIONINSIGHTS_AUTH for target 'machine' since it is either null or empty"
@@ -136,14 +132,15 @@ function Set-EnvironmentVariablesAndConfigParser {
     if (Test-Path -Path '/opt/promMergedConfig.yml') {
         C:\opt\promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
         if ( (!($?)) -or (!(Test-Path -Path "/opt/microsoft/otelcollector/collector-config.yml" ))) {
-            Write-Output "Prometheus custom config validation failed, using defaults"
+            Write-Output "prom-config-validator::Prometheus custom config validation failed. The custom config will not be used"
             # This env variable is used to indicate that the prometheus custom config was invalid and we fall back to defaults, used for telemetry
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Process")
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Machine")
             if (Test-Path -Path '/opt/defaultsMergedConfig.yml') {
+              Write-Output "prom-config-validator::Running validator on just default scrape configs"
                 C:\opt\promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
                 if ( (!($?)) -or (!(Test-Path -Path "/opt/collector-config-with-defaults.yml" ))) {
-                    Write-Output "Prometheus default config validation failed, using empty job as collector config"
+                    Write-Output "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used"
                 }
                 else {
                     Copy-Item "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
@@ -154,13 +151,13 @@ function Set-EnvironmentVariablesAndConfigParser {
         }
     }
     elseif (Test-Path -Path '/opt/defaultsMergedConfig.yml') {
-        Write-Output "No custom config found, using defaults"
+        Write-Output "prom-config-validator::No custom prometheus config found. Only using default scrape configs"
         C:\opt\promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
         if ( (!($?)) -or (!(Test-Path -Path "/opt/collector-config-with-defaults.yml" ))) {
-            Write-Output "Prometheus default config validation failed, using empty job as collector config"
+            Write-Output "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used"
         }
         else {
-            Write-Output "Prometheus default config validation succeeded, using this as collector config"
+            Write-Output "prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config"
             Copy-Item "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
         }
         [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
@@ -168,7 +165,7 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
     else {
         # This else block is needed, when there is no custom config mounted as config map or default configs enabled
-        Write-Output "No custom config found, using defaults"
+        Write-Output "prom-config-validator::No custom config or default scrape configs enabled. No scrape configs will be used"
         [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Process")
         [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
     }
@@ -205,7 +202,6 @@ function Set-EnvironmentVariablesAndConfigParser {
 
     # Set ME Config file
     if (![string]::IsNullOrEmpty($env:CONTROLLER_TYPE)) {
-        Write-Output "Setting the environment variable ME_CONFIG_FILE"
         [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $me_config_file, "Process")
         [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $me_config_file, "Machine")
     }
@@ -272,7 +268,7 @@ function Start-Telegraf {
 }
 
 function Start-ME {
-    Write-Output "Starting Metrics Extension..."
+    Write-Output "Starting Metrics Extension"
     Write-Output "ME_CONFIG_FILE = $env:ME_CONFIG_FILE"
     Write-Output "AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
     Start-Job -ScriptBlock { 
@@ -291,11 +287,11 @@ function Start-ME {
 
 function Start-OTEL-Collector {
     if ($env:AZMON_USE_DEFAULT_PROMETHEUS_CONFIG -eq "true") {
-        Write-Output "starting otelcollector with DEFAULT prometheus configuration...."
+        Write-Output "Starting otelcollector with only default scrape configs enabled"
         Start-Job -ScriptBlock { Start-Process -RedirectStandardError /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/otelcollector.exe" -ArgumentList @("--config", "/opt/microsoft/otelcollector/collector-config-default.yml", "--log-level", "WARN", "--log-format", "json", "--metrics-level", "detailed") }
     }
     else {
-        Write-Output "starting otelcollector...."
+        Write-Output "Starting otelcollector"
         Start-Job -ScriptBlock { Start-Process -RedirectStandardError /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/otelcollector.exe" -ArgumentList @("--config", "/opt/microsoft/otelcollector/collector-config.yml", "--log-level", "WARN", "--log-format", "json", "--metrics-level", "detailed") }
     }
     tasklist /fi "imagename eq otelcollector.exe" /fo "table"  | findstr otelcollector

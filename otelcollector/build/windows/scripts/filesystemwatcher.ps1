@@ -30,7 +30,7 @@ foreach ($path in $Paths)
         $ObjectEventParams.EventName = $Item
         $name = Split-Path -Path $path -Leaf
         $ObjectEventParams.SourceIdentifier = "$($name).$($Item)"
-        Write-Host  "Starting watcher for Event: $($path).$($Item)"
+        #Write-Host  "Starting watcher for Event: $($path).$($Item)"
         $Null = Register-ObjectEvent  @ObjectEventParams
     }
 }

@@ -107,14 +107,14 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
       /opt/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
             # Use default config if specified config is invalid
-            echo_error "prom-config-validator::Prometheus custom config validation failed. The custom config will not be used."
+            echo_error "prom-config-validator::Prometheus custom config validation failed. The custom config will not be used"
             echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
             if [ -e "/opt/defaultsMergedConfig.yml" ]; then
-                  echo_error "prom-config-validator::Running validator on just default scrape configs."
+                  echo_error "prom-config-validator::Running validator on just default scrape configs"
                   /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
                   if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
-                        echo_error "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used."
+                        echo_error "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used"
                   else
                         cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
                   fi
@@ -126,7 +126,7 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
       echo_warning "prom-config-validator::No custom prometheus config found. Only using default scrape configs"
       /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
       if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
-            echo_error "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used."
+            echo_error "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used"
       else
             echo "prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config"
             cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
@@ -136,7 +136,7 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
 
 else
       # This else block is needed, when there is no custom config mounted as config map or default configs enabled
-      echo_error "prom-config-validator::No custom config or default scrape configs enabled. No scrape configs will be used."
+      echo_error "prom-config-validator::No custom config or default scrape configs enabled. No scrape configs will be used"
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi 
