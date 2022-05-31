@@ -31,7 +31,7 @@ var (
 	// ExportingFailedMutex handles if the otelcollector has logged that exporting failed
 	ExportingFailedMutex = &sync.Mutex{}
 
-	OtelCollectorExportingFailed = 0
+	OtelCollectorExportingFailedCount = 0
 
 	// timeseriesReceivedMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
 	timeseriesReceivedMetric = prometheus.NewGaugeVec(
@@ -128,7 +128,8 @@ func ExposePrometheusCollectorHealthMetrics() {
 			invalidCustomConfigMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(float64(isInvalidCustomConfig))
 		
 			ExportingFailedMutex.Lock()
-			exportingFailedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(float64(OtelCollectorExportingFailed))
+			exportingFailedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Add(float64(OtelCollectorExportingFailedCount))
+			OtelCollectorExportingFailedCount = 0
 			ExportingFailedMutex.Unlock()
 
 			lastTickerStart = time.Now()
