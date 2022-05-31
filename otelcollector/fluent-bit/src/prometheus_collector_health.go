@@ -66,7 +66,7 @@ var (
 			Name: "invalid_custom_prometheus_config",
 			Help: "If an invalid custom prometheus config was given or not",
 		},
-		[]string{"computer", "release", "controller_type"},
+		[]string{"computer", "release", "controller_type", "error"},
 	)
 
 	// exportingFailedMetric counts the number of times the otelcollector was unable to export to ME
@@ -122,10 +122,12 @@ func ExposePrometheusCollectorHealthMetrics() {
 			TimeseriesVolumeMutex.Unlock()
 
 			isInvalidCustomConfig := 0
+			invalidConfigErrorString := ""
 			if os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG") == "true" {
 				isInvalidCustomConfig = 1
+				invalidConfigErrorString = os.Getenv("INVALID_CONFIG_FATAL_ERROR")
 			}
-			invalidCustomConfigMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(float64(isInvalidCustomConfig))
+			invalidCustomConfigMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"], "error":invalidConfigErrorString}).Set(float64(isInvalidCustomConfig))
 		
 			ExportingFailedMutex.Lock()
 			exportingFailedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Add(float64(OtelCollectorExportingFailedCount))

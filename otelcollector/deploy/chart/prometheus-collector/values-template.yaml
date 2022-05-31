@@ -79,6 +79,7 @@ internalSettings:
   intEnvironment: false
   clusterOverride: false
 
+# Only enable to view metrics being scraped for a short time. This can affect performance so it should not be enabled when not in use
 debugMode:
   enabled: false
 

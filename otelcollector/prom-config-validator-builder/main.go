@@ -37,6 +37,7 @@ var RESET  = "\033[0m"
 var RED    = "\033[31m"
 
 func logFatalError(message string) {
+	os.Setenv("INVALID_CONFIG_FATAL_ERROR", message[:1023])
 	log.Fatalf("%s%s%s", RED, message, RESET)
 }
 
