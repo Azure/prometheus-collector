@@ -12,10 +12,8 @@ LOGGING_PREFIX = "debug-mode-config"
 # Setting default values which will be used in case they are not set in the configmap or if configmap doesnt exist
 @defaultEnabled = false
 
-# Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
   begin
-    # Check to see if config map is created
     if (File.file?(@configMapMountPath))
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
       return parsedConfig
@@ -28,9 +26,7 @@ def parseConfigMap
   end
 end
 
-# Use the ruby structure created after config parsing to set the right values to be used for otel collector settings
 def populateSettingValuesFromConfigMap(parsedConfig)
-  # Get if otel collector prometheus scraping is enabled
   begin
     if !parsedConfig.nil? && !parsedConfig[:enabled].nil?
       @defaultEnabled = parsedConfig[:enabled]

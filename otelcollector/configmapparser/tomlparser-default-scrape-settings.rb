@@ -2,7 +2,6 @@
 # frozen_string_literal: true
 
 require "tomlrb"
-require 'colorize'
 require_relative "ConfigParseErrorLogger"
 
 LOGGING_PREFIX = "default-scrape-settings"

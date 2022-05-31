@@ -69,7 +69,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	case fluentbitInfiniteMetricTag:
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
-		return PushExportingFailedLogToAppInsightsEvents(records)
+		return RecordExportingFailed(records)
 	default:
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)

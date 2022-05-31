@@ -53,7 +53,7 @@ def parseConfigMap
       return ""
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing configmap for prometheus config: #{errorStr}. Custom prometheus config will not be used. Please check configmap for errors.")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing configmap for prometheus config: #{errorStr}. Custom prometheus config will not be used. Please check configmap for errors")
     return ""
   end
 end
@@ -62,7 +62,7 @@ def loadRegexHash
   begin
     @regexHash = YAML.load_file(@regexHashFile)
   rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception in loadRegexHash for prometheus config: #{errorStr}. Keep list regexes will not be used.")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception in loadRegexHash for prometheus config: #{errorStr}. Keep list regexes will not be used")
   end
 end
 
@@ -89,7 +89,7 @@ def AppendMetricRelabelConfig(yamlConfigFile, keepListRegex)
       end
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while appending metric relabel config in default target file - #{yamlConfigFile} : #{errorStr}. The keep list regex will not be used.")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while appending metric relabel config in default target file - #{yamlConfigFile} : #{errorStr}. The keep list regex will not be used")
   end
 end
 
@@ -308,7 +308,7 @@ def populateDefaultPrometheusConfig
 
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
   rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default scrape targets - #{errorStr}. No default scrape tragets will be included.")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default scrape targets - #{errorStr}. No default scrape tragets will be included")
     @mergedDefaultConfigs = ""
   end
 end
@@ -327,7 +327,7 @@ def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
     end
     ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging #{defaultScrapeConfigs.length} default prometheus config(s)")
   rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while adding default scrape config- #{errorStr}. No default scrape targets will be included.")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while adding default scrape config- #{errorStr}. No default scrape targets will be included")
     mergedDefaultConfigs = ""
   end
   return mergedDefaultConfigs

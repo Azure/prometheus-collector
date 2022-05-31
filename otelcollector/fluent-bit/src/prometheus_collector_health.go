@@ -69,9 +69,9 @@ var (
 		[]string{"computer", "release", "controller_type"},
 	)
 
-	// exportingFailedMetric is true if the otelcollector was unable to export to ME and false otherwise
-	exportingFailedMetric = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
+	// exportingFailedMetric counts the number of times the otelcollector was unable to export to ME
+	exportingFailedMetric = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
 			Name: "exporting_metrics_failed",
 			Help: "If exporting metrics failed or not",
 		},
@@ -125,16 +125,11 @@ func ExposePrometheusCollectorHealthMetrics() {
 			if os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG") == "true" {
 				isInvalidCustomConfig = 1
 			}
-			Log("isInvalidCustomConfig: %d", isInvalidCustomConfig)
 			invalidCustomConfigMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(float64(isInvalidCustomConfig))
 		
-			Log("About to lock for OtelcollectorExportingFailed")
 			ExportingFailedMutex.Lock()
-			Log("OtelcollectorExportingFailed: %d", OtelCollectorExportingFailed)
 			exportingFailedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(float64(OtelCollectorExportingFailed))
-			//OtelCollectorExportingFailed = 0
 			ExportingFailedMutex.Unlock()
-			Log("Unlocked for OtelcollectorExportingFailed")
 
 			lastTickerStart = time.Now()
 		}

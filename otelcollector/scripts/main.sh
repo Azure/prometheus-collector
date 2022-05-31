@@ -17,6 +17,7 @@ echo_warning () {
   echo -e "${Yellow}$1${Color_Off}"
 }
 
+# Echo variable name in Cyan and value in regular color
 echo_var () {
   echo -e "${Cyan}$1${Color_Off}=$2"
 }
