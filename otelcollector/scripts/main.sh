@@ -264,6 +264,8 @@ else
       echo "Starting otelcollector"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
+OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version`
+echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
 
 #get ruby version
 RUBY_VERSION=`ruby --version`
@@ -271,6 +273,8 @@ echo_var "RUBY_VERSION" "$RUBY_VERSION"
 
 echo "Starting telegraf"
 /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+TELEGRAF_VERSION=`/opt/telegraf/telegraf --version`
+echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
 
 echo "Starting fluent-bit"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
