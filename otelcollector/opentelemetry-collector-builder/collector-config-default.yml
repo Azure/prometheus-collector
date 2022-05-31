@@ -1,6 +1,6 @@
 exporters:
   prometheus:
-    endpoint: "127.0.0.1:1234"
+    endpoint: "127.0.0.1:9091"
     const_labels:
       cluster: $customResourceId
   otlp:

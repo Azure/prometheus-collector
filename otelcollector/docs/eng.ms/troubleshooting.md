@@ -24,5 +24,5 @@
 * Check if the config validation failed
 ### 5. Debug Mode
 * Enable Debug Mode through the Helm Chart values or the `<release-name>-prometheus-collector-settings` configmap by setting `debug-mode.enabled="true"`
-* An extra server is created that hosts all the metrics scraped. Run `kubectl port-forward <prometheus-collector pod> -n <namespace> 1234` and go to `127.0.0.1:1234/metrics` in a browser
+* An extra server is created that hosts all the metrics scraped. Run `kubectl port-forward <prometheus-collector pod> -n <namespace> 9091` and go to `127.0.0.1:9091/metrics` in a browser
 * This mode can affect performance and should only be enabled for debugging purposes
