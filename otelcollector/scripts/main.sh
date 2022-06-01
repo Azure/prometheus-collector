@@ -241,8 +241,8 @@ else
       # Use options -T 0x1 or -T 0xFFFF for debug logging
       mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 
-      MDSD_VERSION=`mdsd --version`
-      echo_var "MDSD_VERSION" "$MDSD_VERSION"
+      # Running mdsd --version can't be captured into a variable unlike telegraf and otelcollector, have to run after printing the string
+      echo -n -e "${Cyan}MDSD_VERSION${Color_Off}="; mdsd --version
 
       echo "Waiting for 30s for MDSD to get the config and put them in place for ME"
       # sleep for 30 seconds
@@ -294,7 +294,5 @@ shutdown() {
 }
 
 trap "shutdown" SIGTERM
-
-echo -e "${Red}"
 
 sleep inf & wait
