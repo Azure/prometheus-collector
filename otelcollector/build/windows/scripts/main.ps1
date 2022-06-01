@@ -17,10 +17,10 @@ function Write-Warning {
 
 function Write-Var {
     param (
-        $VarName
+        $VarName,
         $VarValue
     )
-    Write-Host -ForegroundColor Cyan $VarName -nonewline; Write-Host "=" $VarValue
+    Write-Host -ForegroundColor Cyan $VarName -nonewline; Write-Host "=$VarValue"
 }
 
 function Set-EnvironmentVariablesAndConfigParser {

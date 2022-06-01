@@ -223,11 +223,10 @@ else
       source ~/.bashrc
 
       trimmedRegion=$(echo $AKSREGION | sed 's/ //g' | awk '{print tolower($0)}')
-      echo_var "customRegion" "$trimmedRegion"
       export customRegion=$trimmedRegion
       echo "export customRegion=$trimmedRegion" >> ~/.bashrc
       source ~/.bashrc
-      echo "customRegion=$customRegion"
+      echo_var "customRegion" "$trimmedRegion"
 
       echo "Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests"
       # sleep for 10 seconds
@@ -295,5 +294,7 @@ shutdown() {
 }
 
 trap "shutdown" SIGTERM
+
+echo -e "${Red}"
 
 sleep inf & wait
