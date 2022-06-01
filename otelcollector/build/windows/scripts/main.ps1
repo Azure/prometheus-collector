@@ -1,6 +1,28 @@
 #setting it to replicaset by default
 $me_config_file = '/opt/metricextension/me_ds.config'
 
+function Write-Error {
+    param (
+        $Message
+    )
+    Write-Host -ForegroundColor Red $Message
+}
+
+function Write-Warning {
+    param (
+        $Message
+    )
+    Write-Host -ForegroundColor Yellow $Message
+}
+
+function Write-Var {
+    param (
+        $VarName
+        $VarValue
+    )
+    Write-Host -ForegroundColor Cyan $VarName -nonewline; Write-Host "=" $VarValue
+}
+
 function Set-EnvironmentVariablesAndConfigParser {
 
     if ([string]::IsNullOrEmpty($env:MODE)) {
@@ -14,18 +36,18 @@ function Set-EnvironmentVariablesAndConfigParser {
             Write-Output "CLUSTER is empty or not set. Using $env:NODE_NAME as CLUSTER"
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:NODE_NAME, "Process")
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:NODE_NAME, "Machine")
-            Write-Output "customResourceId:$env:customResourceId"
+            Write-Var "customResourceId" "$env:customResourceId"
         }
         else {
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Process")
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Machine")
-            Write-Output "customResourceId:$env:customResourceId"
+            Write-Var "customResourceId" "$env:customResourceId"
         }
     }
     else {
         [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Process")
         [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Machine")
-        Write-Output "customResourceId:$customResourceId"
+        Write-Var "customResourceId" "$customResourceId"
     }
 
     #set agent config schema version
@@ -151,7 +173,7 @@ function Set-EnvironmentVariablesAndConfigParser {
         }
     }
     elseif (Test-Path -Path '/opt/defaultsMergedConfig.yml') {
-        Write-Output "prom-config-validator::No custom prometheus config found. Only using default scrape configs"
+        Write-Warning "prom-config-validator::No custom prometheus config found. Only using default scrape configs"
         C:\opt\promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
         if ( (!($?)) -or (!(Test-Path -Path "/opt/collector-config-with-defaults.yml" ))) {
             Write-Output "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used"
@@ -224,13 +246,14 @@ function Set-EnvironmentVariablesAndConfigParser {
 function Start-Fluentbit {
     # Run fluent-bit service first so that we do not miss any logs being forwarded by the fluentd service and telegraf service.
     # Run fluent-bit as a background job. Switch this to a windows service once fluent-bit supports natively running as a windows service
+    Write-Host "Starting fluent-bit"
     Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\fluent-bit\bin\fluent-bit.exe" -ArgumentList @("-c", "C:\opt\fluent-bit\fluent-bit-windows.conf", "-e", "C:\opt\fluent-bit\bin\out_appinsights.so") }
 
 }
 
 function Start-Telegraf {
     Write-Host "Installing telegraf service"
-    /opt/telegraf/telegraf.exe --service install --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf"
+    /opt/telegraf/telegraf.exe --service install --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf" > NUL
 
     # Setting delay auto start for telegraf since there have been known issues with windows server and telegraf -
     # https://github.com/influxdata/telegraf/issues/4081
@@ -263,7 +286,7 @@ function Start-Telegraf {
         Write-Host "trying to start telegraf in again in 30 seconds, since fluentbit might not have been ready..."
         Start-Sleep -s 30
         /opt/telegraf/telegraf.exe --service start
-        Get-Service telegraf
+        #Get-Service telegraf
     }
 }
 
@@ -276,10 +299,10 @@ function Start-ME {
         $AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME
         $ME_ADDITIONAL_FLAGS = $env:ME_ADDITIONAL_FLAGS
         if (![string]::IsNullOrEmpty($ME_ADDITIONAL_FLAGS)) {
-            Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file, $ME_ADDITIONAL_FLAGS)
+            Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file, $ME_ADDITIONAL_FLAGS) > NUL
         }
         else {
-            Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file) 
+            Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file) > NUL
         }
     }
     tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
@@ -288,29 +311,29 @@ function Start-ME {
 function Start-OTEL-Collector {
     if ($env:AZMON_USE_DEFAULT_PROMETHEUS_CONFIG -eq "true") {
         Write-Output "Starting otelcollector with only default scrape configs enabled"
-        Start-Job -ScriptBlock { Start-Process -RedirectStandardError /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/otelcollector.exe" -ArgumentList @("--config", "/opt/microsoft/otelcollector/collector-config-default.yml", "--log-level", "WARN", "--log-format", "json", "--metrics-level", "detailed") }
+        Start-Job -ScriptBlock { Start-Process -RedirectStandardError /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/otelcollector.exe" -ArgumentList @("--config", "/opt/microsoft/otelcollector/collector-config-default.yml", "--log-level", "WARN", "--log-format", "json", "--metrics-level", "detailed") } > NUL
     }
     else {
         Write-Output "Starting otelcollector"
-        Start-Job -ScriptBlock { Start-Process -RedirectStandardError /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/otelcollector.exe" -ArgumentList @("--config", "/opt/microsoft/otelcollector/collector-config.yml", "--log-level", "WARN", "--log-format", "json", "--metrics-level", "detailed") }
+        Start-Job -ScriptBlock { Start-Process -RedirectStandardError /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/otelcollector.exe" -ArgumentList @("--config", "/opt/microsoft/otelcollector/collector-config.yml", "--log-level", "WARN", "--log-format", "json", "--metrics-level", "detailed") } > NUL
     }
     tasklist /fi "imagename eq otelcollector.exe" /fo "table"  | findstr otelcollector
 }
 
 function Set-CertificateForME {
     # Make a copy of the mounted akv directory to see if it changes
-    mkdir -p /opt/akv-copy
-    Copy-Item -r /etc/config/settings/akv /opt/akv-copy
+    mkdir -p /opt/akv-copy > NUL
+    Copy-Item -r /etc/config/settings/akv /opt/akv-copy 
 
     Get-ChildItem "C:\etc\config\settings\akv\" |  Foreach-Object { 
         if (!($_.Name.startswith('..'))) {
-        Import-PfxCertificate -FilePath $_.FullName -CertStoreLocation Cert:\CurrentUser\My
+          Import-PfxCertificate -FilePath $_.FullName -CertStoreLocation Cert:\CurrentUser\My > NUL
         }
     }
 }
 
 function Start-FileSystemWatcher {
-    Start-Process powershell -NoNewWindow /opt/scripts/filesystemwatcher.ps1
+    Start-Process powershell -NoNewWindow /opt/scripts/filesystemwatcher.ps1 > NUL
 }
 
 Start-Transcript -Path main.txt

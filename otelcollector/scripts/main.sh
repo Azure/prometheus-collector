@@ -217,19 +217,19 @@ if [ "${MAC}" != "true" ]; then
       # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
       /usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS > /dev/null &
 else
-      echo "Setting customResourceId for MAC mode..."
+      echo_var "customResourceId" "$CLUSTER"
       export customResourceId=$CLUSTER
       echo "export customResourceId=$CLUSTER" >> ~/.bashrc
       source ~/.bashrc
 
-      echo "Setting customRegion for MAC mode..."
       trimmedRegion=$(echo $AKSREGION | sed 's/ //g' | awk '{print tolower($0)}')
+      echo_var "customRegion" "$trimmedRegion"
       export customRegion=$trimmedRegion
       echo "export customRegion=$trimmedRegion" >> ~/.bashrc
       source ~/.bashrc
       echo "customRegion=$customRegion"
 
-      echo "Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests..."
+      echo "Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests"
       # sleep for 10 seconds
       sleep 10
 
@@ -238,11 +238,14 @@ else
             echo $line >> ~/.bashrc
       done
       source /etc/mdsd.d/envmdsd
-      echo "Starting MDSD..."
+      echo "Starting MDSD"
       # Use options -T 0x1 or -T 0xFFFF for debug logging
       mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 
-      echo "Waiting for 30s for MDSD to get the config and put them in place for ME..."
+      MDSD_VERSION=`mdsd --version`
+      echo_var "MDSD_VERSION" "$MDSD_VERSION"
+
+      echo "Waiting for 30s for MDSD to get the config and put them in place for ME"
       # sleep for 30 seconds
       sleep 30
 
