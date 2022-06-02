@@ -37,14 +37,35 @@ var RESET  = "\033[0m"
 var RED    = "\033[31m"
 
 func logFatalError(message string) {
+	// Do not set env var if customer is running outside of agent to just validate config
+	if os.Getenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT") == "true" {
+		setFatalErrorMessageAsEnvVar(message)
+	}
+	// Always log the full message
+	log.Fatalf("%s%s%s", RED, message, RESET)
+}
 
-	// Truncate to use as a dimension in the invalid config metric
-	if len(message) >= 1024 {
-		message = message[:1023]
+func setFatalErrorMessageAsEnvVar(message string) {
+	// Truncate to use as a dimension in the invalid config metric for prometheus-collector-health job
+	truncatedMessage := message
+	if len(message) > 1023 {
+		truncatedMessage = message[:1023]
 	}
 	
-	os.Setenv("INVALID_CONFIG_FATAL_ERROR", message)
-	log.Fatalf("%s%s%s", RED, message, RESET)
+	// Write env var to a file so it can be used by other processes
+	file, err := os.Create("/opt/microsoft/prom_config_validator_env_var")
+	if err != nil {
+			log.Println("prom-config-validator::Unable to create file for prom_config_validator_env_var")
+	}
+	setEnvVarString := fmt.Sprintf("export INVALID_CONFIG_FATAL_ERROR=%s\n", truncatedMessage)
+	if os.Getenv("OS_TYPE") != "linux" {
+		setEnvVarString = fmt.Sprintf("INVALID_CONFIG_FATAL_ERROR=%s\n", truncatedMessage)
+	}
+	_, err = file.WriteString(setEnvVarString)
+	if err != nil {
+		log.Println("prom-config-validator::Unable to write to the file prom_config_validator_env_var")
+	}
+	file.Close()
 }
 
 func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTemplatePath string) error {

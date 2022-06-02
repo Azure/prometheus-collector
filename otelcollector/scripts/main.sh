@@ -102,6 +102,8 @@ ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
 
 echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false" >> ~/.bashrc
 export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false
+echo "export CONFIG_VALIDATOR_RUNNING_IN_AGENT=true" >> ~/.bashrc
+export CONFIG_VALIDATOR_RUNNING_IN_AGENT=true
 if [ -e "/opt/promMergedConfig.yml" ]; then
       # promconfigvalidator validates by generating an otel config and running through receiver's config load and validate method
       /opt/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
@@ -139,7 +141,16 @@ else
       echo_error "prom-config-validator::No custom config or default scrape configs enabled. No scrape configs will be used"
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
-fi 
+fi
+
+# Set the environment variables from the prom-config-validator
+if [ -e "/opt/microsoft/prom_config_validator_env_var" ]; then
+      cat /opt/microsoft/prom_config_validator_env_var | while read line; do
+            echo $line >> ~/.bashrc
+      done
+      source /opt/microsoft/prom_config_validator_env_var
+      source ~/.bashrc
+fi
 
 source ~/.bashrc
 echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"

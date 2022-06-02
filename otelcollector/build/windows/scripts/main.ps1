@@ -170,6 +170,17 @@ function Set-EnvironmentVariablesAndConfigParser {
         [System.Environment]::SetEnvironmentVariable("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", "Machine")
     }
 
+    if (Test-Path -Path '/opt/microsoft/prom_config_validator_env_var') {
+      foreach ($line in Get-Content /opt/microsoft/prom_config_validator_env_var) {
+        if ($line.Contains('=')) {
+          $key = ($line -split '=')[0];
+          $value = ($line -split '=')[1];
+          [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+          [System.Environment]::SetEnvironmentVariable($key, $value, "Machine")
+        }
+      }
+    }
+
     # #start cron daemon for logrotate
     # service cron restart
 
