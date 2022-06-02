@@ -300,7 +300,7 @@ function Start-OTEL-Collector {
 
 function Set-CertificateForME {
     # Make a copy of the mounted akv directory to see if it changes
-    mkdir -p /opt/akv-copy > NUL
+    mkdir -p /opt/akv-copy > $null
     Copy-Item -r /etc/config/settings/akv /opt/akv-copy 
 
     Get-ChildItem "C:\etc\config\settings\akv\" |  Foreach-Object { 

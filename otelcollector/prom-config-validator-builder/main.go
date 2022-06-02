@@ -37,7 +37,13 @@ var RESET  = "\033[0m"
 var RED    = "\033[31m"
 
 func logFatalError(message string) {
-	os.Setenv("INVALID_CONFIG_FATAL_ERROR", message[:1023])
+
+	// Truncate to use as a dimension in the invalid config metric
+	if len(message) >= 1024 {
+		message = message[:1023]
+	}
+	
+	os.Setenv("INVALID_CONFIG_FATAL_ERROR", message)
 	log.Fatalf("%s%s%s", RED, message, RESET)
 }
 
