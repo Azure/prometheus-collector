@@ -129,6 +129,12 @@ function Set-EnvironmentVariablesAndConfigParser {
     # Merge default anf custom prometheus config
     ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
 
+    [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", "Process")
+    [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", "Machine")
+
+    [System.Environment]::SetEnvironmentVariable("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", "Process")
+    [System.Environment]::SetEnvironmentVariable("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", "Machine")
+
     if (Test-Path -Path '/opt/promMergedConfig.yml') {
         C:\opt\promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
         if ( (!($?)) -or (!(Test-Path -Path "/opt/microsoft/otelcollector/collector-config.yml" ))) {
