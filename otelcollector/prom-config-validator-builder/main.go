@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-
+	"regexp"
 	"strings"
 
 	"go.opentelemetry.io/collector/config/configloader"
@@ -41,6 +41,7 @@ func logFatalError(message string) {
 	if os.Getenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT") == "true" {
 		setFatalErrorMessageAsEnvVar(message)
 	}
+	
 	// Always log the full message
 	log.Fatalf("%s%s%s", RED, message, RESET)
 }
@@ -51,13 +52,17 @@ func setFatalErrorMessageAsEnvVar(message string) {
 	if len(message) > 1023 {
 		truncatedMessage = message[:1023]
 	}
+
+	// Replace newlines for env var to be set correctly
+	re := regexp.MustCompile("\\n")
+	truncatedMessage = re.ReplaceAllString(truncatedMessage, "")
 	
 	// Write env var to a file so it can be used by other processes
-	file, err := os.Create("/opt/microsoft/prom_config_validator_env_var")
+	file, err := os.Create("prom_config_validator_env_var")
 	if err != nil {
 			log.Println("prom-config-validator::Unable to create file for prom_config_validator_env_var")
 	}
-	setEnvVarString := fmt.Sprintf("export INVALID_CONFIG_FATAL_ERROR=%s\n", truncatedMessage)
+	setEnvVarString := fmt.Sprintf("export INVALID_CONFIG_FATAL_ERROR=\"%s\"\n", truncatedMessage)
 	if os.Getenv("OS_TYPE") != "linux" {
 		setEnvVarString = fmt.Sprintf("INVALID_CONFIG_FATAL_ERROR=%s\n", truncatedMessage)
 	}
