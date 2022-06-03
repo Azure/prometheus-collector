@@ -281,7 +281,6 @@ function Start-Telegraf {
         Write-Host "trying to start telegraf in again in 30 seconds, since fluentbit might not have been ready..."
         Start-Sleep -s 30
         /opt/telegraf/telegraf.exe --service start
-        #Get-Service telegraf
     }
 }
 
