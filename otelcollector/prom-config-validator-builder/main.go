@@ -41,7 +41,7 @@ func logFatalError(message string) {
 	if os.Getenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT") == "true" {
 		setFatalErrorMessageAsEnvVar(message)
 	}
-	
+
 	// Always log the full message
 	log.Fatalf("%s%s%s", RED, message, RESET)
 }
@@ -58,7 +58,7 @@ func setFatalErrorMessageAsEnvVar(message string) {
 	truncatedMessage = re.ReplaceAllString(truncatedMessage, "")
 	
 	// Write env var to a file so it can be used by other processes
-	file, err := os.Create("prom_config_validator_env_var")
+	file, err := os.Create("/opt/microsoft/prom_config_validator_env_var")
 	if err != nil {
 			log.Println("prom-config-validator::Unable to create file for prom_config_validator_env_var")
 	}
