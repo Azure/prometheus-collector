@@ -1,36 +1,79 @@
 # Performance Testing
 
-## E2E Performance Test Instructions
+## E2E Scale and Perf Test Instructions
 
-### Deploy the Prometheus Collectors
+### Benchmark Perf Testing
 
-Run two deployments of the prometheus-collector. One with all the default scrape configs enabled and the other with all default scrape configs disabled and just the reference app as the target. The first will observe the second, which will be scraping the heavy load.
+On your own smaller cluster, you can use the reference app running in perf test mode to quickly check if there is any change in the CPU or memory usage between agents.
 
-You can find the linux scrape config [here]((../../referenceapp/linux-scrape-config.yaml)) and the windows scrape config [here](../../referenceapp/windows-scrape-config.yaml)
+1. Create a new nodepool and 2 nodes with a large enough SKU so that two agent's CPU and memory limits can be raised to at least 6 cores and 10GiB.
 
-### Building the Reference App
+2. Deploy two helm releases with different release names, one with the old agent and one with the changes of the new agent.
 
-Note: This step is only necessary if making changes to the app. Otherwise, the yamls below will have the latest image.
+2. Deploy the app with the settings:
 
-To build the reference app, go to the directory `cd otelcollector/referenceapp/<golang or python>` and run `docker build -f ./<linux or windows>/Dockerfile -t <your image tag> .` depending on which OS you want to build.
+    ```yaml
+    env:
+      - name: RUN_PERF_TEST
+        value: "true"
+      - name: SCRAPE_INTERVAL
+        value: "15"
+      - name: METRIC_COUNT
+        value: "62500"
+    ```
 
-### Deploy the Reference App
+    With these settings, the app generates `62,500 metrics`, each with `8 timeseries`, every `15 seconds`, for a total of `2,000,000 samples` per minute.
 
-Deploy the [linux reference app](../../referenceapp/prometheus-reference-app.yaml) or the [windows reference app](../../referenceapp/win-prometheus-reference-app.yaml) with `RUN_PERF_TEST` set to `true` to generate the specified number of metrics at a specified interval. Specify how many replicas should be scraped in the yaml spec. In the environment variables, set `SCRAPE_INTERVAL` to be an integer in seconds of how often the metrics should be generated. Set `METRIC_COUNT` to be the number of OTLP metrics to generate. Note that OTLP counts metrics by name. Multiply this by the number of timeseries of that metric to get the total number of timeseries that will be generated. For example, the reference app has 8 timeseries for the metric `myapp_temperature`. If we want 1,000,000 of these metrics to be generated every 15 seconds, the environment variables set in the yaml would be:
+3. To scrape the metrics from the app, deploy the custom Prometheus config as: 
 
-```
-env:
-  - name: RUN_PERF_TEST
-    value: "true"
-  - name: SCRAPE_INTERVAL
-    value: "15"
-  - name: METRIC_COUNT
-    value: "125000"
-```
+    ```yaml
+    scrape_configs:
+    - job_name: prometheus_ref_app
+      scheme: http
+      scrape_interval: 15s
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: "prometheus-reference-app"
+    ```
 
-### View the Performance Results
+    The `scrape_interval` value should match the `SCRAPE_INTERVAL` environment variable (in seconds) that is set for the reference app.
 
-* Use the out-of-the-box dashboards in Grafana to view the cpu, memory, and disk metrics (sent from the other deployment) for the deployment scraping the large load.
+4. See the `Viewing the Results` section for where to view the performance and metric volume of each.
+
+### Scale Testing
+
+Compared to benchmark testing with just the reference app having a high load of metrics, the scale cluster with the default scrape targets enabled gives a more realistic environment of discovering, scraping, and sending metrics of varrying types but requires some more setup. You can directly compare the previous agent and the one you are testing by running them simultaneously in the same environment of pods and nodes.
+
+#### Comparing Performance
+
+1. Deploy two helm releases with different release names, one with the old agent and one with the changes of the new agent.
+
+2. Setup the number of nodes and pods. See how many are currently deployed by running:
+    * Check the total number of nodes: `kubectl get nodes | wc -l`
+    * Check the total number of pods: `kubectl get pods --all-namespaces | wc -l`
+
+   Then scale up or down the nodepools to reach the desired number of nodes and change the number of replicas in the nginx deployments to get the desired number of pods.
+
+   You can use the existing perf documented and the scale for that as a starting point.
+
+3. Compare the performance between the old and new agent for that number of nodes and pods. Repeat for any other combination.
+
+#### Finding the Max Volume
+
+The other necessary test is if the maximum volume of metrics that the agent can handle has not regressed. Follow the same steps as above for `Comparing Performance` but increase the number of nodes and pods until `timeseries_published` metric is consistently less than the `timeseries_received` metric and the agent is restarting due to getting `OOM-killed`.
+
+### Viewing the Results
+
+* The overall CPU and memory usage for the pod can be viewed in the `Azure Monitor Container Insights /Kubernetes / Compute Resources / Pod` out-of-the-box Grafana dashboard.
+
+* Use the `Prometheus-Collector Health` dashboard to view the number of metrics and bytes that are received and published by ME.
+
+* The process-level CPU and memory usage for the OpenTelemetry Collector and Metrics Extension can be viewed in our `Telemetry` dashboard.
+
+* OOM-kills and exporting failures can also be viewed in our `Telemetry` dashboard.
 
 * For Windows perf, the following queries can be used by replacing `<container_id>` with the ID of the windows agent container:
 
@@ -42,23 +85,25 @@ env:
     windows_container_memory_usage_private_working_set_bytes{container_id="<container_id"} / 1000000000
     ```
 
-* Use the `Prometheus-Collector Health` dashboard to view the number of metrics being received, processed, and dropped by ME.
+### Building the Reference App
 
-* Use our telemetry to view the cpu and memory usage of the OpenTelemetry Collector and ME individually:
+Note: This step is only necessary if making changes to the app. Otherwise, the yamls below will have the latest image.
 
-    ```
-    customMetrics
-    | where customDimensions.cluster == "<cluster-name>"
-    | where name contains 'cpu'
-    | render timechart
-    ```
+To build the reference app, go to the directory `cd otelcollector/referenceapp/<golang or python>` and run `docker build -f ./<linux or windows>/Dockerfile -t <your image tag> .` depending on which OS you want to build.
 
-    ```
-    customMetrics
-    | where customDimensions.cluster == "<cluster-name>"
-    | where name contains 'memory'
-    | render timechart
-    ```
+### Deploy the Reference App
+
+Deploy the [linux reference app](../../referenceapp/prometheus-reference-app.yaml) or the [windows reference app](../../referenceapp/win-prometheus-reference-app.yaml) with `RUN_PERF_TEST` set to `true` to generate the specified number of metrics at a specified interval. Specify how many replicas should be scraped in the yaml spec. In the environment variables, set `SCRAPE_INTERVAL` to be an integer in seconds of how often the metrics should be generated. Set `METRIC_COUNT` to be the number of OTLP metrics to generate. Note that OTLP counts metrics by name. Multiply this by the number of timeseries of that metric to get the total number of timeseries that will be generated. For example, the reference app has 8 timeseries for the metric `myapp_temperature`. If we want 1,000,000 of these metrics to be generated every 15 seconds, the environment variables set in the yaml would be:
+
+```yaml
+env:
+  - name: RUN_PERF_TEST
+    value: "true"
+  - name: SCRAPE_INTERVAL
+    value: "15"
+  - name: METRIC_COUNT
+    value: "62500"
+```
 
 ## OpenTelemetry Collector Performance Test Instructions
 
