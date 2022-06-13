@@ -39,9 +39,9 @@ const (
 	defaultGCInterval = 2 * time.Minute
 	gcIntervalDelta   = 1 * time.Minute
 
-		// Use same settings as Prometheus web server
-		maxConnections = 512
-		readTimeoutMinutes = 10
+	// Use same settings as Prometheus web server
+	maxConnections = 512
+	readTimeoutMinutes = 10
 )
 
 // pReceiver is the type that provides Prometheus scraper/receiver functionality.
@@ -144,7 +144,7 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 	// Pass config and let the web handler know the config is ready.
 	// These are needed because Prometheus allows reloading the config without restarting.
 	webHandler.ApplyConfig(r.cfg.PrometheusConfig)
-	webHandler.Ready()
+	webHandler.SetReady(true)
 
 	// Uses the same context as the discovery and scrape managers for shutting down
 	go func() {

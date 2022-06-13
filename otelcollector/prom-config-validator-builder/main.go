@@ -10,8 +10,12 @@ import (
 
 	"strings"
 
-	"go.opentelemetry.io/collector/config/configunmarshaler"
-	"go.opentelemetry.io/collector/config/mapprovider/filemapprovider"
+	//"go.opentelemetry.io/collector/service/internal/configunmarshaler"
+	"go.opentelemetry.io/collector/service"
+	//"go.opentelemetry.io/collector/config/mapprovider/filemapprovider"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/confmap/converter/expandconverter"
+	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -199,20 +203,20 @@ func main() {
 			os.Exit(1)
 		}
 
-		ret, err := filemapprovider.New().Retrieve(context.Background(), fmt.Sprintf("file:%s", outputFilePath), nil)
-		cp := ret.Map
+		configProviderSettings := service.ConfigProviderSettings{
+			Locations:     []string{fmt.Sprintf("file:%s", outputFilePath)},
+			MapProviders:  map[string]confmap.Provider{"file": fileprovider.New()},
+			MapConverters: []confmap.Converter{expandconverter.New()},
+		}
 
-		//colParserProvider := parserProvider.Default()
-
-		//cp, err := colParserProvider.Get()
+		cp, err := service.NewConfigProvider(configProviderSettings)
 		if err != nil {
 			log.Fatalf("prom-config-validator::Cannot load configuration's parser: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("prom-config-validator::Loading configuration...\n")
 
-		cfg, err := configunmarshaler.NewDefault().Unmarshal(cp, factories)
-		//cfg, err := configunmarshaler.Unmarshal(cp, factories)
+		fmt.Printf("prom-config-validator::Loading configuration...\n")
+		cfg, err := cp.Get(context.Background(), factories)
 		if err != nil {
 			log.Fatalf("prom-config-validator::Cannot load configuration: %v", err)
 			os.Exit(1)
