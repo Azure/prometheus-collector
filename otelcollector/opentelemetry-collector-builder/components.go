@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/collector/extension/zpagesextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
-	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 )
 
 func components() (component.Factories, error) {

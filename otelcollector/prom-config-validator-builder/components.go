@@ -6,7 +6,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
-	"go.opentelemetry.io/collector/processor/batchprocessor"
 
 	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 	//"go.opentelemetry.io/collector/extension/healthcheckextension"
