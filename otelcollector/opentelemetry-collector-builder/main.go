@@ -14,8 +14,8 @@ func main() {
 	}
 	info := component.BuildInfo{
 		Command:     "custom-collector-distro",
-		Description: "Custom OpenTelemetry Collector distributionr",
-		Version:     "1.0.0",
+		Description: "Custom OpenTelemetry Collector distribution",
+		Version:     "0.51.0",
 	}
 
 	app := service.NewCommand(service.CollectorSettings{BuildInfo: info, Factories: factories})

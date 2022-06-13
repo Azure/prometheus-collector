@@ -1,4 +1,8 @@
 exporters:
+  prometheus:
+    endpoint: "127.0.0.1:9091"
+    const_labels:
+      cluster: $customResourceId
   file:
     path: /otelcollector-metrics.json
   otlp:

@@ -20,6 +20,7 @@ spec:
     metadata:
       labels:
         rsName: {{ template "prometheus-collector.fullname" . }}
+        {{- with .Values.podLabels }}{{ toYaml . | trim | nindent 8 }}{{- end }}
         {{- if ne (index .Values.azureKeyVault "aad-pod-identity") ""}}
         aadpodidbinding: {{ index .Values.azureKeyVault "aad-pod-identity" }}
         {{- end }}
@@ -233,10 +234,6 @@ spec:
                       - master
       # The following tolerations are removed for AKS, this is only required for non AKS
       tolerations:
-        - operator: "Exists"
-          effect: "NoSchedule"
-        - operator: "Exists"
-          effect: "NoExecute"
         - operator: "Exists"
           effect: "PreferNoSchedule"
       volumes:

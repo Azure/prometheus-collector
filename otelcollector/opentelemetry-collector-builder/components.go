@@ -41,7 +41,6 @@ func components() (component.Factories, error) {
 		otlpexporter.NewFactory(),
 		fileexporter.NewFactory(),
 		prometheusexporter.NewFactory(),
-		otlphttpexporter.NewFactory(),
 	)
 	if err != nil {
 		return component.Factories{}, err

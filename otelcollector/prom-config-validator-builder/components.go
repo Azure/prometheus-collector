@@ -6,15 +6,14 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
-	//"github.com/vishiy/influxexporter"
-	//"go.opentelemetry.io/collector/receiver/prometheusreceiver"
+	"go.opentelemetry.io/collector/processor/batchprocessor"
+
 	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 	//"go.opentelemetry.io/collector/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
-	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 )
 
 func components() (component.Factories, error) {
@@ -41,7 +40,6 @@ func components() (component.Factories, error) {
 		otlpexporter.NewFactory(),
 		fileexporter.NewFactory(),
 		prometheusexporter.NewFactory(),
-		otlphttpexporter.NewFactory(),
 	)
 	if err != nil {
 		return component.Factories{}, err
