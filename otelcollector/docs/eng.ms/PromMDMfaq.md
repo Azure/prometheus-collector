@@ -56,8 +56,7 @@ The following functionality will be added to the private preview through 2022
 ### Data Collection Known Issues
 
 1. Metrics with +-Inf and NaN values will be dropped (by design)
-2. 'job' and 'instance' labels are reserved and cannot be relabled. If you either try to relabel 'job' & 'instance' labels, or try adding a label called 'job' or 'instance' (through re-labeling or external labels), it will fail the entire scrape output for that job, and no metrics will be ingested for that job. At present there is no fix for this.
-3. In the scrape config, `remote_write` and `groups` ( rule groups for recording & alerting rules) sections are un-supported. Please remove them from your custom scrape configuration, or else config validation will fail.
+2. In the scrape config, `remote_write` and `groups` ( rule groups for recording & alerting rules) sections are un-supported. Please remove them from your custom scrape configuration, or else config validation will fail.
 
 ### Data Collection Checks
 
