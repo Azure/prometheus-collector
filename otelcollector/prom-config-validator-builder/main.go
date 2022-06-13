@@ -203,13 +203,13 @@ func main() {
 			os.Exit(1)
 		}
 
-		configProviderSettings := service.ConfigProviderSettings{
-			Locations:     []string{fmt.Sprintf("file:%s", outputFilePath)},
-			MapProviders:  map[string]confmap.Provider{"file": fileprovider.New()},
-			MapConverters: []confmap.Converter{expandconverter.New()},
-		}
-
-		cp, err := service.NewConfigProvider(configProviderSettings)
+		cp, err := service.NewConfigProvider(
+			service.ConfigProviderSettings{
+				Locations:     []string{fmt.Sprintf("file:%s", outputFilePath)},
+				MapProviders:  map[string]confmap.Provider{"file": fileprovider.New()},
+				MapConverters: []confmap.Converter{expandconverter.New()},
+			},
+		)
 		if err != nil {
 			log.Fatalf("prom-config-validator::Cannot load configuration's parser: %v\n", err)
 			os.Exit(1)
