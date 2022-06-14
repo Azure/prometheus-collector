@@ -295,9 +295,9 @@ FLUENT_BIT_VERSION=`dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 
 # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.
-# echo "starting inotify for watching mdsd config update"
+echo "starting inotify for watching mdsd config update"
 # inotifywait /etc/mdsd.d/config-cache/metricsextension/_default_MonitoringAccount_Configuration.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
-# inotifywait /etc/mdsd.d/config-cache/metricsextension --daemon --recursive --outfile "/opt/inotifyoutput-mdsd-config.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
+inotifywait /etc/mdsd.d/config-cache --daemon --recursive --outfile "/opt/inotifyoutput-mdsd-config.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
 shutdown() {
 	echo "shutting down"
