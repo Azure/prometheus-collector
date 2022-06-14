@@ -235,10 +235,6 @@ spec:
       # The following tolerations are removed for AKS, this is only required for non AKS
       tolerations:
         - operator: "Exists"
-          effect: "NoSchedule"
-        - operator: "Exists"
-          effect: "NoExecute"
-        - operator: "Exists"
           effect: "PreferNoSchedule"
       volumes:
         - name: settings-vol-config

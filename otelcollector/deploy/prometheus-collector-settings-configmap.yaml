@@ -30,6 +30,8 @@ data:
     nodeexporter = ""
     windowsexporter = ""
     windowskubeproxy = ""
+  debug-mode: |-
+    enabled = false
 metadata:
   name: prometheus-collector-settings-configmap
   namespace: kube-system

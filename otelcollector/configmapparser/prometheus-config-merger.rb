@@ -6,6 +6,7 @@ require "deep_merge"
 require "yaml"
 require_relative "ConfigParseErrorLogger"
 
+LOGGING_PREFIX = "prometheus-config-merger"
 @configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
 @promMergedConfigPath = "/opt/promMergedConfig.yml"
 @mergedDefaultConfigPath = "/opt/defaultsMergedConfig.yml"
@@ -42,35 +43,32 @@ require_relative "ConfigParseErrorLogger"
 def parseConfigMap
   begin
     # Check to see if config map is created
-    puts "prometheus-config-merger::Checking to see if prometheus-config file exists: #{@configMapMountPath}"
     if (File.file?(@configMapMountPath))
-      puts "prometheus-config-merger::configmap prometheus-collector-configmap for prometheus config mounted, parsing values"
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Custom prometheus config exists")
       config = File.read(@configMapMountPath)
-      puts "prometheus-config-merger::Successfully parsed mounted config map"
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Successfully parsed configmap for prometheus config")
       return config
     else
-      puts "prometheus-config-merger::configmap prometheus-collector-configmap for prometheus config not mounted, using defaults"
+      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "Custom prometheus config does not exist, using only default scrape targets if they are enabled")
       return ""
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while parsing config map for prometheus config : #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing configmap for prometheus config: #{errorStr}. Custom prometheus config will not be used. Please check configmap for errors")
     return ""
   end
 end
 
 def loadRegexHash
   begin
-    puts "prometheus-config-merger::Loading regex hash..."
     @regexHash = YAML.load_file(@regexHashFile)
-    puts "prometheus-config-merger::Done loading regex hash!"
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception in loadRegexHash for prometheus config : #{errorStr}, using defaults")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception in loadRegexHash for prometheus config: #{errorStr}. Keep list regexes will not be used")
   end
 end
 
 def AppendMetricRelabelConfig(yamlConfigFile, keepListRegex)
   begin
-    puts "prometheus-config-merger::In AppendMetricRelabelConfig for #{yamlConfigFile}"
+    ConfigParseErrorLogger.log(LOGGING_PREFIX, "Adding keep list regex or minimal ingestion regex for #{yamlConfigFile}")
     config = YAML.load(File.read(yamlConfigFile))
     keepListMetricRelabelConfig = [{ "source_labels" => ["__name__"], "action" => "keep", "regex" => keepListRegex }]
 
@@ -91,7 +89,7 @@ def AppendMetricRelabelConfig(yamlConfigFile, keepListRegex)
       end
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("Exception while appending metric relabel config in default target file - #{yamlConfigFile} : #{errorStr}, using defaults")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while appending metric relabel config in default target file - #{yamlConfigFile} : #{errorStr}. The keep list regex will not be used")
   end
 end
 
@@ -310,13 +308,12 @@ def populateDefaultPrometheusConfig
 
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
   rescue => errorStr
-    ConfigParseErrorLogger.logError("prometheus-config-merger::Exception while merging default prometheus configs - #{errorStr}, using defaults")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default scrape targets - #{errorStr}. No default scrape tragets will be included")
     @mergedDefaultConfigs = ""
   end
 end
 
 def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
-  puts "prometheus-config-merger::Adding default scrape configs..."
   mergedDefaultConfigs = ""
   begin
     if defaultScrapeConfigs.length > 0
@@ -328,9 +325,9 @@ def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
         mergedDefaultConfigs = mergedDefaultConfigs.deep_merge!(defaultConfigYaml)
       }
     end
-    puts "prometheus-config-merger::Done merging #{defaultScrapeConfigs.length} default prometheus config(s)"
+    ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging #{defaultScrapeConfigs.length} default prometheus config(s)")
   rescue => errorStr
-    ConfigParseErrorLogger.logError("prometheus-config-merger::Exception while adding default scrape config- #{errorStr}, using defaults")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while adding default scrape config- #{errorStr}. No default scrape targets will be included")
     mergedDefaultConfigs = ""
   end
   return mergedDefaultConfigs
@@ -340,22 +337,22 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
   mergedConfigYaml = ""
   begin
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
-      puts "prometheus-config-merger::Merging default and custom scrape configs..."
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Merging default and custom scrape configs")
       customPrometheusConfig = YAML.load(customPromConfig)
       mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
       mergedConfigYaml = YAML::dump(mergedConfigs)
-      puts "prometheus-config-merger::Done merging default scrape config(s) with custom prometheus config(s), writing them to file"
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging default scrape config(s) with custom prometheus config, writing them to file")
     else
-      puts "prometheus-config-merger::Merged default scrape config nil or empty, using custom scrape configs to write to file..."
+      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "The merged default scrape config is nil or empty, using only custom scrape config")
       mergedConfigYaml = customPromConfig
     end
     File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigYaml }
   rescue => errorStr
-    ConfigParseErrorLogger.logError("prometheus-config-merger::Exception while merging default and custom scrape configs- #{errorStr}, using defaults")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and custom scrape configs- #{errorStr}")
   end
 end
 
-puts "****************Start Merging Default and Custom Prometheus Config********************"
+ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Merging Default and Custom Prometheus Config")
 # Populate default scrape config(s) if AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED is set to false
 # and write them as a collector config file, in case the custom config validation fails,
 # and we need to fall back to defaults
@@ -364,19 +361,18 @@ if !ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROME
     loadRegexHash
     populateDefaultPrometheusConfig
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
-      puts "prometheus-config-merger::Starting to merge default prometheus config values in collector template as backup"
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Starting to merge default prometheus config values in collector template as backup")
       mergedDefaultConfigYaml = YAML::dump(@mergedDefaultConfigs)
       File.open(@mergedDefaultConfigPath, "w") { |file| file.puts mergedDefaultConfigYaml }
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError("prometheus-config-merger::Error while populating defaults and writing them to the defaults file")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Error while populating default scrape targets and writing them to the default scrape targets file")
   end
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
 
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
-  puts "prometheus-config-merger::Supported config schema version found - will be parsing custom prometheus config"
   prometheusConfigString = parseConfigMap
   if !prometheusConfigString.nil? && !prometheusConfigString.empty?
     mergeDefaultAndCustomScrapeConfigs(prometheusConfigString)
@@ -384,7 +380,7 @@ if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVe
 else
   if (File.file?(@configMapMountPath))
     @supportedSchemaVersion = false
-    ConfigParseErrorLogger.logError("prometheus-config-merger::unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
   end
 end
-puts "****************Done Merging Default and Custom Prometheus Config********************"
+ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Done Merging Default and Custom Prometheus Config")

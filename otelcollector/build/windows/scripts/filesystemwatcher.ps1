@@ -1,6 +1,6 @@
 Start-Transcript -Path fileSystemWatcherTranscript.txt
 Write-Host "Removing Existing Event Subscribers"
-Get-EventSubscriber -Force | ForEach-Object { $_.SubscriptionId } | ForEach-Object { Unregister-Event -SubscriptionId $_ }
+Get-EventSubscriber -Force | ForEach-Object { $_.SubscriptionId } | ForEach-Object { Unregister-Event -SubscriptionId $_ } > $null
 Write-Host "Starting File System Watcher for config map updates"
 
 $Paths = @("C:\etc\config\settings", "C:\etc\config\settings\prometheus")
@@ -30,7 +30,6 @@ foreach ($path in $Paths)
         $ObjectEventParams.EventName = $Item
         $name = Split-Path -Path $path -Leaf
         $ObjectEventParams.SourceIdentifier = "$($name).$($Item)"
-        Write-Host  "Starting watcher for Event: $($path).$($Item)"
         $Null = Register-ObjectEvent  @ObjectEventParams
     }
 }
