@@ -273,9 +273,10 @@ echo "starting fluent-bit"
 /opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
 dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'
 
-#Run inotify as a daemon to track changes to the dcr/dce config.
+# Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.
 # echo "starting inotify for watching mdsd config update"
 # inotifywait /etc/mdsd.d/config-cache/metricsextension/_default_MonitoringAccount_Configuration.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
+# inotifywait /etc/mdsd.d/config-cache/metricsextension --daemon --recursive --outfile "/opt/inotifyoutput-mdsd-config.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
 shutdown() {
 	echo "shutting down"
