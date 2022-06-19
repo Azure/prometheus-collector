@@ -84,7 +84,7 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Moving ME installation to the end until we fix the broken dependencies issue
 sudo apt-get install -y apt-transport-https gnupg
-wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2022.609.1207-6cbe96-_focal_amd64.deb
+wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2022.618.2245-56da6b-_focal_amd64.deb
 
 # # Install ME
 /usr/bin/dpkg -i $TMPDIR/metricsext2*.deb

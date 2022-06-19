@@ -1,8 +1,4 @@
 exporters:
-  prometheus:
-    endpoint: "127.0.0.1:9091"
-    const_labels:
-      cluster: $customResourceId
   otlp:
     endpoint: 127.0.0.1:55680
     tls:
@@ -36,7 +32,9 @@ receivers:
       config:
         scrape_configs:
         # scrape_configs must be non-null for collector to start
-        - job_name: empty_job
+        - job_name: reference-app
+          static_configs:
+          - targets: ["localhost:2112"]
 service:
   pipelines:
     metrics:
