@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - grace/latest-otelcollector
+      - vishwa/latency06192022
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
