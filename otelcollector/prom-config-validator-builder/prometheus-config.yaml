@@ -12,7 +12,7 @@ global:
 #   - url: "https://example.org/write"
 # remote_read:
 #   - url: "https://example.org/read"
-#rule_files: [rulefile.txt]
+# rule_files: [rulefile.txt]
 # Config to test that the ordering of source label doesnt get altered
 scrape_configs:
 - job_name: kube-proxy

@@ -10,9 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	//"go.opentelemetry.io/collector/service/internal/configunmarshaler"
 	"go.opentelemetry.io/collector/service"
-	//"go.opentelemetry.io/collector/config/mapprovider/filemapprovider"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/converter/expandconverter"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"

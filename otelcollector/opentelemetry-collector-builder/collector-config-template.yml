@@ -4,7 +4,7 @@ exporters:
     const_labels:
       cluster: $customResourceId
   file:
-    path: /otelcollector-metrics.json
+    path: /opt/microsoft/otelcollector/promotel.json
   otlp:
     endpoint: 127.0.0.1:55680
     tls:
@@ -44,5 +44,5 @@ service:
       processors: [batch, resource]
   telemetry:
     logs:
-      level: debug
+      level: warning
       encoding: json
