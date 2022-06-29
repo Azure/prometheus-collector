@@ -4,6 +4,8 @@
 # CRITICAL/HIGH
 # usr/sbin/telegraf
 CVE-2021-42836
+# node-exporter
+CVE-2021-38561
 
 # MEDIUM
 # opt/telegraf/telegraf
