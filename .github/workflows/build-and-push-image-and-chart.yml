@@ -52,10 +52,11 @@ jobs:
         run: systeminfo ; go version ; helm version ; docker version
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ ; ./makefile_windows.ps1
-      - uses: actions/upload-artifact@v3
-        with:
-          name: windows-otelcollector
-          path: ./otelcollector/opentelemetry-collector-builder/otelcollector.exe
+      # Uncomment to give ME team new otelcollector build
+      #- uses: actions/upload-artifact@v3
+      #  with:
+      #    name: windows-otelcollector
+      #    path: ./otelcollector/opentelemetry-collector-builder/otelcollector.exe
       - name: Dependency Detection setup
         uses: actions/checkout@v3
         with:
@@ -139,10 +140,11 @@ jobs:
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
-      - uses: actions/upload-artifact@v3
-        with:
-          name: linux-otelcollector
-          path: ./otelcollector/opentelemetry-collector-builder/otelcollector
+      # Uncomment to give ME team new otelcollector build
+      #- uses: actions/upload-artifact@v3
+      #  with:
+      #    name: linux-otelcollector
+      #    path: ./otelcollector/opentelemetry-collector-builder/otelcollector
       - name: Dependency Detection setup
         uses: actions/checkout@v3
         with:
