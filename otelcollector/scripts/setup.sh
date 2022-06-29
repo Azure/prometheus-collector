@@ -74,16 +74,17 @@ sudo tdnf install fluent-bit-1.8.12 -y
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Moving ME installation to the end until we fix the broken dependencies issue
-# wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2021.901.1511-69f7bf-_focal_amd64.deb
+#sudo apt-get install -y apt-transport-https gnupg
+#wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2022.628.2309-817fc7-_focal_amd64.deb
 
 # # Install ME
-# /usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+#/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 # # Fixing broken installations in order to get a clean ME install
-# sudo apt --fix-broken install -y
+#sudo apt --fix-broken install -y
 
 # # Installing ME again after fixing broken dependencies
-# /usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+#/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 # Installing ME
 echo "Installing Metrics Extension..."

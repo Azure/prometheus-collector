@@ -12,19 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package prometheusreceiver
+package prometheusreceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 
 import (
 	"context"
 	"errors"
-	// "errors"
 
 	_ "github.com/prometheus/prometheus/discovery/install" // init() of this package registers service discovery impl.
-
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/receiver/receiverhelper"
 )
 
 // This file implements config for Prometheus receiver.
@@ -37,23 +34,23 @@ var errRenamingDisallowed = errors.New("metric renaming using metric_relabel_con
 
 // NewFactory creates a new Prometheus receiver factory.
 func NewFactory() component.ReceiverFactory {
-	return receiverhelper.NewFactory(
+	return component.NewReceiverFactory(
 		typeStr,
 		createDefaultConfig,
-		receiverhelper.WithMetrics(createMetricsReceiver))
+		component.WithMetricsReceiver(createMetricsReceiver))
 }
 
 func createDefaultConfig() config.Receiver {
 	return &Config{
-		ReceiverSettings: config.NewReceiverSettings(config.NewID(typeStr)),
+		ReceiverSettings: config.NewReceiverSettings(config.NewComponentID(typeStr)),
 	}
 }
 
 func createMetricsReceiver(
 	_ context.Context,
-	params component.ReceiverCreateParams,
+	set component.ReceiverCreateSettings,
 	cfg config.Receiver,
 	nextConsumer consumer.Metrics,
 ) (component.MetricsReceiver, error) {
-	return newPrometheusReceiver(params.Logger, cfg.(*Config), nextConsumer), nil
+	return newPrometheusReceiver(set, cfg.(*Config), nextConsumer), nil
 }

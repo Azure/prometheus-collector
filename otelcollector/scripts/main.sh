@@ -261,7 +261,7 @@ else
       echo "Reading me config file as a string for configOverrides paramater"
       export meConfigString=`cat $ME_CONFIG_FILE | tr '\r' ' ' |  tr '\n' ' ' | sed 's/\"/\\"/g' | sed 's/ //g'`
       echo "Starting metricsextension"
-      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc -ConfigOverrides $meConfigString > /dev/null &
+      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc_prom -ConfigOverrides $meConfigString > /dev/null &
 fi
 
 #get ME version
@@ -270,10 +270,10 @@ fi
 # Start otelcollector
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
       echo_warning "Starting otelcollector with only default scrape configs enabled"
-      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
+      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml &> /opt/microsoft/otelcollector/collector-log.txt &
 else
       echo "Starting otelcollector"
-      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml --log-level WARN --log-format json --metrics-level detailed &> /opt/microsoft/otelcollector/collector-log.txt &
+      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
 OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version`
 echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"

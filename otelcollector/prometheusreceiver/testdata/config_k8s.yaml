@@ -12,7 +12,7 @@ receivers:
         relabel_configs:
         # scrape pods annotated with "prometheus.io/scrape: true"
         - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
-          regex: true
+          regex: "true"
           action: keep
         # read the port from "prometheus.io/port: <port>" annotation and update scraping address accordingly
         - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]

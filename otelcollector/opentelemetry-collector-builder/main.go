@@ -18,12 +18,8 @@ func main() {
 		Version:     "0.51.0",
 	}
 
-	app, err := service.New(service.Parameters{BuildInfo: info, Factories: factories})
-	if err != nil {
-		log.Fatal("failed to construct the collector server: %w", err)
-	}
-
-	err = app.Run()
+	app := service.NewCommand(service.CollectorSettings{BuildInfo: info, Factories: factories})
+	err = app.Execute()
 	if err != nil {
 		log.Fatal("collector server run finished with error: %w", err)
 	}

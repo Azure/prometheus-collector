@@ -6,11 +6,14 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"context"
 	"regexp"
 	"strings"
 
-	"go.opentelemetry.io/collector/config/configloader"
-	parserProvider "go.opentelemetry.io/collector/service/parserprovider"
+	"go.opentelemetry.io/collector/service"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/confmap/converter/expandconverter"
+	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -191,6 +194,19 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	return nil
 }
 
+type stringArrayValue struct {
+	values []string
+}
+
+func (s *stringArrayValue) Set(val string) error {
+	s.values = append(s.values, val)
+	return nil
+}
+
+func (s *stringArrayValue) String() string {
+	return "[" + strings.Join(s.values, ", ") + "]"
+}
+
 func main() {
 	log.SetFlags(0)
 	configFilePtr := flag.String("config", "", "Config file to validate")
@@ -218,7 +234,10 @@ func main() {
 		}
 
 		flags := new(flag.FlagSet)
-		parserProvider.Flags(flags)
+		//parserProvider.Flags(flags)
+		configFlagEx := new(stringArrayValue)
+		flags.Var(configFlagEx, "config", "Locations to the config file(s), note that only a"+
+		" single location can be set per flag entry e.g. `-config=file:/path/to/first --config=file:path/to/second`.")
 		configFlag := fmt.Sprintf("--config=%s", outputFilePath)
 
 		err = flags.Parse([]string{
@@ -235,16 +254,20 @@ func main() {
 			os.Exit(1)
 		}
 
-		colParserProvider := parserProvider.Default()
-
-		cp, err := colParserProvider.Get()
+		cp, err := service.NewConfigProvider(
+			service.ConfigProviderSettings{
+				Locations:     []string{fmt.Sprintf("file:%s", outputFilePath)},
+				MapProviders:  map[string]confmap.Provider{"file": fileprovider.New()},
+				MapConverters: []confmap.Converter{expandconverter.New()},
+			},
+		)
 		if err != nil {
 			logFatalError(fmt.Errorf("prom-config-validator::Cannot load configuration's parser: %w\n", err).Error())
 			os.Exit(1)
 		}
-		fmt.Printf("prom-config-validator::Loading configuration...\n")
 
-		cfg, err := configloader.Load(cp, factories)
+		fmt.Printf("prom-config-validator::Loading configuration...\n")
+		cfg, err := cp.Get(context.Background(), factories)
 		if err != nil {
 			logFatalError(fmt.Sprintf("prom-config-validator::Cannot load configuration: %v", err))
 			os.Exit(1)
