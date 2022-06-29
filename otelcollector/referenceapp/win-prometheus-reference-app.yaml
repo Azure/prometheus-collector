@@ -21,7 +21,7 @@ spec:
               memory: 2Gi
           env:
             - name: RUN_PERF_TEST
-              value: "true"
+              value: "false"
             - name: SCRAPE_INTERVAL
               value: "15"
             - name: METRIC_COUNT

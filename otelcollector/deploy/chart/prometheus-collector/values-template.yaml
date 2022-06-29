@@ -66,6 +66,8 @@ azureKeyVault:
   pfxCertNames: [] #required
   # -- enable/disable managed identity to access keyvault
   useManagedIdentity: false
+  # -- name of the azure pod managed identity to access keyvault, requires useManagedIdentity true
+  aad-pod-identity: ""
   # -- use the client id to specify which user assigned managed identity to use when acccesing keyvault. If using a user assigned identity as the VM's managed identity, then specify the identity's client id. If empty, AND 'useManagedIdentity' is true, then defaults to use the system assigned identity on the VM
   userAssignedIdentityID: ""
 
@@ -76,6 +78,10 @@ clusterName: "" #required
 internalSettings:
   intEnvironment: false
   clusterOverride: false
+
+# Only enable to view metrics being scraped for a short time. This can affect performance so it should not be enabled when not in use
+debugMode:
+  enabled: false
 
 #if advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset
 mode:
@@ -90,6 +96,9 @@ image:
   windows: 
     tag: ${IMAGE_TAG_WINDOWS}
   pullPolicy: IfNotPresent
+
+# -- Applies additional labels to all pods.
+podLabels: {}
 
 resources:
  deployment:

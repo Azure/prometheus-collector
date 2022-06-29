@@ -20,6 +20,10 @@ spec:
     metadata:
       labels:
         rsName: {{ template "prometheus-collector.fullname" . }}
+        {{- with .Values.podLabels }}{{ toYaml . | trim | nindent 8 }}{{- end }}
+        {{- if ne (index .Values.azureKeyVault "aad-pod-identity") ""}}
+        aadpodidbinding: {{ index .Values.azureKeyVault "aad-pod-identity" }}
+        {{- end }}
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
@@ -170,7 +174,7 @@ spec:
             - --secret-name=omsagent-aad-msi-token
             - --token-server-listening-port=7777
             - --health-server-listening-port=9999
-          image: "mcr.microsoft.com/aks/hcp/addon-token-adapter:master.211104.1"
+          image: "mcr.microsoft.com/aks/msi/addon-token-adapter:master.220415.2"
           imagePullPolicy: IfNotPresent
           env:
             - name: AZMON_COLLECT_ENV
@@ -230,10 +234,6 @@ spec:
                       - master
       # The following tolerations are removed for AKS, this is only required for non AKS
       tolerations:
-        - operator: "Exists"
-          effect: "NoSchedule"
-        - operator: "Exists"
-          effect: "NoExecute"
         - operator: "Exists"
           effect: "PreferNoSchedule"
       volumes:

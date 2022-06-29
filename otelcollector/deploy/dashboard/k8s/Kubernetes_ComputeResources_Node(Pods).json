@@ -110,7 +110,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n                rate(container_cpu_usage_seconds_total{cluster=\"$cluster\", instance=~\"$node\", image!=\"\"}[5m])\r\n              ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n                1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"})\r\n              )) by (pod)",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n                rate(container_cpu_usage_seconds_total{cluster=\"$cluster\", instance=~\"$node\", image!=\"\"}[5m])\r\n              ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n                1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\",cluster=\"$cluster\"})\r\n              )) by (pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -360,7 +360,7 @@
           "step": 10
         },
         {
-          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", cluster=\"$cluster\", instance=~\"$node\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"})\r\n        )) by (pod) / sum(kube_pod_container_resource_requests{cluster=\"$cluster\", node=~\"$node\", resource=\"cpu\"}) by (pod)",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", cluster=\"$cluster\", instance=~\"$node\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\",cluster=\"$cluster\"})\r\n        )) by (pod) / sum(kube_pod_container_resource_requests{cluster=\"$cluster\", node=~\"$node\", resource=\"cpu\"}) by (pod)",
           "format": "table",
           "instant": true,
           "intervalFactor": 2,
@@ -378,7 +378,7 @@
           "step": 10
         },
         {
-          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", cluster=\"$cluster\", instance=~\"$node\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"})\r\n        )) by (pod) / sum(kube_pod_container_resource_limits{cluster=\"$cluster\", node=~\"$node\", resource=\"cpu\"}) by (pod)",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n          rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", cluster=\"$cluster\", instance=~\"$node\"}[5m])\r\n        ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n          1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\",cluster=\"$cluster\"})\r\n        )) by (pod) / sum(kube_pod_container_resource_limits{cluster=\"$cluster\", node=~\"$node\", resource=\"cpu\"}) by (pod)",
           "format": "table",
           "instant": true,
           "intervalFactor": 2,
@@ -487,7 +487,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum( container_memory_working_set_bytes{cluster=\"$cluster\", instance=~\"$node\", container!=\"\", image!=\"\"}\r\n              * on (namespace, pod) group_left(node) topk by(namespace, pod) (1,\r\n                max by(namespace, pod, node) (kube_pod_info{node!=\"\"})\r\n              )     ) by (pod)",
+          "expr": "sum( container_memory_working_set_bytes{cluster=\"$cluster\", instance=~\"$node\", container!=\"\", image!=\"\"}\r\n              * on (namespace, pod) group_left(node) topk by(namespace, pod) (1,\r\n                max by(namespace, pod, node) (kube_pod_info{node!=\"\",cluster=\"$cluster\"})\r\n              )     ) by (pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -767,7 +767,7 @@
       ],
       "targets": [
         {
-          "expr": "sum(container_memory_working_set_bytes{job=\"cadvisor\", image!=\"\", cluster=\"$cluster\", instance=~\"$node\",container!=\"\"}\r\n        * on (namespace, pod) group_left(node) topk by(namespace, pod) (1,\r\n          max by(namespace, pod, node) (kube_pod_info{node!=\"\"})\r\n        )) by (pod)",
+          "expr": "sum(container_memory_working_set_bytes{job=\"cadvisor\", image!=\"\", cluster=\"$cluster\", instance=~\"$node\",container!=\"\"}\r\n        * on (namespace, pod) group_left(node) topk by(namespace, pod) (1,\r\n          max by(namespace, pod, node) (kube_pod_info{node!=\"\",cluster=\"$cluster\"})\r\n        )) by (pod)",
           "format": "table",
           "instant": true,
           "intervalFactor": 2,
@@ -785,7 +785,7 @@
           "step": 10
         },
         {
-          "expr": "sum(container_memory_working_set_bytes{job=\"cadvisor\", image!=\"\", instance=~\"$node\", cluster=\"$cluster\"}\r\n        * on (namespace, pod) group_left(node) topk by(namespace, pod) (1,\r\n          max by(namespace, pod, node) (kube_pod_info{node!=\"\"})\r\n        )) by (pod) / sum(kube_pod_container_resource_requests{cluster=\"$cluster\", node=~\"$node\", resource=\"memory\"}) by (pod)",
+          "expr": "sum(container_memory_working_set_bytes{job=\"cadvisor\", image!=\"\", instance=~\"$node\", cluster=\"$cluster\"}\r\n        * on (namespace, pod) group_left(node) topk by(namespace, pod) (1,\r\n          max by(namespace, pod, node) (kube_pod_info{node!=\"\",cluster=\"$cluster\"})\r\n        )) by (pod) / sum(kube_pod_container_resource_requests{cluster=\"$cluster\", node=~\"$node\", resource=\"memory\"}) by (pod)",
           "format": "table",
           "instant": true,
           "intervalFactor": 2,

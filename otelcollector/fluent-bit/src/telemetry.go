@@ -70,6 +70,8 @@ const (
 	fluentbitEventsProcessedLastPeriodTag = "prometheus.log.eventsprocessedlastperiod"
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
+	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
+	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 )
@@ -381,5 +383,14 @@ func PushInfiniteMetricLogToAppInsightsEvents(records []map[interface{}]interfac
 		}
 	}
 
+	return output.FLB_OK
+}
+
+func RecordExportingFailed(records []map[interface{}]interface{}) int {
+	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
+		ExportingFailedMutex.Lock()
+		OtelCollectorExportingFailedCount += 1
+		ExportingFailedMutex.Unlock()
+	}
 	return output.FLB_OK
 }

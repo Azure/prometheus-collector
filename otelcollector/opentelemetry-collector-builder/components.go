@@ -11,7 +11,6 @@ import (
 	"go.opentelemetry.io/collector/exporter/prometheusexporter"
 	"go.opentelemetry.io/collector/exporter/fileexporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
-	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 	//"github.com/vishiy/influxexporter"
 	//"go.opentelemetry.io/collector/receiver/prometheusreceiver"
 	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
@@ -47,7 +46,6 @@ func components() (component.Factories, error) {
 		prometheusexporter.NewFactory(),
 		fileexporter.NewFactory(),
 		otlpexporter.NewFactory(),
-		otlphttpexporter.NewFactory(),
 		//influxexporter.NewFactory(),
 	)
 

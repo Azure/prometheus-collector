@@ -200,12 +200,16 @@ echo "Downloading dashboards package"
 wget https://github.com/microsoft/Docker-Provider/raw/prometheus-collector/prometheus-collector/dashboards.tar.gz
 tar -zxvf dashboards.tar.gz 
 
-echo "Creating dashboards"
+#for 1p this folder already exists, it will fail with a 409 conflict, but its okay to move on
+echo "Creating folder for dashboards"
+az grafana folder create -g $resourceGroup -n $grafanaName --title "Azure Monitor Container Insights"
+
+echo "Importing dashboards into Azure Monitor Container Insights folder in Grafana instance"
 for FILE in dashboards/*.json; do
     az grafana dashboard import -g $resourceGroup -n $grafanaName --overwrite --definition $FILE --folder "Azure Monitor Container Insights"
 done;
 
 echo "Onboarding was completed successfully, please deploy the prometheus-collector helm chart for data collection using the helm command below."
 echo "Please ensure to set the right cluster context before running the helm install command - See Step #2 in the instructions on how to set this."
-echo "helm upgrade --install prometheus-collector-release ./prometheus-collector-3.0.0-main-04-21-2022-9c0c3a39.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId=\"$aksResourceId\" --set azureResourceRegion=\"$trimmedRegion\" --set mode.advanced=true --namespace=\"kube-system\" --create-namespace"
+echo "helm upgrade --install prometheus-collector-release ./prometheus-collector-3.2.0-main-05-24-2022-0c3a87bc.tgz --dependency-update --set useMonitoringAccount=true --set azureResourceId=\"$aksResourceId\" --set azureResourceRegion=\"$trimmedRegion\" --set mode.advanced=true --namespace=\"kube-system\" --create-namespace"
 

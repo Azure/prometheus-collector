@@ -24,6 +24,7 @@ echo "Installing packages for re2 gem install..."
 sudo tdnf install -y build-essential re2-devel ruby-devel
 
 echo "Installing tomlrb, deep_merge and re2 gems..."
+gem install colorize
 gem install tomlrb
 gem install deep_merge
 gem install re2
@@ -63,7 +64,7 @@ mkdir /opt/microsoft/linuxmonagent
 
 # Install Telegraf
 echo "Installing telegraf..."
-sudo tdnf install telegraf-1.21.2 -y
+sudo tdnf install telegraf-1.23.0 -y
 
 # Install fluent-bit
 echo "Installing fluent-bit..."
@@ -121,7 +122,7 @@ echo "Installing Metrics Extension..."
 #sudo tdnf install cpprest grpc grpc-cpp -y
 #sudo tdnf --disablerepo="*" --enablerepo=mariner-official-extras install metricsext2 -y
 
-wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.506.1624-1.cm2.x86_64.1.rpm
+wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.628.2309-1.cm2.x86_64.rpm
 sudo tdnf install -y metricsext2-2.2022.506.1624-1.cm2.x86_64.1.rpm
 
 

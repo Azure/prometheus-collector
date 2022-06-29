@@ -732,7 +732,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n                rate(container_cpu_usage_seconds_total{cluster=\"$cluster\", image!=\"\"}[5m])\r\n              ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n                1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"})\r\n              )) by (namespace)",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (\r\n                rate(container_cpu_usage_seconds_total{cluster=\"$cluster\", image!=\"\"}[5m])\r\n              ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (\r\n                1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\",cluster=\"$cluster\"})\r\n              )) by (namespace)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,

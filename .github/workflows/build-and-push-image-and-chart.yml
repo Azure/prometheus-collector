@@ -147,11 +147,11 @@ jobs:
         with:
           image-ref: "${{ env.IMAGE_FULL_TAG }}"
           format: 'table'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           vuln-type: 'os,library'
           skip-dirs: ''
           # Ignoring this binary since it is installed by mdsd and has vulnerability
-          skip-files: 'usr/sbin/telegraf'
+          #skip-files: 'usr/sbin/telegraf'
           exit-code: '1'
           timeout: '5m0s'
           ignore-unfixed: true
@@ -164,7 +164,7 @@ jobs:
         with:
           image-ref: "${{ env.K-S-M-IMAGE }}"
           format: 'table'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           vuln-type: 'os,library'
           skip-dirs: ''
           exit-code: '1'
@@ -175,7 +175,7 @@ jobs:
         with:
           image-ref: "${{ env.NODE-EXPORTER-IMAGE }}"
           format: 'table'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           vuln-type: 'os,library'
           skip-dirs: ''
           exit-code: '1'
@@ -282,13 +282,13 @@ jobs:
           for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 30
-            if docker manifest inspect ${MCR_REGISTRY}${MCR_REPOSITORY}:${IMAGE_TAG} && docker manifest inspect ${MCR_REGISTRY}${MCR_REPOSITORY}:${IMAGE_TAG_WINDOWS}
+            if docker manifest inspect ${MCR_REGISTRY}${MCR_REPOSITORY}:${IMAGE_TAG} && docker manifest inspect ${MCR_REGISTRY}${MCR_REPOSITORY}:${IMAGE_TAG_WINDOWS} && docker manifest inspect ${MCR_REGISTRY}${MCR_REPOSITORY_HELM}:${IMAGE_TAG}
             then
-              echo "Image published to mcr"
+              echo "Images and chart are published to mcr"
               exit 0
             fi
           done
-          echo "Image not published to mcr within 5 minutes"
+          echo "Images and chart are not published to mcr within 5 minutes"
           exit 1
       - name: Deploy-to-dev-cluster-sp
         if: env.BRANCH_NAME == 'main'

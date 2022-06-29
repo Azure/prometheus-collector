@@ -26,10 +26,11 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	InitializePlugin(agentVersion)
 
-	// Run a go routine that hosts Prometheus metrics for the volume of timeseries scraped and sent
-	// These numbers are picked up from the ME logs in the fluent-bit pipeline
+	// Run a go routine that hosts Prometheus metrics for the health of the agent
+	// Volume numbers are picked up from the ME logs in the fluent-bit pipeline
+	// Other metrics are from environment variables and otelcollector logs
 	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
-		go PublishTimeseriesVolume()
+		go ExposePrometheusCollectorHealthMetrics()
 	}
 
 	return output.FLB_OK
@@ -67,6 +68,8 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return PushMetricsDroppedCountToAppInsightsMetrics(records)
 	case fluentbitInfiniteMetricTag:
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
+	case fluentbitExportingFailedTag:
+		return RecordExportingFailed(records)
 	default:
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)

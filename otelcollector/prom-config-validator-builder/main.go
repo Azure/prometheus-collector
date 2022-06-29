@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-
+	"regexp"
 	"strings"
 
 	"go.opentelemetry.io/collector/config/configloader"
@@ -22,7 +22,55 @@ type OtelConfig struct {
 			Config interface{} `yaml:"config"`
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
-	Service interface{} `yaml:"service"`
+	Service struct { 
+		Pipelines struct {
+			Metrics struct {
+				Exporters interface{} `yaml:"exporters"`
+				Processors interface{} `yaml:"processors"`
+				Receivers interface{} `yaml:"receivers"`
+			} `yaml:"metrics"`
+		} `yaml:"pipelines"`
+	} `yaml:"service"`
+}
+
+var RESET  = "\033[0m"
+var RED    = "\033[31m"
+
+func logFatalError(message string) {
+	// Do not set env var if customer is running outside of agent to just validate config
+	if os.Getenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT") == "true" {
+		setFatalErrorMessageAsEnvVar(message)
+	}
+
+	// Always log the full message
+	log.Fatalf("%s%s%s", RED, message, RESET)
+}
+
+func setFatalErrorMessageAsEnvVar(message string) {
+	// Truncate to use as a dimension in the invalid config metric for prometheus-collector-health job
+	truncatedMessage := message
+	if len(message) > 1023 {
+		truncatedMessage = message[:1023]
+	}
+
+	// Replace newlines for env var to be set correctly
+	re := regexp.MustCompile("\\n")
+	truncatedMessage = re.ReplaceAllString(truncatedMessage, "")
+	
+	// Write env var to a file so it can be used by other processes
+	file, err := os.Create("/opt/microsoft/prom_config_validator_env_var")
+	if err != nil {
+			log.Println("prom-config-validator::Unable to create file for prom_config_validator_env_var")
+	}
+	setEnvVarString := fmt.Sprintf("export INVALID_CONFIG_FATAL_ERROR=\"%s\"\n", truncatedMessage)
+	if os.Getenv("OS_TYPE") != "linux" {
+		setEnvVarString = fmt.Sprintf("INVALID_CONFIG_FATAL_ERROR=%s\n", truncatedMessage)
+	}
+	_, err = file.WriteString(setEnvVarString)
+	if err != nil {
+		log.Println("prom-config-validator::Unable to write to the file prom_config_validator_env_var")
+	}
+	file.Close()
 }
 
 func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTemplatePath string) error {
@@ -59,10 +107,13 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					relabelConfig := relabelConfig.(map[interface{}]interface{})
 					//replace $ with $$ for regex field
 					if relabelConfig["regex"] != nil {
-						regexString := relabelConfig["regex"].(string)
-						modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-						modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-						relabelConfig["regex"] = modifiedRegexString
+						// Adding this check here since regex can be boolean and the conversion will fail
+						if _, isString := relabelConfig["regex"].(string); isString {
+							regexString := relabelConfig["regex"].(string)
+							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							relabelConfig["regex"] = modifiedRegexString
+						}
 					}
 					//replace $ with $$ for replacement field
 					if relabelConfig["replacement"] != nil {
@@ -80,10 +131,13 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					metricRelabelConfig := metricRelabelConfig.(map[interface{}]interface{})
 					//replace $ with $$ for regex field
 					if metricRelabelConfig["regex"] != nil {
-						regexString := metricRelabelConfig["regex"].(string)
-						modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-						modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-						metricRelabelConfig["regex"] = modifiedRegexString
+						// Adding this check here since regex can be boolean and the conversion will fail
+						if _, isString := metricRelabelConfig["regex"].(string); isString {
+							regexString := metricRelabelConfig["regex"].(string)
+							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							metricRelabelConfig["regex"] = modifiedRegexString
+						}
 					}
 
 					//replace $ with $$ for replacement field
@@ -121,6 +175,10 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 
 	otelConfig.Receivers.Prometheus.Config = prometheusConfig
 
+	if os.Getenv("DEBUG_MODE_ENABLED") == "true" {
+		otelConfig.Service.Pipelines.Metrics.Exporters = []interface{}{"otlp", "prometheus"}
+	}
+
 	mergedConfig, err := yaml.Marshal(otelConfig)
 	if err != nil {
 		return err
@@ -134,6 +192,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 }
 
 func main() {
+	log.SetFlags(0)
 	configFilePtr := flag.String("config", "", "Config file to validate")
 	outFilePtr := flag.String("output", "", "Output file path for writing collector config")
 	otelTemplatePathPtr := flag.String("otelTemplate", "", "OTel Collector config template file path")
@@ -141,7 +200,7 @@ func main() {
 	promFilePath := *configFilePtr
 	otelConfigTemplatePath := *otelTemplatePathPtr
 	if otelConfigTemplatePath == "" {
-		log.Fatalf("prom-config-validator::Please provide otel config template path\n")
+		logFatalError("prom-config-validator::Please provide otel config template path\n")
 		os.Exit(1)
 	}
 	if promFilePath != "" {
@@ -154,7 +213,7 @@ func main() {
 
 		err := generateOtelConfig(promFilePath, outputFilePath, otelConfigTemplatePath)
 		if err != nil {
-			log.Fatalf("Generating otel config failed: %v\n", err)
+			logFatalError(fmt.Sprintf("Generating otel config failed: %v\n", err))
 			os.Exit(1)
 		}
 
@@ -166,13 +225,13 @@ func main() {
 			configFlag,
 		})
 		if err != nil {
-			fmt.Printf("prom-config-validator::Error parsing flags - %v\n", err)
+			logFatalError(fmt.Sprintf("prom-config-validator::Error parsing flags - %v\n", err))
 			os.Exit(1)
 		}
 
 		factories, err := components()
 		if err != nil {
-			log.Fatalf("prom-config-validator::Failed to build components: %v\n", err)
+			logFatalError(fmt.Sprintf("prom-config-validator::Failed to build components: %v\n", err))
 			os.Exit(1)
 		}
 
@@ -180,26 +239,26 @@ func main() {
 
 		cp, err := colParserProvider.Get()
 		if err != nil {
-			fmt.Errorf("prom-config-validator::Cannot load configuration's parser: %w\n", err)
+			logFatalError(fmt.Errorf("prom-config-validator::Cannot load configuration's parser: %w\n", err).Error())
 			os.Exit(1)
 		}
 		fmt.Printf("prom-config-validator::Loading configuration...\n")
 
 		cfg, err := configloader.Load(cp, factories)
 		if err != nil {
-			log.Fatalf("prom-config-validator::Cannot load configuration: %v", err)
+			logFatalError(fmt.Sprintf("prom-config-validator::Cannot load configuration: %v", err))
 			os.Exit(1)
 		}
 
 		err = cfg.Validate()
 		if err != nil {
-			fmt.Printf("prom-config-validator::Invalid configuration: %w\n", err)
+			logFatalError(fmt.Errorf("prom-config-validator::Invalid configuration: %w\n", err).Error())
 			os.Exit(1)
 		}
 	} else {
-		log.Fatalf("prom-config-validator::Please provide a config file using the --config flag to validate\n")
+		logFatalError("prom-config-validator::Please provide a config file using the --config flag to validate\n")
 		os.Exit(1)
 	}
-	fmt.Printf("prom-config-validator::Successfully loaded and validated custom prometheus config\n")
+	fmt.Printf("prom-config-validator::Successfully loaded and validated prometheus config\n")
 	os.Exit(0)
 }

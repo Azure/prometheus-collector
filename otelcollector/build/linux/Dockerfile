@@ -1,4 +1,4 @@
-FROM cblmariner2preview.azurecr.io/base/core:2.0 as builder
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="omscontainers@microsoft.com"
 # ARG IMAGE_TAG="test"
@@ -36,7 +36,7 @@ RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
 CMD [ "/opt/main.sh" ]
 
-#FROM cblmariner2preview.azurecr.io/distroless/base:2.0
+#FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 #ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
 #ENV PATH="/busybin:${PATH}"
 #ENV OS_TYPE "linux"

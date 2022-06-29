@@ -31,7 +31,7 @@ jobs:
           scan-type: 'fs'
           scan-ref: "./otelcollector/deploy/dependentcharts/${{ github.event.inputs.dependentHelmChartName }}/"
           format: 'table'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           exit-code: '1'
           timeout: '5m0s'
       - name: Package-HELM-chart
