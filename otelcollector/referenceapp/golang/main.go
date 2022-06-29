@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -250,70 +249,33 @@ func recordMetrics() {
 	}()
 }
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func randSeq(n int) string {
-    b := make([]rune, n)
-    for i := range b {
-        b[i] = letters[rand.Intn(len(letters))]
-    }
-    return string(b)
-}
-
 func recordPerfMetrics() {
 	go func() {
 		i := 0
-		//randomSeq := "abc"
-		//prevRandomSeq := ""
 		for {
 			for _, gauge := range gaugeList {
-				gauge.Reset()
-			}
-
-			gaugeListMutex.Lock()
-			gaugeList = make([]*prometheus.GaugeVec, 0, metricCount)
-			gaugeListMutex.Unlock()
-			createGauges()
-
-			for _, gauge := range gaugeList {
 				for location, tempInfoByCity := range locationsToMinTempPerf {
-					//prevLocation := fmt.Sprintf("%s%s", location, prevRandomSeq)
-					//location = fmt.Sprintf("%s%s", location, randomSeq)
-					//fmt.Printf("%s\n", prevLocation)
 					for city, info := range tempInfoByCity {
-						/*if prevRandomSeq != "" {
-							gauge.Delete(prometheus.Labels{
-								"city": city,
-								"location": prevLocation,
-							})
-							//fmt.Printf("gauge deleted: %t for location %s\n", deleted, prevLocation)
-							//fmt.Printf("%s", prevLocation)
-					  }*/
 						tempRange := info.tempRange
 						minTemp := info.minTemp
 						temperature := float64(rand.Intn(tempRange) + minTemp)
 						gauge.WithLabelValues(city, location).Set(temperature)
 					}
 				}
+
+				i++
 			}
-
-			//prevRandomSeq = fmt.Sprintf("%s", randomSeq)
-			//fmt.Printf("prevRandomSeq: %s\n", prevRandomSeq)
-			//randomSeq = randSeq(3)
-			//fmt.Printf("randomSeq: %s\n", randomSeq)
-
 			// Wait the scrape interval
 			for j := 0; j < scrapeIntervalSec; j++ {
 				time.Sleep(1 * time.Second)
 			}
-			i++
 		}
 	}()
 }
 
 func createGauges() {
 	for i := 0; i < metricCount; i++ {
-		name := fmt.Sprintf("myapp_temperature_%d_%s", i, randSeq(10))
+		name := fmt.Sprintf("myapp_temperature_%d", i)
 		gauge := promauto.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: name,
@@ -323,9 +285,7 @@ func createGauges() {
 				"location",
 			},
 		)
-		gaugeListMutex.Lock()
 		gaugeList = append(gaugeList, gauge)
-		gaugeListMutex.Unlock()
 	}
 }
 
@@ -333,7 +293,6 @@ var (
 	scrapeIntervalSec = 60
 	metricCount       = 10000
 	gaugeList         = make([]*prometheus.GaugeVec, 0, metricCount)
-	gaugeListMutex    = &sync.Mutex{}
 	counter           = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "myapp_measurements_total",
@@ -522,8 +481,7 @@ func main() {
 	}()
 
 	// Run main server for weather app metrics
-	err := http.ListenAndServe(":2112", weatherServer)
-	fmt.Printf("%s", err)
+	http.ListenAndServe(":2112", weatherServer)
 
 	fmt.Printf("ending main function")
 }

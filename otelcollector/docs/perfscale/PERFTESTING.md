@@ -10,7 +10,9 @@ On your own smaller cluster, you can use the reference app running in perf test 
 
 2. Deploy two helm releases with different release names, one with the old agent and one with the changes of the new agent.
 
-2. Deploy the app with the settings:
+3. To make changes to the reference app, see the section below for how to build and deploy. Otherwise you can use the existing yaml and image.
+
+4. Deploy the reference app with these settings in the yaml:
 
     ```yaml
     env:
@@ -24,7 +26,7 @@ On your own smaller cluster, you can use the reference app running in perf test 
 
     With these settings, the app generates `62,500 metrics`, each with `8 timeseries`, every `15 seconds`, for a total of `2,000,000 samples` per minute.
 
-3. To scrape the metrics from the app, deploy the custom Prometheus config as: 
+5. To scrape the metrics from the app, deploy the custom Prometheus config as: 
 
     ```yaml
     scrape_configs:
@@ -41,7 +43,7 @@ On your own smaller cluster, you can use the reference app running in perf test 
 
     The `scrape_interval` value should match the `SCRAPE_INTERVAL` environment variable (in seconds) that is set for the reference app.
 
-4. See the `Viewing the Results` section for where to view the performance and metric volume of each.
+6. See the `Viewing the Results` section for where to view the performance and metric volume of each.
 
 ### Scale Testing
 
@@ -63,9 +65,13 @@ Compared to benchmark testing with just the reference app having a high load of 
 
 #### Finding the Max Volume
 
-The other necessary test is if the maximum volume of metrics that the agent can handle has not regressed. Follow the same steps as above for `Comparing Performance` but increase the number of nodes and pods until `timeseries_published` metric is consistently less than the `timeseries_received` metric and the agent is restarting due to getting `OOM-killed`.
+The other necessary test is if the maximum volume of metrics that the agent can handle has not regressed. Follow the same steps as above for `Comparing Performance` but increase the number of nodes and pods until either
+1. `timeseries_published` metric is consistently less than the `timeseries_received` metric and the agent is restarting due to getting `OOM-killed`.
+2. or ME is logging that the number of metrics is above the limit set in the me.config file and is dropping metrics
 
 ### Viewing the Results
+
+* The `Scale Testing` dashboard in our CI monitoring grafana instance has all of the information below in one dashboard. It can be filtered down to one cluster, with two agents chosen to compare
 
 * The overall CPU and memory usage for the pod can be viewed in the `Azure Monitor Container Insights /Kubernetes / Compute Resources / Pod` out-of-the-box Grafana dashboard.
 
@@ -91,9 +97,9 @@ Note: This step is only necessary if making changes to the app. Otherwise, the y
 
 To build the reference app, go to the directory `cd otelcollector/referenceapp/<golang or python>` and run `docker build -f ./<linux or windows>/Dockerfile -t <your image tag> .` depending on which OS you want to build.
 
-### Deploy the Reference App
+### Deploy the Reference App with Perf Mode Enabled
 
-Deploy the [linux reference app](../../referenceapp/prometheus-reference-app.yaml) or the [windows reference app](../../referenceapp/win-prometheus-reference-app.yaml) with `RUN_PERF_TEST` set to `true` to generate the specified number of metrics at a specified interval. Specify how many replicas should be scraped in the yaml spec. In the environment variables, set `SCRAPE_INTERVAL` to be an integer in seconds of how often the metrics should be generated. Set `METRIC_COUNT` to be the number of OTLP metrics to generate. Note that OTLP counts metrics by name. Multiply this by the number of timeseries of that metric to get the total number of timeseries that will be generated. For example, the reference app has 8 timeseries for the metric `myapp_temperature`. If we want 1,000,000 of these metrics to be generated every 15 seconds, the environment variables set in the yaml would be:
+Deploy the [linux reference app](../../referenceapp/prometheus-reference-app.yaml) or the [windows reference app](../../referenceapp/win-prometheus-reference-app.yaml) with `RUN_PERF_TEST` set to `true` to generate the specified number of metrics at a specified interval. Specify how many replicas should be scraped in the yaml spec. In the environment variables, set `SCRAPE_INTERVAL` to be an integer in seconds of how often the metrics should be generated. Set `METRIC_COUNT` to be the number of OTLP metrics to generate. Note that OTLP counts metrics by name. Multiply this by the number of timeseries of that metric to get the total number of timeseries that will be generated. For example, the reference app has 8 timeseries for the metric `myapp_temperature`. If we want 2,000,000 of these metrics to be generated every 15 seconds, the environment variables set in the yaml would be:
 
 ```yaml
 env:

@@ -1,37 +1,33 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: prometheus-reference-app-2
+  name: prometheus-reference-app
 spec:
   selector:
     matchLabels:
-      app: prometheus-reference-app-2
+      app: prometheus-reference-app
   replicas: 1
   template:
     metadata:
       labels:
-        app: prometheus-reference-app-2
+        app: prometheus-reference-app
     spec:
       containers:
-        - name: prometheus-reference-app-golang-2
-          resources:
-            requests:
-              cpu: 2
-              memory: 2Gi
-          image: gracepromacr.azurecr.io/prometheus-reference-app:golang-061822-1
+        - name: prometheus-reference-app-golang
+          image: gracepromacr.azurecr.io/prometheus-reference-app:golang-082521
           env:
             - name: RUN_PERF_TEST
-              value: "true"
+              value: "false"
             - name: SCRAPE_INTERVAL
               value: "15"
             - name: METRIC_COUNT
-              value: "31250"
+              value: "125000"
           ports:
             - containerPort: 2112
               protocol: TCP
             - containerPort: 2113
               protocol: TCP
-        - name: prometheus-reference-app-python-2
+        - name: prometheus-reference-app-python
           image: gracepromacr.azurecr.io/prometheus-reference-app:python-082521
           ports:
           - containerPort: 2114
@@ -42,10 +38,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: prometheus-reference-service-2
+  name: prometheus-reference-service
 spec:
   selector:
-    app: prometheus-reference-app-2
+    app: prometheus-reference-app
   ports:
     - name: "weather-app"
       protocol: TCP
