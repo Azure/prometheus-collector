@@ -308,10 +308,10 @@
         {
           "editorMode": "code",
           "exemplar": true,
-          "expr": "invalid_custom_prometheus_config{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"}",
+          "expr": "avg(invalid_custom_prometheus_config{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"}) by (cluster, release, controller_type)",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "Controller:{{controller_type}}, Computer:{{computer}}",
+          "legendFormat": "{{controller_type}}",
           "range": true,
           "refId": "A"
         }
@@ -353,32 +353,32 @@
       },
       "id": 6,
       "options": {
-        "footer": {
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": false,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
       },
       "pluginVersion": "8.5.1",
       "targets": [
         {
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(invalid_custom_prometheus_config{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\", error !=\"\"}) by (error)",
+          "expr": "avg(invalid_custom_prometheus_config{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\", error !=\"\"}) by (release, controller_type, error)",
           "format": "table",
-          "instant": false,
+          "instant": true,
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{error}}",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
       "title": "Invalid Prometheus Config Errors",
-      "type": "table"
+      "type": "logs"
     }
   ],
   "refresh": false,
@@ -409,15 +409,11 @@
         "type": "datasource"
       },
       {
-        "allValue": null,
         "current": {},
         "datasource": "${datasource}",
         "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\"}, cluster)",
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": false,
-        "label": null,
         "multi": false,
         "name": "cluster",
         "options": [],
@@ -432,15 +428,11 @@
         "type": "query"
       },
       {
-        "allValue": null,
         "current": {},
         "datasource": "${datasource}",
         "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\"}, release)",
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": true,
-        "label": null,
         "multi": false,
         "name": "release",
         "options": [],
@@ -455,15 +447,11 @@
         "type": "query"
       },
       {
-        "allValue": null,
         "current": {},
         "datasource": "${datasource}",
         "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\"}, controller_type)",
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": true,
-        "label": null,
         "multi": false,
         "name": "controller_type",
         "options": [],
@@ -478,15 +466,11 @@
         "type": "query"
       },
       {
-        "allValue": null,
         "current": {},
         "datasource": "${datasource}",
         "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\"}, computer)",
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": true,
-        "label": null,
         "multi": false,
         "name": "computer",
         "options": [],
