@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - rashmi/update-minimal-ingestion-profile
+      - rashmi/min-ingn-profile
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
