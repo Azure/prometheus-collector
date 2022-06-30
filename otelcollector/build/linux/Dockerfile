@@ -34,9 +34,9 @@ COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/mariner-official-extras.repo ./build/linux/azurecore.repo /etc/yum.repos.d/
 
-# If wanting to run without distroless, uncomment these and comment everything after
-#RUN chmod 775 /etc/cron.daily/logrotate
-#RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
+RUN chmod 775 /etc/cron.daily/logrotate
+RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
+# If wanting to run without distroless, uncomment this line and comment everything after
 #CMD [ "/opt/main.sh" ]
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
@@ -50,7 +50,7 @@ COPY --from=builder /etc /etc
 COPY --from=builder /busybin /busybin
 COPY --from=builder /static/react /static/react
 COPY --from=builder /usr/sbin/me.config /usr/sbin/me_ds.config /usr/sbin/
-#COPY --from=builder /var/opt/microsoft /var/opt/microsoft
+COPY --from=builder /var/opt/microsoft /var/opt/microsoft
 COPY --from=builder /var/lib/logrotate /var/lib/logrotate
 
 # executables
