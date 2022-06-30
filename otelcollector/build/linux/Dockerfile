@@ -41,6 +41,8 @@ RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+# Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
+ENV MALLOC_ARENA_MAX=2
 ENV PATH="/busybin:${PATH}"
 ENV OS_TYPE "linux"
 
@@ -68,7 +70,6 @@ COPY --from=builder /usr/share/vim /usr/share/vim
 COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
 COPY --from=builder /usr/sbin/telegraf /usr/sbin/telegraf
 COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
-COPY --from=builder /usr/bin/logger /usr/bin/logger
 
 # bash dependencies
 COPY --from=builder /lib/libreadline.so.8 /lib/
