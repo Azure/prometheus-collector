@@ -39,6 +39,48 @@
             'for': '10m',
           },
           {
+            alert: 'KubeContainerCPUPercentage',
+            expr: |||
+              sum(sum by (cluster, namespace, pod, container) ( rate(container_cpu_usage_seconds_total{image!=""}[5m]) ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=""}) )) / sum(kube_pod_container_resource_requests{resource="cpu"})  >.95 
+            ||| % $._config,
+            labels: {
+              severity: 'warning',
+            },
+            annotations: {
+              description: 'Average CPU usage per container is greater than 95%.',
+              summary: 'Average CPU usage per container is greater than 95%',
+            },
+            'for': '10m',
+          },
+          {
+            alert: 'KubeContainerMemoryPercentage',
+            expr: |||
+              sum(container_memory_working_set_bytes{container!="", image!=""}) / sum(kube_pod_container_resource_limits{resource="memory"})  >.95 
+            ||| % $._config,
+            labels: {
+              severity: 'warning',
+            },
+            annotations: {
+              description: 'Average Memory usage per container is greater than 95%.',
+              summary: 'Average Memory usage per container is greater than 95%',
+            },
+            'for': '10m',
+          },
+          {
+            alert: 'KubeOOMKilled',
+            expr: |||
+              kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} > 0
+            ||| % $._config,
+            labels: {
+              severity: 'warning',
+            },
+            annotations: {
+              description: 'Number of OOM killed containers is greater than 0',
+              summary: 'Number of OOM killed containers is greater than 0',
+            },
+            'for': '10m',
+          },
+          {
             alert: 'KubeMemoryOvercommit',
             expr: |||
               sum(namespace_memory:kube_pod_container_resource_requests:sum{%(ignoringOverprovisionedWorkloadSelector)s}) - (sum(kube_node_status_allocatable{resource="memory"}) - max(kube_node_status_allocatable{resource="memory"})) > 0

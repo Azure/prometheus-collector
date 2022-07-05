@@ -205,6 +205,34 @@
             alert: 'KubeContainerWaiting',
           },
           {
+            expr: |||
+              sum by (namespace, pod, container) (kube_pod_container_status_restarts_total{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}) > 0
+            ||| % $._config,
+            labels: {
+              severity: 'warning',
+            },
+            annotations: {
+              description: 'container {{ $labels.container}} has been restarted in the last 1 hour.',
+              summary: 'Pod container restarted in last 1 hour',
+            },
+            'for': '1h',
+            alert: 'KubeContainerRestart',
+          },
+          {
+            expr: |||
+              sum(kubelet_volume_stats_used_bytes) by (persistentvolumeclaim) / sum(kubelet_volume_stats_capacity_bytes) by (persistentvolumeclaim) >.8 
+            ||| % $._config,
+            labels: {
+              severity: 'warning',
+            },
+            annotations: {
+              description: 'Average PV usage is greater than 80%',
+              summary: 'Average PV usage is greater than 80%',
+            },
+            'for': '1h',
+            alert: 'KubePersistentVolumeFillingUp',
+          },
+          {
             alert: 'KubeDaemonSetNotScheduled',
             expr: |||
               kube_daemonset_status_desired_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
