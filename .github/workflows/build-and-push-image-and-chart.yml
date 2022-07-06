@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - grace/otelcollector-0-53
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
