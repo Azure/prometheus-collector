@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package prometheusreceiver
+package prometheusreceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 
 import (
 	"context"
@@ -20,28 +20,29 @@ import (
 	"time"
 	"net/url"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/web"
-	"go.uber.org/zap"
-
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/obsreport"
-	//"go.opentelemetry.io/collector/receiver/prometheusreceiver/internal"
-	"github.com/gracewehner/prometheusreceiver/internal"
+	"go.uber.org/zap"
 	"github.com/go-kit/log"
+
+	//"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
+	"github.com/gracewehner/prometheusreceiver/internal"
 )
 
 const (
-	transport = "http"
+	defaultGCInterval = 2 * time.Minute
+	gcIntervalDelta   = 1 * time.Minute
 
 	// Use same settings as Prometheus web server
 	maxConnections = 512
 	readTimeoutMinutes = 10
 )
-
 
 // pReceiver is the type that provides Prometheus scraper/receiver functionality.
 type pReceiver struct {
@@ -49,15 +50,16 @@ type pReceiver struct {
 	consumer   consumer.Metrics
 	cancelFunc context.CancelFunc
 
-	logger *zap.Logger
+	settings      component.ReceiverCreateSettings
+	scrapeManager *scrape.Manager
 }
 
 // New creates a new prometheus.Receiver reference.
-func newPrometheusReceiver(logger *zap.Logger, cfg *Config, next consumer.Metrics) *pReceiver {
+func newPrometheusReceiver(set component.ReceiverCreateSettings, cfg *Config, next consumer.Metrics) *pReceiver {
 	pr := &pReceiver{
 		cfg:      cfg,
 		consumer: next,
-		logger:   logger,
+		settings: set,
 	}
 	return pr
 }
@@ -68,7 +70,7 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 	discoveryCtx, cancel := context.WithCancel(context.Background())
 	r.cancelFunc = cancel
 
-	logger := internal.NewZapToGokitLogAdapter(r.logger)
+	logger := internal.NewZapToGokitLogAdapter(r.settings.Logger)
 
 	discoveryManager := discovery.NewManager(discoveryCtx, logger)
 	discoveryCfg := make(map[string]discovery.Configs)
@@ -80,43 +82,34 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 	}
 	go func() {
 		if err := discoveryManager.Run(); err != nil {
-			r.logger.Error("Discovery manager failed", zap.Error(err))
+			r.settings.Logger.Error("Discovery manager failed", zap.Error(err))
 			host.ReportFatalError(err)
 		}
 	}()
 
-	var jobsMap *internal.JobsMap
-	if !r.cfg.UseStartTimeMetric {
-		jobsMap = internal.NewJobsMap(2 * time.Minute)
-	}
-	// Per component.Component Start instructions, for async operations we should not use the
-	// incoming context, it may get cancelled.
-	receiverCtx := obsreport.ReceiverContext(context.Background(), r.cfg.ID(), transport)
-	ocaStore := internal.NewOcaStore(
-		receiverCtx,
+	store := internal.NewAppendable(
 		r.consumer,
-		r.logger,
-		jobsMap,
+		r.settings,
+		gcInterval(r.cfg.PrometheusConfig),
 		r.cfg.UseStartTimeMetric,
 		r.cfg.StartTimeMetricRegex,
 		r.cfg.ID(),
 		r.cfg.PrometheusConfig.GlobalConfig.ExternalLabels,
 	)
-	scrapeManager := scrape.NewManager(logger, ocaStore)
-	ocaStore.SetScrapeManager(scrapeManager)
-	if err := scrapeManager.ApplyConfig(r.cfg.PrometheusConfig); err != nil {
+	r.scrapeManager = scrape.NewManager(&scrape.Options{PassMetadataInContext: true}, logger, store)
+	if err := r.scrapeManager.ApplyConfig(r.cfg.PrometheusConfig); err != nil {
 		return err
 	}
 	go func() {
-		if err := scrapeManager.Run(discoveryManager.SyncCh()); err != nil {
-			r.logger.Error("Scrape manager failed", zap.Error(err))
+		if err := r.scrapeManager.Run(discoveryManager.SyncCh()); err != nil {
+			r.settings.Logger.Error("Scrape manager failed", zap.Error(err))
 			host.ReportFatalError(err)
 		}
 	}()
 
 	// Setup settings and logger and create Prometheus web handler
 	webOptions := web.Options{
-		ScrapeManager: scrapeManager,
+		ScrapeManager: r.scrapeManager,
 		Context: discoveryCtx,
 		ListenAddress: ":9090",
 		ExternalURL: &url.URL{
@@ -135,7 +128,10 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 			BuildDate: version.BuildDate,
 			GoVersion: version.GoVersion,
 		},
+		Flags: make(map[string]string),
 		MaxConnections: maxConnections,
+		IsAgent: true,
+		Gatherer:   prometheus.DefaultGatherer,
 	}
 	go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 	webHandler := web.New(go_kit_logger, &webOptions)
@@ -148,12 +144,12 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 	// Pass config and let the web handler know the config is ready.
 	// These are needed because Prometheus allows reloading the config without restarting.
 	webHandler.ApplyConfig(r.cfg.PrometheusConfig)
-	webHandler.Ready()
+	webHandler.SetReady(true)
 
 	// Uses the same context as the discovery and scrape managers for shutting down
 	go func() {
 		if err := webHandler.Run(discoveryCtx, listener, ""); err != nil {
-			r.logger.Error("Web handler failed", zap.Error(err))
+			r.settings.Logger.Error("Web handler failed", zap.Error(err))
 			host.ReportFatalError(err)
 		}
 	}()
@@ -161,8 +157,25 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 	return nil
 }
 
+// gcInterval returns the longest scrape interval used by a scrape config,
+// plus a delta to prevent race conditions.
+// This ensures jobs are not garbage collected between scrapes.
+func gcInterval(cfg *config.Config) time.Duration {
+	gcInterval := defaultGCInterval
+	if time.Duration(cfg.GlobalConfig.ScrapeInterval)+gcIntervalDelta > gcInterval {
+		gcInterval = time.Duration(cfg.GlobalConfig.ScrapeInterval) + gcIntervalDelta
+	}
+	for _, scrapeConfig := range cfg.ScrapeConfigs {
+		if time.Duration(scrapeConfig.ScrapeInterval)+gcIntervalDelta > gcInterval {
+			gcInterval = time.Duration(scrapeConfig.ScrapeInterval) + gcIntervalDelta
+		}
+	}
+	return gcInterval
+}
+
 // Shutdown stops and cancels the underlying Prometheus scrapers.
 func (r *pReceiver) Shutdown(context.Context) error {
 	r.cancelFunc()
+	r.scrapeManager.Stop()
 	return nil
 }

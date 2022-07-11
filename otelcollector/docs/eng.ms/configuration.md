@@ -172,6 +172,21 @@ metric_relabel_configs:
   regex: 'default'
 ```
 
+### Job and Instance Relabeling
+The `job` and `instance` label values can be changed based on the source label, just like any other label.
+
+```yaml
+# Replace the job name with the pod label 'k8s app'
+relabel_configs:
+- source_labels: [__meta_kubernetes_pod_label_k8s_app]
+  target_label: job
+# Replace the instance name with the node name. This is helpful to replace the node IP and port with
+# a value that is more readable
+relabel_configs:
+- source_labels: [__meta_kubernetes_node_name]]
+  target_label: instance
+```
+
 ## Advanced Configuration
 
 ### Pod Scraping and Pod Annotation Based Scraping

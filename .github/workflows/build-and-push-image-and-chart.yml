@@ -19,6 +19,12 @@ jobs:
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
         run: echo ("BRANCH_NAME=" + $env:GITHUB_HEAD_REF.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
+      - name: Set-Go-Version
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.17'
+      - name: Print-Go-Version
+        run: go version
       - name: Set-Env
         run: echo "ENV=dev" >> $env:GITHUB_ENV
       - name: Set-ACR-Registry
@@ -45,6 +51,11 @@ jobs:
         run: systeminfo ; go version ; helm version ; docker version
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ ; ./makefile_windows.ps1
+      # Uncomment to give ME team new otelcollector build
+      #- uses: actions/upload-artifact@v3
+      #  with:
+      #    name: windows-otelcollector
+      #    path: ./otelcollector/opentelemetry-collector-builder/otelcollector.exe
       - name: Dependency Detection setup
         uses: actions/checkout@v3
         with:
@@ -82,6 +93,12 @@ jobs:
       - name: Set-branch-name-for-pr
         if: ${{ github.event_name == 'pull_request' }}
         run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / - | tr . - | tr _ - | cut -c1-90)" >> $GITHUB_ENV
+      - name: Set-Go-Version
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.17'
+      - name: Print-Go-Version
+        run: go version
       - name: Set-Env
         run: echo "ENV=dev" >> $GITHUB_ENV
       - name: Set-ACR-Registry
@@ -122,6 +139,11 @@ jobs:
         run: sudo apt-get install build-essential -y
       - name: Build-source-code
         run: cd ./otelcollector/opentelemetry-collector-builder/ && make
+      # Uncomment to give ME team new otelcollector build
+      #- uses: actions/upload-artifact@v3
+      #  with:
+      #    name: linux-otelcollector
+      #    path: ./otelcollector/opentelemetry-collector-builder/otelcollector
       - name: Dependency Detection setup
         uses: actions/checkout@v3
         with:
