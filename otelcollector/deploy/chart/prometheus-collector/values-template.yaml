@@ -100,6 +100,9 @@ image:
 # -- Applies additional labels to all pods.
 podLabels: {}
 
+# -- Applies additional labels to all pods.
+podAnnotations: {}
+
 resources:
  deployment:
    limits:
