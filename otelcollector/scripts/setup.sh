@@ -124,5 +124,4 @@ echo "Installing Metrics Extension..."
 wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.628.2309-1.cm2.x86_64.rpm
 sudo tdnf install -y metricsext2-2.2022.628.2309-1.cm2.x86_64.rpm
 
-
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build.
