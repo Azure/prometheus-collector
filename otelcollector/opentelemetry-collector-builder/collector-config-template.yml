@@ -29,10 +29,6 @@ processors:
     - key: instance
       from_attribute: service.instance.id
       action: insert
-    - key: service.name
-      action: delete
-    - key: service.instance.id
-      action: delete
 receivers:
     prometheus:
       config:
