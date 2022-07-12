@@ -5,8 +5,6 @@ cd $TMPDIR
 
 sudo tdnf install ca-certificates-microsoft -y
 
-localedef -v -c -i en_US -f UTF-8 en_US.UTF-8
-
 #Need this for newer scripts
 chmod 544 $TMPDIR/*.sh
 chmod 544 $TMPDIR/microsoft/liveness/*.sh
@@ -21,7 +19,7 @@ sudo tdnf repolist --refresh
 sudo tdnf install inotify-tools -y
 
 echo "Installing packages for re2 gem install..."
-sudo tdnf install -y build-essential re2-devel ruby-devel
+sudo tdnf install -y build-essential re2-devel
 
 echo "Installing tomlrb, deep_merge and re2 gems..."
 gem install colorize

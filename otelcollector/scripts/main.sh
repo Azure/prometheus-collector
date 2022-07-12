@@ -23,6 +23,7 @@ echo_var () {
 }
 
 #Run inotify as a daemon to track changes to the mounted configmap.
+touch /opt/inotifyoutput.txt
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
 if [ -z $MODE ]; then
@@ -294,6 +295,7 @@ fluent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsi
 #Run inotify as a daemon to track changes to the dcr/dce config.
 if [ "${MAC}" == "true" ]; then
   echo "Starting inotify for watching mdsd config update"
+  touch /opt/inotifyoutput-mdsd-config.txt
   inotifywait /etc/mdsd.d/config-cache/metricsextension/_default_MonitoringAccount_Configuration.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
 fi
 
