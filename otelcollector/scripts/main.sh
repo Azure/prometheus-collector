@@ -265,7 +265,7 @@ else
       /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc_prom -ConfigOverrides $meConfigString > /dev/null &
 fi
 
-#get ME version
+# Get ME version
 ME_VERSION="2.2022.628.2309-1"
 echo_var "ME_VERSION" "$ME_VERSION"
 
@@ -294,7 +294,7 @@ echo "starting fluent-bit"
 mkdir /opt/microsoft/fluent-bit
 touch /opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log
 fluent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
-FLUENT_BIT_VERSION=`/usr/bin/telegraf --version`
+FLUENT_BIT_VERSION=`fluent-bit --version`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 
 #Run inotify as a daemon to track changes to the dcr/dce config.

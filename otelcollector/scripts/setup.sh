@@ -116,11 +116,6 @@ echo "Installing Metrics Extension..."
 #sudo apt --fix-broken install -y
 #/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
-# This is the ME install with Mariner 1.0 repository. Keeping here until 2.0 package is available.
-# However, there are conflicting dependencies so ME package does not work with 2.0 base image
-#sudo tdnf install cpprest grpc grpc-cpp -y
-#sudo tdnf --disablerepo="*" --enablerepo=mariner-official-extras install metricsext2 -y
-
 wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.628.2309-1.cm2.x86_64.rpm
 sudo tdnf install -y metricsext2-2.2022.628.2309-1.cm2.x86_64.rpm
 
