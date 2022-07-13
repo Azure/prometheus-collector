@@ -85,6 +85,9 @@ jobs:
             docker push ${{ env.IMAGE_FULL_TAG }}
   LINUX-build-and-push-image-and-chart:
     runs-on: ubuntu-latest
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+    env:
+      DOCKER_BUILDKIT: 1
     steps:
       - name: Set-workflow-initiator
         run: echo "Initiated by - ${GITHUB_ACTOR}"
@@ -159,9 +162,6 @@ jobs:
         uses: ./.github/actions/dependency-detection
         with:
           token: ${{ github.token }}
-      # This is necessary because of: https://github.com/moby/moby/issues/37965
-      - name: Set-docker-env-var
-        run: export DOCKER_BUILDKIT=1
       - name: Create-docker-image
         run: |
             cd ./otelcollector/ && docker build . --file ./build/linux/Dockerfile -t $IMAGE_FULL_TAG
