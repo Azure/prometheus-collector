@@ -5,7 +5,7 @@
 * View available [packages](https://eng.ms/docs/products/mariner-linux/gettingstarted/packages/packagesx) and how to request additional ones
 
 ## Mariner vs. Ubuntu
-Mariner is an RPM-based distro whereas Ubuntu is Debian-based. Mariner uses `tdnf` as its package manager whereas Ubuntu uses `apt`. The largest differnce between the two then is replacing all the `apt` commands with `tdnf`. [This table](https://eng.ms/docs/products/mariner-linux/gettingstarted/ubuntu/atlas#command-replacement-reference-table) provides all the equivalent commands between the two. Not all commands are available with `tdnf`, which is a trimmed-down C-based version of the `dnf` package manager. `dnf` can be installed by `tdnf` with `tdnf install -y dnf` if some extra commands are needed. Using `dnf` was useful for debugging to find which repo a package was coming or if it had a different name compared to the Ubuntu package.
+Mariner is an RPM-based distro whereas Ubuntu is Debian-based. Mariner uses `tdnf` as its package manager whereas Ubuntu uses `apt`. The largest difference between the two then is replacing all the `apt` commands with `tdnf`. [This table](https://eng.ms/docs/products/mariner-linux/gettingstarted/ubuntu/atlas#command-replacement-reference-table) provides all the equivalent commands between the two. Not all commands are available with `tdnf`, which is a trimmed-down C-based version of the `dnf` package manager. `dnf` can be installed by `tdnf` with `tdnf install -y dnf` if some extra commands are needed. Using `dnf` was useful for debugging to find which repo a package was coming or if it had a different name compared to the Ubuntu package.
 
 More info about `apt` vs `tdnf` can be found [here](https://eng.ms/docs/products/mariner-linux/onboarding/packaging/packagemanagement).
 
@@ -14,14 +14,14 @@ New repositories are added with a `*.repo` file stored in the `/etc/yum.repos.d/
 
 Mariner by default has certain repo files in the container already. These include the repos for the mariner base and mariner extended packages.
 
-MetricsExtension is included in the mariner-official-extra repository and MDSD is in the azurecore repository. Both have corresponding repo files [here](/otelcollector/build/linux/).
+`MetricsExtension` is included in the `mariner-official-extra` repository and `mdsd` is in the `azurecore` repository. Both have corresponding repo files [here](/otelcollector/build/linux/).
 
 ## Distroless Containers
 
-Distroless containers exclude packages provided by the distro such as a shell and package manager. They provide a slimmed down image with a smaller attack surface. We will still need a shell for our `main.sh` script and any debugging done by exec-ing into the container. But a distroless base image is still useful to not have the package managers and any unecessary packages just needed for building. This is especially useful since `tdnf` does not have an `autoremove` command and using the distroless container trims down the size quite a bit.
+Distroless containers exclude packages provided by the distro such as a shell and package manager. They provide a slimmed down image with a smaller attack surface. We will still need a shell for our `main.sh` script and any debugging done by exec-ing into the container. But a distroless base image is still useful to not have the package managers and any unecessary packages which are needed solely for building and not at runtime. This is especially useful since `tdnf` does not have an `autoremove` command and using the distroless container trims down the size quite a bit.
 
 ### Docker Multi-Stage Builds
-Since the distroless container does not have a package manager, we will still need a way to install all the necessary packages. The standard way to do this is through [multi-stage builds](https://docs.docker.com/develop/develop-images/multistage-build/). The first build uses the regular base container and sets up everything as normal up until adding the entry command as running the `main.sh` script.
+Since the distroless container does not have a package manager, we will still need a way to install all the necessary packages. The standard way to do this for distroless containers is through [multi-stage builds](https://docs.docker.com/develop/develop-images/multistage-build/). The first build uses the regular base container and sets up everything as normal up until adding the entry command as running the `main.sh` script.
 
 The second build uses the distroless image as the base image. Only the files we need at runtime are copied over from the first build. An example of this is [here](https://medium.com/@alexanto222/hardening-of-docker-images-distroless-images-d6d87b591a59).
 
@@ -34,17 +34,16 @@ Note that this means that any new files added while developing will need to be c
   | Old Command | New Command |
   | --- | --- |
   | `kubectl exec -it <pod name> -- bash` | `kubectl exec -it <pod name> -- sh` |
-  | `vim` | `vi` |
   | `ps -aux` | `ps` |
 
 
-## Adding a New Package
+## Adding or Upgrading a New Package
 ### Base Image
 You can start to add a package by including `tdnf install -y <package name>` in the `builder` Docker stage and trying to build to see if the package is available. `tdnf` will search all repos for the package and print out an error if it cannot be found.
 
 Some naming conventions or package names are different for RPM packages. For example, `*-dev` and `*-debug` for Ubuntu packages vs. `*-devel` and `*-debugsymbol` for RPM pacakges. Similarly, `cron` has an equivalent RPM package called `cronie` and the name of the executable is `crond`. A package you are looking for may be provided by Mariner but under a different name. For example, `libre2` is just `re2` in the Mariner repository.
 
-`dnf` has a command called `whatprovides` to help with this as explained [here](https://eng.ms/docs/products/mariner-linux/onboarding/packaging/packagemanagement#finding-the-right-package), but usually a google search will also work.
+`dnf` has a command called `whatprovides` to help with this as explained [here](https://eng.ms/docs/products/mariner-linux/onboarding/packaging/packagemanagement#finding-the-right-package), but usually a quick internet search will also work.
 
 ### Distroless Image
 In the base image, run:
@@ -73,4 +72,4 @@ In the Dockerfile in the distroless stage:
 ## Our Current Package Dependencies
 * `telegraf` and `fluent-bit` are both built and published by the Mariner team in the [Mariner base repository](https://packages.microsoft.com/cbl-mariner/2.0/preview/base/x86_64/). [ARM64 versions](https://packages.microsoft.com/cbl-mariner/2.0/preview/base/aarch64/) are available also.
 * `MetricsExtension` is published by their team to the Mariner extras repository. [Mariner 1.0](https://packages.microsoft.com/cbl-mariner/1.0/prod/extras/x86_64/rpms/) is available. Mariner 2.0 is in progress.
-* `MDSD` is published by their team to the Azure Core repository. [Release notes](https://eng.ms/docs/products/geneva/collect/instrument/linux/releasenotes) and [instructions](https://eng.ms/docs/products/geneva/getting_started/environments/linuxvm) for installing the RPM package.
+* `mdsd` is published by their team to the Azure Core repository. [Release notes](https://eng.ms/docs/products/geneva/collect/instrument/linux/releasenotes) and [instructions](https://eng.ms/docs/products/geneva/getting_started/environments/linuxvm) for installing the RPM package.
