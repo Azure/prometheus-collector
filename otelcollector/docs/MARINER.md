@@ -3,6 +3,7 @@
 * Official eng.hub docs: [aka.ms/mariner](aka.ms/mariner)
 * View current [container images](https://eng.ms/docs/products/mariner-linux/gettingstarted/containers/marinercontainerimage)
 * View available [packages](https://eng.ms/docs/products/mariner-linux/gettingstarted/packages/packagesx) and how to request additional ones
+* Info about the [secure supply chain initiative](https://eng.ms/docs/more/containers-secure-supply-chain/) for containers
 
 ## Mariner vs. Ubuntu
 Mariner is an RPM-based distro whereas Ubuntu is Debian-based. Mariner uses `tdnf` as its package manager whereas Ubuntu uses `apt`. The largest difference between the two then is replacing all the `apt` commands with `tdnf`. [This table](https://eng.ms/docs/products/mariner-linux/gettingstarted/ubuntu/atlas#command-replacement-reference-table) provides all the equivalent commands between the two. Not all commands are available with `tdnf`, which is a trimmed-down C-based version of the `dnf` package manager. `dnf` can be installed by `tdnf` with `tdnf install -y dnf` if some extra commands are needed. Using `dnf` was useful for debugging to find which repo a package was coming or if it had a different name compared to the Ubuntu package.
@@ -29,12 +30,14 @@ Note that this means that any new files added while developing will need to be c
 
 
 ### Using the Shell in the Distroless Container
-`bash` is still copied over into our container to be able to run our `main.sh` bash script. However, there are some interface issues with `bash` and `vim` on the distroless container. `busybox` and its shell are more common on smaller container images like `alpine` and Mariner has support for a debug container that includes `busybox`. This however changes some of the commands when exec-ing into the container which I have noted below. Feel free to add more here if you find them.
+`bash` is still copied over into our container to be able to run our `main.sh` bash script. However, there are some interface issues with `bash` on the distroless container. Mariner has default support for using `busybox` as the shell for debugging. This however changes some of the commands when exec-ing into the container which I have noted below. Feel free to add more here if you find them.
 
   | Old Command | New Command |
   | --- | --- |
   | `kubectl exec -it <pod name> -- bash` | `kubectl exec -it <pod name> -- sh` |
   | `ps -aux` | `ps` |
+
+Note: You can still call `kubectl exec -it <pod name> -- bash`, there will just be a weird warning from `busybox` in the beginning.
 
 
 ## Adding or Upgrading a New Package
@@ -46,9 +49,9 @@ Some naming conventions or package names are different for RPM packages. For exa
 `dnf` has a command called `whatprovides` to help with this as explained [here](https://eng.ms/docs/products/mariner-linux/onboarding/packaging/packagemanagement#finding-the-right-package), but usually a quick internet search will also work.
 
 ### Distroless Image
-In the base image, run:
-  * `whereis <executable>`
-  * `ldd <executable path>`
+To get the .so file dependencies, run:
+  * `which <executable>` to get the executable path
+  * `ldd <executable path>` to get the list of dependencies
   * This will print out something similar to:
 
     ```
@@ -61,15 +64,15 @@ In the base image, run:
     libaudit.so.1 => /lib/libaudit.so.1 (0x00007f76777ae000)
     ```
 
-  * Packages without `=>` do not need to be copied as these will already be present in the distroless container.
-  * Note: for `/lib/libc.so.6`, I was having issues copying this over for Mariner v2. This package was already there in the distroless container and there were some conflicting issues when copying it over again. This was the only `.so` file I was seeing issues with.
+  * Packages without `=>` do not need to be copied as these will already be present in the distroless container
+If some files are missing after the `=>`, you can run these commands in a container that is using the base image instead of the distroless image to see which files need to be copied over
 
 In the Dockerfile in the distroless stage:
   * Copy over the executable file path
-  * Copy over the full path of all `.so` files that have `=>` except for `/lib/libc.so.6`
-  * If not all necssary `.so` files are available, there will be an error saying that file is missing during runtime.
+  * Copy over the full path of all `.so` files that have `=>`
+  * If not all necssary `.so` files are available, there will be an error saying that file is missing during runtime
 
 ## Our Current Package Dependencies
 * `telegraf` and `fluent-bit` are both built and published by the Mariner team in the [Mariner base repository](https://packages.microsoft.com/cbl-mariner/2.0/preview/base/x86_64/). [ARM64 versions](https://packages.microsoft.com/cbl-mariner/2.0/preview/base/aarch64/) are available also.
-* `MetricsExtension` is published by their team to the Mariner extras repository. [Mariner 1.0](https://packages.microsoft.com/cbl-mariner/1.0/prod/extras/x86_64/rpms/) is available. Mariner 2.0 is in progress.
+* `MetricsExtension` is published by their team to the Mariner extras repository. The package for [Mariner 2.0](https://packages.microsoft.com/cbl-mariner/2.0/prod/extras/x86_64/) is now available.
 * `mdsd` is published by their team to the Azure Core repository. [Release notes](https://eng.ms/docs/products/geneva/collect/instrument/linux/releasenotes) and [instructions](https://eng.ms/docs/products/geneva/getting_started/environments/linuxvm) for installing the RPM package.
