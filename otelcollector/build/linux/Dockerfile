@@ -98,6 +98,9 @@ RUN [ "/bin/bash", "-c", "true" ]
 # fluent-bit dependencies
 COPY --from=builder /lib/libssl.so.1.1 /lib/libcrypto.so.1.1 /lib/libsystemd.so.0 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/liblzma.so.5 /lib/liblz4.so.1 /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libgpg-error.so.0 /lib/
 RUN [ "/bin/bash", "-c", "true" ]
+# telegraf dependencies
+COPY --from=builder /lib/libc.so.6 /lib/
+RUN [ "/bin/bash", "-c", "true" ]
 # mdsd dependencies
 COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
 RUN [ "/bin/bash", "-c", "true" ]
