@@ -1,6 +1,6 @@
 # Mariner Development
 ## Links
-* Official eng.hub docs: [aka.ms/mariner](aka.ms/mariner)
+* Official eng.hub docs: [aka.ms/mariner](https://aka.ms/mariner)
 * View current [container images](https://eng.ms/docs/products/mariner-linux/gettingstarted/containers/marinercontainerimage)
 * View available [packages](https://eng.ms/docs/products/mariner-linux/gettingstarted/packages/packagesx) and how to request additional ones
 * Info about the [secure supply chain initiative](https://eng.ms/docs/more/containers-secure-supply-chain/) for containers
@@ -18,7 +18,6 @@ Mariner by default has certain repo files in the container already. These includ
 `MetricsExtension` is included in the `mariner-official-extra` repository and `mdsd` is in the `azurecore` repository. Both have corresponding repo files [here](/otelcollector/build/linux/).
 
 ## Distroless Containers
-
 Distroless containers exclude packages provided by the distro such as a shell and package manager. They provide a slimmed down image with a smaller attack surface. We will still need a shell for our `main.sh` script and any debugging done by exec-ing into the container. But a distroless base image is still useful to not have the package managers and any unecessary packages which are needed solely for building and not at runtime. This is especially useful since `tdnf` does not have an `autoremove` command and using the distroless container trims down the size quite a bit.
 
 ### Docker Multi-Stage Builds
@@ -27,6 +26,8 @@ Since the distroless container does not have a package manager, we will still ne
 The second build uses the distroless image as the base image. Only the files we need at runtime are copied over from the first build. An example of this is [here](https://medium.com/@alexanto222/hardening-of-docker-images-distroless-images-d6d87b591a59).
 
 Note that this means that any new files added while developing will need to be copied over to the distroless build stage. Everything under `/opt` is currently copied over. See below for the steps to take when adding a new package.
+
+If you are building locally, you will need to set `DOCKER_BUILDKIT=1` because of [this](https://github.com/moby/moby/issues/37965) Docker bug. This has been set in our github actions builds.
 
 
 ### Using the Shell in the Distroless Container
