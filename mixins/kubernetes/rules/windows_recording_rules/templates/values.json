@@ -1,5 +1,0 @@
-{
-    "MACLocation": "eastus2euap",
-    "mac": "/subscriptions/ad2f1a83-caac-4e21-9d2a-9ca3f87105e2/resourcegroups/divyaj-test/providers/microsoft.monitor/accounts/onboardingTestMACAcc",
-    "cluster": "{replace_your_cluster_name_here}"
-}
