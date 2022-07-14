@@ -1,0 +1,46 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "variables": {},
+    "resources": [
+        {
+           "name": "sampleRuleGroup3",
+           "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+           "apiVersion": "2021-07-22-preview",
+           "location": "eastus",
+           "properties": {
+                "description": "Sample Prometheus Rule Group",
+                "scopes": [
+                    "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourcegroups/sohamTestKV/providers/microsoft.monitor/accounts/sohamtest5"
+                ],
+                "interval": "PT1M",
+                "rules": [
+                    {
+                        "alert": "KubeCPUQuotaOvercommit",
+                        "expression": "1<bool 2",
+                        "for": "PT1M",
+                        "labels": {
+                            "team": "prod"
+                        },
+                        "annotations": {
+                            "description": "Cluster has overcommitted CPU resource requests for Namespaces.",
+                            "runbook_url": "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuquotaovercommit",
+                            "summary": "Cluster has overcommitted CPU resource requests."
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                               "actionGroupId": "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourcegroups/sohamTestKV/providers/microsoft.insights/actiongroups/sohamtest"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}        
