@@ -135,7 +135,7 @@ sudo apt-get remove build-essential -y
 sudo apt-get remove ruby-dev -y
 
 echo "auto removing unused packages..."
-#sudo apt-get autoremove -y
+sudo apt-get --dry-run autoremove | grep -Po '^Remv \K[^ ]+'
 
 #cleanup all install
 echo "cleaning up all install.."
