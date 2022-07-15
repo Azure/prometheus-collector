@@ -37,7 +37,7 @@ COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh
 # If wanting to run without distroless, uncomment this line and comment everything after
-#CMD [ "/opt/main.sh" ]
+CMD [ "/opt/main.sh" ]
 
 #FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 #ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
