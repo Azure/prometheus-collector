@@ -15,7 +15,8 @@ COPY ./logrotate/prometheus-collector /etc/logrotate.d/
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
 RUN tdnf repolist --refresh
-RUN tdnf install -y wget sudo net-tools cronie vim ruby logrotate procps-ng dnf busybox
+RUN tdnf install -y dnf
+RUN dnf install -y wget sudo net-tools cronie vim ruby logrotate procps-ng busybox
 RUN mkdir /busybin && busybox --install /busybin
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
 COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/

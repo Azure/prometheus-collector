@@ -14,12 +14,12 @@ chmod 744 /usr/sbin/
 
 #download inotify tools for watching configmap changes
 echo "Installing inotify..."
-sudo tdnf check-update
-sudo tdnf repolist --refresh
-sudo tdnf install inotify-tools -y
+sudo dnf check-update
+sudo dnf repolist --refresh
+sudo dnf install inotify-tools -y
 
 echo "Installing packages for re2 gem install..."
-sudo tdnf install -y build-essential re2-devel
+sudo dnf install -y build-essential re2-devel
 
 echo "Installing tomlrb, deep_merge and re2 gems..."
 gem install colorize
@@ -53,20 +53,20 @@ gem install re2
 #chmod 777 /opt/microsoft/otelcollector29/otelcollector
 
 echo "Installing MDSD dependencies"
-sudo tdnf install -y which
+sudo dnf install -y which
 echo "Downloading MDSD"
-sudo tdnf --disablerepo="*" --enablerepo=packages-microsoft-com-azurecore install azure-mdsd-1.18.0 -y
+sudo dnf --disablerepo="*" --enablerepo=packages-microsoft-com-azurecore install azure-mdsd-1.18.0 -y
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for logs
 mkdir /opt/microsoft/linuxmonagent
 
 # Install Telegraf
 echo "Installing telegraf..."
-sudo tdnf install telegraf-1.23.0 -y
+sudo dnf install telegraf-1.23.0 -y
 
 # Install fluent-bit
 echo "Installing fluent-bit..."
-sudo tdnf install fluent-bit-1.8.12 -y
+sudo dnf install fluent-bit-1.8.12 -y
 
 # setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
@@ -104,9 +104,10 @@ echo "Installing Metrics Extension..."
 #/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.628.2309-1.cm2.x86_64.rpm
-sudo tdnf install -y metricsext2-2.2022.628.2309-1.cm2.x86_64.rpm
+sudo dnf install -y metricsext2-2.2022.628.2309-1.cm2.x86_64.rpm
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build.
 sudo tdnf remove g++ binutils libgcc-atomic make patch -y
+sudo dnf autoremove -y
 
 rm -f $TMPDIR/metricsext2*.rpm
