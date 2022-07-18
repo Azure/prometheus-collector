@@ -20,3 +20,5 @@ CVE-2022-29189
 CVE-2022-31030
 # usr/sbin/telegraf
 CVE-2019-11254
+# /bin/node_exporter
+CVE-2021-44716
