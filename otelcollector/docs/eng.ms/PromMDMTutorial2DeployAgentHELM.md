@@ -5,7 +5,17 @@
 
 For deploying the metrics collection agent, we will leverage [HELM](https://kubernetes.io/blog/2016/10/helm-charts-making-it-simple-to-package-and-deploy-apps-on-kubernetes/), specifically versions >= 3.7.0. 
 
-```Note: Our charts will not work on HELM clients < 3.7.0```
+**Note: Our charts will not work on HELM clients < 3.7.0**
+
+## Review metrics account limits
+
+Deploying the agent will cause a **sharp increase** in your events/minute as it starts sending metrics to your MDM account. You should review and adjust your **Event** and **Metrics Store Timeseries** limits accordingly before deploying to avoid any disruption. You can learn how to view and increase your current account limits [here](~/metrics/management/limitincrease.md). For reference, some teams have observed an increase of over 100k events/minute. Give yourself some buffer room before deploying and adjust down afterwards.
+
+Once you've deployed and your service is at a steady state, it's recommended to adjust your **Projected Usage** to be set so that you're only consuming 75% or less of both **Event** and **Metrics Store Timeseries** limits.
+
+> [!IMPORTANT]
+>
+> Failure to adjust the limits appropriately may cause your account to be throttled and for events to be sampled causing **data loss**. 
 
 ## Install prometheus-collector chart in your cluster
 

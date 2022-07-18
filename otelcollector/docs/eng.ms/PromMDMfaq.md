@@ -5,6 +5,7 @@ Prometheus metrics in MDM is currently available to internal Microsoft teams as 
 * [Private Preview - Prerequisites](./PromMDMfaq.md#private-preview---prerequisites)
 * [Private Preview - Existing capabilities](./PromMDMfaq.md#private-preview---existing-capabilities)
 * [Private Preview - upcoming](./PromMDMfaq.md#private-preview---upcoming)
+* [Prometheus and Azure Native metrics](./PromMDMfaq.md#prometheus-and-azure-native-metrics)
 * [Unsupported capabilities](./PromMDMfaq.md#unsupported-capabilities)
 * [Data collection FAQ](./PromMDMfaq.md#data-collection-faq)
 * [Query FAQ](./PromMDMfaq.md#promql-query-faq)
@@ -17,20 +18,20 @@ Prometheus metrics in MDM is currently available to internal Microsoft teams as 
 
 ### Who can use Geneva-MDM backed Prometheus?
 
-Prometheus metrics in MDM is still in active development and is offered as a Private Preview. You can join the [K8s Observability](https://idwebelements/GroupManagement.aspx?Group=K8sObsUpdates&Operation=join) for updates on the preview, and information about future milestones like public preview and GA. 
+Prometheus metrics in MDM is still in active development and offered as a Private Preview. All teams internal to Microsoft can onboard to this preview (no registration required). You can join the [K8s Observability](https://idwebelements/GroupManagement.aspx?Group=K8sObsUpdates&Operation=join) for updates on the preview, and information about future milestones like public preview and GA. 
 
 ### What are some prerequisites to use Geneva-MDM backed Prometheus?
 
-1. MDM account should be in **public cloud** region. We will support all regions in subsequent milestones.
+1. Your MDM account should be in a **public cloud** region. We will support national/air-gapped clouds by the GA milestone.
 2. Cluster's K8s versions should be > **1.16.x**
 3. The MDM certificate should be stored in **Azure key-vault**, we only support Azure key-vault certificate based auth for ingesting metrics into metrics store(UA-MI will be coming soon).
-4. The limited preview requires signing up for managed Grafana preview. Please reach out to [AzMonGrafanaTeam@microsoft.com](mailto:AzMonGrafanaTeam@microsoft.com) for instructions on how to sign up for that.
+4. The preview requires signing up for managed Grafana preview. Please reach out to [AzMonGrafanaTeam@microsoft.com](mailto:AzMonGrafanaTeam@microsoft.com) for instructions on how to sign up for that.
 
 ## Private Preview - Existing capabilities
 
 * Ability to ingest all 4 Prometheus metric types, via an agent (Prometheus collector)
 * Customizable metric collection config (service discovery supported), with scrape intervals up to 1 sec. 
-* Store collected metrics in MDM accounts (currently accounts in shared MDM stamps are supported. Dedicated stamps will be supported by Mar 2022). 
+* Store collected metrics in MDM accounts (accounts on both shared and dedicated stamps are supported).
 * View ingested metrics in Grafana via a Prometheus data source and run queries using PromQL queries. Grafana will be available as both a managed offering (Azure Grafana Service - preview) or BYO (stand alone Grafana that you manage).
 
 ## Private Preview - upcoming
@@ -43,13 +44,43 @@ The following functionality will be added to the private preview through 2022
 4. **up** metric for discovered targets.
 5. Prometheus **Operator support**
 6. Customizable MDM namespace for Prometheus metrics(currently fixed namespace for all Prom metrics)
-7. Querying Prometheus metrics via SDK or KQL-M(currently PromQL only)
 
 ## Unsupported capabilities
 
 1. You cannot query Prometheus metrics via Jarvis, we recommend customers to use Azure managed Grafana to access Prometheus metrics.
 2. You will not be able to use IFx* libaries for instrumenting Prometheus metrics. For now use Prometheus SDK to instrument your workloads & in future we will support these capabilities via Open Telemetry metrics SDK).
-3. We will not support pre-aggregates & composite metrics in Prometheus metrics.
+3. There is no support for pre-aggregates & composite metrics in Prometheus metrics model.
+4. There is no KQL-M support for Prometheus metrics. YOu need to use the PromQL language. 
+
+## Prometheus and Azure Native metrics
+
+Geneva Metrics supports two metrics models. 
+
+1. Azure Native metrics (or native MDM metrics)
+2. [Prometheus](https://prometheus.io/docs/introduction/overview/) metrics
+
+While metric data for both models is stored in the MDM time series database, there are some differences across the models. Some of these are listed below to help teams make a decision on which one to use for your metrics use case.  
+
+Geneva Metrics will bring the two systems closer together in future iterations. For additional guidance please reach out to the team per the support options listed in [Getting support](./PromMDMfaq.md#getting-support).
+
+|                           | Prometheus metrics | Azure Native metrics |
+|---------------------------|--------------------|----------------------|
+| Metric Types | Gauge <br><br> Counter <br><br> Histogram <br><br> Summary| Gauge <br><br> Histogram  <br><br> Distinct Count |
+| Instrumentation & data collection | Instrument using Prometheus client SDK. OTel SDK will also be supported in the future. <br><br> Collect metrics via agent (Prometheus collector) or remote write | Instrument via IFx / OTel SDKs <br><br> Collect metrics via agent across following protocols (IFx, statsD, dogstatsD, Influxdb line, OTLP)
+| Querying metrics | Query using PromQL | Query using KQL-M or Jarvis point/click |
+| Dashboarding | Grafana | Jarvis + Grafana |
+| Platform metrics (Shoebox) | Not supported | Supported via shoebox process|
+| SLO/SLI | Not supported | Supported via IFxExt and OTel based instrumentation and KQL-M |
+| Monitors/Alerting | Provides Prometheus comptible alerting /w support for ICM. <br><br> Some alert enrichment flows will differ from those available in Geneva monitors | Supported via Geneva Monitors |
+| Health model | Not supported | Supported |
+
+AKS infra metrics: Geneva's Prometheus offering also provides out-of-the-box support for collecting AKS infra metrics such as CPU, memory, etc. These also have default Grafana dashboards, and as such Geneva recommends using Prometheus for this use case. This is similar to collecting performance counters in Windows via MA config.  
+
+For Application metrics, we encourage teams to review the capability set above to pick a model for your applications metric needs. The typical use case for choosing Prometheus model is as follows. 
+* Your team is already using (or prefers) the Prometheus client SDL for metrics instrumentation.
+* Your team is already using (or prefers) using the PromQL language for metrics consumption.
+  
+If you use Prometheus for infra metrics, and Azure Native for application metrics, it is still possible to have a single pane of glass by consuming [multiple data sources in a single Grafana dashboard](~/dashboards/grafana/combineddashgrafana.md).  
 
 ## Data Collection FAQ
 
@@ -147,4 +178,4 @@ Yes, you can use this with your local Grafana instance. However we recommend you
 ## Getting Support
 
 * [Teams channel](https://teams.microsoft.com/l/channel/19%3a0ee871c52d1744b0883e2d07f2066df0%40thread.skype/Prometheus%2520metrics%2520in%2520MDM%2520(Limited%2520Preview)?groupId=5658f840-c680-4882-93be-7cc69578f94e&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
-* [ICM support](https://portal.microsofticm.com/imp/v3/incidents/create?tmpl=hcP1y3)
+* [ICM support](https://portal.microsofticm.com/imp/v3/incidents/create?tmpl=o2f3u2)
