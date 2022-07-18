@@ -13,6 +13,9 @@ LOGGING_PREFIX = "config"
 # Setting default values which will be used in case they are not set in the configmap or if configmap doesnt exist
 @defaultMetricAccountName = "NONE"
 
+@clusterAlias = ""
+@clusterName = ""
+
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
   begin
@@ -41,6 +44,16 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for prometheus collector settings- #{errorStr}, using defaults, please check config map for errors")
   end
+
+  begin
+    if !parsedConfig.nil? && !parsedConfig[:cluster_alias].nil?
+      @clusterAlias = parsedConfig[:cluster_alias].strip
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap setting for cluster_alias:#{@clusterAlias}")
+    end
+  rescue => errorStr
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for cluster_alias in prometheus collector settings- #{errorStr}, using defaults, please check config map for errors")
+  end
+
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
@@ -56,14 +69,32 @@ else
   end
 end
 
+# get clustername (to be used for mac mode as 'cluster' dimension)
+begin
+  if !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true"
+    resourceArray=ENV['CLUSTER'].strip.split("/")
+    @clusterName=resourceArray[resourceArray.length - 1]
+  else
+    @clusterName=ENV['CLUSTER']
+  end
+rescue => errorStr
+  ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing cluster name from full cluster resource id in prometheus collector settings- #{errorStr}, using default as full cluster resource id.")
+end
+
 # Write the settings to file, so that they can be set as environment variables
 file = File.open("/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var", "w")
 
 if !file.nil?
   if !ENV['OS_TYPE'].nil? && ENV['OS_TYPE'].downcase == "linux"
     file.write("export AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
+    file.write("export AZMON_CLUSTER_NAME=#{@clusterName}\n")
+    if  !@clusterAlias.nil? && !@clusterAlias.empty? && @clusterAlias.length > 0
+      file.write("export AZMON_CLUSTER_ALIAS=#{@clusterAlias}\n")
   else
     file.write("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
+    file.write("AZMON_CLUSTER_NAME=#{@clusterName}\n")
+    if  !@clusterAlias.nil? && !@clusterAlias.empty? && @clusterAlias.length > 0
+      file.write("AZMON_CLUSTER_ALIAS=#{@clusterAlias}\n")
   end
   
   file.close

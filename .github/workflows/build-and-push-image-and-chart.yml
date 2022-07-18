@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - vishwa/clusteralias
   pull_request:
     types: [opened, synchronize, reopened]
     branches:

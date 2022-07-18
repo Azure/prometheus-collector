@@ -5,6 +5,9 @@
 # -- when true, ingestion will be based on Monitor account & DCR(s)
 useMonitoringAccount: false
 
+# -- when set to a string, this value will override the "clusterName" (when provided as chart paramater i.e when useMonitoringAccount is 'false' ), OR it will override "azureResourceId" parameter (when provided as chart paramater i.e. when useMonitoringAccount is 'true')
+clusterAlias: ""
+
 # -- required & used only when useMonitoringAccount=true. This is the full ARM ResourceId for the Kubernetes cluster that is going to be monitoring with this chart
 azureResourceId: ""
 

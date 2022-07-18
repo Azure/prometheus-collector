@@ -7,13 +7,13 @@ data:
   config-version:
     #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
     ver1
-  {{- if not .Values.useMonitoringAccount }}
   prometheus-collector-settings: |-
+  {{- if not .Values.useMonitoringAccount }}
     default_metric_account_name = {{ required "azureMetricAccount.defaultAccountName is required" .Values.azureMetricAccount.defaultAccountName | toString | quote }}
   {{- else }}
-  prometheus-collector-settings: |-
     default_metric_account_name = "notapplicable"
   {{- end }}
+    cluster_alias: {{ index .Values "clusterAlias" | toString | quote }}
   default-scrape-settings-enabled: |-
     kubelet = {{ .Values.scrapeTargets.kubelet }}
     coredns = {{ .Values.scrapeTargets.coreDns }}
