@@ -23,13 +23,33 @@ jobs:
         uses: Azure/login@v1
         with:
           creds: ${{ secrets.AZURE_KEYVAULT_CREDENTIALS }}
-      - name: Get-kube-config-from-Key-Vault
+      - name: Get-kube-config-from-Key-Vault-sp
         uses: Azure/get-keyvault-secrets@v1
         with:
           keyvault: "cdpxacrcredskv"
           secrets: 'ci-prod-aks-eus-kubeconfig'
-        id: GetKubeConfig
-      - name: Get-kube-config
-        run: mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig.outputs.ci-prod-aks-eus-kubeconfig }}" > ~/.kube/config
-      - name: Pull-HELM-chart-and-Deploy-to-cluster
-        run: helm pull oci://${{ env.MCR_REPOSITORY_HELM }} --version ${{ github.event.inputs.helmChartTag }} && helm upgrade --install prom-prod ./prometheus-collector-${{ github.event.inputs.helmChartTag }}.tgz --dependency-update --set image.repository=${{ env.MCR_REPOSITORY }} --set image.tag=${{ github.event.inputs.helmChartTag }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsprodclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-prod-aks-eus" --set azureMetricAccount.defaultAccountName="containerinsightsprodclusteraccount" --set azureKeyVault.clientId=${{ secrets.CI_PROMETHEUS_KV_CLIENTID }} --set azureKeyVault.clientSecret=${{ secrets.CI_PROMETHEUS_KV_CLIENTSECRET }} --set mode.advanced=true -n monitoring --create-namespace
+        id: GetKubeConfig-sp
+      - name: Get-kube-config-from-Key-Vault-msi
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "cdpxacrcredskv"
+          secrets: 'ci-prod-aks-msi-eus2-kubeconfig'
+        id: GetKubeConfig-msi
+      - name: Get-kube-config-from-Key-Vault-mac
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: "cdpxacrcredskv"
+          secrets: 'ci-prod-aks-mac-weu-kubeconfig'
+        id: GetKubeConfig-mac
+      - name: Get-kube-config-sp
+        run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-sp.outputs.ci-prod-aks-eus-kubeconfig }}" > ~/.kube/config
+      - name: Pull-HELM-chart-and-Deploy-to-prod-cluster-sp
+        run: helm pull oci://${{ env.MCR_REPOSITORY_HELM }} --version ${{ github.event.inputs.helmChartTag }} && helm upgrade --install prom-prod ./prometheus-collector-${{ github.event.inputs.helmChartTag }}.tgz --dependency-update --set image.repository=${{ env.MCR_REPOSITORY }} --set image.tag=${{ github.event.inputs.helmChartTag }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsprodclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-prod-aks-eus" --set azureMetricAccount.defaultAccountName="containerinsightsprodclusteraccount" --set azureKeyVault.clientId=${{ secrets.CI_PROMETHEUS_KV_CLIENTID }} --set azureKeyVault.clientSecret=${{ secrets.CI_PROMETHEUS_KV_CLIENTSECRET }} --set mode.advanced=true --set windowsDaemonset=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" -n monitoring --create-namespace
+      - name: Get-kube-config-msi
+        run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-msi.outputs.ci-prod-aks-msi-eus2-kubeconfig }}" > ~/.kube/config
+      - name: Pull-HELM-chart-and-Deploy-to-prod-cluster-msi
+        run: helm pull oci://${{ env.MCR_REPOSITORY_HELM }} --version ${{ github.event.inputs.helmChartTag }} && helm upgrade --install prom-prod-msi ./prometheus-collector-${{ github.event.inputs.helmChartTag }}.tgz --dependency-update --set image.repository=${{ env.MCR_REPOSITORY }} --set image.tag=${{ github.event.inputs.helmChartTag }} --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsprodclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-prod-aks-msi-eus2" --set azureMetricAccount.defaultAccountName="containerinsightsprodclusteraccount" --set azureKeyVault.useManagedIdentity=true --set mode.advanced=true --set windowsDaemonset=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set minimalIngestionProfile="false" -n monitoring --create-namespace
+      - name: Get-kube-config-mac
+        run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-mac.outputs.ci-prod-aks-mac-weu-kubeconfig }}" > ~/.kube/config
+      - name: Pull-HELM-chart-and-Deploy-to-prod-cluster-mac
+        run: helm pull oci://${{ env.MCR_REPOSITORY_HELM }} --version ${{ github.event.inputs.helmChartTag }} && helm upgrade --install prom-prod-mac ./prometheus-collector-${{ github.event.inputs.helmChartTag }}.tgz --dependency-update --set image.repository=${{ env.MCR_REPOSITORY }} --set image.tag=${{ github.event.inputs.helmChartTag }} --set useMonitoringAccount=true --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set mode.advanced=true --set windowsDaemonset=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set azureResourceId="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu" --set azureResourceRegion="westeurope" -n kube-system --create-namespace

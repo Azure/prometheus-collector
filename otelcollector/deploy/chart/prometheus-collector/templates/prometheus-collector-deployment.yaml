@@ -2,7 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ template "prometheus-collector.fullname" . }}
+  {{- if not .Values.useMonitoringAccount }}
   namespace: {{ .Release.Namespace }}
+  {{- else }}
+  {{ include "mac-namespace-validate" . | required "namespace value is incorrect. The valid value is 'kube-system' " }}
+  {{- end }}
   labels:
     component: {{ template "prometheus-collector.fullname" . }}
 spec:
@@ -16,9 +20,14 @@ spec:
     metadata:
       labels:
         rsName: {{ template "prometheus-collector.fullname" . }}
+        {{- with .Values.podLabels }}{{ toYaml . | trim | nindent 8 }}{{- end }}
+        {{- if ne (index .Values.azureKeyVault "aad-pod-identity") ""}}
+        aadpodidbinding: {{ index .Values.azureKeyVault "aad-pod-identity" }}
+        {{- end }}
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
+        {{- with .Values.podAnnotations }}{{ toYaml . | trim | nindent 8 }}{{- end }}
     spec:
       serviceAccountName: {{ template "prometheus-collector.fullname" . }}-serviceaccount
       containers:
@@ -28,12 +37,29 @@ spec:
           resources:
             {{- toYaml .Values.resources.deployment | nindent 12 }}
           env:
+            {{- if not .Values.useMonitoringAccount }}
             - name: CLUSTER
-              value: {{ required "clusterName is required" .Values.clusterName | toString | quote }}
-            {{- if .Values.internalSettings.intEnvironment  }}
+              value: {{ required "clusterName is required" .Values.clusterName | toString | trim | quote }}
+            {{- else }}
+            - name: CLUSTER
+              value: {{ required "azureResourceId is required when using monitoring account" .Values.azureResourceId | toString | quote }}
+            - name: AKSREGION
+              value: {{ required "azureResourceRegion is required when using monitoring account" .Values.azureResourceRegion | toString | trim | lower | quote }}
+            - name: MAC
+              value: "true"
+            - name: customEnvironment
+              value: "azurepubliccloud"
+            - name: OMS_TLD
+              value: "opinsights.azure.com"
+            {{- end }}
+            {{- if and (.Values.internalSettings.intEnvironment) (not .Values.useMonitoringAccount) }}
             - name: ME_ADDITIONAL_FLAGS
               value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
             {{- end }}
+            {{- if .Values.internalSettings.clusterOverride  }}
+            - name: CLUSTER_OVERRIDE
+              value: "true"
+            {{- end }}  
             - name: CONTROLLER_TYPE
               value: "ReplicaSet"
             - name: NODE_IP
@@ -85,6 +111,31 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
+            {{- if and (.Values.windowsDaemonset) (not .Values.useMonitoringAccount) }}
+            - name: WINMODE
+              value: "advanced" # WINDOWS: only supported mode is 'advanced' [when not using MAC], any other value will be the default/non-advance mode
+            {{- else }}
+            - name: WINMODE
+              value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            {{- end }}
+            {{- if not .Values.useMonitoringAccount }}
+            {{- if .Values.azureKeyVault.useManagedIdentity  }}
+              {{- if .Values.azureKeyVault.userAssignedIdentityID }}
+            - name: AKVAUTH
+              value: "mi-ua" # managed identity-user assigned
+              {{- else }}
+            - name: AKVAUTH
+              value: "mi-sa" # managed identity-system assigned
+              {{- end }}
+            {{- else }}
+            - name: AKVAUTH
+              value: "sp" # service principal
+            {{- end }}
+            {{- end }}
+            {{- if .Values.minimalIngestionProfile  }}
+            - name: MINIMAL_INGESTION_PROFILE
+              value: "true" # only supported value is the string "true"
+            {{- end }}
           securityContext:
             privileged: false
           volumeMounts:
@@ -94,9 +145,11 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
+            {{- if not .Values.useMonitoringAccount }}
             - mountPath: /etc/config/settings/akv
               name: secrets-store-inline
               readOnly: true
+            {{- end }}
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
@@ -113,6 +166,41 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
+        {{- if .Values.useMonitoringAccount }}
+        - name: addon-token-adapter
+          command:
+            - /addon-token-adapter
+          args:
+            - --secret-namespace=kube-system
+            - --secret-name=omsagent-aad-msi-token
+            - --token-server-listening-port=7777
+            - --health-server-listening-port=9999
+          image: "mcr.microsoft.com/aks/msi/addon-token-adapter:master.220415.2"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: AZMON_COLLECT_ENV
+              value: "false"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9999
+            initialDelaySeconds: 10
+            periodSeconds: 60
+          resources:
+            limits:
+              cpu: 500m
+              memory: 500Mi
+            requests:
+              cpu: 20m
+              memory: 30Mi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
+                - NET_RAW
+        {{- end }}
       affinity:
         nodeAffinity:
           # affinity to schedule on to ephemeral os node if its available
@@ -128,10 +216,14 @@ spec:
             nodeSelectorTerms:
               - labelSelector:
                 matchExpressions:
-                  - key: beta.kubernetes.io/os
+                  - key: kubernetes.io/os
                     operator: In
                     values:
-                    - linux
+                      - linux
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - amd64
                   - key: type
                     operator: NotIn
                     values:
@@ -143,10 +235,6 @@ spec:
                       - master
       # The following tolerations are removed for AKS, this is only required for non AKS
       tolerations:
-        - operator: "Exists"
-          effect: "NoSchedule"
-        - operator: "Exists"
-          effect: "NoExecute"
         - operator: "Exists"
           effect: "PreferNoSchedule"
       volumes:
@@ -164,11 +252,15 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
+        {{- if not .Values.useMonitoringAccount }}
         - name: secrets-store-inline
           csi:
             driver: secrets-store.csi.k8s.io
             readOnly: true
             volumeAttributes:
               secretProviderClass: "{{ template "prometheus-collector.fullname" . }}-azure-kv-metricstore"
+            {{- if not .Values.azureKeyVault.useManagedIdentity }}
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds   # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
+            {{- end }}
+        {{- end }}

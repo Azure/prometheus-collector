@@ -132,7 +132,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "\r\n 1 - (\r\n          (\r\n            # write too slow\r\n            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            -\r\n            sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",le=\"1\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n          ) +\r\n          (\r\n            # read too slow\r\n            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            -\r\n            (\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"resource\",le=\"0.1\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]) or vector(0) )   +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"namespace\",le=\"0.5\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))  +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"cluster\",le=\"5\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            )\r\n          ) +\r\n          # errors\r\n          sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=~\"$cluster\",verb=~\"LIST|GET|POST|PUT|PATCH|DELETE\",code=~\"5..\",instance=~\"$instance\"}[13d]))) or vector(0) ) \r\n        )\r\n        /\r\n        sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d])) ))",
+          "expr": "\r\n 1 - (\r\n          (\r\n            # write too slow\r\n            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            -\r\n            sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",le=\"1\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n          ) +\r\n          (\r\n            # read too slow\r\n            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            -\r\n            (\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"resource\",le=\"0.1\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]) or vector(0) )   +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"namespace\",le=\"0.5\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))  +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"cluster\",le=\"5\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            )\r\n          ) +\r\n          # errors\r\n          sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=\"$cluster\",verb=~\"LIST|GET|POST|PUT|PATCH|DELETE\",code=~\"5..\",instance=~\"$instance\"}[13d]))) or vector(0) ) \r\n        )\r\n        /\r\n        sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=\"$cluster\",instance=~\"$instance\"}[13d])) ))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -195,7 +195,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "100 * ( \t1 - (\r\n\t          (\r\n\t            # write too slow\r\n\t            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n\t            -\r\n\t            sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",le=\"1\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n\t          ) +\r\n\t          (\r\n\t            # read too slow\r\n\t            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n\t            -\r\n\t            (\r\n\t              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"resource\",le=\"0.1\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]) or vector(0) )  +\r\n\t              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"namespace\",le=\"0.5\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))  +\r\n\t              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"cluster\",le=\"5\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n\t            )\r\n\t          ) +\r\n\t          # errors\r\n\t          sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=~\"$cluster\",verb=~\"LIST|GET|POST|PUT|PATCH|DELETE\",code=~\"5..\",instance=~\"$instance\"}[13d]))) or vector(0) )\r\n\t        )\r\n\t        /\r\n\t        sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d])) ))\r\n - 0.990000)",
+          "expr": "100 * ( \t1 - (\r\n\t          (\r\n\t            # write too slow\r\n\t            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n\t            -\r\n\t            sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",le=\"1\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n\t          ) +\r\n\t          (\r\n\t            # read too slow\r\n\t            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n\t            -\r\n\t            (\r\n\t              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"resource\",le=\"0.1\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]) or vector(0) )  +\r\n\t              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"namespace\",le=\"0.5\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))  +\r\n\t              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"cluster\",le=\"5\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n\t            )\r\n\t          ) +\r\n\t          # errors\r\n\t          sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=\"$cluster\",verb=~\"LIST|GET|POST|PUT|PATCH|DELETE\",code=~\"5..\",instance=~\"$instance\"}[13d]))) or vector(0) )\r\n\t        )\r\n\t        /\r\n\t        sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=\"$cluster\",instance=~\"$instance\"}[13d])) ))\r\n - 0.990000)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -309,7 +309,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": " 1 - (\r\n            # read too slow\r\n            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            -\r\n            (\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"resource\",le=\"0.1\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]) or vector(0) )   +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"namespace\",le=\"0.5\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))  +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"cluster\",le=\"5\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            )\r\n            +\r\n            # errors\r\n            sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=~\"$cluster\",verb=~\"LIST|GET\",code=~\"5..\",instance=~\"$instance\"}[13d]))) or vector(0) ) \r\n        )\r\n        /\r\n        sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=~\"$cluster\",verb=~\"LIST|GET\",instance=~\"$instance\"}[13d])) ))",
+          "expr": " 1 - (\r\n            # read too slow\r\n            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            -\r\n            (\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"resource\",le=\"0.1\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]) or vector(0) )   +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"namespace\",le=\"0.5\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))  +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",scope=\"cluster\",le=\"5\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            )\r\n            +\r\n            # errors\r\n            sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=\"$cluster\",verb=~\"LIST|GET\",code=~\"5..\",instance=~\"$instance\"}[13d]))) or vector(0) ) \r\n        )\r\n        /\r\n        sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=\"$cluster\",verb=~\"LIST|GET\",instance=~\"$instance\"}[13d])) ))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -390,7 +390,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (code) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=~\"$cluster\",instance=~\"$instance\"}[5m])))",
+          "expr": "sum by (code) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=\"$cluster\",instance=~\"$instance\"}[5m])))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -492,7 +492,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (resource) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"LIST|GET\",code=~\"5..\", cluster=~\"$cluster\",instance=~\"$instance\"}[5m])) or vector(0) ) / sum by (resource) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=~\"$cluster\",instance=~\"$instance\"}[5m])) or vector(0))",
+          "expr": "sum by (resource) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"LIST|GET\",code=~\"5..\", cluster=\"$cluster\",instance=~\"$instance\"}[5m])) or vector(0) ) / sum by (resource) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=\"$cluster\",instance=~\"$instance\"}[5m])) or vector(0))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -594,7 +594,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum by (le, resource) (rate(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=~\"$cluster\",instance=~\"$instance\"}[5m]))) > 0",
+          "expr": "histogram_quantile(0.99, sum by (le, resource) (rate(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"LIST|GET\",cluster=\"$cluster\",instance=~\"$instance\"}[5m]))) > 0",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -708,7 +708,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "1 - (\r\n            # write too slow\r\n            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            -\r\n            (\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",scope=\"resource\",le=\"0.1\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]) or vector(0) )   +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",scope=\"namespace\",le=\"0.5\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))  +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",scope=\"cluster\",le=\"5\",cluster=~\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            )\r\n            +\r\n            # errors\r\n            sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=~\"$cluster\",verb=~\"POST|PUT|PATCH|DELETE\",code=~\"5..\",instance=~\"$instance\"}[13d]))) or vector(0) ) \r\n        )\r\n        /\r\n        sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=~\"$cluster\",verb=~\"POST|PUT|PATCH|DELETE\",instance=~\"$instance\"}[13d])) ))",
+          "expr": "1 - (\r\n            # write too slow\r\n            sum(increase(apiserver_request_duration_seconds_count{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            -\r\n            (\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",scope=\"resource\",le=\"0.1\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]) or vector(0) )   +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",scope=\"namespace\",le=\"0.5\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))  +\r\n              sum(increase(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",scope=\"cluster\",le=\"5\",cluster=\"$cluster\",instance=~\"$instance\"}[13d]))\r\n            )\r\n            +\r\n            # errors\r\n            sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=\"$cluster\",verb=~\"POST|PUT|PATCH|DELETE\",code=~\"5..\",instance=~\"$instance\"}[13d]))) or vector(0) ) \r\n        )\r\n        /\r\n        sum(sum by (code) (sum by (code, verb) (increase(apiserver_request_total{job=\"kube-apiserver\",cluster=\"$cluster\",verb=~\"POST|PUT|PATCH|DELETE\",instance=~\"$instance\"}[13d])) ))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -789,7 +789,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (code) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=~\"$cluster\",instance=~\"$instance\"}[5m])))",
+          "expr": "sum by (code) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=\"$cluster\",instance=~\"$instance\"}[5m])))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -893,7 +893,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (resource) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",code=~\"5..\", cluster=~\"$cluster\",instance=~\"$instance\"}[5m])) or vector(0) ) / sum by (resource) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=~\"$cluster\",instance=~\"$instance\"}[5m])) or vector(0))",
+          "expr": "sum by (resource) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",code=~\"5..\", cluster=\"$cluster\",instance=~\"$instance\"}[5m])) or vector(0) ) / sum by (resource) (sum by (code,resource) (rate(apiserver_request_total{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=\"$cluster\",instance=~\"$instance\"}[5m])) or vector(0))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -995,7 +995,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum by (le, resource) (rate(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=~\"$cluster\",instance=~\"$instance\"}[5m]))) > 0",
+          "expr": "histogram_quantile(0.99, sum by (le, resource) (rate(apiserver_request_duration_seconds_bucket{job=\"kube-apiserver\",verb=~\"POST|PUT|PATCH|DELETE\",cluster=\"$cluster\",instance=~\"$instance\"}[5m]))) > 0",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1095,7 +1095,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(workqueue_adds_total{job=\"kube-apiserver\", instance=~\"$instance\", cluster=~\"$cluster\"}[5m])) by (instance, name)",
+          "expr": "sum(rate(workqueue_adds_total{job=\"kube-apiserver\", instance=~\"$instance\", cluster=\"$cluster\"}[5m])) by (instance, name)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{instance}} {{name}}",
@@ -1194,7 +1194,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(workqueue_depth{job=\"kube-apiserver\", instance=~\"$instance\", cluster=~\"$cluster\"}[5m])) by (instance, name)",
+          "expr": "sum(rate(workqueue_depth{job=\"kube-apiserver\", instance=~\"$instance\", cluster=\"$cluster\"}[5m])) by (instance, name)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{instance}} {{name}}",
@@ -1293,7 +1293,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance\", cluster=~\"$cluster\"}[5m])) by (instance, name, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"kube-apiserver\", instance=~\"$instance\", cluster=\"$cluster\"}[5m])) by (instance, name, le))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{instance}} {{name}}",
@@ -1392,7 +1392,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{job=\"kube-apiserver\",instance=~\"$instance\", cluster=~\"$cluster\"}",
+          "expr": "process_resident_memory_bytes{job=\"kube-apiserver\",instance=~\"$instance\", cluster=\"$cluster\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{instance}}",
@@ -1491,7 +1491,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"kube-apiserver\",instance=~\"$instance\", cluster=~\"$cluster\"}[5m])",
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-apiserver\",instance=~\"$instance\", cluster=\"$cluster\"}[5m])",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{instance}}",
@@ -1590,7 +1590,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "go_goroutines{job=\"kube-apiserver\",instance=~\"$instance\", cluster=~\"$cluster\"}",
+          "expr": "go_goroutines{job=\"kube-apiserver\",instance=~\"$instance\", cluster=\"$cluster\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{instance}}",
@@ -1686,7 +1686,7 @@
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(apiserver_request_total, cluster)",
+          "query": "label_values(up{job=\"kube-apiserver\"}, cluster)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -1713,7 +1713,7 @@
         "name": "instance",
         "options": [],
         "query": {
-          "query": "label_values(apiserver_request_total{job=\"kube-apiserver\", cluster=~\"$cluster\"}, instance)",
+          "query": "label_values(up{job=\"kube-apiserver\", cluster=\"$cluster\"}, instance)",
           "refId": "Prometheus-INT-Cluster-instance-Variable-Query"
         },
         "refresh": 2,

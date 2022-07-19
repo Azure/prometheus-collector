@@ -1,6 +1,15 @@
 # Default values for prometheus-collector.
-# This is a YAML-formatted file.
+# This is a YAML-formatted file .
 # Declare variables to be passed into your templates.
+
+# -- when true, ingestion will be based on Monitor account & DCR(s)
+useMonitoringAccount: false
+
+# -- required & used only when useMonitoringAccount=true. This is the full ARM ResourceId for the Kubernetes cluster that is going to be monitoring with this chart
+azureResourceId: ""
+
+# -- required & used only when useMonitoringAccount=true. This is the Azure region for the Kubernetes cluster that is going to be monitoring with this chart
+azureResourceRegion: ""
 
 scrapeTargets:
   # -- when true, automatically scrape coredns service in the k8s cluster without any additional scrape config
@@ -23,8 +32,11 @@ scrapeTargets:
   windowsKubeProxy: false
   # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   prometheusCollectorHealth: true
+
+# when minimalIngestionProfile is enabled, we will ingest only hand-picked/selected metrics per default target. see the list of metrics included per default target in our docs.
+minimalIngestionProfile: true
   
-# The following setting will allow only the metrics for each target whose names match the regex string
+# The following setting will allow only the metrics for each target whose names match the regex string. When this list is specified with minimalIngestionProfile=true, then this will be in addition to the metrics collected by the profile
 keepListRegexes:
   coreDns: "" 
   kubelet: "" 
@@ -47,27 +59,49 @@ azureKeyVault:
   # -- tenantid for the azure key vault resource
   tenantId: "" #required
   # -- clientid for a service principal that has access to read the Pfx certificates from keyvault specified above
-  clientId: "" #required
+  clientId: "" #required when using service principal to access keyvault
   # -- client secret for the above service principal
-  clientSecret: "" #required
+  clientSecret: "" #required when using service principal to access keyvault
   # -- name of the Pfx certificate(s) - one per metric account
   pfxCertNames: [] #required
+  # -- enable/disable managed identity to access keyvault
+  useManagedIdentity: false
+  # -- name of the azure pod managed identity to access keyvault, requires useManagedIdentity true
+  aad-pod-identity: ""
+  # -- use the client id to specify which user assigned managed identity to use when acccesing keyvault. If using a user assigned identity as the VM's managed identity, then specify the identity's client id. If empty, AND 'useManagedIdentity' is true, then defaults to use the system assigned identity on the VM
+  userAssignedIdentityID: ""
 
 # -- name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped
 clusterName: "" #required
 
-#do not use any of the internal settings. This is for testing purposes
+#do not use any of the internal settings. This is for testing purposes to be used by Geneva team only
 internalSettings:
   intEnvironment: false
+  clusterOverride: false
+
+# Only enable to view metrics being scraped for a short time. This can affect performance so it should not be enabled when not in use
+debugMode:
+  enabled: false
 
 #if advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset
 mode:
   advanced: false
 
+#if windowsDaemonset==true (default is false) AND mode.advanced==true (default is false), then it will deploy a windows daemonset on windows nodes, and move some of the default node targets (windows-kube-procy and windowsexporter) to windows daemonset
+windowsDaemonset: false
+
 image:
   repository: ${MCR_REGISTRY}${MCR_REPOSITORY}
   tag: ${IMAGE_TAG}
+  windows: 
+    tag: ${IMAGE_TAG_WINDOWS}
   pullPolicy: IfNotPresent
+
+# -- Applies additional labels to all pods.
+podLabels: {}
+
+# -- Applies additional labels to all pods.
+podAnnotations: {}
 
 resources:
  deployment:
@@ -84,11 +118,35 @@ resources:
    requests:
      cpu: 500m
      memory: 1Gi
+ daemonSetWindows:
+   limits:
+     cpu: 500m
+     memory: 500Mi
 kube-state-metrics:
+  # Comma-separated list of additional Kubernetes label keys that will be used in the resource's
+  # labels metric. By default the metric contains only name and namespace labels.
+  # To include additional labels, provide a list of resource names in their plural form and Kubernetes
+  # label keys you would like to allow for them (Example: '=namespaces=[k8s-label-1,k8s-label-n,...],pods=[app],...)'.
+  # A single '*' can be provided per resource instead to allow any labels, but that has
+  # severe performance implications (Example: '=pods=[*]').
+  metricLabelsAllowlist: []
+    # - namespaces=[k8s-label-1,k8s-label-n]
+
+  # Comma-separated list of Kubernetes annotations keys that will be used in the resource'
+  # labels metric. By default the metric contains only name and namespace labels.
+  # To include additional annotations provide a list of resource names in their plural form and Kubernetes
+  # annotation keys you would like to allow for them (Example: '=namespaces=[kubernetes.io/team,...],pods=[kubernetes.io/team],...)'.
+  # A single '*' can be provided per resource instead to allow any annotations, but that has
+  # severe performance implications (Example: '=pods=[*]').
+  metricAnnotationsAllowList: []
+    # - pods=[k8s-annotation-1,k8s-annotation-n]
+  
   nodeSelector:
     kubernetes.io/os: linux
+    kubernetes.io/arch: amd64
 prometheus-node-exporter:
   nodeSelector:
     kubernetes.io/os: linux
+    kubernetes.io/arch: amd64
 
 prometheusConfig: ""

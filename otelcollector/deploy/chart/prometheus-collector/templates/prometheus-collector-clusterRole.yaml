@@ -24,5 +24,9 @@ rules:
     resources:
     - ingresses
     verbs: ["list", "get", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["omsagent-aad-msi-token"]
+    verbs: ["get", "watch"]
   - nonResourceURLs: ["/metrics"]
     verbs: ["get"]

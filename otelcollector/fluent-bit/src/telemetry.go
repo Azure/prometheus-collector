@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -47,10 +48,8 @@ var (
 )
 
 const (
-	clusterTypeACS                        = "ACS"
 	clusterTypeAKS                        = "AKS"
 	envAKSResourceID                      = "AKS_RESOURCE_ID"
-	envACSResourceName                    = "ACS_RESOURCE_NAME"
 	envAgentVersion                       = "AGENT_VERSION"
 	envControllerType                     = "CONTROLLER_TYPE"
 	envNodeIP                             = "NODE_IP"
@@ -71,7 +70,10 @@ const (
 	fluentbitEventsProcessedLastPeriodTag = "prometheus.log.eventsprocessedlastperiod"
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
+	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
+	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
+	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -121,34 +123,75 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["defaultmetricaccountname"] = os.Getenv(envDefaultMetricAccountName)
 	CommonProperties["podname"] = os.Getenv(envPodName)
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
+	CommonProperties["osType"] = os.Getenv("OS_TYPE")
 
-	aksResourceID := os.Getenv(envAKSResourceID)
-	// if the aks resource id is not defined, it is most likely an ACS Cluster
-	//todo
-	//fix all the casing issues below for property names and also revist these telemetry before productizing as AKS addon
-	if aksResourceID == "" && os.Getenv(envACSResourceName) != "" {
-		CommonProperties["ACSResourceName"] = os.Getenv(envACSResourceName)
-		CommonProperties["ClusterType"] = clusterTypeACS
-
-		CommonProperties["SubscriptionID"] = ""
-		CommonProperties["ResourceGroupName"] = ""
-		CommonProperties["ClusterName"] = ""
-		CommonProperties["Region"] = ""
-		CommonProperties["AKS_RESOURCE_ID"] = ""
-
-	} else if aksResourceID != "" {
-		CommonProperties["ACSResourceName"] = ""
+	isMacMode := os.Getenv("MAC")
+	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
+		CommonProperties["macmode"] = isMacMode
+		aksResourceID := os.Getenv("CLUSTER")
+		// When we support ARC add a way to identify and send telemetry that it is an ARC cluster
 		CommonProperties["AKS_RESOURCE_ID"] = aksResourceID
+		CommonProperties["ClusterType"] = clusterTypeAKS
+		CommonProperties["Region"] = os.Getenv("AKSREGION")
 		splitStrings := strings.Split(aksResourceID, "/")
 		if len(splitStrings) >= 9 {
 			CommonProperties["SubscriptionID"] = splitStrings[2]
 			CommonProperties["ResourceGroupName"] = splitStrings[4]
 			CommonProperties["ClusterName"] = splitStrings[8]
 		}
-		CommonProperties["ClusterType"] = clusterTypeAKS
+		// Reading AMCS config file for telemetry
+		amcsConfigFile, err := os.Open(amcsConfigFilePath)
+		if err != nil {
+			message := fmt.Sprintf("Error while opening AMCS config file - %v\n", err)
+			Log(message)
+			SendException(message)
+		}
+		Log("Successfully read AMCS config file contents for telemetry\n")
+		defer amcsConfigFile.Close()
 
-		region := os.Getenv("AKS_REGION")
-		CommonProperties["Region"] = region
+		amcsConfigFileContents, err := ioutil.ReadAll(amcsConfigFile)
+		if err != nil {
+			message := fmt.Sprintf("Error while reading AMCS config file contents - %v\n", err)
+			Log(message)
+			SendException(message)
+		}
+
+		var amcsConfig map[string]interface{}
+
+		err = json.Unmarshal([]byte(amcsConfigFileContents), &amcsConfig)
+		if err != nil {
+			message := fmt.Sprintf("Error while unmarshaling AMCS config file contents - %v\n", err)
+			Log(message)
+			SendException(message)
+		}
+
+		// iterate through keys and parse dcr name
+		for key, _ := range amcsConfig {
+			Log("Parsing %v for extracting DCR:", key)
+			splitKey := strings.Split(key, "/")
+			// Expecting a key in this format to extract out DCR Id -
+			// https://<dce>.eastus2euap-1.metrics.ingest.monitor.azure.com/api/v1/dataCollectionRules/<dcrid>/streams/Microsoft-PrometheusMetrics
+			if len(splitKey) == 9 {
+				dcrId := CommonProperties["DCRId"]
+				if dcrId == "" {
+					CommonProperties["DCRId"] = splitKey[6]
+				} else {
+					dcrIdArray := dcrId + ";" + splitKey[6]
+					CommonProperties["DCRId"] = dcrIdArray
+				}
+			} else {
+				message := fmt.Sprintf("AMCS token config json key contract has changed, unable to get DCR ID. Logging the entire key as DCRId")
+				Log(message)
+				SendException(message)
+				dcrId := CommonProperties["DCRId"]
+				if dcrId == "" {
+					CommonProperties["DCRId"] = key
+				} else {
+					dcrIdArray := dcrId + ";" + key
+					CommonProperties["DCRId"] = dcrIdArray
+				}
+			}
+		}
 	}
 
 	TelemetryClient.Context().CommonProperties = CommonProperties
@@ -340,5 +383,14 @@ func PushInfiniteMetricLogToAppInsightsEvents(records []map[interface{}]interfac
 		}
 	}
 
+	return output.FLB_OK
+}
+
+func RecordExportingFailed(records []map[interface{}]interface{}) int {
+	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
+		ExportingFailedMutex.Lock()
+		OtelCollectorExportingFailedCount += 1
+		ExportingFailedMutex.Unlock()
+	}
 	return output.FLB_OK
 }

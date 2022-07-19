@@ -15,6 +15,12 @@
     },
     {
       "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
       "id": "timeseries",
       "name": "Time series",
       "version": ""
@@ -24,21 +30,31 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
   },
   "editable": true,
-  "gnetId": null,
+  "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1631912169601,
+  "iteration": 1654125994346,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
       "datasource": "${datasource}",
@@ -107,13 +123,14 @@
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(timeseries_sent_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
+          "expr": "sum(timeseries_sent_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "timeseries sent per minute",
@@ -121,7 +138,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
+          "expr": "sum(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
@@ -200,13 +217,14 @@
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(bytes_sent_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
+          "expr": "sum(bytes_sent_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"})",
           "interval": "",
           "legendFormat": "bytes sent per minute",
           "refId": "A"
@@ -214,10 +232,157 @@
       ],
       "title": "Bytes Sent Per Minute",
       "type": "timeseries"
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "avg(invalid_custom_prometheus_config{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\"}) by (cluster, release, controller_type)",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{controller_type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Agent Pods with Invalid Prometheus Config",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "${datasource}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 6,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": false,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "pluginVersion": "8.5.1",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "avg(invalid_custom_prometheus_config{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\", computer=~\"$computer\", error !=\"\"}) by (release, controller_type, error)",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{error}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Invalid Prometheus Config Errors",
+      "type": "logs"
     }
   ],
   "refresh": false,
-  "schemaVersion": 30,
+  "schemaVersion": 36,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -244,20 +409,16 @@
         "type": "datasource"
       },
       {
-        "allValue": null,
         "current": {},
         "datasource": "${datasource}",
-        "definition": "label_values(timeseries_received_per_minute, cluster)",
-        "description": null,
-        "error": null,
+        "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\"}, cluster)",
         "hide": 0,
         "includeAll": false,
-        "label": null,
         "multi": false,
         "name": "cluster",
         "options": [],
         "query": {
-          "query": "label_values(timeseries_received_per_minute, cluster)",
+          "query": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\"}, cluster)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -267,20 +428,16 @@
         "type": "query"
       },
       {
-        "allValue": null,
         "current": {},
         "datasource": "${datasource}",
-        "definition": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\"}, release)",
-        "description": null,
-        "error": null,
+        "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\"}, release)",
         "hide": 0,
         "includeAll": true,
-        "label": null,
         "multi": false,
         "name": "release",
         "options": [],
         "query": {
-          "query": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\"}, release)",
+          "query": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\"}, release)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -290,46 +447,38 @@
         "type": "query"
       },
       {
-        "allValue": null,
         "current": {},
         "datasource": "${datasource}",
-        "definition": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\"}, controller_type)",
-        "description": null,
-        "error": null,
+        "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\"}, controller_type)",
         "hide": 0,
         "includeAll": true,
-        "label": null,
         "multi": false,
         "name": "controller_type",
         "options": [],
         "query": {
-          "query": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\"}, controller_type)",
+          "query": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\"}, controller_type)",
           "refId": "StandardVariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
       },
       {
-        "allValue": null,
         "current": {},
         "datasource": "${datasource}",
-        "definition": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\"}, computer)",
-        "description": null,
-        "error": null,
+        "definition": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\"}, computer)",
         "hide": 0,
         "includeAll": true,
-        "label": null,
         "multi": false,
         "name": "computer",
         "options": [],
         "query": {
-          "query": "label_values(timeseries_received_per_minute{cluster=~\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\"}, computer)",
+          "query": "label_values(timeseries_received_per_minute{job=\"prometheus_collector_health\", cluster=\"$cluster\", release=~\"$release\", controller_type=~\"$controller_type\"}, computer)",
           "refId": "StandardVariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -345,5 +494,5 @@
   "timezone": "",
   "title": "Prometheus-Collector Health",
   "uid": "UskST-Snz",
-  "version": 3
+  "version": 4
 }

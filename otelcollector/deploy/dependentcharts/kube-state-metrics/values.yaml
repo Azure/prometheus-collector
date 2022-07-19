@@ -2,7 +2,7 @@
 prometheusScrape: true
 image:
   repository: mcr.microsoft.com/oss/kubernetes/kube-state-metrics
-  tag: v2.2.0
+  tag: v2.4.2
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -28,9 +28,15 @@ service:
   type: ClusterIP
   nodePort: 0
   loadBalancerIP: ""
+  clusterIP: ""
   annotations: {}
 
+## Additional labels to add to all resources
 customLabels: {}
+  # app: kube-state-metrics
+
+## set to true to add the release label so scraping of the servicemonitor with kube-prometheus-stack works out of the box
+releaseLabel: false
 
 hostNetwork: false
 
@@ -63,6 +69,11 @@ prometheus:
     enabled: false
     additionalLabels: {}
     namespace: ""
+    jobLabel: ""
+    interval: ""
+    scrapeTimeout: ""
+    proxyUrl: ""
+    selectorOverride: {}
     honorLabels: false
     metricRelabelings: []
     relabelings: []
@@ -184,6 +195,10 @@ kubeconfig:
 
 # Comma-separated list of namespaces to be enabled for collecting resources. By default all namespaces are collected.
 namespaces: ""
+
+# Comma-separated list of namespaces not to be enabled. If namespaces and namespaces-denylist are both set,
+# only namespaces that are excluded in namespaces-denylist will be used.
+namespacesDenylist: ""
 
 ## Override the deployment namespace
 ##

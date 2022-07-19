@@ -5,6 +5,12 @@ Receives metric data in [Prometheus](https://prometheus.io/) format. See the
 
 Supported pipeline types: metrics
 
+## ❗️ Important note
+
+Starting from version 0.49.0, the receiver consumes 30% more memory when there is a lot of target churn.
+The issue is currently being investigated and will be fixed in one of the new releases. More details:
+https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/9278.
+
 ## ⚠️ Warning
 
 Note: This component is currently work in progress. It has several limitations
@@ -18,13 +24,29 @@ and please don't use it if the following limitations is a concern:
   if they want to manually shard the scraping.
 * The Prometheus receiver is a stateful component.
 
+## Unsupported features
+The Prometheus receiver is meant to minimally be a drop-in replacement for Prometheus. However,
+there are advanced features of Prometheus that we don't support and thus explicitly will return
+an error for if the receiver's configuration YAML/code contains any of the following
+
+- [x] alert_config.alertmanagers
+- [x] alert_config.relabel_configs
+- [x] remote_read
+- [x] remote_write
+- [x] rule_files
+
+
 ## Getting Started
 
 This receiver is a drop-in replacement for getting Prometheus to scrape your
-services. It supports the full set of Prometheus configuration, including
-service discovery. Just like you would write in a YAML configuration file
-before starting Prometheus, such as with:
+services. It supports [the full set of Prometheus configuration in `scrape_config`][sc],
+including service discovery. Just like you would write in a YAML configuration
+file before starting Prometheus, such as with:
 
+**Note**: Since the collector configuration supports env variable substitution
+`$` characters in your prometheus configuration are interpreted as environment
+variables.  If you want to use $ characters in your prometheus configuration,
+you must escape them using `$$`.
 
 ```shell
 prometheus --config.file=prom.yaml
@@ -61,3 +83,5 @@ receivers:
               regex: "(request_duration_seconds.*|response_duration_seconds.*)"
               action: keep
 ```
+
+[sc]: https://github.com/prometheus/prometheus/blob/v2.28.1/docs/configuration/configuration.md#scrape_config
