@@ -18,6 +18,7 @@ CVE-2022-1996
 # MEDIUM
 # usr/sbin/telegraf (mdsd)
 CVE-2019-11254
+CVE-2022-29526
 # telegraf
 CVE-2022-29189
 # otelcollector and promconfigvalidator
