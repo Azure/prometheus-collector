@@ -347,6 +347,7 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
         if !matched
           customPrometheusConfig["global"]["scrape_interval"] = "30s"
         end
+      end
     end
 
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
