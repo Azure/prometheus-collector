@@ -181,28 +181,28 @@ jobs:
         run: echo "K-S-M-IMAGE=mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.4.2" >> $GITHUB_ENV
       - name: Set-node-exporter-image
         run: echo "NODE-EXPORTER-IMAGE=mcr.microsoft.com/oss/prometheus/node-exporter:v1.3.1" >> $GITHUB_ENV
-      - name: Run-trivy-scanner-on-kube-state-metrics-image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: "${{ env.K-S-M-IMAGE }}"
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM'
-          vuln-type: 'os,library'
-          skip-dirs: ''
-          exit-code: '1'
-          timeout: '5m0s'
-          ignore-unfixed: true
-      - name: Run-trivy-scanner-on-node-exporter-image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: "${{ env.NODE-EXPORTER-IMAGE }}"
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM'
-          vuln-type: 'os,library'
-          skip-dirs: ''
-          exit-code: '1'
-          timeout: '5m0s'
-          ignore-unfixed: true
+      # - name: Run-trivy-scanner-on-kube-state-metrics-image
+      #   uses: aquasecurity/trivy-action@master
+      #   with:
+      #     image-ref: "${{ env.K-S-M-IMAGE }}"
+      #     format: 'table'
+      #     severity: 'CRITICAL,HIGH,MEDIUM'
+      #     vuln-type: 'os,library'
+      #     skip-dirs: ''
+      #     exit-code: '1'
+      #     timeout: '5m0s'
+      #     ignore-unfixed: true
+      # - name: Run-trivy-scanner-on-node-exporter-image
+      #   uses: aquasecurity/trivy-action@master
+      #   with:
+      #     image-ref: "${{ env.NODE-EXPORTER-IMAGE }}"
+      #     format: 'table'
+      #     severity: 'CRITICAL,HIGH,MEDIUM'
+      #     vuln-type: 'os,library'
+      #     skip-dirs: ''
+      #     exit-code: '1'
+      #     timeout: '5m0s'
+      #     ignore-unfixed: true
       - name: Login-to-ACR-thru-Docker
         if: github.event_name != 'pull_request'
         run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
