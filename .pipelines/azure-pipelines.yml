@@ -26,7 +26,7 @@ stages:
       inputs:
         command: build
         buildContext: '$(Build.SourcesDirectory)/otelcollector/'
-        dockerfile: '$(Build.SourcesDirectory)/otelcollector/linux/Dockerfile'
+        dockerfile: '$(Build.SourcesDirectory)/otelcollector/build/linux/Dockerfile'
         tags: |
           $(tag)
     - task: ComponentGovernanceComponentDetection@0
