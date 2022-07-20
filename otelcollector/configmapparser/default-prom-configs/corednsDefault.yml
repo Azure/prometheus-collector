@@ -2,7 +2,6 @@
   - job_name: kube-dns
     scheme: http
     metrics_path: /metrics
-    scrape_interval: 30s
     relabel_configs:
     - action: keep
       source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]

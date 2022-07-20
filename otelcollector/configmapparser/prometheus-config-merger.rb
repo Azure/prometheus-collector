@@ -18,6 +18,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @regexHashFile = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 @regexHash = {}
 
+@defaultGlobalConfigFile = @defaultPromConfigPathPrefix + "defaultGlobalConfig.yml"
 @kubeletDefaultFileRsSimple = @defaultPromConfigPathPrefix + "kubeletDefaultRsSimple.yml"
 @kubeletDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "kubeletDefaultRsAdvanced.yml"
 @kubeletDefaultFileDs = @defaultPromConfigPathPrefix + "kubeletDefaultDs.yml"
@@ -336,9 +337,20 @@ end
 def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
   mergedConfigYaml = ""
   begin
+    customPrometheusConfig = YAML.load(customPromConfig)
+
+    if !customPrometheusConfig.nil?
+      globalConfig = customPrometheusConfig["global"]
+      if !globalConfig.nil?
+        glolbalScrapeInterval = globalConfig["scrape_interval"]
+        matched = "^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$".match(glolbalScrapeInterval)
+        if !matched
+          customPrometheusConfig["global"]["scrape_interval"] = "30s"
+        end
+    end
+
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Merging default and custom scrape configs")
-      customPrometheusConfig = YAML.load(customPromConfig)
       mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
       mergedConfigYaml = YAML::dump(mergedConfigs)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging default scrape config(s) with custom prometheus config, writing them to file")
@@ -349,6 +361,19 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
     File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigYaml }
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and custom scrape configs- #{errorStr}")
+  end
+end
+
+def mergeGlobalConfig()
+  begin
+    ConfigParseErrorLogger.log(LOGGING_PREFIX, "Merging default global scrape_interval and default config")
+    defaultGlobalConfig = YAML.load(File.read(@defaultGlobalConfigFile))
+    mergedConfigs = defaultGlobalConfig.deep_merge!(@mergedDefaultConfigs)
+    mergedConfigYaml = YAML::dump(mergedConfigs)
+    ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging default global scrape_interval with default config, writing them to file")
+    File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigYaml }
+  rescue => errorStr
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default gloabl scarpe_interval- #{errorStr}")
   end
 end
 
@@ -374,8 +399,12 @@ end
 
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   prometheusConfigString = parseConfigMap
+
   if !prometheusConfigString.nil? && !prometheusConfigString.empty?
     mergeDefaultAndCustomScrapeConfigs(prometheusConfigString)
+  else
+    # if no customconfig is provided then we add in our own global setting for the default scrape_interval (30s)
+    mergeGlobalConfig()
   end
 else
   if (File.file?(@configMapMountPath))

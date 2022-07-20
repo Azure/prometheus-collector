@@ -2,7 +2,6 @@
   - job_name: kubelet
     scheme: https
     metrics_path: /metrics
-    scrape_interval: 30s
     tls_config:
       ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
       insecure_skip_verify: true

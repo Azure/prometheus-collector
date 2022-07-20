@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+  external_labels:
+    kaveesh: dubey
+    prometheus: test
+

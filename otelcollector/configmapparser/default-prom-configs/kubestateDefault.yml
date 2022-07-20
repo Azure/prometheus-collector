@@ -1,5 +1,4 @@
   scrape_configs:
   - job_name: kube-state-metrics
-    scrape_interval: 30s
     static_configs:
     - targets: ['$$KUBE_STATE_NAME$$.$$POD_NAMESPACE$$.svc.cluster.local:8080']
