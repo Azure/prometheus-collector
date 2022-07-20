@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      = grace/me-inf-metric-logging-fix
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
