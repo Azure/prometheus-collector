@@ -2,7 +2,7 @@
 # ignore these CVEs, but continue scanning to catch other vulns. Note : this will ignore these cves globally
 
 # CRITICAL/HIGH
-# usr/sbin/telegraf
+# usr/sbin/telegraf 
 CVE-2021-42836
 #/opt/telegraf/telegraf
 CVE-2022-29190
