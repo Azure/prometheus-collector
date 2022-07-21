@@ -10,6 +10,7 @@ CVE-2022-29222
 CVE-2022-27191
 # node-exporter
 CVE-2021-38561
+CVE-2022-21698
 # otelcollector and promconfigvalidator
 CVE-2022-1996
 
