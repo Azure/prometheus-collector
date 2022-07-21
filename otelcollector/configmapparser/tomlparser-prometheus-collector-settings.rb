@@ -85,7 +85,7 @@ end
 
 #override cluster label with cluster alias, if alias is specified
 
-if !clusterAlias.nil? && !clusterAlias.empty? && @clusterAlias.length > 0
+if !@clusterAlias.nil? && !@clusterAlias.empty? && @clusterAlias.length > 0
   @clusterLabel = @clusterAlias
   ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using clusterLabel from cluster_alias:#{@clusterAlias}")
 end

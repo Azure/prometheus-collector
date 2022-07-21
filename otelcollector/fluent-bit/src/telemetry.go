@@ -56,7 +56,7 @@ const (
 	// explicitly defining below for clarity, but not send thru our telemetry for brieviety
 	//envCustomResourceId					  = "customResourceId"
 	//envClusterAlias						  = "AZMON_CLUSTER_ALIAS"
-	//envClusterName					  	  = "AZMON_CLUSTER_NAME"
+	//envClusterLabel						  = "AZMON_CLUSTER_LABEL"
 	envAppInsightsAuth                    = "APPLICATIONINSIGHTS_AUTH"
 	envAppInsightsEndpoint                = "APPLICATIONINSIGHTS_ENDPOINT"
 	envComputerName                       = "NODE_NAME"

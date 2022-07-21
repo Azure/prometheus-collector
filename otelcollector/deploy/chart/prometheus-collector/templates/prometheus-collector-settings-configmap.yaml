@@ -13,7 +13,7 @@ data:
   {{- else }}
     default_metric_account_name = "notapplicable"
   {{- end }}
-    cluster_alias: {{ index .Values "clusterAlias" | toString | quote }}
+    cluster_alias = {{ index .Values "clusterAlias" | toString | quote }}
   default-scrape-settings-enabled: |-
     kubelet = {{ .Values.scrapeTargets.kubelet }}
     coredns = {{ .Values.scrapeTargets.coreDns }}
