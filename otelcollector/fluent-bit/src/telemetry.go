@@ -52,7 +52,7 @@ const (
 	envControllerType                     = "CONTROLLER_TYPE"
 	envNodeIP                             = "NODE_IP"
 	envMode                               = "MODE"
-	envCluster                            = "CLUSTER" //this will contain full resourceid for MAC , ir-resprective of cluster_alias set or not
+	envCluster                            = "customResourceId" //this will contain full resourceid for MAC , ir-resprective of cluster_alias set or not
 	// explicitly defining below for clarity, but not send thru our telemetry for brieviety
 	//envCustomResourceId					  = "customResourceId"
 	//envClusterAlias						  = "AZMON_CLUSTER_ALIAS"

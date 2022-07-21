@@ -180,26 +180,14 @@ source ~/.bashrc
 echo_var "ME_CONFIG_FILE" "$ME_CONFIG_FILE"
 
 if [ "${MAC}" != "true" ]; then
-      if [ -z $AZMON_CLUSTER_ALIAS ]; then
-            if [ -z $CLUSTER ]; then
-                  echo "non-MAC mode. CLUSTER is empty or not set. Using NODE_NAME as customResourceId"
-                  echo_var "NODE_NAME" "$NODE_NAME"
-                  export customResourceId=$NODE_NAME
-                  echo "export customResourceId=$NODE_NAME" >> ~/.bashrc
-                  source ~/.bashrc
-            else
-                  echo "non-MAC mode, using CLUSTER as customResourceId"
-                  echo_var "CLUSTER" "$CLUSTER"
-                  export customResourceId=$CLUSTER
-                  echo "export customResourceId=$CLUSTER" >> ~/.bashrc
-                  source ~/.bashrc
-            fi
+      if [ -z $CLUSTER ]; then
+            echo "CLUSTER is empty or not set. Using $NODE_NAME as CLUSTER"
+            export customResourceId=$NODE_NAME
+            echo "export customResourceId=$NODE_NAME" >> ~/.bashrc
+            source ~/.bashrc
       else
-            echo "non-MAC mode & cluster_alias is set, using AZMON_CLUSTER_ALIAS as customResourceId"
-            echo_var "CLUSTER" "$CLUSTER"
-            echo_var "AZMON_CLUSTER_ALIAS" "$AZMON_CLUSTER_ALIAS"
-            export customResourceId=$AZMON_CLUSTER_ALIAS
-            echo "export customResourceId=$AZMON_CLUSTER_ALIAS" >> ~/.bashrc
+            export customResourceId=$CLUSTER
+            echo "export customResourceId=$CLUSTER" >> ~/.bashrc
             source ~/.bashrc
       fi
 
@@ -240,21 +228,10 @@ if [ "${MAC}" != "true" ]; then
       # Logs at level 'Info' to get metrics processed count. Fluentbit and out_appinsights filter the logs to only send errors and the metrics processed count to the telemetry
       /usr/sbin/MetricsExtension -Logger File -LogLevel Info -DataDirectory /opt/MetricsExtensionData -Input otlp_grpc_prom -PfxFile $AZMON_METRIC_ACCOUNTS_AKV_FILES -MonitoringAccount $AZMON_DEFAULT_METRIC_ACCOUNT_NAME -ConfigOverridesFilePath $ME_CONFIG_FILE $ME_ADDITIONAL_FLAGS > /dev/null &
 else
-      if [ -z $AZMON_CLUSTER_ALIAS ]; then
-            echo " MAC mode is set , using AZMON_CLUSTER_NAME as customResourceId "
-            echo_var "CLUSTER" "$CLUSTER"
-            echo_var "AZMON_CLUSTER_NAME" "$AZMON_CLUSTER_NAME"
-            export customResourceId=$AZMON_CLUSTER_NAME
-            echo "export customResourceId=$AZMON_CLUSTER_NAME" >> ~/.bashrc
-            source ~/.bashrc
-      else
-            echo "cluster_alias is set for mac mode, using AZMON_CLUSTER_ALIAS as customResourceId"
-            echo_var "CLUSTER" "$CLUSTER"
-            echo_var "AZMON_CLUSTER_ALIAS" "$AZMON_CLUSTER_ALIAS"
-            export customResourceId=$AZMON_CLUSTER_ALIAS
-            echo "export customResourceId=$AZMON_CLUSTER_ALIAS" >> ~/.bashrc
-            source ~/.bashrc
-      fi
+      echo_var "customResourceId" "$CLUSTER"
+      export customResourceId=$CLUSTER
+      echo "export customResourceId=$CLUSTER" >> ~/.bashrc
+      source ~/.bashrc
 
       trimmedRegion=$(echo $AKSREGION | sed 's/ //g' | awk '{print tolower($0)}')
       export customRegion=$trimmedRegion

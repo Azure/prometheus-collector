@@ -9,26 +9,23 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
 
     #resourceid override.
-    if ([string]::IsNullOrEmpty($env:AZMON_CLUSTER_ALIAS)) {
+    if ([string]::IsNullOrEmpty($env:AKS_RESOURCE_ID)) {
         if ([string]::IsNullOrEmpty($env:CLUSTER)) {
-            Write-Output "CLUSTER is empty or not set. Using $env:NODE_NAME as customResourceId"
+            Write-Output "CLUSTER is empty or not set. Using $env:NODE_NAME as CLUSTER"
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:NODE_NAME, "Process")
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:NODE_NAME, "Machine")
             Write-Output "customResourceId=$env:customResourceId"
         }
         else {
-            Write-Output "Using $env:CLUSTER as customResourceId"
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Process")
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Machine")
             Write-Output "customResourceId=$env:customResourceId"
         }
     }
     else {
-       Write-Output "AZMON_CLUSTER_ALIAS is set."     
-       Write-Output "Using $env:AZMON_CLUSTER_ALIAS as customResourceId"
-       [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AZMON_CLUSTER_ALIAS, "Process")
-       [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AZMON_CLUSTER_ALIAS, "Machine")
-       Write-Output "customResourceId=$env:customResourceId"
+        [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Process")
+        [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Machine")
+        Write-Output "customResourceId=$customResourceId"
     }
 
     #set agent config schema version
