@@ -339,14 +339,12 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
   begin
     customPrometheusConfig = YAML.load(customPromConfig)
 
-    if !customPrometheusConfig.nil?
-      globalConfig = customPrometheusConfig["global"]
-      if !globalConfig.nil?
-        glolbalScrapeInterval = globalConfig["scrape_interval"]
-        matched = "^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$".match(glolbalScrapeInterval)
-        if !matched
-          customPrometheusConfig["global"]["scrape_interval"] = "30s"
-        end
+    globalConfig = customPrometheusConfig["global"]
+    if !globalConfig.nil?
+      glolbalScrapeInterval = globalConfig["scrape_interval"]
+      matched = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$/.match(glolbalScrapeInterval)
+      if !matched
+        customPrometheusConfig["global"]["scrape_interval"] = "30s"
       end
     end
 
