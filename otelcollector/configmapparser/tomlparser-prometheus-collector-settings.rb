@@ -48,7 +48,9 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   begin
     if !parsedConfig.nil? && !parsedConfig[:cluster_alias].nil?
       @clusterAlias = parsedConfig[:cluster_alias].strip
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap setting for cluster_alias:#{@clusterAlias}")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Got configmap setting for cluster_alias:#{@clusterAlias}")
+      @clusterAlias = @clusterAlias.gsub(/[^0-9a-z]/i, '_') #replace all non alpha-numeric characters with "_"  -- this is to ensure that all down stream places where this is used (like collector, telegraf config etc are keeping up with sanity)
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "After g-subing configmap setting for cluster_alias:#{@clusterAlias}")
     end
   rescue => errorStr
     @clusterAlias = ""
