@@ -1,5 +1,15 @@
 # Working with Prometheus metrics in MDM
 
+## Release 07-18-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.3.0-main-07-15-2022-dc6f1b37`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.3.0-main-07-15-2022-dc6f1b37`
+* Change Log -
+  * Improve debugging for customers for troubleshooting metric collection issues (see doc here : https://eng.ms/docs/products/geneva/metrics/prometheus/troubleshooting )
+  * Add a new parameter for adding pod annotations to collector pods (Thanks to contrinutions from peter.glotfelty@microsoft.com)
+  * Move to OTLP 0.10.X FROM 0.7.X
+  * Increase max gRPC size from 8M to 12M
+
 ## Release 05-24-2022
 
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.2.0-main-05-24-2022-0c3a87bc`

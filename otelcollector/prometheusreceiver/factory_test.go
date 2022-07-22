@@ -16,22 +16,19 @@ package prometheusreceiver
 
 import (
 	"context"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
-
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
-	"go.opentelemetry.io/collector/config/configcheck"
 	"go.opentelemetry.io/collector/config/configtest"
+	"go.opentelemetry.io/collector/service/servicetest"
 )
 
 func TestCreateDefaultConfig(t *testing.T) {
 	cfg := createDefaultConfig()
 	assert.NotNil(t, cfg, "failed to create default config")
-	assert.NoError(t, configcheck.ValidateConfig(cfg))
+	assert.NoError(t, configtest.CheckConfigStruct(cfg))
 }
 
 func TestCreateReceiver(t *testing.T) {
@@ -39,8 +36,8 @@ func TestCreateReceiver(t *testing.T) {
 
 	// The default config does not provide scrape_config so we expect that metrics receiver
 	// creation must also fail.
-	creationParams := component.ReceiverCreateParams{Logger: zap.NewNop()}
-	mReceiver, _ := createMetricsReceiver(context.Background(), creationParams, cfg, nil)
+	creationSet := componenttest.NewNopReceiverCreateSettings()
+	mReceiver, _ := createMetricsReceiver(context.Background(), creationSet, cfg, nil)
 	assert.NotNil(t, mReceiver)
 }
 
@@ -50,7 +47,7 @@ func TestFactoryCanParseServiceDiscoveryConfigs(t *testing.T) {
 
 	factory := NewFactory()
 	factories.Receivers[typeStr] = factory
-	_, err = configtest.LoadConfigFile(t, path.Join(".", "testdata", "config_sd.yaml"), factories)
+	_, err = servicetest.LoadConfigAndValidate(filepath.Join("testdata", "config_sd.yaml"), factories)
 
 	assert.NoError(t, err)
 }

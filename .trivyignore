@@ -2,19 +2,23 @@
 # ignore these CVEs, but continue scanning to catch other vulns. Note : this will ignore these cves globally
 
 # CRITICAL/HIGH
-CVE-2020-13949
-CVE-2022-23648
-CVE-2022-27191
 # usr/sbin/telegraf
 CVE-2021-42836
+#/opt/telegraf/telegraf
+CVE-2022-29190
+CVE-2022-29222
+CVE-2022-27191
+# node-exporter
+CVE-2021-38561
+# otelcollector and promconfigvalidator
+CVE-2022-1996
 
 # MEDIUM
-# opt/microsoft/otelcollector/otelcollector
-CVE-2019-3826
-# opt/promconfigvalidator
-CVE-2019-3826
-CVE-2021-20329
 # opt/telegraf/telegraf
 CVE-2019-3826
+CVE-2022-29189
+CVE-2022-31030
 # usr/sbin/telegraf
 CVE-2019-11254
+# /bin/node_exporter
+CVE-2021-44716

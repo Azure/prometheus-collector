@@ -17,7 +17,7 @@ Here are steps we will walk through.
 1. [Create metrics account and set up KeyVault authentication](~/metrics/Prometheus/PromMDMTutorial1Account.md)  
 2. [Deploy agent to Kubernetes cluster for metrics collection](~/metrics/Prometheus/PromMDMTutorial2DeployAgentHELM.md)  
 3. [Configure metrics collection](~/metrics/Prometheus/PromMDMTutorial3ConfigureCollection.md)  
-4. [Set up Azure Grafana Service](~/metrics/Prometheus/PromMDMTutorial4SetUpGrafana.md)  
+4. [Set up Azure Managed Grafana ](~/metrics/Prometheus/PromMDMTutorial4SetUpGrafana.md)  
 5. [Configure Prometheus data source](~/metrics/Prometheus/PromMDMTutorial5AddPromDataSource.md)  
 6. [Use built-in dashboards](~/metrics/Prometheus/PromMDMTutorial6ReuseExistingDashboard.md)
 7. [Set up alerts and recording rules](./PromMDMTutorial7SetUpAlerts.md)
@@ -32,9 +32,7 @@ Please ensure you have the following set up before continuing with this tutorial
 
     ```Note: Our charts will not work on HELM clients < 3.7.0```  
  
-* Join the Private Preview of Azure Managed Workspaces for Grafana and deploy an instance. If you are not already part of the Private Preview, please send your Azure subscription ID to [this email](mailto:ad4g@microsoft.com) with a subject line Request to join private preview and see the full instructions below.
-
-  [Set up Azure Grafana Service](~/metrics/Prometheus/PromMDMTutorial4SetUpGrafana.md)  
+* [Set up Azure Managed Grafana](~/metrics/Prometheus/PromMDMTutorial4SetUpGrafana.md)  
 
 
 --------------------------------------
