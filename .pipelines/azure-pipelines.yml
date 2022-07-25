@@ -21,6 +21,10 @@ extends:
     - stage: build
       jobs:
       - job: Build
+        variables:
+          ob_outputDirectory: '$(Build.SourcesDirectory)/bin'
+        pool:
+          type: linux
         displayName: Build
         steps:
         - script: |
@@ -29,10 +33,20 @@ extends:
         - script: |
             cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ && make
           displayName: 'make'
-        - task: Docker@2
-          displayName: Build an image
+      - job: Docker
+        variables:
+          ob_git_checkout: true
+        pool:
+          type: docker
+          os: linux
+        steps:
+        - task: onebranch.pipeline.imagebuildinfo@1
           inputs:
-            command: build
-            dockerfile: '$(Build.SourcesDirectory)/otelcollector/Dockerfile'
-            tags: |
-              $(tag)
+            #repositoryName: contosovlinux1
+            dockerFileRelPath: otelcollector/build/linux/Dockerfile
+            dockerFileContextPath: otelcollector
+            #registry: cdpxlinux.azurecr.io
+            saveImageToPath: prometheus-collector-image.tar
+            buildkit: 1
+            #arguments: --target final-app
+            build_tag: $(tag)
