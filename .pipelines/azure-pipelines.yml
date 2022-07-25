@@ -1,19 +1,15 @@
 # Go to https://github-private.visualstudio.com/microsoft/_build?definitionId=405 and manually run the pipeline for CG detection
 # Then find the results here: https://github-private.visualstudio.com/microsoft/_componentGovernance/188700
-resources:
-- repo: self
+trigger: none
 
 variables:
   tag: '$(Build.BuildId)'
 
-stages:
-- stage: Build
-  displayName: Build image
-  jobs:
-  - job: Build
-    displayName: Build
-    pool:
-      vmImage: ubuntu-latest
+jobs:
+- job: Build
+  displayName: Build
+  pool:
+    name: Azure-Pipelines-CI-Test-EO
     steps:
     - script: |
         sudo apt-get install build-essential -y
@@ -25,8 +21,7 @@ stages:
       displayName: Build an image
       inputs:
         command: build
-        buildContext: '$(Build.SourcesDirectory)/otelcollector/'
-        dockerfile: '$(Build.SourcesDirectory)/otelcollector/build/linux/Dockerfile'
+        dockerfile: '$(Build.SourcesDirectory)/otelcollector/Dockerfile'
         tags: |
           $(tag)
     - task: ComponentGovernanceComponentDetection@0
