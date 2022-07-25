@@ -22,8 +22,6 @@ extends:
       jobs:
       - job: Build
         displayName: Build
-        pool:
-          vmImage: ubuntu-latest
         steps:
         - script: |
             sudo apt-get install build-essential -y
