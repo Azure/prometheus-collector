@@ -33,6 +33,7 @@ extends:
             cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ && make
           displayName: 'make'
       - job: Docker
+        dependsOn: Build
         variables:
           ob_git_checkout: true
         pool:
