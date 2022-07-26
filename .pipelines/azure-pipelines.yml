@@ -5,6 +5,9 @@ trigger: none
 jobs:
 - job: Common
   displayName: Common
+  variables:
+    ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
+    ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   pool:
     name: Azure-Pipelines-CI-Prod-EO
   steps:
@@ -74,4 +77,3 @@ jobs:
     #    docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
     #    docker push $(WINDOWS_FULL_IMAGE_NAME)
     #  displayName: 'Push docker image to acr'
-
