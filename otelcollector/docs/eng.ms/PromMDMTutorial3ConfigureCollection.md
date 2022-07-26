@@ -79,6 +79,8 @@ This is meant to aid authoring custom scrape configs and troubleshooting the ser
 
 Note that the `cluster` label will not be present since this is added as label later in the pipeline.
 
+See more troubleshooting information [here](~/metrics/prometheus/troubleshooting.md)
+
 --------------------------------------
 
 In this step you configured what metrics should be collected from your Kubernetes cluster, and the metric account(s) they will be stored in.  

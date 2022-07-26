@@ -2,14 +2,13 @@ exporters:
   prometheus:
     endpoint: "127.0.0.1:9091"
     const_labels:
-      cluster: $customResourceId
+      cluster: $AZMON_CLUSTER_LABEL
   file:
     path: /opt/microsoft/otelcollector/promotel.json
-  #influx:
-  #  loglevel: debug
   otlp:
     endpoint: 127.0.0.1:55680
-    insecure: true
+    tls:
+      insecure: true
     compression: "gzip"
     retry_on_failure:
       enabled: false
@@ -22,8 +21,14 @@ processors:
   resource:
     attributes:
     - key: cluster
-      value: "$customResourceId"
+      value: "$AZMON_CLUSTER_LABEL"
       action: "upsert"
+    - key: job
+      from_attribute: service.name
+      action: insert
+    - key: instance
+      from_attribute: service.instance.id
+      action: insert
 receivers:
     prometheus:
       config:
@@ -33,3 +38,7 @@ service:
       receivers: [prometheus]
       exporters: [otlp]
       processors: [batch, resource]
+  telemetry:
+    logs:
+      level: warn
+      encoding: json
