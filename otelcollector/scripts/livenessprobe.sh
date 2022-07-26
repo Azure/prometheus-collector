@@ -28,7 +28,7 @@ if [ "${MAC}" != "true" ]; then
   fi
 else
   # MDSD is only running in MAC mode
-  # Excluding MetricsExtenstion and inotofywait too since grep returns ME and inotify processes since mdsd is in the config file path
+  # Excluding MetricsExtenstion and inotifywait too since grep returns ME and inotify processes since mdsd is in the config file path
   (ps -ef | grep "mdsd" | grep -vE 'grep|MetricsExtension|inotifywait')
   if [ $? -ne 0 ]
   then
