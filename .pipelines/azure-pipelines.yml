@@ -3,52 +3,29 @@
 trigger: none
 
 variables:
-  #WindowsContainerImage: cdpxwin1809.azurecr.io/global/vse2019:latest # for Windows jobs
-  LinuxContainerImage: onebranch.azurecr.io/linux/ubuntu-2004:latest # for Linux jobs
   tag: '$(Build.BuildId)'
 
-resources:
-  repositories: 
-    - repository: templates
-      type: git
-      name: OneBranch.Pipelines/GovernedTemplates
-
-extends:
-  template: v2/OneBranch.NonOfficial.CrossPlat.yml@templates
-  parameters:
-    featureFlags:
-      skipPoliciesValidation: true
-    stages:
-    - stage: build
-      jobs:
-      - job: Build
-        variables:
-          ob_outputDirectory: '$(Build.SourcesDirectory)/bin'
-        pool:
-          type: linux
-        displayName: Build
-        steps:
-        - script: |
-            sudo apt-get install build-essential -y
-          displayName: 'Get build dependencies'
-        - script: |
-            cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ && make
-          displayName: 'make'
-      - job: Docker
-        dependsOn: Build
-        variables:
-          ob_git_checkout: true
-        pool:
-          type: docker
-          os: linux
-        steps:
-        - task: onebranch.pipeline.imagebuildinfo@1
-          inputs:
-            #repositoryName: contosovlinux1
-            dockerFileRelPath: otelcollector/build/linux/Dockerfile
-            dockerFileContextPath: otelcollector
-            #registry: cdpxlinux.azurecr.io
-            saveImageToPath: prometheus-collector-image.tar
-            buildkit: 1
-            #arguments: --target final-app
-            build_tag: $(tag)
+jobs:
+- job: Build
+  displayName: Build
+  pool:
+    name: Azure-Pipelines-CI-Prod-EO
+    steps:
+    - script: |
+        sudo apt-get install build-essential -y
+      displayName: 'Get build dependencies'
+    - script: |
+        cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ && make
+      displayName: 'make'
+    - task: Docker@2
+      displayName: Build an image
+      inputs:
+        command: build
+        dockerfile: '$(Build.SourcesDirectory)/otelcollector/Dockerfile'
+        tags: |
+          $(tag)
+    - task: ComponentGovernanceComponentDetection@0
+      inputs:
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(tag)'
+        alertWarningLevel: 'High'
