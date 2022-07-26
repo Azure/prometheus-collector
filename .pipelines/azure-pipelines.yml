@@ -13,19 +13,31 @@ jobs:
   steps:
     - script: |
         sudo apt-get install build-essential -y
-      displayName: 'Get build dependencies'
+        displayName: 'Get build dependencies'
     - script: |
         cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ && make
       displayName: 'make'
-    - task: Docker@2
-      displayName: Build an image
-      inputs:
-        command: build
-        dockerfile: '$(Build.SourcesDirectory)/otelcollector/Dockerfile'
-        tags: |
-          $(tag)
-    - task: ComponentGovernanceComponentDetection@0
-      inputs:
-        verbosity: 'Verbose'
-        dockerImagesToScan: '$(tag)'
-        alertWarningLevel: 'High'
+    - bash: |
+        COMMIT_SHA=$(Build.SourceVersion::8)
+        BRANCH_NAME=$(Build.SourceBranchName)
+        DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
+        VERSION=$(cat ./otelcollector/VERSION)
+        SEMVER=$(VERSION)-$(BRANCH_NAME}-$(DATE)-$(COMMIT_SHA)
+        LINUX_IMAGE_TAG=$(HELM_SEMVER)
+        FULL_IMAGE_NAME=$(ACR_REGISTRY)$(ACR_REPOSITORY):$(IMAGE_TAG)
+        echo "##vso[task.setvariable variable=FULL_IMAGE_NAME;isOutput=true]$FULL_IMAGE_NAME"
+      displayName: 'Set linux image tag'
+    - bash: |
+        cd ./otelcollector/ && docker build . --file ./build/linux/Dockerfile -t $FULL_IMAGE_NAME
+      displayName: 'Build docker images'
+    - bash: |
+        docker images --digests --all
+      displayName: 'List docker images'
+    - bash: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(FULL_IMAGE_NAME)
+      displayName: 'Run trivy scan'
+    #- bash: |
+    #    docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
+    #    docker push ${{ env.IMAGE_FULL_TAG }}
+    #  displayName: 'Push docker image to acr'
