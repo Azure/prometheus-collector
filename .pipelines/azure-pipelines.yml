@@ -17,8 +17,8 @@ jobs:
         echo $(Build.SourceVersion)
         echo $(Build.SourceBranchName)
         echo $(TZ=America/Los_Angeles date +%m-%d-%Y)
-        echo $($(Build.SourceVersion)::8)
-        COMMIT_SHA=$($(Build.SourceVersion)::8)
+        echo $($(Build.SourceVersion) | cut -b -8)
+        COMMIT_SHA=$($(Build.SourceVersion) | cut -b -8)
         BRANCH_NAME=$(Build.SourceBranchName)
         DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
         VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
@@ -29,6 +29,7 @@ jobs:
         WINDOWS_FULL_IMAGE_NAME=$(ACR_REGISTRY)$(ACR_REPOSITORY):$(WINDOWS_IMAGE_TAG)
         HELM_CHART_NAME_AND_VERSION=$(HELM_CHART_NAME)-$(SEMVER)
         HELM_CHART_FULL_IMAGE_NAME=$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+        echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=HELM_CHART_FULL_IMAGE_NAME;isOutput=true]$HELM_CHART_FULL_IMAGE_NAME"
@@ -68,10 +69,10 @@ jobs:
     - powershell: |
         cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ ; ./makefile_windows.ps1
       displayName: 'make'
-    - bash: |
+    - powershell: |
         cd $(Build.SourcesDirectory)/otelcollector/ && docker build . --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)
       displayName: 'Build docker images'
-    - bash: |
+    - powershell: |
         docker images --digests --all
       displayName: 'List docker images'
     #- bash: |
@@ -87,5 +88,16 @@ jobs:
   dependsOn:
   - Linux
   - Windows
+  variables:
+    MCR_REGISTRY: 'mcr.microsoft.com'
+    MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
+    FULL_IMAGE_NAME: $[ dependencies.common.outputs['Common.HELM_CHART_FULL_IMAGE_NAME'] ]
+    HELM_SEMVER: $[ dependencies.common.outputs['Common.SEMVER'] ]
+    IMAGE_TAG: $[ dependencies.common.outputs['Common.SEMVER'] ]
+  steps:
+  - bash: |
+      envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
+      helm version
+    displayName: 'Substitute chart version in files'
 
     
