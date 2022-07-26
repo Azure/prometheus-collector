@@ -103,10 +103,10 @@ jobs:
       helm package ./prometheus-collector/
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
     displayName: 'Package helm chart'
-  - bash: |
-      helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
-      helm push ${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY_HELM }}
-    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
-    displayName: 'Push helm chart'
+  #- bash: |
+  #    helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
+  #    helm push ${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY_HELM }}
+  #  workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
+  #  displayName: 'Push helm chart'
 
     
