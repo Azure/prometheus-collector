@@ -14,6 +14,9 @@ azureResourceId: ""
 # -- required & used only when useMonitoringAccount=true. This is the Azure region for the Kubernetes cluster that is going to be monitoring with this chart
 azureResourceRegion: ""
 
+# -- required & used only when useMonitoringAccount=true. This is the cloud name for the Kubernetes cluster that is going to be monitoring with this chart
+customEnvironment: "azurepubliccloud"
+
 scrapeTargets:
   # -- when true, automatically scrape coredns service in the k8s cluster without any additional scrape config
   coreDns: true
@@ -81,6 +84,12 @@ clusterName: "" #required
 internalSettings:
   intEnvironment: false
   clusterOverride: false
+
+# Do not change the below settings. They are reserved for Arc Autonomous
+arcAutonomousSettings:
+  customRegionalEndpoint: ""
+  customGlobalEndpoint: ""
+  customResourceEndpoint: ""
 
 # Only enable to view metrics being scraped for a short time. This can affect performance so it should not be enabled when not in use
 debugMode:
