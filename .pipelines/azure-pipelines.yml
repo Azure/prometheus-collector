@@ -10,7 +10,7 @@ jobs:
   displayName: Build
   pool:
     name: Azure-Pipelines-CI-Prod-EO
-    steps:
+  steps:
     - script: |
         sudo apt-get install build-essential -y
       displayName: 'Get build dependencies'
