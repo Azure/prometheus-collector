@@ -17,8 +17,8 @@ jobs:
         echo $(Build.SourceVersion)
         echo $(Build.SourceBranchName)
         echo $(TZ=America/Los_Angeles date +%m-%d-%Y)
-        echo $($(Build.SourceVersion) | cut -b -8)
-        COMMIT_SHA=$($(Build.SourceVersion) | cut -b -8)
+        echo $(echo $(Build.SourceVersion) | cut -b -8)
+        COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
         BRANCH_NAME=$(Build.SourceBranchName)
         DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
         VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
@@ -99,5 +99,14 @@ jobs:
       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
       helm version
     displayName: 'Substitute chart version in files'
+  - bash: |
+      helm package ./prometheus-collector/
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
+    displayName: 'Package helm chart'
+  - bash: |
+      helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
+      helm push ${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY_HELM }}
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
+    displayName: 'Push helm chart'
 
     
