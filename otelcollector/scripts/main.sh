@@ -301,6 +301,12 @@ if [ "${MAC}" == "true" ]; then
       inotifywait /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
 fi
 
+# Setting time at which the container started running, so that it can be used for empty configuration checks in livenessprobe
+epochTimeNow=`date +%s`
+echo "export AZMON_CONTAINER_START_TIME=$epochTimeNow" >> ~/.bashrc
+source ~/.bashrc
+
+
 shutdown() {
 	echo "shutting down"
 }
