@@ -55,7 +55,7 @@ jobs:
     #  displayName: 'Push docker image to acr'
 - job: Windows
   pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
+    vmImage: windows-2019
   dependsOn: common
   variables:
     FULL_IMAGE_NAME: $[ dependencies.common.outputs['Common.WINDOWS_FULL_IMAGE_NAME'] ]
