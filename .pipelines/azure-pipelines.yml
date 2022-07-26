@@ -9,17 +9,22 @@ jobs:
     name: Azure-Pipelines-CI-Prod-EO
   steps:
     - bash: |
+        echo $(Build.SourceVersion)
+        echo $(Build.SourceBranchName)
+        echo ${TZ=America/Los_Angeles date +%m-%d-%Y}
+        echo ${$(Build.SourceVersion)::8}
         COMMIT_SHA=${Build.SourceVersion::8}
         BRANCH_NAME=$(Build.SourceBranchName)
         DATE=${TZ=America/Los_Angeles date +%m-%d-%Y}
-        VERSION=${cat ./otelcollector/VERSION}
+        VERSION=${cat $(Build.SourcesDirectory)/otelcollector/VERSION}
         SEMVER=$(VERSION)-$(BRANCH_NAME}-$(DATE)-$(COMMIT_SHA)
         LINUX_IMAGE_TAG=$(SEMVER)
         WINDOWS_IMAGE_TAG=$(SEMVER)-win
         LINUX_FULL_IMAGE_NAME=$(ACR_REGISTRY)$(ACR_REPOSITORY):$(LINUX_IMAGE_TAG)
         WINDOWS_FULL_IMAGE_NAME=$(ACR_REGISTRY)$(ACR_REPOSITORY):$(WINDOWS_IMAGE_TAG)
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
-      displayName: 'Set linux image tag'
+        echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
+      displayName: 'Set image registry, repo, and tags'
 - job: Linux
   pool:
     name: Azure-Pipelines-CI-Prod-EO
@@ -32,16 +37,41 @@ jobs:
         cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ && make
       displayName: 'make'
     - bash: |
-        cd ./otelcollector/ && docker build . --file ./build/linux/Dockerfile -t $FULL_IMAGE_NAME
+        cd $(Build.SourcesDirectory/otelcollector/ && docker build . --file ./build/linux/Dockerfile -t $LINUX_FULL_IMAGE_NAME
       displayName: 'Build docker images'
     - bash: |
         docker images --digests --all
       displayName: 'List docker images'
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(FULL_IMAGE_NAME)
+        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
       displayName: 'Run trivy scan'
     #- bash: |
     #    docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
-    #    docker push ${{ env.IMAGE_FULL_TAG }}
+    #    docker push $(LINUX_FULL_IMAGE_NAME)
     #  displayName: 'Push docker image to acr'
+- job: Windows
+  pool:
+    name: Azure-Pipelines-Windows-CI-Test-EO
+  dependsOn: common
+  variables:
+    FULL_IMAGE_NAME: $[ dependencies.common.outputs['Common.WINDOWS_FULL_IMAGE_NAME'] ]
+  steps:
+    - powershell: |
+        cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ ; ./makefile_windows.ps1
+      displayName: 'make'
+    - bash: |
+        cd $(Build.SourcesDirectory)/otelcollector/ && docker build . --file ./build/windows/Dockerfile -t $WINDOWS_FULL_IMAGE_NAME
+      displayName: 'Build docker images'
+    - bash: |
+        docker images --digests --all
+      displayName: 'List docker images'
+    #- bash: |
+    #    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+    #    trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(WINDOWS_FULL_IMAGE_NAME)
+    #  displayName: 'Run trivy scan'
+    #- bash: |
+    #    docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
+    #    docker push $(WINDOWS_FULL_IMAGE_NAME)
+    #  displayName: 'Push docker image to acr'
+
