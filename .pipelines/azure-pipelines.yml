@@ -21,14 +21,14 @@ jobs:
         COMMIT_SHA=$($(Build.SourceVersion)::8)
         BRANCH_NAME=$(Build.SourceBranchName)
         DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
-        VERSION=${cat $(Build.SourcesDirectory)/otelcollector/VERSION}
+        VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
         SEMVER=$(VERSION)-$(BRANCH_NAME}-$(DATE)-$(COMMIT_SHA)
         LINUX_IMAGE_TAG=$(SEMVER)
         WINDOWS_IMAGE_TAG=$(SEMVER)-win
         LINUX_FULL_IMAGE_NAME=$(ACR_REGISTRY)$(ACR_REPOSITORY):$(LINUX_IMAGE_TAG)
         WINDOWS_FULL_IMAGE_NAME=$(ACR_REGISTRY)$(ACR_REPOSITORY):$(WINDOWS_IMAGE_TAG)
         HELM_CHART_NAME_AND_VERSION=$(HELM_CHART_NAME)-$(SEMVER)
-        HELM_CHART_FULL_IMAGE_NAME=${ACR_REGISTRY}${ACR_REPOSITORY_HELM}
+        HELM_CHART_FULL_IMAGE_NAME=$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=HELM_CHART_FULL_IMAGE_NAME;isOutput=true]$HELM_CHART_FULL_IMAGE_NAME"
@@ -45,7 +45,7 @@ jobs:
         cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ && make
       displayName: 'make'
     - bash: |
-        cd $(Build.SourcesDirectory/otelcollector/ && docker build . --file ./build/linux/Dockerfile -t $LINUX_FULL_IMAGE_NAME
+        cd $(Build.SourcesDirectory/otelcollector/ && docker build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)
       displayName: 'Build docker images'
     - bash: |
         docker images --digests --all
@@ -69,7 +69,7 @@ jobs:
         cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ ; ./makefile_windows.ps1
       displayName: 'make'
     - bash: |
-        cd $(Build.SourcesDirectory)/otelcollector/ && docker build . --file ./build/windows/Dockerfile -t $WINDOWS_FULL_IMAGE_NAME
+        cd $(Build.SourcesDirectory)/otelcollector/ && docker build . --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)
       displayName: 'Build docker images'
     - bash: |
         docker images --digests --all
