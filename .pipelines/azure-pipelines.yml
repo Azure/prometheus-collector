@@ -2,29 +2,35 @@
 # Then find the results here: https://github-private.visualstudio.com/microsoft/_componentGovernance/188700
 trigger: none
 
-variables:
-  tag: '$(Build.BuildId)'
-
 jobs:
-- job: Build
-  displayName: Build
+- job: Common
+  displayName: Common
   pool:
     name: Azure-Pipelines-CI-Prod-EO
+  steps:
+    - bash: |
+        COMMIT_SHA=${Build.SourceVersion::8}
+        BRANCH_NAME=$(Build.SourceBranchName)
+        DATE=${TZ=America/Los_Angeles date +%m-%d-%Y}
+        VERSION=${cat ./otelcollector/VERSION}
+        SEMVER=$(VERSION)-$(BRANCH_NAME}-$(DATE)-$(COMMIT_SHA)
+        LINUX_IMAGE_TAG=$(SEMVER)
+        WINDOWS_IMAGE_TAG=$(SEMVER)-win
+        LINUX_FULL_IMAGE_NAME=$(ACR_REGISTRY)$(ACR_REPOSITORY):$(LINUX_IMAGE_TAG)
+        WINDOWS_FULL_IMAGE_NAME=$(ACR_REGISTRY)$(ACR_REPOSITORY):$(WINDOWS_IMAGE_TAG)
+        echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
+      displayName: 'Set linux image tag'
+- job: Linux
+  pool:
+    name: Azure-Pipelines-CI-Prod-EO
+  dependsOn: common
+  variables:
+    FULL_IMAGE_NAME: $[ dependencies.common.outputs['Common.LINUX_FULL_IMAGE_NAME'] ]
   steps:
     - bash: |
         sudo apt-get install build-essential -y
         cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ && make
       displayName: 'make'
-    - bash: |
-        COMMIT_SHA=$(Build.SourceVersion::8)
-        BRANCH_NAME=$(Build.SourceBranchName)
-        DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
-        VERSION=$(cat ./otelcollector/VERSION)
-        SEMVER=$(VERSION)-$(BRANCH_NAME}-$(DATE)-$(COMMIT_SHA)
-        LINUX_IMAGE_TAG=$(HELM_SEMVER)
-        FULL_IMAGE_NAME=$(ACR_REGISTRY)$(ACR_REPOSITORY):$(IMAGE_TAG)
-        echo "##vso[task.setvariable variable=FULL_IMAGE_NAME;isOutput=true]$FULL_IMAGE_NAME"
-      displayName: 'Set linux image tag'
     - bash: |
         cd ./otelcollector/ && docker build . --file ./build/linux/Dockerfile -t $FULL_IMAGE_NAME
       displayName: 'Build docker images'
