@@ -11,10 +11,8 @@ jobs:
   pool:
     name: Azure-Pipelines-CI-Prod-EO
   steps:
-    - script: |
+    - bash: |
         sudo apt-get install build-essential -y
-        displayName: 'Get build dependencies'
-    - script: |
         cd $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/ && make
       displayName: 'make'
     - bash: |
