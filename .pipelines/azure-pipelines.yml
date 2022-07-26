@@ -16,11 +16,11 @@ jobs:
     - bash: |
         echo $(Build.SourceVersion)
         echo $(Build.SourceBranchName)
-        echo ${{ TZ=America/Los_Angeles date +%m-%d-%Y }}
+        echo $(TZ=America/Los_Angeles date +%m-%d-%Y)
         echo $($(Build.SourceVersion)::8)
-        COMMIT_SHA=${{ $(Build.SourceVersion)::8 }}
+        COMMIT_SHA=$($(Build.SourceVersion)::8)
         BRANCH_NAME=$(Build.SourceBranchName)
-        DATE=${{ TZ=America/Los_Angeles date +%m-%d-%Y }}
+        DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
         VERSION=${cat $(Build.SourcesDirectory)/otelcollector/VERSION}
         SEMVER=$(VERSION)-$(BRANCH_NAME}-$(DATE)-$(COMMIT_SHA)
         LINUX_IMAGE_TAG=$(SEMVER)
