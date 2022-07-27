@@ -8,6 +8,7 @@ jobs:
   variables:
     ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
     ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
+    HELM_CHART_NAME: 'prometheus-collector'
   pool:
     name: Azure-Pipelines-CI-Prod-EO
   steps:
@@ -21,10 +22,13 @@ jobs:
         WINDOWS_IMAGE_TAG=$SEMVER-win
         LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
         WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
+        HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/HELM_CHART_NAME:SEMVER
         echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS__IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
+        echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
+        echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
       displayName: 'Set image registry, repo, and tags'
       name: setup
 - job: Linux
@@ -54,6 +58,15 @@ jobs:
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker push $(LINUX_FULL_IMAGE_NAME)
       displayName: 'Push docker image to acr'
+    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+      displayName: 'Generation Task'
+      inputs:
+        BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
+        DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: drop
 - job: Windows
   pool:
     vmImage: windows-2019
@@ -76,6 +89,15 @@ jobs:
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker push $(WINDOWS_FULL_IMAGE_NAME)
       displayName: 'Push docker image to acr'
+    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+      displayName: 'Generation Task'
+      inputs:
+        BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
+        DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: drop
 - job: Chart
   pool: Azure-Pipelines-CI-Prod-EO
   dependsOn:
@@ -88,10 +110,11 @@ jobs:
     MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
     ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
     ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
-    HELM_CHART_NAME: 'prometheus-collector'
+    HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+    HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
   steps:
   - bash: |
       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
@@ -111,3 +134,16 @@ jobs:
       helm push $(HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
     displayName: 'Push helm chart'
+  - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+    displayName: 'Generation Task'
+    inputs:
+      BuildDropPath: '$(Build.ArtifactStagingDirectory)/chart'
+      DockerImagesToScan: $(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)/$(HELM_CHART_NAME):$(HELM_SEMVER)
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathToPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: drop
+- job: Deploy
+  pool: Azure-Pipelines-CI-Prod-EO
+  dependsOn:
+  - Chart
