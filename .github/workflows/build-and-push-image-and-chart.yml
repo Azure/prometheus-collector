@@ -20,7 +20,7 @@ jobs:
         azure-pipeline-name: 'Azure.prometheus-collector'
         azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
   deploy-chart:
-    if: ${{ github.event_name != 'pull_request' && env.BRANCH_NAME == 'main' }}
+    if: github.event_name != 'pull_request' && env.BRANCH_NAME == 'main'
     runs-on: ubuntu-latest
     steps:
       - name: Echo-test
