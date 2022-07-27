@@ -24,6 +24,7 @@ jobs:
         echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
+        echo "##vso[task.setvariable variable=WINDOWS__IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
       displayName: 'Set image registry, repo, and tags'
       name: setup
 #- job: Linux
@@ -94,14 +95,9 @@ jobs:
     HELM_CHART_NAME: 'prometheus-collector'
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
+    IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
   steps:
   - bash: |
-      export MCR_REGISTRY=$(MCR_REGISTRY)
-      export MCR_REPOSITORY=$(MCR_REPOSITORY)
-      export MCR_REPOSITORY_HELM_DEPENDENCIES=$(MCR_REPOSITORY_HELM_DEPENDENCIES)
-      export HELM_SEMVER=$(HELM_SEMVER)
-      export IMAGE_TAG=$(IMAGE_TAG)
-      export IMAGE_TAG_WINDOWS=$IMAGE_TAG-win
       echo $HELM_SEMVER
       echo $IMAGE_TAG
       echo $IMAGE_TAG_WINDOWS
