@@ -81,7 +81,8 @@ jobs:
 #      displayName: 'Push docker image to acr'
 - job: Chart
   pool: Azure-Pipelines-CI-Prod-EO
-  #dependsOn:
+  dependsOn:
+  - Common
   #- Linux
   #- Windows
   variables:
