@@ -14,6 +14,7 @@ jobs:
     name: Azure-Pipelines-CI-Prod-EO
   steps:
     - bash: |
+        COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
         BRANCH_NAME=$(Build.SourceBranchName)
         DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
         VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
@@ -31,12 +32,13 @@ jobs:
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=HELM_CHART_FULL_IMAGE_NAME;isOutput=true]$HELM_CHART_FULL_IMAGE_NAME"
       displayName: 'Set image registry, repo, and tags'
+      name: setup
 - job: Linux
   pool:
     name: Azure-Pipelines-CI-Prod-EO
   dependsOn: common
   variables:
-    LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['Common.LINUX_FULL_IMAGE_NAME'] ]
+    LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
   steps:
     - bash: |
         sudo apt-get install build-essential -y
@@ -63,7 +65,7 @@ jobs:
     vmImage: windows-2019
   dependsOn: common
   variables:
-    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['Common.WINDOWS_FULL_IMAGE_NAME'] ]
+    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
   steps:
     - powershell: |
         ./makefile_windows.ps1
@@ -92,9 +94,9 @@ jobs:
   variables:
     MCR_REGISTRY: 'mcr.microsoft.com'
     MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
-    HELM_CHART_FULL_IMAGE_NAME: $[ dependencies.common.outputs['Common.HELM_CHART_FULL_IMAGE_NAME'] ]
-    HELM_SEMVER: $[ dependencies.common.outputs['Common.SEMVER'] ]
-    IMAGE_TAG: $[ dependencies.common.outputs['Common.SEMVER'] ]
+    HELM_CHART_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_FULL_IMAGE_NAME'] ]
+    HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
+    IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
   steps:
   - bash: |
       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
@@ -109,5 +111,3 @@ jobs:
   #    helm push ${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY_HELM }}
   #  workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
   #  displayName: 'Push helm chart'
-
-    
