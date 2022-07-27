@@ -113,8 +113,7 @@ jobs:
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/
     displayName: 'Update helm dependencies'
   - bash: |
-      cd ./prometheus-collector/ && helm dep update
-      helm package prometheus-collector/
+      helm package ./prometheus-collector/
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
     displayName: 'Package helm chart'
   - bash: |
