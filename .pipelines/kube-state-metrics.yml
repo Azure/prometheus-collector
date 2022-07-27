@@ -1,0 +1,23 @@
+trigger: none
+
+jobs:
+- job: Chart
+  pool: Azure-Pipelines-CI-Prod-EO
+  dependsOn:
+  - Common
+  #- Linux
+  #- Windows
+  variables:
+    ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
+    ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
+  steps:
+  - bash: |
+      rm -f ./kube-state-metrics/*.md
+      helm package ./kube-state-metrics/
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/dependentcharts/
+    displayName: 'Package helm chart'
+  - bash: |
+      helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+      helm push kube-state-metrics-*.tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/dependentcharts/
+    displayName: 'Push helm chart'
