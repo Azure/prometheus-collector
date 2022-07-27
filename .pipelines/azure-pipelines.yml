@@ -89,6 +89,7 @@ jobs:
     MCR_REGISTRY: 'mcr.microsoft.com'
     MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
     MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
+    ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
     ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
     HELM_CHART_NAME: 'prometheus-collector'
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
