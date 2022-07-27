@@ -87,6 +87,7 @@ jobs:
   #- Windows
   variables:
     MCR_REGISTRY: 'mcr.microsoft.com'
+    MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
     MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
     ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
     HELM_CHART_NAME: 'prometheus-collector'
@@ -95,17 +96,25 @@ jobs:
   steps:
   - bash: |
       export MCR_REGISTRY=$(MCR_REGISTRY)
+      export MCR_REPOSITORY=$(MCR_REPOSITORY)
       export MCR_REPOSITORY_HELM_DEPENDENCIES=$(MCR_REPOSITORY_HELM_DEPENDENCIES)
       export HELM_SEMVER=$(HELM_SEMVER)
       export IMAGE_TAG=$(IMAGE_TAG)
+      export IMAGE_TAG_WINDOWS=$IMAGE_TAG-win
       echo $HELM_SEMVER
       echo $IMAGE_TAG
+      echo $IMAGE_TAG_WINDOWS
       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
       cat $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml
       helm version
     displayName: 'Substitute chart version in files'
   - bash: |
-      helm package ./prometheus-collector/
+      helm dep update
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/
+    displayName: 'Update helm dependencies'
+  - bash: |
+      cd ./prometheus-collector/ && helm dep update
+      helm package prometheus-collector/
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
     displayName: 'Package helm chart'
   - bash: |
