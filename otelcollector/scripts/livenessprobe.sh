@@ -16,7 +16,7 @@ then
     duration=$((epochTimeNow - $AZMON_CONTAINER_START_TIME))
     durationInMinutes=$(($duration / 60))
     # Checking if 15 minutes have elapsed between checks, so that no configuration doesn't result in crashloopbackup which will flag the pods in AKS
-    if (( $durationInMinutes % 5 == 0 )); then
+    if (( $durationInMinutes % 15 == 0 )); then
       echo "Metrics Extension is not running (no configuration)" > /dev/termination-log
       exit 1
     fi
