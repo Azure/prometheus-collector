@@ -7,16 +7,17 @@ then
   exit 1
 fi
 
-#SECONDS=0
 (ps -ef | grep MetricsExt | grep -v "grep")
 if [ $? -ne 0 ]
 then
   # Checking if metricsextension folder exists, if it doesn't, it means that there is no DCR/DCE config for this resource and ME will fail to start
   if [ ! -d /etc/mdsd.d/config-cache/metricsextension ]; then
-    duration=$SECONDS
+    epochTimeNow=`date +%s`
+    duration=$((epochTimeNow - $AZMON_CONTAINER_START_TIME))
+    durationInMinutes=$(($duration / 60))
     # Checking if 15 minutes have elapsed between checks, so that no configuration doesn't result in crashloopbackup which will flag the pods in AKS
-    if (( $duration % 5 == 0 )); then
-      echo "Metrics Extension is not running (no configuration) " > /dev/termination-log
+    if (( $durationInMinutes % 5 == 0 )); then
+      echo "Metrics Extension is not running (no configuration)" > /dev/termination-log
       exit 1
     fi
   else
