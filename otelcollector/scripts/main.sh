@@ -302,10 +302,10 @@ if [ "${MAC}" == "true" ]; then
 fi
 
 # Setting time at which the container started running, so that it can be used for empty configuration checks in livenessprobe
-epochTimeNow=`date +%s`
-export AZMON_CONTAINER_START_TIME=$epochTimeNow
-echo "export AZMON_CONTAINER_START_TIME=$epochTimeNow" >> ~/.bashrc
-source ~/.bashrc
+# epochTimeNow=`date +%s`
+# export AZMON_CONTAINER_START_TIME=$epochTimeNow
+# echo "export AZMON_CONTAINER_START_TIME=$epochTimeNow" >> ~/.bashrc
+# source ~/.bashrc
 
 
 shutdown() {
