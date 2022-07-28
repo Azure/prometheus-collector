@@ -46,7 +46,8 @@ jobs:
         run: echo "MIXIN_NAME=${{ github.event.inputs.mixinName }}" >> $GITHUB_ENV
       - name: Get-Prereqs-To-Build-node-or-coredns-mixin
         if: env.MIXIN_NAME != 'kubernetes'
-        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && go install github.com/google/go-jsonnet/cmd/jsonnet@latest && go install github.com/google/go-jsonnet/cmd/jsonnetfmt@latest && go install github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest && GO111MODULE=on go install -v github.com/prometheus/prometheus/cmd/promtool@main
+      # run: cd ./mixins/${{ env.MIXIN_NAME }}/ && go install github.com/google/go-jsonnet/cmd/jsonnet@latest && go install github.com/google/go-jsonnet/cmd/jsonnetfmt@latest && go install github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest && GO111MODULE=on go install -v github.com/prometheus/prometheus/cmd/promtool@main
+        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && go install github.com/google/go-jsonnet/cmd/jsonnet@latest && go install github.com/google/go-jsonnet/cmd/jsonnetfmt@latest && go install github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest
       - name: Build-kubernetes-mixin
         if: env.MIXIN_NAME == 'kubernetes'
         run: cd ./mixins/${{ env.MIXIN_NAME }}/ && make all && zip ${{ env.MIXIN_NAME }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
@@ -55,7 +56,7 @@ jobs:
         run: cd ./mixins/${{ env.MIXIN_NAME }}/ && jb install && make all && zip ${{ env.MIXIN_NAME }}-mixins ./node_alerts.yaml ./node_rules.yaml ./dashboards_out/ -r
       - name: Build-coredns-mixin
         if: env.MIXIN_NAME == 'coredns'
-        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && jb install && make all && zip ${{ env.MIXIN_NAME }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
+        run: cd ./mixins/${{ env.MIXIN_NAME }}/ && jb install && make notest && zip ${{ env.MIXIN_NAME }}-mixins ./prometheus_alerts.yaml ./prometheus_rules.yaml ./dashboards_out/ -r
       - name: List-build-output
         run: cd ./mixins/${{ env.MIXIN_NAME }}/ && ls -lt && ls -lt ./dashboards_out
       #- name: Run-trivy-scanner-on-mixin
