@@ -44,7 +44,7 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: 'make'
     - bash: |
-        touch $(Build.ArtifactStagingDirectory)/linux/metadata.json
+        mkdir -p $(Build.ArtifactStagingDirectory)/linux
         docker buildx create --name testbuilder
         docker buildx use testbuilder
         docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
@@ -83,6 +83,7 @@ jobs:
       displayName: 'make'
     - powershell: |
         docker build . --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)
+        New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
         @{"image.name"="${{ variables.repoImageName }}:$(windowsImageTag)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: 'Build docker images'
