@@ -22,3 +22,5 @@ CVE-2022-31030
 CVE-2019-11254
 # /bin/node_exporter
 CVE-2021-44716
+# golang
+CVE-2022-29526
