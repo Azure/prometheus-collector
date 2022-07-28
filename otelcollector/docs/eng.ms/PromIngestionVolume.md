@@ -20,6 +20,7 @@ For histograms & summaries, each series has to be included explicitly in the lis
 
 ## coredns/kube-dns
 
+coredns_build_info
 coredns_panics_total
 coredns_dns_responses_total
 coredns_forward_responses_total
