@@ -1,3 +1,5 @@
+echo "test log"
+
 if [ "${MAC}" == "true" ]; then
     # Checking if metricsextension folder exists, if it doesn't, it means that there is no DCR/DCE config for this resource and ME/MDSD will fail to start
     # To avoid the pods from going into crashloopbackoff, we are restarting the pod with this message every 15 minutes.
@@ -77,7 +79,6 @@ else
         exit 1
     fi
 fi
-
 
 
 # if [ "${MAC}" != "true" ]; then
