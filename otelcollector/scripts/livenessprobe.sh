@@ -3,8 +3,8 @@ if [ "${MAC}" == "true" ]; then
     # To avoid the pods from going into crashloopbackoff, we are restarting the pod with this message every 15 minutes.
     if [ ! -e /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json ]; then
         epochTimeNow=`date +%s`
-        echo "AZMON_CONTAINER_START_TIME = " "$AZMON_CONTAINER_START_TIME" > /dev/termination-log
-        duration=$((epochTimeNow - $AZMON_CONTAINER_START_TIME))
+        echo "AZMON_CONTAINER_START_TIME = " "${AZMON_CONTAINER_START_TIME}" > /dev/termination-log
+        duration=$((epochTimeNow - ${AZMON_CONTAINER_START_TIME}))
         echo "duration = " "$duration" > /dev/termination-log
         durationInMinutes=$(($duration / 60))
         echo "durationInMinutes = " "$durationInMinutes" > /dev/termination-log
