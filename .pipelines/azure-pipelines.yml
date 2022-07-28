@@ -47,20 +47,17 @@ jobs:
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
         docker buildx create --name testbuilder
         docker buildx use testbuilder
-        docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
+        docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: 'Build docker images'
     - bash: |
+        docker pull $(LINUX_FULL_IMAGE_NAME)
         docker images --digests --all
       displayName: 'List docker images'
     #- bash: |
     #    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
     #    trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
     #  displayName: 'Run trivy scan'
-    - bash: |
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker push $(LINUX_FULL_IMAGE_NAME)
-      displayName: 'Push docker image to acr'
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: 'Generation Task'
       inputs:
@@ -152,3 +149,10 @@ jobs:
   pool: Azure-Pipelines-CI-Prod-EO
   dependsOn:
   - Chart
+  steps:
+  - task: AzureKeyVault@1
+    inputs:
+      azureSubscription: 'repo-kv-demo'                    ## YOUR_SERVICE_CONNECTION_NAME
+      KeyVaultName: 'kv-demo-repo'                         ## YOUR_KEY_VAULT_NAME
+      SecretsFilter: 'secretDemo'                          ## YOUR_SECRET_NAME. Default value: *
+      RunAsPreJob: false                                   ## Make the secret(s) available to the whole job
