@@ -84,7 +84,7 @@ jobs:
     - powershell: |
         docker build . --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)
         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
-        @{"image.name"="${{ variables.repoImageName }}:$(windowsImageTag)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
+        @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: 'Build docker images'
     - powershell: |
