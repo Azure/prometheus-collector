@@ -2,16 +2,19 @@ if [ "${MAC}" == "true" ]; then
     # Checking if TokenConfig file exists, if it doesn't, it means that there is no DCR/DCE config for this resource and ME/MDSD will fail to start
     # To avoid the pods from going into crashloopbackoff, we are restarting the pod with this message every 15 minutes.
     if [ ! -e /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json ]; then
-        epochTimeNow=`date +%s`
-        echo "AZMON_CONTAINER_START_TIME = ${AZMON_CONTAINER_START_TIME}" > /dev/termination-log
-        duration=$((epochTimeNow - ${AZMON_CONTAINER_START_TIME}))
-        echo "duration = $duration" > /dev/termination-log
-        durationInMinutes=$(($duration / 60))
-        echo "durationInMinutes = $durationInMinutes" > /dev/termination-log
-        # Checking if 15 minutes have elapsed since container start, so that absence of configuration doesn't result in crashloopbackup which will flag the pods in AKS
-        if [ $durationInMinutes > 5 ]; then
-            echo "No configuration present for the AKS resource" > /dev/termination-log
-            exit 1
+        if [ -e /opt/microsoft/liveness/azmon-container-start-time ]; then
+            epochTimeNow=`date +%s`
+            azmonContainerStartTime=`cat /opt/microsoft/liveness/azmon-container-start-time`
+            echo "AZMON_CONTAINER_START_TIME = $azmonContainerStartTime" > /dev/termination-log
+            duration=$((epochTimeNow - $azmonContainerStartTime))
+            echo "duration = $duration" > /dev/termination-log
+            durationInMinutes=$(($duration / 60))
+            echo "durationInMinutes = $durationInMinutes" > /dev/termination-log
+            # Checking if 15 minutes have elapsed since container start, so that absence of configuration doesn't result in crashloopbackup which will flag the pods in AKS
+            if [ $durationInMinutes > 5 ]; then
+                echo "No configuration present for the AKS resource" > /dev/termination-log
+                exit 1
+            fi
         fi
     else
         # Check if ME is not running, despite existing configuration 

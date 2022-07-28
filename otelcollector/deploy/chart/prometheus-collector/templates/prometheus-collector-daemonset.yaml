@@ -108,10 +108,6 @@ spec:
               value: "{{ .Release.Name }}"
             - name: AGENT_VERSION
               value: *collectorimagetag
-            - name: AZMON_CONTAINER_START_TIME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.creationTimestamp
             {{- if .Values.mode.advanced  }}
             - name: MODE
               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
