@@ -47,11 +47,12 @@ jobs:
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
         docker buildx create --name testbuilder
         docker buildx use testbuilder
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+        docker pull $(LINUX_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: 'Build docker images'
     - bash: |
-        docker pull $(LINUX_FULL_IMAGE_NAME)
         docker images --digests --all
       displayName: 'List docker images'
     #- bash: |
