@@ -3,11 +3,11 @@ if [ "${MAC}" == "true" ]; then
     # To avoid the pods from going into crashloopbackoff, we are restarting the pod with this message every 15 minutes.
     if [ ! -e /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json ]; then
         epochTimeNow=`date +%s`
-        echo "AZMON_CONTAINER_START_TIME = " "${AZMON_CONTAINER_START_TIME}" > /dev/termination-log
+        echo "AZMON_CONTAINER_START_TIME = ${AZMON_CONTAINER_START_TIME}" > /dev/termination-log
         duration=$((epochTimeNow - ${AZMON_CONTAINER_START_TIME}))
-        echo "duration = " "$duration" > /dev/termination-log
+        echo "duration = $duration" > /dev/termination-log
         durationInMinutes=$(($duration / 60))
-        echo "durationInMinutes = " "$durationInMinutes" > /dev/termination-log
+        echo "durationInMinutes = $durationInMinutes" > /dev/termination-log
         # Checking if 15 minutes have elapsed since container start, so that absence of configuration doesn't result in crashloopbackup which will flag the pods in AKS
         if [ $durationInMinutes > 5 ]; then
             echo "No configuration present for the AKS resource" > /dev/termination-log
