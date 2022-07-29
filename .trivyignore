@@ -23,5 +23,9 @@ CVE-2019-11254
 CVE-2022-29526
 # telegraf
 CVE-2022-29189
+CVE-2022-31030
+CVE-2022-29526
 # otelcollector and promconfigvalidator
 CVE-2019-3826
+# /bin/node_exporter
+CVE-2021-44716
