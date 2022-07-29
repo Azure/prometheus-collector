@@ -266,7 +266,7 @@ else
 fi
 
 # Get ME version
-ME_VERSION="2.2022.628.2309-1"
+ME_VERSION="2.2022.727.2052-1"
 echo_var "ME_VERSION" "$ME_VERSION"
 
 # Start otelcollector
