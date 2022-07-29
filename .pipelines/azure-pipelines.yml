@@ -2,14 +2,19 @@
 # Then find the results here: https://github-private.visualstudio.com/microsoft/_componentGovernance/188700
 trigger: none
 
+variables:
+  ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
+  ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
+  ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
+  HELM_CHART_NAME: 'prometheus-collector'
+  MCR_REGISTRY: 'mcr.microsoft.com'
+  MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
+  MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
+  MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
+
 jobs:
 - job: Common
   displayName: Common
-  variables:
-    ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
-    ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
-    ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
-    HELM_CHART_NAME: 'prometheus-collector'
   pool:
     name: Azure-Pipelines-CI-Prod-EO
   steps:
@@ -23,7 +28,7 @@ jobs:
         WINDOWS_IMAGE_TAG=$SEMVER-win
         LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
         WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
-        HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/HELM_CHART_NAME:SEMVER
+        HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
         echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
@@ -119,11 +124,6 @@ jobs:
   - Common
   - Linux
   variables:
-    MCR_REGISTRY: 'mcr.microsoft.com'
-    MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
-    MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
-    ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
-    ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
     HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
@@ -163,12 +163,6 @@ jobs:
   dependsOn:
   - Chart
   variables:
-    MCR_REGISTRY: 'mcr.microsoft.com'
-    MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
-    MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
-    MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
-    ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
-    ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
     HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
