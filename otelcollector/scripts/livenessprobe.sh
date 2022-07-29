@@ -11,7 +11,7 @@ if [ "${MAC}" == "true" ]; then
             durationInMinutes=$(($duration / 60))
             echo "durationInMinutes = $durationInMinutes" > /dev/termination-log
             # Checking if 15 minutes have elapsed since container start, so that absence of configuration doesn't result in crashloopbackup which will flag the pods in AKS
-            if [ $durationInMinutes > 5 ]; then
+            if [ $durationInMinutes -gt 5 ]; then
                 echo "No configuration present for the AKS resource" > /dev/termination-log
                 exit 1
             fi
