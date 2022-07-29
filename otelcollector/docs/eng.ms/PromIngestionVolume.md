@@ -51,6 +51,7 @@ coredns_dns_response_size_bytes_count
 process_resident_memory_bytes
 process_cpu_seconds_total
 go_goroutines
+kubernetes_build_info
 
 ## kube-apiserver
 
@@ -68,6 +69,7 @@ workqueue_queue_duration_seconds_count
 process_resident_memory_bytes
 process_cpu_seconds_total
 go_goroutines
+kubernetes_build_info
 
 ## kubelet
 
@@ -121,6 +123,7 @@ kubelet_volume_stats_capacity_bytes
 kubelet_volume_stats_available_bytes
 kubelet_volume_stats_inodes_used
 kubelet_volume_stats_inodes
+kubernetes_build_info
 
 ## cadvisor
 
@@ -142,6 +145,7 @@ container_memory_swap
 container_cpu_cfs_throttled_periods_total
 container_cpu_cfs_periods_total
 container_memory_usage_bytes
+kubernetes_build_info
 
 ## node/node-exporter (Linux)
 
@@ -171,6 +175,7 @@ node_network_transmit_drop_total
 node_disk_io_time_weighted_seconds_total
 node_exporter_build_info
 node_time_seconds
+kubernetes_build_info
 
 ## kube-state-metrics
 
@@ -191,6 +196,7 @@ kube_node_info
 kube_statefulset_metadata_generation
 kube_pod_labels
 kube_pod_annotations
+kubernetes_build_info
 
 ## kube-proxy
 
@@ -210,3 +216,4 @@ rest_client_request_duration_seconds_count
 process_resident_memory_bytes
 process_cpu_seconds_total
 go_goroutines
+kubernetes_build_info
