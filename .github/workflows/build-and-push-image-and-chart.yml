@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - azure-pipelines
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
