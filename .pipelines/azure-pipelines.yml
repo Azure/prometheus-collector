@@ -173,6 +173,7 @@ jobs:
   displayName: "Deploy to dev clusters"
   pool: Azure-Pipelines-CI-Prod-EO
   dependsOn:
+  - Common
   - Chart
   variables:
     HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
