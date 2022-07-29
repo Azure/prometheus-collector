@@ -100,6 +100,6 @@ COPY --from=builder /usr/local/lib/libtcmalloc_minimal.so.4 /usr/local/lib/
 # logrotate dependencies
 COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
 
-#RUN [ "/bin/bash", "-c", "chmod 775 /etc/cron.daily/logrotate" ]
-#ENTRYPOINT [ "/bin/bash" ]
-#CMD [ "/opt/main.sh" ]
+RUN [ "/bin/bash", "-c", "chmod 775 /etc/cron.daily/logrotate" ]
+ENTRYPOINT [ "/bin/bash" ]
+CMD [ "/opt/main.sh" ]
