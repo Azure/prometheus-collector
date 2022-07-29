@@ -104,7 +104,7 @@ echo "Installing Metrics Extension..."
 #/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.727.2052-1.cm2.x86_64.rpm
-sudo tdnf install -y metricsext2-2.2022.628.2309-1.cm2.x86_64.rpm
+sudo tdnf install -y metricsext2-2.2022.727.2052-1.cm2.x86_64.rpm
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build.
 sudo tdnf remove g++ binutils libgcc-atomic make patch bison diffutils docbook-dtd-xml gawk glibc-devel installkernel kernel-headers libgcc-devel libgomp-devel libmpc libstdc++-devel libtool libxml2-devel libxslt m4 mariner-rpm-macros mpfr python3-lxml python3-pygments dnf -y
