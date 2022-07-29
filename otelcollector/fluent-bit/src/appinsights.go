@@ -11,9 +11,6 @@ import (
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
-//env variable which has ResourceId for LA
-const ResourceIdEnv = "AKS_RESOURCE_ID"
-
 //env variable which has ResourceName for NON-AKS
 const ResourceNameEnv = "ACS_RESOURCE_NAME"
 
@@ -98,7 +95,7 @@ func InitializePlugin(agentVersion string) {
 	os_type := os.Getenv("OS_TYPE")
 	Log("OS_TYPE=%s", os_type)
 
-	ResourceID = os.Getenv(envAKSResourceID)
+	ResourceID = os.Getenv(envCluster)
 	Computer = os.Getenv(envComputerName)
 
 	if len(ResourceID) > 0 {
