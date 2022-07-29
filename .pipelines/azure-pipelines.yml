@@ -8,6 +8,7 @@ jobs:
   variables:
     ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
     ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
+    ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
     HELM_CHART_NAME: 'prometheus-collector'
   pool:
     name: Azure-Pipelines-CI-Prod-EO
@@ -150,7 +151,7 @@ jobs:
       helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
       helm push $(HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
       mkdir -p $(Build.ArtifactStagingDirectory)/chart
-      echo '{"image.name":"$(HELM_FULL_IMAGE_NAME)"}' > $(Build.ArtifactStagingDirectory)/chart/metadata.json
+      echo {"image.name":"$(HELM_FULL_IMAGE_NAME)"} > $(Build.ArtifactStagingDirectory)/chart/metadata.json
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
     displayName: 'Push helm chart'
   - task: PublishBuildArtifacts@1
@@ -164,6 +165,7 @@ jobs:
   variables:
     MCR_REGISTRY: 'mcr.microsoft.com'
     MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
+    MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
     MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
     ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
     ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
@@ -181,6 +183,8 @@ jobs:
       for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 30
+            echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG)
+            echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
             if docker manifest inspect $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) && docker manifest inspect $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
             then
               echo "Images and chart are published to mcr"
