@@ -117,7 +117,6 @@ jobs:
   dependsOn:
   - Common
   - Linux
-  - Windows
   variables:
     MCR_REGISTRY: 'mcr.microsoft.com'
     MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
@@ -162,6 +161,17 @@ jobs:
   pool: Azure-Pipelines-CI-Prod-EO
   dependsOn:
   - Chart
+  variables:
+    MCR_REGISTRY: 'mcr.microsoft.com'
+    MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
+    MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
+    ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
+    ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
+    HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
+    HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
+    IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
+    IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+    HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
   steps:
   - task: HelmInstaller@1
     displayName: Helm installer
@@ -171,7 +181,7 @@ jobs:
       for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 30
-            if docker manifest inspect $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) && docker manifest inspect $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS) && docker manifest inspect $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
+            if docker manifest inspect $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) && docker manifest inspect $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
             then
               echo "Images and chart are published to mcr"
               exit 0
