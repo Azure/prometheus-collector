@@ -5,13 +5,10 @@ if [ "${MAC}" == "true" ]; then
         if [ -e /opt/microsoft/liveness/azmon-container-start-time ]; then
             epochTimeNow=`date +%s`
             azmonContainerStartTime=`cat /opt/microsoft/liveness/azmon-container-start-time`
-            echo "AZMON_CONTAINER_START_TIME = $azmonContainerStartTime" > /dev/termination-log
             duration=$((epochTimeNow - $azmonContainerStartTime))
-            echo "duration = $duration" > /dev/termination-log
             durationInMinutes=$(($duration / 60))
-            echo "durationInMinutes = $durationInMinutes" > /dev/termination-log
             # Checking if 15 minutes have elapsed since container start, so that absence of configuration doesn't result in crashloopbackup which will flag the pods in AKS
-            if [ $durationInMinutes -gt 5 ]; then
+            if [ $durationInMinutes -gt 15 ]; then
                 echo "No configuration present for the AKS resource" > /dev/termination-log
                 exit 1
             fi
@@ -83,49 +80,3 @@ else
         exit 1
     fi
 fi
-
-
-# if [ "${MAC}" != "true" ]; then
-#   # The mounted cert files are modified by the keyvault provider every time it probes for new certs
-#   # even if the actual contents don't change. Need to check if actual contents changed.
-#   if [ -d "/etc/config/settings/akv" ] && [ -d "/opt/akv-copy/akv" ]
-#   then
-#     diff -r -q /etc/config/settings/akv /opt/akv-copy/akv
-#     if [ $? -ne 0 ]
-#     then
-#       echo "A Metrics Account certificate has changed" > /dev/termination-log
-#       exit 1
-#     fi
-#   fi
-# # else
-# #   # MDSD is only running in MAC mode
-# #   # Excluding MetricsExtenstion and inotifywait too since grep returns ME and inotify processes since mdsd is in the config file path
-# #   (ps -ef | grep "mdsd" | grep -vE 'grep|MetricsExtension|inotifywait')
-# #   if [ $? -ne 0 ]
-# #   then
-# #     echo "mdsd is not running" > /dev/termination-log
-# #     exit 1
-# #   fi
-# fi
-
-# Adding liveness probe check for AMCS config update by MDSD
-# if [ -s "/opt/inotifyoutput-mdsd-config.txt" ]  #file exists and size > 0
-# then
-#   echo "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed" > /dev/termination-log
-#   exit 1
-# fi
-
-
-# if [ ! -s "/opt/inotifyoutput.txt" ] #file doesn't exists or size == 0
-# then
-#   exit 0
-# else
-#   if [ -s "/opt/inotifyoutput.txt" ]  #file exists and size > 0
-#   then
-#     echo "inotifyoutput.txt has been updated - config changed" > /dev/termination-log
-#     exit 1
-#   fi
-# fi
-
-
-
