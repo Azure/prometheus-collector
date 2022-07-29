@@ -211,7 +211,6 @@ jobs:
             docker push ${{ env.IMAGE_FULL_TAG }}
   build-and-deploy-chart:
     needs: [WINDOWS-build-and-push-image, LINUX-build-and-push-image-and-chart]
-    needs: [LINUX-build-and-push-image-and-chart]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
