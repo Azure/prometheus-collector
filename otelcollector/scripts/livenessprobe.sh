@@ -1,3 +1,4 @@
+#test to exit non zero value if there is no configuration (MAC mode), otelcollector or ME is not running or config changed
 if [ "${MAC}" == "true" ]; then
     # Checking if TokenConfig file exists, if it doesn't, it means that there is no DCR/DCE config for this resource and ME/MDSD will fail to start
     # To avoid the pods from going into crashloopbackoff, we are restarting the pod with this message every 15 minutes.
