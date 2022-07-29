@@ -179,6 +179,7 @@ kube_pod_container_resource_requests
 kube_pod_status_phase
 kube_pod_container_resource_limits
 kube_node_status_allocatable
+kube_node_status_capacity
 kube_pod_info
 kube_pod_owner
 kube_resourcequota

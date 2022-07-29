@@ -29,7 +29,8 @@
     podLabel: 'pod',
     hostNetworkInterfaceSelector: 'device!~"veth.+"',
     hostMountpointSelector: 'mountpoint="/"',
-    wmiExporterSelector: 'job="windows-exporter"',
+    windowsExporterSelector: 'job="windows-exporter"',
+    containerfsSelector: 'container!=""',
     clusterSelector: 'cluster="replace_cluster_name_here"',
 
     // Grafana dashboard IDs are necessary for stable links for dashboards
@@ -108,5 +109,15 @@
     // This list of disk device names is referenced in various expressions.
     diskDevices: ['mmcblk.p.+', 'nvme.+', 'rbd.+', 'sd.+', 'vd.+', 'xvd.+', 'dm-.+', 'dasd.+'],
     diskDeviceSelector: 'device=~"%s"' % std.join('|', self.diskDevices),
+
+    // Certain workloads (e.g. KubeVirt/CDI) will fully utilise the persistent volume they claim
+    // the size of the PV will never grow since they consume the entirety of the volume by design.
+    // This selector allows an admin to 'pre-mark' the PVC of such a workload (or for any other use case)
+    // so that specific storage alerts will not fire.With the default selector, adding a label `exclude-from-alerts: 'true'`
+    // to the PVC will have the desired effect.
+    pvExcludedSelector: 'label_excluded_from_alerts="true"',
+
+    // Default timeout value for k8s Jobs. The jobs which are active beyond this duration would trigger KubeJobNotCompleted alert.
+    kubeJobTimeoutDuration: 12 * 60 * 60,
   },
 }

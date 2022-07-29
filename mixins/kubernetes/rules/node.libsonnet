@@ -20,8 +20,8 @@
             // below for instance.
             record: 'node_namespace_pod:kube_pod_info:',
             expr: |||
-              topk by(namespace, %(podLabel)s) (1,
-                max by (node, namespace, %(podLabel)s) (
+              topk by(%(clusterLabel)s, namespace, %(podLabel)s) (1,
+                max by (%(clusterLabel)s, node, namespace, %(podLabel)s) (
                   label_replace(kube_pod_info{%(kubeStateMetricsSelector)s,node!=""}, "%(podLabel)s", "$1", "pod", "(.*)")
               ))
             ||| % $._config,
@@ -50,6 +50,14 @@
                   node_memory_Slab_bytes{%(nodeExporterSelector)s}
                 )
               ) by (%(clusterLabel)s)
+            ||| % $._config,
+          },
+          {
+            // This rule gives cpu utilization per cluster
+            record: 'cluster:node_cpu:ratio_rate5m',
+            expr: |||
+              sum(rate(node_cpu_seconds_total{%(nodeExporterSelector)s,mode!="idle",mode!="iowait",mode!="steal"}[5m])) /
+              count(sum(node_cpu_seconds_total{%(nodeExporterSelector)s}) by (%(clusterLabel)s, instance, cpu))
             ||| % $._config,
           },
         ],

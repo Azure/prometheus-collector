@@ -39,48 +39,6 @@
             'for': '10m',
           },
           {
-            alert: 'KubeContainerCPUPercentage',
-            expr: |||
-              sum (rate(container_cpu_usage_seconds_total{cluster = "$cluster",name!~".*prometheus.*", image!="", container_name!="POD"}[5m])) by (pod_name, container,cluster) / sum(container_spec_cpu_quota{cluster = "$cluster",name!~".*prometheus.*", image!="", container_name!="POD"}/container_spec_cpu_period{cluster = "$cluster",name!~".*prometheus.*", image!="", container_name!="POD"}) by (pod_name, container,cluster) >.95  
-            ||| % $._config,
-            labels: {
-              severity: 'warning',
-            },
-            annotations: {
-              description: 'Average CPU usage per container is greater than 95%.',
-              summary: 'Average CPU usage per container is greater than 95%',
-            },
-            'for': '10m',
-          },
-          {
-            alert: 'KubeContainerMemoryPercentage',
-            expr: |||
-              sum by (namespace,cluster,container) (container_memory_working_set_bytes{cluster = "$cluster", container!="", image!="", container_name!="POD"}) / sum by (namespace,cluster,container) (kube_pod_container_resource_limits{cluster = "$cluster", resource="memory"})> .95 
-            ||| % $._config,
-            labels: {
-              severity: 'warning',
-            },
-            annotations: {
-              description: 'Average Memory usage per container is greater than 95%.',
-              summary: 'Average Memory usage per container is greater than 95%',
-            },
-            'for': '10m',
-          },
-          {
-            alert: 'KubeOOMKilled',
-            expr: |||
-              sum by (cluster,container,namespace)(kube_pod_container_status_last_terminated_reason{reason="OOMKilled",cluster="$cluster"})  > 0 
-            ||| % $._config,
-            labels: {
-              severity: 'warning',
-            },
-            annotations: {
-              description: 'Number of OOM killed containers is greater than 0',
-              summary: 'Number of OOM killed containers is greater than 0',
-            },
-            'for': '10m',
-          },
-          {
             alert: 'KubeMemoryOvercommit',
             expr: |||
               sum(namespace_memory:kube_pod_container_resource_requests:sum{%(ignoringOverprovisionedWorkloadSelector)s}) - (sum(kube_node_status_allocatable{resource="memory"}) - max(kube_node_status_allocatable{resource="memory"})) > 0
@@ -91,7 +49,7 @@
               severity: 'warning',
             },
             annotations: {
-              description: 'Cluster has overcommitted memory resource requests for Pods by {{ $value }} bytes and cannot tolerate node failure.',
+              description: 'Cluster has overcommitted memory resource requests for Pods by {{ $value | humanize }} bytes and cannot tolerate node failure.',
               summary: 'Cluster has overcommitted memory resource requests.',
             },
             'for': '10m',
@@ -99,9 +57,9 @@
           {
             alert: 'KubeCPUQuotaOvercommit',
             expr: |||
-              sum(kube_resourcequota{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, type="hard", resource="cpu"})
+              sum(min without(resource) (kube_resourcequota{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, type="hard", resource=~"(cpu|requests.cpu)"}))
                 /
-              sum(kube_node_status_allocatable{resource="cpu"})
+              sum(kube_node_status_allocatable{resource="cpu", %(kubeStateMetricsSelector)s})
                 > %(namespaceOvercommitFactor)s
             ||| % $._config,
             labels: {
@@ -116,9 +74,9 @@
           {
             alert: 'KubeMemoryQuotaOvercommit',
             expr: |||
-              sum(kube_resourcequota{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, type="hard", resource="memory"})
+              sum(min without(resource) (kube_resourcequota{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, type="hard", resource=~"(memory|requests.memory)"}))
                 /
-              sum(kube_node_status_allocatable{resource="memory",%(kubeStateMetricsSelector)s})
+              sum(kube_node_status_allocatable{resource="memory", %(kubeStateMetricsSelector)s})
                 > %(namespaceOvercommitFactor)s
             ||| % $._config,
             labels: {
