@@ -43,7 +43,7 @@ jobs:
         SourceFolder: "$(Build.SourcesDirectory)/.pipelines/deployment"
         Contents: |
           **/*
-        TargetFolder: '$(Build.ArtifactStagingDirectory)/build'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
     - task: PublishBuildArtifacts@1
       displayName: "Publish ev2 deployment artifacts"
       inputs:
