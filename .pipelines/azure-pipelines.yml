@@ -16,7 +16,7 @@ jobs:
 - job: Common
   displayName: Set image tags and publish ev2 artifacts
   pool:
-    name: Azure-Pipelines-CI-Prod-EO
+    vmImage: ubuntu-latest
   steps:
     - bash: |
         COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
@@ -53,7 +53,7 @@ jobs:
 - job: Linux
   displayName: Build linux image
   pool:
-    name: Azure-Pipelines-CI-Prod-EO
+    vmImage: ubuntu-latest
   dependsOn: common
   variables:
     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
@@ -128,7 +128,8 @@ jobs:
 
 - job: Chart
   displayName: "Package helm chart"
-  pool: Azure-Pipelines-CI-Prod-EO
+  pool:
+    vmImage: ubuntu-latest
   dependsOn:
   - Common
   - Linux
@@ -171,7 +172,8 @@ jobs:
 
 - job: Deploy
   displayName: "Deploy to dev clusters"
-  pool: Azure-Pipelines-CI-Prod-EO
+  pool:
+    vmImage: ubuntu-latest
   dependsOn:
   - Common
   - Chart
