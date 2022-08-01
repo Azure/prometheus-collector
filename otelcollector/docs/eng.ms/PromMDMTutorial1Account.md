@@ -5,7 +5,15 @@
 
 ## Create metrics account
 
-All Prometheus metrics will be stored in a Geneva metrics (MDM) account. If you already have an existing metrics account, you can reuse that account for Prometheus metrics as well. If you don't have an existing metrics account, or want to store your Prometheus metrics in a separate account, follow the instructions to create a [metrics account](~/getting_started/v2/createaccounts_basic.md) for storing your metrics. A Logs account is not strictly required for Prometheus metrics collection.  
+All Prometheus metrics will be stored in a Geneva metrics (MDM) account. If you already have an existing metrics account, you can reuse that account for Prometheus metrics as well. If you don't have an existing metrics account, or want to store your Prometheus metrics in a separate account, follow the instructions to create a [metrics account](~/getting_started/v2/createaccounts_basic.md) for storing your metrics. A Logs account is not strictly required for Prometheus metrics collection.
+
+Note: An account with an INT stamp is not supported. Please use only MDM accounts with a prod stamp. 
+
+### Account limits
+
+**Be aware** of your Geneva Metrics account limits as you roll out to new clusters. Deploying **Prometheus metrics in MDM** will cause a **sharp increase** in your events/minute. You will need to pay attention to your **Event** and **Metrics Store Timeseries** limits as they will likely need to be adjusted. If you exceed those limits, your metrics will be throttled\sampled and **you may lose data**.
+
+You can learn how to view and increase your current limits [here](~/metrics/management/limitincrease.md). It's recommended for your **Projected Usage** to be set so that you're consuming less than 75% in both **Event** and **Metrics Store Timeseries** limits once you've deployed **Prometheus metrics in MDM**. It may take a few adjustments to get it right after deployment and you'll need to revisit when deploying to additional clusters.
 
 ## Set up KeyVault authentication
 

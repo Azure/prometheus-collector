@@ -51,6 +51,7 @@ coredns_dns_response_size_bytes_count
 process_resident_memory_bytes
 process_cpu_seconds_total
 go_goroutines
+kubernetes_build_info
 
 ## kube-apiserver
 
@@ -68,6 +69,7 @@ workqueue_queue_duration_seconds_count
 process_resident_memory_bytes
 process_cpu_seconds_total
 go_goroutines
+kubernetes_build_info
 
 ## kubelet
 
@@ -174,6 +176,7 @@ node_network_transmit_drop_total
 node_disk_io_time_weighted_seconds_total
 node_exporter_build_info
 node_time_seconds
+kubernetes_build_info
 
 ## kube-state-metrics
 
@@ -222,3 +225,4 @@ rest_client_request_duration_seconds_count
 process_resident_memory_bytes
 process_cpu_seconds_total
 go_goroutines
+kubernetes_build_info

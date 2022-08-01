@@ -14,16 +14,12 @@ func main() {
 	}
 	info := component.BuildInfo{
 		Command:     "custom-collector-distro",
-		Description: "Custom OpenTelemetry Collector distributionr",
-		Version:     "1.0.0",
+		Description: "Custom OpenTelemetry Collector distribution",
+		Version:     "0.53.0",
 	}
 
-	app, err := service.New(service.Parameters{BuildInfo: info, Factories: factories})
-	if err != nil {
-		log.Fatal("failed to construct the collector server: %w", err)
-	}
-
-	err = app.Run()
+	app := service.NewCommand(service.CollectorSettings{BuildInfo: info, Factories: factories})
+	err = app.Execute()
 	if err != nil {
 		log.Fatal("collector server run finished with error: %w", err)
 	}
