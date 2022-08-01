@@ -123,7 +123,7 @@ kubelet_volume_stats_capacity_bytes
 kubelet_volume_stats_available_bytes
 kubelet_volume_stats_inodes_used
 kubelet_volume_stats_inodes
-kubernetes_build_info
+kubelet_volume_stats_used_bytes
 
 ## cadvisor
 
@@ -145,7 +145,8 @@ container_memory_swap
 container_cpu_cfs_throttled_periods_total
 container_cpu_cfs_periods_total
 container_memory_usage_bytes
-kubernetes_build_info
+container_spec_cpu_period
+container_spec_cpu_quota
 
 ## node/node-exporter (Linux)
 
@@ -196,7 +197,15 @@ kube_node_info
 kube_statefulset_metadata_generation
 kube_pod_labels
 kube_pod_annotations
-kubernetes_build_info
+kube_job_status_succeeded
+kube_job_spec_completions
+kube_daemonset_status_desired_number_scheduled
+kube_daemonset_status_number_ready
+kube_deployment_spec_replicas
+kube_deployment_status_replicas_ready
+kube_pod_container_status_last_terminated_reason
+kube_node_status_condition
+kube_pod_container_status_restarts_total
 
 ## kube-proxy
 
