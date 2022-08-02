@@ -50,7 +50,7 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 echo "Installing Metrics Extension..."
 wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.727.2052-1.cm2.x86_64.rpm
 sudo tdnf install -y metricsext2-2.2022.727.2052-1.cm2.x86_64.rpm
-sudo tdnf list installed | grep metricsext2 | | awk '{print $2}' > metricsextversion.txt
+sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 rm -f $TMPDIR/metricsext2*.rpm
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
