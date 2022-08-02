@@ -49,6 +49,11 @@
           "Name": "PushWindowsAgent",
           "InstanceOf": "ShellExtension",
           "RolloutParametersPath": "Parameters\\PrometheusCollector.Windows.Parameters.json"
+        },
+        {
+          "Name": "PushHelmChart",
+          "InstanceOf": "ShellExtension",
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.Chart.Parameters.json"
         }
       ]
     }

@@ -13,7 +13,7 @@
     },
     "Notification": {
       "Email": {
-        "To": "omscontainers@microsoft.com"
+        "To": "grwehner@microsoft.com"
       }
     }
   },
@@ -29,6 +29,13 @@
       "name": "PushWindowsAgent",
       "targetType": "ServiceResource",
       "targetName": "PushWindowsAgent",
+      "actions": [ "Shell/PushAgentToACR" ],
+      "dependsOn": [ ]
+    },
+    {
+      "name": "PushHelmChart",
+      "targetType": "ServiceResource",
+      "targetName": "PushHelmChart",
       "actions": [ "Shell/PushAgentToACR" ],
       "dependsOn": [ ]
     }

@@ -57,8 +57,8 @@ else
   exit 1
 fi
 
-echo "Pushing $PROD_ACR_REPOSITORY:$IMAGE_TAG to ${ACR_NAME}"
-az acr import --name $ACR_REGISTRY --source ${MCR_REGISTRY}${MCR_REPOSITORY}:${IMAGE_TAG} --image ${PROD_ACR_REPOSITORY}:${IMAGE_TAG}
+echo "Pushing $PROD_ACR_REPOSITORY:$IMAGE_TAG to $ACR_REGISTRY"
+az acr import --name $ACR_REGISTRY --source ${MCR_REGISTRY}${DEV_MCR_REPOSITORY}:${IMAGE_TAG} --image ${PROD_ACR_REPOSITORY}:${IMAGE_TAG}
 if [ $? -eq 0 ]; then
   echo "Retagged and pushed image successfully"
 else

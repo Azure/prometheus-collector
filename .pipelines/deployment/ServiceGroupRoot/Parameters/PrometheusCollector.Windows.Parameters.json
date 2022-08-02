@@ -29,11 +29,11 @@
         "environmentVariables": [
           {
             "name": "_ACR_REGISTRY",
-            "value": "___ACR_REGISTRY__"
+            "value": "__ACR_REGISTRY__"
           },
           {
             "name": "PROD_ACR_REPOSITORY",
-            "value": "__PROD_ACR_REPOSITORY__"
+            "value": "__PROD_ACR_AGENT_REPOSITORY__"
           },
           {
             "name": "MCR_REGISTRY",
@@ -41,11 +41,11 @@
           },
           {
             "name": "PROD_MCR_REPOSITORY",
-            "value": "__PROD_MCR_REPOSITORY__"
+            "value": "__PROD_MCR_AGENT_REPOSITORY__"
           },
           {
             "name": "DEV_MCR_REPOSITORY",
-            "value": "__DEV_MCR_REPOSITORY__"
+            "value": "__DEV_MCR_AGENT_REPOSITORY__"
           },
           {
             "name": "IMAGE_TAG",

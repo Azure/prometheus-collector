@@ -10,8 +10,12 @@
                   "replaceWith": "$(ACRRegistry)"
               },            
               {
-                  "find": "__PROD_ACR_REPOSITORY__",
-                  "replaceWith": "$(ProdACRRepository)"
+                  "find": "__PROD_ACR_AGENT_REPOSITORY__",
+                  "replaceWith": "$(ProdACRAgentRepository)"
+              },
+              {
+                "find": "__PROD_ACR_CHART_REPOSITORY__",
+                "replaceWith": "$(ProdACRChartRepository)"
               },
               {
                 "find": "__MANAGED_IDENTITY__",
@@ -22,8 +26,8 @@
                 "replaceWith": "$(MCRRegistry)"
               },
               {
-                "find": "__DEV_MCR_REPOSITORY__",
-                "replaceWith": "$(DevMCRRepository)"
+                "find": "__DEV_MCR_AGENT_REPOSITORY__",
+                "replaceWith": "$(DevMCRAgentRepository)"
               },
               {
                   "find": "__LINUX_TAG__",
@@ -34,9 +38,21 @@
                   "replaceWith": "$(WindowsTag)"
               },
               {
-                "find": "__PROD_MCR_REPOSITORY__",
-                "replaceWith": "$(ProdMCRRepository)"
-            }
+                "find": "__PROD_MCR_AGENT_REPOSITORY__",
+                "replaceWith": "$(ProdMCRAgentRepository)"
+              },
+              {
+                "find": "__DEV_MCR_CHART_REPOSITORY__",
+                "replaceWith": "$(DevMCRChartRepository)"
+              },
+              {
+                "find": "__PROD_MCR_CHART_REPOSITORY__",
+                "replaceWith": "$(ProdMCRChartRepository)"
+              },
+              {
+                "find": "__CHART_TAG__",
+                "replaceWith": "$(ChartTag)"
+              }
           ]
       }                                                                                                                                                
   ]
