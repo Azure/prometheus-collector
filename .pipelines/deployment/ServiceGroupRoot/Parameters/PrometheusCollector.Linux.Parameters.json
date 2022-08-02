@@ -28,7 +28,7 @@
         ],
         "environmentVariables": [
           {
-            "name": "_ACR_REGISTRY",
+            "name": "ACR_REGISTRY",
             "value": "__ACR_REGISTRY__"
           },
           {
