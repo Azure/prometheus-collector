@@ -7,7 +7,7 @@
   },
   "ServiceResourceGroupDefinitions": [
     {
-      "Name": "CI-Agent-ServiceResourceGroupDefinition",
+      "Name": "PrometheusCollector-ServiceResourceGroupDefinition",
       "ServiceResourceDefinitions": [
         {
           "Name": "ShellExtension",
@@ -30,9 +30,9 @@
   ],
   "ServiceResourceGroups": [
     {
-      "AzureResourceGroupName": "ContainerInsights-MultiArch-Agent-Release",
+      "AzureResourceGroupName": "PrometheusCollector-Release",
       "Location": "eastus2",
-      "InstanceOf": "CI-Agent-ServiceResourceGroupDefinition",
+      "InstanceOf": "PrometheusCollector-ServiceResourceGroupDefinition",
       "AzureSubscriptionId": "30c56c3a-54da-46ea-b004-06eb33432687",
       "ScopeTags": [
         {
@@ -43,12 +43,12 @@
         {
           "Name": "PushLinuxAgent",
           "InstanceOf": "ShellExtension",
-          "RolloutParametersPath": "Parameters\\ContainerInsights.Linux.Parameters.json"
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.Linux.Parameters.json"
         },
         {
           "Name": "PushWindowsAgent",
           "InstanceOf": "ShellExtension",
-          "RolloutParametersPath": "Parameters\\ContainerInsights.Windows.Parameters.json"
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.Windows.Parameters.json"
         }
       ]
     }

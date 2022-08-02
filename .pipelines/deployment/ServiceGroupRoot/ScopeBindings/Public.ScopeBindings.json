@@ -6,45 +6,37 @@
           "scopeTagName": "Global",
           "bindings": [        
               {
-                  "find": "__ACR_NAME__",
-                  "replaceWith": "$(ACRName)"
+                  "find": "__ACR_REGISTRY__",
+                  "replaceWith": "$(ACRRegistry)"
               },            
               {
-                  "find": "__AGENT_RELEASE__",
-                  "replaceWith": "$(AgentRelease)"
-              }, 
-              {
-                  "find": "__AGENT_IMAGE_TAG_SUFFIX__",
-                  "replaceWith": "$(AgentImageTagSuffix)"
+                  "find": "__PROD_ACR_REPOSITORY__",
+                  "replaceWith": "$(ProdACRRepository)"
               },
               {
-                  "find": "__MANAGED_IDENTITY__",
-                  "replaceWith": "$(ManagedIdentity)"
-              }, 
-              {
-                  "find": "__CDPX_LINUX_REGISTRY__",
-                  "replaceWith": "$(CDPXLinuxRegistry)"
+                "find": "__MANAGED_IDENTITY__",
+                "replaceWith": "$(ManagedIdentity)"
               },
               {
-                  "find": "__CDPX_WINDOWS_REGISTRY__",
-                  "replaceWith": "$(CDPXWindowsRegistry)"
+                "find": "__MCR_REGISTRY__",
+                "replaceWith": "$(MCRRegistry)"
               },
               {
-                  "find": "__CDPX_LINUX_TAG__",
-                  "replaceWith": "$(CDPXLinuxTag)"
+                "find": "__DEV_MCR_REPOSITORY__",
+                "replaceWith": "$(DevMCRRepository)"
               },
               {
-                  "find": "__CDPX_WINDOWS_TAG__",
-                  "replaceWith": "$(CDPXWindowsTag)"
+                  "find": "__LINUX_TAG__",
+                  "replaceWith": "$(LinuxTag)"
               },
               {
-                  "find": "__CDPX_LINUX_REPO_NAME__",
-                  "replaceWith": "$(CDPXLinuxRepoName)"
+                  "find": "__WINDOWS_TAG__",
+                  "replaceWith": "$(WindowsTag)"
               },
               {
-                  "find": "__CDPX_WINDOWS_REPO_NAME__",
-                  "replaceWith": "$(CDPXWindowsRepoName)"
-              }
+                "find": "__PROD_MCR_REPOSITORY__",
+                "replaceWith": "$(ProdMCRRepository)"
+            }
           ]
       }                                                                                                                                                
   ]
