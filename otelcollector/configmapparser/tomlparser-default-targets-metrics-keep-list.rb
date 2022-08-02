@@ -119,7 +119,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !cadvisorRegex.empty?
         if isValidRegex(cadvisorRegex) == true
           @cadvisorRegex = cadvisorRegex
-          pConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for cadvisor")
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for cadvisor")
         else
           ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for cadvisor")
         end
