@@ -35,6 +35,10 @@ jobs:
         echo "##vso[task.setvariable variable=WINDOWS__IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
         echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
         echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
+
+        cd $(Build.SourcesDirectory)/deployment/ServiceGroupRoot/Scripts
+        tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh
+
       displayName: 'Set image registry, repo, and tags'
       name: setup
     - task: CopyFiles@2
