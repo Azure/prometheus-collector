@@ -35,6 +35,7 @@ jobs:
         else
           BRANCH_NAME=$(Build.SourceBranchName)
         fi
+        BRANCH_NAME=$(echo $BRANCH_NAME | tr / - | tr . - | tr _ - | cut -c1-90)
         COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
         DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
         VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
