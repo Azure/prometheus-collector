@@ -30,7 +30,7 @@ jobs:
     vmImage: ubuntu-latest
   steps:
     - bash: |
-        if [ $(IS_PR) == "True" ]; then
+        if [ $(IS_PR) = true ]; then
           BRANCH_NAME=$(System.PullRequest.TargetBranch)
         else
           BRANCH_NAME=$(Build.SourceBranchName)
