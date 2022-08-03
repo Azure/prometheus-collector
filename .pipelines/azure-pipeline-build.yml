@@ -2,14 +2,14 @@ trigger:
   batch: true
   branches:
     include:
-    - azure-pipelines
+    - azure-pipeline-build
 
 pr:
   autoCancel: true
   drafts: true
   branches:
     include:
-    - azure-pipelines
+    - azure-pipeline-build
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
