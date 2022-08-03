@@ -1,0 +1,17 @@
+KubeJobNotCompleted
+KubeJobFailed
+KubePodCrashLooping
+KubePodNotReady
+KubeDeploymentReplicasMismatch
+KubeStatefulSetReplicasMismatch
+KubeHpaReplicasMismatch
+KubeHpaMaxedOut
+KubeQuotaAlmostFull
+#CPUThrottlingHigh -> Disabled for now as false positives and noisy
+KubeMemoryQuotaOvercommit
+KubeCPUQuotaOvercommit
+KubeVersionMismatch
+KubeNodeNotReady
+KubeNodeReadinessFlapping
+KubeletTooManyPods
+KubeNodeUnreachable
