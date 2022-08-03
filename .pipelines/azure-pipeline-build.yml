@@ -30,8 +30,12 @@ jobs:
     vmImage: ubuntu-latest
   steps:
     - bash: |
+        if [ $(IS_PR) == "True" ]; then
+          BRANCH_NAME=$(System.PullRequest.TargetBranch)
+        else
+          BRANCH_NAME=$(Build.SourceBranchName)
+        fi
         COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
-        BRANCH_NAME=$(Build.SourceBranchName)
         DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
         VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
         SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
@@ -43,6 +47,7 @@ jobs:
         WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
         HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
 
+        echo "##vso[build.updatebuildnumber]$SEMVER"
         echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
