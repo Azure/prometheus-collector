@@ -15,8 +15,7 @@ variables:
 jobs:
 - job: Common
   displayName: Set image tags and publish ev2 artifacts
-  pool:
-    vmImage: ubuntu-latest
+  pool: Azure-Pipelines-CI-Prod-EO
   steps:
     - bash: |
         COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
@@ -24,11 +23,14 @@ jobs:
         DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
         VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
         SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
+
         LINUX_IMAGE_TAG=$SEMVER
         WINDOWS_IMAGE_TAG=$SEMVER-win
+
         LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
         WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
         HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
+
         echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
@@ -56,8 +58,7 @@ jobs:
 
 - job: Linux
   displayName: Build linux image
-  pool:
-    vmImage: ubuntu-latest
+  pool: Azure-Pipelines-CI-Prod-EO
   dependsOn: common
   variables:
     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
@@ -132,8 +133,7 @@ jobs:
 
 - job: Chart
   displayName: "Package helm chart"
-  pool:
-    vmImage: ubuntu-latest
+  pool: Azure-Pipelines-CI-Prod-EO
   dependsOn:
   - Common
   - Linux
@@ -177,8 +177,7 @@ jobs:
 
 - job: Deploy
   displayName: "Deploy to dev clusters"
-  pool:
-    vmImage: ubuntu-latest
+  pool: Azure-Pipelines-CI-Prod-EO
   dependsOn:
   - Common
   - Chart
