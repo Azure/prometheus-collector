@@ -52,7 +52,7 @@ The following are the formats for the image tags, helm chart versions, and git t
   - Chart version/image tag: `{helm chart semver}-{branch}-{date in pacific timezone}-{commit id}`
   - Git Tag: `v{helm chart semver}-{branch}-{date in pacific timezone}-{commit id}`
   
-Each merge into `main` will push the image to the public mcr and deploy to the dev clusters.
+Each merge into `main` will push the image to the public mcr and deploy to the dev clusters. If the deployed pods do not have a `Running` state within the 5 minute timeout, the deploy step will fail, so we will know the clusters did not get updated. The reason for why the deployment failed would need to be investigated and fixed. Then you can go back to the build and click `Rerun failed jobs` to try to re-deploy without having to re-build and push the images.
 
 ## Release Process
 - **PR 1**: Bump the version in the VERSION file following semantic versioning.
