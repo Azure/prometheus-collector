@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - vishwa/defaultdashboards
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
