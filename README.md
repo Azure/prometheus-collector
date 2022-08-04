@@ -1,10 +1,18 @@
 # Build Status
+
+## Dev
 | Step | Status |
 | -- | -- |
 | Linux | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=azure-pipelines&jobName=Build%20linux%20image)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=azure-pipelines) |
 | Windows | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=azure-pipelines&jobName=Build%20windows%20image)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=azure-pipelines)
 | Chart | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=azure-pipelines&jobName=Package%20helm%20chart)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=azure-pipelines)
 | Deploy | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=azure-pipelines&jobName=Deploy%20to%20dev%20clusters)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=azure-pipelines) |
+
+## Prod
+| Step | Status |
+| -- | -- |
+| Publish | [![Build Status](https://github-private.vsrm.visualstudio.com/_apis/public/Release/badge/2d36c31d-2f89-409f-9a3e-32e4e9699840/79/127)](https://github-private.visualstudio.com/azure/_release?definitionId=79&view=mine&_a=releases) |
+| Deploy | [![Build Status](https://github-private.vsrm.visualstudio.com/_apis/public/Release/badge/2d36c31d-2f89-409f-9a3e-32e4e9699840/79/128)](https://github-private.visualstudio.com/azure/_release?definitionId=79&view=mine&_a=releases) |
 
 # Project 
 

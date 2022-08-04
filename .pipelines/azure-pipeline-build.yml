@@ -209,6 +209,12 @@ jobs:
     IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
   steps:
+  - checkout: self
+    persistCredentials: true
+  - bash: |
+      git config --global user.name "AzureDevOps Agent"
+      git tag "$(HELM_SEMVER)"
+      git push origin "$(HELM_SEMVER)"
   - task: HelmInstaller@1
     displayName: Install Helm version
     inputs: 
