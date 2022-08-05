@@ -92,8 +92,12 @@ jobs:
         docker buildx create --name testbuilder
         docker buildx use testbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
-        docker pull $(LINUX_FULL_IMAGE_NAME)
+        if [ "$(Build.Reason)" != "PullRequest" ]; then
+          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          docker pull $(LINUX_FULL_IMAGE_NAME)
+        else
+          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
+        fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build and push image to dev ACR"
     - bash: |
@@ -105,11 +109,13 @@ jobs:
     #  displayName: 'Run trivy scan'
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Generate image artifacts for Ev2"
+      condition: eq(variables.IS_PR, false)
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
     - task: PublishBuildArtifacts@1
       displayName: "Publish image artifacts for Ev2"
+      condition: eq(variables.IS_PR, false)
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
@@ -139,12 +145,15 @@ jobs:
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker push $(WINDOWS_FULL_IMAGE_NAME)
       displayName: "Push image to dev ACR"
+      condition: eq(variables.IS_PR, false)
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+      condition: eq(variables.IS_PR, false)
       displayName: "Generate image artifacts for Ev2"
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
         DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
     - task: PublishBuildArtifacts@1
+      condition: eq(variables.IS_PR, false)
       displayName: "Publish image artifacts for Ev2"
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
@@ -188,8 +197,10 @@ jobs:
       echo {\"image.name\":\"$(HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/chart/metadata.json
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
     displayName: "Push helm chart to dev ACR"
+    condition: eq(variables.IS_PR, false)
   - task: PublishBuildArtifacts@1
     displayName: "Publish helm chart artifacts for Ev2"
+    condition: eq(variables.IS_PR, false)
     inputs:
       pathToPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: drop
@@ -215,6 +226,7 @@ jobs:
       git config --global user.name "AzureDevOps Agent"
       git tag "$(HELM_SEMVER)"
       git push origin "$(HELM_SEMVER)"
+    displayName: Tag commit with semver
   - task: HelmInstaller@1
     displayName: Install Helm version
     inputs: 
