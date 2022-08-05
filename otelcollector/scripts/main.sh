@@ -303,7 +303,9 @@ fi
 # Setting time at which the container started running, so that it can be used for empty configuration checks in livenessprobe
 epochTimeNow=`date +%s`
 echo $epochTimeNow > /opt/microsoft/liveness/azmon-container-start-time
-
+echo_var "AZMON_CONTAINER_START_TIME" "$epochTimeNow"
+epochTimeNowReadable=`date --date @$epochTimeNow`
+echo_var "AZMON_CONTAINER_START_TIME_READABLE" "$epochTimeNowReadable"
 
 shutdown() {
 	echo "shutting down"

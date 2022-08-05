@@ -8,6 +8,10 @@ if [ "${MAC}" == "true" ]; then
             azmonContainerStartTime=`cat /opt/microsoft/liveness/azmon-container-start-time`
             duration=$((epochTimeNow - $azmonContainerStartTime))
             durationInMinutes=$(($duration / 60))
+             # Logging this every 5 minutes so that it can picked up in traces for telemetry as well as sent to stdout of the container
+            if (( $durationInMinutes % 5 == 0 )); then
+                echo "`date "+%Y-%m-%dT%H:%M:%S"` No configuration present for the AKS resource" > /dev/write-to-traces
+            fi
             # Checking if 15 minutes have elapsed since container start, so that absence of configuration doesn't result in crashloopbackup which will flag the pods in AKS
             if [ $durationInMinutes -gt 15 ]; then
                 echo "No configuration present for the AKS resource" > /dev/termination-log
