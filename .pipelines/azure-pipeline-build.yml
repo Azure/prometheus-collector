@@ -92,7 +92,7 @@ jobs:
       displayName: 'SDL: run binskim'
       inputs:
         InputType: 'CommandLine'
-        arguments: 'analyze -E $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
     - bash: |
         sudo gem install brakeman
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser
