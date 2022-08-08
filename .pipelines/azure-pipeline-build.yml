@@ -106,8 +106,9 @@ jobs:
         unzip DevSkim_linux_0.6.9.zip
         cd DevSkim_linux_0.6.9/
         chmod 777 devskim
-        devskim analyze ../otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
+        ./devskim analyze ../otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
       displayName: 'SDL: run devskim'
+      workingDirectory: $(Build.SourcesDirectory)
     
     - bash: |
         sudo gem install brakeman
@@ -132,10 +133,6 @@ jobs:
         docker images --digests --all
       displayName: "List docker images"
     
-    - bash: |
-        
-      displayName: "SDL: Run devskim"
-    
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: Run component governance"
       condition: eq(variables.IS_PR, false)
@@ -154,12 +151,20 @@ jobs:
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
+
     - task: PublishBuildArtifacts@1
       displayName: "Publish image artifacts for Ev2"
       condition: eq(variables.IS_PR, false)
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
+    
+    - task: PostAnalysis@2
+      displayName: 'SDL: Post-Build Analysis'
+      inputs:
+        GdnBreakFast: false
+        GdnBreakPolicyMinSev: Default
+        GdnBreakAllTools: true
 
 - job: Windows
   displayName: "Build windows image"
