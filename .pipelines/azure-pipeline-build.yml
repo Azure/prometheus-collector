@@ -7,7 +7,6 @@ trigger:
 
 pr:
   autoCancel: true
-  drafts: true
   branches:
     include:
     - main
@@ -23,6 +22,7 @@ variables:
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
+  Codeql.Enabled: true
 
 jobs:
 - job: Common
@@ -88,6 +88,27 @@ jobs:
         make
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: "Build otelcollector, promconfigvalidator, and fluent-bit plugin"
+    - task: BinSkim@4
+      displayName: 'SDL: run binskim'
+      inputs:
+        InputType: 'Basic'
+        Function: 'analyze'
+        TargetPattern: 'binskimPattern'
+        AnalyzeTargetBinskim: |
+          $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector 
+          $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator
+          $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so
+        AnalyzeRecurse: false
+        AnalyzeVerbose: true
+    - bash: |
+        gem install brakeman
+        brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser
+      displayName: 'SDL: run brakeman'
+    - task: Gosec@1
+      displayName: 'SDL: run gosec'
+      inputs:
+        targetPattern: 'gosecPattern'
+        targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
         docker buildx create --name testbuilder
@@ -104,8 +125,9 @@ jobs:
     - bash: |
         docker images --digests --all
       displayName: "List docker images"
+    
     - task: ComponentGovernanceComponentDetection@0
-      displayName: "Run component governance detection"
+      displayName: "SDL: Run component governance"
       condition: eq(variables.IS_PR, false)
       inputs:
         scanType: 'Register'
