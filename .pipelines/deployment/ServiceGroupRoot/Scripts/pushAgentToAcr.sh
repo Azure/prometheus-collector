@@ -1,12 +1,12 @@
 #!/bin/bash
 set -e
 
-if [$STEP_NAME == "PushKSMChart"] [ $PUSH_NEW_KSM_CHART == "false" ]; then
+if [ $STEP_NAME == "PushKSMChart" ] && [ $PUSH_NEW_KSM_CHART == "false" ]; then
   echo "Skipping pushing KSM Chart"
   exit 0
 fi
 
-if [$STEP_NAME == "PushNEChart"] [ $PUSH_NEW_NE_CHART == "false" ]; then
+if [ $STEP_NAME == "PushNEChart" ] && [ $PUSH_NEW_NE_CHART == "false" ]; then
   echo "Skipping pushing NE Chart"
   exit 0
 fi
