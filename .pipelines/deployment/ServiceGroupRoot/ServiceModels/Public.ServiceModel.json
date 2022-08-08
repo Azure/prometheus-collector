@@ -18,7 +18,7 @@
                   "type": "ShellExtensionType",
                   "properties": {
                     "imageName": "adm-ubuntu-1804-l",
-                    "imageVersion": "v18"
+                    "imageVersion": "v27"
                   }
                 }
               ]
@@ -54,6 +54,16 @@
           "Name": "PushHelmChart",
           "InstanceOf": "ShellExtension",
           "RolloutParametersPath": "Parameters\\PrometheusCollector.Chart.Parameters.json"
+        },
+        {
+          "Name": "PushKSMChart",
+          "InstanceOf": "ShellExtension",
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.KSM.Parameters.json"
+        },
+        {
+          "Name": "PushNEChart",
+          "InstanceOf": "ShellExtension",
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.NE.Parameters.json"
         }
       ]
     }

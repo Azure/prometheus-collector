@@ -58,7 +58,7 @@ jobs:
         echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
 
         cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts
-        tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh
+        tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh
 
       displayName: 'Set image registry, repo, and tags'
       name: setup

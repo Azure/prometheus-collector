@@ -4,7 +4,7 @@
   "RolloutMetadata": {
     "ServiceModelPath": "ServiceModels//Public.ServiceModel.json",
     "ScopeBindingsPath": "ScopeBindings//Public.ScopeBindings.json",
-    "Name": "PrometheusCollectorAgent",
+    "Name": "PrometheusCollectorAgent-__LINUX_TAG___",
     "RolloutType": "Major",
     "BuildSource": {
       "Parameters": {
@@ -33,11 +33,25 @@
       "dependsOn": [ ]
     },
     {
+      "name": "PushKSMChart",
+      "targetType": "ServiceResource",
+      "targetName": "PushKSMChart",
+      "actions": [ "Shell/PushAgentToACR" ],
+      "dependsOn": [ ]
+    },
+    {
+      "name": "PushNEChart",
+      "targetType": "ServiceResource",
+      "targetName": "PushNEChart",
+      "actions": [ "Shell/PushAgentToACR" ],
+      "dependsOn": [ ]
+    },
+    {
       "name": "PushHelmChart",
       "targetType": "ServiceResource",
       "targetName": "PushHelmChart",
       "actions": [ "Shell/PushAgentToACR" ],
-      "dependsOn": [ ]
+      "dependsOn": [ "PushLinuxAgent", "PushWindowsAgent", "PushKSMChart", "PushNEChart" ]
     }
   ]
 }

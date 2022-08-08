@@ -18,6 +18,14 @@
                 "replaceWith": "$(ProdACRChartRepository)"
               },
               {
+                "find": "__PROD_ACR_KSM_REPOSITORY__",
+                "replaceWith": "$(ProdACRKSMRepository)"
+              },
+              {
+                "find": "__PROD_ACR_NE_REPOSITORY__",
+                "replaceWith": "$(ProdACRNERepository)"
+              },
+              {
                 "find": "__MANAGED_IDENTITY__",
                 "replaceWith": "$(ManagedIdentity)"
               },
@@ -28,6 +36,14 @@
               {
                 "find": "__DEV_MCR_AGENT_REPOSITORY__",
                 "replaceWith": "$(DevMCRAgentRepository)"
+              },
+              {
+                "find": "__DEV_MCR_KSM_REPOSITORY__",
+                "replaceWith": "$(DevMCRKSMRepository)"
+              },
+              {
+                "find": "__DEV_MCR_NE_REPOSITORY__",
+                "replaceWith": "$(DevMCRNERepository)"
               },
               {
                   "find": "__LINUX_TAG__",
@@ -50,8 +66,40 @@
                 "replaceWith": "$(ProdMCRChartRepository)"
               },
               {
+                "find": "__PROD_MCR_KSM_REPOSITORY__",
+                "replaceWith": "$(ProdMCRKSMRepository)"
+              },
+              {
+                "find": "__PROD_MCR_NE_REPOSITORY__",
+                "replaceWith": "$(ProdMCRNERepository)"
+              },
+              {
+                "find": "__PROD_MCR_REPOSITORY_HELM_DEPENDENCIES__",
+                "replaceWith": "$(ProdMCRRepositoryHelmDependencies)"
+              },
+              {
                 "find": "__CHART_TAG__",
                 "replaceWith": "$(ChartTag)"
+              },
+              {
+                "find": "__PUSH_NEW_KSM_CHART__",
+                "replaceWith": "$(PushNewKSMChart)"
+              },
+              {
+                "find": "__PUSH_NEW_NE_CHART__",
+                "replaceWith": "$(PushNewNEChart)"
+              },
+              {
+                "find": "__KSM_CHART_TAG__",
+                "replaceWith": "$(KSMChartTag)"
+              },
+              {
+                "find": "__NE_CHART_TAG__",
+                "replaceWith": "$(NEChartTag)"
+              },
+              {
+                "find": "__HELM_CHART_NAME__",
+                "replaceWith": "$(HelmChartName)"
               }
           ]
       }                                                                                                                                                

@@ -24,7 +24,7 @@
       "launch": {
         "command": [
           "/bin/bash",
-          "pushChartToAcr.sh"
+          "pushAgentToAcr.sh"
         ],
         "environmentVariables": [
           {
@@ -33,55 +33,31 @@
           },
           {
             "name": "PROD_ACR_REPOSITORY",
-            "value": "__PROD_ACR_CHART_REPOSITORY__"
+            "value": "__PROD_ACR_NE_REPOSITORY__"
           },
           {
             "name": "MCR_REGISTRY",
             "value": "__MCR_REGISTRY__"
           },
           {
-            "name": "MCR_REPOSITORY",
-            "value": "__PROD_MCR_CHART_REPOSITORY__"
-          },
-          {
             "name": "PROD_MCR_REPOSITORY",
-            "value": "__PROD_MCR_CHART_REPOSITORY__"
-          },
-          {
-            "name": "MCR_REPOSITORY_HELM_DEPENDENCIES",
-            "value": "__PROD_MCR_REPOSITORY_HELM_DEPENDENCIES__"
-          },
-          {
-            "name": "IMAGE_TAG",
-            "value": "__LINUX_TAG__"
-          },
-          {
-            "name": "IMAGE_TAG_WINDOWS",
-            "value": "__WINDOWS_TAG__"
-          },
-          {
-            "name": "HELM_SEMVER",
-            "value": "__CHART_TAG__"
-          },
-          {
-            "name": "HELM_CHART_NAME",
-            "value": "__HELM_CHART_NAME__"
-          },
-          {
-            "name": "PROD_MCR_KSM_REPOSITORY",
-            "value": "__PROD_MCR_KSM_REPOSITORY__"
-          },
-          {
-            "name": "KSM_CHART_TAG",
-            "value": "__KSM_CHART_TAG__"
-          },
-          {
-            "name": "PROD_MCR_NE_REPOSITORY",
             "value": "__PROD_MCR_NE_REPOSITORY__"
           },
           {
-            "name": "NE_CHART_TAG",
+            "name": "DEV_MCR_REPOSITORY",
+            "value": "__DEV_MCR_NE_REPOSITORY__"
+          },
+          {
+            "name": "IMAGE_TAG",
             "value": "__NE_CHART_TAG__"
+          },
+          {
+            "name": "PUSH_NEW_NE_CHART",
+            "value": "__PUSH_NEW_NE_CHART__"
+          },
+          {
+            "name": "STEP_NAME",
+            "value": "PushNEChart"
           }
         ], 
         "identity": {

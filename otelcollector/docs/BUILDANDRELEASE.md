@@ -41,6 +41,16 @@ PRs to the `main` branch are setup to build images with a tag using the branch n
 
 The ADO build number is set to be the same as the image tag.
 
+### Golang Version
+
+The default Golang version for the [1ES hosted pools](https://eng.ms/docs/cloud-ai-platform/developer-services/one-engineering-system-1es/1es-docs) is used. To switch from using the default version, add the following task and specfiy the version such as:
+
+```
+- task: GoTool@0
+  inputs:
+    version: '1.18'
+```
+
 # Release Process
 
 ## Azure Pipelines
@@ -52,7 +62,7 @@ The following are the formats for the image tags, helm chart versions, and git t
   - Chart version/image tag: `{helm chart semver}-{branch}-{date in pacific timezone}-{commit id}`
   - Git Tag: `v{helm chart semver}-{branch}-{date in pacific timezone}-{commit id}`
   
-Each merge into `main` will push the image to the public mcr and deploy to the dev clusters. If the deployed pods do not have a `Running` state within the 5 minute timeout, the deploy step will fail, so we will know the clusters did not get updated. The reason for why the deployment failed would need to be investigated and fixed. Then you can go back to the build and click `Rerun failed jobs` to try to re-deploy without having to re-build and push the images.
+Each merge into `main` will push the image to the public mcr and deploy to the dev clusters. If the pods fail to deploy properly, then after fixing the issue on the cluster, you can go back to the build and click `Rerun failed jobs` to try to re-deploy without having to re-build and re-push the images.
 
 ## Release Process
 - **PR 1**: Bump the version in the VERSION file following semantic versioning.
@@ -61,7 +71,7 @@ Each merge into `main` will push the image to the public mcr and deploy to the d
 - **Release**: Create a release in [ADO](https://github-private.visualstudio.com/azure/_release?_a=releases&view=mine&definitionId=79).
     - Select `Create release`, then choose the build version which should be the same as the image tag.
     - This pushes the linux, windows, and chart builds to the prod ACR which is synchronized with the prod MCR.
-    - Once pushed, the chart is deployed on the prod clusters.
+    - Once pushed, you can manually start the `Deploy to prod clusters` stage to deploy the image to our prod clusters.
 - **PR 2**: Get the chart semver or container image tag from the commit used for **Build 1**, and also for the previously released version and run `./release.sh` script: 
 
   - ```

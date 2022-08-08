@@ -1,7 +1,15 @@
 #!/bin/bash
 set -e
 
-# Note - This script used in the pipeline as inline script
+if [$STEP_NAME == "PushKSMChart"] [ $PUSH_NEW_KSM_CHART == "false" ]; then
+  echo "Skipping pushing KSM Chart"
+  exit 0
+fi
+
+if [$STEP_NAME == "PushNEChart"] [ $PUSH_NEW_NE_CHART == "false" ]; then
+  echo "Skipping pushing NE Chart"
+  exit 0
+fi
 
 if [ -z $IMAGE_TAG ]; then
   echo "-e error value of IMAGE_TAG variable shouldnt be empty. Check release variables"

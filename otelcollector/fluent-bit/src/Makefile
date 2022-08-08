@@ -9,7 +9,7 @@ fbplugin:
 	@echo "========================= go get  ========================="
 	go get
 	@echo "========================= go build  ========================="
-	go build -buildmode=c-shared -o out_appinsights.so .
+	go build -buildmode=c-shared -ldflags '-Wl,-z,now' -o out_appinsights.so .
 
 clean:
 	rm -rf *.so *.h *~
