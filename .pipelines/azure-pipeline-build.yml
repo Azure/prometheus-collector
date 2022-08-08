@@ -93,15 +93,15 @@ jobs:
       inputs:
         InputType: 'CommandLine'
         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
-    - bash: |
-        sudo gem install brakeman
-        brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser
-      displayName: 'SDL: run brakeman'
     - task: Gosec@1
       displayName: 'SDL: run gosec'
       inputs:
         targetPattern: 'gosecPattern'
         targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
+    - bash: |
+        sudo gem install brakeman
+        brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
+      displayName: 'SDL: run brakeman'
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
         docker buildx create --name testbuilder
