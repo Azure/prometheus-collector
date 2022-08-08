@@ -88,20 +88,32 @@ jobs:
         make
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: "Build otelcollector, promconfigvalidator, and fluent-bit plugin"
+
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
       inputs:
         InputType: 'CommandLine'
         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+    
     - task: Gosec@1
       displayName: 'SDL: run gosec'
       inputs:
         targetPattern: 'gosecPattern'
         targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
+    
+    - bash: |
+        wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
+        unzip DevSkim_linux_0.6.9.zip
+        cd DevSkim_linux_0.6.9/
+        chmod 777 devskim
+        devskim analyze ../otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
+      displayName: 'SDL: run devskim'
+    
     - bash: |
         sudo gem install brakeman
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
+    
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
         docker buildx create --name testbuilder
@@ -115,9 +127,14 @@ jobs:
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build and push image to dev ACR"
+    
     - bash: |
         docker images --digests --all
       displayName: "List docker images"
+    
+    - bash: |
+        
+      displayName: "SDL: Run devskim"
     
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: Run component governance"
@@ -148,7 +165,9 @@ jobs:
   displayName: "Build windows image"
   pool:
     vmImage: windows-2019
-  dependsOn: common
+  dependsOn:
+  - Common
+  - Linux
   variables:
     WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
   steps:
