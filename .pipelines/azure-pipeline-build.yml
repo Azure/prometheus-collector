@@ -104,9 +104,10 @@ jobs:
     - bash: |
         wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
         unzip DevSkim_linux_0.6.9.zip
-        cd DevSkim_linux_0.6.9/
-        chmod 777 devskim
-        ./devskim analyze ../otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
+        ls DevSkim_linux_0.6.9/
+        chmod 777 DevSkim_linux_0.6.9/devskim
+        ls -la DevSkim_linux_0.6.9/
+        ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
       displayName: 'SDL: run devskim'
       workingDirectory: $(Build.SourcesDirectory)
     
