@@ -3,13 +3,14 @@ trigger:
   branches:
     include:
     - azure-pipelines
+    - grace/test-pipeline-pr
 
 pr:
   autoCancel: true
   drafts: true
   branches:
     include:
-    - azure-pipelines
+    - main
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -96,13 +97,21 @@ jobs:
           docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           docker pull $(LINUX_FULL_IMAGE_NAME)
         else
-          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
+          docker buildx build . --file ./build/linux/Dockerfile -t --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build and push image to dev ACR"
     - bash: |
         docker images --digests --all
       displayName: "List docker images"
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "Run component governance detection"
+      condition: eq(variables.IS_PR, false)
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
+        alertWarningLevel: 'High' 
     #- bash: |
     #    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
     #    trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
@@ -146,6 +155,14 @@ jobs:
         docker push $(WINDOWS_FULL_IMAGE_NAME)
       displayName: "Push image to dev ACR"
       condition: eq(variables.IS_PR, false)
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "Run component governance detection"
+      condition: eq(variables.IS_PR, false)
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
+        alertWarningLevel: 'High' 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       condition: eq(variables.IS_PR, false)
       displayName: "Generate image artifacts for Ev2"
