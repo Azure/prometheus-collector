@@ -91,17 +91,10 @@ jobs:
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
       inputs:
-        InputType: 'Basic'
-        Function: 'analyze'
-        TargetPattern: 'binskimPattern'
-        AnalyzeTargetBinskim: |
-          $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector 
-          $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator
-          $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so
-        AnalyzeRecurse: false
-        AnalyzeVerbose: true
+        InputType: 'CommandLine'
+        arguments: 'analyze -E $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
     - bash: |
-        gem install brakeman
+        sudo gem install brakeman
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser
       displayName: 'SDL: run brakeman'
     - task: Gosec@1
