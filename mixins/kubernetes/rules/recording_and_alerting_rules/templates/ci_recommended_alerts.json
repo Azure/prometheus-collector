@@ -34,7 +34,9 @@
                         "actions": [
                             {
                                 "ActionProperties": {
-                                    "Icm.Enabled": "True"
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Average CPU usage for container is greater than 95% in cluster: {{$labels.cluster}} for container: {{$labels.container}}"
+
                                 }
                             }
                         ]
@@ -57,7 +59,8 @@
                         "actions": [
                             {
                                 "ActionProperties": {
-                                    "Icm.Enabled": "True"
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Average Memory usage per container is greater than 95% in cluster: {{$labels.cluster}} for container: {{$labels.container}}"
                                 }
                             }
                         ]
@@ -80,7 +83,8 @@
                         "actions": [
                             {
                                 "ActionProperties": {
-                                    "Icm.Enabled": "True"
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Number of OOM killed containers is greater than 0 in cluster: {{$labels.cluster}} for container: {{$labels.container}}"
                                 }
                             }
                         ]
@@ -103,7 +107,8 @@
                         "actions": [
                             {
                                 "ActionProperties": {
-                                    "Icm.Enabled": "True"
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Average PV usage is greater than 80% in cluster: {{$labels.cluster}} in pod: {{$labels.pod}} in container: {{$labels.container}}"
                                 }
                             }
                         ]
@@ -126,7 +131,8 @@
                         "actions": [
                             {
                                 "ActionProperties": {
-                                    "Icm.Enabled": "True"
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Pod container restarted in last 1 hour in cluster: {{$labels.cluster}} in pod: {{$labels.pod}} in container: {{$labels.container}}"
                                 }
                             }
                         ]
@@ -149,7 +155,9 @@
                         "actions": [
                             {
                                 "ActionProperties": {
-                                    "Icm.Enabled": "True"
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Node {{$labels.node}} is not ready in cluster: {{$labels.cluster}}"
+
                                 }
                             }
                         ]
@@ -172,7 +180,8 @@
                         "actions": [
                             {
                                 "ActionProperties": {
-                                    "Icm.Enabled": "True"
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Ready state of pods is less than 80% in cluster: {{$labels.cluster}} in deployment: {{$labels.deployment}}"
                                 }
                             }
                         ]
@@ -195,7 +204,8 @@
                         "actions": [
                             {
                                 "ActionProperties": {
-                                    "Icm.Enabled": "True"
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Number of stale jobs older than six hours is greater than 0 in cluster: {{$labels.cluster}}"
                                 }
                             }
                         ]
@@ -218,7 +228,8 @@
                         "actions": [
                             {
                                 "ActionProperties": {
-                                    "Icm.Enabled": "True"
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Average node CPU utilization is greater than 80% in cluster: {{$labels.cluster}} in node: {{$labels.instance}}"
                                 }
                             }
                         ]
@@ -241,7 +252,8 @@
                         "actions": [
                             {
                                 "ActionProperties": {
-                                    "Icm.Enabled": "True"
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Working set memory for a node is greater than 80% in cluster: {{$labels.cluster}} in node: {{$labels.instance}}"
                                 }
                             }
                         ]
@@ -264,7 +276,8 @@
                         "actions": [
                             {
                                 "ActionProperties": {
-                                    "Icm.Enabled": "True"
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Number of pods in failed state are greater than 0 in cluster: {{$labels.cluster}} pod: {{$labels.pod}}"
                                 }
                             }
                         ]
