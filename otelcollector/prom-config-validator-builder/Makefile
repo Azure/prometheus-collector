@@ -6,4 +6,4 @@ promconfigvalidator:
 	@echo "========================= go get  ========================="
 	go get
 	@echo "========================= go build  ========================="
-	go build -buildmode=pie -ldflags '-extldflags=-Wl,-z,now' -o promconfigvalidator .
+	go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator .

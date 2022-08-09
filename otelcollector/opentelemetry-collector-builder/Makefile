@@ -4,7 +4,7 @@ all: otelcollector fluentbitplugin promconfigvalidator
 otelcollector:
 	rm -rf otelcollector
 	go get
-	go build -buildmode=pie -ldflags '-extldflags=-Wl,-z,now' -o otelcollector .
+	go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector .
 
 fluentbitplugin:
 	make -C ../fluent-bit/src
