@@ -76,9 +76,9 @@ helm version
 # Wait for KSM and node-exporter charts to push
 for i in 1 2 3 4 5 6 7 8 9 10; do
   sleep 30
-  echo $(MCR_REGISTRY)$(PROD_MCR_KSM_REPOSITORY):$(KSM_CHART_TAG)
-  echo $(MCR_REGISTRY)$(PROD_MCR_NE_REPOSITORY):$(NE_CHART_TAG)
-  if docker manifest inspect $(MCR_REGISTRY)$(PROD_MCR_KSM_REPOSITORY):$(KSM_CHART_TAG) && docker manifest inspect $(MCR_REGISTRY)$(PROD_MCR_NE_REPOSITORY):$(NE_CHART_TAG); then
+  echo "${MCR_REGISTRY}${PROD_MCR_KSM_REPOSITORY}:${KSM_CHART_TAG}"
+  echo "${MCR_REGISTRY}${PROD_MCR_NE_REPOSITORY}:${NE_CHART_TAG}"
+  if docker manifest inspect ${MCR_REGISTRY}${PROD_MCR_KSM_REPOSITORY}:${KSM_CHART_TAG} && docker manifest inspect ${MCR_REGISTRY}${PROD_MCR_NE_REPOSITORY}:${NE_CHART_TAG}; then
     echo "Dependent charts are published to mcr"
     break
   fi
@@ -104,25 +104,25 @@ else
   exit 1
 fi
 
-ACCESS_TOKEN=$(az acr login --name $(ACR_REGISTRY) --expose-token --output tsv --query accessToken)
+ACCESS_TOKEN=$(az acr login --name ${ACR_REGISTRY} --expose-token --output tsv --query accessToken)
 if [ $? -ne 0 ]; then         
    echo "-e error az acr login failed. Please review the Ev2 pipeline logs for more details on the error."
    exit 1
 fi
 
-echo "login to acr:$(ACR_REGISTRY) using helm ..."
-echo $ACCESS_TOKEN | helm registry login $(ACR_REGISTRY) -u 00000000-0000-0000-0000-000000000000 --password-stdin
+echo "login to acr:${ACR_REGISTRY} using helm ..."
+echo $ACCESS_TOKEN | helm registry login ${ACR_REGISTRY} -u 00000000-0000-0000-0000-000000000000 --password-stdin
 if [ $? -eq 0 ]; then
-  echo "login to acr:$(ACR_REGISTRY)} using helm completed successfully."
+  echo "login to acr:${ACR_REGISTRY} using helm completed successfully."
 else
-  echo "-e error login to acr:$(ACR_REGISTRY) using helm failed."
+  echo "-e error login to acr:${ACR_REGISTRY} using helm failed."
   exit 1
 fi 
 
-helm push $(HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(PROD_ACR_REPOSITORY)
+helm push ${HELM_CHART_NAME}-${HELM_SEMVER}.tgz oci://${ACR_REGISTRY}${PROD_ACR_REPOSITORY}
 if [ $? -eq 0 ]; then            
-  echo "pushing the chart to acr path: ${destAcrFullPath} completed successfully."
+  echo "pushing the chart to acr path: ${ACR_REGISTRY}${PROD_ACR_REPOSITORY} completed successfully."
 else     
-  echo "-e error pushing the chart to acr path: ${destAcrFullPath} failed."
+  echo "-e error pushing the chart to acr path: ${ACR_REGISTRY}${PROD_ACR_REPOSITORY} failed."
   exit 1
 fi    
