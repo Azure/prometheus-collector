@@ -200,7 +200,11 @@ echo "Downloading dashboards package"
 wget https://github.com/microsoft/Docker-Provider/raw/prometheus-collector/prometheus-collector/dashboards.tar.gz
 tar -zxvf dashboards.tar.gz 
 
-echo "Creating dashboards"
+#for 1p this folder already exists, it will fail with a 409 conflict, but its okay to move on
+echo "Creating folder for dashboards"
+az grafana folder create -g $resourceGroup -n $grafanaName --title "Azure Monitor Container Insights"
+
+echo "Importing dashboards into Azure Monitor Container Insights folder in Grafana instance"
 for FILE in dashboards/*.json; do
     az grafana dashboard import -g $resourceGroup -n $grafanaName --overwrite --definition $FILE --folder "Azure Monitor Container Insights"
 done;

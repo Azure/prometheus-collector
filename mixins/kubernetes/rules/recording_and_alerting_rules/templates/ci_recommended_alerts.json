@@ -11,6 +11,7 @@
             "location": "$MACLocation",
             "properties": {
                 "description": "rule group for cluster $cluster",
+                "clusterName": "$cluster",
                 "scopes": [
                     "$mac"
                 ],
@@ -18,10 +19,10 @@
                 "rules": [
                     {
                         "alert": "Average CPU usage per container is greater than 95%",
-                        "expression": "sum (rate(container_cpu_usage_seconds_total{cluster = \"$cluster\",name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}[5m])) by (pod_name, container,cluster,namespace) / sum(container_spec_cpu_quota{cluster = \"$cluster\",name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}/container_spec_cpu_period{cluster = \"$cluster\",name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}) by (pod_name, container,cluster,namespace) >.95",
+                        "expression": "sum (rate(container_cpu_usage_seconds_total{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}[5m])) by (pod_name, container,cluster,namespace) / sum(container_spec_cpu_quota{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}/container_spec_cpu_period{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}) by (pod_name, container,cluster,namespace) >.95",
                         "for": "PT5M",
                         "labels": {
-                            "cluster": "$cluster"
+                            "cluster": "{{$labels.cluster}}"
                         },
                         "annotations": {
                             "description": "Average CPU usage per container is greater than 95%"
@@ -41,10 +42,10 @@
                     },
                     {
                         "alert": "Average Memory usage per container is greater than 95%.",
-                        "expression": "sum by (namespace,cluster,container) (container_memory_working_set_bytes{cluster = \"$cluster\", container!=\"\", image!=\"\", container_name!=\"POD\"}) / sum by (namespace,cluster,container) (kube_pod_container_resource_limits{cluster = \"$cluster\", resource=\"memory\"}) > .95 ",
+                        "expression": "sum by (namespace,cluster,container) (container_memory_working_set_bytes{container!=\"\", image!=\"\", container_name!=\"POD\"}) / sum by (namespace,cluster,container) (kube_pod_container_resource_limits{resource=\"memory\"}) > .95 ",
                         "for": "PT10M",
                         "labels": {
-                            "cluster": "$cluster"
+                            "cluster": "{{$labels.cluster}}"
                         },
                         "annotations": {
                             "description": "Average Memory usage per container is greater than 95%"
@@ -64,10 +65,10 @@
                     },
                     {
                         "alert": "Number of OOM killed containers is greater than 0",
-                        "expression": "sum by (cluster,container,namespace)(kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\",cluster=\"$cluster\"}) > 0",
+                        "expression": "sum by (cluster,container,namespace)(kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"}) > 0",
                         "for": "PT5M",
                         "labels": {
-                            "cluster": "$cluster"
+                            "cluster": "{{$labels.cluster}}"
                         },
                         "annotations": {
                             "description": "Number of OOM killed containers is greater than 0"
@@ -87,10 +88,10 @@
                     },
                     {
                         "alert": "Average PV usage is greater than 80%",
-                        "expression": "sum by (namespace,cluster,container,pod)(kubelet_volume_stats_used_bytes{job=\"kubelet\", cluster=\"$cluster\"}) / sum by (namespace,cluster,container,pod)(kubelet_volume_stats_capacity_bytes{job=\"kubelet\", cluster=\"$cluster\"})  >.8",
+                        "expression": "sum by (namespace,cluster,container,pod)(kubelet_volume_stats_used_bytes{job=\"kubelet\"}) / sum by (namespace,cluster,container,pod)(kubelet_volume_stats_capacity_bytes{job=\"kubelet\"})  >.8",
                         "for": "PT5M",
                         "labels": {
-                            "cluster": "$cluster"
+                            "cluster": "{{$labels.cluster}}"
                         },
                         "annotations": {
                             "description": "Average PV usage is greater than 80%"
@@ -110,10 +111,10 @@
                     },
                     {
                         "alert": "Pod container restarted in last 1 hour",
-                        "expression": "sum by (namespace, pod, container, cluster) (kube_pod_container_status_restarts_total{job=\"kube-state-metrics\", cluster= \"$cluster\", namespace=\"kube-system\"}) > 0 ",
+                        "expression": "sum by (namespace, pod, container, cluster) (kube_pod_container_status_restarts_total{job=\"kube-state-metrics\", namespace=\"kube-system\"}) > 0 ",
                         "for": "PT15M", 
                         "labels": {
-                            "cluster": "$cluster"
+                            "cluster": "{{$labels.cluster}}"
                         },
                         "annotations": {
                             "description": "Pod container restarted in last 1 hour"
@@ -133,10 +134,10 @@
                     },
                     {
                         "alert": "Node is not ready.",
-                        "expression": "sum by (namespace,cluster,node)(kube_node_status_condition{cluster=\"$cluster\",job=\"kube-state-metrics\",condition=\"Ready\",status!=\"true\", node!=\"\"}) > 0",
+                        "expression": "sum by (namespace,cluster,node)(kube_node_status_condition{job=\"kube-state-metrics\",condition=\"Ready\",status!=\"true\", node!=\"\"}) > 0",
                         "for": "PT15M",
                         "labels": {
-                            "cluster": "$cluster"
+                            "cluster": "{{$labels.cluster}}"
                         },
                         "annotations": {
                             "description": "Node has been unready for more than 15 minutes "
@@ -156,10 +157,10 @@
                     },
                     {
                         "alert": "Ready state of pods is less than 80%. ",
-                        "expression": "sum by (cluster,namespace,deployment)(kube_deployment_status_replicas_ready {cluster=\"$cluster\"}) / sum by (cluster,namespace,deployment)(kube_deployment_spec_replicas {cluster=\"$cluster\"}) <.8 or sum by (cluster,namespace,deployment)(kube_daemonset_status_number_ready{cluster=\"$cluster\"}) / sum by (cluster,namespace,deployment)(kube_daemonset_status_desired_number_scheduled{cluster=\"$cluster\"}) <.8 ",
+                        "expression": "sum by (cluster,namespace,deployment)(kube_deployment_status_replicas_ready) / sum by (cluster,namespace,deployment)(kube_deployment_spec_replicas) <.8 or sum by (cluster,namespace,deployment)(kube_daemonset_status_number_ready) / sum by (cluster,namespace,deployment)(kube_daemonset_status_desired_number_scheduled) <.8 ",
                         "for": "PT5M",
                         "labels": {
-                            "cluster": "$cluster"
+                            "cluster": "{{$labels.cluster}}"
                         },
                         "annotations": {
                             "description": "Ready state of pods is less than 80%."
@@ -179,10 +180,10 @@
                     },
                     {
                         "alert": "Job did not complete in time",
-                        "expression": "sum by(namespace,cluster)(kube_job_spec_completions{job=\"kube-state-metrics\",cluster=\"$cluster\"}) - sum by(namespace,cluster)(kube_job_status_succeeded{job=\"kube-state-metrics\",cluster=\"$cluster\"})  > 0 ",
+                        "expression": "sum by(namespace,cluster)(kube_job_spec_completions{job=\"kube-state-metrics\"}) - sum by(namespace,cluster)(kube_job_status_succeeded{job=\"kube-state-metrics\"})  > 0 ",
                         "for": "PT360M",
                         "labels": {
-                            "cluster": "$cluster"
+                            "cluster": "{{$labels.cluster}}"
                         },
                         "annotations": {
                             "description": "Number of stale jobs older than six hours is greater than 0"
@@ -202,10 +203,10 @@
                     },
                     {
                         "alert": "Average node CPU utilization is greater than 80%",
-                        "expression": "(  (1 - rate(node_cpu_seconds_total{job=\"node\", mode=\"idle\",cluster=\"$cluster\"}[5m]) ) / ignoring(cpu) group_left count without (cpu)( node_cpu_seconds_total{job=\"node\", mode=\"idle\",cluster=\"$cluster\"}) ) > .8 ",
+                        "expression": "(  (1 - rate(node_cpu_seconds_total{job=\"node\", mode=\"idle\"}[5m]) ) / ignoring(cpu) group_left count without (cpu)( node_cpu_seconds_total{job=\"node\", mode=\"idle\"}) ) > .8 ",
                         "for": "PT5M",
                         "labels": {
-                            "cluster": "$cluster"
+                            "cluster": "{{$labels.cluster}}"
                         },
                         "annotations": {
                             "description": "Average node CPU utilization is greater than 80%"
@@ -225,10 +226,10 @@
                     },
                     {
                         "alert": "Working set memory for a node is greater than 80%.",
-                        "expression": "1 - avg by (namespace,cluster,job)(node_memory_MemAvailable_bytes{job=\"node\",cluster=\"$cluster\"}) / avg by (namespace,cluster,job)(node_memory_MemTotal_bytes{job=\"node\",cluster=\"$cluster\"}) > .8",
+                        "expression": "1 - avg by (namespace,cluster,job)(node_memory_MemAvailable_bytes{job=\"node\"}) / avg by (namespace,cluster,job)(node_memory_MemTotal_bytes{job=\"node\"}) > .8",
                         "for": "PT5M",
                         "labels": {
-                            "cluster": "$cluster"
+                            "cluster": "{{$labels.cluster}}"
                         },
                         "annotations": {
                             "description": "Working set memory for a node is greater than 80%."
@@ -248,10 +249,10 @@
                     },
                     {
                         "alert": "Number of pods in failed state are greater than 0.",
-                        "expression": "sum by (cluster, namespace, pod) (kube_pod_status_phase{cluster=\"$cluster\",phase=\"failed\"}) > 0",
+                        "expression": "sum by (cluster, namespace, pod) (kube_pod_status_phase{phase=\"failed\"}) > 0",
                         "for": "PT5M",
                         "labels": {
-                            "cluster": "$cluster"
+                            "cluster": "{{$labels.cluster}}"
                         },
                         "annotations": {
                             "description": "Number of pods in failed state are greater than 0"

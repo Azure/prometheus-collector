@@ -11,6 +11,9 @@ updates:
       interval: "daily"
       time: "10:00"
       timezone: "America/Los_Angeles"
+    ignore:
+    - dependency-name: "go.opentelemetry.io/collector"
+    - dependency-name: "github.com/open-telemetry/opentelemetry-collector-contrib*"
     open-pull-requests-limit: 2
     rebase-strategy: "auto"
   - package-ecosystem: "gomod"
@@ -19,6 +22,9 @@ updates:
       interval: "daily"
       time: "10:00"
       timezone: "America/Los_Angeles"
+    ignore:
+    - dependency-name: "go.opentelemetry.io/collector"
+    - dependency-name: "github.com/open-telemetry/opentelemetry-collector-contrib*"
     open-pull-requests-limit: 2
     rebase-strategy: "auto"
   - package-ecosystem: "gomod"
@@ -38,6 +44,7 @@ updates:
     ignore:
       - dependency-name: "containerd"
       - dependency-name: "image-spec"
+      - dependency-name: "github.com/containerd/containerd"
     open-pull-requests-limit: 2
     rebase-strategy: "auto"
   - package-ecosystem: "github-actions"
