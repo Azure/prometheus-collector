@@ -68,27 +68,23 @@ echo "Done checking that all necessary variables exist."
 #fi
 
 ls
-
-envsubst prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
-
-helm version
+cd prometheus-collector/
+ls
 
 # Wait for KSM and node-exporter charts to push
 for i in 1 2 3 4 5 6 7 8 9 10; do
   sleep 30
-  echo "${MCR_REGISTRY}${PROD_MCR_KSM_REPOSITORY}:${KSM_CHART_TAG}"
-  echo "${MCR_REGISTRY}${PROD_MCR_NE_REPOSITORY}:${NE_CHART_TAG}"
-  if docker manifest inspect ${MCR_REGISTRY}${PROD_MCR_KSM_REPOSITORY}:${KSM_CHART_TAG} && docker manifest inspect ${MCR_REGISTRY}${PROD_MCR_NE_REPOSITORY}:${NE_CHART_TAG}; then
+  helm dep update
+  if [ $? -eq 0]; then
     echo "Dependent charts are published to mcr"
+    DEPENDENT_CHARTS_PUBLISHED="true"
     break
   fi
 done
-echo "Dependent charts are not published to mcr within 5 minutes"
-exit 1
-
-cd prometheus-collector/
-ls
-helm dep update
+if [ "$DEPENDENT_CHARTS_PUBLISHED" != "true" ]; then
+  echo "Dependent charts are not published to mcr within 5 minutes"
+  #exit 1
+fi
 
 cd ../
 ls
