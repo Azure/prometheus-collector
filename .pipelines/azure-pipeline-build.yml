@@ -63,9 +63,9 @@ jobs:
         cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
         export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
         export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
-        export HELM_SEMVER=$SEMVER
-        export IMAGE_TAG=$LINUX_IMAGE_TAG
-        export IMAGE_TAG_WINDOWS=$WINDOWS_IMAGE_TAG
+        export HELM_SEMVER=$SETUP_SEMVER
+        export IMAGE_TAG=$SETUP_SEMVER
+        export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
         env
 
         envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
