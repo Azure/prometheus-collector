@@ -83,6 +83,9 @@ jobs:
   variables:
     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
   steps:
+  
+    - task: CodeQL3000Init@0
+
     - bash: |
         sudo apt-get install build-essential -y
         make
@@ -127,6 +130,8 @@ jobs:
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build and push image to dev ACR"
+    
+    - task: CodeQL3000Finalize@0
     
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: Run component governance"
