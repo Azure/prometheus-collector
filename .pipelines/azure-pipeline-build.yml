@@ -104,9 +104,7 @@ jobs:
     - bash: |
         wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
         unzip DevSkim_linux_0.6.9.zip
-        ls DevSkim_linux_0.6.9/
-        chmod 777 DevSkim_linux_0.6.9/devskim
-        ls -la DevSkim_linux_0.6.9/
+        chmod 775 DevSkim_linux_0.6.9/devskim
         ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
       displayName: 'SDL: run devskim'
       workingDirectory: $(Build.SourcesDirectory)
@@ -130,10 +128,6 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build and push image to dev ACR"
     
-    - bash: |
-        docker images --digests --all
-      displayName: "List docker images"
-    
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: Run component governance"
       condition: eq(variables.IS_PR, false)
@@ -142,16 +136,36 @@ jobs:
         verbosity: 'Verbose'
         dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
         alertWarningLevel: 'High' 
+
     #- bash: |
     #    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
     #    trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
     #  displayName: 'Run trivy scan'
+
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Generate image artifacts for Ev2"
       condition: eq(variables.IS_PR, false)
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
+    
+    - task: SdtReport@2
+      inputs:
+        GdnExportAllTools: false
+        GdnExportGdnToolBinSkim: true
+        GdnExportGdnToolBinSkimSeverity: 'Note'
+        GdnExportGdnToolGosec: true
+        GdnExportGdnToolGosecSeverity: 'Note'
+        GdnExportGdnToolSemmle: true
+        GdnExportGdnToolSemmleSeverity: 'Note'
+
+    - task: PublishSecurityAnalysisLogs@3
+      inputs:
+        ArtifactName: 'CodeAnalysisLogs'
+        ArtifactType: 'Container'
+        PublishProcessedResults: true
+        AllTools: true
+        ToolLogsNotFoundAction: 'Standard'
 
     - task: PublishBuildArtifacts@1
       displayName: "Publish image artifacts for Ev2"
@@ -163,9 +177,13 @@ jobs:
     - task: PostAnalysis@2
       displayName: 'SDL: Post-Build Analysis'
       inputs:
-        GdnBreakFast: false
-        GdnBreakPolicyMinSev: Default
-        GdnBreakAllTools: true
+        GdnBreakAllTools: false
+        GdnBreakGdnToolBinSkim: true
+        GdnBreakGdnToolBinSkimSeverity: 'Warning'
+        GdnBreakGdnToolGosec: true
+        GdnBreakGdnToolGosecSeverity: 'Warning'
+        GdnBreakGdnToolSemmle: true
+        GdnBreakGdnToolSemmleSeverity: 'Warning'
 
 - job: Windows
   displayName: "Build windows image"
