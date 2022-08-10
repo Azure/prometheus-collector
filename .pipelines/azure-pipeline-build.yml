@@ -63,20 +63,25 @@ jobs:
         cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
         export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
         export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
+        export HELM_SEMVER=$SEMVER
+        export IMAGE_TAG=$LINUX_IMAGE_TAG
+        export IMAGE_TAG_WINDOWS=$WINDOWS_IMAGE_TAG
+        env
 
         envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
         tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector
-      displayName: 'Ev2: Package artifacts.tar.gz for prod release'
+      displayName: 'Ev2: package artifacts.tar.gz for prod release'
 
     - task: CopyFiles@2
-      displayName: "Copy Ev2 deployment artifacts to staging directory"
+      displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
       inputs:
         SourceFolder: "$(Build.SourcesDirectory)/.pipelines/deployment"
         Contents: |
           **/*
         TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
+  
     - task: PublishBuildArtifacts@1
-      displayName: "Publish Ev2 deployment artifacts"
+      displayName: "Ev2: publish Ev2 deployment artifacts"
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
@@ -219,17 +224,17 @@ jobs:
         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
         @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build image"
+      displayName: "Build: build image"
     - powershell: |
         docker images --digests --all
       displayName: "List docker images"
     - powershell: |
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker push $(WINDOWS_FULL_IMAGE_NAME)
-      displayName: "Push image to dev ACR"
+      displayName: "Build: push image to dev ACR"
       condition: eq(variables.IS_PR, false)
     - task: ComponentGovernanceComponentDetection@0
-      displayName: "Run component governance detection"
+      displayName: "SDL: run component governance"
       condition: eq(variables.IS_PR, false)
       inputs:
         scanType: 'Register'
@@ -238,13 +243,13 @@ jobs:
         alertWarningLevel: 'High' 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       condition: eq(variables.IS_PR, false)
-      displayName: "Generate image artifacts for Ev2"
+      displayName: "Ev2: generate image artifacts"
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
         DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
     - task: PublishBuildArtifacts@1
       condition: eq(variables.IS_PR, false)
-      displayName: "Publish image artifacts for Ev2"
+      displayName: "Ev2: publish image artifacts"
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
@@ -265,7 +270,7 @@ jobs:
     HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
   steps:
   - task: HelmInstaller@1
-    displayName: Install Helm version
+    displayName: 'Build: install Helm version'
     inputs: 
       helmVersionToInstall: latest
   - bash: |
@@ -275,21 +280,21 @@ jobs:
   - bash: |
       helm dep update
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/
-    displayName: "Update helm dependencies"
+    displayName: "Build: update helm dependencies"
   - bash: |
       helm package ./prometheus-collector/
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
-    displayName: "Package helm chart"
+    displayName: "Build: package helm chart"
   - bash: |
       helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
       helm push $(HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
       mkdir -p $(Build.ArtifactStagingDirectory)/chart
       echo {\"image.name\":\"$(HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/chart/metadata.json
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
-    displayName: "Push helm chart to dev ACR"
+    displayName: "Build: push helm chart to dev ACR"
     condition: eq(variables.IS_PR, false)
   - task: PublishBuildArtifacts@1
-    displayName: "Publish helm chart artifacts for Ev2"
+    displayName: "Ev2: publish helm chart artifacts"
     condition: eq(variables.IS_PR, false)
     inputs:
       pathToPublish: '$(Build.ArtifactStagingDirectory)'
@@ -341,7 +346,7 @@ jobs:
     workingDirectory: $(Build.StagingDirectory)
     displayName: "Pull helm chart from dev MCR"
   - task: HelmDeploy@0
-    displayName: "Deploy to ci-dev-aks-wcus cluster"
+    displayName: "Deploy: ci-dev-aks-wcus cluster"
     inputs:
       connectionType: 'Azure Resource Manager'
       azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
@@ -355,7 +360,7 @@ jobs:
       waitForExecution: false
       arguments: '--dependency-update --set image.repository=$(MCR_REGISTRY)$(MCR_REPOSITORY) --set image.tag=$(IMAGE_TAG) --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-wcus" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.clientId=$(CI_PROMETHEUS_KV_CLIENTID) --set azureKeyVault.clientSecret=$(CI_PROMETHEUS_KV_CLIENTSECRET) --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi"'
   - task: HelmDeploy@0
-    displayName: "Deploy to ci-dev-aks-msi-eus2 cluster"
+    displayName: "Deploy: ci-dev-aks-msi-eus2 cluster"
     inputs:
       connectionType: 'Azure Resource Manager'
       azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
@@ -369,7 +374,7 @@ jobs:
       waitForExecution: false
       arguments: '--dependency-update --set image.repository=$(MCR_REGISTRY)$(MCR_REPOSITORY) --set image.tag=$(IMAGE_TAG) --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-msi-eus2" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.useManagedIdentity=true --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set minimalIngestionProfile="false"'
   - task: HelmDeploy@0
-    displayName: "Deploy to ci-dev-aks-mac-eus cluster"
+    displayName: "Deploy: ci-dev-aks-mac-eus cluster"
     inputs:
       connectionType: 'Azure Resource Manager'
       azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
