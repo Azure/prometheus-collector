@@ -85,12 +85,13 @@ jobs:
   steps:
   
     - task: CodeQL3000Init@0
+      displayName: 'SDL: init codeql'
 
     - bash: |
         sudo apt-get install build-essential -y
         make
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "Build otelcollector, promconfigvalidator, and fluent-bit plugin"
+      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
@@ -129,9 +130,10 @@ jobs:
           docker buildx build . --file ./build/linux/Dockerfile -t --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build and push image to dev ACR"
+      displayName: "Build: build and push image to dev ACR"
     
     - task: CodeQL3000Finalize@0
+      displayName: 'SDL: run codeql'
     
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: Run component governance"
@@ -148,13 +150,14 @@ jobs:
     #  displayName: 'Run trivy scan'
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      displayName: "Generate image artifacts for Ev2"
+      displayName: "Ev2: Generate image artifacts"
       condition: eq(variables.IS_PR, false)
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
     
     - task: SdtReport@2
+      displayName: 'SDL: generate report'
       inputs:
         GdnExportAllTools: false
         GdnExportGdnToolBinSkim: true
@@ -165,6 +168,7 @@ jobs:
         GdnExportGdnToolSemmleSeverity: 'Note'
 
     - task: PublishSecurityAnalysisLogs@3
+      displayName: 'SDL: publish report'
       inputs:
         ArtifactName: 'CodeAnalysisLogs'
         ArtifactType: 'Container'
@@ -173,7 +177,7 @@ jobs:
         ToolLogsNotFoundAction: 'Standard'
 
     - task: PublishBuildArtifacts@1
-      displayName: "Publish image artifacts for Ev2"
+      displayName: "Ev2: Publish image artifacts"
       condition: eq(variables.IS_PR, false)
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
