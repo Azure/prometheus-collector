@@ -1,5 +1,17 @@
 # Working with Prometheus metrics in MDM
 
+
+## Release 08-12-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.4.0-<tbd>`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.4.0-<tbd>`
+* Change Log -
+  * Add ability to alias cluster name label used globally (only in MAC mode)
+  * Add template for CI (log based) recommended alerts equivalents in Prometheus
+  * Update metric allow list to account metrics used in for CI recommended alerts
+  * Update MDSD to master.406_x86_64 deb package (from master.377_x86_64)
+  * Adapt liveness probe to account for MAC config DCR download failure scenarios
+
 ## Release 07-18-2022
 
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.3.0-main-07-15-2022-dc6f1b37`
