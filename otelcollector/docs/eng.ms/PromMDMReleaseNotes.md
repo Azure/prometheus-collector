@@ -11,6 +11,7 @@
   * Update metric allow list to account metrics used in for CI recommended alerts
   * Update MDSD to master.406_x86_64 deb package (from master.377_x86_64)
   * Adapt liveness probe to account for MAC config DCR download failure scenarios
+  * Fix a bug in Config processing during regex merge (Thanks to contributions from peter.glotfelty@microsoft.com)
 
 ## Release 07-18-2022
 
@@ -28,7 +29,7 @@
 * image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.2.0-main-05-24-2022-0c3a87bc`
 * Change Log -
   * Remove tolerations for replica & daemonset
-  * Add a new parameter for adding pod labels to collector pods (Thanks to contrinutions from peter.glotfelty@microsoft.com)
+  * Add a new parameter for adding pod labels to collector pods (Thanks to contributions from peter.glotfelty@microsoft.com)
   * Enable aad pod identity for akv access (Thanks to contributions from nicholas.maliwacki@microsoft.com)
   * Windows USE method dashboards have recording rules support (they are not auto provisioned in Grafana)
     * These dashboards are not part of default dashboards. If you have windows nodes in your cluster and want to try these windows dashboards & their recording rules, please ping us over teams channel.
