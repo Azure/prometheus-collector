@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - sohamtest/CollectKubeSMParams
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
