@@ -54,7 +54,7 @@ gem install re2
 #chmod 777 /opt/microsoft/otelcollector29/otelcollector
 
 echo "Downloading MDSD"
-wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-support-official/azure-mdsd_1.17.1-build.master.377_x86_64.deb
+wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.406_x86_64.deb
 /usr/bin/dpkg -i $TMPDIR/azure-mdsd*.deb
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for logs

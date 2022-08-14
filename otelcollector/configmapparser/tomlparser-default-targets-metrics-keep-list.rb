@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 require "tomlrb"
-if (!ENV['OS_TYPE'].nil? && ENV['OS_TYPE'].downcase == "linux")
+if (!ENV["OS_TYPE"].nil? && ENV["OS_TYPE"].downcase == "linux")
   require "re2"
 end
 require "yaml"
@@ -76,7 +76,7 @@ def isValidRegex_windows(str)
 end
 
 def isValidRegex(str)
-  if ENV['OS_TYPE'] == "linux"
+  if ENV["OS_TYPE"] == "linux"
     return isValidRegex_linux(str)
   else
     return isValidRegex_windows(str)
@@ -119,7 +119,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       if !cadvisorRegex.empty?
         if isValidRegex(cadvisorRegex) == true
           @cadvisorRegex = cadvisorRegex
-          pConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for cadvisor")
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for cadvisor")
         else
           ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for cadvisor")
         end
@@ -215,24 +215,24 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for default targets metrics keep list - #{errorStr}, using defaults, please check config map for errors")
   end
 
-# -------Apply profile for ingestion--------
-# Logical OR-ing profile regex with customer provided regex
-# so the theory here is --
-    # if customer provided regex is valid, our regex validation for that will pass, and when minimal ingestion profile is true, a OR of customer provided regex with our minimal profile regex would be a valid regex as well, so we dont check again for the wholistic validation of merged regex
-    # if customer provided regex is invalid, our regex validation for customer provided regex will fail, and if minimal ingestion profile is enabled, we will use that and ignore customer provided one
+  # -------Apply profile for ingestion--------
+  # Logical OR-ing profile regex with customer provided regex
+  # so the theory here is --
+  # if customer provided regex is valid, our regex validation for that will pass, and when minimal ingestion profile is true, a OR of customer provided regex with our minimal profile regex would be a valid regex as well, so we dont check again for the wholistic validation of merged regex
+  # if customer provided regex is invalid, our regex validation for customer provided regex will fail, and if minimal ingestion profile is enabled, we will use that and ignore customer provided one
 
-@minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"] #this when enabled, will always be string "true" as we set the string value in the chart
-if @minimalIngestionProfile == "true"
-  ConfigParseErrorLogger.log(LOGGING_PREFIX, "minimalIngestionProfile=true. Applying appropriate Regexes")
-  @kubeletRegex = @kubeletRegex + "|"  + @kubeletRegex_minimal
-  @corednsRegex = @corednsRegex + "|" + @corednsRegex_minimal
-  @cadvisorRegex = @cadvisorRegex + "|" + @cadvisorRegex_minimal
-  @kubeproxyRegex = @kubeproxyRegex + "|" + @kubeproxyRegex_minimal
-  @apiserverRegex = @apiserverRegex + "|" + @apiserverRegex_minimal
-  @kubestateRegex = @kubestateRegex + "|" + @kubestateRegex_minimal
-  @nodeexporterRegex = @nodeexporterRegex + "|" + @nodeexporterRegex_minimal
-end 
-# ----End appliing profile for ingestion--------
+  @minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"] #this when enabled, will always be string "true" as we set the string value in the chart
+  if @minimalIngestionProfile == "true"
+    ConfigParseErrorLogger.log(LOGGING_PREFIX, "minimalIngestionProfile=true. Applying appropriate Regexes")
+    @kubeletRegex = @kubeletRegex + "|" + @kubeletRegex_minimal
+    @corednsRegex = @corednsRegex + "|" + @corednsRegex_minimal
+    @cadvisorRegex = @cadvisorRegex + "|" + @cadvisorRegex_minimal
+    @kubeproxyRegex = @kubeproxyRegex + "|" + @kubeproxyRegex_minimal
+    @apiserverRegex = @apiserverRegex + "|" + @apiserverRegex_minimal
+    @kubestateRegex = @kubestateRegex + "|" + @kubestateRegex_minimal
+    @nodeexporterRegex = @nodeexporterRegex + "|" + @nodeexporterRegex_minimal
+  end
+  # ----End appliing profile for ingestion--------
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
