@@ -14,7 +14,7 @@ local statPanel = grafana.statPanel;
           datasource='$datasource',
           reducerFunction='lastNotNull',
         )
-        .addTarget(prometheus.target('sum(kubelet_node_name{%(clusterLabel)s="$cluster", %(kubeletSelector)s})' % $._config));
+        .addTarget(prometheus.target('sum(kubelet_node_name{%(clusterLabel)s="$cluster", instance=~"$instance", %(kubeletSelector)s})' % $._config));
 
       local runningPodCount =
         statPanel.new(

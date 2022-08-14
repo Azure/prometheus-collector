@@ -176,6 +176,7 @@ node_network_transmit_drop_total
 node_disk_io_time_weighted_seconds_total
 node_exporter_build_info
 node_time_seconds
+node_uname_info
 kubernetes_build_info
 
 ## kube-state-metrics
@@ -216,6 +217,7 @@ kube_job_status_start_time
 kube_deployment_spec_replicas
 kube_deployment_status_replicas_available
 kube_deployment_status_replicas_updated
+kube_replicaset_owner
 kubernetes_build_info
 
 ## kube-proxy
