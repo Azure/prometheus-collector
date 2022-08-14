@@ -3,8 +3,8 @@
 
 ## Release 08-12-2022
 
-* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.4.0-<tbd>`
-* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.4.0-<tbd>`
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.4.0-main-08-12-2022-b454f29f`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.4.0-main-08-12-2022-b454f29f`
 * Change Log -
   * Add ability to alias cluster name label used globally (only in MAC mode)
   * Add template for CI (log based) recommended alerts equivalents in Prometheus
