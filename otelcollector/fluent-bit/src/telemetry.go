@@ -231,7 +231,7 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 
 		// Logs have different parsed formats depending on if they're from otelcollector or metricsextension
 		if tag == fluentbitOtelCollectorLogsTag {
-			logEntry = fmt.Sprintf("%s %s", ToString(record["caller"]), ToString(record["msg"]))
+			logEntry = fmt.Sprintf("%s %s %s", ToString(record["caller"]), ToString(record["msg"]), ToString(record["error"]))
 		} else if tag == fluentbitContainerLogsTag {
 			logEntry = ToString(record["log"])
 		}
