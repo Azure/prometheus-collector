@@ -272,7 +272,6 @@ jobs:
   dependsOn:
   - Common
   - Linux
-  - Windows
   variables:
     HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
@@ -280,6 +279,15 @@ jobs:
     IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
   steps:
+  - checkout: self
+    persistCredentials: true
+
+  - bash: |
+      git config --global user.name "AzureDevOps Agent"
+      git tag "$(HELM_SEMVER)"
+      git push origin "$(HELM_SEMVER)"
+    displayName: Tag commit with semver
+
   - task: HelmInstaller@1
     displayName: 'Build: install Helm version'
     inputs: 
@@ -315,15 +323,6 @@ jobs:
     inputs:
       pathToPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: drop
-
-  - checkout: self
-    persistCredentials: true
-
-  - bash: |
-      git config --global user.name "AzureDevOps Agent"
-      git tag "$(HELM_SEMVER)"
-      git push origin "$(HELM_SEMVER)"
-    displayName: Tag commit with semver
 
 - job: Deploy
   displayName: "Deploy to dev clusters"
