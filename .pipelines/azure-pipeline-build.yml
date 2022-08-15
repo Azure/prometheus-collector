@@ -21,7 +21,6 @@ variables:
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
-  Codeql.Enabled: true
 
 jobs:
 - job: Common
@@ -34,6 +33,7 @@ jobs:
           BRANCH_NAME=$(System.PullRequest.SourceBranch)
         else
           BRANCH_NAME=$(Build.SourceBranchName)
+          BRANCH_NAME=$(echo ${Build.SourceBranch#refs/heads/})
         fi
         BRANCH_NAME=$(echo $BRANCH_NAME | tr / - | tr . - | tr _ - | cut -c1-90)
         COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
@@ -97,6 +97,7 @@ jobs:
   
     - task: CodeQL3000Init@0
       displayName: 'SDL: init codeql'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
     - bash: |
         sudo apt-get install build-essential -y
@@ -106,12 +107,14 @@ jobs:
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         InputType: 'CommandLine'
         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
     
     - task: Gosec@1
       displayName: 'SDL: run gosec'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         targetPattern: 'gosecPattern'
         targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
@@ -122,12 +125,14 @@ jobs:
         chmod 775 DevSkim_linux_0.6.9/devskim
         ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
       displayName: 'SDL: run devskim'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       workingDirectory: $(Build.SourcesDirectory)
     
     - bash: |
         sudo gem install brakeman
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
     
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
@@ -145,10 +150,11 @@ jobs:
     
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
     
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: Run component governance"
-      condition: eq(variables.IS_PR, false)
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
@@ -162,13 +168,14 @@ jobs:
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Ev2: Generate image artifacts"
-      condition: eq(variables.IS_PR, false)
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
     
     - task: SdtReport@2
       displayName: 'SDL: generate report'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         GdnExportAllTools: false
         GdnExportGdnToolBinSkim: true
@@ -180,6 +187,7 @@ jobs:
 
     - task: PublishSecurityAnalysisLogs@3
       displayName: 'SDL: publish report'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         ArtifactName: 'CodeAnalysisLogs'
         ArtifactType: 'Container'
@@ -189,13 +197,14 @@ jobs:
 
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: Publish image artifacts"
-      condition: eq(variables.IS_PR, false)
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
     
     - task: PostAnalysis@2
       displayName: 'SDL: Post-Build Analysis'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         GdnBreakAllTools: false
         GdnBreakGdnToolBinSkim: true
@@ -219,36 +228,38 @@ jobs:
         ./makefile_windows.ps1
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: "Build otelcollector, promconfigvalidator, and fluent-bit plugin"
+
     - powershell: |
         docker build . --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)
         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
         @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build image"
-    - powershell: |
-        docker images --digests --all
-      displayName: "List docker images"
+
     - powershell: |
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker push $(WINDOWS_FULL_IMAGE_NAME)
       displayName: "Build: push image to dev ACR"
       condition: eq(variables.IS_PR, false)
+
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
-      condition: eq(variables.IS_PR, false)
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
         dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
-        alertWarningLevel: 'High' 
+        alertWarningLevel: 'High'
+
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      condition: eq(variables.IS_PR, false)
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       displayName: "Ev2: generate image artifacts"
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
         DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
+
     - task: PublishBuildArtifacts@1
-      condition: eq(variables.IS_PR, false)
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       displayName: "Ev2: publish image artifacts"
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
@@ -273,18 +284,22 @@ jobs:
     displayName: 'Build: install Helm version'
     inputs: 
       helmVersionToInstall: latest
+
   - bash: |
       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
       helm version
     displayName: "Substitute chart version in Chart.yaml and values.yaml"
+
   - bash: |
       helm dep update
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/
     displayName: "Build: update helm dependencies"
+
   - bash: |
       helm package ./prometheus-collector/
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
     displayName: "Build: package helm chart"
+
   - bash: |
       helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
       helm push $(HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
@@ -293,12 +308,22 @@ jobs:
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
     displayName: "Build: push helm chart to dev ACR"
     condition: eq(variables.IS_PR, false)
+
   - task: PublishBuildArtifacts@1
     displayName: "Ev2: publish helm chart artifacts"
-    condition: eq(variables.IS_PR, false)
+    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
     inputs:
       pathToPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: drop
+
+  - checkout: self
+    persistCredentials: true
+
+  - bash: |
+      git config --global user.name "AzureDevOps Agent"
+      git tag "$(HELM_SEMVER)"
+      git push origin "$(HELM_SEMVER)"
+    displayName: Tag commit with semver
 
 - job: Deploy
   displayName: "Deploy to dev clusters"
@@ -317,11 +342,13 @@ jobs:
   steps:
   - checkout: self
     persistCredentials: true
+
   - bash: |
       git config --global user.name "AzureDevOps Agent"
       git tag "$(HELM_SEMVER)"
       git push origin "$(HELM_SEMVER)"
     displayName: Tag commit with semver
+
   - task: HelmInstaller@1
     displayName: Install Helm version
     inputs: 
@@ -341,10 +368,12 @@ jobs:
           echo "Images and chart are not published to mcr within 5 minutes"
           exit 1
       displayName: "Check images are pushed to dev MCR"
+
   - bash: |
       helm pull oci://$(MCR_REGISTRY)$(MCR_REPOSITORY_HELM) --version $(HELM_SEMVER)
     workingDirectory: $(Build.StagingDirectory)
     displayName: "Pull helm chart from dev MCR"
+
   - task: HelmDeploy@0
     displayName: "Deploy: ci-dev-aks-wcus cluster"
     inputs:
@@ -359,6 +388,7 @@ jobs:
       releaseName: 'prom-dev'
       waitForExecution: false
       arguments: '--dependency-update --set image.repository=$(MCR_REGISTRY)$(MCR_REPOSITORY) --set image.tag=$(IMAGE_TAG) --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-wcus" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.clientId=$(CI_PROMETHEUS_KV_CLIENTID) --set azureKeyVault.clientSecret=$(CI_PROMETHEUS_KV_CLIENTSECRET) --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi"'
+
   - task: HelmDeploy@0
     displayName: "Deploy: ci-dev-aks-msi-eus2 cluster"
     inputs:
@@ -373,6 +403,7 @@ jobs:
       releaseName: 'prom-dev-msi'
       waitForExecution: false
       arguments: '--dependency-update --set image.repository=$(MCR_REGISTRY)$(MCR_REPOSITORY) --set image.tag=$(IMAGE_TAG) --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-msi-eus2" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.useManagedIdentity=true --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set minimalIngestionProfile="false"'
+
   - task: HelmDeploy@0
     displayName: "Deploy: ci-dev-aks-mac-eus cluster"
     inputs:

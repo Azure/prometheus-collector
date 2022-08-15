@@ -4,7 +4,7 @@
   "RolloutMetadata": {
     "ServiceModelPath": "ServiceModels//Public.ServiceModel.json",
     "ScopeBindingsPath": "ScopeBindings//Public.ScopeBindings.json",
-    "Name": "PrometheusCollectorAgent-__LINUX_TAG___",
+    "Name": "PrometheusCollectorAgent",
     "RolloutType": "Major",
     "BuildSource": {
       "Parameters": {
