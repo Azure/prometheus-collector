@@ -32,8 +32,8 @@ jobs:
         if [ $(IS_PR) == "True" ]; then
           BRANCH_NAME=$(System.PullRequest.SourceBranch)
         else
-          BRANCH_NAME=$(Build.SourceBranchName)
-          BRANCH_NAME=$(echo ${Build.SourceBranch#refs/heads/})
+          BRANCH_NAME=$(Build.SourceBranch)
+          BRANCH_NAME=${BRANCH_NAME#refs/heads/}
         fi
         BRANCH_NAME=$(echo $BRANCH_NAME | tr / - | tr . - | tr _ - | cut -c1-90)
         COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
