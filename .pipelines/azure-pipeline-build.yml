@@ -1,8 +1,7 @@
 trigger:
   branches:
     include:
-    - azure-pipelines
-    - grace/test-pipeline-pr
+    - main
 
 pr:
   autoCancel: true
@@ -26,7 +25,7 @@ jobs:
 - job: Common
   displayName: Set image tags and publish Ev2 artifacts
   pool:
-    name: Azure-Pipelines-CI-Prod-EO
+    name: Azure-Pipelines-CI-Test-EO
   steps:
     - bash: |
         if [ $(IS_PR) == "True" ]; then
@@ -89,7 +88,7 @@ jobs:
 - job: Linux
   displayName: Build linux image
   pool:
-    name: Azure-Pipelines-CI-Prod-EO
+    name: Azure-Pipelines-CI-Test-EO
   dependsOn: common
   variables:
     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
@@ -217,7 +216,7 @@ jobs:
 - job: Windows
   displayName: "Build windows image"
   pool:
-    vmImage: windows-2019
+    name: Azure-Pipelines-Windows-CI-Test-EO
   dependsOn:
   - Common
   - Linux
@@ -268,7 +267,7 @@ jobs:
 - job: Chart
   displayName: "Package helm chart"
   pool:
-    name: Azure-Pipelines-CI-Prod-EO
+    name: Azure-Pipelines-CI-Test-EO
   dependsOn:
   - Common
   - Linux
@@ -318,7 +317,7 @@ jobs:
 - job: Deploy
   displayName: "Deploy to dev clusters"
   pool:
-    name: Azure-Pipelines-CI-Prod-EO
+    name: Azure-Pipelines-CI-Test-EO
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   dependsOn:
   - Common

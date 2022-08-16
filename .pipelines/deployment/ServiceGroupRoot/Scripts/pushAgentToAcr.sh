@@ -43,25 +43,6 @@ fi
 
 echo "Done checking that all necessary variables exist."
 
-#Make sure that tag being pushed will not overwrite an existing tag in mcr
-#echo "Checking if this tag already exists in prod MCR path"
-#PROD_MCR_TAG_RESULT="`wget -qO- https://mcr.microsoft.com/v2$PROD_MCR_REPOSITORY/tags/list`"
-#TAG_RESULT_EXIT_CODE=$?
-#if [ $TAG_RESULT_EXIT_CODE -ne 0 ] && [ $TAG_RESULT_EXIT_CODE -ne 8 ]; then         
-#   echo "-e error unable to get list of tags for $PROD_MCR_REPOSITORY"
-#   exit 1
-#fi
-
-#if [ $PROD_MCR_TAG_RESULT ]; then 
-#  echo "Checking tag list"
-#  TAG_EXISTS=$(echo $PROD_MCR_TAG_RESULT | jq '.tags | contains(["'"$IMAGE_TAG"'"])')
-#
-#  if $TAG_EXISTS; then
-#    echo "-e error ${IMAGE_TAG} already exists in Prod MCR. Make sure the image tag is unique"
-#    exit 1
-#  fi
-#fi
-
 #Login to az cli and authenticate to acr
 echo "Login cli using managed identity"
 az login --identity

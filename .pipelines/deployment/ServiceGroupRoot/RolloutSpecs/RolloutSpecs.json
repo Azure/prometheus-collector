@@ -13,7 +13,7 @@
     },
     "Notification": {
       "Email": {
-        "To": "grwehner@microsoft.com"
+        "To": "omscontainers@microsoft.com"
       }
     }
   },

@@ -48,30 +48,8 @@ fi
 
 echo "Done checking that all necessary variables exist."
 
-#Make sure that tag being pushed will not overwrite an existing tag in mcr
-#echo "Checking if this tag already exists in prod MCR path"
-#PROD_MCR_TAG_RESULT="`wget -qO- https://mcr.microsoft.com/v2$PROD_MCR_REPOSITORY/tags/list`"
-#TAG_RESULT_EXIT_CODE=$?
-#if [ $TAG_RESULT_EXIT_CODE -ne 0 ] && [ $TAG_RESULT_EXIT_CODE -ne 8 ]; then         
-#   echo "-e error unable to get list of tags for $PROD_MCR_REPOSITORY"
-#   exit 1
-#fi
-
-#if [ $PROD_MCR_TAG_RESULT ]; then 
-#  echo "Checking tag list"
-#  TAG_EXISTS=$(echo $PROD_MCR_TAG_RESULT | jq '.tags | contains(["'"$IMAGE_TAG"'"])')
-#
-#  if $TAG_EXISTS; then
-#    echo "-e error ${IMAGE_TAG} already exists in Prod MCR. Make sure the image tag is unique"
-#    exit 1
-#  fi
-#fi
-
-ls
-cd prometheus-collector/
-ls
-
 # Wait for KSM and node-exporter charts to push
+cd prometheus-collector/
 for i in 1 2 3 4 5 6 7 8 9 10; do
   sleep 30
   helm dep update
@@ -83,11 +61,10 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
 done
 if [ "$DEPENDENT_CHARTS_PUBLISHED" != "true" ]; then
   echo "Dependent charts are not published to mcr within 5 minutes"
-  #exit 1
+  exit 1
 fi
 
 cd ../
-ls
 helm package ./prometheus-collector/
 
 #Login to az cli and authenticate to acr
