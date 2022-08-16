@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/test-pipeline-pr
 
 pr:
   autoCancel: true
@@ -27,6 +26,7 @@ jobs:
   displayName: Set image tags and publish Ev2 artifacts
   pool:
     name: Azure-Pipelines-CI-Test-EO
+    vmImage: ci-1es-ubuntu-1804-compliant
   steps:
     - bash: |
         if [ $(IS_PR) == "True" ]; then
@@ -90,6 +90,7 @@ jobs:
   displayName: Build linux image
   pool:
     name: Azure-Pipelines-CI-Test-EO
+    vmImage: ci-1es-ubuntu-1804-compliant
   dependsOn: common
   variables:
     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
@@ -143,10 +144,13 @@ jobs:
           docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           docker pull $(LINUX_FULL_IMAGE_NAME)
         else
-          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
+          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --load
         fi
+
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build and push image to dev ACR"
+      displayName: "Build: build, scan, and push image to dev ACR"
     
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'
@@ -159,12 +163,7 @@ jobs:
         scanType: 'Register'
         verbosity: 'Verbose'
         dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
-        alertWarningLevel: 'High' 
-
-    - bash: |
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
-      displayName: 'Build: Run trivy scan'
+        alertWarningLevel: 'High'
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Ev2: Generate image artifacts"
@@ -218,6 +217,7 @@ jobs:
   displayName: "Build windows image"
   pool:
     name: Azure-Pipelines-CI-Test-EO
+    vmImage: ci-1es-windows-2019-compliant
   dependsOn:
   - Common
   - Linux
@@ -269,6 +269,7 @@ jobs:
   displayName: "Package helm chart"
   pool:
     name: Azure-Pipelines-CI-Test-EO
+    vmImage: ci-1es-ubuntu-1804-compliant
   dependsOn:
   - Common
   - Linux
@@ -320,6 +321,7 @@ jobs:
   displayName: "Deploy to dev clusters"
   pool:
     name: Azure-Pipelines-CI-Test-EO
+    vmImage: ci-1es-ubuntu-1804-compliant
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   dependsOn:
   - Common

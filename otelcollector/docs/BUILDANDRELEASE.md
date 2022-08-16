@@ -51,7 +51,7 @@ The default Golang version for the [1ES hosted pools](https://eng.ms/docs/cloud-
     version: '1.18'
 ```
 
-# Release Process
+# Builds and Releases
 
 ## Azure Pipelines
 Each commit to a PR for `main` or a merge into `main` generates a build with [Azure Pipelines](https://github-private.visualstudio.com/azure/_build?definitionId=440). 
