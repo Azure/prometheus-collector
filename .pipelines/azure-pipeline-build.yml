@@ -143,7 +143,7 @@ jobs:
           docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           docker pull $(LINUX_FULL_IMAGE_NAME)
         else
-          docker buildx build . --file ./build/linux/Dockerfile -t --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
+          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
@@ -217,7 +217,7 @@ jobs:
 - job: Windows
   displayName: "Build windows image"
   pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
+    name: Azure-Pipelines-CI-Test-EO
   dependsOn:
   - Common
   - Linux
