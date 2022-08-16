@@ -26,7 +26,7 @@ jobs:
 - job: Common
   displayName: Set image tags and publish Ev2 artifacts
   pool:
-    vmImage: ubuntu-latest
+    name: Azure-Pipelines-CI-Prod-EO
   steps:
     - bash: |
         if [ $(IS_PR) == "True" ]; then
@@ -55,7 +55,7 @@ jobs:
         echo "##vso[task.setvariable variable=WINDOWS_IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
         echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
         echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
-      displayName: 'Set image registry, repo, and tags'
+      displayName: 'Build: set image registry, repo, and tags'
       name: setup
 
     - bash: |
@@ -89,7 +89,7 @@ jobs:
 - job: Linux
   displayName: Build linux image
   pool:
-    vmImage: ubuntu-latest
+    name: Azure-Pipelines-CI-Prod-EO
   dependsOn: common
   variables:
     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
@@ -153,7 +153,7 @@ jobs:
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
     
     - task: ComponentGovernanceComponentDetection@0
-      displayName: "SDL: Run component governance"
+      displayName: "SDL: run component governance"
       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         scanType: 'Register'
@@ -268,7 +268,7 @@ jobs:
 - job: Chart
   displayName: "Package helm chart"
   pool:
-    vmImage: ubuntu-latest
+    name: Azure-Pipelines-CI-Prod-EO
   dependsOn:
   - Common
   - Linux
@@ -287,7 +287,7 @@ jobs:
   - bash: |
       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
       helm version
-    displayName: "Substitute chart version in Chart.yaml and values.yaml"
+    displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
 
   - bash: |
       helm dep update
@@ -318,7 +318,7 @@ jobs:
 - job: Deploy
   displayName: "Deploy to dev clusters"
   pool:
-    vmImage: ubuntu-latest
+    name: Azure-Pipelines-CI-Prod-EO
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   dependsOn:
   - Common
