@@ -341,8 +341,10 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
 
     globalConfig = customPrometheusConfig["global"]
     if !globalConfig.nil?
-      glolbalScrapeInterval = globalConfig["scrape_interval"]
-      matched = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$/.match(glolbalScrapeInterval)
+      globalScrapeInterval = globalConfig["scrape_interval"]
+      # Checking to see if the duration matches the pattern specified in the prometheus config 
+      # Link to documenation with regex pattern -> https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file
+      matched = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$/.match(globalScrapeInterval)
       if !matched
         customPrometheusConfig["global"]["scrape_interval"] = "30s"
       end
