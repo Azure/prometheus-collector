@@ -18,8 +18,10 @@ variables:
   MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
-  IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
-  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
+  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.4.2'
+  NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.3.1'
+  IS_PR: 'true' #$[eq(variables['Build.Reason'], 'PullRequest')]
+  IS_MAIN_BRANCH: 'false' #$[eq(variables['Build.SourceBranchName'], 'main')]
 
 jobs:
 - job: Common
@@ -146,11 +148,16 @@ jobs:
         else
           docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --load
         fi
-
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+      displayName: "Build: build and push image to dev ACR"
+    
+    - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build, scan, and push image to dev ACR"
+        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
+        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
+      workingDirectory: $(Build.SourcesDirectory)
+      displayName: "Build: run trivy scan"
     
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'
