@@ -51,6 +51,7 @@ coredns_dns_response_size_bytes_count
 process_resident_memory_bytes
 process_cpu_seconds_total
 go_goroutines
+kubernetes_build_info
 
 ## kube-apiserver
 
@@ -68,9 +69,11 @@ workqueue_queue_duration_seconds_count
 process_resident_memory_bytes
 process_cpu_seconds_total
 go_goroutines
+kubernetes_build_info
 
 ## kubelet
 
+kubelet_volume_stats_used_bytes
 kubelet_node_name
 kubelet_running_pods
 kubelet_running_pod_count
@@ -121,9 +124,12 @@ kubelet_volume_stats_capacity_bytes
 kubelet_volume_stats_available_bytes
 kubelet_volume_stats_inodes_used
 kubelet_volume_stats_inodes
+kubernetes_build_info
 
 ## cadvisor
 
+container_spec_cpu_period
+container_spec_cpu_quota
 container_cpu_usage_seconds_total
 container_memory_rss
 container_network_receive_bytes_total
@@ -142,6 +148,7 @@ container_memory_swap
 container_cpu_cfs_throttled_periods_total
 container_cpu_cfs_periods_total
 container_memory_usage_bytes
+kubernetes_build_info
 
 ## node/node-exporter (Linux)
 
@@ -171,9 +178,19 @@ node_network_transmit_drop_total
 node_disk_io_time_weighted_seconds_total
 node_exporter_build_info
 node_time_seconds
+kubernetes_build_info
 
 ## kube-state-metrics
 
+kube_job_status_succeeded
+kube_job_spec_completions
+kube_daemonset_status_desired_number_scheduled
+kube_daemonset_status_number_ready
+kube_deployment_spec_replicas
+kube_deployment_status_replicas_ready
+kube_pod_container_status_last_terminated_reason
+kube_node_status_condition
+kube_pod_container_status_restarts_total
 kube_pod_container_resource_requests
 kube_pod_status_phase
 kube_pod_container_resource_limits
@@ -191,6 +208,17 @@ kube_node_info
 kube_statefulset_metadata_generation
 kube_pod_labels
 kube_pod_annotations
+kube_horizontalpodautoscaler_status_current_replicas
+kube_horizontalpodautoscaler_spec_max_replicas
+kube_node_status_condition
+kube_node_spec_taint
+kube_pod_container_status_waiting_reason
+kube_job_failed
+kube_job_status_start_time
+kube_deployment_spec_replicas
+kube_deployment_status_replicas_available
+kube_deployment_status_replicas_updated
+kubernetes_build_info
 
 ## kube-proxy
 
@@ -210,3 +238,4 @@ rest_client_request_duration_seconds_count
 process_resident_memory_bytes
 process_cpu_seconds_total
 go_goroutines
+kubernetes_build_info

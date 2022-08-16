@@ -294,11 +294,18 @@ echo "Starting fluent-bit"
 FLUENT_BIT_VERSION=`dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 
-#Run inotify as a daemon to track changes to the dcr/dce config.
 if [ "${MAC}" == "true" ]; then
-  echo "Starting inotify for watching mdsd config update"
-  inotifywait /etc/mdsd.d/config-cache/metricsextension/_default_MonitoringAccount_Configuration.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
+      # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.
+      echo "starting inotify for watching mdsd config update"
+      inotifywait /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
 fi
+
+# Setting time at which the container started running, so that it can be used for empty configuration checks in livenessprobe
+epochTimeNow=`date +%s`
+echo $epochTimeNow > /opt/microsoft/liveness/azmon-container-start-time
+echo_var "AZMON_CONTAINER_START_TIME" "$epochTimeNow"
+epochTimeNowReadable=`date --date @$epochTimeNow`
+echo_var "AZMON_CONTAINER_START_TIME_READABLE" "$epochTimeNowReadable"
 
 shutdown() {
 	echo "shutting down"

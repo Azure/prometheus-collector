@@ -161,10 +161,10 @@ jobs:
         dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
         alertWarningLevel: 'High' 
 
-    #- bash: |
-    #    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-    #    trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
-    #  displayName: 'Run trivy scan'
+    - bash: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
+      displayName: 'Build: Run trivy scan'
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Ev2: Generate image artifacts"
@@ -279,15 +279,6 @@ jobs:
     IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
   steps:
-  - checkout: self
-    persistCredentials: true
-
-  - bash: |
-      git config --global user.name "AzureDevOps Agent"
-      git tag "$(HELM_SEMVER)"
-      git push origin "$(HELM_SEMVER)"
-    displayName: Tag commit with semver
-
   - task: HelmInstaller@1
     displayName: 'Build: install Helm version'
     inputs: 
