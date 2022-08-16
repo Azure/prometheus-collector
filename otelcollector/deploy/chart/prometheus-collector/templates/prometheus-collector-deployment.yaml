@@ -48,6 +48,10 @@ spec:
               value: "true"
             - name: customEnvironment
               value: "azurepubliccloud"
+            - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
+              value: "{{ index .Values "kube-state-metrics" "metricsLabelsAllowlist" | join ","  }}"
+            - name: KUBE_STATE_METRICS_ANNOTATIONS
+              value: "{{ index .Values "kube-state-metrics" "metricAnnotationsAllowList" | join "," }}" 
             - name: OMS_TLD
               value: "opinsights.azure.com"
             {{- end }}
