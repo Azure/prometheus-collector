@@ -3,7 +3,7 @@
 
 A set of Grafana dashboards & Prometheus alerts for CoreDNS.
 
-Last syned on 11/10/2021 with commit https://github.com/povilasv/coredns-mixin/commit/2d5064f4007e8c964992bd7395fd1feb1d8ec8f9
+Last syned on 07/28/2022 with commit https://github.com/povilasv/coredns-mixin/commit/8b121c41b6c0741f1603b2d75ccd324050c4bd03
 
 ## How to use
 

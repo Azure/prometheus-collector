@@ -20,6 +20,7 @@ For histograms & summaries, each series has to be included explicitly in the lis
 
 ## coredns/kube-dns
 
+coredns_build_info
 coredns_panics_total
 coredns_dns_responses_total
 coredns_forward_responses_total
@@ -178,6 +179,7 @@ node_network_transmit_drop_total
 node_disk_io_time_weighted_seconds_total
 node_exporter_build_info
 node_time_seconds
+node_uname_info
 kubernetes_build_info
 
 ## kube-state-metrics
@@ -195,6 +197,7 @@ kube_pod_container_resource_requests
 kube_pod_status_phase
 kube_pod_container_resource_limits
 kube_node_status_allocatable
+kube_node_status_capacity
 kube_pod_info
 kube_pod_owner
 kube_resourcequota
@@ -218,6 +221,7 @@ kube_job_status_start_time
 kube_deployment_spec_replicas
 kube_deployment_status_replicas_available
 kube_deployment_status_replicas_updated
+kube_replicaset_owner
 kubernetes_build_info
 
 ## kube-proxy
