@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/test-pipeline-pr
 
 pr:
   autoCancel: true
@@ -271,6 +272,7 @@ jobs:
   dependsOn:
   - Common
   - Linux
+  - Windows
   variables:
     HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
