@@ -52,13 +52,19 @@ In the data source configuration fill in the fields per guidance below.
     
      ![Add AMGAddDatasourcePP4](~/metrics/images/prometheus/AMGAddDatasourcePP4.png)
   
-- Finally, you need to let the data source know your specific MDM account. If you are using MAC based query endpoint, this step is not required and query service ignores this header if passed with MAC based query URL. Otherwise, pass via a custom header during data source setup. In Custom HTTP headers section, click **+ Add header**  
+- Next, you need to let the data source know your specific MDM account. If you are using MAC based query endpoint, this step is not required and query service ignores this header if passed with MAC based query URL. Otherwise, pass via a custom header during data source setup. In Custom HTTP headers section, click **+ Add header**  
     - For **Header** enter 'X-Ms-Mdm-Account-Name'.
     - For **Value** enter your actual MDM metrics account
 
-Note: Few customers have already used old header name **mdmAccountName** for this which we will continue to support. The new new name is more aligned towards Microsoft naming convention.
+**Note:** Few customers have already used old header name **mdmAccountName** for this which we will continue to support. The new new name is more aligned towards Microsoft naming convention.
 
 ![Add datasource7](~/metrics/images/prometheus/AMGAddDatasource7.png)  
+
+- Finally, which MDM namespace to query? If you are using the collector agent version (to ingest metrics) greater than or equals to this one: https://eng.ms/docs/products/geneva/metrics/prometheus/prommdmreleasenotes#release-03-17-2022-breaking-changes, then you will have to add header **x-ms-use-new-mdm-namespace** with value **true** to query metrics from the new namespace where agent is ingesting to. With old agent, don't provide this header (or set value to false) as we still need to query from old namespace (where old agent is ingesting to).
+
+**Note:** We will remove support of querying from old namespace entirely towards April 3rd week, so you must move to new agent. Please refer to (https://eng.ms/docs/products/geneva/metrics/prometheus/prometheusnamespace) for more details.
+
+![Grafana new namespace setting](~/metrics/images/newNamespaceGrafanaConfig.png)  
 
 * Click **Save and test** to validate the data source. You are ready once you see a 'Data source is working' confirmation.  
 

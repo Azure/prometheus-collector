@@ -48,13 +48,15 @@ var (
 )
 
 const (
-	clusterTypeAKS                        = "AKS"
-	envAKSResourceID                      = "AKS_RESOURCE_ID"
 	envAgentVersion                       = "AGENT_VERSION"
 	envControllerType                     = "CONTROLLER_TYPE"
 	envNodeIP                             = "NODE_IP"
 	envMode                               = "MODE"
-	envCluster                            = "customResourceId"
+	envCluster                            = "customResourceId" //this will contain full resourceid for MAC , ir-resprective of cluster_alias set or not
+	// explicitly defining below for clarity, but not send thru our telemetry for brieviety
+	//envCustomResourceId					  = "customResourceId"
+	//envClusterAlias						  = "AZMON_CLUSTER_ALIAS"
+	//envClusterLabel						  = "AZMON_CLUSTER_LABEL"
 	envAppInsightsAuth                    = "APPLICATIONINSIGHTS_AUTH"
 	envAppInsightsEndpoint                = "APPLICATIONINSIGHTS_ENDPOINT"
 	envComputerName                       = "NODE_NAME"
@@ -70,6 +72,8 @@ const (
 	fluentbitEventsProcessedLastPeriodTag = "prometheus.log.eventsprocessedlastperiod"
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
+	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
+	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 )
@@ -127,9 +131,6 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
 		CommonProperties["macmode"] = isMacMode
 		aksResourceID := os.Getenv("CLUSTER")
-		// When we support ARC add a way to identify and send telemetry that it is an ARC cluster
-		CommonProperties["AKS_RESOURCE_ID"] = aksResourceID
-		CommonProperties["ClusterType"] = clusterTypeAKS
 		CommonProperties["Region"] = os.Getenv("AKSREGION")
 		splitStrings := strings.Split(aksResourceID, "/")
 		if len(splitStrings) >= 9 {
@@ -381,5 +382,14 @@ func PushInfiniteMetricLogToAppInsightsEvents(records []map[interface{}]interfac
 		}
 	}
 
+	return output.FLB_OK
+}
+
+func RecordExportingFailed(records []map[interface{}]interface{}) int {
+	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
+		ExportingFailedMutex.Lock()
+		OtelCollectorExportingFailedCount += 1
+		ExportingFailedMutex.Unlock()
+	}
 	return output.FLB_OK
 }
