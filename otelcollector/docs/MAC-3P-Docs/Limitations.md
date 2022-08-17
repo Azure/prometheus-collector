@@ -1,9 +1,11 @@
 # Limitations
 
 
-## MAC (Monitoring Account) limitations: 
-* The default limit on the number of timeseries is 50000.  
-* The default limit on the number of events is 250000  
+## Azure Managed Service for Prometheus ingestion limitations: 
+* These limits are enforced by the Monitoring account you created to store your Prometheus metrics.
+* The default limit on the number of active time series is 1 Million.  
+* The default limit on the number of events is 1 Million.
+* These limits can be increased if requested.
   
 <br/>
 
@@ -32,6 +34,7 @@ You can find full specification of [OSS prom APIs](https://prometheus.io/docs/pr
 
 [Label values](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-label-values): /api/v1/label/\_\_name\_\_\/values. It’s the only supported version of this API which effectively means GET all metric names. Any other /api/v1/label/{name}/values **are not supported**.
 
+<br/>
 
 ### **API limitations (differing from prom specification)**
 **Case sensitivity**
@@ -50,7 +53,7 @@ Any time series fetch queries (**/series** or **/query** or **/query_range)** mu
 
 **/series** API fetches data only for 12 hours time range. If endTime is not provided, endTime = time.now().
 
-**range selectors** (time range baked in query itself) supports 15d. We are evaluating if we can increase this to 30d.
+**range selectors** (lookback/time range baked in query itself) supports 30d. Note that time range selected via time picker in Grafana adds up to the lookback present in range selector in the query. The total time range shouldn't exceed 30 days.
 
     Note: These supported time ranges are subject to change as we are still experimenting.
 

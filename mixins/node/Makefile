@@ -22,7 +22,7 @@ lint: node_alerts.yaml node_rules.yaml
 			$(JSONNET_FMT) "$$f" | diff -u "$$f" -; \
 		done
 
-	promtool check rules node_alerts.yaml node_rules.yaml
+#	promtool check rules node_alerts.yaml node_rules.yaml
 
 .PHONY: jb_install
 jb_install:

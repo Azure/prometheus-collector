@@ -2,73 +2,56 @@ package main
 
 import (
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/consumer/consumererror"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
-	"go.opentelemetry.io/collector/processor/filterprocessor"
-	"go.opentelemetry.io/collector/processor/memorylimiter"
-	"go.opentelemetry.io/collector/processor/resourceprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
-	"go.opentelemetry.io/collector/exporter/prometheusexporter"
-	"go.opentelemetry.io/collector/exporter/fileexporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
-	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 	//"github.com/vishiy/influxexporter"
 	//"go.opentelemetry.io/collector/receiver/prometheusreceiver"
 	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 	//"go.opentelemetry.io/collector/extension/healthcheckextension"
-	"go.opentelemetry.io/collector/extension/pprofextension"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
 )
 
 func components() (component.Factories, error) {
-	var errs []error
+  var err error
+	factories := component.Factories{}
 
-	processors, err := component.MakeProcessorFactoryMap (
+	factories.Processors, err = component.MakeProcessorFactoryMap(
 		batchprocessor.NewFactory(),
-		memorylimiter.NewFactory(),
 		resourceprocessor.NewFactory(),
-		filterprocessor.NewFactory(),
 	)
-
 	if err != nil {
-		errs = append(errs,err)
+		return component.Factories{}, err
 	}
 
-	receivers, err := component.MakeReceiverFactoryMap (
+	factories.Receivers, err = component.MakeReceiverFactoryMap(
 		privatepromreceiver.NewFactory(),
 	)
-
 	if err != nil {
-		errs = append(errs,err)
+		return component.Factories{}, err
 	}
 
-	exporters, err := component.MakeExporterFactoryMap (
+	factories.Exporters, err = component.MakeExporterFactoryMap(
 		loggingexporter.NewFactory(),
-		prometheusexporter.NewFactory(),
-		fileexporter.NewFactory(),
 		otlpexporter.NewFactory(),
-		otlphttpexporter.NewFactory(),
-		//influxexporter.NewFactory(),
+		fileexporter.NewFactory(),
+		prometheusexporter.NewFactory(),
 	)
-
 	if err != nil {
-		errs = append(errs,err)
+		return component.Factories{}, err
 	}
 
-	extensions, err := component.MakeExtensionFactoryMap (
-		//healthcheckextension.NewFactory(),
+	factories.Extensions, err = component.MakeExtensionFactoryMap(
 		pprofextension.NewFactory(),
 		zpagesextension.NewFactory(),
 	)
-
 	if err != nil {
-		errs = append(errs,err)
+		return component.Factories{}, err
 	}
-	factories := component.Factories{
-		Processors : processors,
-		Receivers : receivers,
-		Exporters : exporters,
-		Extensions : extensions,
-	}
-	return factories, consumererror.Combine(errs)
+
+	return factories, nil
 }
