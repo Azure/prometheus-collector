@@ -1,0 +1,47 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "variables": {},
+    "resources": [
+        {
+            "name": "sohamtest3_sohamclusterci_rulegroup_6",
+            "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+            "apiVersion": "2021-07-22-preview",
+            "location": "eastus2euap",
+            "properties": {
+                "description": "rule group for cluster sohamcluster",
+                "scopes": [
+                    "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourcegroups/sohamTestKV/providers/microsoft.monitor/accounts/sohamtest3"
+                ],
+                "interval": "PT5M",
+                "rules": [
+                    {
+                        "alert": "Average CPU usage per container is greater than 95%",
+                        "expression": "sum (rate(container_cpu_usage_seconds_total{cluster = \"sohamcluster\",name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}[5m])) by (pod_name, container,cluster,namespace) / sum(container_spec_cpu_quota{cluster = \"sohamcluster\",name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}/container_spec_cpu_period{cluster = \"sohamcluster\",name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}) by (pod_name, container,cluster,namespace) >200",
+                        "for": "PT5M",
+                        "labels": {
+                            "cluster": "sohamcluster"
+                        },
+                        "annotations": {
+                            "description": "Average CPU usage per container is greater than 95%"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT15M"
+                        },
+                        "actions": [
+                            {
+                                "ActionProperties": {
+                                    "Icm.Enabled": "True",
+                                    "Icm.Title": "Average CPU usage for container is greater than 95% in cluster: {{$labels.cluster}} for container: {{$labels.container}}"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}
