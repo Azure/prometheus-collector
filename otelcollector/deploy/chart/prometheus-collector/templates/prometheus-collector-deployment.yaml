@@ -97,6 +97,10 @@ spec:
               value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
             - name: KUBE_STATE_VERSION
               value: "{{ index .Values "kube-state-metrics" "image" "repository" }}:{{ index .Values "kube-state-metrics" "image" "tag" }}"
+            - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
+              value: "{{ index .Values "kube-state-metrics" "metricLabelsAllowlist" | join "," }}"
+            - name: KUBE_STATE_METRICS_ANNOTATIONS
+              value: "{{ index .Values "kube-state-metrics" "metricAnnotationsAllowList" | join "," }}" 
             - name: NODE_EXPORTER_VERSION
               value: "{{ index .Values "prometheus-node-exporter" "image" "repository" }}:{{ index .Values "prometheus-node-exporter" "image" "tag" }}"
             - name: HELM_RELEASE_NAME
