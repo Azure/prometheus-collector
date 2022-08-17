@@ -5,6 +5,9 @@
 # -- when true, ingestion will be based on Monitor account & DCR(s)
 useMonitoringAccount: false
 
+# -- when set to a string, this will be used as 'cluster' label's value in every time-series scraped & ingested (for both MAC & non-MAC based ingestion). When not specified , for non-MAC , clusterName parameter will be used as value of cluster label, and for MAC, the last part of the cluster's ARM resourceID will be used as value of cluster label.
+clusterAlias: ""
+
 # -- required & used only when useMonitoringAccount=true. This is the full ARM ResourceId for the Kubernetes cluster that is going to be monitoring with this chart
 azureResourceId: ""
 
@@ -79,6 +82,10 @@ internalSettings:
   intEnvironment: false
   clusterOverride: false
 
+# Only enable to view metrics being scraped for a short time. This can affect performance so it should not be enabled when not in use
+debugMode:
+  enabled: false
+
 #if advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset
 mode:
   advanced: false
@@ -95,6 +102,9 @@ image:
 
 # -- Applies additional labels to all pods.
 podLabels: {}
+
+# -- Applies additional labels to all pods.
+podAnnotations: {}
 
 resources:
  deployment:

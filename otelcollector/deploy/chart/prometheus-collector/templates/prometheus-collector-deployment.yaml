@@ -27,6 +27,7 @@ spec:
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
+        {{- with .Values.podAnnotations }}{{ toYaml . | trim | nindent 8 }}{{- end }}
     spec:
       serviceAccountName: {{ template "prometheus-collector.fullname" . }}-serviceaccount
       containers:

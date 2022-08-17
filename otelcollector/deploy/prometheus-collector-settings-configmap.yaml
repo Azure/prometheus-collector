@@ -9,6 +9,7 @@ data:
     ver1
   prometheus-collector-settings: |-
     default_metric_account_name = "mymetricaccountname"
+    cluster_alias = ""
   default-scrape-settings-enabled: |-
     kubelet = true
     coredns = true
@@ -30,6 +31,8 @@ data:
     nodeexporter = ""
     windowsexporter = ""
     windowskubeproxy = ""
+  debug-mode: |-
+    enabled = false
 metadata:
   name: prometheus-collector-settings-configmap
   namespace: kube-system
