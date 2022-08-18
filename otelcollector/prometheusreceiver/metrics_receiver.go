@@ -135,17 +135,17 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 	}
 	go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 	webHandler := web.New(go_kit_logger, &webOptions)
-
+	
 	listener, err := webHandler.Listener()
 	if err != nil {
 		return err
 	}
-
+	
 	// Pass config and let the web handler know the config is ready.
 	// These are needed because Prometheus allows reloading the config without restarting.
 	webHandler.ApplyConfig(r.cfg.PrometheusConfig)
 	webHandler.SetReady(true)
-
+	
 	// Uses the same context as the discovery and scrape managers for shutting down
 	go func() {
 		if err := webHandler.Run(discoveryCtx, listener, ""); err != nil {
