@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - grace/double-telemetry-logs-fix
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
