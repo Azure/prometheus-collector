@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - grace/official-me
+      - grace/official-me-drop
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
