@@ -82,6 +82,8 @@ sudo apt-get install td-agent-bit=1.7.8 -y
 # setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
+# The commented out section is necessary if downloading ME package from Github
+# Uncomment this section and comment out the installation further down
 # Moving ME installation to the end until we fix the broken dependencies issue
 #sudo apt-get install -y apt-transport-https gnupg
 #wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2022.628.2309-817fc7-_focal_amd64.deb
@@ -89,6 +91,7 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 # # Install ME
 #/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
+# Necessary if downloading package from github instead of a package manager
 # # Fixing broken installations in order to get a clean ME install
 #sudo apt --fix-broken install -y
 
