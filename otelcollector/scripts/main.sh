@@ -161,7 +161,7 @@ service cron restart > /dev/null
 #get controller kind in lowercase, trimmed
 controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
 if [ $controllerType = "replicaset" ]; then
-   fluentBitConfigFile="/opt/fluent-bit/fluent-bit-replicaset.conf"
+   fluentBitConfigFile="/opt/fluent-bit/fluent-bit.conf"
    if [ "$CLUSTER_OVERRIDE" = "true" ]; then
       meConfigFile="/usr/sbin/me_internal.config"
    else
