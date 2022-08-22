@@ -64,6 +64,8 @@ azureKeyVault:
   name: "" #required
   # -- tenantid for the azure key vault resource
   tenantId: "" #required
+  # -- cloudName for the azure key vault resource
+  cloudName: "" # optional for public cloud.
   # -- clientid for a service principal that has access to read the Pfx certificates from keyvault specified above
   clientId: "" #required when using service principal to access keyvault
   # -- client secret for the above service principal
