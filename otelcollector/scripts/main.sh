@@ -32,12 +32,6 @@ echo_var "MODE" "$MODE"
 echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
 
-if [ $MODE == 'simple' ] || [[ $MODE == 'advanced' && $CONTROLLER_TYPE == 'DaemonSet' ]]; then
-  export NANO_CORE_COUNT=$(curl -s -k -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://$NODE_IP:10250/stats/summary | jq '.node.cpu.usageNanoCores')
-  echo "export NANO_CORE_COUNT=$NANO_CORE_COUNT" >> ~/.bashrc
-  source ~/.bashrc
-fi
-
 #set agent config schema version
 if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
       #trim

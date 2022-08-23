@@ -12,7 +12,7 @@ ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
 ENV MALLOC_ARENA_MAX=2
 COPY ./logrotate/prometheus-collector /etc/logrotate.d/
-RUN apt-get update && apt-get install -y libc-bin wget openssl curl sudo init-system-helpers net-tools cron vim apt-transport-https locales ruby gnupg logrotate ucf jq
+RUN apt-get update && apt-get install -y libc-bin wget openssl curl sudo init-system-helpers net-tools cron vim apt-transport-https locales ruby gnupg logrotate ucf
 RUN apt-get upgrade libsystemd0 -y
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
 COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/

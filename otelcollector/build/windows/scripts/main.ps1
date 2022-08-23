@@ -236,9 +236,6 @@ function Set-EnvironmentVariablesAndConfigParser {
     [System.Environment]::SetEnvironmentVariable("CONTAINER_CPU_LIMIT", $env:CONTAINER_CPU_LIMIT, "Machine")
     [System.Environment]::SetEnvironmentVariable("CONTAINER_MEMORY_LIMIT", $env:CONTAINER_MEMORY_LIMIT, "Machine")
 
-    $nano_core_count=$(Invoke-WebRequest -Headers @{'Authorization' = "Bearer $(Get-Content /var/run/secrets/kubernetes.io/serviceaccount/token)" } -Uri "https://${env:NODE_IP}:10250/stats/summary"  -UseBasicParsing | jq '.node.cpu.usageNanoCores')
-    [System.Environment]::SetEnvironmentVariable("NANO_CORE_COUNT", $nano_core_count, "Process")
-    [System.Environment]::SetEnvironmentVariable("NANO_CORE_COUNT", $nano_core_count, "Machine")
 }
 
 function Start-Fluentbit {
