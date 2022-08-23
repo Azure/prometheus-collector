@@ -250,6 +250,7 @@ func SendCoreCountToAppInsightsMetrics() {
 
 		nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
+			SendException(fmt.Sprintf("Error while getting the nodes list for cores attached telemetry: %v\n", err))
 			continue
 		}
 
