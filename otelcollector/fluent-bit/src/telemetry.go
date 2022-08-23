@@ -52,6 +52,8 @@ var (
 )
 
 const (
+	coresAttachedTelemetryIntervalSeconds = 600
+	coresAttachedTelemetryName            = "NodeCoreCapacityTotal"
 	envAgentVersion                       = "AGENT_VERSION"
 	envControllerType                     = "CONTROLLER_TYPE"
 	envNodeIP                             = "NODE_IP"
@@ -239,7 +241,7 @@ func SendCoreCountToAppInsightsMetrics() {
 		SendException(fmt.Sprintf("Error while creating the golang client for cores attached telemetry: %v\n", err))
 	}
 
-	coreCountTelemetryTicker := time.NewTicker(time.Second * time.Duration(60))
+	coreCountTelemetryTicker := time.NewTicker(time.Second * time.Duration(coresAttachedTelemetryIntervalSeconds))
 	for ; true; <-coreCountTelemetryTicker.C {
 		cpuCapacityTotalLinux := int64(0)
 		cpuCapacityTotalWindows := int64(0)
@@ -276,9 +278,9 @@ func SendCoreCountToAppInsightsMetrics() {
 
 		// Send metric to app insights for node and core capacity
 		cpuCapacityTotal := float64(cpuCapacityTotalLinux + cpuCapacityTotalWindows)
-		metricTelemetryItem := appinsights.NewMetricTelemetry("NodeCoreCapacityTotal", cpuCapacityTotal)
+		metricTelemetryItem := appinsights.NewMetricTelemetry(coresAttachedTelemetryName, cpuCapacityTotal)
 
-		// Abreviated properties to save telemetry cost
+		// Abbreviated properties to save telemetry cost
 		metricTelemetryItem.Properties["LiCapacity"] = fmt.Sprintf("%d", cpuCapacityTotalLinux)
 		metricTelemetryItem.Properties["LiNodeCnt"] = fmt.Sprintf("%d", linuxNodeCount)
 		metricTelemetryItem.Properties["WiCapacity"] = fmt.Sprintf("%d", cpuCapacityTotalWindows)
