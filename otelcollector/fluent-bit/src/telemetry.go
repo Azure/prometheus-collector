@@ -10,9 +10,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+	"context"
 
 	yaml "gopkg.in/yaml.v2"
 
+	//"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
@@ -222,6 +228,37 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	}
 
 	return 0, nil
+}
+
+// SendCoreCountToAppInsightsMetrics is a go-routine that flushes the data periodically (every 10 mins to App Insights)
+func SendCoreCountToAppInsightsMetrics() {
+	CoreCountTelemetryTicker := time.NewTicker(time.Second * time.Duration(60))
+
+	// creates the in-cluster config
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		panic(err.Error())
+	}
+	// creates the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	for ; true; <-CoreCountTelemetryTicker.C {
+
+		cpuCapacityTotal := int64(0)
+		nodeList, _ := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+		nodes := nodeList.Items
+		for _, node := range nodes {
+	  	cpu := node.Status.Capacity["cpu"]
+			cpuCapacityTotal += cpu.Value()
+		}
+
+		metricTelemetryItem := appinsights.NewMetricTelemetry("NodeCoreCapacityTotal", float64(cpuCapacityTotal))
+		metricTelemetryItem.Properties["NodeTotal"] = fmt.Sprintf("%d", (len(nodes)))
+		TelemetryClient.Track(metricTelemetryItem)
+	}
 }
 
 func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, severityLevel contracts.SeverityLevel, tag string) int {
