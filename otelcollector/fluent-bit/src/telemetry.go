@@ -53,7 +53,7 @@ var (
 
 const (
 	coresAttachedTelemetryIntervalSeconds = 600
-	coresAttachedTelemetryName            = "NodeCoreCapacityTotal"
+	coresAttachedTelemetryName            = "ClusterCoreCapacity"
 	envAgentVersion                       = "AGENT_VERSION"
 	envControllerType                     = "CONTROLLER_TYPE"
 	envNodeIP                             = "NODE_IP"
@@ -255,15 +255,16 @@ func SendCoreCountToAppInsightsMetrics() {
 
 		// Get core and node count by OS
 		for _, node := range nodeList.Items {
+			osLabel := ""
 			if node.Labels == nil {
 				SendException(fmt.Sprintf("Labels are missing for the node: %s when getting core capacity", node.Name))
-				continue
+			} else {
+				osLabel = node.Labels["kubernetes.io/os"]
 			}
-			osLabel := node.Labels["kubernetes.io/os"]
 
 			if node.Status.Capacity == nil {
 				SendException(fmt.Sprintf("Capacity is missing for the node: %s when getting core capacity", node.Name))
-			  continue
+				continue
 			}
 			cpu := node.Status.Capacity["cpu"]
 
