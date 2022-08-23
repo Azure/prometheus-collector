@@ -230,33 +230,62 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	return 0, nil
 }
 
-// SendCoreCountToAppInsightsMetrics is a go-routine that flushes the data periodically (every 10 mins to App Insights)
+// Send count of cores/nodes attached to Application Insights periodically
 func SendCoreCountToAppInsightsMetrics() {
-	CoreCountTelemetryTicker := time.NewTicker(time.Second * time.Duration(60))
-
-	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		panic(err.Error())
+		SendException(fmt.Sprintf("Error while getting the credentials for the golang client for cores attached telemetry: %v\n", err))
 	}
-	// creates the clientset
-	clientset, err := kubernetes.NewForConfig(config)
+	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		SendException(fmt.Sprintf("Error while creating the golang client for cores attached telemetry: %v\n", err))
 	}
 
-	for ; true; <-CoreCountTelemetryTicker.C {
+	coreCountTelemetryTicker := time.NewTicker(time.Second * time.Duration(60))
+	for ; true; <-coreCountTelemetryTicker.C {
+		cpuCapacityTotalLinux := int64(0)
+		cpuCapacityTotalWindows := int64(0)
+		linuxNodeCount := 0
+		windowsNodeCount := 0
 
-		cpuCapacityTotal := int64(0)
-		nodeList, _ := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-		nodes := nodeList.Items
-		for _, node := range nodes {
-	  	cpu := node.Status.Capacity["cpu"]
-			cpuCapacityTotal += cpu.Value()
+		nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			continue
 		}
 
-		metricTelemetryItem := appinsights.NewMetricTelemetry("NodeCoreCapacityTotal", float64(cpuCapacityTotal))
-		metricTelemetryItem.Properties["NodeTotal"] = fmt.Sprintf("%d", (len(nodes)))
+		// Get core and node count by OS
+		for _, node := range nodeList.Items {
+			if node.Labels == nil {
+				SendException(fmt.Sprintf("Labels are missing for the node: %s when getting core capacity", node.Name))
+				continue
+			}
+			osLabel := node.Labels["kubernetes.io/os"]
+
+			if node.Status.Capacity == nil {
+				SendException(fmt.Sprintf("Capacity is missing for the node: %s when getting core capacity", node.Name))
+			  continue
+			}
+			cpu := node.Status.Capacity["cpu"]
+
+			if osLabel == "windows" {
+				cpuCapacityTotalWindows += cpu.Value()
+				windowsNodeCount += 1
+			} else {
+				cpuCapacityTotalLinux += cpu.Value()
+				linuxNodeCount += 1
+			}
+		}
+
+		// Send metric to app insights for node and core capacity
+		cpuCapacityTotal := float64(cpuCapacityTotalLinux + cpuCapacityTotalWindows)
+		metricTelemetryItem := appinsights.NewMetricTelemetry("NodeCoreCapacityTotal", cpuCapacityTotal)
+
+		// Abreviated properties to save telemetry cost
+		metricTelemetryItem.Properties["LiCapacity"] = fmt.Sprintf("%d", cpuCapacityTotalLinux)
+		metricTelemetryItem.Properties["LiNodeCnt"] = fmt.Sprintf("%d", linuxNodeCount)
+		metricTelemetryItem.Properties["WiCapacity"] = fmt.Sprintf("%d", cpuCapacityTotalWindows)
+		metricTelemetryItem.Properties["WiNodeCnt"] = fmt.Sprintf("%d", windowsNodeCount)
+
 		TelemetryClient.Track(metricTelemetryItem)
 	}
 }
