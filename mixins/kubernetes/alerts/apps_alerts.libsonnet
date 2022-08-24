@@ -1,6 +1,7 @@
 {
   _config+:: {
     kubeStateMetricsSelector: error 'must provide selector for kube-state-metrics',
+    kubeJobTimeoutDuration: error 'must provide value for kubeJobTimeoutDuration',
     namespaceSelector: null,
     prefixedNamespaceSelector: if self.namespaceSelector != null then self.namespaceSelector + ',' else '',
   },
@@ -26,15 +27,15 @@
           },
           {
             // We wrap kube_pod_owner with the topk() aggregator to ensure that
-            // every (namespace, pod) tuple is unique even if the "owner_kind"
+            // every (namespace, pod, %(clusterLabel)s) tuple is unique even if the "owner_kind"
             // label exists for 2 values. This avoids "many-to-many matching
             // not allowed" errors when joining with kube_pod_status_phase.
             expr: |||
-              sum by (namespace, pod) (
-                max by(namespace, pod) (
+              sum by (namespace, pod, %(clusterLabel)s) (
+                max by(namespace, pod, %(clusterLabel)s) (
                   kube_pod_status_phase{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, phase=~"Pending|Unknown"}
-                ) * on(namespace, pod) group_left(owner_kind) topk by(namespace, pod) (
-                  1, max by(namespace, pod, owner_kind) (kube_pod_owner{owner_kind!="Job"})
+                ) * on(namespace, pod, %(clusterLabel)s) group_left(owner_kind) topk by(namespace, pod, %(clusterLabel)s) (
+                  1, max by(namespace, pod, owner_kind, %(clusterLabel)s) (kube_pod_owner{owner_kind!="Job"})
                 )
               ) > 0
             ||| % $._config,
@@ -167,7 +168,7 @@
                    !=
                   0
                 ) or (
-                  kube_daemonset_updated_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
+                  kube_daemonset_status_updated_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                    !=
                   kube_daemonset_status_desired_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                 ) or (
@@ -176,7 +177,7 @@
                   kube_daemonset_status_desired_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                 )
               ) and (
-                changes(kube_daemonset_updated_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}[5m])
+                changes(kube_daemonset_status_updated_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}[5m])
                   ==
                 0
               )
@@ -192,7 +193,7 @@
           },
           {
             expr: |||
-              sum by (namespace, pod, container) (kube_pod_container_status_waiting_reason{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}) > 0
+              sum by (namespace, pod, container, %(clusterLabel)s) (kube_pod_container_status_waiting_reason{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}) > 0
             ||| % $._config,
             labels: {
               severity: 'warning',
@@ -203,34 +204,6 @@
             },
             'for': '1h',
             alert: 'KubeContainerWaiting',
-          },
-          {
-            expr: |||
-              sum by (namespace, pod, container, cluster) (kube_pod_container_status_restarts_total{job="kube-state-metrics", cluster= "$cluster"}) > 0 
-            ||| % $._config,
-            labels: {
-              severity: 'warning',
-            },
-            annotations: {
-              description: 'container {{ $labels.container}} has been restarted in the last 1 hour.',
-              summary: 'Pod container restarted in last 1 hour',
-            },
-            'for': '1h',
-            alert: 'KubeContainerRestart',
-          },
-          {
-            expr: |||
-              sum by (namespace,cluster,container,pod)(kubelet_volume_stats_used_bytes{job="kubelet", cluster="$cluster"}) / sum by (namespace,cluster,container,pod)(kubelet_volume_stats_capacity_bytes{job="kubelet", cluster="$cluster"})>.8 
-            ||| % $._config,
-            labels: {
-              severity: 'warning',
-            },
-            annotations: {
-              description: 'Average PV usage is greater than 80%',
-              summary: 'Average PV usage is greater than 80%',
-            },
-            'for': '1h',
-            alert: 'KubePersistentVolumeFillingUp',
           },
           {
             alert: 'KubeDaemonSetNotScheduled',
@@ -263,16 +236,17 @@
             'for': '15m',
           },
           {
-            alert: 'KubeJobCompletion',
+            alert: 'KubeJobNotCompleted',
             expr: |||
-              kube_job_spec_completions{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s} - kube_job_status_succeeded{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}  > 0
+              time() - max by(namespace, job_name, %(clusterLabel)s) (kube_job_status_start_time{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
+                and
+              kube_job_status_active{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s} > 0) > %(kubeJobTimeoutDuration)s
             ||| % $._config,
-            'for': '12h',
             labels: {
               severity: 'warning',
             },
             annotations: {
-              description: 'Job {{ $labels.namespace }}/{{ $labels.job_name }} is taking more than 12 hours to complete.',
+              description: 'Job {{ $labels.namespace }}/{{ $labels.job_name }} is taking more than {{ "%(kubeJobTimeoutDuration)s" | humanizeDuration }} to complete.' % $._config,
               summary: 'Job did not complete in time',
             },
           },
