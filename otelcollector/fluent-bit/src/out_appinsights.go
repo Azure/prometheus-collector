@@ -32,6 +32,7 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
 		go ExposePrometheusCollectorHealthMetrics()
 	}
+	go SendCoreCountToAppInsightsMetrics()
 
 	return output.FLB_OK
 }

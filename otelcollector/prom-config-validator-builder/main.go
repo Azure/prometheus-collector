@@ -33,6 +33,12 @@ type OtelConfig struct {
 				Receivers interface{} `yaml:"receivers"`
 			} `yaml:"metrics"`
 		} `yaml:"pipelines"`
+		Telemetry struct {
+			Logs struct {
+				Level interface{} `yaml:"level"`
+				Encoding interface{} `yaml:"encoding"`
+			} `yaml:"logs"`
+		} `yaml:"telemetry"`
 	} `yaml:"service"`
 }
 
