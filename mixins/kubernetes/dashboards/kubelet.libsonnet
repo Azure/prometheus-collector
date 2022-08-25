@@ -284,6 +284,7 @@ local statPanel = grafana.statPanel;
         )
         .addTarget(prometheus.target('go_goroutines{%(clusterLabel)s="$cluster",%(kubeletSelector)s,instance=~"$instance"}' % $._config, legendFormat='{{instance}}'));
 
+      local uid = ($._config.grafanaDashboardIDs['kubelet.json']);
 
       dashboard.new(
         '%(dashboardNamePrefix)sKubelet' % $._config.grafanaK8s,
