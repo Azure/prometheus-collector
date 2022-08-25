@@ -481,7 +481,7 @@ local table = grafana70.panel.table;
       dashboard.new(
         '%sNodes' % config.dashboardNamePrefix,
         time_from='now-1h',
-        uid=($._config.grafanaDashboardIDs['nodes.json']),
+        uid=(config.grafanaDashboardIDs['nodes.json']),
         tags=(config.dashboardTags),
         timezone='utc',
         refresh='30s',
@@ -493,7 +493,7 @@ local table = grafana70.panel.table;
       dashboard.new(
         '%sMacOS' % config.dashboardNamePrefix,
         time_from='now-1h',
-        uid=($._config.grafanaDashboardIDs['nodes.json']),
+        uid=(config.grafanaDashboardIDs['nodes.json']),
         tags=(config.dashboardTags),
         timezone='utc',
         refresh='30s',
