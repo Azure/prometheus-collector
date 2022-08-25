@@ -17,6 +17,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @defaultPromConfigPathPrefix = "/opt/microsoft/otelcollector/default-prom-configs/"
 @regexHashFile = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 @regexHash = {}
+@sendDSUpMetric = false
 
 @kubeletDefaultFileRsSimple = @defaultPromConfigPathPrefix + "kubeletDefaultRsSimple.yml"
 @kubeletDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "kubeletDefaultRsAdvanced.yml"
@@ -125,7 +126,7 @@ def populateDefaultPrometheusConfig
           defaultConfigs.push(@kubeletDefaultFileRsSimple)
         elsif windowsDaemonset == true
           defaultConfigs.push(@kubeletDefaultFileRsAdvancedWindowsDaemonset)
-        else
+        elsif @sendDSUpMetric == true
           defaultConfigs.push(@kubeletDefaultFileRsAdvanced)
         end
       else
@@ -157,7 +158,7 @@ def populateDefaultPrometheusConfig
             AppendMetricRelabelConfig(@cadvisorDefaultFileRsSimple, cadvisorMetricsKeepListRegex)
           end
           defaultConfigs.push(@cadvisorDefaultFileRsSimple)
-        else
+        elsif @sendDSUpMetric == true
           defaultConfigs.push(@cadvisorDefaultFileRsAdvanced)
         end
       else
@@ -202,7 +203,7 @@ def populateDefaultPrometheusConfig
       nodeexporterMetricsKeepListRegex = @regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
 
       if currentControllerType == @replicasetControllerType
-        if advancedMode == true
+        if advancedMode == true && @sendDSUpMetric == true
           contents = File.read(@nodeexporterDefaultFileRsAdvanced)
           contents = contents.gsub("$$NODE_EXPORTER_NAME$$", ENV["NODE_EXPORTER_NAME"])
           contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
@@ -260,7 +261,7 @@ def populateDefaultPrometheusConfig
         defaultConfigs.push(@windowsexporterDefaultDsFile)
       
       # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "linux"
+      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
         defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
       
       # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
@@ -294,7 +295,7 @@ def populateDefaultPrometheusConfig
         defaultConfigs.push(@windowskubeproxyDefaultDsFile)
       
       # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "linux"
+      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
         defaultConfigs.push(@windowskubeproxyDefaultRsAdvancedFile)
 
       # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
