@@ -7,6 +7,7 @@
 | azureKeyVault.clientSecret | string | Optional | `""` | client secret for the above service principal. Required when using service principal |
 | azureKeyVault.pfxCertNames | list of comma seperated strings | <mark>`Required`</mark> | `"{}"` | name of the Pfx certificate(s) - one per metric account |
 | azureKeyVault.tenantId | string | <mark>`Required`</mark> | `""` | tenantid for the azure key vault resource |
+| azureKeyVault.cloudName | string | Optional | `""` | The cloud name the keyvault exists in. The default empty string will use `AzurePublicCloud`. Other values include `AzureChinaCloud`, `AzureUSGovernment`, and `AzureGermanCloud`. |
 | azureKeyVault.useManagedIdentity | string | Optional | `false` | enable/disable managed identity to access keyvault |
 | azureKeyVault.aad-pod-identity | string | Optional | `""` | name of the azure pod managed identity to access keyvault, requires useManagedIdentity true |
 | azureKeyVault.userAssignedIdentityID | string | Optional | `""` | used when useManagedIdentity parameter is set to true. This specifies which user assigned managed identity to use when acccesing keyvault. If you are using a user assigned identity as managed identity, then specify the identity's client id. If empty, AND 'useManagedIdentity' is true, then defaults to use the system assigned identity on the VM |

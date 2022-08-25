@@ -82,45 +82,48 @@ sudo apt-get install td-agent-bit=1.7.8 -y
 # setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
+# The commented out section is necessary if downloading ME package from Github
+# Uncomment this section and comment out the installation further down
 # Moving ME installation to the end until we fix the broken dependencies issue
-sudo apt-get install -y apt-transport-https gnupg
-wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2022.628.2309-817fc7-_focal_amd64.deb
+#sudo apt-get install -y apt-transport-https gnupg
+#wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2_2.2022.628.2309-817fc7-_focal_amd64.deb
 
 # # Install ME
-/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+#/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
+# Necessary if downloading package from github instead of a package manager
 # # Fixing broken installations in order to get a clean ME install
-sudo apt --fix-broken install -y
+#sudo apt --fix-broken install -y
 
 # # Installing ME again after fixing broken dependencies
-/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
+#/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb
 
 # Installing ME
-#echo "Installing Metrics Extension..."
-#sudo apt-get install -y apt-transport-https gnupg
+echo "Installing Metrics Extension..."
+sudo apt-get install -y apt-transport-https gnupg
 
 # Accept Microsoft public keys
-#wget -qO - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-#wget -qO - https://packages.microsoft.com/keys/msopentech.asc | sudo apt-key add -
+wget -qO - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+wget -qO - https://packages.microsoft.com/keys/msopentech.asc | sudo apt-key add -
 
 # Source information on OS distro and code name
-#. /etc/os-release
+. /etc/os-release
 
-#if [ "$ID" = ubuntu ]; then
-#    REPO_NAME=azurecore
-#elif [ "$ID" = debian ]; then
-#    REPO_NAME=azurecore-debian
-#else
-#    echo "Unsupported distribution: $ID"
-#    exit 1
-#fi
+if [ "$ID" = ubuntu ]; then
+    REPO_NAME=azurecore
+elif [ "$ID" = debian ]; then
+    REPO_NAME=azurecore-debian
+else
+    echo "Unsupported distribution: $ID"
+    exit 1
+fi
 
 # Add azurecore repo and update package list
-#echo "deb [arch=amd64] https://packages.microsoft.com/repos/$REPO_NAME $VERSION_CODENAME main" | sudo tee -a /etc/apt/sources.list.d/azure.list
-#sudo apt-get update
+echo "deb [arch=amd64] https://packages.microsoft.com/repos/$REPO_NAME $VERSION_CODENAME main" | sudo tee -a /etc/apt/sources.list.d/azure.list
+sudo apt-get update
 
 # Pinning to the latest stable version of ME
-#sudo apt-get install -y metricsext2=2.2022.312.2300-d1b4f6-~focal
+sudo apt-get install -y metricsext2=2.2022.811.1333-d2565c-~focal
 
 #wget https://rashmi.blob.core.windows.net/rashmi-mac-mdsd/metricsext2_2.2022.201.001-9e07c0-_focal_amd64.deb
 #/usr/bin/dpkg -i $TMPDIR/metricsext2*.deb

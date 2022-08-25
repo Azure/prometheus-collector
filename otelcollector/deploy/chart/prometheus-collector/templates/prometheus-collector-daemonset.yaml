@@ -52,9 +52,17 @@ spec:
             - name: MAC
               value: "true"
             - name: customEnvironment
-              value: "azurepubliccloud"
+              value: {{ required "customEnvironment is required when using monitoring account" .Values.customEnvironment | toString | trim | lower | quote }}
             - name: OMS_TLD
               value: "opinsights.azure.com"
+            {{- if eq .Values.customEnvironment "arcautonomous" }}
+            - name: customRegionalEndpoint
+              value: {{ required "customRegionalEndpoint is required when using monitoring account in Arc Autonomous" .Values.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
+            - name: customGlobalEndpoint
+              value: {{ required "customGlobalEndpoint is required when using monitoring account in Arc Autonomous" .Values.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
+            - name: customResourceEndpoint
+              value: {{ required "customResourceEndpoint is required when using monitoring account in Arc Autonomous" .Values.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
+            {{- end }}
             {{- end }}
             {{- if and (.Values.internalSettings.intEnvironment) (not .Values.useMonitoringAccount) }}
             - name: ME_ADDITIONAL_FLAGS

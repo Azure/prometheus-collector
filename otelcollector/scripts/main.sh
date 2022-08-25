@@ -161,12 +161,14 @@ service cron restart > /dev/null
 #get controller kind in lowercase, trimmed
 controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
 if [ $controllerType = "replicaset" ]; then
+   fluentBitConfigFile="/opt/fluent-bit/fluent-bit.conf"
    if [ "$CLUSTER_OVERRIDE" = "true" ]; then
       meConfigFile="/usr/sbin/me_internal.config"
    else
       meConfigFile="/usr/sbin/me.config"
    fi
 else
+   fluentBitConfigFile="/opt/fluent-bit/fluent-bit-daemonset.conf"
    if [ "$CLUSTER_OVERRIDE" = "true" ]; then
       meConfigFile="/usr/sbin/me_ds_internal.config"
    else
@@ -175,7 +177,9 @@ else
 fi
 
 export ME_CONFIG_FILE=$meConfigFile	
+export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile
 echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
+echo "export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile" >> ~/.bashrc
 source ~/.bashrc
 echo_var "ME_CONFIG_FILE" "$ME_CONFIG_FILE"
 
@@ -290,9 +294,10 @@ TELEGRAF_VERSION=`/opt/telegraf/telegraf --version`
 echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
 
 echo "Starting fluent-bit"
-/opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
+/opt/td-agent-bit/bin/td-agent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
 FLUENT_BIT_VERSION=`dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
+echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
 
 if [ "${MAC}" == "true" ]; then
       # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.

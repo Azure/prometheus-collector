@@ -48,9 +48,17 @@ spec:
             - name: MAC
               value: "true"
             - name: customEnvironment
-              value: "azurepubliccloud"
+              value: {{ required "customEnvironment is required when using monitoring account" .Values.customEnvironment | toString | trim | lower | quote }}
             - name: OMS_TLD
               value: "opinsights.azure.com"
+            {{- if eq .Values.customEnvironment "arcautonomous" }}
+            - name: customRegionalEndpoint
+              value: {{ required "customRegionalEndpoint is required when using monitoring account in Arc Autonomous" .Values.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
+            - name: customGlobalEndpoint
+              value: {{ required "customGlobalEndpoint is required when using monitoring account in Arc Autonomous" .Values.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
+            - name: customResourceEndpoint
+              value: {{ required "customResourceEndpoint is required when using monitoring account in Arc Autonomous" .Values.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
+            {{- end }}
             {{- end }}
             {{- if and (.Values.internalSettings.intEnvironment) (not .Values.useMonitoringAccount) }}
             - name: ME_ADDITIONAL_FLAGS
@@ -98,6 +106,10 @@ spec:
               value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
             - name: KUBE_STATE_VERSION
               value: "{{ index .Values "kube-state-metrics" "image" "repository" }}:{{ index .Values "kube-state-metrics" "image" "tag" }}"
+            - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
+              value: "{{ index .Values "kube-state-metrics" "metricLabelsAllowlist" | join "," }}"
+            - name: KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST
+              value: "{{ index .Values "kube-state-metrics" "metricAnnotationsAllowList" | join "," }}" 
             - name: NODE_EXPORTER_VERSION
               value: "{{ index .Values "prometheus-node-exporter" "image" "repository" }}:{{ index .Values "prometheus-node-exporter" "image" "tag" }}"
             - name: HELM_RELEASE_NAME
