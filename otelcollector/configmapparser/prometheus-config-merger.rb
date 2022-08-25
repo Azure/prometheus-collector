@@ -209,7 +209,7 @@ def populateDefaultPrometheusConfig
           contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
           File.open(@nodeexporterDefaultFileRsAdvanced, "w") { |file| file.puts contents }
           defaultConfigs.push(@nodeexporterDefaultFileRsAdvanced)
-        elif advancedMode == false
+        elsif advancedMode == false
           if !nodeexporterMetricsKeepListRegex.nil? && !nodeexporterMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@nodeexporterDefaultFileRsSimple, nodeexporterMetricsKeepListRegex)
           end
