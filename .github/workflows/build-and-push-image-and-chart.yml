@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - grace/ds-up-metric
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
