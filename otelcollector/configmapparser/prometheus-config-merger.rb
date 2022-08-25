@@ -124,7 +124,7 @@ def populateDefaultPrometheusConfig
             AppendMetricRelabelConfig(@kubeletDefaultFileRsSimple, kubeletMetricsKeepListRegex)
           end
           defaultConfigs.push(@kubeletDefaultFileRsSimple)
-        elsif windowsDaemonset == true
+        elsif windowsDaemonset == true && @sendDSUpMetric == true
           defaultConfigs.push(@kubeletDefaultFileRsAdvancedWindowsDaemonset)
         elsif @sendDSUpMetric == true
           defaultConfigs.push(@kubeletDefaultFileRsAdvanced)
@@ -209,7 +209,7 @@ def populateDefaultPrometheusConfig
           contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
           File.open(@nodeexporterDefaultFileRsAdvanced, "w") { |file| file.puts contents }
           defaultConfigs.push(@nodeexporterDefaultFileRsAdvanced)
-        else
+        elif advancedMode == false
           if !nodeexporterMetricsKeepListRegex.nil? && !nodeexporterMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@nodeexporterDefaultFileRsSimple, nodeexporterMetricsKeepListRegex)
           end
