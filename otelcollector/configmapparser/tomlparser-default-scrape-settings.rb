@@ -84,6 +84,11 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       puts "config::Using configmap scrape settings for windowskubeproxy: #{@windowskubeproxyEnabled}"
     end
 
+    windowsDaemonset = false
+    if ENV["WINMODE"].nil? && ENV["WINMODE"].strip.downcase == "advanced"
+      windowsDaemonset = true
+    end
+
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
       if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@kubeletEnabled && !@prometheusCollectorHealthEnabled
@@ -92,7 +97,10 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         @noDefaultsEnabled = true
       elsif controllerType == "ReplicaSet" && @sendDsUpMetric && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
-      elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@prometheusCollectorHealthEnabled
+      elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@prometheusCollectorHealthEnabled
+        @noDefaultsEnabled = true
+      # Windows daemonset is not enabled so Windows kube-proxy and node-exporter are scraped from replica
+      elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && !windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
       end
     elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
