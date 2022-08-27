@@ -23,7 +23,7 @@ jobs:
       - name: Set-Go-Version
         uses: actions/setup-go@v3
         with:
-          go-version: '1.17'
+          go-version: '1.19'
       - name: Print-Go-Version
         run: go version
       - name: Set-Env
@@ -97,7 +97,7 @@ jobs:
       - name: Set-Go-Version
         uses: actions/setup-go@v3
         with:
-          go-version: '1.17'
+          go-version: '1.19'
       - name: Print-Go-Version
         run: go version
       - name: Set-Env
@@ -326,7 +326,7 @@ jobs:
         run: rm -rf ~/.kube/ && mkdir ~/.kube/ && echo "${{ steps.GetKubeConfig-mac.outputs.ci-dev-aks-mac-eus-kubeconfig }}" > ~/.kube/config
       - name: Deploy-to-dev-cluster-mac
         if: env.BRANCH_NAME == 'main'
-        run: helm pull oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} && helm upgrade --install prom-dev-mac ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set useMonitoringAccount=true --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set mode.advanced=true --set windowsDaemonset=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set azureResourceId="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus" --set azureResourceRegion="eastus" -n kube-system --create-namespace
+        run: helm pull oci://${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY_HELM }} --version ${{ env.HELM_SEMVER }} && helm upgrade --install prom-dev-mac ./${{ env.HELM_CHART_NAME }}-${{ env.HELM_SEMVER }}.tgz --dependency-update --set image.repository=${{ env.MCR_REGISTRY }}${{ env.MCR_REPOSITORY }} --set image.tag=${{ env.IMAGE_TAG }} --set useMonitoringAccount=true --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.coreDns="false" --set scrapeTargets.kubeProxy="false" --set scrapeTargets.apiServer="false" --set scrapeTargets.prometheusCollectorHealth="true" --set mode.advanced=true --set windowsDaemonset=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set azureResourceId="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus" --set azureResourceRegion="eastus" -n kube-system --create-namespace
       - name: Tag-this-push
         if: env.BRANCH_NAME == 'main'
         id: tag_version
