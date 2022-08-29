@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM mcr.microsoft.com/mirror/docker/library/ubuntu:20.04
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="omscontainers@microsoft.com"
 # ARG IMAGE_TAG="test"
