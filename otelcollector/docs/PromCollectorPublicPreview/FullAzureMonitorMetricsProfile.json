@@ -1,0 +1,199 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "azureMonitorWorkspaceResourceId": {
+      "type": "string"
+    },
+    "azureMonitorWorkspaceLocation": {
+      "type": "string",
+      "defaultValue": "",
+      "allowedValues": [
+        "eastus2euap",
+        "centraluseuap",
+        "centralus",
+        "eastus",
+        "eastus2",
+        "northeurope",
+        "southcentralus",
+        "southeastasia",
+        "uksouth",
+        "westeurope",
+        "westus",
+        "westus2"
+      ]
+    },
+    "AKSSubId": {
+      "type": "string"
+    },
+    "AKSRg": {
+      "type": "string"
+    },
+    "AKSClusterName": {
+      "type": "string"
+    },
+    "GrafanaResourceId": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "dceName": {
+      "type": "string",
+      "defaultValue": "[concat('MSProm-', parameters('azureMonitorWorkspaceLocation'), '-', parameters('AKSClusterName')))]"
+    },
+    "dcrName": {
+      "type": "string",
+      "defaultValue": "[concat('MSProm-', parameters('azureMonitorWorkspaceLocation'), '-', parameters('AKSClusterName')))]"
+    },
+    "dcraName": {
+      "type": "string",
+      "defaultValue": "[concat('MSProm-', parameters('azureMonitorWorkspaceLocation'), '-', parameters('AKSClusterName')))]"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/dataCollectionEndpoints",
+      "apiVersion": "2021-09-01-preview",
+      "name": "[variables('dceName')]",
+      "location": "[parameters('azureMonitorWorkspaceLocation')]",
+      "kind": "Linux",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Insights/dataCollectionRules",
+      "apiVersion": "2021-09-01-preview",
+      "name": "[variables('dcrName')]",
+      "location": "[parameters('azureMonitorWorkspaceLocation')]",
+      "kind": "Linux",
+      "properties": {
+        "dataCollectionEndpointId": "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
+        "dataFlows": [
+          {
+            "destinations": ["MonitoringAccount1"],
+            "streams": ["Microsoft-PrometheusMetrics"]
+          }
+        ],
+        "dataSources": {
+          "prometheusForwarder": [
+            {
+              "name": "PrometheusDataSource",
+              "streams": ["Microsoft-PrometheusMetrics"],
+              "labelIncludeFilter": {}
+            }
+          ]
+        },
+        "description": "DCR for Azure Monitor Metrics Profile (Managed Prometheus)",
+        "destinations": {
+          "monitoringAccounts": [
+            {
+              "accountResourceId": "[parameters('azureMonitorWorkspaceResourceId')]",
+              "name": "MonitoringAccount1"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
+        "[resourceId('Microsoft.Monitor/Accounts/', parameters('azureMonitorWorkspaceLocation'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2021-04-01",
+      "name": "nestedDCRADeployment",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/dataCollectionRules/', parameters('dcrName'))]"
+      ],
+      "subscriptionId": "[parameters('AKSSubId')]",
+      "resourceGroup": "[parameters('AKSRg')]",
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "parameters": {
+          "dcrId": {
+            "value": "[resourceId('Microsoft.Insights/dataCollectionRules/', parameters('dcrName'))]"
+          },
+          "dcraName": {
+            "value": "[resourceId('Microsoft.ContainerService/managedClusters/', parameters('dcraName'))]"
+          },
+          "targetAKSResource": {
+            "value": "[parameters('targetAKSResource')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "dcrId": {
+              "type": "string"
+            },
+            "dcraName": {
+              "type": "string"
+            },
+            "targetAKSResource": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/dataCollectionRuleAssociations",
+              "apiVersion": "2021-09-01-preview",
+              "name": "[parameters('dcraName')]",
+              "scope": "[parameters('targetAKSResource')]",
+              "properties": {
+                "dataCollectionRuleId": "[parameters('dcrId')]",
+                "description": "Data collection association between DCR, DCE and target AKS resource"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "[Concat('azuremonitormetrics-profile', '-',  uniqueString(parameters('AKSClusterName')))]",
+      "apiVersion": "2022-07-02-preview",
+      "subscriptionId": "[variables('AKSSubId')]",
+      "resourceGroup": "[variables('AKSRg')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
+        "[resourceId('Microsoft.Insights/dataCollectionRules/', variables('dcrName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters/', parameters('dcraName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {},
+          "variables": {},
+          "resources": [
+              {
+                  "name": "[variables('clusterName')]",
+                  "type": "Microsoft.ContainerService/managedClusters",
+                  "location": "[parameters('aksResourceLocation')]",
+                  "tags": "[parameters('resourceTagValues')]",
+                  "apiVersion": "2018-03-31",
+                  "properties": {
+                    "mode": "Incremental",
+                    "id": "[parameters('aksResourceId')]",
+                    "azureMonitorProfile": {
+                      "metrics": {
+                        "enabled": true,
+                        "kubeStateMetrics": {
+                          "metricLabelsAllowlist": "",
+                          "metricAnnotationsAllowList": ""
+                        }
+                      }
+                    }
+                  }
+              }
+          ]
+        },
+        "parameters": {}
+      }
+  }
+  ]
+}

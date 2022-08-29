@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "azureMonitorWorkspaceResourceId": {
+      "value": "/subscriptions/<SubscriptionId>/resourcegroups/<ResourceGroup>/providers/microsoft.monitor/accounts/<ResourceName>"
+    },
+    "azureMonitorWorkspaceLocation": {
+      "value": "<amwLocation>"
+    },
+    "AKSSubId": {
+      "value": "<aksClusterSubscription"
+    },
+    "AKSRg": {
+      "value": "<clusterResourceGroup>"
+    },
+    "AKSClusterName": {
+      "value": "<clusterName>"
+    },
+    "GrafanaResourceId": {
+      "value": "<grafanaResourceId>"
+    }
+  }
+}
