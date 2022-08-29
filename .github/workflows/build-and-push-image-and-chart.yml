@@ -3,10 +3,12 @@ on:
   push:
     branches:
       - main
+      - stdoutlogtest
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
       - main
+      
 jobs:
   WINDOWS-build-and-push-image:
     runs-on: windows-2019
