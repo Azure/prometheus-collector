@@ -98,6 +98,11 @@ jobs:
     - task: CodeQL3000Init@0
       displayName: 'SDL: init codeql'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+    
+    - task: GoTool@0
+      displayName: "Build: specify golang version"
+      inputs:
+        version: '1.19'
 
     - bash: |
         sudo apt-get install build-essential -y
@@ -162,7 +167,7 @@ jobs:
     
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
-      #condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
@@ -227,10 +232,15 @@ jobs:
   variables:
     WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
   steps:
+    - task: GoTool@0
+      displayName: "Build: specify golang version"
+      inputs:
+        version: '1.19'
+
     - powershell: |
         ./makefile_windows.ps1
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "Build otelcollector, promconfigvalidator, and fluent-bit plugin"
+      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
     - powershell: |
         docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)
