@@ -17,8 +17,14 @@
     "AKSClusterName": {
       "value": "<clusterName>"
     },
+    "MetricLabelsAllowlist": {
+      "value": "<metricLabelsAllowlist>"
+    },
+    "MetricAnnotationsAllowList": {
+      "value": "<metricAnnotationsAllowList>"
+    },
     "GrafanaResourceId": {
-      "value": "<grafanaResourceId>"
+      "value": "<fullGrafanaResourceId>"
     }
   }
 }

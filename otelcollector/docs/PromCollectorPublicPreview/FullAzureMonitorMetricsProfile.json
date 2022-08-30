@@ -32,8 +32,17 @@
     "AKSClusterName": {
       "type": "string"
     },
+    "MetricLabelsAllowlist": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "MetricAnnotationsAllowList": {
+      "type": "string",
+      "defaultValue": ""
+    },
     "GrafanaResourceId": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": ""
     }
   },
   "variables": {
@@ -160,7 +169,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
         "[resourceId('Microsoft.Insights/dataCollectionRules/', variables('dcrName'))]",
-        "[resourceId('Microsoft.ContainerService/managedClusters/', parameters('dcraName'))]"
+        "[resourceId('Microsoft.Insights/dataCollectionRules/', parameters('dcraName'))]" // MIGHT NEED AN UPDATE
       ],
       "properties": {
         "mode": "Incremental",
@@ -170,30 +179,47 @@
           "parameters": {},
           "variables": {},
           "resources": [
-              {
-                  "name": "[variables('clusterName')]",
-                  "type": "Microsoft.ContainerService/managedClusters",
-                  "location": "[parameters('aksResourceLocation')]",
-                  "tags": "[parameters('resourceTagValues')]",
-                  "apiVersion": "2018-03-31",
-                  "properties": {
-                    "mode": "Incremental",
-                    "id": "[parameters('aksResourceId')]",
-                    "azureMonitorProfile": {
-                      "metrics": {
-                        "enabled": true,
-                        "kubeStateMetrics": {
-                          "metricLabelsAllowlist": "",
-                          "metricAnnotationsAllowList": ""
-                        }
-                      }
+            {
+              "name": "[variables('clusterName')]",
+              "type": "Microsoft.ContainerService/managedClusters",
+              "location": "[parameters('aksResourceLocation')]",
+              "tags": "[parameters('resourceTagValues')]",
+              "apiVersion": "2018-03-31",
+              "properties": {
+                "mode": "Incremental",
+                "id": "[parameters('aksResourceId')]",
+                "azureMonitorProfile": {
+                  "metrics": {
+                    "enabled": true,
+                    "kubeStateMetrics": {
+                      "metricLabelsAllowlist": "[parameters('MetricLabelsAllowlist')]",
+                      "metricAnnotationsAllowList": "[parameters('MetricAnnotationsAllowList')]"
                     }
                   }
+                }
               }
+            }
           ]
         },
         "parameters": {}
       }
-  }
+    },
+    {
+      "type": "Microsoft.Dashboard/grafana",
+      "apiVersion": "2022-08-01",
+      "name": "[reference(parameters('GrafanaResourceId'), '2022-08-01').name]",
+      "location": "[reference(parameters('GrafanaResourceId'), '2022-08-01').location]",
+      "tags": "[reference(parameters('GrafanaResourceId'), '2022-08-01').tags]",
+      "sku": {
+        "name": "[reference(parameters('GrafanaResourceId'), '2022-08-01').sku.name]"
+      },
+      "identity": "[reference(parameters('GrafanaResourceId'), '2022-08-01').identity]",
+      "properties": {
+        "mode": "Incremental",
+        "grafanaIntegrations": {
+          "azureMonitorWorkspaceIntegrations": "[concat( parameters('existingArray'), if( parameters('condition'), array('Cc'), variables('emptyArray')) )]"
+        }
+      }
+    }
   ]
 }
