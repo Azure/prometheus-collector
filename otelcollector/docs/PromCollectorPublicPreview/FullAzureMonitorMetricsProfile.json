@@ -217,7 +217,7 @@
       "properties": {
         "mode": "Incremental",
         "grafanaIntegrations": {
-          "azureMonitorWorkspaceIntegrations": "[concat( parameters('existingArray'), if( parameters('condition'), array('Cc'), variables('emptyArray')) )]"
+          "azureMonitorWorkspaceIntegrations": "[concat(reference(parameters('GrafanaResourceId'), '2022-08-01').properties.grafanaIntegrations, parameters('azureMonitorWorkspaceResourceId'))]"
         }
       }
     }
