@@ -6,8 +6,8 @@
 | azureResourceId | string | <mark> `Required` </mark> | `""` | Azure ARM resource id for AKS cluster that will be monitored by this install |
 | azureResourceRegion | string | <mark> `Required` </mark> | `""` | Azure region for the AKS resource spricied in `azureResourceId` |
 | image.pullPolicy | string | Optional | `"IfNotPresent"` |  |
-| image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images"` |  |
-| image.tag | string | Optional | `"3.4.0-main-08-12-2022-b454f29f"` |  |
+| image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images"` |  |
+| image.tag | string | Optional | `"4.0.0-main-08-31-2022-9ad2c059"` |  |
 | internalSettings.intEnvironment | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes for Geneva team |
 | internalSettings.clusterOverride | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes for Geneva team |
 | mode.advanced | bool | Optional | `false` | if mode.advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset. On bigger clusters (> 50+ nodes and > 1500+ pods), it is highly recommended to set this to `true`, as this will distribute the metric volumes to individual nodes as nodes & pods scale out & grow. Note:- When this is set to `true`, the `up` metric for the node target will be generated from the replica, so when the node (and daemonset in the node) becomes unvailable), the target availability can still be tracked.
