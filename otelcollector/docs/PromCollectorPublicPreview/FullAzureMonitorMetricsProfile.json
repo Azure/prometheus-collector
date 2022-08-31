@@ -40,6 +40,14 @@
     "grafanaResourceId": {
       "type": "string",
       "defaultValue": ""
+    },
+    "grafanaLocation": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "grafanaSku": {
+      "type": "string",
+      "defaultValue": ""
     }
   },
   "variables": {
@@ -47,6 +55,7 @@
     "clusterResourceGroup": "[split(parameters('clusterResourceId'),'/')[4]]",
     "clusterName": "[split(parameters('clusterResourceId'),'/')[8]]",
     "azureMonitorWorkspaceName": "[split(parameters('azureMonitorWorkspaceResourceId'),'/')[8]]",
+    "grafanaName": "[split(parameters('grafanaResourceId'),'/')[8]]",
     "dceName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', variables('clusterName'))]",
     "dcrName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', variables('clusterName'))]",
     "dcraName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', variables('clusterName'))]"
@@ -168,6 +177,24 @@
           ]
         },
         "parameters": {}
+      }
+    },
+    {
+      "type": "Microsoft.Dashboard/grafana",
+      "apiVersion": "2022-08-01",
+      "name": "[split(parameters('grafanaResourceId'),'/')[8]]",
+      "sku": {
+        "name": "[parameters('grafanaSku')]"
+      },
+      "location": "[parameters('grafanaLocation')]",
+      "properties": {
+        "grafanaIntegrations": {
+          "azureMonitorWorkspaceIntegrations": [
+            {
+              "azureMonitorWorkspaceResourceId": "[parameters('azureMonitorWorkspaceResourceId')]"
+            }
+          ]
+        }
       }
     }
   ]

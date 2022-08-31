@@ -22,6 +22,12 @@
     },
     "grafanaResourceId": {
       "value": "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesharm/providers/Microsoft.Dashboard/grafana/kaveesharm"
+    },
+    "grafanaLocation": {
+      "value": "australiaeast"
+    },
+    "grafanaSku": {
+      "value": "Standard"
     }
   }
 }
