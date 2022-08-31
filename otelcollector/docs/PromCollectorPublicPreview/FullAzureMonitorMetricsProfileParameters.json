@@ -12,7 +12,7 @@
       "value": "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourcegroups/kaveesharm/providers/Microsoft.ContainerService/managedClusters/kaveesharm"
     },
     "clusterLocation": {
-      "value": "eastus"
+      "value": "uksouth"
     },
     "metricLabelsAllowlist": {
       "value": ""
