@@ -232,9 +232,19 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   # if customer provided regex is valid, our regex validation for that will pass, and when minimal ingestion profile is true, a OR of customer provided regex with our minimal profile regex would be a valid regex as well, so we dont check again for the wholistic validation of merged regex
   # if customer provided regex is invalid, our regex validation for customer provided regex will fail, and if minimal ingestion profile is enabled, we will use that and ignore customer provided one
 
-  @minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"] #this when enabled, will always be string "true" as we set the string value in the chart
+  @minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"] #this when enabled, will always be string "true" as we set the string value in the chart for both MAC and non MAC modes
+
+  @isMacMode = false
+  if !ENV["MAC"].nil? && !ENV["MAC"].empty? && ENV["MAC"].strip.downcase == "true"
+    @isMacMode = true
+    minimalIngestionProfileSetting = parsedConfig[:minimalingestionprofile]
+    if !minimalIngestionProfileSetting.nil? && !minimalIngestionProfileSetting.empty?
+      @minimalIngestionProfile = minimalIngestionProfileSetting.to_s.downcase #Doing this to keep it consistent in the check below for helm chart and configmap
+    end
+  end
+
   if @minimalIngestionProfile == "true"
-    if !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true"
+    if @isMacMode == true
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "minimalIngestionProfile=true, MAC is enabled. Applying appropriate MAC Regexes")
       @kubeletRegex = @kubeletRegex + "|" + @kubeletRegex_minimal_mac
       @corednsRegex = @corednsRegex + "|" + @corednsRegex_minimal_mac
