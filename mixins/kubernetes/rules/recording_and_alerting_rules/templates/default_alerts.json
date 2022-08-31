@@ -1,0 +1,256 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "clusterName": {
+            "type": "string",
+            "defaultValue": "sohamcluster",
+            "metadata": {
+                "description": "Cluster name"
+            }
+        },
+        "actionGroupResourceId": {
+            "type": "string",
+            "defaultValue": "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/sohamTestKV/providers/microsoft.insights/actionGroups/sohamtest",
+            "metadata": {
+                "description": "Action Group ResourceId"
+            }
+        },
+        "macResourceId": {
+            "type": "string",
+            "defaultValue": "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourcegroups/sohamTestKV/providers/microsoft.monitor/accounts/sohamtest3",
+            "metadata": {
+                "description": "ResourceId of Monitoring Account (MAC) to associate to"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "eastus2euap"
+        }
+    },
+    "variables": {
+        "kubernetesAlertRuleGroup": "KubernetesAlertRuleGroup-",
+        "kubernetesAlertRuleGroupName": "[concat(variables('kubernetesAlertRuleGroup'), parameters('clusterName'))]",
+        "kubernetesAlertRuleGroupDescription": "Kubernetes Alert RuleGroup-",
+        "version": " - 0.1"
+    },
+    "resources": [
+        {
+            "name": "[variables('kubernetesAlertRuleGroupName')]",
+            "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+            "apiVersion": "2021-07-22-preview",
+            "location": "eastus2euap",
+            "properties": {
+                "description": "[concat(variables('kubernetesAlertRuleGroupDescription'), variables('version'))]",
+                "scopes": [
+                    "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourcegroups/sohamTestKV/providers/microsoft.monitor/accounts/sohamtest3"
+                ],
+                "clusterName": "sohamcluster",
+                "interval": "PT1M",
+                "rules": [
+                    
+                    {
+                        "alert": "KubePodNotReady",
+                        "expression": "sum by (namespace, pod, cluster) (  max by(namespace, pod, cluster) (    kube_pod_status_phase{job=\"kube-state-metrics\", phase=~\"Pending|Unknown\"}  ) * on(namespace, pod, cluster) group_left(owner_kind) topk by(namespace, pod, cluster) (    1, max by(namespace, pod, owner_kind, cluster) (kube_pod_owner{owner_kind!=\"Job\"})  )) == 0",
+                        "for": "PT15M",
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KubeDeploymentReplicasMismatch",
+                        "expression": "(  kube_deployment_spec_replicas{job=\"kube-state-metrics\"}    ==  kube_deployment_status_replicas_available{job=\"kube-state-metrics\"}) and (  changes(kube_deployment_status_replicas_updated{job=\"kube-state-metrics\"}[10m])    ==  0)",
+                        "for": "PT15M",
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KubeStatefulSetReplicasMismatch",
+                        "expression": "(  kube_statefulset_status_replicas_ready{job=\"kube-state-metrics\"}    !=  kube_statefulset_status_replicas{job=\"kube-state-metrics\"}) and (  changes(kube_statefulset_status_replicas_updated{job=\"kube-state-metrics\"}[10m])    ==  0)",
+                        "for": "PT15M",
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KubeJobNotCompleted",
+                        "expression": "time() - max by(namespace, job_name, cluster) (kube_job_status_start_time{job=\"kube-state-metrics\"}  and kube_job_status_active{job=\"kube-state-metrics\"} ) > 43200",
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KubeJobFailed",
+                        "expression": "kube_job_failed{job=\"kube-state-metrics\"}  > 0",
+                        "for": "PT15M",
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KubeHpaReplicasMismatch",
+                        "expression": "(kube_horizontalpodautoscaler_status_desired_replicas{job=\"kube-state-metrics\"}  ==kube_horizontalpodautoscaler_status_current_replicas{job=\"kube-state-metrics\"})  and(kube_horizontalpodautoscaler_status_current_replicas{job=\"kube-state-metrics\"}  ==kube_horizontalpodautoscaler_spec_min_replicas{job=\"kube-state-metrics\"})  and(kube_horizontalpodautoscaler_status_current_replicas{job=\"kube-state-metrics\"}  <kube_horizontalpodautoscaler_spec_max_replicas{job=\"kube-state-metrics\"})  and changes(kube_horizontalpodautoscaler_status_current_replicas{job=\"kube-state-metrics\"}[15m]) == 0",
+                        "for": "PT15M",
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KubeHpaMaxedOut",
+                        "expression": "kube_horizontalpodautoscaler_status_current_replicas{job=\"kube-state-metrics\"}  <kube_horizontalpodautoscaler_spec_max_replicas{job=\"kube-state-metrics\"}",
+                        "for": "PT15M",
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    
+                    {
+                        "alert": "KubeVersionMismatch",
+                        "expression": "count by (cluster) (count by (git_version, cluster) (label_replace(kubernetes_build_info{job!~\"kube-dns|coredns\"},\"git_version\",\"$1\",\"git_version\",\"(v[0-9]*.[0-9]*).*\"))) > 1",
+                        "for": "PT15M",
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KubeNodeNotReady",
+                        "expression": "kube_node_status_condition{job=\"kube-state-metrics\",condition=\"Ready\",status=\"true\"} == 1",
+                        "for": "PT15M",
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KubeQuotaAlmostFull",
+                        "expression": "kube_resourcequota{job=\"kube-state-metrics\", type=\"used\"}  / ignoring(instance, job, type)(kube_resourcequota{job=\"kube-state-metrics\", type=\"hard\"} > 0)  > 0.05",
+                        "for": "PT1M",
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KubeNodeReadinessFlapping",
+                        "expression": "sum(changes(kube_node_status_condition{status=\"true\",condition=\"containerruntimeproblem\"}[15m])) by (cluster, node) == 0",
+                        "for": "PT15M",
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    }
+                ]
+
+
+            }
+        }
+    ]
+}
