@@ -105,7 +105,7 @@
       "resourceGroup": "[variables('clusterResourceGroup')]",
       "dependsOn": [
         "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
-        "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrName'))]"
+        "[resourceId('Microsoft.Insights/dataCollectionRules/', variables('dcrName'))]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -117,11 +117,55 @@
           "resources": [
             {
               "type": "Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations",
-              "name": "[concat(variables('clusterName'),'/microsoft.insights/', variables('dcraName'))]",
+              "name": "[variables('dcraName')]",
               "apiVersion": "2021-09-01-preview",
+              "scope": "[parameters('clusterResourceId')]",
               "properties": {
-                "description": "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster.",
-                "dataCollectionRuleId": "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrName'))]"
+                "description": "Association of data collection rule. Deleting this association will break the prometheus metrics data collection for this AKS Cluster.",
+                "dataCollectionRuleId": "[variables('dataCollectionRuleId')]"
+              }
+            }
+          ]
+        },
+        "parameters": {}
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "[Concat('azuremonitormetrics-profile', '-',  uniqueString(variables('clusterName')))]",
+      "subscriptionId": "[variables('clusterSubscriptionId')]",
+      "resourceGroup": "[variables('clusterResourceGroup')]",
+      "apiVersion": "2019-05-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
+        "[resourceId('Microsoft.Insights/dataCollectionRules/', variables('dcrName'))]",
+        "[Concat('azuremonitormetrics-dcra', '-',  uniqueString(parameters('clusterResourceId')))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {},
+          "variables": {},
+          "resources": [
+            {
+              "name": "[variables('clusterName')]",
+              "type": "Microsoft.ContainerService/managedClusters",
+              "location": "[parameters('clusterLocation')]",
+              "apiVersion": "2022-07-02-preview",
+              "properties": {
+                "mode": "Incremental",
+                "id": "[parameters('clusterResourceId')]",
+                "azureMonitorProfile": {
+                  "metrics": {
+                    "enabled": true,
+                    "kubeStateMetrics": {
+                      "metricLabelsAllowlist": "[parameters('MetricLabelsAllowlist')]",
+                      "metricAnnotationsAllowList": "[parameters('MetricAnnotationsAllowList')]"
+                    }
+                  }
+                }
               }
             }
           ]

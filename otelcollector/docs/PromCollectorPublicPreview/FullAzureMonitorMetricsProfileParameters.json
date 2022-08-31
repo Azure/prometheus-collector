@@ -3,28 +3,25 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "azureMonitorWorkspaceResourceId": {
-      "value": "/subscriptions/<SubscriptionId>/resourcegroups/<ResourceGroup>/providers/microsoft.monitor/accounts/<ResourceName>"
+      "value": "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesharm/providers/microsoft.monitor/accounts/kaveesharm"
     },
     "azureMonitorWorkspaceLocation": {
-      "value": "<amwLocation>"
+      "value": "eastus"
     },
-    "AKSSubId": {
-      "value": "<aksClusterSubscription"
+    "clusterResourceId": {
+      "value": "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourcegroups/kaveesharm/providers/Microsoft.ContainerService/managedClusters/kaveesharm"
     },
-    "AKSRg": {
-      "value": "<clusterResourceGroup>"
+    "clusterLocation": {
+      "value": "eastus"
     },
-    "AKSClusterName": {
-      "value": "<clusterName>"
+    "metricLabelsAllowlist": {
+      "value": ""
     },
-    "MetricLabelsAllowlist": {
-      "value": "<metricLabelsAllowlist>"
+    "metricAnnotationsAllowList": {
+      "value": ""
     },
-    "MetricAnnotationsAllowList": {
-      "value": "<metricAnnotationsAllowList>"
-    },
-    "GrafanaResourceId": {
-      "value": "<fullGrafanaResourceId>"
+    "grafanaResourceId": {
+      "value": "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesharm/providers/Microsoft.Dashboard/grafana/kaveesharm"
     }
   }
 }
