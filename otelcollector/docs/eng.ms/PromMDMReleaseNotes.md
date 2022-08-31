@@ -1,5 +1,21 @@
 # Working with Prometheus metrics in MDM
 
+## Release 08-30-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/<tbd>`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/<tbd>`
+* Change Log -
+  * Update ME (from 2022.628.2309-817fc7 to 2.2022.811.1333-d2565c)
+  * Telemetry fixes (collect k-s-m regex, fix collector logs not picked up by telemetry, duplicate telemetry logs)
+  * Add cores attached telemetry
+  * Make cloudName configurable for Sov clouds (Thanks to contributions from peter.glotfelty@microsoft.com)
+  * Fix mixins build issues & sync with latest mixins (k8s,node & coredns)
+  * Add default dashboards, recording rule ARM template, alerting rule ARM template (all for MAC/Addon mode)
+  * Turn off unused default targets (for MAC/Addon mode)
+  * Build and release thru ADO & EV2
+  * Remove ICM setting from external facing recommended CI alerts template
+  * Add template for CI (log based) recommended alerts equivalents in Prometheus
+  * Update metric allow list to account metrics used in MAC/Addon mode
 
 ## Release 08-12-2022
 
