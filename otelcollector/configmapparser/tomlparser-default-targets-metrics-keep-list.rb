@@ -234,6 +234,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 
   @minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"] #this when enabled, will always be string "true" as we set the string value in the chart for both MAC and non MAC modes
 
+  # Provide for overwriting the chart setting using configmap for MAC mode
   @isMacMode = false
   if !ENV["MAC"].nil? && !ENV["MAC"].empty? && ENV["MAC"].strip.downcase == "true"
     @isMacMode = true
