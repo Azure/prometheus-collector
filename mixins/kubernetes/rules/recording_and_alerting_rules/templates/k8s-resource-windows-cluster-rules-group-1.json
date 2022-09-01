@@ -9,6 +9,7 @@
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
             "location": "$MACLocation",
+            "clusterName": "$cluster",
             "properties": {
                 "scopes": [
                     "$mac"
