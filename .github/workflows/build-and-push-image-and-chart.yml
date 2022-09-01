@@ -1,12 +1,6 @@
 name: build-and-push-image-and-chart
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches:
-      - main
+  workflow_dispatch
 jobs:
   WINDOWS-build-and-push-image:
     runs-on: windows-2019
