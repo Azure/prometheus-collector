@@ -224,6 +224,13 @@ spec:
                 operator: NotIn
                 values:
                 - managed
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: amametricsdeploymentpreferrednode
+                operator: In
+                values:
+                - largenode
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - labelSelector:
