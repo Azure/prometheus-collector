@@ -24,6 +24,14 @@ LOGGING_PREFIX = "default-scrape-keep-lists"
 @windowsexporterRegex = ""
 @windowskubeproxyRegex = ""
 
+#This will always be string "true" as we set the string value in the chart for both MAC and non MAC modes
+@minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"]
+
+@isMacMode = false
+if !ENV["MAC"].nil? && !ENV["MAC"].empty? && ENV["MAC"].strip.downcase == "true"
+  @isMacMode = true
+end
+
 # minimal profile -- list of metrics to white-list for each target for 1p mode (non MAC). This list includes metrics used by default dashboards + alerts.
 @kubeletRegex_minimal = "kubelet_volume_stats_used_bytes|kubelet_node_name|kubelet_running_pods|kubelet_running_pod_count|kubelet_running_containers|kubelet_running_container_count|volume_manager_total_volumes|kubelet_node_config_error|kubelet_runtime_operations_total|kubelet_runtime_operations_errors_total|kubelet_runtime_operations_duration_seconds|kubelet_runtime_operations_duration_seconds_bucket|kubelet_runtime_operations_duration_seconds_sum|kubelet_runtime_operations_duration_seconds_count|kubelet_pod_start_duration_seconds|kubelet_pod_start_duration_seconds_bucket|kubelet_pod_start_duration_seconds_sum|kubelet_pod_start_duration_seconds_count|kubelet_pod_worker_duration_seconds|kubelet_pod_worker_duration_seconds_bucket|kubelet_pod_worker_duration_seconds_sum|kubelet_pod_worker_duration_seconds_count|storage_operation_duration_seconds|storage_operation_duration_seconds_bucket|storage_operation_duration_seconds_sum|storage_operation_duration_seconds_count|storage_operation_errors_total|kubelet_cgroup_manager_duration_seconds|kubelet_cgroup_manager_duration_seconds_bucket|kubelet_cgroup_manager_duration_seconds_sum|kubelet_cgroup_manager_duration_seconds_count|kubelet_pleg_relist_duration_seconds|kubelet_pleg_relist_duration_seconds_bucket|kubelet_pleg_relist_duration_sum|kubelet_pleg_relist_duration_seconds_count|kubelet_pleg_relist_interval_seconds|kubelet_pleg_relist_interval_seconds_bucket|kubelet_pleg_relist_interval_seconds_sum|kubelet_pleg_relist_interval_seconds_count|rest_client_requests_total|rest_client_request_duration_seconds|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_available_bytes|kubelet_volume_stats_inodes_used|kubelet_volume_stats_inodes|kubernetes_build_info"
 @corednsRegex_minimal = "coredns_build_info|coredns_panics_total|coredns_dns_responses_total|coredns_forward_responses_total|coredns_dns_request_duration_seconds|coredns_dns_request_duration_seconds_bucket|coredns_dns_request_duration_seconds_sum|coredns_dns_request_duration_seconds_count|coredns_forward_request_duration_seconds|coredns_forward_request_duration_seconds_bucket|coredns_forward_request_duration_seconds_sum|coredns_forward_request_duration_seconds_count|coredns_dns_requests_total|coredns_forward_requests_total|coredns_cache_hits_total|coredns_cache_misses_total|coredns_cache_entries|coredns_plugin_enabled|coredns_dns_request_size_bytes|coredns_dns_request_size_bytes_bucket|coredns_dns_request_size_bytes_sum|coredns_dns_request_size_bytes_count|coredns_dns_response_size_bytes|coredns_dns_response_size_bytes_bucket|coredns_dns_response_size_bytes_sum|coredns_dns_response_size_bytes_count|coredns_dns_response_size_bytes_bucket|coredns_dns_response_size_bytes_sum|coredns_dns_response_size_bytes_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info"
@@ -226,47 +234,50 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for default targets metrics keep list - #{errorStr}, using defaults, please check config map for errors")
   end
 
-  # -------Apply profile for ingestion--------
-  # Logical OR-ing profile regex with customer provided regex
-  # so the theory here is --
-  # if customer provided regex is valid, our regex validation for that will pass, and when minimal ingestion profile is true, a OR of customer provided regex with our minimal profile regex would be a valid regex as well, so we dont check again for the wholistic validation of merged regex
-  # if customer provided regex is invalid, our regex validation for customer provided regex will fail, and if minimal ingestion profile is enabled, we will use that and ignore customer provided one
-
-  @minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"] #this when enabled, will always be string "true" as we set the string value in the chart for both MAC and non MAC modes
-
-  # Provide for overwriting the chart setting using configmap for MAC mode
-  @isMacMode = false
-  if !ENV["MAC"].nil? && !ENV["MAC"].empty? && ENV["MAC"].strip.downcase == "true"
-    @isMacMode = true
+  # Provide for overwriting the chart setting for minimal ingestion profile using configmap for MAC mode
+  if @isMacMode == true
+    ConfigParseErrorLogger.log(LOGGING_PREFIX, "MAC mode set to true - Reading configmap setting for minimalingestionprofile")
     minimalIngestionProfileSetting = parsedConfig[:minimalingestionprofile]
     if !minimalIngestionProfileSetting.nil? && !minimalIngestionProfileSetting.empty?
       @minimalIngestionProfile = minimalIngestionProfileSetting.to_s.downcase #Doing this to keep it consistent in the check below for helm chart and configmap
     end
   end
-
-  if @minimalIngestionProfile == "true"
-    if @isMacMode == true
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "minimalIngestionProfile=true, MAC is enabled. Applying appropriate MAC Regexes")
-      @kubeletRegex = @kubeletRegex + "|" + @kubeletRegex_minimal_mac
-      @corednsRegex = @corednsRegex + "|" + @corednsRegex_minimal_mac
-      @cadvisorRegex = @cadvisorRegex + "|" + @cadvisorRegex_minimal_mac
-      @kubeproxyRegex = @kubeproxyRegex + "|" + @kubeproxyRegex_minimal_mac
-      @apiserverRegex = @apiserverRegex + "|" + @apiserverRegex_minimal_mac
-      @kubestateRegex = @kubestateRegex + "|" + @kubestateRegex_minimal_mac
-      @nodeexporterRegex = @nodeexporterRegex + "|" + @nodeexporterRegex_minimal_mac
-    else
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "minimalIngestionProfile=true, MAC is not enabled. Applying appropriate non-MAC Regexes")
-      @kubeletRegex = @kubeletRegex + "|" + @kubeletRegex_minimal
-      @corednsRegex = @corednsRegex + "|" + @corednsRegex_minimal
-      @cadvisorRegex = @cadvisorRegex + "|" + @cadvisorRegex_minimal
-      @kubeproxyRegex = @kubeproxyRegex + "|" + @kubeproxyRegex_minimal
-      @apiserverRegex = @apiserverRegex + "|" + @apiserverRegex_minimal
-      @kubestateRegex = @kubestateRegex + "|" + @kubestateRegex_minimal
-      @nodeexporterRegex = @nodeexporterRegex + "|" + @nodeexporterRegex_minimal
-    end
-  end
-  # ----End applying profile for ingestion--------
 end
+
+# -------Apply profile for ingestion--------
+# Logical OR-ing profile regex with customer provided regex
+# so the theory here is --
+# if customer provided regex is valid, our regex validation for that will pass, and when minimal ingestion profile is true, a OR of customer provided regex with our minimal profile regex would be a valid regex as well, so we dont check again for the wholistic validation of merged regex
+# if customer provided regex is invalid, our regex validation for customer provided regex will fail, and if minimal ingestion profile is enabled, we will use that and ignore customer provided one
+def populateRegexValuesWithMinimalIngestionProfile
+  begin
+    if @minimalIngestionProfile == "true"
+      if @isMacMode == true
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "minimalIngestionProfile=true, MAC is enabled. Applying appropriate MAC Regexes")
+        @kubeletRegex = @kubeletRegex + "|" + @kubeletRegex_minimal_mac
+        @corednsRegex = @corednsRegex + "|" + @corednsRegex_minimal_mac
+        @cadvisorRegex = @cadvisorRegex + "|" + @cadvisorRegex_minimal_mac
+        @kubeproxyRegex = @kubeproxyRegex + "|" + @kubeproxyRegex_minimal_mac
+        @apiserverRegex = @apiserverRegex + "|" + @apiserverRegex_minimal_mac
+        @kubestateRegex = @kubestateRegex + "|" + @kubestateRegex_minimal_mac
+        @nodeexporterRegex = @nodeexporterRegex + "|" + @nodeexporterRegex_minimal_mac
+      else
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "minimalIngestionProfile=true, MAC is not enabled. Applying appropriate non-MAC Regexes")
+        @kubeletRegex = @kubeletRegex + "|" + @kubeletRegex_minimal
+        @corednsRegex = @corednsRegex + "|" + @corednsRegex_minimal
+        @cadvisorRegex = @cadvisorRegex + "|" + @cadvisorRegex_minimal
+        @kubeproxyRegex = @kubeproxyRegex + "|" + @kubeproxyRegex_minimal
+        @apiserverRegex = @apiserverRegex + "|" + @apiserverRegex_minimal
+        @kubestateRegex = @kubestateRegex + "|" + @kubestateRegex_minimal
+        @nodeexporterRegex = @nodeexporterRegex + "|" + @nodeexporterRegex_minimal
+      end
+    end
+  rescue => errorStr
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while populating regex values with minimal ingestion profile - #{errorStr}, skipping applying minimal ingestion profile regexes")
+  end
+end
+
+# ----End applying profile for ingestion--------
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start default-targets-metrics-keep-list Processing")
@@ -280,6 +291,9 @@ else
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
   end
 end
+
+# Populate the regex values after reading the configmap settings based on the minimal ingestion profile value
+populateRegexValuesWithMinimalIngestionProfile
 
 # Write the settings to file, so that they can be set as environment variables
 file = File.open("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash", "w")
