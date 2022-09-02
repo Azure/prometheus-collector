@@ -20,6 +20,13 @@ func FLBPluginRegister(ctx unsafe.Pointer) int {
 // (fluentbit will call this)
 // ctx (context) pointer to fluentbit context (state/ c code)
 func FLBPluginInit(ctx unsafe.Pointer) int {
+
+	// This will not load the plugin instance. FLBPluginFlush won't be called.
+	if os.Getenv("TELEMETRY_DISABLED") == "true" {
+		Log("Telemetry disabled. Not initializing telemetry plugin.")
+		return output.FLB_ERROR
+	}
+
 	Log("Initializing out_appinsights go plugin for fluentbit")
 	var agentVersion string
 	agentVersion = os.Getenv("AGENT_VERSION")

@@ -9,7 +9,7 @@ When you deployed the prometheus-collector, it set up the following targets to b
   
 If these are the only targets you want to scrape, then you can proceed further to [Setting up Grafana](~/metrics/prometheus/PromMDMTutorial4SetUpGrafana.md).  
 
-If you'd like to scrape additional custom targets, then create a Prometheus configuration file (named prometheus-config) and add any custom scrape targets to it. See the [Prometheus configuration docs](https://prometheus.io/docs/prometheus/latest/configuration/configuration/) for more information. Your config file will list the scrape configs under the section `scrape_configs` and can use the `global` section for setting the global `scrape_interval`, `scrape_timeout`, and `evaluation_interval`.
+If you'd like to scrape additional custom targets, then create a Prometheus configuration file (named prometheus-config) and add any custom scrape targets to it. See the [Prometheus configuration docs](https://prometheus.io/docs/prometheus/2.37/configuration/configuration/) for more information. Your config file will list the scrape configs under the section `scrape_configs` and can use the `global` section for setting the global `scrape_interval`, `scrape_timeout`, and `evaluation_interval`.
 
 ### Customizing default targets
 If you'd like to customize any of the default targets to filter out the metrics by their names you can use the chart value settings ([ChartValues](https://eng.ms/docs/products/geneva/metrics/prometheus/chartvalues)) - keepListRegexes. This setting is per job, for example keepListRegexes.apiServer is the metric filtering setting for the default target - api server.
@@ -67,17 +67,19 @@ kubectl create configmap my-collector-dev-release-prometheus-config --from-file=
 
 ## Troubleshoot scrape configuration and targets with the Prometheus Web UI
 
-You can access certain Prometheus Web UI pages to view information about configuration, targets, and service discovery by port-forwarding:
+You can access the Prometheus Agent Mode Web UI pages to view information about configuration, targets, and service discovery by port-forwarding:
 
 ```shell
 kubectl port-forward <prometheus-collector pod name> -n <prometheus-collector namespace> 9090:9090
 ```
 
-After running the above command, you can go to `127.0.0.1:9090/config` in your browser. This will have information about the full Prometheus config given with the default targets included, the service discovery, and the targets and their labels before and after re-labeling.
+After running the above command, you can go to `127.0.0.1:9090` in your browser. The UI provides information about the full Prometheus config given with the default targets included, the service discovery, and the targets and their labels before and after re-labeling.
 
 This is meant to aid authoring custom scrape configs and troubleshooting the service discovery and target relabeling specified in the custom configs. For clusters where kubectl access is unavailable, the `up` metric can be queried in Grafana to see which targets are being scraped.
 
 Note that the `cluster` label will not be present since this is added as label later in the pipeline.
+
+For an experience similar to the non-agent Prometheus Graph UI with querying and viewing metrics, [Grafana Explore](https://grafana.com/docs/grafana/latest/explore/) is recommended.
 
 See more troubleshooting information [here](~/metrics/prometheus/troubleshooting.md)
 

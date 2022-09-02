@@ -9,6 +9,7 @@ ENV AZMON_COLLECT_ENV False
 ENV tmpdir /opt
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+ENV TELEMETRY_DISABLED false
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
 ENV MALLOC_ARENA_MAX=2
 COPY ./logrotate/prometheus-collector /etc/logrotate.d/

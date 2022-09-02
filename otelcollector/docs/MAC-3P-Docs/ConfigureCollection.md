@@ -2,7 +2,7 @@
 
 When you deployed the prometheus-collector, it set up the following targets to be scraped by default every 30 seconds - 'coreDns', 'kubelet', cAdvisor', 'kubeproxy', 'apiServer', 'kube-state-metrics' and 'node'.
   
-If you'd like to scrape additional custom targets, then create a Prometheus configuration file (named prometheus-config) and add any custom scrape targets to it. See the [Prometheus configuration docs](https://prometheus.io/docs/prometheus/latest/configuration/configuration/) for more information. Your config file will list the scrape configs under the section `scrape_configs` and can use the `global` section for setting the global `scrape_interval`, `scrape_timeout`, and `evaluation_interval`.
+If you'd like to scrape additional custom targets, then create a Prometheus configuration file (named prometheus-config) and add any custom scrape targets to it. See the [Prometheus configuration docs](https://prometheus.io/docs/prometheus/2.37/configuration/configuration/) for more information. Your config file will list the scrape configs under the section `scrape_configs` and can use the `global` section for setting the global `scrape_interval`, `scrape_timeout`, and `evaluation_interval`.
 
 ## Validate the custom config
 

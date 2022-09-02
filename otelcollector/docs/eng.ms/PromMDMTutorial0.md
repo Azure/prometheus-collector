@@ -8,7 +8,7 @@
 
 This tutorial is an introduction to working with Prometheus based metrics in MDM.
 
-Upon completion of this tutorial, you will have created a metrics account, deployed an agent to a Kubernetes cluster, configured it to scrape [Prometheus](https://prometheus.io/docs/introduction/overview/) metrics into your metrics account, and used [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) and [Grafana](https://grafana.com/grafana/) to query / visualize the metrics in dashboards.
+Upon completion of this tutorial, you will have created a metrics account, deployed an agent to a Kubernetes cluster, configured it to scrape [Prometheus](https://prometheus.io/docs/introduction/overview/) metrics into your metrics account, and used [PromQL](https://prometheus.io/docs/prometheus/2.37/querying/basics/) and [Grafana](https://grafana.com/grafana/) to query / visualize the metrics in dashboards.
 
 ![PromMDMgrafana](~/metrics/images/prometheus/PromMetricsMDMgrafana.png)  
   

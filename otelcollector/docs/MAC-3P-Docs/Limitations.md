@@ -22,17 +22,17 @@
 
 ## Prometheus Query Service limitations:  
 ### **Supported APIs**
-You can find full specification of [OSS prom APIs](https://prometheus.io/docs/prometheus/latest/querying/api/) .  We support following:
+You can find full specification of [OSS prom APIs](https://prometheus.io/docs/prometheus/2.37/querying/api/) .  We support following:
 
-[Instant queries](https://prometheus.io/docs/prometheus/latest/querying/api/#instant-queries): /api/v1/query
+[Instant queries](https://prometheus.io/docs/prometheus/2.37/querying/api/#instant-queries): /api/v1/query
 
-[Range queries](https://prometheus.io/docs/prometheus/latest/querying/api/#range-queries): /api/v1/query_range
+[Range queries](https://prometheus.io/docs/prometheus/2.37/querying/api/#range-queries): /api/v1/query_range
 
-[Series](https://prometheus.io/docs/prometheus/latest/querying/api/#finding-series-by-label-matchers): /api/v1/series
+[Series](https://prometheus.io/docs/prometheus/2.37/querying/api/#finding-series-by-label-matchers): /api/v1/series
 
-[Labels](https://prometheus.io/docs/prometheus/latest/querying/api/#getting-label-names): /api/v1/labels
+[Labels](https://prometheus.io/docs/prometheus/2.37/querying/api/#getting-label-names): /api/v1/labels
 
-[Label values](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-label-values): /api/v1/label/\_\_name\_\_\/values. It’s the only supported version of this API which effectively means GET all metric names. Any other /api/v1/label/{name}/values **are not supported**.
+[Label values](https://prometheus.io/docs/prometheus/2.37/querying/api/#querying-label-values): /api/v1/label/\_\_name\_\_\/values. It’s the only supported version of this API which effectively means GET all metric names. Any other /api/v1/label/{name}/values **are not supported**.
 
 <br/>
 
@@ -63,4 +63,4 @@ Start time and end time provided with **/labels** and **/label**/name/values are
 
 **Experimental features**
 
-None of the experimental features are supported such as [exemplars](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-exemplars), [@ Modifier](https://prometheus.io/docs/prometheus/latest/feature_flags/#modifier-in-promql[) or [negative offsets](https://prometheus.io/docs/prometheus/latest/feature_flags/#negative-offset-in-promql).
+None of the experimental features are supported such as [exemplars](https://prometheus.io/docs/prometheus/2.37/querying/api/#querying-exemplars), [@ Modifier](https://prometheus.io/docs/prometheus/2.37/feature_flags/#modifier-in-promql[) or [negative offsets](https://prometheus.io/docs/prometheus/2.37/feature_flags/#negative-offset-in-promql).
