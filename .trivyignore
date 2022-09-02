@@ -8,15 +8,19 @@ CVE-2021-42836
 #CVE-2022-29190
 #CVE-2022-29222
 #CVE-2022-27191
-# node-exporter
-#CVE-2021-38561
-#CVE-2022-21698
+node-exporter
+CVE-2021-38561
+CVE-2022-21698
+CVE-2022-27191
+
 # otelcollector and promconfigvalidator
 CVE-2022-1996
+# kube-state-metrics
+CVE-2022-27191
 
 # MEDIUM 
 # opt/telegraf/telegraf
-#CVE-2019-3826
+CVE-2019-3826
 #CVE-2022-29189
 #CVE-2022-31030
 #CVE-2022-29526
@@ -24,3 +28,7 @@ CVE-2022-1996
 CVE-2019-11254
 # /bin/node_exporter
 CVE-2021-44716
+# otelcollector and promconfigvalidator
+CVE-2019-3826
+# kube-state-metrics
+CVE-2022-29526
