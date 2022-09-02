@@ -238,7 +238,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   if @isMacMode == true
     ConfigParseErrorLogger.log(LOGGING_PREFIX, "MAC mode set to true - Reading configmap setting for minimalingestionprofile")
     minimalIngestionProfileSetting = parsedConfig[:minimalingestionprofile]
-    if !minimalIngestionProfileSetting.nil? && !minimalIngestionProfileSetting.empty?
+    if !minimalIngestionProfileSetting.nil?
       @minimalIngestionProfile = minimalIngestionProfileSetting.to_s.downcase #Doing this to keep it consistent in the check below for helm chart and configmap
     end
   end
