@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"unsafe"
+	"fmt"
 )
 
 //export FLBPluginRegister
@@ -68,6 +69,10 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
+	case "prometheus.log.prometheus":
+		for k, v := range record {
+			Log(fmt.Sprintf("\"%s\": %v, ", k, v))
+		}
 	case fluentbitEventsProcessedLastPeriodTag:
 		return PushReceivedMetricsCountToAppInsightsMetrics(records)
 	case fluentbitProcessedCountTag:
@@ -82,6 +87,8 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)
 	}
+
+	return output.FLB_OK
 }
 
 // FLBPluginExit exits the plugin
