@@ -65,11 +65,12 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	}
 
 	incomingTag := strings.ToLower(C.GoString(tag))
-
+  Log(fmt.Sprintf("Incoming tag: %s", incomingTag))
 
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
 	case "prometheus.log.prometheus":
+		Log("Incoming tag is prometheus.log.prometheus")
 		for k, v := range record {
 			Log(fmt.Sprintf("\"%s\": %v, ", k, v))
 		}
