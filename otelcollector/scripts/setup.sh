@@ -146,5 +146,6 @@ rm -f $TMPDIR/metricsext2*.deb
 rm -f $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz
 rm -rf $TMPDIR/prometheus-2.25.2.linux-amd64
 rm -f $TMPDIR/telegraf*.gz
-rm -rf $TMPDIR/telegraf-1.18.0/
+rm -rf $TMPDIR/telegraf-1.23.4/
 rm -rf $TMPDIR/azure-mdsd*.deb
+rm /usr/sbin/telegraf
