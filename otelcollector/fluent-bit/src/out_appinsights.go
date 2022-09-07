@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 	"unsafe"
-	"fmt"
 )
 
 //export FLBPluginRegister
@@ -59,21 +58,16 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		// Extract Record
 		ret, _, record = output.GetRecord(dec)
 		if ret != 0 {
-			Log("Error getting record")
 			break
 		}
 		records = append(records, record)
 	}
-	
+
 	incomingTag := strings.ToLower(C.GoString(tag))
+
 
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
-	case "prometheus.log.scraping":
-		Log("Incoming tag is prometheus.log.scraping")
-		for k, v := range record {
-			Log(fmt.Sprintf("\"%s\": %v, ", k, v))
-		}
 	case fluentbitEventsProcessedLastPeriodTag:
 		return PushReceivedMetricsCountToAppInsightsMetrics(records)
 	case fluentbitProcessedCountTag:
@@ -88,8 +82,6 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)
 	}
-
-	return output.FLB_OK
 }
 
 // FLBPluginExit exits the plugin
