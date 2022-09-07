@@ -2,13 +2,13 @@ trigger:
   branches:
     include:
     - main
+    - vishwa/promlimits
 
 pr:
   autoCancel: true
   branches:
     include:
     - main
-    - vishwa/promlimits
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
