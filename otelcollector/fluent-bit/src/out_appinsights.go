@@ -51,9 +51,6 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	var record map[interface{}]interface{}
 	var records []map[interface{}]interface{}
 
-	incomingTag := strings.ToLower(C.GoString(tag))
-	Log(fmt.Sprintf("Incoming tag before: %s", incomingTag))
-
 	// Create Fluent Bit decoder
 	dec := output.NewDecoder(data, int(length))
 
@@ -67,8 +64,8 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		}
 		records = append(records, record)
 	}
-
-	Log(fmt.Sprintf("Incoming tag after: %s", incomingTag))
+	
+	incomingTag := strings.ToLower(C.GoString(tag))
 
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {

@@ -10,6 +10,8 @@ CVE-2022-27191
 CVE-2022-27191
 
 # MEDIUM
+# opt/telegraf/telegraf
+CVE-2019-3826
 # /bin/node_exporter
 CVE-2021-44716
 # kube-state-metrics
