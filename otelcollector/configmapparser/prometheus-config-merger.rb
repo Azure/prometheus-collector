@@ -348,6 +348,7 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
       mergedConfigYaml = customPromConfig
     end
     File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigYaml }
+    File.open("/opt/vishwa2.yaml", "w") { |file| file.puts mergedConfigYaml }
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and custom scrape configs- #{errorStr}")
   end
@@ -362,12 +363,13 @@ def setLabelLimitsPerScrape(prometheusConfigString)
       limitedCustomscrapes = limitedCustomConfig["scrape_configs"]
       if !limitedCustomscrapes.nil? && !limitedCustomscrapes.empty?
         limitedCustomscrapes.each { |scrape|
-          scrape["label_limit"] = "63"
-          scrape["label_name_length_limit"] = "511"
-          scrape["label_value_length_limit"] = "1023"
+          scrape["label_limit"] = 63
+          scrape["label_name_length_limit"] = 511
+          scrape["label_value_length_limit"] = 1023
           ConfigParseErrorLogger.log(LOGGING_PREFIX, " Successfully set label limits in custom scrape config for job #{scrape["job_name"]}")
         }
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done setting label limits for custom scrape config ...")
+        File.open("/opt/vishwa1.yaml", "w") { |file| file.puts YAML::dump(limitedCustomConfig) }
         return YAML::dump(limitedCustomConfig)
       else
         ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "No Jobs found to set label limits while processing custom scrape config")
