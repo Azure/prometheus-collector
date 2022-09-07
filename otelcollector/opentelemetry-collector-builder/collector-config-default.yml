@@ -43,3 +43,4 @@ service:
     logs:
       level: warn
       encoding: json
+    metrics: detailed
