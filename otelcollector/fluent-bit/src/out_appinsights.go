@@ -51,6 +51,9 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	var record map[interface{}]interface{}
 	var records []map[interface{}]interface{}
 
+	incomingTag := strings.ToLower(C.GoString(tag))
+	Log(fmt.Sprintf("Incoming tag before: %s", incomingTag))
+
 	// Create Fluent Bit decoder
 	dec := output.NewDecoder(data, int(length))
 
@@ -59,18 +62,18 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		// Extract Record
 		ret, _, record = output.GetRecord(dec)
 		if ret != 0 {
+			Log("Error getting record")
 			break
 		}
 		records = append(records, record)
 	}
 
-	incomingTag := strings.ToLower(C.GoString(tag))
-  Log(fmt.Sprintf("Incoming tag: %s", incomingTag))
+	Log(fmt.Sprintf("Incoming tag after: %s", incomingTag))
 
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
-	case "prometheus.log.prometheus":
-		Log("Incoming tag is prometheus.log.prometheus")
+	case "prometheus.log.scraping":
+		Log("Incoming tag is prometheus.log.scraping")
 		for k, v := range record {
 			Log(fmt.Sprintf("\"%s\": %v, ", k, v))
 		}
