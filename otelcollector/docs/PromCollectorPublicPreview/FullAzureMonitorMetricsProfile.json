@@ -190,6 +190,13 @@
       "properties": {
         "grafanaIntegrations": {
           "azureMonitorWorkspaceIntegrations": [
+            // Existing azureMonitorWorkspaceIntegrations values (if any)
+            // {
+            //   "azureMonitorWorkspaceResourceId": "<value>"
+            // },
+            // {
+            //   "azureMonitorWorkspaceResourceId": "<value>"
+            // },
             {
               "azureMonitorWorkspaceResourceId": "[parameters('azureMonitorWorkspaceResourceId')]"
             }
