@@ -364,7 +364,7 @@ def setLabelLimitsPerScrape(prometheusConfigString)
       if !limitedCustomscrapes.nil? && !limitedCustomscrapes.empty?
         limitedCustomscrapes.each { |scrape|
           scrape["label_limit"] = 63
-          scrape["label_name_length_limit"] = 511
+          scrape["label_name_length_limit"] = 2
           scrape["label_value_length_limit"] = 1023
           ConfigParseErrorLogger.log(LOGGING_PREFIX, " Successfully set label limits in custom scrape config for job #{scrape["job_name"]}")
         }
