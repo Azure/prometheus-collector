@@ -42,6 +42,9 @@ This example has two scrape jobs that is configured to woute metrics from each o
 global:
   evaluation_interval: 60s
   scrape_interval: 60s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
 scrape_configs:
 - job_name: prometheus_ref_app
   scheme: http
@@ -186,6 +189,9 @@ To scrape only certain pods, specify the port, path, and http/https through anno
   ```yaml
     scrape_configs:
       - job_name: 'kubernetes-pods'
+        label_limit: 63
+        label_name_length_limit: 511
+        label_value_length_limit: 1023
 
         kubernetes_sd_configs:
         - role: pod
@@ -253,6 +259,9 @@ helm upgrade --install <my-kube-state-metricsrelease-name> prometheus-community/
 ```yaml
 - job_name: 'kube-state-metrics'
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   static_configs:
     - targets: ['<my-kube-state-metrics-release-name>.<my-kube-state-metrics-namespace>.svc.cluster.local:8080']
 ```
@@ -276,6 +285,9 @@ helm upgrade --install <my-node-exporter-release-name> prometheus-community/prom
 - job_name: 'node'
   scheme: http
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   kubernetes_sd_configs:
     - role: endpoints
       namespaces:
@@ -308,6 +320,9 @@ msiexec /i C:\windowsexporter.msi ENABLED_COLLECTORS="[defaults],container,os,me
     - job_name: windows-exporter
       scheme: http
       scrape_interval: 30s
+      label_limit: 63
+      label_name_length_limit: 511
+      label_value_length_limit: 1023
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
         insecure_skip_verify: true

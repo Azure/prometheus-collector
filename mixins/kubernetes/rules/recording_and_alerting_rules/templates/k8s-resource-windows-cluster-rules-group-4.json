@@ -9,6 +9,7 @@
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
             "location": "$MACLocation",
+            "clusterName": "$cluster",
             "properties": {
                 "scopes": [
                     "$mac"
@@ -16,19 +17,19 @@
                 "rules": [
                     {
                         "record": "node:windows_node_cpu_utilisation:avg3m",
-                        "expression": "1 - avg by (instance, job, cluster) (rate(windows_cpu_time_total{ job=\"windows-exporter\", cluster=\"$cluster\",mode=\"idle\"}[3m]))"
+                        "expression": "1 - avg by (instance, job, cluster) (rate(windows_cpu_time_total{ job=\"windows-exporter\",mode=\"idle\"}[3m]))"
                     },
                     {
                         "record": "node:windows_node_num_cpu:sum",
-                        "expression": "count by (instance, cluster, job) (sum by (instance, core, cluster, job) (windows_cpu_time_total{ job=\"windows-exporter\", cluster=\"$cluster\"}))"
+                        "expression": "count by (instance, cluster, job) (sum by (instance, core, cluster, job) (windows_cpu_time_total{ job=\"windows-exporter\"}))"
                     },
                     {
                         "record": "node:windows_node_memory_bytes_total:sum",
-                        "expression": "sum by (instance, cluster, job) (windows_os_visible_memory_bytes{ job=\"windows-exporter\", cluster=\"$cluster\"})"
+                        "expression": "sum by (instance, cluster, job) (windows_os_visible_memory_bytes{ job=\"windows-exporter\"})"
                     },
                     {
                         "record": "node:windows_node_memory_bytes_available:sum",
-                        "expression": "sum by (instance, cluster, job) ((windows_memory_available_bytes{ job=\"windows-exporter\", cluster=\"$cluster\"}))"
+                        "expression": "sum by (instance, cluster, job) ((windows_memory_available_bytes{ job=\"windows-exporter\"}))"
                     },
                     {
                         "record": "node:windows_node_memory_utilisation:ratio",
@@ -36,31 +37,31 @@
                     },
                     {
                         "record": "node:windows_node_memory_swap_io_pages:irate",
-                        "expression": "irate(windows_memory_swap_page_operations_total{ job=\"windows-exporter\", cluster=\"$cluster\"}[5m])"
+                        "expression": "irate(windows_memory_swap_page_operations_total{ job=\"windows-exporter\"}[5m])"
                     },
                     {
                         "record": "node:windows_node:sum",
-                        "expression": "count by (cluster, job) (windows_system_system_up_time{ job=\"windows-exporter\", cluster=\"$cluster\"})"
+                        "expression": "count by (cluster, job) (windows_system_system_up_time{ job=\"windows-exporter\"})"
                     },
                     {
                         "record": "node:windows_node_disk_utilisation:avg_irate",
-                        "expression": "avg by (instance, cluster, job) ((irate(windows_logical_disk_read_seconds_total{ job=\"windows-exporter\", cluster=\"$cluster\"}[3m]) + irate(windows_logical_disk_write_seconds_total{ job=\"windows-exporter\", cluster=\"$cluster\"}[3m])))"
+                        "expression": "avg by (instance, cluster, job) ((irate(windows_logical_disk_read_seconds_total{ job=\"windows-exporter\"}[3m]) + irate(windows_logical_disk_write_seconds_total{ job=\"windows-exporter\"}[3m])))"
                     },
                     {
                         "record": "node:windows_node_net_utilisation:sum_irate",
-                        "expression": "sum by (instance, cluster, job) ((irate(windows_net_bytes_total{ job=\"windows-exporter\", cluster=\"$cluster\"}[3m])))"
+                        "expression": "sum by (instance, cluster, job) ((irate(windows_net_bytes_total{ job=\"windows-exporter\"}[3m])))"
                     },
                     {
                         "record": "node:windows_node_net_saturation:sum_irate",
-                        "expression": "sum by (instance, cluster, job) ((irate(windows_net_packets_received_discarded_total{ job=\"windows-exporter\", cluster=\"$cluster\"}[3m]) + irate(windows_net_packets_outbound_discarded_total{ job=\"windows-exporter\", cluster=\"$cluster\"}[3m])))"
+                        "expression": "sum by (instance, cluster, job) ((irate(windows_net_packets_received_discarded_total{ job=\"windows-exporter\"}[3m]) + irate(windows_net_packets_outbound_discarded_total{ job=\"windows-exporter\"}[3m])))"
                     },
                     {
                         "record": "node:windows_node_filesystem_usage:",
-                        "expression": "max by (instance,volume,job, cluster)((windows_logical_disk_size_bytes{ job=\"windows-exporter\", cluster=\"$cluster\"} - windows_logical_disk_free_bytes{ job=\"windows-exporter\", cluster=\"$cluster\"}) / windows_logical_disk_size_bytes{ job=\"windows-exporter\", cluster=\"$cluster\"})"
+                        "expression": "max by (instance,volume,job, cluster)((windows_logical_disk_size_bytes{ job=\"windows-exporter\"} - windows_logical_disk_free_bytes{ job=\"windows-exporter\"}) / windows_logical_disk_size_bytes{ job=\"windows-exporter\"})"
                     },
                     {
                         "record": "node:windows_node_memory_utilisation:",
-                        "expression": "1 - (node:windows_node_memory_bytes_available:sum{ job=\"windows-exporter\", cluster=\"$cluster\"} / node:windows_node_memory_bytes_total:sum{ job=\"windows-exporter\", cluster=\"$cluster\"})"
+                        "expression": "1 - (node:windows_node_memory_bytes_available:sum{ job=\"windows-exporter\"} / node:windows_node_memory_bytes_total:sum{ job=\"windows-exporter\"})"
                     }
                 ]
             }
