@@ -283,7 +283,8 @@ else
 fi
 OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version`
 echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
-echo_var "PROMETHEUS_VERSION" "2.37"
+PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
+echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
 #get ruby version
 RUBY_VERSION=`ruby --version`
