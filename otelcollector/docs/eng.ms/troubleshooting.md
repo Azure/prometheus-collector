@@ -26,3 +26,9 @@
 * Enable Debug Mode through the Helm Chart values or the `<release-name>-prometheus-collector-settings` configmap by setting `debug-mode.enabled="true"`
 * An extra server is created that hosts all the metrics scraped. Run `kubectl port-forward <prometheus-collector pod> -n <namespace> 9091` and go to `127.0.0.1:9091/metrics` in a browser to see if the metrics were scraped by the OpenTelemetry Collector. This can be done for both the replicaset and daemonset pods if advanced mode is enabled
 * This mode can affect performance and should only be enabled for a short time for debugging purposes
+### 6. Metric names, label names & label values
+* We currently enforce the below limits for agent based scraping
+  * Label name length - less than or equal to 511 characters. When this limit is exceeded for any time-series in a job, the entire scrape job will be failed and metrics will be dropped from that job before ingestion. You can see up=0 for that job and also target Ux will show the reason for up=0
+  * Label value length  - less than or equal to 1023 characters. When this limit is exceeded for any time-series in a job, the entire scrape job will be failed and metrics will be dropped from that job before ingestion. You can see up=0 for that job and also target Ux will show the reason for up=0
+  * Number of labels per timeseries - less than or equal to 63. When this limit is exceeded for any time-series in a job, the entire scrape job will be failed and metrics will be dropped from that job before ingestion. You can see up=0 for that job and also target Ux will show the reason for up=0
+  * Metric name length - less than or equal to 511 characters. When this limit is exceeded for any time-series in a job, only that particular series will be dropped. MetricextensionConsoleDebugLog will have traces for the dropped metric

@@ -1,5 +1,12 @@
 # Working with Prometheus metrics in MDM
 
+## Release 09-tbd-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector:tbd`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:tbd`
+* Change Log -
+  * Enforce limits for metricname length, label name length, label value length and number of labels per timeseries
+
 ## Release 08-31-2022
 
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector:4.0.0-main-08-31-2022-9ad2c059`

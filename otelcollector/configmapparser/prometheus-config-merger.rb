@@ -348,12 +348,13 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
       mergedConfigYaml = customPromConfig
     end
     File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigYaml }
-    File.open("/opt/vishwa2.yaml", "w") { |file| file.puts mergedConfigYaml }
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and custom scrape configs- #{errorStr}")
   end
 end
 
+#this will enforce num labels, label name length & label value length for every scrape job to be with-in azure monitor supported limits
+# by injecting these into every custom scrape job's config. For default scrape jobs, this is already included in them. We do this here, so the config validation can happen after we inject these into the custom scrape jobs .
 def setLabelLimitsPerScrape(prometheusConfigString)
   customConfig = prometheusConfigString
   ConfigParseErrorLogger.log(LOGGING_PREFIX, "setLabelLimitsPerScrape()")
@@ -364,12 +365,11 @@ def setLabelLimitsPerScrape(prometheusConfigString)
       if !limitedCustomscrapes.nil? && !limitedCustomscrapes.empty?
         limitedCustomscrapes.each { |scrape|
           scrape["label_limit"] = 63
-          scrape["label_name_length_limit"] = 2
+          scrape["label_name_length_limit"] = 511
           scrape["label_value_length_limit"] = 1023
           ConfigParseErrorLogger.log(LOGGING_PREFIX, " Successfully set label limits in custom scrape config for job #{scrape["job_name"]}")
         }
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done setting label limits for custom scrape config ...")
-        File.open("/opt/vishwa1.yaml", "w") { |file| file.puts YAML::dump(limitedCustomConfig) }
         return YAML::dump(limitedCustomConfig)
       else
         ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "No Jobs found to set label limits while processing custom scrape config")
@@ -408,6 +408,7 @@ end
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   prometheusConfigString = parseConfigMap
   if !prometheusConfigString.nil? && !prometheusConfigString.empty?
+    #set label limits for every custom scrape job, before merging the default & custom config
     labellimitedconfigString = setLabelLimitsPerScrape(prometheusConfigString)
     mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString)
   end
