@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -11,15 +12,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"context"
 
+	"github.com/fluent/fluent-bit-go/output"
+	"github.com/google/cadvisor/client"
+	"github.com/microsoft/ApplicationInsights-Go/appinsights"
+	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"github.com/fluent/fluent-bit-go/output"
-	"github.com/microsoft/ApplicationInsights-Go/appinsights"
-	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
 )
 
 var (
@@ -277,7 +278,6 @@ func SendCoreCountToAppInsightsMetrics() {
 				linuxNodeCount += 1
 			}
 		}
-
 		// Send metric to app insights for node and core capacity
 		cpuCapacityTotal := float64(cpuCapacityTotalLinux + cpuCapacityTotalWindows)
 		metricTelemetryItem := appinsights.NewMetricTelemetry(coresAttachedTelemetryName, cpuCapacityTotal)
@@ -290,6 +290,63 @@ func SendCoreCountToAppInsightsMetrics() {
 
 		TelemetryClient.Track(metricTelemetryItem)
 	}
+}
+
+// Send count of cores/nodes attached to Application Insights periodically
+func SendKsmCpuMemoryToAppInsightsMetrics() {
+
+	client, err := client.NewClient("https://" + CommonProperties["nodeip"] + ":10250/")
+	if err != nil {
+		message := fmt.Sprintf("Error while creating client - %v\n", err)
+		Log(message)
+		SendException(fmt.Sprintf("Error while  creating client   %v\n", err))
+	}
+
+	request := v1.ContainerInfoRequest{NumStats: -1}
+	sInfo, err := client.SubContainerInfo("/docker", &request)
+
+	if err != nil {
+		message := fmt.Sprintf("Error while getting the info - %v\n", err)
+		Log(message)
+		SendException(fmt.Sprintf("Error while getting the info  %v\n", err))
+	}
+	Log(fmt.Sprintf(sInfo))
+
+	// coreCountTelemetryTicker := time.NewTicker(time.Second * time.Duration(coresAttachedTelemetryIntervalSeconds))
+	// for ; true; <-coreCountTelemetryTicker.C {
+	// 	cpuCapacityTotalLinux := int64(0)
+	// 	cpuCapacityTotalWindows := int64(0)
+
+	// 	if err != nil {
+	// 		SendException(fmt.Sprintf("Error while getting the container info for telemetry: %v\n", err))
+	// 		continue
+	// 	}
+
+	// nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+
+	// // Get core and node count by OS
+	// for _, node := range nodeList.Items {
+	// 	osLabel := ""
+	// 	if node.Labels == nil {
+	// 		SendException(fmt.Sprintf("Labels are missing for the node: %s when getting core capacity", node.Name))
+	// 	} else {
+	// 		osLabel = node.Labels["kubernetes.io/os"]
+	// 	}
+
+	// 	if node.Status.Capacity == nil {
+	// 		SendException(fmt.Sprintf("Capacity is missing for the node: %s when getting core capacity", node.Name))
+	// 		continue
+	// 	}
+	// 	cpu := node.Status.Capacity["cpu"]
+
+	// 	if osLabel == "windows" {
+	// 		cpuCapacityTotalWindows += cpu.Value()
+	// 		windowsNodeCount += 1
+	// 	} else {
+	// 		cpuCapacityTotalLinux += cpu.Value()
+	// 		linuxNodeCount += 1
+	// 	}
+	// }
 }
 
 func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, severityLevel contracts.SeverityLevel, tag string) int {
