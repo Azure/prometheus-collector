@@ -61,11 +61,11 @@ cp -f $TMPDIR/envmdsd /etc/mdsd.d
 mkdir /opt/microsoft/linuxmonagent
 
 # Install Telegraf
-echo "Installing telegraf..."
-wget https://dl.influxdata.com/telegraf/releases/telegraf-1.22.2_linux_amd64.tar.gz
-tar -zxvf telegraf-1.22.2_linux_amd64.tar.gz
-mv /opt/telegraf-1.22.2/usr/bin/telegraf /opt/telegraf/telegraf
-chmod 544 /opt/telegraf/telegraf
+#echo "Installing telegraf..."
+#wget https://dl.influxdata.com/telegraf/releases/telegraf-1.22.2_linux_amd64.tar.gz
+#tar -zxvf telegraf-1.22.2_linux_amd64.tar.gz
+#mv /opt/telegraf-1.22.2/usr/bin/telegraf /opt/telegraf/telegraf
+#chmod 544 /opt/telegraf/telegraf
 
 # Install fluent-bit
 echo "Installing fluent-bit..."

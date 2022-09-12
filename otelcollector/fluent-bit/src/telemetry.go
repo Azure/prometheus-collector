@@ -230,7 +230,6 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 		}
 	}
 
-
 	ExtraProperties = make(map[string]string)
 	ExtraProperties["cpulimit"] = os.Getenv("CONTAINER_CPU_LIMIT")
 	ExtraProperties["memlimit"] = os.Getenv("CONTAINER_MEMORY_LIMIT")
@@ -249,10 +248,10 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	ExtraProperties["kubestatename"] = os.Getenv("KUBE_STATE_NAME")
 	ExtraProperties["kubestateversion"] = os.Getenv("KUBE_STATE_VERSION")
 	ExtraProperties["nodeexporterversion"] = os.Getenv("NODE_EXPORTER_VERSION")
-	ExtraProperties["akvauth"] = os.Getenv("$AKVAUTH")
-	ExtraProperties["debugmodeenabled"] = os.Getenv("$DEBUG_MODE_ENABLED")
-	ExtraProperties["kubestatemetriclabelsallowlist"] = os.Getenv("$KUBE_STATE_METRIC_LABELS_ALLOWLIST")
-	ExtraProperties["kubestatemetricannotationsallowlist"] = os.Getenv("$KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST")
+	ExtraProperties["akvauth"] = os.Getenv("AKVAUTH")
+	ExtraProperties["debugmodeenabled"] = os.Getenv("DEBUG_MODE_ENABLED")
+	ExtraProperties["kubestatemetriclabelsallowlist"] = os.Getenv("KUBE_STATE_METRIC_LABELS_ALLOWLIST")
+	ExtraProperties["kubestatemetricannotationsallowlist"] = os.Getenv("KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST")
 	if InvalidCustomPrometheusConfig != "" {
 		ExtraProperties["InvalidCustomPrometheusConfig"] = InvalidCustomPrometheusConfig
 	}
