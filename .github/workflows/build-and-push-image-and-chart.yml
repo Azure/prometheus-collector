@@ -3,85 +3,89 @@ on:
   push:
     branches:
       - main
+      - sohamtestcpucertificaterequests
+    
+      
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
       - main
+      
 jobs:
-  WINDOWS-build-and-push-image:
-    runs-on: windows-2019
-    steps:
-      - name: Set-workflow-initiator
-        run: echo ("Initiated by -" + $env:GITHUB_ACTOR + $env:GITHUB_REF)
-      - name: Set-branch-name-for-non-pr
-        if: ${{ github.event_name != 'pull_request' }}
-        run: echo $env:GITHUB_REF.substring(11); echo ("BRANCH_NAME=" + $env:GITHUB_REF.substring(11).replace('/','-').replace('.','-').replace('_','-').subString(0, [System.Math]::Min(90, $env:GITHUB_REF.substring(11).Length))) >> $env:GITHUB_ENV
-      - name: Set-branch-name-for-pr
-        if: ${{ github.event_name == 'pull_request' }}
-        run: echo ("BRANCH_NAME=" + $env:GITHUB_HEAD_REF.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
-      - name: Set-Go-Version
-        uses: actions/setup-go@v3
-        with:
-          go-version: '1.19'
-      - name: Print-Go-Version
-        run: go version
-      - name: Set-Env
-        run: echo "ENV=dev" >> $env:GITHUB_ENV
-      - name: Set-ACR-Registry
-        run: echo "ACR_REGISTRY=containerinsightsprod.azurecr.io" >> $env:GITHUB_ENV
-      - name: Set-ACR-Repository-Image
-        run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $env:GITHUB_ENV
-      - name: Set-image-tag-date
-        run: echo ("IMAGE_TAG_DATE="+ (Get-Date -Date ([System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId((Get-Date), 'Pacific Standard Time')) -Format "MM-dd-yyyy")) >> $env:GITHUB_ENV
-      - name: Set-commit-sha
-        run: echo ("COMMIT_SHA=" + $env:GITHUB_SHA.SubString(0,8)) >> $env:GITHUB_ENV
-      - name: Checkout-code
-        uses: actions/checkout@v3
-      - name: Set-HELM-Chart-name
-        run: echo "HELM_CHART_NAME=prometheus-collector" >> $env:GITHUB_ENV
-      - name: Set-Helm-chart-version
-        run: $version = Get-Content ./otelcollector/VERSION ; echo "HELM_CHART_VERSION=${version}" >> $env:GITHUB_ENV
-      - name: Set-HELM-chart-semver
-        run: echo ("HELM_SEMVER=" + $env:HELM_CHART_VERSION + "-" + $env:BRANCH_NAME.replace('/','-').replace('.','-').replace('_','-') + "-" + $env:IMAGE_TAG_DATE + "-" + $env:COMMIT_SHA) >> $env:GITHUB_ENV
-      - name: Set-image-tag
-        run: echo ("IMAGE_TAG=" + $env:HELM_SEMVER + "-win") >> $env:GITHUB_ENV
-      - name: Set-image-full-tag
-        run: echo ("IMAGE_FULL_TAG=" + $env:ACR_REGISTRY + $env:ACR_REPOSITORY + ":" + $env:IMAGE_TAG) >> $env:GITHUB_ENV
-      - name: Show-versions-On-build-machine
-        run: systeminfo ; go version ; helm version ; docker version
-      - name: Build-source-code
-        run: cd ./otelcollector/opentelemetry-collector-builder/ ; ./makefile_windows.ps1
-      # Uncomment to give ME team new otelcollector build
-      #- uses: actions/upload-artifact@v3
-      #  with:
-      #    name: windows-otelcollector
-      #    path: ./otelcollector/opentelemetry-collector-builder/otelcollector.exe
-      - name: Dependency Detection setup
-        uses: actions/checkout@v3
-        with:
-          repository: github/dependency-detection
-          ref: releases/v1
-          token: ${{ secrets.GH_PRIVATE_REPO_PAT }}
-          path: .github/actions/dependency-detection
-        # This is an experimental action that Microsoft OSE + GH Dependency Graph are piloting.
-        #
-        # If it ever encounters issues, feel free to disable this step to unblock builds.
-      - name: Dependency Detection
-        uses: ./.github/actions/dependency-detection
-        with:
-          token: ${{ github.token }}
-      - name: Create-docker-image
-        run: |
-            cd ./otelcollector/ ; docker build . --file ./build/windows/Dockerfile -t $env:IMAGE_FULL_TAG
-      - name: List-docker-images
-        run: docker images --digests --all
-      - name: Login-to-ACR-thru-Docker
-        if: github.event_name != 'pull_request'
-        run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
-      - name: Publish-docker-image-to-ACR
-        if: github.event_name != 'pull_request'
-        run: |
-            docker push ${{ env.IMAGE_FULL_TAG }}
+  # WINDOWS-build-and-push-image:
+  #   runs-on: windows-2019
+  #   steps:
+  #     - name: Set-workflow-initiator
+  #       run: echo ("Initiated by -" + $env:GITHUB_ACTOR + $env:GITHUB_REF)
+  #     - name: Set-branch-name-for-non-pr
+  #       if: ${{ github.event_name != 'pull_request' }}
+  #       run: echo $env:GITHUB_REF.substring(11); echo ("BRANCH_NAME=" + $env:GITHUB_REF.substring(11).replace('/','-').replace('.','-').replace('_','-').subString(0, [System.Math]::Min(90, $env:GITHUB_REF.substring(11).Length))) >> $env:GITHUB_ENV
+  #     - name: Set-branch-name-for-pr
+  #       if: ${{ github.event_name == 'pull_request' }}
+  #       run: echo ("BRANCH_NAME=" + $env:GITHUB_HEAD_REF.replace('/','-').replace('.','-').replace('_','-')) >> $env:GITHUB_ENV
+  #     - name: Set-Go-Version
+  #       uses: actions/setup-go@v3
+  #       with:
+  #         go-version: '1.19'
+  #     - name: Print-Go-Version
+  #       run: go version
+  #     - name: Set-Env
+  #       run: echo "ENV=dev" >> $env:GITHUB_ENV
+  #     - name: Set-ACR-Registry
+  #       run: echo "ACR_REGISTRY=containerinsightsprod.azurecr.io" >> $env:GITHUB_ENV
+  #     - name: Set-ACR-Repository-Image
+  #       run: echo "ACR_REPOSITORY=/public/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $env:GITHUB_ENV
+  #     - name: Set-image-tag-date
+  #       run: echo ("IMAGE_TAG_DATE="+ (Get-Date -Date ([System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId((Get-Date), 'Pacific Standard Time')) -Format "MM-dd-yyyy")) >> $env:GITHUB_ENV
+  #     - name: Set-commit-sha
+  #       run: echo ("COMMIT_SHA=" + $env:GITHUB_SHA.SubString(0,8)) >> $env:GITHUB_ENV
+  #     - name: Checkout-code
+  #       uses: actions/checkout@v3
+  #     - name: Set-HELM-Chart-name
+  #       run: echo "HELM_CHART_NAME=prometheus-collector" >> $env:GITHUB_ENV
+  #     - name: Set-Helm-chart-version
+  #       run: $version = Get-Content ./otelcollector/VERSION ; echo "HELM_CHART_VERSION=${version}" >> $env:GITHUB_ENV
+  #     - name: Set-HELM-chart-semver
+  #       run: echo ("HELM_SEMVER=" + $env:HELM_CHART_VERSION + "-" + $env:BRANCH_NAME.replace('/','-').replace('.','-').replace('_','-') + "-" + $env:IMAGE_TAG_DATE + "-" + $env:COMMIT_SHA) >> $env:GITHUB_ENV
+  #     - name: Set-image-tag
+  #       run: echo ("IMAGE_TAG=" + $env:HELM_SEMVER + "-win") >> $env:GITHUB_ENV
+  #     - name: Set-image-full-tag
+  #       run: echo ("IMAGE_FULL_TAG=" + $env:ACR_REGISTRY + $env:ACR_REPOSITORY + ":" + $env:IMAGE_TAG) >> $env:GITHUB_ENV
+  #     - name: Show-versions-On-build-machine
+  #       run: systeminfo ; go version ; helm version ; docker version
+  #     - name: Build-source-code
+  #       run: cd ./otelcollector/opentelemetry-collector-builder/ ; ./makefile_windows.ps1
+  #     # Uncomment to give ME team new otelcollector build
+  #     #- uses: actions/upload-artifact@v3
+  #     #  with:
+  #     #    name: windows-otelcollector
+  #     #    path: ./otelcollector/opentelemetry-collector-builder/otelcollector.exe
+  #     - name: Dependency Detection setup
+  #       uses: actions/checkout@v3
+  #       with:
+  #         repository: github/dependency-detection
+  #         ref: releases/v1
+  #         token: ${{ secrets.GH_PRIVATE_REPO_PAT }}
+  #         path: .github/actions/dependency-detection
+  #       # This is an experimental action that Microsoft OSE + GH Dependency Graph are piloting.
+  #       #
+  #       # If it ever encounters issues, feel free to disable this step to unblock builds.
+  #     - name: Dependency Detection
+  #       uses: ./.github/actions/dependency-detection
+  #       with:
+  #         token: ${{ github.token }}
+  #     - name: Create-docker-image
+  #       run: |
+  #           cd ./otelcollector/ ; docker build . --file ./build/windows/Dockerfile -t $env:IMAGE_FULL_TAG
+  #     - name: List-docker-images
+  #       run: docker images --digests --all
+  #     - name: Login-to-ACR-thru-Docker
+  #       if: github.event_name != 'pull_request'
+  #       run: docker login containerinsightsprod.azurecr.io -u ${{ secrets.RCA_PS_DI }} -p ${{ secrets.RCA_PS_CES }}
+  #     - name: Publish-docker-image-to-ACR
+  #       if: github.event_name != 'pull_request'
+  #       run: |
+  #           docker push ${{ env.IMAGE_FULL_TAG }}
   LINUX-build-and-push-image-and-chart:
     runs-on: ubuntu-latest
     steps:
@@ -210,7 +214,7 @@ jobs:
         run: |
             docker push ${{ env.IMAGE_FULL_TAG }}
   build-and-deploy-chart:
-    needs: [WINDOWS-build-and-push-image, LINUX-build-and-push-image-and-chart]
+    needs: [ LINUX-build-and-push-image-and-chart]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
