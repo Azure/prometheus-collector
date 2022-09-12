@@ -325,9 +325,17 @@ func PushProcessMemoryToAppInsightsMetrics(records []map[interface{}]interface{}
 	return output.FLB_OK
 }
 
-func PushProcessCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+func PushProcessCpuToAppInsightsMetrics(records []map[interface{}]interface{}, tag string) int {
 	for _, record := range records {
 		Log(fmt.Sprintf("cpu record: %v", record))
+		var cpuUsage, _ = ToFloat(record["cpu_p"])
+		metric := appinsights.NewMetricTelemetry("procCpuUsage", cpuUsage)
+		if strings.Contains(tag, "metricsextension") {
+			metric.Properties["procName"] = "metricsextension"
+		} else if strings.Contains(tag, "otelcollector") {
+			metric.Properties["procName"] = "otelcollector"
+		}
+		TelemetryClient.Track(metric)
 	}
 	return output.FLB_OK
 }
