@@ -317,7 +317,7 @@ func PushProcessMemoryToAppInsightsMetrics(records []map[interface{}]interface{}
 	for _, record := range records {
 		Log(fmt.Sprintf("mem record: %v", record))
 		var process = ToString(record["proc_name"])
-		var memoryUsage, _ = ToFloat(record["mem.VmRSS"])
+		var memoryUsage, _ = ToFloat(record["maxRSS"])
 		metric := appinsights.NewMetricTelemetry("procMemUsage", memoryUsage)
 		metric.Properties["procName"] = process
 		TelemetryClient.Track(metric)
@@ -328,7 +328,7 @@ func PushProcessMemoryToAppInsightsMetrics(records []map[interface{}]interface{}
 func PushProcessCpuToAppInsightsMetrics(records []map[interface{}]interface{}, tag string) int {
 	for _, record := range records {
 		Log(fmt.Sprintf("cpu record: %v", record))
-		var cpuUsage, _ = ToFloat(record["cpu_p"])
+		var cpuUsage, _ = ToFloat(record["maxCpu"])
 		metric := appinsights.NewMetricTelemetry("procCpuUsage", cpuUsage)
 		if strings.Contains(tag, "metricsextension") {
 			metric.Properties["procName"] = "metricsextension"
