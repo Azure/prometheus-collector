@@ -61,6 +61,14 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
+	case "prometheus.log.mem.metricsextension":
+	  return PushProcessMemoryToAppInsightsMetrics(records)
+	case "prometheus.log.mem.otelcollector":
+	  return PushProcessMemoryToAppInsightsMetrics(records)
+	case "prometheus.log.cpu.metricsextension":
+	  return PushProcessCpuToAppInsightsMetrics(records)
+	case "prometheus.log.cpu.otelcollector":
+	  return PushProcessCpuToAppInsightsMetrics(records)
 	case fluentbitEventsProcessedLastPeriodTag:
 		return PushReceivedMetricsCountToAppInsightsMetrics(records)
 	case fluentbitProcessedCountTag:

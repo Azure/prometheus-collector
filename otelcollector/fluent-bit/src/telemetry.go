@@ -313,6 +313,18 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 	return output.FLB_OK
 }
 
+func PushProcessMemoryToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		Log(fmt.Sprintf("mem record: %v", record))
+	}
+}
+
+func PushProcessCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		Log(fmt.Sprintf("cpu record: %v", record))
+	}
+}
+
 // Get the account name, metrics/bytes processed count, and metrics/bytes sent count from metrics extension log line
 // that was filtered by fluent-bit
 func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{}) int {

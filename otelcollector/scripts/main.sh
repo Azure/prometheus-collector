@@ -289,10 +289,17 @@ echo_var "PROMETHEUS_VERSION" "2.37"
 RUBY_VERSION=`ruby --version`
 echo_var "RUBY_VERSION" "$RUBY_VERSION"
 
-echo "Starting telegraf"
-/opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
-TELEGRAF_VERSION=`/opt/telegraf/telegraf --version`
-echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
+#echo "Starting telegraf"
+#/opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+#TELEGRAF_VERSION=`/opt/telegraf/telegraf --version`
+#echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
+
+
+ME_PID=`pidof MetricsExtension`
+OTELCOLLECTOR_PID=`pidof otelcollector`
+echo "export ME_PID=$ME_PID" >> ~/.bashrc
+echo "export OTELCOLLECTOR_PID=$OTELCOLLECTOR_PID" >> ~/.bashrc
+source ~/.bashrc
 
 echo "Starting fluent-bit"
 /opt/td-agent-bit/bin/td-agent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
