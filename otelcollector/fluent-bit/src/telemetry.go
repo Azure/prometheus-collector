@@ -373,13 +373,16 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 	return output.FLB_OK
 }
 
-func PushProcessMemoryToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+func PushProcessMemoryToAppInsightsMetrics(records []map[interface{}]interface{}, tag string) int {
 	for _, record := range records {
 		Log(fmt.Sprintf("mem record: %v", record))
-		var process = ToString(record["proc_name"])
 		var memoryUsage, _ = ToFloat(record["maxRSS"])
 		metric := appinsights.NewMetricTelemetry("procMemUsage", memoryUsage)
-		metric.Properties["procName"] = process
+		if strings.Contains(tag, "metricsextension") {
+			metric.Properties["procName"] = "metricsextension"
+		} else if strings.Contains(tag, "otelcollector") {
+			metric.Properties["procName"] = "otelcollector"
+		}
 		TelemetryClient.Track(metric)
 	}
 	return output.FLB_OK

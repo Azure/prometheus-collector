@@ -1,6 +1,6 @@
 module Docker-Provider/source/plugins/go/src
 
-go 1.14
+go 1.18
 
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
