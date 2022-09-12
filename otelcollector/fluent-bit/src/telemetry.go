@@ -14,6 +14,7 @@ import (
 	"context"
 
 	yaml "gopkg.in/yaml.v2"
+	"golang.org/x/exp/maps"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -49,6 +50,8 @@ var (
 	WinExporterKeepListRegex string
 	// Windows KubeProxy metrics keep list regex
 	WinKubeProxyKeepListRegex string
+	// ExtraProperties
+	ExtraProperties map[string]string
 )
 
 const (
@@ -227,6 +230,63 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 		}
 	}
 
+
+	ExtraProperties = make(map[string]string)
+	ExtraProperties["cpulimit"] = os.Getenv("CONTAINER_CPU_LIMIT")
+	ExtraProperties["memlimit"] = os.Getenv("CONTAINER_MEMORY_LIMIT")
+	ExtraProperties["defaultscrapekubelet"] = os.Getenv("AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED")
+	ExtraProperties["defaultscrapecoreDns"] = os.Getenv("AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED")
+	ExtraProperties["defaultscrapecadvisor"] = os.Getenv("AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED")
+	ExtraProperties["defaultscrapekubeproxy"] = os.Getenv("AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED")
+	ExtraProperties["defaultscrapeapiserver"] = os.Getenv("AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED")
+	ExtraProperties["defaultscrapekubestate"] = os.Getenv("AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED")
+	ExtraProperties["defaultscrapenodeexporter"] = os.Getenv("AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED")
+	ExtraProperties["defaultscrapecollectorhealth"] = os.Getenv("AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED")
+	ExtraProperties["defaultscrapewindowsexporter"] = os.Getenv("AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED")
+	ExtraProperties["defaultscrapewindowskubeproxy"] = os.Getenv("AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED")
+	ExtraProperties["nodeexportertargetport"] = os.Getenv("NODE_EXPORTER_TARGETPORT")
+	ExtraProperties["nodeexportername"] = os.Getenv("NODE_EXPORTER_NAME")
+	ExtraProperties["kubestatename"] = os.Getenv("KUBE_STATE_NAME")
+	ExtraProperties["kubestateversion"] = os.Getenv("KUBE_STATE_VERSION")
+	ExtraProperties["nodeexporterversion"] = os.Getenv("NODE_EXPORTER_VERSION")
+	ExtraProperties["akvauth"] = os.Getenv("$AKVAUTH")
+	ExtraProperties["debugmodeenabled"] = os.Getenv("$DEBUG_MODE_ENABLED")
+	ExtraProperties["kubestatemetriclabelsallowlist"] = os.Getenv("$KUBE_STATE_METRIC_LABELS_ALLOWLIST")
+	ExtraProperties["kubestatemetricannotationsallowlist"] = os.Getenv("$KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST")
+	if InvalidCustomPrometheusConfig != "" {
+		ExtraProperties["InvalidCustomPrometheusConfig"] = InvalidCustomPrometheusConfig
+	}
+	if DefaultPrometheusConfig != "" {
+		ExtraProperties["DefaultPrometheusConfig"] = DefaultPrometheusConfig
+	}
+	if KubeletKeepListRegex != "" {
+		ExtraProperties["KubeletKeepListRegex"] = KubeletKeepListRegex
+	}
+	if CoreDNSKeepListRegex != "" {
+		ExtraProperties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
+	}
+	if CAdvisorKeepListRegex != "" {
+		ExtraProperties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
+	}
+	if KubeProxyKeepListRegex != "" {
+		ExtraProperties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
+	}
+	if ApiServerKeepListRegex != "" {
+		ExtraProperties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
+	}
+	if KubeStateKeepListRegex != "" {
+		ExtraProperties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
+	}
+	if NodeExporterKeepListRegex != "" {
+		ExtraProperties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
+	}
+	if WinExporterKeepListRegex != "" {
+		ExtraProperties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
+	}
+	if WinKubeProxyKeepListRegex != "" {
+		ExtraProperties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
+	}
+
 	return 0, nil
 }
 
@@ -334,6 +394,7 @@ func PushProcessCpuToAppInsightsMetrics(records []map[interface{}]interface{}, t
 			metric.Properties["procName"] = "metricsextension"
 		} else if strings.Contains(tag, "otelcollector") {
 			metric.Properties["procName"] = "otelcollector"
+			maps.Copy(metric.Properties, ExtraProperties)
 		}
 		TelemetryClient.Track(metric)
 	}
@@ -356,39 +417,6 @@ func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{
 				metric.Properties["bytesProcessedCount"] = groupMatches[5]
 				metric.Properties["metricsSentToPubCount"] = groupMatches[6]
 				metric.Properties["bytesSentToPubCount"] = groupMatches[7]
-				if InvalidCustomPrometheusConfig != "" {
-					metric.Properties["InvalidCustomPrometheusConfig"] = InvalidCustomPrometheusConfig
-				}
-				if DefaultPrometheusConfig != "" {
-					metric.Properties["DefaultPrometheusConfig"] = DefaultPrometheusConfig
-				}
-				if KubeletKeepListRegex != "" {
-					metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
-				}
-				if CoreDNSKeepListRegex != "" {
-					metric.Properties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
-				}
-				if CAdvisorKeepListRegex != "" {
-					metric.Properties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
-				}
-				if KubeProxyKeepListRegex != "" {
-					metric.Properties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
-				}
-				if ApiServerKeepListRegex != "" {
-					metric.Properties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
-				}
-				if KubeStateKeepListRegex != "" {
-					metric.Properties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
-				}
-				if NodeExporterKeepListRegex != "" {
-					metric.Properties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
-				}
-				if WinExporterKeepListRegex != "" {
-					metric.Properties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
-				}
-				if WinKubeProxyKeepListRegex != "" {
-					metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
-				}
 				TelemetryClient.Track(metric)
 			}
 
