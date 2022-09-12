@@ -78,5 +78,4 @@ Selector labels
 */}}
 {{- define "kube-state-metrics.selectorLabels" }}
 app.kubernetes.io/name: {{ include "kube-state-metrics.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
