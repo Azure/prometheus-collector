@@ -8,11 +8,14 @@ CVE-2021-42836
 CVE-2022-29190
 CVE-2022-29222
 CVE-2022-27191
+CVE-2022-27664
+
 # node-exporter
 CVE-2021-38561
 CVE-2022-21698
 # otelcollector and promconfigvalidator
 CVE-2022-1996
+CVE-2022-27664
 
 # MEDIUM 
 # opt/telegraf/telegraf
