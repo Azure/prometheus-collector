@@ -22,5 +22,7 @@ CVE-2022-31030
 CVE-2022-29526
 # usr/sbin/telegraf
 CVE-2019-11254
+# kube-state-metrics
+CVE-2022-1996
 # /bin/node_exporter
 CVE-2021-44716
