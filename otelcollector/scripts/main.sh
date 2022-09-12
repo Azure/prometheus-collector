@@ -297,6 +297,8 @@ echo_var "RUBY_VERSION" "$RUBY_VERSION"
 
 ME_PID=`pidof MetricsExtension`
 OTELCOLLECTOR_PID=`pidof otelcollector`
+export ME_PID=$ME_PID
+export OTELCOLLECTOR_PID=$OTELCOLLECTOR_PID
 echo "export ME_PID=$ME_PID" >> ~/.bashrc
 echo "export OTELCOLLECTOR_PID=$OTELCOLLECTOR_PID" >> ~/.bashrc
 source ~/.bashrc
