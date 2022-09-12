@@ -17,7 +17,7 @@ func ToString(s interface{}) string {
 	}
 }
 
-func ToFloat(unk interface{}) (float64, error) {
+func ToFloat(s interface{}) (float64, error) {
 	switch t := s.(type) {
 	case float64:
 			return t, nil
@@ -36,7 +36,7 @@ func ToFloat(unk interface{}) (float64, error) {
 	case uint:
 			return float64(t), nil
 	default:
-			return math.NaN(), errUnexpectedType
+			return 0.0, nil
 	}
 }
 
