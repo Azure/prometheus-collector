@@ -1,25 +1,28 @@
 package main
 
 import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"context"
 
+	"github.com/fluent/fluent-bit-go/output"
+	"github.com/microsoft/ApplicationInsights-Go/appinsights"
+	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"github.com/fluent/fluent-bit-go/output"
-	"github.com/microsoft/ApplicationInsights-Go/appinsights"
-	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
 )
 
 var (
@@ -53,7 +56,9 @@ var (
 
 const (
 	coresAttachedTelemetryIntervalSeconds = 600
+	ksmAttachedTelemetryIntervalSeconds   = 600
 	coresAttachedTelemetryName            = "ClusterCoreCapacity"
+	ksmCpuMemoryTelemetryName             = "ksmCapacity"
 	envAgentVersion                       = "AGENT_VERSION"
 	envControllerType                     = "CONTROLLER_TYPE"
 	envNodeIP                             = "NODE_IP"
@@ -277,7 +282,6 @@ func SendCoreCountToAppInsightsMetrics() {
 				linuxNodeCount += 1
 			}
 		}
-
 		// Send metric to app insights for node and core capacity
 		cpuCapacityTotal := float64(cpuCapacityTotalLinux + cpuCapacityTotalWindows)
 		metricTelemetryItem := appinsights.NewMetricTelemetry(coresAttachedTelemetryName, cpuCapacityTotal)
@@ -290,6 +294,128 @@ func SendCoreCountToAppInsightsMetrics() {
 
 		TelemetryClient.Track(metricTelemetryItem)
 	}
+}
+
+type CadvisorJson struct {
+	Pods []struct {
+		Containers []struct {
+			Name string `json:"name"`
+			Cpu  struct {
+				UsageCoreNanoSeconds float64 `json:"usageCoreNanoSeconds"`
+			} `json:"cpu"`
+			Memory struct {
+				WorkingSetBytes float64 `json:"workingSetBytes"`
+			} `json:"memory"`
+		} `json:"containers"`
+	} `json:"pods"`
+}
+
+// Send count of cores/nodes attached to Application Insights periodically
+func SendKsmCpuMemoryToAppInsightsMetrics() {
+
+	var p CadvisorJson
+	err := json.Unmarshal(retrieveKsmData(), &p)
+	if err != nil {
+		message := fmt.Sprintf("Unable to retrieve the unmarshalled Json from Cadvisor- %v\n", err)
+		Log(message)
+		SendException(fmt.Sprintf("Unable to retrieve the unmarshalled Json from Cadvisor  %v\n", err))
+	}
+
+	ksmTelemetryTicker := time.NewTicker(time.Second * time.Duration(ksmAttachedTelemetryIntervalSeconds))
+	for ; true; <-ksmTelemetryTicker.C {
+		cpuKsmUsageCoreNanoSecondsLinux := float64(0)
+		cpuKsmUsageCoreNanoSecondsWindows := float64(0)
+		memoryKsmWorkingSetBytesLinux := float64(0)
+
+		for podId := 0; podId < len(p.Pods); podId++ {
+			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
+				Log(CommonProperties["osType"])
+				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "" {
+					message := fmt.Sprintf("Container name is missing")
+					Log(message)
+					continue
+				}
+				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "ama-metrics-ksm" {
+
+					if CommonProperties["osType"] == "windows" {
+						cpuKsmUsageCoreNanoSecondsWindows += p.Pods[podId].Containers[containerId].Cpu.UsageCoreNanoSeconds
+						Log(string(cpuKsmUsageCoreNanoSecondsWindows))
+					}
+					if CommonProperties["osType"] != "windows" {
+						cpuKsmUsageCoreNanoSecondsLinux += p.Pods[podId].Containers[containerId].Cpu.UsageCoreNanoSeconds
+						Log(string(cpuKsmUsageCoreNanoSecondsLinux))
+						memoryKsmWorkingSetBytesLinux += p.Pods[podId].Containers[containerId].Memory.WorkingSetBytes
+						Log(string(memoryKsmWorkingSetBytesLinux))
+					}
+				}
+			}
+		}
+		// Send metric to app insights for node and core capacity
+		cpuKsmCapacityTotal := float64(cpuKsmUsageCoreNanoSecondsLinux + cpuKsmUsageCoreNanoSecondsWindows)
+		metricTelemetryItem := appinsights.NewMetricTelemetry(ksmCpuMemoryTelemetryName, cpuKsmCapacityTotal)
+
+		// Abbreviated properties to save telemetry cost
+		metricTelemetryItem.Properties["MemKsmWSBytesLinux"] = fmt.Sprintf("%d", memoryKsmWorkingSetBytesLinux)
+
+		TelemetryClient.Track(metricTelemetryItem)
+	}
+
+}
+
+func retrieveKsmData() []byte {
+
+	caCert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	if err != nil {
+		message := fmt.Sprintf("Error getting certificate - %v\n", err)
+		Log(message)
+		SendException(fmt.Sprintf("Error getting certificate  %v\n", err))
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	client := &http.Client{
+		Timeout: time.Duration(5) * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs:            caCertPool,
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	req, err := http.NewRequest("GET", "https://"+CommonProperties["nodeip"]+":10250/stats/summary", nil)
+
+	if err != nil {
+		message := fmt.Sprintf("Error creating the http request - %v\n", err)
+		Log(message)
+		SendException(fmt.Sprintf("Error creating the http request  %v\n", err))
+	}
+
+	tokendata, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		message := fmt.Sprintf("Error accessing the token data - %v\n", err)
+		Log(message)
+		SendException(fmt.Sprintf("Error accessing the token data  %v\n", err))
+	}
+
+	bearerToken := "Bearer" + " " + string(tokendata)
+	req.Header.Add("Authorization", string(bearerToken))
+
+	resp, err := client.Do(req)
+	if err != nil {
+		message := fmt.Sprintf("Error getting response from cadvisor- %v\n", err)
+		Log(message)
+		SendException(fmt.Sprintf("Error getting response from cadvisor %v\n", err))
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		message := fmt.Sprintf("Error reading reponse body - %v\n", err)
+		Log(message)
+		SendException(fmt.Sprintf("Error reading reponse body  %v\n", err))
+	}
+	return body
 }
 
 func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, severityLevel contracts.SeverityLevel, tag string) int {
