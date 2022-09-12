@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - vishwa/depupdates09092022
 
 pr:
   autoCancel: true
