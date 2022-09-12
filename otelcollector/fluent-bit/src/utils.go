@@ -17,6 +17,29 @@ func ToString(s interface{}) string {
 	}
 }
 
+func ToFloat(unk interface{}) (float64, error) {
+	switch t := s.(type) {
+	case float64:
+			return t, nil
+	case float32:
+			return float64(t), nil
+	case int64:
+			return float64(t), nil
+	case int32:
+			return float64(t), nil
+	case int:
+			return float64(t), nil
+	case uint64:
+			return float64(t), nil
+	case uint32:
+			return float64(t), nil
+	case uint:
+			return float64(t), nil
+	default:
+			return math.NaN(), errUnexpectedType
+	}
+}
+
 func ReadFileContents(fullPathToFileName string) (string, error) {
 	fullPathToFileName = strings.TrimSpace(fullPathToFileName)
 	if len(fullPathToFileName) == 0 {

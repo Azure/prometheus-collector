@@ -316,13 +316,20 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 func PushProcessMemoryToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		Log(fmt.Sprintf("mem record: %v", record))
+		var process = ToString(record["proc_name"])
+		var memoryUsage, _ = ToFloat(record["mem.VmRSS"])
+		metric := appinsights.NewMetricTelemetry("procMemUsage", memoryUsage)
+		metric.Properties["procName"] = process
+		TelemetryClient.Track(metric)
 	}
+	return output.FLB_OK
 }
 
 func PushProcessCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		Log(fmt.Sprintf("cpu record: %v", record))
 	}
+	return output.FLB_OK
 }
 
 // Get the account name, metrics/bytes processed count, and metrics/bytes sent count from metrics extension log line
