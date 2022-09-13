@@ -4,22 +4,17 @@
 # CRITICAL/HIGH
 # usr/sbin/telegraf 
 CVE-2021-42836
-#/opt/telegraf/telegraf
-CVE-2022-29190
-CVE-2022-29222
-CVE-2022-27191
 # node-exporter
 CVE-2021-38561
 CVE-2022-21698
 # otelcollector and promconfigvalidator
 CVE-2022-1996
+CVE-2022-27664
+# kube-state-metrics and node-exporter
+CVE-2021-43565
+CVE-2022-27664
 
-# MEDIUM 
-# opt/telegraf/telegraf
-CVE-2019-3826
-CVE-2022-29189
-CVE-2022-31030
-CVE-2022-29526
+# MEDIUM
 # usr/sbin/telegraf
 CVE-2019-11254
 # /bin/node_exporter
