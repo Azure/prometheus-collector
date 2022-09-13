@@ -68,7 +68,7 @@ To use the built-in dashboards
 
 ## Modify dashboards via Grafana
 
-As part of Azure Grafana Service, you will get in-built dashboards.You can query using [PromQL](https://prometheus.io/docs/prometheus/2.37/querying/basics/). Here are a few few limitations that you need be aware of, in case you modify the grafana dashboard
+As part of Azure Grafana Service, you will get in-built dashboards.You can query using [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/). Here are a few few limitations that you need be aware of, in case you modify the grafana dashboard
 
 1. Query durations > 14d are blocked.  
 2. Grafana Template functions  
@@ -85,4 +85,4 @@ In addition to reusing existing dashboard, you can also create new [dashboards i
 --------------------------------------
 
 **Tutorial Summary**
-In this tutorial you learned how to create a metrics account, deploy an agent to a Kubernetes cluster, configure it to scrape [Prometheus](https://prometheus.io/docs/introduction/overview/) metrics into your metrics account, use [PromQL](https://prometheus.io/docs/prometheus/2.37/querying/basics/) and [Grafana](https://grafana.com/grafana/) to query / visualize the metrics in dashboards.
+In this tutorial you learned how to create a metrics account, deploy an agent to a Kubernetes cluster, configure it to scrape [Prometheus](https://prometheus.io/docs/introduction/overview/) metrics into your metrics account, use [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) and [Grafana](https://grafana.com/grafana/) to query / visualize the metrics in dashboards.

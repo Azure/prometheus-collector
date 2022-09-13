@@ -18,9 +18,3 @@ for file in $(find ./docs/ ! -name "PromMDMReleaseNotes.md" -name "*.md" -o -nam
 # Replacing the image  in scan-released-image.yml
 echo "Replacing $previous_semver globally with $current_semver in github workflow - scan-released-image.yml"
 sed -i "s/$previous_semver/$current_semver/g" ../.github/workflows/scan-released-image.yml
-
-prom_version=`cat ./opentelemetry-collector-builder/PROMETHEUS_VERSION`
-echo "Replacing links to Prometheus docs with Prometheus version $prom_version"
-prom_doc_regex="https://prometheus.io/docs/prometheus/[a-zA-Z\.0-9]*"
-prom_doc_replacement="https://prometheus.io/docs/prometheus/$prom_version"
-for file in $(find ./docs/ -name "*.md" -type f); do echo -e "\n$file: "; sed -i "s|$prom_doc_regex|$prom_doc_replacement|g" "$file"; done
