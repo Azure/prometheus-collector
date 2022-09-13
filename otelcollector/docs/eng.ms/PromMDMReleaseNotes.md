@@ -6,6 +6,7 @@
 * image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:tbd`
 * Change Log -
   * Enforce limits for metricname length, label name length, label value length and number of labels per timeseries
+  * Update kube-state-metrics (from 4.7.0 to 4.18.0)
 
 ## Release 08-31-2022
 
