@@ -243,7 +243,7 @@ function Start-Fluentbit {
     $OTELCOLLECTOR_PID = Get-Process otelcollector | select -expand id
     [System.Environment]::SetEnvironmentVariable("OTELCOLLECTOR_PID", $OTELCOLLECTOR_PID, "Process")
     [System.Environment]::SetEnvironmentVariable("OTELCOLLECTOR_PID", $OTELCOLLECTOR_PID, "Machine")
-    
+
     $ME_PID = Get-Process MetricsExtension.Native | select -expand id
     [System.Environment]::SetEnvironmentVariable("ME_PID", $ME_PID, "Process")
     [System.Environment]::SetEnvironmentVariable("ME_PID", $ME_PID, "Machine")
@@ -252,7 +252,6 @@ function Start-Fluentbit {
     # Run fluent-bit as a background job. Switch this to a windows service once fluent-bit supports natively running as a windows service
     Write-Host "Starting fluent-bit"
     Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\fluent-bit\bin\fluent-bit.exe" -ArgumentList @("-c", "C:\opt\fluent-bit\fluent-bit-windows.conf", "-e", "C:\opt\fluent-bit\bin\out_appinsights.so") }
-
 }
 
 #function Start-Telegraf {
