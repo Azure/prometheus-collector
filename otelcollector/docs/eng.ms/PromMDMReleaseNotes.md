@@ -11,7 +11,7 @@
   * Upgrade otelcollector from 0.38.0 to 0.39.0
   * Remove mdsd telegraf
   * Add way to disable telemetry collection if building and testing from the repo
-
+  * Update kube-state-metrics (from 4.7.0 to 4.18.0)
 
 ## Release 08-31-2022
 
