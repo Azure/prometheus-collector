@@ -10,9 +10,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+	"context"
 
 	yaml "gopkg.in/yaml.v2"
-
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
@@ -48,13 +52,17 @@ var (
 )
 
 const (
-	clusterTypeAKS                        = "AKS"
-	envAKSResourceID                      = "AKS_RESOURCE_ID"
+	coresAttachedTelemetryIntervalSeconds = 600
+	coresAttachedTelemetryName            = "ClusterCoreCapacity"
 	envAgentVersion                       = "AGENT_VERSION"
 	envControllerType                     = "CONTROLLER_TYPE"
 	envNodeIP                             = "NODE_IP"
 	envMode                               = "MODE"
-	envCluster                            = "customResourceId"
+	envCluster                            = "customResourceId" //this will contain full resourceid for MAC , ir-resprective of cluster_alias set or not
+	// explicitly defining below for clarity, but not send thru our telemetry for brieviety
+	//envCustomResourceId					  = "customResourceId"
+	//envClusterAlias						  = "AZMON_CLUSTER_ALIAS"
+	//envClusterLabel						  = "AZMON_CLUSTER_LABEL"
 	envAppInsightsAuth                    = "APPLICATIONINSIGHTS_AUTH"
 	envAppInsightsEndpoint                = "APPLICATIONINSIGHTS_ENDPOINT"
 	envComputerName                       = "NODE_NAME"
@@ -129,9 +137,6 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
 		CommonProperties["macmode"] = isMacMode
 		aksResourceID := os.Getenv("CLUSTER")
-		// When we support ARC add a way to identify and send telemetry that it is an ARC cluster
-		CommonProperties["AKS_RESOURCE_ID"] = aksResourceID
-		CommonProperties["ClusterType"] = clusterTypeAKS
 		CommonProperties["Region"] = os.Getenv("AKSREGION")
 		splitStrings := strings.Split(aksResourceID, "/")
 		if len(splitStrings) >= 9 {
@@ -223,6 +228,68 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	}
 
 	return 0, nil
+}
+
+// Send count of cores/nodes attached to Application Insights periodically
+func SendCoreCountToAppInsightsMetrics() {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		SendException(fmt.Sprintf("Error while getting the credentials for the golang client for cores attached telemetry: %v\n", err))
+	}
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		SendException(fmt.Sprintf("Error while creating the golang client for cores attached telemetry: %v\n", err))
+	}
+
+	coreCountTelemetryTicker := time.NewTicker(time.Second * time.Duration(coresAttachedTelemetryIntervalSeconds))
+	for ; true; <-coreCountTelemetryTicker.C {
+		cpuCapacityTotalLinux := int64(0)
+		cpuCapacityTotalWindows := int64(0)
+		linuxNodeCount := 0
+		windowsNodeCount := 0
+
+		nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			SendException(fmt.Sprintf("Error while getting the nodes list for cores attached telemetry: %v\n", err))
+			continue
+		}
+
+		// Get core and node count by OS
+		for _, node := range nodeList.Items {
+			osLabel := ""
+			if node.Labels == nil {
+				SendException(fmt.Sprintf("Labels are missing for the node: %s when getting core capacity", node.Name))
+			} else {
+				osLabel = node.Labels["kubernetes.io/os"]
+			}
+
+			if node.Status.Capacity == nil {
+				SendException(fmt.Sprintf("Capacity is missing for the node: %s when getting core capacity", node.Name))
+				continue
+			}
+			cpu := node.Status.Capacity["cpu"]
+
+			if osLabel == "windows" {
+				cpuCapacityTotalWindows += cpu.Value()
+				windowsNodeCount += 1
+			} else {
+				cpuCapacityTotalLinux += cpu.Value()
+				linuxNodeCount += 1
+			}
+		}
+
+		// Send metric to app insights for node and core capacity
+		cpuCapacityTotal := float64(cpuCapacityTotalLinux + cpuCapacityTotalWindows)
+		metricTelemetryItem := appinsights.NewMetricTelemetry(coresAttachedTelemetryName, cpuCapacityTotal)
+
+		// Abbreviated properties to save telemetry cost
+		metricTelemetryItem.Properties["LiCapacity"] = fmt.Sprintf("%d", cpuCapacityTotalLinux)
+		metricTelemetryItem.Properties["LiNodeCnt"] = fmt.Sprintf("%d", linuxNodeCount)
+		metricTelemetryItem.Properties["WiCapacity"] = fmt.Sprintf("%d", cpuCapacityTotalWindows)
+		metricTelemetryItem.Properties["WiNodeCnt"] = fmt.Sprintf("%d", windowsNodeCount)
+
+		TelemetryClient.Track(metricTelemetryItem)
+	}
 }
 
 func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, severityLevel contracts.SeverityLevel, tag string) int {

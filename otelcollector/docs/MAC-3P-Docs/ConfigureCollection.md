@@ -21,7 +21,7 @@ This is the otel config that will be applied to the prometheus collector which i
 Your prometheus-config file now contains the additional scrape targets you want.  
 For the prometheus collector to consume these additional scrape configs, you create and deploy this config file as a configmap in your cluster in the `kube-system` namespace. Note that your configuration file name must be `prometheus-config` for the configmap to be setup properly. See example below as well. 
 
-**For full configmap refrence see prometheus-config-configmap.yaml**
+**For full configmap reference see prometheus-config-configmap.yaml**
 
 ```shell
 kubectl create configmap <helm-release-name>-prometheus-config --from-file=prometheus-config -n kube-system
@@ -35,6 +35,12 @@ Here's an example to create a new configuration where the Helm release name is `
 ```shell
 kubectl create configmap my-collector-dev-release-prometheus-config --from-file=prometheus-config -n kube-system
 ```
+
+## Create alias for `cluster` label
+
+The value of `cluster` label for all the time-series we collect, could be over-ridden using the cluster alias setting in the settings configmap.
+only alpha-numeric characters are allowed, everything else like will be replaced with `_` . This is to ensure that different components that consume this label (otel collector, telegraf etc..) will all adhere to the basic alphanumeric + _ convention.
+[Doc this more with samples as part of MAC docs].
 
 ## Troubleshoot scrape configuration and targets with the Prometheus Web UI
 

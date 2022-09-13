@@ -161,12 +161,14 @@ service cron restart > /dev/null
 #get controller kind in lowercase, trimmed
 controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
 if [ $controllerType = "replicaset" ]; then
+   fluentBitConfigFile="/opt/fluent-bit/fluent-bit.conf"
    if [ "$CLUSTER_OVERRIDE" = "true" ]; then
       meConfigFile="/usr/sbin/me_internal.config"
    else
       meConfigFile="/usr/sbin/me.config"
    fi
 else
+   fluentBitConfigFile="/opt/fluent-bit/fluent-bit-daemonset.conf"
    if [ "$CLUSTER_OVERRIDE" = "true" ]; then
       meConfigFile="/usr/sbin/me_ds_internal.config"
    else
@@ -175,7 +177,9 @@ else
 fi
 
 export ME_CONFIG_FILE=$meConfigFile	
+export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile
 echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
+echo "export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile" >> ~/.bashrc
 source ~/.bashrc
 echo_var "ME_CONFIG_FILE" "$ME_CONFIG_FILE"
 
@@ -279,6 +283,7 @@ else
 fi
 OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version`
 echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
+echo_var "PROMETHEUS_VERSION" "2.37"
 
 #get ruby version
 RUBY_VERSION=`ruby --version`
@@ -290,15 +295,23 @@ TELEGRAF_VERSION=`/opt/telegraf/telegraf --version`
 echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
 
 echo "Starting fluent-bit"
-/opt/td-agent-bit/bin/td-agent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
+/opt/td-agent-bit/bin/td-agent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
 FLUENT_BIT_VERSION=`dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
+echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
 
-#Run inotify as a daemon to track changes to the dcr/dce config.
 if [ "${MAC}" == "true" ]; then
-  echo "Starting inotify for watching mdsd config update"
-  inotifywait /etc/mdsd.d/config-cache/metricsextension/_default_MonitoringAccount_Configuration.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
+      # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.
+      echo "starting inotify for watching mdsd config update"
+      inotifywait /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
 fi
+
+# Setting time at which the container started running, so that it can be used for empty configuration checks in livenessprobe
+epochTimeNow=`date +%s`
+echo $epochTimeNow > /opt/microsoft/liveness/azmon-container-start-time
+echo_var "AZMON_CONTAINER_START_TIME" "$epochTimeNow"
+epochTimeNowReadable=`date --date @$epochTimeNow`
+echo_var "AZMON_CONTAINER_START_TIME_READABLE" "$epochTimeNowReadable"
 
 shutdown() {
 	echo "shutting down"

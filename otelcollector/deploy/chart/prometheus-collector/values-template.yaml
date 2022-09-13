@@ -5,11 +5,17 @@
 # -- when true, ingestion will be based on Monitor account & DCR(s)
 useMonitoringAccount: false
 
+# -- when set to a string, this will be used as 'cluster' label's value in every time-series scraped & ingested (for both MAC & non-MAC based ingestion). When not specified , for non-MAC , clusterName parameter will be used as value of cluster label, and for MAC, the last part of the cluster's ARM resourceID will be used as value of cluster label.
+clusterAlias: ""
+
 # -- required & used only when useMonitoringAccount=true. This is the full ARM ResourceId for the Kubernetes cluster that is going to be monitoring with this chart
 azureResourceId: ""
 
 # -- required & used only when useMonitoringAccount=true. This is the Azure region for the Kubernetes cluster that is going to be monitoring with this chart
 azureResourceRegion: ""
+
+# -- required & used only when useMonitoringAccount=true. This is the cloud name for the Kubernetes cluster that is going to be monitoring with this chart
+customEnvironment: "azurepubliccloud"
 
 scrapeTargets:
   # -- when true, automatically scrape coredns service in the k8s cluster without any additional scrape config
@@ -58,6 +64,8 @@ azureKeyVault:
   name: "" #required
   # -- tenantid for the azure key vault resource
   tenantId: "" #required
+  # -- cloudName for the azure key vault resource
+  cloudName: "" # optional for public cloud.
   # -- clientid for a service principal that has access to read the Pfx certificates from keyvault specified above
   clientId: "" #required when using service principal to access keyvault
   # -- client secret for the above service principal
@@ -78,6 +86,12 @@ clusterName: "" #required
 internalSettings:
   intEnvironment: false
   clusterOverride: false
+
+# Do not change the below settings. They are reserved for Arc Autonomous
+arcAutonomousSettings:
+  customRegionalEndpoint: ""
+  customGlobalEndpoint: ""
+  customResourceEndpoint: ""
 
 # Only enable to view metrics being scraped for a short time. This can affect performance so it should not be enabled when not in use
 debugMode:

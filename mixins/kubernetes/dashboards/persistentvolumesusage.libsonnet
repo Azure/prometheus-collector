@@ -131,7 +131,7 @@ local gauge = promgrafonnet.gauge;
         template.new(
           'cluster',
           '$datasource',
-          'label_values(kubelet_volume_stats_capacity_bytes, %s)' % $._config.clusterLabel,
+          'label_values(kubelet_volume_stats_capacity_bytes{%(kubeletSelector)s}, %(clusterLabel)s)' % $._config,
           label='cluster',
           refresh='time',
           hide=if $._config.showMultiCluster then '' else 'variable',
@@ -167,6 +167,6 @@ local gauge = promgrafonnet.gauge;
         row.new()
         .addPanel(inodesGraph)
         .addPanel(inodeGauge)
-      ) + { refresh: $._config.grafanaK8s.refresh },
+      ),
   },
 }

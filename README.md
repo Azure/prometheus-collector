@@ -1,12 +1,22 @@
-- **Main branch builds:** ![Builds on main branch](https://github.com/Azure/prometheus-collector/actions/workflows/build-and-push-image-and-chart.yml/badge.svg?branch=main&event=push)  
+# Build Status
 
-- **PR builds:** ![PRs to main branch](https://github.com/Azure/prometheus-collector/actions/workflows/build-and-push-image-and-chart.yml/badge.svg?branch=main&event!=push)
+## Dev
+| Step | Status |
+| -- | -- |
+| Linux | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=main&jobName=Build%20linux%20image)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=main) |
+| Windows | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=main&jobName=Build%20windows%20image)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=main)
+| Chart | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=main&jobName=Package%20helm%20chart)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=main)
+| Deploy | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=main&jobName=Deploy%20to%20dev%20clusters)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=main) |
 
+## Prod
+| Step | Status |
+| -- | -- |
+| Publish | [![Build Status](https://github-private.vsrm.visualstudio.com/_apis/public/Release/badge/2d36c31d-2f89-409f-9a3e-32e4e9699840/79/127)](https://github-private.visualstudio.com/azure/_release?definitionId=79&view=mine&_a=releases) |
+| Deploy | [![Build Status](https://github-private.vsrm.visualstudio.com/_apis/public/Release/badge/2d36c31d-2f89-409f-9a3e-32e4e9699840/79/128)](https://github-private.visualstudio.com/azure/_release?definitionId=79&view=mine&_a=releases) |
 
-# Project 
+# Project  
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+This project is Azure Monitor managed service for Prometheus, which is the agent based solution to collect Prometheus metrics to be sent to managed Azure Monitor store.
 
 As the maintainer of this project, please make a few updates:
 
@@ -28,6 +38,10 @@ provided by the bot. You will only need to do this once across all repos using o
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+## Telemetry
+
+The software may collect information about you and your use of the software and send it to Microsoft. Microsoft may use this information to provide services and improve our products and services. You may turn off the telemetry as described in the repository. There are also some features in the software that may enable you and Microsoft to collect data from users of your applications. If you use these features, you must comply with applicable law, including providing appropriate notices to users of your applications together with a copy of Microsoft’s privacy statement. Our privacy statement is located at https://go.microsoft.com/fwlink/?LinkID=824704. You can learn more about data collection and use in the help documentation and our privacy statement. Your use of the software operates as your consent to these practices.
 
 ## Trademarks 
 

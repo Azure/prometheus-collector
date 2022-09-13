@@ -1,5 +1,42 @@
 # Working with Prometheus metrics in MDM
 
+## Release 09-tbd-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector:tbd`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:tbd`
+* Change Log -
+  * Enforce limits for metricname length, label name length, label value length and number of labels per timeseries
+
+## Release 08-31-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector:4.0.0-main-08-31-2022-9ad2c059`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:4.0.0-main-08-31-2022-9ad2c059`
+* Change Log -
+  * Update ME (from 2022.628.2309-817fc7 to 2.2022.811.1333-d2565c)
+  * Telemetry fixes (collect k-s-m regex, fix collector logs not picked up by telemetry, duplicate telemetry logs)
+  * Add cores attached telemetry
+  * Make cloudName configurable for Sov clouds (Thanks to contributions from peter.glotfelty@microsoft.com)
+  * Fix mixins build issues & sync with latest mixins (k8s,node & coredns)
+  * Add default dashboards, recording rule ARM template, alerting rule ARM template (all for MAC/Addon mode)
+  * Turn off unused default targets (for MAC/Addon mode)
+  * Add parameters for ARC-A
+  * Build and release thru ADO & EV2
+  * Remove ICM setting from external facing recommended CI alerts template
+  * Add template for CI (log based) recommended alerts equivalents in Prometheus
+  * Update metric allow list to account metrics used in MAC/Addon mode
+
+## Release 08-12-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.4.0-main-08-12-2022-b454f29f`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.4.0-main-08-12-2022-b454f29f`
+* Change Log -
+  * Add ability to alias cluster name label used globally (only in MAC mode)
+  * Add template for CI (log based) recommended alerts equivalents in Prometheus
+  * Update metric allow list to account metrics used in for CI recommended alerts
+  * Update MDSD to master.406_x86_64 deb package (from master.377_x86_64)
+  * Adapt liveness probe to account for MAC config DCR download failure scenarios
+  * Fix a bug in Config processing during regex merge (Thanks to contributions from peter.glotfelty@microsoft.com)
+
 ## Release 07-18-2022
 
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:3.3.0-main-07-15-2022-dc6f1b37`
@@ -16,7 +53,7 @@
 * image - `mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:3.2.0-main-05-24-2022-0c3a87bc`
 * Change Log -
   * Remove tolerations for replica & daemonset
-  * Add a new parameter for adding pod labels to collector pods (Thanks to contrinutions from peter.glotfelty@microsoft.com)
+  * Add a new parameter for adding pod labels to collector pods (Thanks to contributions from peter.glotfelty@microsoft.com)
   * Enable aad pod identity for akv access (Thanks to contributions from nicholas.maliwacki@microsoft.com)
   * Windows USE method dashboards have recording rules support (they are not auto provisioned in Grafana)
     * These dashboards are not part of default dashboards. If you have windows nodes in your cluster and want to try these windows dashboards & their recording rules, please ping us over teams channel.

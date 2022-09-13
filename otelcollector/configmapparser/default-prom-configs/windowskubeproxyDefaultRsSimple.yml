@@ -1,6 +1,10 @@
   scrape_configs:
     - job_name: kube-proxy-windows
       scheme: http
+      scrape_interval: 30s
+      label_limit: 63
+      label_name_length_limit: 511
+      label_value_length_limit: 1023
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
         insecure_skip_verify: true

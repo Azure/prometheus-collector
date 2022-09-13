@@ -7,14 +7,15 @@
 | azureKeyVault.clientSecret | string | Optional | `""` | client secret for the above service principal. Required when using service principal |
 | azureKeyVault.pfxCertNames | list of comma seperated strings | <mark>`Required`</mark> | `"{}"` | name of the Pfx certificate(s) - one per metric account |
 | azureKeyVault.tenantId | string | <mark>`Required`</mark> | `""` | tenantid for the azure key vault resource |
+| azureKeyVault.cloudName | string | Optional | `""` | The cloud name the keyvault exists in. The default empty string will use `AzurePublicCloud`. Other values include `AzureChinaCloud`, `AzureUSGovernment`, and `AzureGermanCloud`. |
 | azureKeyVault.useManagedIdentity | string | Optional | `false` | enable/disable managed identity to access keyvault |
 | azureKeyVault.aad-pod-identity | string | Optional | `""` | name of the azure pod managed identity to access keyvault, requires useManagedIdentity true |
 | azureKeyVault.userAssignedIdentityID | string | Optional | `""` | used when useManagedIdentity parameter is set to true. This specifies which user assigned managed identity to use when acccesing keyvault. If you are using a user assigned identity as managed identity, then specify the identity's client id. If empty, AND 'useManagedIdentity' is true, then defaults to use the system assigned identity on the VM |
 | azureMetricAccount.defaultAccountName | string | <mark>`Required`</mark> | `""` | default metric account name to ingest metrics into. This will be the account used if metric itself does not have account 'hinting' label. The certificate for this account should be specified in one of the further arguments below here |
 | clusterName | string | <mark>`Required`</mark> | `""` | name of the k8s cluster. This will be added as a 'cluster' label for every metric scraped |
 | image.pullPolicy | string | Optional | `"IfNotPresent"` |  |
-| image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images"` |  |
-| image.tag | string | Optional | `"3.3.0-main-07-15-2022-dc6f1b37"` |  |
+| image.repository | string | Optional | `"mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images"` |  |
+| image.tag | string | Optional | `"4.0.0-main-08-31-2022-9ad2c059"` |  |
 | internalSettings.intEnvironment | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes for Geneva team |
 | internalSettings.clusterOverride | bool | Optional | `false` | do not use any of the internal settings. This is for testing purposes for Geneva team |
 | mode.advanced | bool | Optional | `false` | if mode.advanced==true (default is false), then it will deploy a daemonset in addition to replica, and move some of the default node targets (kubelet, cadvisor & nodeexporter) to daemonset. On bigger clusters (> 50+ nodes and > 1500+ pods), it is highly recommended to set this to `true`, as this will distribute the metric volumes to individual nodes as nodes & pods scale out & grow. Note:- When this is set to `true`, the `up` metric for the node target will be generated from the replica, so when the node (and daemonset in the node) becomes unvailable), the target availability can still be tracked.

@@ -17,6 +17,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @defaultPromConfigPathPrefix = "/opt/microsoft/otelcollector/default-prom-configs/"
 @regexHashFile = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 @regexHash = {}
+@sendDSUpMetric = false
 
 @defaultGlobalConfigFile = @defaultPromConfigPathPrefix + "defaultGlobalConfig.yml"
 @kubeletDefaultFileRsSimple = @defaultPromConfigPathPrefix + "kubeletDefaultRsSimple.yml"
@@ -124,9 +125,9 @@ def populateDefaultPrometheusConfig
             AppendMetricRelabelConfig(@kubeletDefaultFileRsSimple, kubeletMetricsKeepListRegex)
           end
           defaultConfigs.push(@kubeletDefaultFileRsSimple)
-        elsif windowsDaemonset == true
+        elsif windowsDaemonset == true && @sendDSUpMetric == true
           defaultConfigs.push(@kubeletDefaultFileRsAdvancedWindowsDaemonset)
-        else
+        elsif @sendDSUpMetric == true
           defaultConfigs.push(@kubeletDefaultFileRsAdvanced)
         end
       else
@@ -158,7 +159,7 @@ def populateDefaultPrometheusConfig
             AppendMetricRelabelConfig(@cadvisorDefaultFileRsSimple, cadvisorMetricsKeepListRegex)
           end
           defaultConfigs.push(@cadvisorDefaultFileRsSimple)
-        else
+        elsif @sendDSUpMetric == true
           defaultConfigs.push(@cadvisorDefaultFileRsAdvanced)
         end
       else
@@ -203,13 +204,13 @@ def populateDefaultPrometheusConfig
       nodeexporterMetricsKeepListRegex = @regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
 
       if currentControllerType == @replicasetControllerType
-        if advancedMode == true
+        if advancedMode == true && @sendDSUpMetric == true
           contents = File.read(@nodeexporterDefaultFileRsAdvanced)
           contents = contents.gsub("$$NODE_EXPORTER_NAME$$", ENV["NODE_EXPORTER_NAME"])
           contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
           File.open(@nodeexporterDefaultFileRsAdvanced, "w") { |file| file.puts contents }
           defaultConfigs.push(@nodeexporterDefaultFileRsAdvanced)
-        else
+        elsif advancedMode == false
           if !nodeexporterMetricsKeepListRegex.nil? && !nodeexporterMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@nodeexporterDefaultFileRsSimple, nodeexporterMetricsKeepListRegex)
           end
@@ -261,7 +262,7 @@ def populateDefaultPrometheusConfig
         defaultConfigs.push(@windowsexporterDefaultDsFile)
       
       # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "linux"
+      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
         defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
       
       # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
@@ -295,7 +296,7 @@ def populateDefaultPrometheusConfig
         defaultConfigs.push(@windowskubeproxyDefaultDsFile)
       
       # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "linux"
+      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
         defaultConfigs.push(@windowskubeproxyDefaultRsAdvancedFile)
 
       # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
@@ -378,6 +379,38 @@ def mergeGlobalConfig()
   end
 end
 
+#this will enforce num labels, label name length & label value length for every scrape job to be with-in azure monitor supported limits
+# by injecting these into every custom scrape job's config. For default scrape jobs, this is already included in them. We do this here, so the config validation can happen after we inject these into the custom scrape jobs .
+def setLabelLimitsPerScrape(prometheusConfigString)
+  customConfig = prometheusConfigString
+  ConfigParseErrorLogger.log(LOGGING_PREFIX, "setLabelLimitsPerScrape()")
+  begin
+    if !customConfig.nil? && !customConfig.empty?
+      limitedCustomConfig = YAML.load(customConfig)
+      limitedCustomscrapes = limitedCustomConfig["scrape_configs"]
+      if !limitedCustomscrapes.nil? && !limitedCustomscrapes.empty?
+        limitedCustomscrapes.each { |scrape|
+          scrape["label_limit"] = 63
+          scrape["label_name_length_limit"] = 511
+          scrape["label_value_length_limit"] = 1023
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, " Successfully set label limits in custom scrape config for job #{scrape["job_name"]}")
+        }
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done setting label limits for custom scrape config ...")
+        return YAML::dump(limitedCustomConfig)
+      else
+        ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "No Jobs found to set label limits while processing custom scrape config")
+        return prometheusConfigString
+      end
+    else
+      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "Nothing to set for label limits while processing custom scrape config")
+      return prometheusConfigString
+    end
+  rescue => errStr
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception when setting label limits while processing custom scrape config - #{errStr}")
+    return prometheusConfigString
+  end
+end
+
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Merging Default and Custom Prometheus Config")
 # Populate default scrape config(s) if AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED is set to false
 # and write them as a collector config file, in case the custom config validation fails,
@@ -406,6 +439,9 @@ if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVe
   else
     # if no customconfig is provided then we add in our own global setting for the default scrape_interval (30s)
     mergeGlobalConfig()
+    #set label limits for every custom scrape job, before merging the default & custom config
+    labellimitedconfigString = setLabelLimitsPerScrape(prometheusConfigString)
+    mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString)
   end
 else
   if (File.file?(@configMapMountPath))

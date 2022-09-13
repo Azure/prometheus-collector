@@ -13,6 +13,9 @@ LOGGING_PREFIX = "config"
 # Setting default values which will be used in case they are not set in the configmap or if configmap doesnt exist
 @defaultMetricAccountName = "NONE"
 
+@clusterAlias = ""  # user provided alias (thru config map or chart param)
+@clusterLabel = ""  # value of the 'cluster' label in every time series scraped
+
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
   begin
@@ -41,6 +44,19 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for prometheus collector settings- #{errorStr}, using defaults, please check config map for errors")
   end
+
+  begin
+    if !parsedConfig.nil? && !parsedConfig[:cluster_alias].nil?
+      @clusterAlias = parsedConfig[:cluster_alias].strip
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Got configmap setting for cluster_alias:#{@clusterAlias}")
+      @clusterAlias = @clusterAlias.gsub(/[^0-9a-z]/i, '_') #replace all non alpha-numeric characters with "_"  -- this is to ensure that all down stream places where this is used (like collector, telegraf config etc are keeping up with sanity)
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "After g-subing configmap setting for cluster_alias:#{@clusterAlias}")
+    end
+  rescue => errorStr
+    @clusterAlias = ""
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for cluster_alias in prometheus collector settings- #{errorStr}, using defaults, please check config map for errors")
+  end
+
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
@@ -56,14 +72,41 @@ else
   end
 end
 
+# get clustername from cluster's full ARM resourceid (to be used for mac mode as 'cluster' label)
+begin
+  if !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true"
+    resourceArray=ENV['CLUSTER'].strip.split("/")
+    @clusterLabel=resourceArray[resourceArray.length - 1]
+  else
+    @clusterLabel=ENV['CLUSTER']
+  end
+rescue => errorStr
+  @clusterLabel=ENV['CLUSTER']
+  ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing to determine cluster label from full cluster resource id in prometheus collector settings- #{errorStr}, using default as full CLUSTER passed-in '#{@clusterLabel}'")
+end
+
+#override cluster label with cluster alias, if alias is specified
+
+if !@clusterAlias.nil? && !@clusterAlias.empty? && @clusterAlias.length > 0
+  @clusterLabel = @clusterAlias
+  ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using clusterLabel from cluster_alias:#{@clusterAlias}")
+end
+
+ConfigParseErrorLogger.log(LOGGING_PREFIX, "AZMON_CLUSTER_ALIAS:'#{@clusterAlias}'")
+ConfigParseErrorLogger.log(LOGGING_PREFIX, "AZMON_CLUSTER_LABEL:#{@clusterLabel}")
+
 # Write the settings to file, so that they can be set as environment variables
 file = File.open("/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var", "w")
 
 if !file.nil?
   if !ENV['OS_TYPE'].nil? && ENV['OS_TYPE'].downcase == "linux"
     file.write("export AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
+    file.write("export AZMON_CLUSTER_LABEL=#{@clusterLabel}\n") #used for cluster label value when scraping 
+    file.write("export AZMON_CLUSTER_ALIAS=#{@clusterAlias}\n") #used only for telemetry
   else
     file.write("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
+    file.write("AZMON_CLUSTER_LABEL=#{@clusterLabel}\n") #used for cluster label value when scraping 
+    file.write("AZMON_CLUSTER_ALIAS=#{@clusterAlias}\n") #used only for telemetry
   end
   
   file.close

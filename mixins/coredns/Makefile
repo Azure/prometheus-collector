@@ -8,6 +8,7 @@ endif
 JSONNET_FMT := $(JSONNET_FMT_CMD) $(JSONNET_FMT_ARGS)
 
 all: fmt prometheus_alerts.yaml dashboards_out lint test 
+notest: fmt prometheus_alerts.yaml dashboards_out lint
 
 fmt:
 	find . -name 'vendor' -prune -o -name '*.libsonnet' -print -o -name '*.jsonnet' -print | \
@@ -26,7 +27,7 @@ lint: prometheus_alerts.yaml
 			$(JSONNET_FMT) "$$f" | diff -u "$$f" -; \
 		done
 
-	promtool check rules prometheus_alerts.yaml
+#	promtool check rules prometheus_alerts.yaml
 
 clean:
 	rm -rf dashboards_out prometheus_alerts.yaml
