@@ -240,12 +240,12 @@ function Set-EnvironmentVariablesAndConfigParser {
 
 function Start-Fluentbit {
     $ME_PID = Get-Process MetricsExtension.Native | select -expand id
-    [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $ME_PID, "Process")
-    [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $ME_PID, "Machine")
+    [System.Environment]::SetEnvironmentVariable("ME_PID", $ME_PID, "Process")
+    [System.Environment]::SetEnvironmentVariable("ME_PID", $ME_PID, "Machine")
 
     $OTELCOLLECTOR_PID = Get-Process otelcollector | select -expand id
-    [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $OTELCOLLECTOR_PID, "Process")
-    [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $OTELCOLLECTOR_PID, "Machine")
+    [System.Environment]::SetEnvironmentVariable("OTELCOLLECTOR_PID", $OTELCOLLECTOR_PID, "Process")
+    [System.Environment]::SetEnvironmentVariable("OTELCOLLECTOR_PID", $OTELCOLLECTOR_PID, "Machine")
 
     # Run fluent-bit service first so that we do not miss any logs being forwarded by the fluentd service and telegraf service.
     # Run fluent-bit as a background job. Switch this to a windows service once fluent-bit supports natively running as a windows service
@@ -345,10 +345,10 @@ Set-EnvironmentVariablesAndConfigParser
 
 Start-FileSystemWatcher
 
-Start-Fluentbit
 #Start-Telegraf
 Start-OTEL-Collector
 Start-ME
+Start-Fluentbit
 
 # Notepad.exe | Out-Null
 Write-Output "Starting ping to keep the container running"
