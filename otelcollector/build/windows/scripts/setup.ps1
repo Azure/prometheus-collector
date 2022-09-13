@@ -52,21 +52,21 @@ Copy-Item -Path /Windows/System32/vccorlib140.dll -Destination /opt/fluent-bit/b
 Copy-Item -Path /Windows/System32/vcruntime140.dll -Destination /opt/fluent-bit/bin
 Write-Host ('Finished Installing Visual C++ Redistributable Package')
 ###########################################################################################
-Write-Host ('Installing Telegraf');
-try {
+#Write-Host ('Installing Telegraf');
+#try {
     # Keep version in sync with linux in setup.sh file
-    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.21.4_windows_amd64.zip'
-    Invoke-WebRequest -Uri $telegrafUri -OutFile /installation/telegraf.zip
-    Expand-Archive -Path /installation/telegraf.zip -Destination /installation/telegraf
-    Move-Item -Path /installation/telegraf/*/* -Destination /opt/telegraf/ -ErrorAction SilentlyContinue
-}
-catch {
-    $ex = $_.Exception
-    Write-Host "exception while downloading telegraf for windows"
-    Write-Host $ex
-    exit 1
-}
-Write-Host ('Finished downloading Telegraf')
+#    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.21.4_windows_amd64.zip'
+#    Invoke-WebRequest -Uri $telegrafUri -OutFile /installation/telegraf.zip
+#    Expand-Archive -Path /installation/telegraf.zip -Destination /installation/telegraf
+#    Move-Item -Path /installation/telegraf/*/* -Destination /opt/telegraf/ -ErrorAction SilentlyContinue
+#}
+#catch {
+#    $ex = $_.Exception
+#    Write-Host "exception while downloading telegraf for windows"
+#    Write-Host $ex
+#    exit 1
+#}
+#Write-Host ('Finished downloading Telegraf')
 ###########################################################################################
 #Remove gemfile.lock for http_parser gem 0.6.0
 #see  - https://github.com/fluent/fluentd/issues/3374 https://github.com/tmm1/http_parser.rb/issues/70

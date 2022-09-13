@@ -239,6 +239,14 @@ function Set-EnvironmentVariablesAndConfigParser {
 }
 
 function Start-Fluentbit {
+    $ME_PID = Get-Process MetricsExtension.Native | select -expand id
+    [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $ME_PID, "Process")
+    [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $ME_PID, "Machine")
+
+    $OTELCOLLECTOR_PID = Get-Process otelcollector | select -expand id
+    [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $OTELCOLLECTOR_PID, "Process")
+    [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $OTELCOLLECTOR_PID, "Machine")
+
     # Run fluent-bit service first so that we do not miss any logs being forwarded by the fluentd service and telegraf service.
     # Run fluent-bit as a background job. Switch this to a windows service once fluent-bit supports natively running as a windows service
     Write-Host "Starting fluent-bit"
@@ -246,43 +254,43 @@ function Start-Fluentbit {
 
 }
 
-function Start-Telegraf {
-    Write-Host "Installing telegraf service"
-    /opt/telegraf/telegraf.exe --service install --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf" > $null
+#function Start-Telegraf {
+#    Write-Host "Installing telegraf service"
+#    /opt/telegraf/telegraf.exe --service install --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf" > $null
 
     # Setting delay auto start for telegraf since there have been known issues with windows server and telegraf -
     # https://github.com/influxdata/telegraf/issues/4081
     # https://github.com/influxdata/telegraf/issues/3601
-    try {
-        $serverName = [System.Environment]::GetEnvironmentVariable("POD_NAME", "process")
-        if (![string]::IsNullOrEmpty($serverName)) {
-            sc.exe \\$serverName config telegraf start= delayed-auto
-            Write-Host "Successfully set delayed start for telegraf"
+#    try {
+#        $serverName = [System.Environment]::GetEnvironmentVariable("POD_NAME", "process")
+#        if (![string]::IsNullOrEmpty($serverName)) {
+#            sc.exe \\$serverName config telegraf start= delayed-auto
+#            Write-Host "Successfully set delayed start for telegraf"
 
-        }
-        else {
-            Write-Host "Failed to get environment variable POD_NAME to set delayed telegraf start"
-        }
-    }
-    catch {
-        $e = $_.Exception
-        Write-Host $e
-        Write-Host "exception occured in delayed telegraf start.. continuing without exiting"
-    }
-    Write-Host "Running telegraf service in test mode"
-    /opt/telegraf/telegraf.exe --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf" --test
-    Write-Host "Starting telegraf service"
+#        }
+#        else {
+#            Write-Host "Failed to get environment variable POD_NAME to set delayed telegraf start"
+#        }
+#    }
+#    catch {
+#        $e = $_.Exception
+#        Write-Host $e
+#        Write-Host "exception occured in delayed telegraf start.. continuing without exiting"
+#    }
+#    Write-Host "Running telegraf service in test mode"
+#    /opt/telegraf/telegraf.exe --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf" --test
+#    Write-Host "Starting telegraf service"
     # C:\opt\telegraf\telegraf.exe --service start
-    /opt/telegraf/telegraf.exe --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf" --service start
+#    /opt/telegraf/telegraf.exe --config "/opt/telegraf/telegraf-prometheus-collector-windows.conf" --service start
 
     # Trying to start telegraf again if it did not start due to fluent bit not being ready at startup
-    Get-Service telegraf | findstr Running
-    if ($? -eq $false) {
-        Write-Host "trying to start telegraf in again in 30 seconds, since fluentbit might not have been ready..."
-        Start-Sleep -s 30
-        /opt/telegraf/telegraf.exe --service start
-    }
-}
+#    Get-Service telegraf | findstr Running
+#    if ($? -eq $false) {
+#        Write-Host "trying to start telegraf in again in 30 seconds, since fluentbit might not have been ready..."
+#        Start-Sleep -s 30
+#        /opt/telegraf/telegraf.exe --service start
+#    }
+#}
 
 function Start-ME {
     Write-Output "Starting Metrics Extension"
@@ -338,7 +346,7 @@ Set-EnvironmentVariablesAndConfigParser
 Start-FileSystemWatcher
 
 Start-Fluentbit
-Start-Telegraf
+#Start-Telegraf
 Start-OTEL-Collector
 Start-ME
 

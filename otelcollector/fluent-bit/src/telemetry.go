@@ -83,6 +83,10 @@ const (
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
 	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
+	fluentbitMemoryUsageMETag             = "prometheus.log.perf.mem.metricsextension"
+	fluentbitMemoryUsageOtelcollectorTag  = "prometheus.log.perf.mem.otelcollector"
+	fluentbitCpuUsageMETag                = "prometheus.log.perf.cpu.metricsextension"
+	fluentbitCpuUsageOtelcollectorTag     = "prometheus.log.perf.cpu.otelcollector"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 )
@@ -374,7 +378,6 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 
 func PushProcessMemoryToAppInsightsMetrics(records []map[interface{}]interface{}, tag string) int {
 	for _, record := range records {
-		Log(fmt.Sprintf("mem record: %v", record))
 		var memoryUsage, _ = ToFloat(record["maxRSS"])
 		metric := appinsights.NewMetricTelemetry("procMemUsage", memoryUsage)
 		if strings.Contains(tag, "metricsextension") {
@@ -389,7 +392,6 @@ func PushProcessMemoryToAppInsightsMetrics(records []map[interface{}]interface{}
 
 func PushProcessCpuToAppInsightsMetrics(records []map[interface{}]interface{}, tag string) int {
 	for _, record := range records {
-		Log(fmt.Sprintf("cpu record: %v", record))
 		var cpuUsage, _ = ToFloat(record["maxCpu"])
 		metric := appinsights.NewMetricTelemetry("procCpuUsage", cpuUsage)
 		if strings.Contains(tag, "metricsextension") {
