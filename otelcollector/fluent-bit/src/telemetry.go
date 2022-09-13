@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -294,6 +296,7 @@ func SendCoreCountToAppInsightsMetrics() {
 	}
 }
 
+// Struct for getting relevant fields from JSON object obtained from cadvisor endpoint
 type CadvisorJson struct {
 	Pods []struct {
 		Containers []struct {
@@ -308,7 +311,7 @@ type CadvisorJson struct {
 	} `json:"pods"`
 }
 
-// Send count of cores/nodes attached to Application Insights periodically
+// Send Cpu and Memory Usage for Kube state metrics to Application Insights periodically
 func SendKsmCpuMemoryToAppInsightsMetrics() {
 
 	var p CadvisorJson
@@ -333,22 +336,27 @@ func SendKsmCpuMemoryToAppInsightsMetrics() {
 					continue
 				}
 				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "ama-metrics-ksm" {
-
 					if CommonProperties["osType"] == "windows" {
 						cpuKsmUsageCoreNanoSecondsWindows += p.Pods[podId].Containers[containerId].Cpu.UsageCoreNanoSeconds
+						Log(fmt.Sprintf("cpuKsmUsageCoreNanoSecondsWindows- %v\n", cpuKsmUsageCoreNanoSecondsWindows))
 					}
 					if CommonProperties["osType"] != "windows" {
 						cpuKsmUsageCoreNanoSecondsLinux += p.Pods[podId].Containers[containerId].Cpu.UsageCoreNanoSeconds
+						Log(fmt.Sprintf("cpuKsmUsageCoreNanoSecondsLinux- %v\n", cpuKsmUsageCoreNanoSecondsLinux))
 						memoryKsmWorkingSetBytesLinux += p.Pods[podId].Containers[containerId].Memory.WorkingSetBytes
+						Log(fmt.Sprintf("memoryKsmWorkingSetBytesLinux- %v\n", memoryKsmWorkingSetBytesLinux))
 					}
 				}
 			}
 		}
-		// Send metric to app insights for node and core capacity
+		// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
 		cpuKsmCapacityTotal := float64(cpuKsmUsageCoreNanoSecondsLinux + cpuKsmUsageCoreNanoSecondsWindows)
+		Log(fmt.Sprintf("cpuKsmCapacityTotal- %v\n", cpuKsmCapacityTotal))
 		metricTelemetryItem := appinsights.NewMetricTelemetry(ksmCpuMemoryTelemetryName, cpuKsmCapacityTotal)
 
 		// Abbreviated properties to save telemetry cost
+		metricTelemetryItem.Properties["CpuUsageKsmWindows"] = fmt.Sprintf("%d", cpuKsmUsageCoreNanoSecondsWindows)
+		metricTelemetryItem.Properties["CpuUsageKsmLinux"] = fmt.Sprintf("%d", cpuKsmUsageCoreNanoSecondsLinux)
 		metricTelemetryItem.Properties["MemKsmWSBytesLinux"] = fmt.Sprintf("%d", memoryKsmWorkingSetBytesLinux)
 
 		TelemetryClient.Track(metricTelemetryItem)
@@ -356,13 +364,50 @@ func SendKsmCpuMemoryToAppInsightsMetrics() {
 
 }
 
+// Retrieve the JSON payload of Kube state metrics from Cadvisor endpoint
 func retrieveKsmData() []byte {
-	resp, err := http.Get("https://" + CommonProperties["nodeip"] + ":10250/")
+	caCert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	if err != nil {
-		message := fmt.Sprintf("Error getting response - %v\n", err)
+		message := fmt.Sprintf("Error getting certificate - %v\n", err)
 		Log(message)
-		SendException(fmt.Sprintf("Error getting response  %v\n", err))
+		SendException(fmt.Sprintf("Error getting certificate  %v\n", err))
 	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	client := &http.Client{
+		Timeout: time.Duration(5) * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs:            caCertPool,
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+	req, err := http.NewRequest("GET", "https://"+CommonProperties["nodeip"]+":10250/stats/summary", nil)
+	if err != nil {
+		message := fmt.Sprintf("Error creating the http request - %v\n", err)
+		Log(message)
+		SendException(fmt.Sprintf("Error creating the http request  %v\n", err))
+	}
+	// Get token data
+	tokendata, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		message := fmt.Sprintf("Error accessing the token data - %v\n", err)
+		Log(message)
+		SendException(fmt.Sprintf("Error accessing the token data  %v\n", err))
+	}
+	// Create bearer token
+	bearerToken := "Bearer" + " " + string(tokendata)
+	req.Header.Add("Authorization", string(bearerToken))
+
+	resp, err := client.Do(req)
+	if err != nil {
+		message := fmt.Sprintf("Error getting response from cadvisor- %v\n", err)
+		Log(message)
+		SendException(fmt.Sprintf("Error getting response from cadvisor %v\n", err))
+	}
+
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -370,7 +415,6 @@ func retrieveKsmData() []byte {
 		Log(message)
 		SendException(fmt.Sprintf("Error reading reponse body  %v\n", err))
 	}
-	Log(string(body))
 	return body
 }
 
