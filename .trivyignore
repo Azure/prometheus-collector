@@ -13,9 +13,13 @@ CVE-2022-27664
 # kube-state-metrics and node-exporter
 CVE-2021-43565
 CVE-2022-27664
+CVE-2022-27191
 
 # MEDIUM
 # usr/sbin/telegraf
 CVE-2019-11254
-# /bin/node_exporter
+# /bin/node_exporter and kube-state-metrics
 CVE-2021-44716
+CVE-2022-29526
+# otelcollector and promconfigvalidator
+CVE-2019-3826
