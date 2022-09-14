@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/fluent/fluent-bit-go/output"
+	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 )
 import (
 	"C"
@@ -43,6 +43,10 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 		go SendCoreCountToAppInsightsMetrics()
 	}
 
+	if strings.ToLower(os.Getenv(envControllerType)) == "daemonset" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+		go SendKsmCpuMemoryToAppInsightsMetrics()
+	}
+
 	return output.FLB_OK
 }
 
@@ -66,7 +70,6 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	}
 
 	incomingTag := strings.ToLower(C.GoString(tag))
-
 
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
