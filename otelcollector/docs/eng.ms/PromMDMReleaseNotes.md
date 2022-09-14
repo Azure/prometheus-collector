@@ -16,6 +16,12 @@
     * secrets-store.csi.x-k8s.io/v1alpha1 --> secrets-store.csi.x-k8s.io/v1
     * policy/v1beta1 PodDisruptionBudget --> policy/v1 PodDisruptionBudget
     * Disable psp (pod security policy) for node exporter, as psp is deprecated and will be removed starting k8s versions 1.25+
+  * Telemetry changes
+    * Collect cpu cores telemetry
+    * Collect cpu & mem usage telemetry for k-s-m
+  * Update Windows rec.rules to use cluster scope
+  * Make Minimal ingestion profile configurable thru config map
+  * Fix CI recommended rules with few query bugs
 
 ## Release 08-31-2022
 
