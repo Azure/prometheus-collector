@@ -12,5 +12,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.25.0
 	k8s.io/client-go v0.25.0
-	github.com/google/cadvisor v0.45.0
 )

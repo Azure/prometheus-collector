@@ -58,7 +58,7 @@ const (
 	coresAttachedTelemetryIntervalSeconds = 600
 	ksmAttachedTelemetryIntervalSeconds   = 600
 	coresAttachedTelemetryName            = "ClusterCoreCapacity"
-	ksmCpuMemoryTelemetryName             = "ksmCapacity"
+	ksmCpuMemoryTelemetryName             = "ksmUsage"
 	envAgentVersion                       = "AGENT_VERSION"
 	envControllerType                     = "CONTROLLER_TYPE"
 	envNodeIP                             = "NODE_IP"
@@ -302,10 +302,10 @@ type CadvisorJson struct {
 		Containers []struct {
 			Name string `json:"name"`
 			Cpu  struct {
-				UsageCoreNanoSeconds float64 `json:"usageCoreNanoSeconds"`
+				UsageNanoCores float64 `json:"usageNanoCores"`
 			} `json:"cpu"`
 			Memory struct {
-				WorkingSetBytes float64 `json:"workingSetBytes"`
+				RssBytes float64 `json:"rssBytes"`
 			} `json:"memory"`
 		} `json:"containers"`
 	} `json:"pods"`
@@ -319,45 +319,34 @@ func SendKsmCpuMemoryToAppInsightsMetrics() {
 	if err != nil {
 		message := fmt.Sprintf("Unable to retrieve the unmarshalled Json from Cadvisor- %v\n", err)
 		Log(message)
-		SendException(fmt.Sprintf("Unable to retrieve the unmarshalled Json from Cadvisor  %v\n", err))
+		SendException(message)
 	}
 
 	ksmTelemetryTicker := time.NewTicker(time.Second * time.Duration(ksmAttachedTelemetryIntervalSeconds))
 	for ; true; <-ksmTelemetryTicker.C {
-		cpuKsmUsageCoreNanoSecondsLinux := float64(0)
-		cpuKsmUsageCoreNanoSecondsWindows := float64(0)
-		memoryKsmWorkingSetBytesLinux := float64(0)
+		cpuKsmUsageNanoCoresLinux := float64(0)
+		memoryKsmRssBytesLinux := float64(0)
 
 		for podId := 0; podId < len(p.Pods); podId++ {
 			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
-				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "" {
-					message := fmt.Sprintf("Container name is missing")
-					Log(message)
-					continue
-				}
-				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "ama-metrics-ksm" {
-					if CommonProperties["osType"] == "windows" {
-						cpuKsmUsageCoreNanoSecondsWindows += p.Pods[podId].Containers[containerId].Cpu.UsageCoreNanoSeconds
-						Log(fmt.Sprintf("cpuKsmUsageCoreNanoSecondsWindows- %v\n", cpuKsmUsageCoreNanoSecondsWindows))
+				if CommonProperties["osType"] == "linux" {
+					if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "" {
+						message := fmt.Sprintf("Container name is missing")
+						Log(message)
+						continue
 					}
-					if CommonProperties["osType"] != "windows" {
-						cpuKsmUsageCoreNanoSecondsLinux += p.Pods[podId].Containers[containerId].Cpu.UsageCoreNanoSeconds
-						Log(fmt.Sprintf("cpuKsmUsageCoreNanoSecondsLinux- %v\n", cpuKsmUsageCoreNanoSecondsLinux))
-						memoryKsmWorkingSetBytesLinux += p.Pods[podId].Containers[containerId].Memory.WorkingSetBytes
-						Log(fmt.Sprintf("memoryKsmWorkingSetBytesLinux- %v\n", memoryKsmWorkingSetBytesLinux))
+					if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "ama-metrics-ksm" {
+						cpuKsmUsageNanoCoresLinux += p.Pods[podId].Containers[containerId].Cpu.UsageNanoCores
+						memoryKsmRssBytesLinux += p.Pods[podId].Containers[containerId].Memory.RssBytes
 					}
 				}
 			}
 		}
 		// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
-		cpuKsmCapacityTotal := float64(cpuKsmUsageCoreNanoSecondsLinux + cpuKsmUsageCoreNanoSecondsWindows)
-		Log(fmt.Sprintf("cpuKsmCapacityTotal- %v\n", cpuKsmCapacityTotal))
-		metricTelemetryItem := appinsights.NewMetricTelemetry(ksmCpuMemoryTelemetryName, cpuKsmCapacityTotal)
+		metricTelemetryItem := appinsights.NewMetricTelemetry(ksmCpuMemoryTelemetryName, cpuKsmUsageNanoCoresLinux)
 
 		// Abbreviated properties to save telemetry cost
-		metricTelemetryItem.Properties["CpuUsageKsmWindows"] = fmt.Sprintf("%d", cpuKsmUsageCoreNanoSecondsWindows)
-		metricTelemetryItem.Properties["CpuUsageKsmLinux"] = fmt.Sprintf("%d", cpuKsmUsageCoreNanoSecondsLinux)
-		metricTelemetryItem.Properties["MemKsmWSBytesLinux"] = fmt.Sprintf("%d", memoryKsmWorkingSetBytesLinux)
+		metricTelemetryItem.Properties["MemKsmRssBytesLinux"] = fmt.Sprintf("%d", memoryKsmRssBytesLinux)
 
 		TelemetryClient.Track(metricTelemetryItem)
 	}
@@ -370,7 +359,7 @@ func retrieveKsmData() []byte {
 	if err != nil {
 		message := fmt.Sprintf("Error getting certificate - %v\n", err)
 		Log(message)
-		SendException(fmt.Sprintf("Error getting certificate  %v\n", err))
+		SendException(message)
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -388,14 +377,14 @@ func retrieveKsmData() []byte {
 	if err != nil {
 		message := fmt.Sprintf("Error creating the http request - %v\n", err)
 		Log(message)
-		SendException(fmt.Sprintf("Error creating the http request  %v\n", err))
+		SendException(message)
 	}
 	// Get token data
 	tokendata, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
 		message := fmt.Sprintf("Error accessing the token data - %v\n", err)
 		Log(message)
-		SendException(fmt.Sprintf("Error accessing the token data  %v\n", err))
+		SendException(message)
 	}
 	// Create bearer token
 	bearerToken := "Bearer" + " " + string(tokendata)
@@ -405,7 +394,7 @@ func retrieveKsmData() []byte {
 	if err != nil {
 		message := fmt.Sprintf("Error getting response from cadvisor- %v\n", err)
 		Log(message)
-		SendException(fmt.Sprintf("Error getting response from cadvisor %v\n", err))
+		SendException(message)
 	}
 
 	defer resp.Body.Close()
@@ -413,7 +402,7 @@ func retrieveKsmData() []byte {
 	if err != nil {
 		message := fmt.Sprintf("Error reading reponse body - %v\n", err)
 		Log(message)
-		SendException(fmt.Sprintf("Error reading reponse body  %v\n", err))
+		SendException(message)
 	}
 	return body
 }
