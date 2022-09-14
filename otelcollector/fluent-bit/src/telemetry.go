@@ -329,16 +329,14 @@ func SendKsmCpuMemoryToAppInsightsMetrics() {
 
 		for podId := 0; podId < len(p.Pods); podId++ {
 			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
-				if CommonProperties["osType"] == "linux" {
-					if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "" {
-						message := fmt.Sprintf("Container name is missing")
-						Log(message)
-						continue
-					}
-					if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "ama-metrics-ksm" {
-						cpuKsmUsageNanoCoresLinux += p.Pods[podId].Containers[containerId].Cpu.UsageNanoCores
-						memoryKsmRssBytesLinux += p.Pods[podId].Containers[containerId].Memory.RssBytes
-					}
+				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "" {
+					message := fmt.Sprintf("Container name is missing")
+					Log(message)
+					continue
+				}
+				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "ama-metrics-ksm" {
+					cpuKsmUsageNanoCoresLinux += p.Pods[podId].Containers[containerId].Cpu.UsageNanoCores
+					memoryKsmRssBytesLinux += p.Pods[podId].Containers[containerId].Memory.RssBytes
 				}
 			}
 		}
