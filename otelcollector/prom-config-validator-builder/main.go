@@ -262,9 +262,12 @@ func main() {
 
 		cp, err := service.NewConfigProvider(
 			service.ConfigProviderSettings{
-				Locations:     []string{fmt.Sprintf("file:%s", outputFilePath)},
-				MapProviders:  map[string]confmap.Provider{"file": fileprovider.New()},
-				MapConverters: []confmap.Converter{expandconverter.New()},
+				ResolverSettings: 
+					confmap.ResolverSettings {
+						URIs:     []string{fmt.Sprintf("file:%s", outputFilePath)},
+						Providers:  map[string]confmap.Provider{"file": fileprovider.New()},
+						Converters: []confmap.Converter{expandconverter.New()},
+					},
 			},
 		)
 		if err != nil {

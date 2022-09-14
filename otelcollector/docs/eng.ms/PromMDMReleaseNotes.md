@@ -6,6 +6,11 @@
 * image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:tbd`
 * Change Log -
   * Enforce limits for metricname length, label name length, label value length and number of labels per timeseries
+  * Upgrade telegraf from 1.22.2 to 1.23.4
+  * Upgrade fluent-bit from 1.7.8 to 1.9.7
+  * Upgrade otelcollector from 0.38.0 to 0.39.0
+  * Remove mdsd telegraf
+  * Add way to disable telemetry collection if building and testing from the repo
   * Update kube-state-metrics (from 4.7.0 to 4.18.0)
 
 ## Release 08-31-2022
