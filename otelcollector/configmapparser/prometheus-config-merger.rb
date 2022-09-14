@@ -353,6 +353,38 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
   end
 end
 
+#this will enforce num labels, label name length & label value length for every scrape job to be with-in azure monitor supported limits
+# by injecting these into every custom scrape job's config. For default scrape jobs, this is already included in them. We do this here, so the config validation can happen after we inject these into the custom scrape jobs .
+def setLabelLimitsPerScrape(prometheusConfigString)
+  customConfig = prometheusConfigString
+  ConfigParseErrorLogger.log(LOGGING_PREFIX, "setLabelLimitsPerScrape()")
+  begin
+    if !customConfig.nil? && !customConfig.empty?
+      limitedCustomConfig = YAML.load(customConfig)
+      limitedCustomscrapes = limitedCustomConfig["scrape_configs"]
+      if !limitedCustomscrapes.nil? && !limitedCustomscrapes.empty?
+        limitedCustomscrapes.each { |scrape|
+          scrape["label_limit"] = 63
+          scrape["label_name_length_limit"] = 511
+          scrape["label_value_length_limit"] = 1023
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, " Successfully set label limits in custom scrape config for job #{scrape["job_name"]}")
+        }
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done setting label limits for custom scrape config ...")
+        return YAML::dump(limitedCustomConfig)
+      else
+        ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "No Jobs found to set label limits while processing custom scrape config")
+        return prometheusConfigString
+      end
+    else
+      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "Nothing to set for label limits while processing custom scrape config")
+      return prometheusConfigString
+    end
+  rescue => errStr
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception when setting label limits while processing custom scrape config - #{errStr}")
+    return prometheusConfigString
+  end
+end
+
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Merging Default and Custom Prometheus Config")
 # Populate default scrape config(s) if AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED is set to false
 # and write them as a collector config file, in case the custom config validation fails,
@@ -376,7 +408,9 @@ end
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   prometheusConfigString = parseConfigMap
   if !prometheusConfigString.nil? && !prometheusConfigString.empty?
-    mergeDefaultAndCustomScrapeConfigs(prometheusConfigString)
+    #set label limits for every custom scrape job, before merging the default & custom config
+    labellimitedconfigString = setLabelLimitsPerScrape(prometheusConfigString)
+    mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString)
   end
 else
   if (File.file?(@configMapMountPath))

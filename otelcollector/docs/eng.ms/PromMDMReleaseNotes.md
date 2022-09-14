@@ -1,5 +1,39 @@
 # Working with Prometheus metrics in MDM
 
+## Release 09-tbd-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector:tbd`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:tbd`
+* Change Log -
+  * Enforce limits for metricname length, label name length, label value length and number of labels per timeseries
+  * Upgrade telegraf from 1.22.2 to 1.23.4
+  * Upgrade fluent-bit from 1.7.8 to 1.9.7
+  * Upgrade otelcollector from 0.38.0 to 0.39.0
+  * Remove mdsd telegraf
+  * Add way to disable telemetry collection if building and testing from the repo
+  * Update kube-state-metrics (from 4.7.0 to 4.18.0)
+  * API Deprecations
+    * secrets-store.csi.x-k8s.io/v1alpha1 --> secrets-store.csi.x-k8s.io/v1
+    * policy/v1beta1 PodDisruptionBudget --> policy/v1 PodDisruptionBudget
+    * Disable psp (pod security policy) for node exporter, as psp is deprecated and will be removed starting k8s versions 1.25+
+
+## Release 08-31-2022
+
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector:4.0.0-main-08-31-2022-9ad2c059`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:4.0.0-main-08-31-2022-9ad2c059`
+* Change Log -
+  * Update ME (from 2022.628.2309-817fc7 to 2.2022.811.1333-d2565c)
+  * Telemetry fixes (collect k-s-m regex, fix collector logs not picked up by telemetry, duplicate telemetry logs)
+  * Add cores attached telemetry
+  * Make cloudName configurable for Sov clouds (Thanks to contributions from peter.glotfelty@microsoft.com)
+  * Fix mixins build issues & sync with latest mixins (k8s,node & coredns)
+  * Add default dashboards, recording rule ARM template, alerting rule ARM template (all for MAC/Addon mode)
+  * Turn off unused default targets (for MAC/Addon mode)
+  * Add parameters for ARC-A
+  * Build and release thru ADO & EV2
+  * Remove ICM setting from external facing recommended CI alerts template
+  * Add template for CI (log based) recommended alerts equivalents in Prometheus
+  * Update metric allow list to account metrics used in MAC/Addon mode
 
 ## Release 08-12-2022
 

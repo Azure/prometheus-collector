@@ -76,7 +76,7 @@
   helm upgrade --install <chart_release_name_2> <chart.tgz> --version <chart_semver> --set azureKeyVault.name="**" --set azureKeyVault.pfxCertNames="{**,**}" --set azureKeyVault.tenantId="**" --set clusterName="**" --set azureMetricAccount.defaultAccountName="**" --set azureKeyVault.clientId="**" --set azureKeyVault.clientSecret="****" --set scrapeTargets.coreDns=false --set scrapeTargets.kubelet=false --set scrapeTargets.cAdvisor=false -- set scrapeTargets.kubeProxy=false --set scrapeTargets.apiServer=false --set scrapeTargets.kubeState=false --set scrapeTargets.nodeExporter=false --namespace=<my_prom_collector_namespace> --create-namespace
   ```
 
-## Setting Custom CPU and Memory Limits
+## Setting Custom CPU and Memory Limits (Helm Chart)
 
 The CPU and memory needed are correlated with the number of bytes each timeseries sent is and how many timeseries there are.
 
@@ -136,3 +136,28 @@ The CPU and memory needed are correlated with the number of bytes each timeserie
   ```
 
   These can be adjusted by specifying these chart values such as `--set resources.deployment.limits.cpu=5` and `--set resources.deployment.limits.memory=11GB` in the HELM upgrade/install command.
+
+## CPU and Memory Limits (Addon)
+
+The CPU and memory usage is correlated with the number of bytes of each sample and the number of samples scraped. Below are benchmarks based on the default targets scraped, volume of custom metrics scraped, and number of nodes, pods, and containers. These numbers are meant as a reference rather than a guarantee, since usage can still vary greatly depending on the number of timeseries and bytes per metric.
+
+Note that a very large volume of metrics will require a large enough node to be able to handle the CPU and memory usage required. Below are guidelines on the expected usage.
+
+Currently the upper volume limit is around 3-3.5 million samples/min, depending on the number of bytes per sample. This limitation will go away in the future with sharding.
+
+### Replicaset in Small vs Large Cluster
+
+  Scrape Targets | Samples Sent / Minute | Node Count | Pod Count | Prometheus-Collector CPU Usage (cores) |Prometheus-Collector Memory Usage (bytes)
+  | --- | --- | --- | --- | --- | --- |
+  | default targets | 11,344 | 3 | 40 | 12.9 mc | 148 Mi |
+  | default targets | 260,000  | 340 | 13000 | 1.10 c | 1.70 GB |
+  | default targets + custom targets | 3.56 million | 340 | 13000 | 5.13 c | 9.52 GB |
+
+### Daemonset in Small Cluster vs Large Cluster
+
+  Scrape Targets | Samples Sent / Minute Total | Samples Sent / Minute / Pod |  Node Count | Pod Count | Prometheus-Collector CPU Usage Total (cores) |Prometheus-Collector Memory Usage Total (bytes) | Prometheus-Collector CPU Usage / Pod (cores) |Prometheus-Collector Memory Usage / Pod (bytes)
+  | --- | --- | --- | --- | -- | --- | --- | --- | --- |
+  | default targets | 9,858 | 3,327 | 3 | 40 | 41.9 mc | 581 Mi | 14.7 mc | 189 Mi |
+  | default targets | 2.3 million | 14,400 | 340 | 13000 | 805 mc | 305.34 GB | 2.36 mc | 898 Mi |
+
+  For additional custom metrics, the single pod will behave the same as the replicaset pod depending on the volume of custom metrics.

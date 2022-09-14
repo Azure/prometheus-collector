@@ -15,11 +15,12 @@
                 "scopes": [
                     "$mac"
                 ],
+                "enabled": true,
                 "interval": "PT5M",
                 "rules": [
                     {
                         "alert": "Average CPU usage per container is greater than 95%",
-                        "expression": "sum (rate(container_cpu_usage_seconds_total{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}[5m])) by (pod_name, container,cluster,namespace) / sum(container_spec_cpu_quota{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}/container_spec_cpu_period{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}) by (pod_name, container,cluster,namespace) >.95",
+                        "expression": "sum (rate(container_cpu_usage_seconds_total{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}[5m])) by (pod,cluster,container,namespace) / sum(container_spec_cpu_quota{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}/container_spec_cpu_period{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}) by (pod,cluster,container,namespace) > .95",
                         "for": "PT5M",
                         "labels": {
                             "cluster": "{{$labels.cluster}}"
@@ -27,6 +28,7 @@
                         "annotations": {
                             "description": "Average CPU usage per container is greater than 95%"
                         },
+                        "enabled": true,
                         "severity": 4,
                         "resolveConfiguration": {
                             "autoResolved": true,
@@ -40,7 +42,7 @@
                     },
                     {
                         "alert": "Average Memory usage per container is greater than 95%.",
-                        "expression": "sum by (namespace,cluster,container) (container_memory_working_set_bytes{container!=\"\", image!=\"\", container_name!=\"POD\"}) / sum by (namespace,cluster,container) (kube_pod_container_resource_limits{resource=\"memory\"}) > .95 ",
+                        "expression": "(container_memory_working_set_bytes{container!=\"\", image!=\"\", container_name!=\"POD\"} / on(namespace,cluster,pod,container) kube_pod_container_resource_limits{resource=\"memory\"}) > .95 ",
                         "for": "PT10M",
                         "labels": {
                             "cluster": "{{$labels.cluster}}"
@@ -48,6 +50,7 @@
                         "annotations": {
                             "description": "Average Memory usage per container is greater than 95%"
                         },
+                        "enabled": true,
                         "severity": 4,
                         "resolveConfiguration": {
                             "autoResolved": true,
@@ -69,6 +72,7 @@
                         "annotations": {
                             "description": "Number of OOM killed containers is greater than 0"
                         },
+                        "enabled": true,
                         "severity": 4,
                         "resolveConfiguration": {
                             "autoResolved": true,
@@ -90,6 +94,7 @@
                         "annotations": {
                             "description": "Average PV usage is greater than 80%"
                         },
+                        "enabled": true,
                         "severity": 4,
                         "resolveConfiguration": {
                             "autoResolved": true,
@@ -111,6 +116,7 @@
                         "annotations": {
                             "description": "Pod container restarted in last 1 hour"
                         },
+                        "enabled": true,
                         "severity": 4,
                         "resolveConfiguration": {
                             "autoResolved": true,
@@ -132,6 +138,7 @@
                         "annotations": {
                             "description": "Node has been unready for more than 15 minutes "
                         },
+                        "enabled": true,
                         "severity": 4,
                         "resolveConfiguration": {
                             "autoResolved": true,
@@ -153,6 +160,7 @@
                         "annotations": {
                             "description": "Ready state of pods is less than 80%."
                         },
+                        "enabled": true,
                         "severity": 4,
                         "resolveConfiguration": {
                             "autoResolved": true,
@@ -174,6 +182,7 @@
                         "annotations": {
                             "description": "Number of stale jobs older than six hours is greater than 0"
                         },
+                        "enabled": true,
                         "severity": 4,
                         "resolveConfiguration": {
                             "autoResolved": true,
@@ -195,6 +204,7 @@
                         "annotations": {
                             "description": "Average node CPU utilization is greater than 80%"
                         },
+                        "enabled": true,
                         "severity": 4,
                         "resolveConfiguration": {
                             "autoResolved": true,
@@ -216,6 +226,7 @@
                         "annotations": {
                             "description": "Working set memory for a node is greater than 80%."
                         },
+                        "enabled": true,
                         "severity": 4,
                         "resolveConfiguration": {
                             "autoResolved": true,
@@ -237,6 +248,7 @@
                         "annotations": {
                             "description": "Number of pods in failed state are greater than 0"
                         },
+                        "enabled": true,
                         "severity": 4,
                         "resolveConfiguration": {
                             "autoResolved": true,

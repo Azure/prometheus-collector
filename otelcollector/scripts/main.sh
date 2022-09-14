@@ -283,15 +283,19 @@ else
 fi
 OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version`
 echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
+PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
+echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
 #get ruby version
 RUBY_VERSION=`ruby --version`
 echo_var "RUBY_VERSION" "$RUBY_VERSION"
 
 echo "Starting telegraf"
-/opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
-TELEGRAF_VERSION=`/opt/telegraf/telegraf --version`
-echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
+if [ "$TELEMETRY_DISABLED" != "true" ]; then
+  /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+  TELEGRAF_VERSION=`/opt/telegraf/telegraf --version`
+  echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
+fi
 
 echo "Starting fluent-bit"
 /opt/td-agent-bit/bin/td-agent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
