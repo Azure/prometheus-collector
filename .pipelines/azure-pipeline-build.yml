@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - kaveesh/azureml
 
 pr:
   autoCancel: true
