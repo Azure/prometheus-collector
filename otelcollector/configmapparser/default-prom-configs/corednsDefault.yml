@@ -2,7 +2,7 @@
   - job_name: kube-dns
     scheme: http
     metrics_path: /metrics
-    scrape_interval: '$$SCRAPE_INTERVAL$$'
+    scrape_interval: $$SCRAPE_INTERVAL$$
     label_limit: 63
     label_name_length_limit: 511
     label_value_length_limit: 1023
