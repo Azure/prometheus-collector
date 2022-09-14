@@ -62,9 +62,9 @@ mkdir /opt/microsoft/linuxmonagent
 
 # Install Telegraf
 echo "Installing telegraf..."
-wget https://dl.influxdata.com/telegraf/releases/telegraf-1.22.2_linux_amd64.tar.gz
-tar -zxvf telegraf-1.22.2_linux_amd64.tar.gz
-mv /opt/telegraf-1.22.2/usr/bin/telegraf /opt/telegraf/telegraf
+wget https://dl.influxdata.com/telegraf/releases/telegraf-1.23.4_linux_amd64.tar.gz
+tar -zxvf telegraf-1.23.4_linux_amd64.tar.gz
+mv /opt/telegraf-1.23.4/usr/bin/telegraf /opt/telegraf/telegraf
 chmod 544 /opt/telegraf/telegraf
 
 # Install fluent-bit
@@ -77,7 +77,7 @@ sudo apt-get update
 
 # Some dependencies were fixed with sudo apt --fix-broken, try installing td-agent-bit again
 # This is because we are keeping the same fluentbit version but have upgraded ubuntu
-sudo apt-get install td-agent-bit=1.7.8 -y
+sudo apt-get install td-agent-bit=1.9.7 -y
 
 # setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
@@ -146,5 +146,6 @@ rm -f $TMPDIR/metricsext2*.deb
 rm -f $TMPDIR/prometheus-2.25.2.linux-amd64.tar.gz
 rm -rf $TMPDIR/prometheus-2.25.2.linux-amd64
 rm -f $TMPDIR/telegraf*.gz
-rm -rf $TMPDIR/telegraf-1.18.0/
+rm -rf $TMPDIR/telegraf-1.23.4/
 rm -rf $TMPDIR/azure-mdsd*.deb
+rm /usr/sbin/telegraf

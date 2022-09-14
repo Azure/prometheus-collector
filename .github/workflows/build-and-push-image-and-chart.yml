@@ -1,12 +1,6 @@
 name: build-and-push-image-and-chart
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches:
-      - main
+  workflow_dispatch
 jobs:
   WINDOWS-build-and-push-image:
     runs-on: windows-2019
@@ -177,7 +171,7 @@ jobs:
           timeout: '5m0s'
           ignore-unfixed: true
       - name: Set-kube-state-image
-        run: echo "K-S-M-IMAGE=mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.4.2" >> $GITHUB_ENV
+        run: echo "K-S-M-IMAGE=mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.6.0" >> $GITHUB_ENV
       - name: Set-node-exporter-image
         run: echo "NODE-EXPORTER-IMAGE=mcr.microsoft.com/oss/prometheus/node-exporter:v1.3.1" >> $GITHUB_ENV
       - name: Run-trivy-scanner-on-kube-state-metrics-image
