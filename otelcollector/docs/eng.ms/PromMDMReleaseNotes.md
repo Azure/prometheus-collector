@@ -12,6 +12,10 @@
   * Remove mdsd telegraf
   * Add way to disable telemetry collection if building and testing from the repo
   * Update kube-state-metrics (from 4.7.0 to 4.18.0)
+  * API Deprecations
+    * secrets-store.csi.x-k8s.io/v1alpha1 --> secrets-store.csi.x-k8s.io/v1
+    * policy/v1beta1 PodDisruptionBudget --> policy/v1 PodDisruptionBudget
+    * Disable psp (pod security policy) for node exporter, as psp is deprecated and will be removed starting k8s versions 1.25+
 
 ## Release 08-31-2022
 
