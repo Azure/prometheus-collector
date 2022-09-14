@@ -8,7 +8,6 @@ data:
     #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
     ver1
   prometheus-collector-settings: |-
-    default_metric_account_name = "mymetricaccountname"
     cluster_alias = ""
   default-scrape-settings-enabled: |-
     kubelet = true
