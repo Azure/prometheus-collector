@@ -2,8 +2,8 @@
 
 ## Release 09-tbd-2022
 
-* chart - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector:tbd`
-* image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:tbd`
+* chart - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector:5.0.0-main-09-14-2022-9b2af251`
+* image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.0.0-main-09-14-2022-9b2af251`
 * Change Log -
   * Enforce limits for metricname length, label name length, label value length and number of labels per timeseries
   * Upgrade telegraf from 1.22.2 to 1.23.4
