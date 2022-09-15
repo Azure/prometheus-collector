@@ -53,7 +53,7 @@ cd prometheus-collector/
 for i in 1 2 3 4 5 6 7 8 9 10; do
   sleep 30
   helm dep update
-  if [ $? -eq 0]; then
+  if [ $? -eq 0 ]; then
     echo "Dependent charts are published to mcr"
     DEPENDENT_CHARTS_PUBLISHED="true"
     break

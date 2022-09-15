@@ -16,9 +16,9 @@ jobs:
       - name: Set-Helm-OCI-Experimental-feature
         run: echo "HELM_EXPERIMENTAL_OCI=1" >> $GITHUB_ENV
       - name: Set-MCR-Repository
-        run: echo "MCR_REPOSITORY=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images" >> $GITHUB_ENV
+        run: echo "MCR_REPOSITORY=mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images" >> $GITHUB_ENV
       - name: Set-MCR-HELM-CHART-Repository
-        run: echo "MCR_REPOSITORY_HELM=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector" >> $GITHUB_ENV 
+        run: echo "MCR_REPOSITORY_HELM=mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector" >> $GITHUB_ENV 
       - name: Login-to-Azure-Key-Vault
         uses: Azure/login@v1
         with:
