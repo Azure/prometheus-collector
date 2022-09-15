@@ -1,6 +1,6 @@
 @REM REM "Checking if fluent-bit is running"
 
-tasklist /fi "imagename eq fluent-bit.exe" /fo "table"  | findstr fluent-bit
+tasklist /fi "imagename eq td-agent-bit.exe" /fo "table"  | findstr td-agent-bit
 
 IF ERRORLEVEL 1 (
     echo "Fluent-Bit is not running"

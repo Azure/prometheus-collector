@@ -229,7 +229,6 @@ jobs:
     name: Azure-Pipelines-Windows-CI-Test-EO
   dependsOn:
   - Common
-  - Linux
   variables:
     WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
   steps:
