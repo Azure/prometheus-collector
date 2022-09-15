@@ -37,12 +37,12 @@
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
             "location": "[parameters('location')]",
-            "clusterName": "[parameters('clusterName')]",
             "properties": {
                 "description": "[concat(variables('kubernetesAlertRuleGroupDescription'), variables('version'))]",
                 "scopes": [
                     "[parameters('macResourceId')]"
                 ],
+                "clusterName": "[parameters('clusterName')]",
                 "enabled": true,
                 "interval": "PT5M",
                 "rules": [
@@ -61,7 +61,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -80,7 +80,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -99,7 +99,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -118,7 +118,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -137,7 +137,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -156,7 +156,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -175,7 +175,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -194,7 +194,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -213,7 +213,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -232,7 +232,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -251,7 +251,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     }  
