@@ -34,5 +34,5 @@ data:
   debug-mode: |-
     enabled = false
 metadata:
-  name: prometheus-collector-settings-configmap
+  name: ama-metrics-settings-configmap
   namespace: kube-system
