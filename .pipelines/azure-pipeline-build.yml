@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/fluent-bit-windows
 
 pr:
   autoCancel: true
