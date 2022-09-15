@@ -1,6 +1,6 @@
 # Working with Prometheus metrics in MDM
 
-## Release 09-tbd-2022
+## Release 09-14-2022
 
 * chart - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector:5.0.0-main-09-14-2022-9b2af251`
 * image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.0.0-main-09-14-2022-9b2af251`
