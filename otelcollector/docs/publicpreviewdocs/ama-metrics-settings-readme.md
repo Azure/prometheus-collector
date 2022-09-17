@@ -1,6 +1,6 @@
 # Configure metrics collection
 
-# open question - should we doc windows targets?
+RashmiTBD: - should we doc windows targets?
 
 ## Default targets
 Below is a list of all the default targets which the Azure Monitor Metrics addon can scrape by default. 
@@ -25,7 +25,8 @@ If you wish to turn on the scraping of the default targets which are not enabled
 ## Customizing default targets
 If you'd like to customize any of the default targets to filter out the metrics by their names you can edit the settings under 'default-targets-metrics-keep-list' in this [configmap](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/deploy/ama-metrics-settings-configmap.yaml) (or edit if you have already created it). 
 By default we ingest only minimal metrics as required by dashboards, rec.rules & alerts. 
-# Update this - Read about ingestion volume control & customizations [here](./PromIngestionVolume.md)
+
+RashmiTBD: - Read about ingestion volume control & customizations [here](./PromIngestionVolume.md)
 
 This setting is per job, for example kubelet is the metric filtering setting for the default target - kubelet.
 Specify if you'd like to filter IN metrics collected for the default targets using regex based filtering. 
@@ -41,7 +42,7 @@ ex -
 
 If you would like to further customize the default jobs to customize the collection frequency or labels etc, you could disable the corresponding default target by setting the configmap value for the target to false (refer Default targets section above) and then applying the job using custom configmap. 
 
-# Update this - Please see this section 'Create a configmap from your configuration file' below on how to create configmap for custom targets.
+RashmiTBD: - Please see this section 'Create a configmap from your configuration file' below on how to create configmap for custom targets.
 
 
 ## Cluser Alias
