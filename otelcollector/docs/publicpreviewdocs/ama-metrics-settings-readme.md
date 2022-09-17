@@ -22,6 +22,27 @@ The table below also lists the ones that are enabled to be scraped by default (e
 If you wish to turn on the scraping of the default targets which are not enabled by default, you can create this [configmap](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/deploy/ama-metrics-settings-configmap.yaml) (or edit if you have already created it) and update the targets listed under
 'default-scrape-settings-enabled' to true.
 
+## Customizing default targets
+If you'd like to customize any of the default targets to filter out the metrics by their names you can edit the settings under 'default-targets-metrics-keep-list' in this [configmap](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/deploy/ama-metrics-settings-configmap.yaml) (or edit if you have already created it). 
+By default we ingest only minimal metrics as required by dashboards, rec.rules & alerts. 
+# Update this - Read about ingestion volume control & customizations [here](./PromIngestionVolume.md)
+
+This setting is per job, for example kubelet is the metric filtering setting for the default target - kubelet.
+Specify if you'd like to filter IN metrics collected for the default targets using regex based filtering. 
+
+ex -
+
+    kubelet = "metricX|metricY"
+    apiserver = "mymetric.*"
+
+>Note: If you are using  
+      1. quotes in the regex you will need to escape them using a backslash. Example - keepListRegexes.kubelet = `"test\'smetric\"s\""`  instead of `"test'smetric"s""`  
+      2. backslashes in the regex, you will need to escape them. Example - keepListRegexes.kubelet = `testbackslash\\*` instead of `testbackslash\*`
+
+If you would like to further customize the default jobs to customize the collection frequency or labels etc, you could disable the corresponding default target by setting the configmap value for the target to false (refer Default targets section above) and then applying the job using custom configmap. 
+
+# Update this - Please see this section 'Create a configmap from your configuration file' below on how to create configmap for custom targets.
+
 
 ## Cluser Alias
 The cluster label appended to every timeseries scraped will use the last part of the full ARM resourceID.
@@ -31,3 +52,5 @@ If you wish to override the cluster label in the time-series scraped, you can up
 
 The new label will also show up in the grafana instance in the cluster dropdown instead of the default one.
 >Note - only alpha-numeric characters are allowed, everything else will be replaced with _ . This is to ensure that different components that consume this label (otel collector, telegraf etc..) will all adhere to the basic alphanumeric + _ convention.
+
+# Debug mode - Sync with Grace to doc
