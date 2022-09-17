@@ -1,6 +1,6 @@
 # Configure custom scrape jobs
 
-In order to configure the azure monitor metrics addon to scrape targets other than the default targets, create this [configmap](https://github.com/Azure/prometheus-collector/blob/rashmi/pub-preview-docs/otelcollector/deploy/ama-metric-settings-prometheus-config.yaml) and update the prometheus-config section with your custom prometheus configuration. 
+In order to configure the azure monitor metrics addon to scrape targets other than the default targets, create this [configmap](https://github.com/Azure/prometheus-collector/blob/rashmi/pub-preview-docs/otelcollector/deploy/ama-metric-prometheus-config-configmap.yaml) and update the prometheus-config section with your custom prometheus configuration. 
 The format specified in the configmap will be the same as a prometheus.yml following the [configuration format](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file). Currently supported are the following sections:
 ```yaml
 global:
