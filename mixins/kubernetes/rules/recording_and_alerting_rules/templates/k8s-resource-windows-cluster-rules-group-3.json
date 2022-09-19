@@ -9,6 +9,7 @@
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
             "location": "$MACLocation",
+            "clusterName": "$cluster",
             "properties": {
                 "scopes": [
                     "$mac"
@@ -16,19 +17,19 @@
                 "rules": [
                     {
                         "record": "windows_container_network_received_bytes_total",
-                        "expression": "windows_container_network_receive_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\", cluster = \"$cluster\"}) by(container, container_id, pod, namespace, cluster)"
+                        "expression": "windows_container_network_receive_bytes_total{job = \"windows-exporter\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\"}) by(container, container_id, pod, namespace, cluster)"
                     },
                     {
                         "record": "network_io_1",
-                        "expression": "sort_desc(sum by (cluster, namespace, pod, container) (rate(windows_container_network_received_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"}[3m])))"
+                        "expression": "sort_desc(sum by (cluster, namespace, pod, container) (rate(windows_container_network_received_bytes_total{job = \"windows-exporter\"}[3m])))"
                     },
                     {
                         "record": "windows_container_network_transmitted_bytes_total",
-                        "expression": "windows_container_network_transmit_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\", cluster = \"$cluster\"}) by(container, container_id, pod, namespace, cluster)"
+                        "expression": "windows_container_network_transmit_bytes_total{job = \"windows-exporter\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\"}) by(container, container_id, pod, namespace, cluster)"
                     },
                     {
                         "record": "network_io_2",
-                        "expression": "sort_desc(sum by (cluster, namespace, pod, container) (rate(windows_container_network_transmitted_bytes_total{job = \"windows-exporter\", cluster = \"$cluster\"}[3m])))"
+                        "expression": "sort_desc(sum by (cluster, namespace, pod, container) (rate(windows_container_network_transmitted_bytes_total{job = \"windows-exporter\"}[3m])))"
                     }
                 ]
             }

@@ -6,7 +6,7 @@
 | Linux | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=main&jobName=Build%20linux%20image)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=main) |
 | Windows | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=main&jobName=Build%20windows%20image)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=main)
 | Chart | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=main&jobName=Package%20helm%20chart)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=main)
-| Deploy | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=mains&jobName=Deploy%20to%20dev%20clusters)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=main) |
+| Deploy | [![Build Status](https://github-private.visualstudio.com/azure/_apis/build/status/Azure.prometheus-collector?branchName=main&jobName=Deploy%20to%20dev%20clusters)](https://github-private.visualstudio.com/azure/_build/latest?definitionId=440&branchName=main) |
 
 ## Prod
 | Step | Status |
@@ -17,13 +17,6 @@
 # Project  
 
 This project is Azure Monitor managed service for Prometheus, which is the agent based solution to collect Prometheus metrics to be sent to managed Azure Monitor store.
-
-As the maintainer of this project, please make a few updates:
-
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
 
 ## Contributing 
 
@@ -42,6 +35,8 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 ## Telemetry
 
 The software may collect information about you and your use of the software and send it to Microsoft. Microsoft may use this information to provide services and improve our products and services. You may turn off the telemetry as described in the repository. There are also some features in the software that may enable you and Microsoft to collect data from users of your applications. If you use these features, you must comply with applicable law, including providing appropriate notices to users of your applications together with a copy of Microsoft’s privacy statement. Our privacy statement is located at https://go.microsoft.com/fwlink/?LinkID=824704. You can learn more about data collection and use in the help documentation and our privacy statement. Your use of the software operates as your consent to these practices.
+
+To disable telemetry, you can set the environment variable `TELEMETRY_DISABLED` to `true` for the container either by yaml or in the [Dockerfile](/otelcollector/build/linux/Dockerfile).
 
 ## Trademarks 
 
