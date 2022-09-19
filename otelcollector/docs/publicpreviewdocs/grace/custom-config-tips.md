@@ -68,6 +68,7 @@ metric_relabel_configs:
 ```
 
 ### Job and Instance Relabeling
+
 The `job` and `instance` label values can be changed based on the source label, just like any other label.
 
 ```yaml
@@ -84,6 +85,7 @@ relabel_configs:
 ```
 
 ## Metric Relabel Configs
+
 Metric relabel configs are applied after scraping and before ingestion. Use the `metric_relabel_configs` section to filter metrics after scraping. Below are examples of how to do so.
 
 ### Drop Metrics by Name
@@ -217,17 +219,17 @@ Routing metrics to additional Azure Monitor Workspaces can be done through the c
 
 ### Sending the Same Metrics to Multiple Workspaces
 
-You can create multiple Data Collection Rules that point to the same Data Collection Endpoint for metrics to be sent to additional Azure Monitor Workspaces from the same Kubernetes cluster. Currently, this is only available through ARM template deployments [link to Kaveesh's doc]. In your ARM template, add additional DCRs for your additional Azure Monitor Workspaces:
+You can create multiple Data Collection Rules that point to the same Data Collection Endpoint for metrics to be sent to additional Azure Monitor Workspaces from the same Kubernetes cluster. Currently, this is only available through ARM template deployments [link to Kaveesh's doc]. In your ARM template, add additional DCRs for your additional Azure Monitor Workspaces. Replace `<dcr-name-1>`, `<azure-monitor-workspace-location-1>`, `<dcr-name-2>`, `<azure-monitor-workspace-location-2>`, `<dce-resource-id>` in the sample below:
 
 ```json
 {
   "type": "Microsoft.Insights/dataCollectionRules",
   "apiVersion": "2021-09-01-preview",
-  "name": "[variables('dcrName')]",
-  "location": "[parameters('azureMonitorWorkspaceLocation')]",
+  "name": "<dcr-name-1>",
+  "location": "<azure-monitor-workspace-location-1>",
   "kind": "Linux",
   "properties": {
-    "dataCollectionEndpointId": "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
+    "dataCollectionEndpointId": "<dce-resource-id>",
     "dataFlows": [
       {
         "destinations": ["MonitoringAccount1"],
@@ -247,27 +249,27 @@ You can create multiple Data Collection Rules that point to the same Data Collec
     "destinations": {
       "monitoringAccounts": [
         {
-          "accountResourceId": "[parameters('azureMonitorWorkspaceResourceId')]",
+          "accountResourceId": "<azure-monitor-workspace-resource-id-1>",
           "name": "MonitoringAccount1"
         }
       ]
     }
   },
   "dependsOn": [
-    "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]"
+    "<dce-resource-id>"
   ]
 },
 {
   "type": "Microsoft.Insights/dataCollectionRules",
   "apiVersion": "2021-09-01-preview",
-  "name": "[variables('dcrName')]",
-  "location": "[parameters('azureMonitorWorkspaceLocation')]",
+  "name": "<dcr-name-2>",
+  "location": "<azure-monitor-workspace-location-2>",
   "kind": "Linux",
   "properties": {
-    "dataCollectionEndpointId": "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
+    "dataCollectionEndpointId": "<dce-resource-id>",
     "dataFlows": [
       {
-        "destinations": ["MonitoringAccount1"],
+        "destinations": ["MonitoringAccount2"],
         "streams": ["Microsoft-PrometheusMetrics"]
       }
     ],
@@ -284,14 +286,14 @@ You can create multiple Data Collection Rules that point to the same Data Collec
     "destinations": {
       "monitoringAccounts": [
         {
-          "accountResourceId": "[parameters('azureMonitorWorkspaceResourceId')]",
-          "name": "MonitoringAccount1"
+          "accountResourceId": "<azure-monitor-workspace-resource-id-2>",
+          "name": "MonitoringAccount2"
         }
       ]
     }
   },
   "dependsOn": [
-    "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]"
+    "<dce-resource-id>"
   ]
 }
 ```
