@@ -1,3 +1,6 @@
+# [DEPRECATED]
+# Use .pipelines/azure-pipeline-build.yml
+
 name: build-and-push-image-and-chart
 on:
   workflow_dispatch

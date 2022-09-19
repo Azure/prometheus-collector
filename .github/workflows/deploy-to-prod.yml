@@ -1,3 +1,6 @@
+# [DEPRECATED]
+# Use .pipelines/deployment
+
 name: deploy-to-prod-cluster
 on:
   workflow_dispatch:
