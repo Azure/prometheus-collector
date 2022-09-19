@@ -310,7 +310,13 @@ relabel_configs:
   replacement: "MonitoringAccountLabel1"
 ```
 
-For example, for sending 3 different jobs to 3 different workspaces, in each DCR include:
+The source label is `__address__` because this label will always exist so this relabel config will always be applied. The target label will always be `microsoft_metrics_account` and its value should be replaced with the corresponding label value for the workspace.
+
+
+#### Example
+
+If you want to configure three different jobs to send the metrics to three different workspaces, then in each DCR include:
+
 ```json
 "labelIncludeFilter": {
   "microsoft_metrics_include_label": "MonitoringAccountLabel1"
