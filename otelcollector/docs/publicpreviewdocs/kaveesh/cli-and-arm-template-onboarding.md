@@ -222,9 +222,9 @@ Please store the values from all the azureMonitorWorkspaceIntegrations for later
 
 ### Create or download templates
 
-1. Download the template at [temporary link -> move to aka.ms](https://raw.githubusercontent.com/Azure/prometheus-collector/kaveesh/arm_template/otelcollector/docs/PromCollectorPublicPreview/FullAzureMonitorMetricsProfile.json?token=GHSAT0AAAAAABUMNXFSOG3H4LIKOWFQDXUGYZI3L3A) and save it as **existingClusterOnboarding.json**.
+1. Download the template at [https://aka.ms/aks-enable-azuremonitormetrics](https://aka.ms/aks-enable-azuremonitormetrics) and save it as **existingClusterOnboarding.json**.
 
-2. Download the parameter file at [temporary link -> move to aka.ms](https://raw.githubusercontent.com/Azure/prometheus-collector/kaveesh/arm_template/otelcollector/docs/PromCollectorPublicPreview/FullAzureMonitorMetricsProfileParameters.json?token=GHSAT0AAAAAABUMNXFSPFX66LD2TQTN7LG4YZI3M5A) and save it as **existingClusterParam.json**.
+2. Download the parameter file at [https://aka.ms/aks-enable-azuremonitormetricsparameters](https://aka.ms/aks-enable-azuremonitormetricsparameters) and save it as **existingClusterParam.json**.
 
 3. Edit the values in the parameter file.
 
