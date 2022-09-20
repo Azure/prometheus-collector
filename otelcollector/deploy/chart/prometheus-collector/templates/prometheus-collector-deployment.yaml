@@ -230,7 +230,7 @@ spec:
               - key: azuremonitor/metrics.replica.preferred
                 operator: In
                 values:
-                - true
+                - "true"
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - labelSelector:
