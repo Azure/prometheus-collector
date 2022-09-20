@@ -13,8 +13,4 @@ az aks update --disable-azuremonitormetrics -n MyExistingManagedCluster -g MyExi
 
 ## Azure Resource Manager template
 
-#################################################
-
-lorem ipsum
-
-#################################################
+Please use the az cli for offboarding right now.
