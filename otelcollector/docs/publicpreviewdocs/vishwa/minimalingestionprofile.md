@@ -3,10 +3,10 @@ To ingest only minimal data (series/metrics used by our default dashboards, defa
 
 There are 4 possible cases to customize this behavior -
 
-Case 1 : Ingest only minimal metrics per default target. This is the default behavior (default-targets-metrics-keep-list.minimalIngestionProfile="true"). In this case, only the below listed series/metrics will be ingested for each of the default targets.
-Case 2 : Ingest few additional metrics (say X,Y) for one or more default targets in addition to minimal metrics (minimalIngestionProfile="true"). In this case you have to speficy the appropriate keeplistRegexes.* specific to the target. ex;- keeplistRegexes.coreDns="X|Y". We will merge X,Y with default metric list for the target as listed below and will ingest them along with X & Y.
-Case 3 : Ingest only metrics X,Y for a target, and nothing else. In this case, please set minimalIngestionProfile="false", and specify the appropriate default-targets-metrics-keep-list.<targetname>="X|Y" specific to the target in the ama-metrics-settings-configmap
-Case 4 : Ingest all metrics scraped for the default target. In this case, please set minimalIngestionProfile="false", and don't specify any default-targets-metrics-keep-list.<targetname> for that target. This can increase metric ingestion volume, by a factor per target.
+* Case 1 : Ingest only minimal metrics per default target. This is the default behavior (default-targets-metrics-keep-list.minimalIngestionProfile="true"). In this case, only the below listed series/metrics will be ingested for each of the default targets.
+* Case 2 : Ingest few additional metrics (say X,Y) for one or more default targets in addition to minimal metrics (minimalIngestionProfile="true"). In this case you have to speficy the appropriate keeplistRegexes.* specific to the target. ex;- keeplistRegexes.coreDns="X|Y". We will merge X,Y with default metric list for the target as listed below and will ingest them along with X & Y.
+* Case 3 : Ingest only metrics X,Y for a target, and nothing else. In this case, please set minimalIngestionProfile="false", and specify the appropriate default-targets-metrics-keep-list.<targetname>="X|Y" specific to the target in the ama-metrics-settings-configmap
+* Case 4 : Ingest all metrics scraped for the default target. In this case, please set minimalIngestionProfile="false", and don't specify any default-targets-metrics-keep-list.<targetname> for that target. This can increase metric ingestion volume, by a factor per target.
 
 Note: 
 `up` metric is not part of allow/keep list because, they will be ingested per scrape,per target, ir-respective of keepLists specified, as `up` metric is actually not scraped but produced as result of scrape by the metrics addon.
