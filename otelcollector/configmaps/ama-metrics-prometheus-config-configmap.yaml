@@ -1,0 +1,12 @@
+kind: ConfigMap
+apiVersion: v1
+data:
+  prometheus-config: |-
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+    - job_name: <your scrape job here>
+    - job_name: <your scrape job here>
+metadata:
+  name: ama-metrics-prometheus-config
+  namespace: kube-system
