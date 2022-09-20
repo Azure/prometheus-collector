@@ -215,16 +215,7 @@ spec:
         {{- end }}
       affinity:
         nodeAffinity:
-          # affinity to schedule on to ephemeral os node if its available
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 1
-            preference:
-              matchExpressions:
-              - key: storageprofile
-                operator: NotIn
-                values:
-                - managed
-          - weight: 1
+          - weight: 50
             preference:
               matchExpressions:
               - key: azuremonitor/metrics.replica.preferred
