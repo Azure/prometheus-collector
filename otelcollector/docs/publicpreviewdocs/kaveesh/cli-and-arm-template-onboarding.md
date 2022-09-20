@@ -316,21 +316,60 @@ The configuration change can take a few minutes to complete. When it's completed
 After you've enabled monitoring, you can view the metrics in the Azure Managed Grafana instance that you've linked or through querying the Azure Monitor Workspace.
 
 ## Verify Deployment
-#################################################
 
-lorem ipsum
+Run the following commands to verify that the agent is deployed successfully.
 
-#################################################
+`
+kubectl get ds ama-metrics-node --namespace=kube-system
+`
+
+The output should resemble the following, which indicates the daemonset was deployed properly:
+
+<pre>
+User@aksuser:~$ kubectl get ds ama-metrics-node --namespace=kube-system
+NAME               DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+ama-metrics-node   1         1         1       1            1           <none>          10h
+</pre>
+
+`
+kubectl get rs --namespace=kube-system
+`
+
+The output should resemble the following, which indicates the replicaset was deployed properly:
+
+<pre>
+User@aksuser:~$kubectl get rs --namespace=kube-system
+NAME                            DESIRED   CURRENT   READY   AGE
+ama-metrics-5c974985b8          1         1         1       11h
+ama-metrics-ksm-5fcf8dffcd      1         1         1       11h
+</pre>
+
 
 ## View configuration with CLI
-#################################################
 
-lorem ipsum
+Use the `aks show` command to get details such as is the solution enabled or not and what kube-state metrics annotations and labels are specified
 
-#################################################
+`
+az aks show -g <resourceGroupofAKSCluster> -n <nameofAksCluster>
+`
+
+After a few minutes, the command completes and returns JSON-formatted information about solution.  The results of the command should show the monitoring add-on profile and resembles the following example output:
+
+<pre>
+    "azureMonitorProfile": {
+        "metrics": {
+          "enabled": true,
+          "kubeStateMetrics": {
+            "metricAnnotationsAllowList": "",
+            "metricLabelsAllowlist": ""
+          }
+        }
+      }
+</pre>
 
 ## Limitations
 
 - Please update the kube-state metrics Annotations and Labels list with proper formatting and care. There is a limitation in the Resource Manager template deployments right now were we are passing through the exact values into the kube-state metrics pods. If the kuberenetes pods has any issues with malformed parameters and isn't running then the feature will not work as expected.
 - A data collection rule, data collection endpoint is created with the name *MSPROM-\<cluster-name\>-\<cluster-region\>*. These names cannot currently be modified.
 - One must get the existing azure monitor workspace integrations for a grafana workspace and update the resource manager template with it otherwise it will overwrite and remove the existing integrations from the grafana workspace.
+- One can only offboard using the az cli for now.
