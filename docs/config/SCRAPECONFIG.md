@@ -1,23 +1,28 @@
-# Prometheus Configuration
+# Prometheus Configuration Tips
+
 ## Configuration File
-The format specified in the configmap will be the same as a prometheus.yml following the [configuration format](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file). Currently supported are the following sections:
+The configuration format is the same as the [Prometheus configuration file](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file). Currently supported are the following sections:
 ```yaml
 global:
   scrape_interval: <duration>
   scrape_timeout: <duration>
+  external_labels:
+    <labelname1>: <labelvalue>
+    <labelname2>: <labelvalue>
 scrape_configs:
-  - <scrape_config>
-  ...
+  - <scrape_config1>
+  - <scrape_config2>
 ```
-Note that any other unsupported sections need to be removed from the config before applying as a configmap, else the promconfigvalidator tool validation will fail and as a result the custom scrape configuration will not be applied
 
-The `scrape_config` setting `honor_labels` (`false` by default) should be `true` for scrape configs where labels that are normally added by Prometheus, such as `job` and `instance`, are already labels of the scraped metrics and should not be overridden. This is only applicable for cases like [federation](https://prometheus.io/docs/prometheus/latest/federation/) or scraping the [Pushgateway](https://github.com/prometheus/pushgateway), where the scraped metrics already have `job` and `instance` labels. See the [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) for more details.
+Note that any other unsupported sections need to be removed from the config before applying as a configmap; otherwise the custom configuration will fail validation and will not be applied.
 
-
-## Targets
-For a Kubernetes cluster, a scrape config can either use `static_configs` or [`kubernetes_sd_configs`](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#kubernetes_sd_config) for specifing or discovering targets.
+## Scrape Configs
+The currently supported methods of target discovery for a [scrape config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) are either [`static_configs`](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#static_config) or [`kubernetes_sd_configs`](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#kubernetes_sd_config) for specifing or discovering targets.
 
 ### Static Config
+
+A static config has a list of static targets and any additional labels to add to them.
+
 ```yaml
 scrape_configs:
   - job_name: example
@@ -31,63 +36,12 @@ Targets discovered using [`kubernetes_sd_configs`](https://prometheus.io/docs/pr
 
 See the [Prometheus examples](https://github.com/prometheus/prometheus/blob/main/documentation/examples/prometheus-kubernetes.yml) of scrape configs for a Kubernetes cluster.
 
-### Multiple metric accounts
+## Relabel Configs
+The `relabel_configs` section is applied at the time of target discovery and applies to each target for the job. Below are examples showing ways to use `relabel_configs`.
 
-To route metric(s) to different account(s), use the target re-labeling config to provide a pre-defined label ```microsoft_metrics_account```
+### Adding a Label
+Add a new label called `example_label` with value `example_value` to every metric of the job. Use `__address__` as the source label only because that label will always exist. This will add the label for every target of the job.
 
-This example has two scrape jobs that is configured to woute metrics from each of these job to a different metrics account. 
-**Note** If no account name is specified using the pre-defined label for any scraped metric, those metrics will be routed to the 'default' metric account specified in the config map. To over-ride the default account, you can use the re-labeling per job or even for specific metric(s), in the scrape config.
-
-```yaml
-global:
-  evaluation_interval: 60s
-  scrape_interval: 60s
-  label_limit: 63
-  label_name_length_limit: 511
-  label_value_length_limit: 1023
-scrape_configs:
-- job_name: prometheus_ref_app
-  scheme: http
-  kubernetes_sd_configs:
-    - role: service
-  relabel_configs:
-    - source_labels: [__meta_kubernetes_service_name]
-      action: keep
-      regex: "prometheus-reference-service"
-    - source_labels: [__address__]
-      target_label: microsoft_metrics_account
-      action: replace
-      replacement: "containerinsightsgenevaaccount"
-- job_name: "kubernetes-kubelet"
-  scheme: https
-  tls_config:
-    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-    insecure_skip_verify: true
-  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-  kubernetes_sd_configs:
-    - role: node
-  relabel_configs:
-  - action: labelmap
-    regex: __meta_kubernetes_node_label_(.+)
-  - target_label: __address__
-    replacement: kubernetes.default.svc:443
-  - target_label: __scheme__
-    replacement: https
-  - source_labels: [__meta_kubernetes_node_name]
-    regex: (.+)
-    target_label: __metrics_path__
-    replacement: /api/v1/nodes/$${1}/proxy/metrics
-  - source_labels: [__address__]
-    target_label: microsoft_metrics_account
-    action: replace
-    replacement: "containerinsightsgenevaaccount2"
-```
-
-#### More Examples
-
-Add a new label called `example_label` with value `example_value` to every metric of the job. Use `__address__` as the source label only because that label will always exist.
-
-This example can be used to add a `cluster_id` label to metrics when multiple clusters are sending metrics to the same account.
 ```yaml
 relabel_configs:
 - source_labels: [__address__]
@@ -95,79 +49,17 @@ relabel_configs:
   replacement: 'example_value'
 ```
 
-## Metric Filtering
-Metrics are filtered after scraping and before ingestion. Use the `metric_relabel_configs` section for a scrape_config to rename or filter metrics.
+### Use Kubernetes Service Discovery Labels
 
-### Drop Metrics by Name
-Drop the metric named `example_metric_name`
-```yaml
-metric_relabel_configs:
-- source_labels: [__name__]
-  action: drop
-  regex: 'example_metric_name'
-```
-### Keep Only Certain Metrics by Name
-Keep only the metric named `example_metric_name`
-```yaml
-metric_relabel_configs:
-- source_labels: [__name__]
-  action: keep
-  regex: 'example_metric_name'
-```
-Keep only metrics that start with `example_`
-```yaml
-metric_relabel_configs:
-- source_labels: [__name__]
-  action: keep
-  regex: '(example_.*)'
-```
-### Rename Metrics
-Rename the metric `example_metric_name` to `new_metric_name`
-```yaml
-metric_relabel_configs:
-- source_labels: [__name__]
-  action: replace
-  regex: 'example_metric_name'
-  target_label: __name__
-  replacement: 'new_metric_name'
-```
-### Filter Metrics by Labels
-Keep only metrics with where example_label = 'example'
-```yaml
-metric_relabel_configs:
-- source_labels: [example_label]
-  action: keep
-  regex: 'example'
-```
-Keep metric only if `example_label` equals `value_1` or `value_2`
-```yaml
-metric_relabel_configs:
-- source_labels: [example_label]
-  action: keep
-  regex: '(value_1|value_2)'
-```
-Keep metric only if `example_label_1 = value_1` and `example_label_2 = value_2`
-```yaml
-metric_relabel_configs:
-- source_labels: [example_label_1, example_label_2]
-  separator: ';'
-  action: keep
-  regex: 'value_1;value_2'
-```
-Keep metric only if `example_label` exists
-```yaml
-metric_relabel_configs:
-- source_labels: [example_label_1]
-  action: keep
-  regex: '.+'
-```
 If a job is using [`kubernetes_sd_configs`](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#kubernetes_sd_config) to discover targets, each role has associated `__meta_*` labels for metrics. The `__*` labels are dropped after discovering the targets. To filter by them at the metrics level, first keep them using `relabel_configs` by assigning a label name and then use `metric_relabel_configs` to filter.
+
 ```yaml
 # Use the kubernetes namespace as a label called 'kubernetes_namespace'
 relabel_configs:
 - source_labels: [__meta_kubernetes_namespace]
   action: replace
   target_label: kubernetes_namespace
+
 # Keep only metrics with the kubernetes namespace 'default'
 metric_relabel_configs:
 - source_labels: [kubernetes_namespace]
@@ -175,168 +67,308 @@ metric_relabel_configs:
   regex: 'default'
 ```
 
-## Advanced Configuration
+### Job and Instance Relabeling
 
-### Pod Scraping and Pod Annotation Based Scraping
-To scrape all pods, include only the last three relabel configs below.
+The `job` and `instance` label values can be changed based on the source label, just like any other label.
 
-To scrape only certain pods, specify the port, path, and http/https through annotations for the pod and the below job will scrape only the address specified by the annotation:
+```yaml
+# Replace the job name with the pod label 'k8s app'
+relabel_configs:
+- source_labels: [__meta_kubernetes_pod_label_k8s_app]
+  target_label: job
+
+# Replace the instance name with the node name. This is helpful to replace a node IP
+# and port with a value that is more readable
+relabel_configs:
+- source_labels: [__meta_kubernetes_node_name]]
+  target_label: instance
+```
+
+## Metric Relabel Configs
+
+Metric relabel configs are applied after scraping and before ingestion. Use the `metric_relabel_configs` section to filter metrics after scraping. Below are examples of how to do so.
+
+### Drop Metrics by Name
+
+```yaml
+# Drop the metric named 'example_metric_name'
+metric_relabel_configs:
+- source_labels: [__name__]
+  action: drop
+  regex: 'example_metric_name'
+```
+
+### Keep Only Certain Metrics by Name
+
+```yaml
+# Keep only the metric named 'example_metric_name'
+metric_relabel_configs:
+- source_labels: [__name__]
+  action: keep
+  regex: 'example_metric_name'
+```
+
+```yaml
+# Keep only metrics that start with 'example_'
+metric_relabel_configs:
+- source_labels: [__name__]
+  action: keep
+  regex: '(example_.*)'
+```
+
+### Rename Metrics
+*Note that metric renaming is not supported.*
+
+### Filter Metrics by Labels
+
+```yaml
+# Keep only metrics with where example_label = 'example'
+metric_relabel_configs:
+- source_labels: [example_label]
+  action: keep
+  regex: 'example'
+```
+
+```yaml
+# Keep metrics only if `example_label` equals `value_1` or `value_2`
+metric_relabel_configs:
+- source_labels: [example_label]
+  action: keep
+  regex: '(value_1|value_2)'
+```
+
+```yaml
+# Keep metric only if `example_label_1 = value_1` and `example_label_2 = value_2`
+metric_relabel_configs:
+- source_labels: [example_label_1, example_label_2]
+  separator: ';'
+  action: keep
+  regex: 'value_1;value_2'
+```
+
+```yaml
+# Keep metric only if `example_label` exists as a label
+metric_relabel_configs:
+- source_labels: [example_label_1]
+  action: keep
+  regex: '.+'
+```
+
+## Pod Annotation Based Scraping
+
+If you are currently using Azure Monitor Container Insights Prometheus scraping with the setting `monitor_kubernetes_pods = true`, adding this job to your custom config will allow you to scrape the same pods and metrics.
+
+The scrape config below uses the `__meta_*` labels added from the `kubernetes_sd_configs` for the `pod` role to filter for pods with certain annotations.
+
+To scrape certain pods, specify the port, path, and scheme through annotations for the pod and the below job will scrape only the address specified by the annotation:
 - `prometheus.io/scrape`: Enable scraping for this pod
 - `prometheus.io/scheme`: If the metrics endpoint is secured then you will need to set this to `https` & most likely set the tls config.
 - `prometheus.io/path`: If the metrics path is not /metrics, define it with this annotation.
 - `prometheus.io/port`: Specify a single, desired port to scrape
 
-  ```yaml
-    scrape_configs:
-      - job_name: 'kubernetes-pods'
-        label_limit: 63
-        label_name_length_limit: 511
-        label_value_length_limit: 1023
-
-        kubernetes_sd_configs:
-        - role: pod
-
-        relabel_configs:
-        # Scrape only pods with the annotation: prometheus.io/scrape = true
-        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
-          action: keep
-          regex: true
-
-        # If prometheus.io/path is specified, scrape this path instead of /metrics
-        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
-          action: replace
-          target_label: __metrics_path__
-          regex: (.+)
-
-        # If prometheus.io/port is specified, scrape this port instead of the default
-        - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
-          action: replace
-          regex: ([^:]+)(?::\d+)?;(\d+)
-          replacement: $1:$2
-          target_label: __address__
-        
-        # If prometheus.io/scheme is specified, scrape with this scheme instead of http
-        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scheme]
-          action: replace
-          regex: (http|https)
-          target_label: __scheme__
-
-        # Include all pod labels as labels for the metric
-        - action: labelmap
-          regex: __meta_kubernetes_pod_label_(.+)
-
-        # Include the pod namespace a label for the metric
-        - source_labels: [__meta_kubernetes_namespace]
-          action: replace
-          target_label: kubernetes_namespace
-
-        # Include the pod name as a label for the metric
-        - source_labels: [__meta_kubernetes_pod_name]
-          action: replace
-          target_label: kubernetes_pod_name
-  ```
-
-### Reducing Cost
-See the [Grafana documentation](https://grafana.com/docs/grafana-cloud/billing-and-usage/prometheus/usage-reduction/) for detailed instructions on using `relabel_configs` and `metric_relabel_configs` for reducing the number of targets scraped and the amount of metrics ingested.
-
-## Exporters
-
-### Kube-state-metrics
-
-Read about it [here](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-state-metrics).
-
-TLDR below -
-
-#### Install :
 ```yaml
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-helm upgrade --install <my-kube-state-metricsrelease-name> prometheus-community/kube-state-metrics --namespace=<my-kube-state-metrics-namespace> --create-namespace --set nodeSelector."kubernetes\.io/os"=linux
-```
-- Note that the `--set nodeSelector."kubernetes\.io/os"=linux` setting for the node selector is necessary if windows nodes exist on the cluster.
-- Note that if release name you provided is same as chart name, ```kube-state-metrics``` in this case, you just specify chart name in the place of ```<my-kube-state-metrics-release-name>``` below. Also this name will be truncated to limit to 63 chars due to DNS limits.
-#### Scrape Configuration:
-```yaml
-- job_name: 'kube-state-metrics'
-  scrape_interval: 30s
-  label_limit: 63
-  label_name_length_limit: 511
-  label_value_length_limit: 1023
-  static_configs:
-    - targets: ['<my-kube-state-metrics-release-name>.<my-kube-state-metrics-namespace>.svc.cluster.local:8080']
-```
+scrape_configs:
+  - job_name: 'kubernetes-pods'
 
-### Node exporter
+    kubernetes_sd_configs:
+    - role: pod
 
-Read about it [here](https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-node-exporter).
-
-TLDR below -
-
-#### Install :
-```yaml
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-helm upgrade --install <my-node-exporter-release-name> prometheus-community/prometheus-node-exporter --namespace=<my-node-exporter-namespace> --create-namespace --set nodeSelector."kubernetes\.io/os"=linux
-```
-- Note that the `--set nodeSelector."kubernetes\.io/os"=linux` setting for the node selector is necessary if windows nodes exist on the cluster.
-- Note that if release name you provided is same as chart name, ```prometheus-node-exporter``` in this case, you just specify chart name in the endpoint name regex for the relabel configuration. Also service names will be truncated to limit to 63 chars due to DNS limits.
-#### Scrape Configuration:
-```yaml
-- job_name: 'node'
-  scheme: http
-  scrape_interval: 30s
-  label_limit: 63
-  label_name_length_limit: 511
-  label_value_length_limit: 1023
-  kubernetes_sd_configs:
-    - role: endpoints
-      namespaces:
-        names:
-        - <my-node-exporter-namespace>
-  relabel_configs:
-    - source_labels: [__meta_kubernetes_endpoints_name]
+    relabel_configs:
+    # Scrape only pods with the annotation: prometheus.io/scrape = true
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
       action: keep
-      regex: "<my-node-exporter-release-name>-prometheus-node-exporter"
+      regex: true
+
+    # If prometheus.io/path is specified, scrape this path instead of /metrics
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+      action: replace
+      target_label: __metrics_path__
+      regex: (.+)
+
+    # If prometheus.io/port is specified, scrape this port instead of the default
+    - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+      action: replace
+      regex: ([^:]+)(?::\d+)?;(\d+)
+      replacement: $1:$2
+      target_label: __address__
+        
+    # If prometheus.io/scheme is specified, scrape with this scheme instead of http
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scheme]
+      action: replace
+      regex: (http|https)
+      target_label: __scheme__
+
+    # Include the pod namespace as a label for each metric
+    - source_labels: [__meta_kubernetes_namespace]
+      action: replace
+      target_label: kubernetes_namespace
+
+    # Include the pod name as a label for each metric
+    - source_labels: [__meta_kubernetes_pod_name]
+      action: replace
+      target_label: kubernetes_pod_name
+    
+    # [Optional] Include all pod labels as labels for each metric
+    - action: labelmap
+      regex: __meta_kubernetes_pod_label_(.+)
 ```
-### Windows exporter (previously WMI Exporter)
 
-Read about it [here](https://github.com/prometheus-community/windows_exporter).
+## Send Metrics to Multiple Azure Monitor Workspaces
 
-TLDR below -
+Routing metrics to additional Azure Monitor Workspaces can be done through the creation of additional DCRs. All metrics can be sent to all workspaces or different metrics can be specified to be sent to different workspaces.
 
-#### Install :
-  
-  Currently, Windows exporter is only installable as a windows service in windows host nodes. You could automate installing it for  windows nodes in the cluster using DSC. When installing Windows exporter, ensure its using default port (9182) and also `os`,`memory` and `container` collectors are enabled.
+### Sending the Same Metrics to Multiple Workspaces
+
+You can create multiple Data Collection Rules that point to the same Data Collection Endpoint for metrics to be sent to additional Azure Monitor Workspaces from the same Kubernetes cluster. Currently, this is only available through ARM template deployments [link to Kaveesh's doc]. In your ARM template, add additional DCRs for your additional Azure Monitor Workspaces. Replace `<dcr-name-1>`, `<azure-monitor-workspace-location-1>`, `<dcr-name-2>`, `<azure-monitor-workspace-location-2>`, `<dce-resource-id>` in the sample below:
+
+```json
+{
+  "type": "Microsoft.Insights/dataCollectionRules",
+  "apiVersion": "2021-09-01-preview",
+  "name": "<dcr-name-1>",
+  "location": "<azure-monitor-workspace-location-1>",
+  "kind": "Linux",
+  "properties": {
+    "dataCollectionEndpointId": "<dce-resource-id>",
+    "dataFlows": [
+      {
+        "destinations": ["MonitoringAccount1"],
+        "streams": ["Microsoft-PrometheusMetrics"]
+      }
+    ],
+    "dataSources": {
+      "prometheusForwarder": [
+        {
+          "name": "PrometheusDataSource",
+          "streams": ["Microsoft-PrometheusMetrics"],
+          "labelIncludeFilter": {}
+        }
+      ]
+    },
+    "description": "DCR for Azure Monitor Metrics Profile (Managed Prometheus)",
+    "destinations": {
+      "monitoringAccounts": [
+        {
+          "accountResourceId": "<azure-monitor-workspace-resource-id-1>",
+          "name": "MonitoringAccount1"
+        }
+      ]
+    }
+  },
+  "dependsOn": [
+    "<dce-resource-id>"
+  ]
+},
+{
+  "type": "Microsoft.Insights/dataCollectionRules",
+  "apiVersion": "2021-09-01-preview",
+  "name": "<dcr-name-2>",
+  "location": "<azure-monitor-workspace-location-2>",
+  "kind": "Linux",
+  "properties": {
+    "dataCollectionEndpointId": "<dce-resource-id>",
+    "dataFlows": [
+      {
+        "destinations": ["MonitoringAccount2"],
+        "streams": ["Microsoft-PrometheusMetrics"]
+      }
+    ],
+    "dataSources": {
+      "prometheusForwarder": [
+        {
+          "name": "PrometheusDataSource",
+          "streams": ["Microsoft-PrometheusMetrics"],
+          "labelIncludeFilter": {}
+        }
+      ]
+    },
+    "description": "DCR for Azure Monitor Metrics Profile (Managed Prometheus)",
+    "destinations": {
+      "monitoringAccounts": [
+        {
+          "accountResourceId": "<azure-monitor-workspace-resource-id-2>",
+          "name": "MonitoringAccount2"
+        }
+      ]
+    }
+  },
+  "dependsOn": [
+    "<dce-resource-id>"
+  ]
+}
+```
+
+### Sending Different Metrics to Different Azure Monitor Workspaces
+
+If you want to send some metrics to one Azure Monitor Workspace and other metrics to a different one, follow the above steps to add additional DCRs. The value of `microsoft_metrics_include_label` under the `labelIncludeFilter` in the DCR is the identifier for the workspace. To then configure which metrics are routed to which workspace, you can add an extra pre-defined label, `microsoft_metrics_account` to the metrics. The value should be the same as the corresponding `microsoft_metrics_include_label` in the DCR for that workspace. To add the label to the metrics, you can utilize `relabel_configs` in your scrape config. To send all metrics from one job to a certain workspace, add the following relabel config:
 
 ```yaml
-Invoke-WebRequest -Uri https://github.com/prometheus-community/windows_exporter/releases/download/v0.16.0/windows_exporter-0.16.0-amd64.msi -OutFile c:\windowsexporter.msi
-msiexec /i C:\windowsexporter.msi ENABLED_COLLECTORS="[defaults],container,os,memory" /quiet
+relabel_configs:
+- source_labels: [__address__]
+  target_label: microsoft_metrics_account
+  action: replace
+  replacement: "MonitoringAccountLabel1"
 ```
-- Note that the `--set nodeSelector."kubernetes\.io/os"=linux` setting for the node selector is necessary if windows nodes exist on the cluster.
-- Note that if release name you provided is same as chart name, ```prometheus-node-exporter``` in this case, you just specify chart name in the endpoint name regex for the relabel configuration. Also service names will be truncated to limit to 63 chars due to DNS limits.
-#### Scrape Configuration:
+
+The source label is `__address__` because this label will always exist so this relabel config will always be applied. The target label will always be `microsoft_metrics_account` and its value should be replaced with the corresponding label value for the workspace.
+
+
+#### Example
+
+If you want to configure three different jobs to send the metrics to three different workspaces, then in each DCR include:
+
+```json
+"labelIncludeFilter": {
+  "microsoft_metrics_include_label": "MonitoringAccountLabel1"
+}
+```
+
+```json
+"labelIncludeFilter": {
+  "microsoft_metrics_include_label": "MonitoringAccountLabel2"
+}
+```
+
+```json
+"labelIncludeFilter": {
+  "microsoft_metrics_include_label": "MonitoringAccountLabel3"
+}
+```
+
+Then in your scrape config, include the same label value for each:
 ```yaml
-  scrape_configs:
-    - job_name: windows-exporter
-      scheme: http
-      scrape_interval: 30s
-      label_limit: 63
-      label_name_length_limit: 511
-      label_value_length_limit: 1023
-      tls_config:
-        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-        insecure_skip_verify: true
-      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-      kubernetes_sd_configs:
-      - role: node
-      relabel_configs:
-      - action: keep
-        source_labels: [__meta_kubernetes_node_label_kubernetes_io_os]
-        regex: windows
-      - source_labels:
-        - __address__
-        action: replace
-        target_label: __address__
-        regex: (.+?)(\:\d+)?
-        replacement: $$1:9182
+scrape_configs:
+- job_name: prometheus_ref_app_1
+  kubernetes_sd_configs:
+    - role: pod
+  relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: "prometheus-reference-app-1"
+    - source_labels: [__address__]
+      target_label: microsoft_metrics_account
+      action: replace
+      replacement: "MonitoringAccountLabel1"
+- job_name: prometheus_ref_app_2
+  kubernetes_sd_configs:
+    - role: pod
+  relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: "prometheus-reference-app-2"
+    - source_labels: [__address__]
+      target_label: microsoft_metrics_account
+      action: replace
+      replacement: "MonitoringAccountLabel2"
+- job_name: prometheus_ref_app_3
+  kubernetes_sd_configs:
+    - role: pod
+  relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: "prometheus-reference-app-3"
+    - source_labels: [__address__]
+      target_label: microsoft_metrics_account
+      action: replace
+      replacement: "MonitoringAccountLabel3"
 ```
