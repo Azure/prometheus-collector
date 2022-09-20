@@ -1,5 +1,5 @@
 # Minimal ingestion profile
-To ingest only minimal data (series/metrics used by our default dashboards, default recordingrules & default alerts) from default scrape targets , this setting (default-targets-metrics-keep-list.minimalIngestionProfile="true") is enabled by default on the metrics addon. This will help reduce/control ingestion volume for default targets. You can specify this setting in ama-metrics-settings-configmap under default-targets-metrics-keep-list section. [Link to sample setting configmap]
+To ingest only minimal data (series/metrics used by our default dashboards, default recordingrules & default alerts) from default scrape targets , this setting (default-targets-metrics-keep-list.minimalIngestionProfile="true") is enabled by default on the metrics addon. This will help reduce/control ingestion volume for default targets. You can specify this setting in [ama-metrics-settings-configmap](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/configmaps/ama-metrics-settings-configmap.yaml) under default-targets-metrics-keep-list section. 
 
 There are 4 possible cases to customize this behavior -
 
