@@ -215,6 +215,7 @@ spec:
         {{- end }}
       affinity:
         nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 50
             preference:
               matchExpressions:
