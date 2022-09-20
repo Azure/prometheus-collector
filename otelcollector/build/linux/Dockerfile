@@ -1,8 +1,6 @@
 FROM mcr.microsoft.com/mirror/docker/library/ubuntu:20.04
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="omscontainers@microsoft.com"
-# ARG IMAGE_TAG="test"
-# ENV AGENT_VERSION ${IMAGE_TAG}
 ENV OS_TYPE "linux"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV AZMON_COLLECT_ENV False
