@@ -16,7 +16,7 @@ By default, Azure monitor Managed Prometheus agent sets up & scrapes few targets
 
 Below metrics are collected by default from each default target (All other metrics are dropped through relabeling rules). Please see []() on how to add more metrics to `keeplist` per target.
 
-cadvisor (job=cadvisor)
+   cadvisor (job=cadvisor)
    * container_memory_rss
    * container_network_receive_bytes_total
    * container_network_transmit_bytes_total
@@ -29,7 +29,7 @@ cadvisor (job=cadvisor)
    * container_fs_reads_bytes_total
    * container_fs_writes_bytes_total|container_cpu_usage_seconds_total
   
-kubelet (job=kubelet)
+   kubelet (job=kubelet)
    * kubelet_node_name
    * kubelet_running_pods
    * kubelet_running_pod_count
@@ -70,7 +70,7 @@ kubelet (job=kubelet)
    * go_goroutines
    * kubernetes_build_info
   
-nodexporter (job=node)
+   nodexporter (job=node)
    * node_memory_MemTotal_bytes
    * node_cpu_seconds_total
    * node_memory_MemAvailable_bytes
@@ -96,7 +96,7 @@ nodexporter (job=node)
    * node_disk_written_bytes_total
    * node_uname_info
   
-  kube-state-metrics (job=kube-state-metrics)
+   kube-state-metrics (job=kube-state-metrics)
    * kube_node_status_allocatable
    * kube_pod_owner
    * kube_pod_container_resource_requests
