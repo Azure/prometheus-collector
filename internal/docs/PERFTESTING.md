@@ -95,11 +95,11 @@ The other necessary test is if the maximum volume of metrics that the agent can 
 
 Note: This step is only necessary if making changes to the app. Otherwise, the yamls below will have the latest image.
 
-To build the reference app, go to the directory `cd otelcollector/referenceapp/<golang or python>` and run `docker build -f ./<linux or windows>/Dockerfile -t <your image tag> .` depending on which OS you want to build.
+To build the reference app, go to the directory `cd internal/referenceapp/<golang or python>` and run `docker build -f ./<linux or windows>/Dockerfile -t <your image tag> .` depending on which OS you want to build.
 
 ### Deploy the Reference App with Perf Mode Enabled
 
-Deploy the [linux reference app](../../referenceapp/prometheus-reference-app.yaml) or the [windows reference app](../../referenceapp/win-prometheus-reference-app.yaml) with `RUN_PERF_TEST` set to `true` to generate the specified number of metrics at a specified interval. Specify how many replicas should be scraped in the yaml spec. In the environment variables, set `SCRAPE_INTERVAL` to be an integer in seconds of how often the metrics should be generated. Set `METRIC_COUNT` to be the number of OTLP metrics to generate. Note that OTLP counts metrics by name. Multiply this by the number of timeseries of that metric to get the total number of timeseries that will be generated. For example, the reference app has 8 timeseries for the metric `myapp_temperature`. If we want 2,000,000 of these metrics to be generated every 15 seconds, the environment variables set in the yaml would be:
+Deploy the [linux reference app](../referenceapp/prometheus-reference-app.yaml) or the [windows reference app](../referenceapp/win-prometheus-reference-app.yaml) with `RUN_PERF_TEST` set to `true` to generate the specified number of metrics at a specified interval. Specify how many replicas should be scraped in the yaml spec. In the environment variables, set `SCRAPE_INTERVAL` to be an integer in seconds of how often the metrics should be generated. Set `METRIC_COUNT` to be the number of OTLP metrics to generate. Note that OTLP counts metrics by name. Multiply this by the number of timeseries of that metric to get the total number of timeseries that will be generated. For example, the reference app has 8 timeseries for the metric `myapp_temperature`. If we want 2,000,000 of these metrics to be generated every 15 seconds, the environment variables set in the yaml would be:
 
 ```yaml
 env:

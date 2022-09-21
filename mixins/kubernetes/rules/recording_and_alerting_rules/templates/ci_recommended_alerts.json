@@ -1,20 +1,48 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "parameters": {},
-    "variables": {},
+    "parameters": {
+        "clusterName": {
+            "type": "string",
+            "metadata": {
+                "description": "Cluster name"
+            }
+        },
+        "actionGroupResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "Action Group ResourceId"
+            }
+        },
+        "macResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "ResourceId of Monitoring Account (MAC) to associate to"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]"
+        }
+    },
+    "variables": {
+        "kubernetesAlertRuleGroup": "KubernetesAlertRuleGroup-",
+        "kubernetesAlertRuleGroupName": "[concat(variables('kubernetesAlertRuleGroup'), parameters('clusterName'))]",
+        "kubernetesAlertRuleGroupDescription": "Kubernetes Alert RuleGroup-",
+        "version": " - 0.1"
+    },
     "resources": [
         {
-            "name": "$name",
+            "name": "[variables('kubernetesAlertRuleGroupName')]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
-            "location": "$MACLocation",
+            "location": "[parameters('location')]",
             "properties": {
-                "description": "rule group for cluster $cluster",
-                "clusterName": "$cluster",
+                "description": "[concat(variables('kubernetesAlertRuleGroupDescription'), variables('version'))]",
                 "scopes": [
-                    "$mac"
+                    "[parameters('macResourceId')]"
                 ],
+                "clusterName": "[parameters('clusterName')]",
                 "enabled": true,
                 "interval": "PT5M",
                 "rules": [
@@ -22,9 +50,6 @@
                         "alert": "Average CPU usage per container is greater than 95%",
                         "expression": "sum (rate(container_cpu_usage_seconds_total{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}[5m])) by (pod,cluster,container,namespace) / sum(container_spec_cpu_quota{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}/container_spec_cpu_period{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}) by (pod,cluster,container,namespace) > .95",
                         "for": "PT5M",
-                        "labels": {
-                            "cluster": "{{$labels.cluster}}"
-                        },
                         "annotations": {
                             "description": "Average CPU usage per container is greater than 95%"
                         },
@@ -36,7 +61,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -44,9 +69,6 @@
                         "alert": "Average Memory usage per container is greater than 95%.",
                         "expression": "(container_memory_working_set_bytes{container!=\"\", image!=\"\", container_name!=\"POD\"} / on(namespace,cluster,pod,container) kube_pod_container_resource_limits{resource=\"memory\"}) > .95 ",
                         "for": "PT10M",
-                        "labels": {
-                            "cluster": "{{$labels.cluster}}"
-                        },
                         "annotations": {
                             "description": "Average Memory usage per container is greater than 95%"
                         },
@@ -58,7 +80,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -66,9 +88,6 @@
                         "alert": "Number of OOM killed containers is greater than 0",
                         "expression": "sum by (cluster,container,namespace)(kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"}) > 0",
                         "for": "PT5M",
-                        "labels": {
-                            "cluster": "{{$labels.cluster}}"
-                        },
                         "annotations": {
                             "description": "Number of OOM killed containers is greater than 0"
                         },
@@ -80,7 +99,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -88,9 +107,6 @@
                         "alert": "Average PV usage is greater than 80%",
                         "expression": "sum by (namespace,cluster,container,pod)(kubelet_volume_stats_used_bytes{job=\"kubelet\"}) / sum by (namespace,cluster,container,pod)(kubelet_volume_stats_capacity_bytes{job=\"kubelet\"})  >.8",
                         "for": "PT5M",
-                        "labels": {
-                            "cluster": "{{$labels.cluster}}"
-                        },
                         "annotations": {
                             "description": "Average PV usage is greater than 80%"
                         },
@@ -102,7 +118,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -110,9 +126,6 @@
                         "alert": "Pod container restarted in last 1 hour",
                         "expression": "sum by (namespace, pod, container, cluster) (kube_pod_container_status_restarts_total{job=\"kube-state-metrics\", namespace=\"kube-system\"}) > 0 ",
                         "for": "PT15M", 
-                        "labels": {
-                            "cluster": "{{$labels.cluster}}"
-                        },
                         "annotations": {
                             "description": "Pod container restarted in last 1 hour"
                         },
@@ -124,7 +137,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -132,9 +145,6 @@
                         "alert": "Node is not ready.",
                         "expression": "sum by (namespace,cluster,node)(kube_node_status_condition{job=\"kube-state-metrics\",condition=\"Ready\",status!=\"true\", node!=\"\"}) > 0",
                         "for": "PT15M",
-                        "labels": {
-                            "cluster": "{{$labels.cluster}}"
-                        },
                         "annotations": {
                             "description": "Node has been unready for more than 15 minutes "
                         },
@@ -146,7 +156,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -154,9 +164,6 @@
                         "alert": "Ready state of pods is less than 80%. ",
                         "expression": "sum by (cluster,namespace,deployment)(kube_deployment_status_replicas_ready) / sum by (cluster,namespace,deployment)(kube_deployment_spec_replicas) <.8 or sum by (cluster,namespace,deployment)(kube_daemonset_status_number_ready) / sum by (cluster,namespace,deployment)(kube_daemonset_status_desired_number_scheduled) <.8 ",
                         "for": "PT5M",
-                        "labels": {
-                            "cluster": "{{$labels.cluster}}"
-                        },
                         "annotations": {
                             "description": "Ready state of pods is less than 80%."
                         },
@@ -168,7 +175,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -176,9 +183,6 @@
                         "alert": "Job did not complete in time",
                         "expression": "sum by(namespace,cluster)(kube_job_spec_completions{job=\"kube-state-metrics\"}) - sum by(namespace,cluster)(kube_job_status_succeeded{job=\"kube-state-metrics\"})  > 0 ",
                         "for": "PT360M",
-                        "labels": {
-                            "cluster": "{{$labels.cluster}}"
-                        },
                         "annotations": {
                             "description": "Number of stale jobs older than six hours is greater than 0"
                         },
@@ -190,7 +194,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -198,9 +202,6 @@
                         "alert": "Average node CPU utilization is greater than 80%",
                         "expression": "(  (1 - rate(node_cpu_seconds_total{job=\"node\", mode=\"idle\"}[5m]) ) / ignoring(cpu) group_left count without (cpu)( node_cpu_seconds_total{job=\"node\", mode=\"idle\"}) ) > .8 ",
                         "for": "PT5M",
-                        "labels": {
-                            "cluster": "{{$labels.cluster}}"
-                        },
                         "annotations": {
                             "description": "Average node CPU utilization is greater than 80%"
                         },
@@ -212,7 +213,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -220,9 +221,6 @@
                         "alert": "Working set memory for a node is greater than 80%.",
                         "expression": "1 - avg by (namespace,cluster,job)(node_memory_MemAvailable_bytes{job=\"node\"}) / avg by (namespace,cluster,job)(node_memory_MemTotal_bytes{job=\"node\"}) > .8",
                         "for": "PT5M",
-                        "labels": {
-                            "cluster": "{{$labels.cluster}}"
-                        },
                         "annotations": {
                             "description": "Working set memory for a node is greater than 80%."
                         },
@@ -234,7 +232,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     },
@@ -242,9 +240,6 @@
                         "alert": "Number of pods in failed state are greater than 0.",
                         "expression": "sum by (cluster, namespace, pod) (kube_pod_status_phase{phase=\"failed\"}) > 0",
                         "for": "PT5M",
-                        "labels": {
-                            "cluster": "{{$labels.cluster}}"
-                        },
                         "annotations": {
                             "description": "Number of pods in failed state are greater than 0"
                         },
@@ -256,7 +251,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "$actionGroupResourceId"
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
                     }  
