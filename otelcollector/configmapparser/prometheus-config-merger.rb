@@ -18,9 +18,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @regexHashFile = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 @regexHash = {}
 @sendDSUpMetric = false
-@scrapeInterval = "30s"
 
-@defaultGlobalConfigFile = @defaultPromConfigPathPrefix + "defaultGlobalConfig.yml"
 @kubeletDefaultFileRsSimple = @defaultPromConfigPathPrefix + "kubeletDefaultRsSimple.yml"
 @kubeletDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "kubeletDefaultRsAdvanced.yml"
 @kubeletDefaultFileDs = @defaultPromConfigPathPrefix + "kubeletDefaultDs.yml"
@@ -113,7 +111,7 @@ def populateDefaultPrometheusConfig
 
     # get if windowsdaemonset is enabled or not (ie. WINMODE env = advanced or not...)
     winMode = ENV["WINMODE"].strip.downcase
-    if winMode == "advanced" 
+    if winMode == "advanced"
       windowsDaemonset = true
     end
 
@@ -261,11 +259,11 @@ def populateDefaultPrometheusConfig
         contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
         File.open(@windowsexporterDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowsexporterDefaultDsFile)
-      
+
       # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
         defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
-      
+
       # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
         if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
@@ -295,7 +293,7 @@ def populateDefaultPrometheusConfig
         contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
         File.open(@windowskubeproxyDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeproxyDefaultDsFile)
-      
+
       # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
         defaultConfigs.push(@windowskubeproxyDefaultRsAdvancedFile)
@@ -339,27 +337,9 @@ end
 def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
   mergedConfigYaml = ""
   begin
-    customPrometheusConfig = YAML.load(customPromConfig)
-
-    globalConfig = customPrometheusConfig["global"]
-    if !globalConfig.nil?
-      @scrapeInterval = globalConfig["scrape_interval"]
-      # Checking to see if the duration matches the pattern specified in the prometheus config 
-      # Link to documenation with regex pattern -> https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file
-      matched = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$/.match(@scrapeInterval)
-      if !matched
-        # set default global scrape interval to 1m if its not in the proper format
-        customPrometheusConfig["global"]["scrape_interval"] = "1m"
-        # set scrape interval to 30s for updating the default merged config
-        @scrapeInterval = "30s"
-      end
-    end
-
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
-      # replace $$SCRAPE_INTERVAL in all the default configs
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Replacing $$SCRAPE_INTERVAL$$ in default configs")
-      @mergedDefaultConfigs = @mergedDefaultConfigs.gsub("$$SCRAPE_INTERVAL$$", @scrapeInterval)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Merging default and custom scrape configs")
+      customPrometheusConfig = YAML.load(customPromConfig)
       mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
       mergedConfigYaml = YAML::dump(mergedConfigs)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging default scrape config(s) with custom prometheus config, writing them to file")
@@ -405,37 +385,70 @@ def setLabelLimitsPerScrape(prometheusConfigString)
   end
 end
 
-ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Merging Default and Custom Prometheus Config")
 # Populate default scrape config(s) if AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED is set to false
 # and write them as a collector config file, in case the custom config validation fails,
 # and we need to fall back to defaults
-if !ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].downcase == "false"
-  begin
-    loadRegexHash
-    populateDefaultPrometheusConfig
-    if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Starting to merge default prometheus config values in collector template as backup")
-      mergedDefaultConfigYaml = YAML::dump(@mergedDefaultConfigs)
-      File.open(@mergedDefaultConfigPath, "w") { |file| file.puts mergedDefaultConfigYaml }
+def writeDefaultScrapeTargetsFile()
+  ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Merging Default and Custom Prometheus Config")
+  if !ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].downcase == "false"
+    begin
+      loadRegexHash
+      populateDefaultPrometheusConfig
+      if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Starting to merge default prometheus config values in collector template as backup")
+        mergedDefaultConfigYaml = YAML::dump(@mergedDefaultConfigs)
+        File.open(@mergedDefaultConfigPath, "w") { |file| file.puts mergedDefaultConfigYaml }
+      end
+    rescue => errorStr
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Error while populating default scrape targets and writing them to the default scrape targets file")
     end
-  rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Error while populating default scrape targets and writing them to the default scrape targets file")
   end
 end
 
-@configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
+def setGlobalScrapeConfigInDefaultFilesIfExists(configString)
+  customConfig = YAML.load(configString)
+  @scrapeInterval = customConfig["global"]["scrape_interval"]
+  # Checking to see if the duration matches the pattern specified in the prometheus config
+  # Link to documenation with regex pattern -> https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file
+  matched = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$/.match(@scrapeInterval)
+  if !matched
+    # set default global scrape interval to 1m if its not in the proper format
+    customConfig["global"]["scrape_interval"] = "1m"
+    # set scrape interval to 30s for updating the default merged config
+    @scrapeInterval = "30s"
+  end
 
+  defaultFilesArray = [
+    @kubeletDefaultFileRsSimple, @kubeletDefaultFileRsAdvanced, @kubeletDefaultFileDs, @kubeletDefaultFileRsAdvancedWindowsDaemonset,
+    @corednsDefaultFile, @cadvisorDefaultFileRsSimple, @cadvisorDefaultFileRsAdvanced, @cadvisorDefaultFileDs, @kubeproxyDefaultFile,
+    @apiserverDefaultFile, @kubestateDefaultFile, @nodeexporterDefaultFileRsSimple, @nodeexporterDefaultFileRsAdvanced, @nodeexporterDefaultFileDs,
+    @prometheusCollectorHealthDefaultFile, @windowsexporterDefaultRsSimpleFile, @windowsexporterDefaultDsFile, @windowsexporterDefaultRsAdvancedFile,
+    @windowskubeproxyDefaultFileRsSimpleFile, @windowskubeproxyDefaultDsFile, @windowskubeproxyDefaultRsAdvancedFile
+  ]
+
+  defaultFilesArray.each { |currentFile|
+    contents = File.read(currentFile)
+    contents = contents.gsub("$$SCRAPE_INTERVAL$$", @scrapeInterval)
+    File.open(currentFile, "w") { |file| file.puts contents }
+  }
+
+  return YAML::dump(customConfig)
+end
+
+@configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   prometheusConfigString = parseConfigMap
-
   if !prometheusConfigString.nil? && !prometheusConfigString.empty?
-    mergeDefaultAndCustomScrapeConfigs(prometheusConfigString)
-  else
+    modifiedPrometheusConfigString = setGlobalScrapeConfigInDefaultFilesIfExists(prometheusConfigString)
+    writeDefaultScrapeTargetsFile()
     #set label limits for every custom scrape job, before merging the default & custom config
-    labellimitedconfigString = setLabelLimitsPerScrape(prometheusConfigString)
+    labellimitedconfigString = setLabelLimitsPerScrape(modifiedPrometheusConfigString)
     mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString)
+  else
+    writeDefaultScrapeTargetsFile()
   end
 else
+  writeDefaultScrapeTargetsFile()
   if (File.file?(@configMapMountPath))
     @supportedSchemaVersion = false
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
