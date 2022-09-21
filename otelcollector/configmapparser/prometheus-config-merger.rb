@@ -405,19 +405,7 @@ def writeDefaultScrapeTargetsFile()
   end
 end
 
-def setGlobalScrapeConfigInDefaultFilesIfExists(configString)
-  customConfig = YAML.load(configString)
-  @scrapeInterval = customConfig["global"]["scrape_interval"]
-  # Checking to see if the duration matches the pattern specified in the prometheus config
-  # Link to documenation with regex pattern -> https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file
-  matched = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$/.match(@scrapeInterval)
-  if !matched
-    # set default global scrape interval to 1m if its not in the proper format
-    customConfig["global"]["scrape_interval"] = "1m"
-    # set scrape interval to 30s for updating the default merged config
-    @scrapeInterval = "30s"
-  end
-
+def setDefaultFileScrapeInterval(scrapeInterval)
   defaultFilesArray = [
     @kubeletDefaultFileRsSimple, @kubeletDefaultFileRsAdvanced, @kubeletDefaultFileDs, @kubeletDefaultFileRsAdvancedWindowsDaemonset,
     @corednsDefaultFile, @cadvisorDefaultFileRsSimple, @cadvisorDefaultFileRsAdvanced, @cadvisorDefaultFileDs, @kubeproxyDefaultFile,
@@ -428,10 +416,24 @@ def setGlobalScrapeConfigInDefaultFilesIfExists(configString)
 
   defaultFilesArray.each { |currentFile|
     contents = File.read(currentFile)
-    contents = contents.gsub("$$SCRAPE_INTERVAL$$", @scrapeInterval)
+    contents = contents.gsub("$$SCRAPE_INTERVAL$$", scrapeInterval)
     File.open(currentFile, "w") { |file| file.puts contents }
   }
+end
 
+def setGlobalScrapeConfigInDefaultFilesIfExists(configString)
+  customConfig = YAML.load(configString)
+  scrapeInterval = customConfig["global"]["scrape_interval"]
+  # Checking to see if the duration matches the pattern specified in the prometheus config
+  # Link to documenation with regex pattern -> https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file
+  matched = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$/.match(scrapeInterval)
+  if !matched
+    # set default global scrape interval to 1m if its not in the proper format
+    customConfig["global"]["scrape_interval"] = "1m"
+    # set scrape interval to 30s for updating the default merged config
+    scrapeInterval = "30s"
+  end
+  setDefaultFileScrapeInterval(scrapeInterval)
   return YAML::dump(customConfig)
 end
 
@@ -445,9 +447,11 @@ if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVe
     labellimitedconfigString = setLabelLimitsPerScrape(modifiedPrometheusConfigString)
     mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString)
   else
+    setDefaultFileScrapeInterval("30s")
     writeDefaultScrapeTargetsFile()
   end
 else
+  setDefaultFileScrapeInterval("30s")
   writeDefaultScrapeTargetsFile()
   if (File.file?(@configMapMountPath))
     @supportedSchemaVersion = false
