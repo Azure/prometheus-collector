@@ -5,7 +5,7 @@
      "type": "git", 
      "git": { 
        "repositoryUrl": "https://github.com/fluent/fluent-bit", 
-       "commitHash": "33be5a4d501d2c5f7501ea6e8e94bece1e3a533d" 
+       "commitHash": "82f03f8fb7198c82e1ad320d4360b30a8fecac23" 
        }
      }
   },
@@ -14,7 +14,7 @@
      "type": "git", 
      "git": { 
        "repositoryUrl": "https://github.com/influxdata/telegraf", 
-       "commitHash": "9f8be0473260e321dbbcd6670356f0e37ee9a05f" 
+       "commitHash": "a60db9ba2fd3260a99856d52e40850ef79bb2778" 
        }
      }
   },

@@ -3,6 +3,9 @@ scrape_configs:
   scheme: https
   metrics_path: /metrics/cadvisor
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   tls_config:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     insecure_skip_verify: true
@@ -14,6 +17,9 @@ scrape_configs:
   scheme: https
   metrics_path: /metrics
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   tls_config:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     insecure_skip_verify: true
@@ -29,6 +35,9 @@ scrape_configs:
 
 - job_name: kube-dns
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   honor_labels: true
   kubernetes_sd_configs:
   - role: pod
@@ -45,6 +54,9 @@ scrape_configs:
 
 - job_name: kube-proxy
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   kubernetes_sd_configs:
   - role: pod
   relabel_configs:
@@ -61,6 +73,9 @@ scrape_configs:
 
 - job_name: kube-apiserver
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   kubernetes_sd_configs:
   - role: endpoints
   scheme: https
@@ -75,6 +90,9 @@ scrape_configs:
 
 - job_name: node
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   scheme: http
   kubernetes_sd_configs:
     - role: endpoints
@@ -94,12 +112,18 @@ scrape_configs:
 
 - job_name: kube-state-metrics
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   static_configs:
     - targets: ['dev-cluster-kube-state-metrics-release.kube-state-metrics.svc.cluster.local:8080']
 
 - job_name: kube-proxy-windows
   scheme: http
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   tls_config:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     insecure_skip_verify: true
@@ -118,12 +142,18 @@ scrape_configs:
     replacement: $$1:10249
 
 - job_name: prometheus_collector_health
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   static_configs:
   - targets: ['127.0.0.1:2234']
 
 - job_name: windows-exporter
   scheme: http
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   tls_config:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     insecure_skip_verify: true

@@ -18,7 +18,7 @@ variables:
   MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
-  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.4.2'
+  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.6.0'
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.3.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
@@ -229,7 +229,6 @@ jobs:
     name: Azure-Pipelines-Windows-CI-Test-EO
   dependsOn:
   - Common
-  - Linux
   variables:
     WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
   steps:
@@ -350,8 +349,8 @@ jobs:
 
   - bash: |
       git config --global user.name "AzureDevOps Agent"
-      git tag "$(HELM_SEMVER)"
-      git push origin "$(HELM_SEMVER)"
+      git tag "v$(HELM_SEMVER)"
+      git push origin "v$(HELM_SEMVER)"
     displayName: Tag commit with semver
 
   - task: HelmInstaller@1
@@ -422,4 +421,4 @@ jobs:
       chartPath: '$(Build.StagingDirectory)/$(HELM_CHART_NAME)-$(HELM_SEMVER).tgz'
       releaseName: 'prom-dev-mac'
       waitForExecution: false
-      arguments: '--dependency-update --set image.repository=$(MCR_REGISTRY)$(MCR_REPOSITORY) --set image.tag=$(IMAGE_TAG) --set useMonitoringAccount=true --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set mode.advanced=true --set windowsDaemonset=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set azureResourceId="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus" --set azureResourceRegion="eastus"'
+      arguments: '--dependency-update --set image.repository=$(MCR_REGISTRY)$(MCR_REPOSITORY) --set image.tag=$(IMAGE_TAG) --set useMonitoringAccount=true --set scrapeTargets.coreDns="false" --set scrapeTargets.kubeProxy="false" --set scrapeTargets.apiServer="false" --set scrapeTargets.prometheusCollectorHealth=true --set mode.advanced=true --set windowsDaemonset=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set azureResourceId="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus" --set azureResourceRegion="eastus"'
