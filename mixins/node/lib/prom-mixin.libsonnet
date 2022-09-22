@@ -7,6 +7,7 @@ local graphPanel = grafana.graphPanel;
 local grafana70 = import 'github.com/grafana/grafonnet-lib/grafonnet-7.0/grafana.libsonnet';
 local gaugePanel = grafana70.panel.gauge;
 local table = grafana70.panel.table;
+local c = import '../config.libsonnet';
 
 {
 
@@ -27,6 +28,18 @@ local table = grafana70.panel.table;
       type: 'datasource',
     },
 
+    local clusterTemplate = 
+      template.new(
+        name='cluster',
+        datasource='$datasource',
+        query='label_values(node_time_seconds, %s)' % config.clusterLabel,
+        current='',
+        hide=if config.showMultiCluster then '' else '2',
+        refresh=2,
+        includeAll=false,
+        sort=1
+      ),
+
     local instanceTemplatePrototype =
       template.new(
         'instance',
@@ -38,10 +51,10 @@ local table = grafana70.panel.table;
     local instanceTemplate =
       if platform == 'Darwin' then
         instanceTemplatePrototype
-        { query: 'label_values(node_uname_info{%(nodeExporterSelector)s, sysname="Darwin"}, instance)' % config }
+        { query: 'label_values(node_uname_info{%(nodeExporterSelector)s, sysname="Darwin", %(clusterLabel)s="$cluster"}, instance)' % config }
       else
         instanceTemplatePrototype
-        { query: 'label_values(node_uname_info{%(nodeExporterSelector)s, sysname!="Darwin"}, instance)' % config },
+        { query: 'label_values(node_uname_info{%(nodeExporterSelector)s, sysname!="Darwin", %(clusterLabel)s="$cluster"}, instance)' % config },
 
 
     local idleCPU =
@@ -57,9 +70,9 @@ local table = grafana70.panel.table;
       .addTarget(prometheus.target(
         |||
           (
-            (1 - sum without (mode) (rate(node_cpu_seconds_total{%(nodeExporterSelector)s, mode=~"idle|iowait|steal", instance="$instance"}[$__rate_interval])))
+            (1 - sum without (mode) (rate(node_cpu_seconds_total{%(nodeExporterSelector)s, mode=~"idle|iowait|steal", instance="$instance", %(clusterLabel)s="$cluster"}[$__rate_interval])))
           / ignoring(cpu) group_left
-            count without (cpu, mode) (node_cpu_seconds_total{%(nodeExporterSelector)s, mode="idle", instance="$instance"})
+            count without (cpu, mode) (node_cpu_seconds_total{%(nodeExporterSelector)s, mode="idle", instance="$instance", %(clusterLabel)s="$cluster"})
           )
         ||| % config,
         legendFormat='{{cpu}}',
@@ -75,10 +88,10 @@ local table = grafana70.panel.table;
         min=0,
         fill=0,
       )
-      .addTarget(prometheus.target('node_load1{%(nodeExporterSelector)s, instance="$instance"}' % config, legendFormat='1m load average'))
-      .addTarget(prometheus.target('node_load5{%(nodeExporterSelector)s, instance="$instance"}' % config, legendFormat='5m load average'))
-      .addTarget(prometheus.target('node_load15{%(nodeExporterSelector)s, instance="$instance"}' % config, legendFormat='15m load average'))
-      .addTarget(prometheus.target('count(node_cpu_seconds_total{%(nodeExporterSelector)s, instance="$instance", mode="idle"})' % config, legendFormat='logical cores')),
+      .addTarget(prometheus.target('node_load1{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}' % config, legendFormat='1m load average'))
+      .addTarget(prometheus.target('node_load5{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}' % config, legendFormat='5m load average'))
+      .addTarget(prometheus.target('node_load15{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}' % config, legendFormat='15m load average'))
+      .addTarget(prometheus.target('count(node_cpu_seconds_total{%(nodeExporterSelector)s, instance="$instance", mode="idle", %(clusterLabel)s="$cluster"})' % config, legendFormat='logical cores')),
 
     local memoryGraphPanelPrototype =
       graphPanel.new(
@@ -94,44 +107,44 @@ local table = grafana70.panel.table;
         .addTarget(prometheus.target(
           |||
             (
-              node_memory_MemTotal_bytes{%(nodeExporterSelector)s, instance="$instance"}
+              node_memory_MemTotal_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}
             -
-              node_memory_MemFree_bytes{%(nodeExporterSelector)s, instance="$instance"}
+              node_memory_MemFree_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}
             -
-              node_memory_Buffers_bytes{%(nodeExporterSelector)s, instance="$instance"}
+              node_memory_Buffers_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}
             -
-              node_memory_Cached_bytes{%(nodeExporterSelector)s, instance="$instance"}
+              node_memory_Cached_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}
             )
           ||| % config,
           legendFormat='memory used'
         ))
-        .addTarget(prometheus.target('node_memory_Buffers_bytes{%(nodeExporterSelector)s, instance="$instance"}' % config, legendFormat='memory buffers'))
-        .addTarget(prometheus.target('node_memory_Cached_bytes{%(nodeExporterSelector)s, instance="$instance"}' % config, legendFormat='memory cached'))
-        .addTarget(prometheus.target('node_memory_MemFree_bytes{%(nodeExporterSelector)s, instance="$instance"}' % config, legendFormat='memory free'))
+        .addTarget(prometheus.target('node_memory_Buffers_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}' % config, legendFormat='memory buffers'))
+        .addTarget(prometheus.target('node_memory_Cached_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}' % config, legendFormat='memory cached'))
+        .addTarget(prometheus.target('node_memory_MemFree_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}' % config, legendFormat='memory free'))
       else if platform == 'Darwin' then
         // not useful to stack
         memoryGraphPanelPrototype { stack: false }
-        .addTarget(prometheus.target('node_memory_total_bytes{%(nodeExporterSelector)s, instance="$instance"}' % config, legendFormat='Physical Memory'))
+        .addTarget(prometheus.target('node_memory_total_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}' % config, legendFormat='Physical Memory'))
         .addTarget(prometheus.target(
           |||
             (
-                node_memory_internal_bytes{%(nodeExporterSelector)s, instance="$instance"} -
-                node_memory_purgeable_bytes{%(nodeExporterSelector)s, instance="$instance"} +
-                node_memory_wired_bytes{%(nodeExporterSelector)s, instance="$instance"} +
-                node_memory_compressed_bytes{%(nodeExporterSelector)s, instance="$instance"}
+                node_memory_internal_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"} -
+                node_memory_purgeable_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"} +
+                node_memory_wired_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"} +
+                node_memory_compressed_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}
             )
           ||| % config, legendFormat='Memory Used'
         ))
         .addTarget(prometheus.target(
           |||
             (
-                node_memory_internal_bytes{%(nodeExporterSelector)s, instance="$instance"} -
-                node_memory_purgeable_bytes{%(nodeExporterSelector)s, instance="$instance"}
+                node_memory_internal_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"} -
+                node_memory_purgeable_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}
             )
           ||| % config, legendFormat='App Memory'
         ))
-        .addTarget(prometheus.target('node_memory_wired_bytes{%(nodeExporterSelector)s, instance="$instance"}' % config, legendFormat='Wired Memory'))
-        .addTarget(prometheus.target('node_memory_compressed_bytes{%(nodeExporterSelector)s, instance="$instance"}' % config, legendFormat='Compressed')),
+        .addTarget(prometheus.target('node_memory_wired_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}' % config, legendFormat='Wired Memory'))
+        .addTarget(prometheus.target('node_memory_compressed_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}' % config, legendFormat='Compressed')),
 
     // NOTE: avg() is used to circumvent a label change caused by a node_exporter rollout.
     local memoryGaugePanelPrototype =
@@ -155,8 +168,8 @@ local table = grafana70.panel.table;
           |||
             100 -
             (
-              avg(node_memory_MemAvailable_bytes{%(nodeExporterSelector)s, instance="$instance"}) /
-              avg(node_memory_MemTotal_bytes{%(nodeExporterSelector)s, instance="$instance"})
+              avg(node_memory_MemAvailable_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}) /
+              avg(node_memory_MemTotal_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"})
             * 100
             )
           ||| % config,
@@ -168,12 +181,12 @@ local table = grafana70.panel.table;
           |||
             (
                 (
-                  avg(node_memory_internal_bytes{%(nodeExporterSelector)s, instance="$instance"}) -
-                  avg(node_memory_purgeable_bytes{%(nodeExporterSelector)s, instance="$instance"}) +
-                  avg(node_memory_wired_bytes{%(nodeExporterSelector)s, instance="$instance"}) +
-                  avg(node_memory_compressed_bytes{%(nodeExporterSelector)s, instance="$instance"})
+                  avg(node_memory_internal_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}) -
+                  avg(node_memory_purgeable_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}) +
+                  avg(node_memory_wired_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"}) +
+                  avg(node_memory_compressed_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"})
                 ) /
-                avg(node_memory_total_bytes{%(nodeExporterSelector)s, instance="$instance"})
+                avg(node_memory_total_bytes{%(nodeExporterSelector)s, instance="$instance", %(clusterLabel)s="$cluster"})
             )
             *
             100
@@ -190,17 +203,17 @@ local table = grafana70.panel.table;
       )
       // TODO: Does it make sense to have those three in the same panel?
       .addTarget(prometheus.target(
-        'rate(node_disk_read_bytes_total{%(nodeExporterSelector)s, instance="$instance", %(diskDeviceSelector)s}[$__rate_interval])' % config,
+        'rate(node_disk_read_bytes_total{%(nodeExporterSelector)s, instance="$instance", %(diskDeviceSelector)s, %(clusterLabel)s="$cluster"}[$__rate_interval])' % config,
         legendFormat='{{device}} read',
         intervalFactor=1,
       ))
       .addTarget(prometheus.target(
-        'rate(node_disk_written_bytes_total{%(nodeExporterSelector)s, instance="$instance", %(diskDeviceSelector)s}[$__rate_interval])' % config,
+        'rate(node_disk_written_bytes_total{%(nodeExporterSelector)s, instance="$instance", %(diskDeviceSelector)s, %(clusterLabel)s="$cluster"}[$__rate_interval])' % config,
         legendFormat='{{device}} written',
         intervalFactor=1,
       ))
       .addTarget(prometheus.target(
-        'rate(node_disk_io_time_seconds_total{%(nodeExporterSelector)s, instance="$instance", %(diskDeviceSelector)s}[$__rate_interval])' % config,
+        'rate(node_disk_io_time_seconds_total{%(nodeExporterSelector)s, instance="$instance", %(diskDeviceSelector)s, %(clusterLabel)s="$cluster"}[$__rate_interval])' % config,
         legendFormat='{{device}} io time',
         intervalFactor=1,
       )) +
@@ -232,7 +245,7 @@ local table = grafana70.panel.table;
       .addThresholdStep(color='red', value=0.9)
       .addTarget(prometheus.target(
         |||
-          max by (mountpoint) (node_filesystem_size_bytes{%(nodeExporterSelector)s, instance="$instance", %(fsSelector)s})
+          max by (mountpoint) (node_filesystem_size_bytes{%(nodeExporterSelector)s, instance="$instance", %(fsSelector)s, %(clusterLabel)s="$cluster"})
         ||| % config,
         legendFormat='',
         instant=true,
@@ -240,7 +253,7 @@ local table = grafana70.panel.table;
       ))
       .addTarget(prometheus.target(
         |||
-          max by (mountpoint) (node_filesystem_avail_bytes{%(nodeExporterSelector)s, instance="$instance", %(fsSelector)s})
+          max by (mountpoint) (node_filesystem_avail_bytes{%(nodeExporterSelector)s, instance="$instance", %(fsSelector)s, %(clusterLabel)s="$cluster"})
         ||| % config,
         legendFormat='',
         instant=true,
@@ -421,7 +434,7 @@ local table = grafana70.panel.table;
         fill=0,
       )
       .addTarget(prometheus.target(
-        'rate(node_network_receive_bytes_total{%(nodeExporterSelector)s, instance="$instance", device!="lo"}[$__rate_interval]) * 8' % config,
+        'rate(node_network_receive_bytes_total{%(nodeExporterSelector)s, instance="$instance", device!="lo", %(clusterLabel)s="$cluster"}[$__rate_interval]) * 8' % config,
         legendFormat='{{device}}',
         intervalFactor=1,
       )),
@@ -437,7 +450,7 @@ local table = grafana70.panel.table;
         fill=0,
       )
       .addTarget(prometheus.target(
-        'rate(node_network_transmit_bytes_total{%(nodeExporterSelector)s, instance="$instance", device!="lo"}[$__rate_interval]) * 8' % config,
+        'rate(node_network_transmit_bytes_total{%(nodeExporterSelector)s, instance="$instance", device!="lo", %(clusterLabel)s="$cluster"}[$__rate_interval]) * 8' % config,
         legendFormat='{{device}}',
         intervalFactor=1,
       )),
@@ -473,6 +486,7 @@ local table = grafana70.panel.table;
     local templates =
       [
         prometheusDatasourceTemplate,
+        clusterTemplate,
         instanceTemplate,
       ],
 
