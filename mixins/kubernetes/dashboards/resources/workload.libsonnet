@@ -313,6 +313,6 @@ local template = grafana.template;
           g.stack +
           { yaxes: g.yaxes('pps') },
         )
-      ) + { tags: $._config.grafanaK8s.dashboardTags, templating+: { list+: [clusterTemplate, namespaceTemplate, workloadTemplate, workloadTypeTemplate] }, refresh: $._config.grafanaK8s.refresh },
+      ) + { tags: $._config.grafanaK8s.dashboardTags, templating+: { list+: [clusterTemplate, namespaceTemplate, workloadTypeTemplate, workloadTemplate] }, refresh: $._config.grafanaK8s.refresh },
   },
 }
