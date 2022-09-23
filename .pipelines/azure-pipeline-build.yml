@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - rashmi/prom-merger-fix
 
 pr:
   autoCancel: true

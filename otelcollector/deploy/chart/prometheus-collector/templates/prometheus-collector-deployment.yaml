@@ -252,11 +252,11 @@ spec:
       volumes:
         - name: settings-vol-config
           configMap:
-            name: ama-metrics-settings-configmap
+            name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
             optional: true
         - name: prometheus-config-vol
           configMap:
-            name: ama-metrics-prometheus-config
+            name: {{ .Release.Name }}-prometheus-config
             optional: true
         - name: host-log-containers
           hostPath:
