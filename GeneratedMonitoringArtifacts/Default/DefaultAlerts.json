@@ -26,9 +26,9 @@
         }
     },
     "variables": {
-        "kubernetesAlertRuleGroup": "KubernetesAlertRuleGroup-DefaultAlerts",
+        "kubernetesAlertRuleGroup": "KubernetesAlert-DefaultAlerts",
         "kubernetesAlertRuleGroupName": "[concat(variables('kubernetesAlertRuleGroup'), parameters('clusterName'))]",
-        "kubernetesAlertRuleGroupDescription": "Kubernetes Alert RuleGroup-",
+        "kubernetesAlertRuleGroupDescription": "Kubernetes Alert RuleGroup-DefaultAlerts",
         "version": " - 0.1"
     },
     "resources": [
