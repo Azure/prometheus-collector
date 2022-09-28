@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/virtual-kubelet-cores
 
 pr:
   autoCancel: true
