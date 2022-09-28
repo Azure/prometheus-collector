@@ -266,7 +266,7 @@ func SendCoreCountToAppInsightsMetrics() {
 			if node.Labels == nil {
 				SendException(fmt.Sprintf("Labels are missing for the node: %s when getting core capacity", node.Name))
 			} else if node.Labels["type"] == "virtual-kubelet" {
-				  // Do not add core capacity total for virtual nodes as this could be extremely large
+					// Do not add core capacity total for virtual nodes as this could be extremely large
 					// Just count how many virtual nodes exist
 					virtualNodeCount += 1
 					continue
