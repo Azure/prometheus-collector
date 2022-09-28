@@ -252,6 +252,7 @@ func SendCoreCountToAppInsightsMetrics() {
 		cpuCapacityTotalWindows := int64(0)
 		linuxNodeCount := 0
 		windowsNodeCount := 0
+		virtualNodeCount := 0
 
 		nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
@@ -264,6 +265,11 @@ func SendCoreCountToAppInsightsMetrics() {
 			osLabel := ""
 			if node.Labels == nil {
 				SendException(fmt.Sprintf("Labels are missing for the node: %s when getting core capacity", node.Name))
+			} else if node.Labels["type"] == "virtual-kubelet" {
+				  // Do not add core capacity total for virtual nodes as this could be extremely large
+					// Just count how many virtual nodes exist
+					virtualNodeCount += 1
+					continue
 			} else {
 				osLabel = node.Labels["kubernetes.io/os"]
 			}
@@ -289,8 +295,15 @@ func SendCoreCountToAppInsightsMetrics() {
 		// Abbreviated properties to save telemetry cost
 		metricTelemetryItem.Properties["LiCapacity"] = fmt.Sprintf("%d", cpuCapacityTotalLinux)
 		metricTelemetryItem.Properties["LiNodeCnt"] = fmt.Sprintf("%d", linuxNodeCount)
-		metricTelemetryItem.Properties["WiCapacity"] = fmt.Sprintf("%d", cpuCapacityTotalWindows)
-		metricTelemetryItem.Properties["WiNodeCnt"] = fmt.Sprintf("%d", windowsNodeCount)
+		if cpuCapacityTotalWindows != 0 {
+			metricTelemetryItem.Properties["WiCapacity"] = fmt.Sprintf("%d", cpuCapacityTotalWindows)
+		}
+		if windowsNodeCount != 0 {
+			metricTelemetryItem.Properties["WiNodeCnt"] = fmt.Sprintf("%d", windowsNodeCount)
+		}
+		if virtualNodeCount != 0 {
+			metricTelemetryItem.Properties["VirtualNodeCnt"] = fmt.Sprintf("%d", virtualNodeCount)
+		}
 
 		TelemetryClient.Track(metricTelemetryItem)
 	}
