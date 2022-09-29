@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/notice-file
 
 pr:
   autoCancel: true
