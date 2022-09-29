@@ -31,6 +31,17 @@ data:
     windowsexporter = ""
     windowskubeproxy = ""
     minimalingestionprofile = true
+  default-targets-scrape-interval-list: |-
+    kubelet = 30
+    coredns = 30
+    cadvisor = 30
+    kubeproxy = 30
+    apiserver = 30
+    kubestate = 30
+    nodeexporter = 30
+    windowsexporter = 30
+    windowskubeproxy = 30
+    prometheusCollectorHealth = 30
   debug-mode: |-
     enabled = false
 metadata:
