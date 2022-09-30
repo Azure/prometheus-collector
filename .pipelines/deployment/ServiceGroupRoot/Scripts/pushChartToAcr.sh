@@ -67,10 +67,20 @@ fi
 cd ../
 helm package ./prometheus-collector/
 
-#Login to az cli and authenticate to acr
+# Login to az cli and authenticate to acr
 echo "Login cli using managed identity"
-az login --identity
-if [ $? -eq 0 ]; then
+
+# Retries needed due to: https://stackoverflow.microsoft.com/questions/195032
+n=0
+signInExitCode=-1
+until [ "$n" -ge 5 ]
+do
+   az login --identity && signInExitCode=0 && break
+   n=$((n+1))
+   sleep 15
+done
+
+if [ $signInExitCode -eq 0 ]; then
   echo "Logged in successfully"
 else
   echo "-e error failed to login to az with managed identity credentials"

@@ -96,9 +96,9 @@ jobs:
     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
   steps:
   
-    #- task: CodeQL3000Init@0
-    #  displayName: 'SDL: init codeql'
-    #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+    - task: CodeQL3000Init@0
+      displayName: 'SDL: init codeql'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
     
     - task: GoTool@0
       displayName: "Build: specify golang version"
@@ -111,19 +111,19 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
-    #- task: BinSkim@4
-    #  displayName: 'SDL: run binskim'
-    #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-    #  inputs:
-    #    InputType: 'CommandLine'
-    #    arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+    - task: BinSkim@4
+      displayName: 'SDL: run binskim'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        InputType: 'CommandLine'
+        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
     
-    #- task: Gosec@1
-    #  displayName: 'SDL: run gosec'
-    #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-    #  inputs:
-    #    targetPattern: 'gosecPattern'
-    #    targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
+    - task: Gosec@1
+      displayName: 'SDL: run gosec'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        targetPattern: 'gosecPattern'
+        targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
     
     - bash: |
         wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
@@ -162,9 +162,9 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
     
-    #- task: CodeQL3000Finalize@0
-    #  displayName: 'SDL: run codeql'
-    #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+    - task: CodeQL3000Finalize@0
+      displayName: 'SDL: run codeql'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
     
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
@@ -182,27 +182,27 @@ jobs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
     
-    #- task: SdtReport@2
-    #  displayName: 'SDL: generate report'
-    #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-    #  inputs:
-    #    GdnExportAllTools: false
-    #    GdnExportGdnToolBinSkim: true
-    #    GdnExportGdnToolBinSkimSeverity: 'Note'
-    #    GdnExportGdnToolGosec: true
-    #    GdnExportGdnToolGosecSeverity: 'Note'
-    #    GdnExportGdnToolSemmle: true
-    #    GdnExportGdnToolSemmleSeverity: 'Note'
+    - task: SdtReport@2
+      displayName: 'SDL: generate report'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        GdnExportAllTools: false
+        GdnExportGdnToolBinSkim: true
+        GdnExportGdnToolBinSkimSeverity: 'Note'
+        GdnExportGdnToolGosec: true
+        GdnExportGdnToolGosecSeverity: 'Note'
+        GdnExportGdnToolSemmle: true
+        GdnExportGdnToolSemmleSeverity: 'Note'
 
-    #- task: PublishSecurityAnalysisLogs@3
-    #  displayName: 'SDL: publish report'
-    #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-    #  inputs:
-    #    ArtifactName: 'CodeAnalysisLogs'
-    #    ArtifactType: 'Container'
-    #    PublishProcessedResults: true
-    #    AllTools: true
-    #    ToolLogsNotFoundAction: 'Standard'
+    - task: PublishSecurityAnalysisLogs@3
+      displayName: 'SDL: publish report'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        ArtifactName: 'CodeAnalysisLogs'
+        ArtifactType: 'Container'
+        PublishProcessedResults: true
+        AllTools: true
+        ToolLogsNotFoundAction: 'Standard'
 
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: Publish image artifacts"
@@ -211,17 +211,17 @@ jobs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
     
-    #- task: PostAnalysis@2
-    #  displayName: 'SDL: Post-Build Analysis'
-    #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-    #  inputs:
-    #    GdnBreakAllTools: false
-    #    GdnBreakGdnToolBinSkim: true
-    #    GdnBreakGdnToolBinSkimSeverity: 'Warning'
-    #    GdnBreakGdnToolGosec: true
-    #    GdnBreakGdnToolGosecSeverity: 'Warning'
-    #    GdnBreakGdnToolSemmle: true
-    #    GdnBreakGdnToolSemmleSeverity: 'Warning'
+    - task: PostAnalysis@2
+      displayName: 'SDL: Post-Build Analysis'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        GdnBreakAllTools: false
+        GdnBreakGdnToolBinSkim: true
+        GdnBreakGdnToolBinSkimSeverity: 'Warning'
+        GdnBreakGdnToolGosec: true
+        GdnBreakGdnToolGosecSeverity: 'Warning'
+        GdnBreakGdnToolSemmle: true
+        GdnBreakGdnToolSemmleSeverity: 'Warning'
 
 - job: Windows
   displayName: "Build windows image"
