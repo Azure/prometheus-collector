@@ -26,9 +26,9 @@
         }
     },
     "variables": {
-        "kubernetesAlertRuleGroup": "KubernetesAlertRuleGroup-",
+        "kubernetesAlertRuleGroup": "RecommendedCIAlerts-",
         "kubernetesAlertRuleGroupName": "[concat(variables('kubernetesAlertRuleGroup'), parameters('clusterName'))]",
-        "kubernetesAlertRuleGroupDescription": "Kubernetes Alert RuleGroup-",
+        "kubernetesAlertRuleGroupDescription": "Kubernetes Alert RuleGroup-RecommendedCIAlerts",
         "version": " - 0.1"
     },
     "resources": [
@@ -67,7 +67,7 @@
                     },
                     {
                         "alert": "Average Memory usage per container is greater than 95%.",
-                        "expression": "(container_memory_working_set_bytes{container!=\"\", image!=\"\", container_name!=\"POD\"} / on(namespace,cluster,pod,container) kube_pod_container_resource_limits{resource=\"memory\"}) > .95 ",
+                        "expression": "(container_memory_working_set_bytes{container!=\"\", image!=\"\", container_name!=\"POD\"} / on(namespace,cluster,pod,container) group_left kube_pod_container_resource_limits{resource=\"memory\"}) > .95 ",
                         "for": "PT10M",
                         "annotations": {
                             "description": "Average Memory usage per container is greater than 95%"

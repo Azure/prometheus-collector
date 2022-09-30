@@ -10,7 +10,6 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
 @promMergedConfigPath = "/opt/promMergedConfig.yml"
 @mergedDefaultConfigPath = "/opt/defaultsMergedConfig.yml"
-@configSchemaVersion = ""
 @replicasetControllerType = "replicaset"
 @daemonsetControllerType = "daemonset"
 @supportedSchemaVersion = true
@@ -260,11 +259,19 @@ def populateDefaultPrometheusConfig
         File.open(@windowsexporterDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowsexporterDefaultDsFile)
 
+<<<<<<< HEAD
       # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
         defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
 
       # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
+=======
+        # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
+      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
+        defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
+
+        # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
+>>>>>>> main
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
         if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowsexporterDefaultRsSimpleFile, winexporterMetricsKeepListRegex)
@@ -294,11 +301,15 @@ def populateDefaultPrometheusConfig
         File.open(@windowskubeproxyDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeproxyDefaultDsFile)
 
+<<<<<<< HEAD
       # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
+=======
+        # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
+>>>>>>> main
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
         defaultConfigs.push(@windowskubeproxyDefaultRsAdvancedFile)
 
-      # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
+        # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
         if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowskubeproxyDefaultRsSimpleFile, winkubeproxyMetricsKeepListRegex)
@@ -437,25 +448,15 @@ def setGlobalScrapeConfigInDefaultFilesIfExists(configString)
   return YAML::dump(customConfig)
 end
 
-@configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
-if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
-  prometheusConfigString = parseConfigMap
-  if !prometheusConfigString.nil? && !prometheusConfigString.empty?
-    modifiedPrometheusConfigString = setGlobalScrapeConfigInDefaultFilesIfExists(prometheusConfigString)
-    writeDefaultScrapeTargetsFile()
-    #set label limits for every custom scrape job, before merging the default & custom config
-    labellimitedconfigString = setLabelLimitsPerScrape(modifiedPrometheusConfigString)
-    mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString)
-  else
-    setDefaultFileScrapeInterval("30s")
-    writeDefaultScrapeTargetsFile()
-  end
+prometheusConfigString = parseConfigMap
+if !prometheusConfigString.nil? && !prometheusConfigString.empty?
+  modifiedPrometheusConfigString = setGlobalScrapeConfigInDefaultFilesIfExists(prometheusConfigString)
+  writeDefaultScrapeTargetsFile()
+  #set label limits for every custom scrape job, before merging the default & custom config
+  labellimitedconfigString = setLabelLimitsPerScrape(modifiedPrometheusConfigString)
+  mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString)
 else
   setDefaultFileScrapeInterval("30s")
   writeDefaultScrapeTargetsFile()
-  if (File.file?(@configMapMountPath))
-    @supportedSchemaVersion = false
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
-  end
 end
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Done Merging Default and Custom Prometheus Config")
