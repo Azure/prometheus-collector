@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - kaveesh/azureml
 
 pr:
   autoCancel: true
@@ -80,7 +81,7 @@ jobs:
         Contents: |
           **/*
         TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
-  
+
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: publish Ev2 deployment artifacts"
       inputs:
@@ -95,11 +96,11 @@ jobs:
   variables:
     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
   steps:
-  
+
     #- task: CodeQL3000Init@0
     #  displayName: 'SDL: init codeql'
     #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-    
+
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
@@ -117,14 +118,14 @@ jobs:
     #  inputs:
     #    InputType: 'CommandLine'
     #    arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
-    
+
     #- task: Gosec@1
     #  displayName: 'SDL: run gosec'
     #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
     #  inputs:
     #    targetPattern: 'gosecPattern'
     #    targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
-    
+
     - bash: |
         wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
         unzip DevSkim_linux_0.6.9.zip
@@ -133,13 +134,13 @@ jobs:
       displayName: 'SDL: run devskim'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       workingDirectory: $(Build.SourcesDirectory)
-    
+
     - bash: |
         sudo gem install brakeman
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-    
+
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
         docker buildx create --name testbuilder
@@ -153,7 +154,7 @@ jobs:
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
-    
+
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
@@ -161,11 +162,11 @@ jobs:
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
-    
+
     #- task: CodeQL3000Finalize@0
     #  displayName: 'SDL: run codeql'
     #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-    
+
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
@@ -181,7 +182,7 @@ jobs:
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
-    
+
     #- task: SdtReport@2
     #  displayName: 'SDL: generate report'
     #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
@@ -210,7 +211,7 @@ jobs:
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
-    
+
     #- task: PostAnalysis@2
     #  displayName: 'SDL: Post-Build Analysis'
     #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
@@ -295,7 +296,7 @@ jobs:
   steps:
   - task: HelmInstaller@1
     displayName: 'Build: install Helm version'
-    inputs: 
+    inputs:
       helmVersionToInstall: latest
 
   - bash: |
@@ -355,7 +356,7 @@ jobs:
 
   - task: HelmInstaller@1
     displayName: Install Helm version
-    inputs: 
+    inputs:
       helmVersionToInstall: latest
   - bash: |
       for i in 1 2 3 4 5 6 7 8 9 10
