@@ -51,7 +51,7 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Installing ME
 echo "Installing Metrics Extension..."
-sudo tdnf --disablerepo="*" --enablerepo=mariner-official-extras install -y metricsext2-2.2022.811.1333
+sudo tdnf --disablerepo="*" --enablerepo=mariner-official-extras install -y metricsext2
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
