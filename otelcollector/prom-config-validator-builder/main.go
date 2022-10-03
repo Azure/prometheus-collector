@@ -33,6 +33,12 @@ type OtelConfig struct {
 				Receivers interface{} `yaml:"receivers"`
 			} `yaml:"metrics"`
 		} `yaml:"pipelines"`
+		Telemetry struct {
+			Logs struct {
+				Level interface{} `yaml:"level"`
+				Encoding interface{} `yaml:"encoding"`
+			} `yaml:"logs"`
+		} `yaml:"telemetry"`
 	} `yaml:"service"`
 }
 
@@ -256,9 +262,12 @@ func main() {
 
 		cp, err := service.NewConfigProvider(
 			service.ConfigProviderSettings{
-				Locations:     []string{fmt.Sprintf("file:%s", outputFilePath)},
-				MapProviders:  map[string]confmap.Provider{"file": fileprovider.New()},
-				MapConverters: []confmap.Converter{expandconverter.New()},
+				ResolverSettings: 
+					confmap.ResolverSettings {
+						URIs:     []string{fmt.Sprintf("file:%s", outputFilePath)},
+						Providers:  map[string]confmap.Provider{"file": fileprovider.New()},
+						Converters: []confmap.Converter{expandconverter.New()},
+					},
 			},
 		)
 		if err != nil {

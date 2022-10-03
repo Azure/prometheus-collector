@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/fluent/fluent-bit-go/output"
+	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 )
 import (
 	"C"
@@ -20,6 +20,13 @@ func FLBPluginRegister(ctx unsafe.Pointer) int {
 // (fluentbit will call this)
 // ctx (context) pointer to fluentbit context (state/ c code)
 func FLBPluginInit(ctx unsafe.Pointer) int {
+
+	// This will not load the plugin instance. FLBPluginFlush won't be called.
+	if os.Getenv("TELEMETRY_DISABLED") == "true" {
+		Log("Telemetry disabled. Not initializing telemetry plugin.")
+		return output.FLB_ERROR
+	}
+
 	Log("Initializing out_appinsights go plugin for fluentbit")
 	var agentVersion string
 	agentVersion = os.Getenv("AGENT_VERSION")
@@ -31,6 +38,13 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 	// Other metrics are from environment variables and otelcollector logs
 	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
 		go ExposePrometheusCollectorHealthMetrics()
+	}
+	if strings.ToLower(os.Getenv(envControllerType)) == "replicaset" {
+		go SendCoreCountToAppInsightsMetrics()
+	}
+
+	if strings.ToLower(os.Getenv(envControllerType)) == "daemonset" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+		go SendKsmCpuMemoryToAppInsightsMetrics()
 	}
 
 	return output.FLB_OK
@@ -56,7 +70,6 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	}
 
 	incomingTag := strings.ToLower(C.GoString(tag))
-
 
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {

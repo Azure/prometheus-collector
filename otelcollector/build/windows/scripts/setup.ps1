@@ -11,8 +11,8 @@ New-Item -Type Directory -Path /opt/ruby -ErrorAction SilentlyContinue
 ###########################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri https://github.com/microsoft/Docker-Provider/releases/download/ME-OTEL-WINDOWS-TEST/MdmMetricsExtension.2.2022.628.2309.nupkg -OutFile /installation/ME/mdmmetricsextension.2.2022.628.2309.zip
-    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2022.628.2309.zip -Destination /installation/ME/
+    Invoke-WebRequest -Uri https://github.com/microsoft/Docker-Provider/releases/download/ME-OTEL-WINDOWS-TEST/MdmMetricsExtension.2.2022.811.1333.nupkg -OutFile /installation/ME/mdmmetricsextension.2.2022.811.1333.zip
+    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2022.811.1333.zip -Destination /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
 catch {
@@ -27,7 +27,7 @@ Write-Host ('Installing Fluent Bit');
 try {
     # Keep version in sync with linux in setup.sh file
     # $fluentBitUri = 'https://github.com/microsoft/OMS-docker/releases/download/winakslogagent/td-agent-bit-1.4.0-win64.zip'
-    $fluentBitUri = 'https://fluentbit.io/releases/1.7/td-agent-bit-1.7.8-win64.zip'
+    $fluentBitUri = 'https://fluentbit.io/releases/1.9/td-agent-bit-1.9.7-win64.zip'
     Invoke-WebRequest -Uri $fluentBitUri -OutFile /installation/td-agent-bit.zip
     Expand-Archive -Path /installation/td-agent-bit.zip -Destination /installation/fluent-bit
     Move-Item -Path /installation/fluent-bit/*/bin/* -Destination /opt/fluent-bit/bin/ -ErrorAction SilentlyContinue
@@ -55,7 +55,7 @@ Write-Host ('Finished Installing Visual C++ Redistributable Package')
 Write-Host ('Installing Telegraf');
 try {
     # Keep version in sync with linux in setup.sh file
-    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.21.4_windows_amd64.zip'
+    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.23.4_windows_amd64.zip'
     Invoke-WebRequest -Uri $telegrafUri -OutFile /installation/telegraf.zip
     Expand-Archive -Path /installation/telegraf.zip -Destination /installation/telegraf
     Move-Item -Path /installation/telegraf/*/* -Destination /opt/telegraf/ -ErrorAction SilentlyContinue

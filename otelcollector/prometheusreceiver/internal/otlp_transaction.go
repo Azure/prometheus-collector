@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// nolint:errcheck
 package internal // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/prometheus/common/model"
@@ -24,12 +24,15 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/obsreport"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
+)
+
+const (
+	targetMetricName = "target_info"
 )
 
 type transaction struct {
@@ -39,7 +42,7 @@ type transaction struct {
 	startTimeMetricRegex string
 	sink                 consumer.Metrics
 	externalLabels       labels.Labels
-	nodeResource         *pcommon.Resource
+	nodeResource         pcommon.Resource
 	logger               *zap.Logger
 	metricBuilder        *metricBuilder
 	job, instance        string
@@ -53,10 +56,10 @@ func newTransaction(
 	jobsMap *JobsMap,
 	useStartTimeMetric bool,
 	startTimeMetricRegex string,
-	receiverID config.ComponentID,
 	sink consumer.Metrics,
 	externalLabels labels.Labels,
-	settings component.ReceiverCreateSettings) *transaction {
+	settings component.ReceiverCreateSettings,
+	obsrecv *obsreport.Receiver) *transaction {
 	return &transaction{
 		ctx:                  ctx,
 		isNew:                true,
@@ -66,7 +69,7 @@ func newTransaction(
 		startTimeMetricRegex: startTimeMetricRegex,
 		externalLabels:       externalLabels,
 		logger:               settings.Logger,
-		obsrecv:              obsreport.NewReceiver(obsreport.ReceiverSettings{ReceiverID: receiverID, Transport: transport, ReceiverCreateSettings: settings}),
+		obsrecv:              obsrecv,
 	}
 }
 
@@ -80,6 +83,7 @@ func (t *transaction) Append(ref storage.SeriesRef, labels labels.Labels, atMs i
 
 	if len(t.externalLabels) != 0 {
 		labels = append(labels, t.externalLabels...)
+		sort.Sort(labels)
 	}
 
 	if t.isNew {
@@ -87,6 +91,12 @@ func (t *transaction) Append(ref storage.SeriesRef, labels labels.Labels, atMs i
 		if err := t.initTransaction(labels); err != nil {
 			return 0, err
 		}
+	}
+
+	// For the `target_info` metric we need to convert it to resource attributes.
+	metricName := labels.Get(model.MetricNameLabel)
+	if metricName == targetMetricName {
+		return 0, t.AddTargetInfo(labels)
 	}
 
 	return 0, t.metricBuilder.AddDataPoint(labels, atMs, value)
@@ -110,7 +120,7 @@ func (t *transaction) initTransaction(labels labels.Labels) error {
 		t.job = job
 		t.instance = instance
 	}
-	t.nodeResource = CreateNodeAndResource(job, instance, metadataCache.SharedLabels())
+	t.nodeResource = CreateResource(job, instance, metadataCache.SharedLabels())
 	t.metricBuilder = newMetricBuilder(metadataCache, t.useStartTimeMetric, t.startTimeMetricRegex, t.logger, t.startTimeMs)
 	t.isNew = false
 	return nil
@@ -124,7 +134,8 @@ func (t *transaction) Commit() error {
 	t.startTimeMs = -1
 
 	ctx := t.obsrecv.StartMetricsOp(t.ctx)
-	metricsL, numPoints, _, err := t.metricBuilder.Build()
+	metricsL := pmetric.NewMetricSlice()
+	err := t.metricBuilder.appendMetrics(metricsL)
 	if err != nil {
 		t.obsrecv.EndMetricsOp(ctx, dataformat, 0, err)
 		return err
@@ -139,13 +150,16 @@ func (t *transaction) Commit() error {
 		// Otherwise adjust the startTimestamp for all the metrics.
 		t.adjustStartTimestamp(metricsL)
 	} else {
-		// TODO: Derive numPoints in this case.
-		_ = NewMetricsAdjuster(t.jobsMap.get(t.job, t.instance), t.logger).AdjustMetricSlice(metricsL)
+		NewMetricsAdjuster(t.jobsMap.get(t.job, t.instance), t.logger).AdjustMetricSlice(metricsL)
 	}
 
+	numPoints := 0
 	if metricsL.Len() > 0 {
-		metrics := t.metricSliceToMetrics(metricsL)
-		t.sink.ConsumeMetrics(ctx, *metrics)
+		md := t.metricSliceToMetrics(metricsL)
+		numPoints = md.DataPointCount()
+		if err = t.sink.ConsumeMetrics(ctx, md); err != nil {
+			return err
+		}
 	}
 
 	t.obsrecv.EndMetricsOp(ctx, dataformat, numPoints, nil)
@@ -157,13 +171,27 @@ func (t *transaction) Rollback() error {
 	return nil
 }
 
+func (t *transaction) AddTargetInfo(labels labels.Labels) error {
+	attrs := t.nodeResource.Attributes()
+
+	for _, lbl := range labels {
+		if lbl.Name == model.JobLabel || lbl.Name == model.InstanceLabel || lbl.Name == model.MetricNameLabel {
+			continue
+		}
+
+		attrs.UpsertString(lbl.Name, lbl.Value)
+	}
+
+	return nil
+}
+
 func pdataTimestampFromFloat64(ts float64) pcommon.Timestamp {
 	secs := int64(ts)
 	nanos := int64((ts - float64(secs)) * 1e9)
 	return pcommon.NewTimestampFromTime(time.Unix(secs, nanos))
 }
 
-func (t transaction) adjustStartTimestamp(metricsL *pmetric.MetricSlice) {
+func (t *transaction) adjustStartTimestamp(metricsL pmetric.MetricSlice) {
 	startTimeTs := pdataTimestampFromFloat64(t.metricBuilder.startTime)
 	for i := 0; i < metricsL.Len(); i++ {
 		metric := metricsL.At(i)
@@ -198,11 +226,11 @@ func (t transaction) adjustStartTimestamp(metricsL *pmetric.MetricSlice) {
 	}
 }
 
-func (t *transaction) metricSliceToMetrics(metricsL *pmetric.MetricSlice) *pmetric.Metrics {
+func (t *transaction) metricSliceToMetrics(metricsL pmetric.MetricSlice) pmetric.Metrics {
 	metrics := pmetric.NewMetrics()
 	rms := metrics.ResourceMetrics().AppendEmpty()
 	ilm := rms.ScopeMetrics().AppendEmpty()
 	metricsL.CopyTo(ilm.Metrics())
 	t.nodeResource.CopyTo(rms.Resource())
-	return &metrics
+	return metrics
 }

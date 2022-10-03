@@ -1,11 +1,8 @@
 # Prometheus Monitoring Mixin for Kubernetes
-[![CircleCI](https://circleci.com/gh/kubernetes-monitoring/kubernetes-mixin/tree/master.svg?style=shield)](https://circleci.com/gh/kubernetes-monitoring/kubernetes-mixin)
+[![ci](https://github.com/kubernetes-monitoring/kubernetes-mixin/actions/workflows/ci.yaml/badge.svg)](https://github.com/kubernetes-monitoring/kubernetes-mixin/actions/workflows/ci.yaml)
 
 > NOTE: This project is *pre-release* stage. Flags, configuration, behaviour and design may change significantly in following releases.
-> Last synced on 11/8/2021 to commit - https://github.com/kubernetes-monitoring/kubernetes-mixin/commit/e43fe7c1ecf3d4a5f9ac752b039780922e04341a
-
-
-
+ Last synced on 07/28/2022 to commit - https://github.com/kubernetes-monitoring/kubernetes-mixin/commit/b8f44bb7be728423836bef0e904ec7166895a34b
 A set of Grafana dashboards and Prometheus alerts for Kubernetes.
 
 ## Releases
@@ -21,14 +18,16 @@ A set of Grafana dashboards and Prometheus alerts for Kubernetes.
 | release-0.7  | v1.19+             | v2.11.0+  | v1.x  |
 | release-0.8  | v1.20+             | v2.11.0+  | v2.0+ |
 | release-0.9  | v1.20+             | v2.11.0+  | v2.0+ |
-| master       | v1.20+             | v2.11.0+  | v2.0+ |
+| release-0.10 | v1.20+             | v2.11.0+  | v2.0+ |
+| release-0.11 | v1.23+             | v2.11.0+  | v2.0+ |
+| master       | v1.23+             | v2.11.0+  | v2.0+ |
 
 In Kubernetes 1.14 there was a major [metrics overhaul](https://github.com/kubernetes/enhancements/issues/1206) implemented.
 Therefore v0.1.x of this repository is the last release to support Kubernetes 1.13 and previous version on a best effort basis.
 
 Some alerts now use Prometheus filters made available in Prometheus 2.11.0, which makes this version of Prometheus a dependency.
 
-Warning: This compatibility matrix was initially created based on experience, we do not guarantee the compatibility, it may be updated based on new learnings. 
+Warning: This compatibility matrix was initially created based on experience, we do not guarantee the compatibility, it may be updated based on new learnings.
 
 Warning: By default the expressions will generate *grafana 7.2+* compatible rules using the *$__rate_interval* variable for rate functions. If you need backward compatible rules please set *grafana72: false* in your *_config*
 
@@ -48,7 +47,7 @@ You can manually generate the alerts, dashboards and rules files, but first you
 must install some tools:
 
 ```
-$ go get github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb
+$ go install github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest
 $ brew install jsonnet
 ```
 
@@ -81,22 +80,12 @@ There are separate dashboards for windows resources.
 4) USE Method / Cluster(Windows)
 5) USE Method / Node(Windows)
 
-These dashboards are based on metrics populated by wmi_exporter(https://github.com/martinlindhe/wmi_exporter) from each Windows node.
-
-Steps to configure wmi_exporter
-1) Download the latest version(v0.7.0 or higher) of wmi_exporter from release page(https://github.com/martinlindhe/wmi_exporter/releases/)
-2) Install the wmi_exporter service.
-```
-  msiexec /i <path-to-msi-file> ENABLED_COLLECTORS=cpu,cs,logical_disk,net,os,system,container,memory LISTEN_PORT=<PORT>
-```
-3) Update the Prometheus server to scrap the metrics from wmi_exporter endpoint.
+These dashboards are based on metrics populated by [windows-exporter](https://github.com/prometheus-community/windows_exporter) from each Windows node.
 
 ## Running the tests
 
-Build the mixins, run the tests:
-
-```
-$ docker run -v $(pwd):/tmp --entrypoint "/bin/promtool" prom/prometheus:latest test rules /tmp/tests.yaml
+```sh
+make test
 ```
 
 ## Using with prometheus-ksonnet
@@ -132,12 +121,11 @@ the kubernetes-mixin:
 $ go get github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb
 $ jb init
 $ jb install github.com/kausalco/public/prometheus-ksonnet
-
 ```
 
 Assuming you want to run in the default namespace ('environment' in ksonnet parlance), add the follow to the file `environments/default/main.jsonnet`:
 
-```
+```jsonnet
 local prometheus = import "prometheus-ksonnet/prometheus-ksonnet.libsonnet";
 
 prometheus {
@@ -161,7 +149,7 @@ TODO
 
 Kubernetes-mixin can support dashboards across multiple clusters. You need either a multi-cluster [Thanos](https://github.com/improbable-eng/thanos) installation with `external_labels` configured or a [Cortex](https://github.com/cortexproject/cortex) system where a cluster label exists. To enable this feature you need to configure the following:
 
-```
+```jsonnet
     // Opt-in to multiCluster dashboards by overriding this and the clusterLabel.
     showMultiCluster: true,
     clusterLabel: '<your cluster label>',
@@ -175,7 +163,7 @@ names and add grafana tags.
 
 In a new directory, add a file `mixin.libsonnet`:
 
-```
+```jsonnet
 local kubernetes = import "kubernetes-mixin/mixin.libsonnet";
 
 kubernetes {
@@ -213,7 +201,7 @@ The steps described below extend on the existing mixin library without modifying
 
 In your working directory, create a new file `kubernetes_mixin_override.libsonnet` with the following:
 
-```
+```jsonnet
 local utils = import 'lib/utils.libsonnet';
 (import 'mixin.libsonnet') +
 (
@@ -238,7 +226,7 @@ local utils = import 'lib/utils.libsonnet';
 ```
 Create new file: `lib/kubernetes_customised_alerts.jsonnet` with the following:
 
-```
+```jsonnet
 std.manifestYamlDoc((import '../kubernetes_mixin_override.libsonnet').prometheusAlerts)
 ```
 Running `jsonnet -S lib/kubernetes_customised_alerts.jsonnet` will build the alerts with your customisations.
@@ -263,5 +251,5 @@ While the community has not yet fully agreed on alert severities and their to be
 
 ## Note
 
-You can use the external tool call [prom-metrics-check](https://github.com/ContainerSolutions/prom-metrics-check) to validate the created dashboards. This tool allows you to check if the metrics installed and used in Grafana dashboards exist in the Prometheus instance. 
+You can use the external tool call [prom-metrics-check](https://github.com/ContainerSolutions/prom-metrics-check) to validate the created dashboards. This tool allows you to check if the metrics installed and used in Grafana dashboards exist in the Prometheus instance.
 Please have a look at https://github.com/ContainerSolutions/prom-metrics-check.

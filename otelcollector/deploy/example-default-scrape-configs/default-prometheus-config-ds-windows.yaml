@@ -2,6 +2,9 @@ scrape_configs:
 - job_name: windows-exporter
   scheme: http
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   relabel_configs:
   - source_labels: [__address__]
     replacement: '$NODE_NAME'
@@ -23,6 +26,9 @@ scrape_configs:
   scheme: https
   metrics_path: /metrics
   scrape_interval: 30s
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   tls_config:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     insecure_skip_verify: true
@@ -41,5 +47,8 @@ scrape_configs:
   - targets: ['$NODE_IP:10250']
 
 - job_name: prometheus_collector_health
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
   static_configs:
   - targets: ['127.0.0.1:2234']

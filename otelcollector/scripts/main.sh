@@ -161,12 +161,14 @@ echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_
 #get controller kind in lowercase, trimmed
 controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
 if [ $controllerType = "replicaset" ]; then
+   fluentBitConfigFile="/opt/fluent-bit/fluent-bit.conf"
    if [ "$CLUSTER_OVERRIDE" = "true" ]; then
       meConfigFile="/usr/sbin/me_internal.config"
    else
       meConfigFile="/usr/sbin/me.config"
    fi
 else
+   fluentBitConfigFile="/opt/fluent-bit/fluent-bit-daemonset.conf"
    if [ "$CLUSTER_OVERRIDE" = "true" ]; then
       meConfigFile="/usr/sbin/me_ds_internal.config"
    else
@@ -175,7 +177,9 @@ else
 fi
 
 export ME_CONFIG_FILE=$meConfigFile	
+export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile
 echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
+echo "export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile" >> ~/.bashrc
 source ~/.bashrc
 echo_var "ME_CONFIG_FILE" "$ME_CONFIG_FILE"
 
@@ -279,30 +283,41 @@ else
 fi
 OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version`
 echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
+PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
+echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
 #get ruby version
 RUBY_VERSION=`ruby --version`
 echo_var "RUBY_VERSION" "$RUBY_VERSION"
 
 echo "starting telegraf"
-# Just running "telegraf" conflicts with MDSD's telegraf in "/usr/sbin/telegraf"
-/usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
-TELEGRAF_VERSION=`/usr/bin/telegraf --version`
-echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
+if [ "$TELEMETRY_DISABLED" != "true" ]; then
+  # Just running "telegraf" conflicts with MDSD's telegraf in "/usr/sbin/telegraf"
+  /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+  TELEGRAF_VERSION=`/usr/bin/telegraf --version`
+  echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
+fi
 
 echo "starting fluent-bit"
 mkdir /opt/microsoft/fluent-bit
 touch /opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log
-fluent-bit -c /opt/fluent-bit/fluent-bit.conf -e /opt/fluent-bit/bin/out_appinsights.so &
+fluent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
 FLUENT_BIT_VERSION=`fluent-bit --version`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
+echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
 
-#Run inotify as a daemon to track changes to the dcr/dce config.
 if [ "${MAC}" == "true" ]; then
   echo "Starting inotify for watching mdsd config update"
   touch /opt/inotifyoutput-mdsd-config.txt
-  inotifywait /etc/mdsd.d/config-cache/metricsextension/_default_MonitoringAccount_Configuration.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
+  inotifywait /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
 fi
+
+# Setting time at which the container started running, so that it can be used for empty configuration checks in livenessprobe
+epochTimeNow=`date +%s`
+echo $epochTimeNow > /opt/microsoft/liveness/azmon-container-start-time
+echo_var "AZMON_CONTAINER_START_TIME" "$epochTimeNow"
+epochTimeNowReadable=`date --date @$epochTimeNow`
+echo_var "AZMON_CONTAINER_START_TIME_READABLE" "$epochTimeNowReadable"
 
 shutdown() {
 	echo "shutting down"
