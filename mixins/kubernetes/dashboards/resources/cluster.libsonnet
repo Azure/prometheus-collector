@@ -20,20 +20,23 @@ local template = grafana.template;
       local tableStyles = {
         namespace: {
           alias: 'Namespace',
-          link: '%(prefix)s/d/%(uid)s/k8s-resources-namespace?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-namespace.json'] },
+          link: '%(prefix)s/d/%(uid)s/k8s-resources-namespace?var-datasource=$datasource&from=$__from&to=$__to&var-cluster=$cluster&var-namespace=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-namespace.json'] },
           linkTooltip: 'Drill down to pods',
+          linkTargetBlank: true,
         },
         'Value #A': {
           alias: 'Pods',
           linkTooltip: 'Drill down to pods',
-          link: '%(prefix)s/d/%(uid)s/k8s-resources-namespace?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$__cell_1' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-namespace.json'] },
+          link: '%(prefix)s/d/%(uid)s/k8s-resources-namespace?var-datasource=$datasource&from=$__from&to=$__to&var-cluster=$cluster&var-namespace=$__cell_1' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-namespace.json'] },
           decimals: 0,
+          linkTargetBlank: true,
         },
         'Value #B': {
           alias: 'Workloads',
           linkTooltip: 'Drill down to workloads',
-          link: '%(prefix)s/d/%(uid)s/k8s-resources-workloads-namespace?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$__cell_1' % { prefix: $._config.grafanaK8s.linkPrefix,  uid: $._config.grafanaDashboardIDs['k8s-resources-workloads-namespace.json'] },
+          link: '%(prefix)s/d/%(uid)s/k8s-resources-workloads-namespace?var-datasource=$datasource&from=$__from&to=$__to&var-cluster=$cluster&var-namespace=$__cell_1' % { prefix: $._config.grafanaK8s.linkPrefix,  uid: $._config.grafanaDashboardIDs['k8s-resources-workloads-namespace.json'] },
           decimals: 0,
+          linkTargetBlank: true,
         },
       };
 
@@ -55,8 +58,9 @@ local template = grafana.template;
       local networkTableStyles = {
         namespace: {
           alias: 'Namespace',
-          link: '%(prefix)s/d/%(uid)s/k8s-resources-namespace?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-namespace.json'] },
+          link: '%(prefix)s/d/%(uid)s/k8s-resources-namespace?var-datasource=$datasource&from=$__from&to=$__to&var-cluster=$cluster&var-namespace=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-namespace.json'] },
           linkTooltip: 'Drill down to pods',
+          linkTargetBlank: true,
         },
         'Value #A': {
           alias: 'Current Receive Bandwidth',
@@ -96,8 +100,9 @@ local template = grafana.template;
       local storageIOTableStyles = {
         namespace: {
           alias: 'Namespace',
-          link: '%(prefix)s/d/%(uid)s/k8s-resources-namespace?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-namespace.json'] },
+          link: '%(prefix)s/d/%(uid)s/k8s-resources-namespace?var-datasource=$datasource&from=$__from&to=$__to&var-cluster=$cluster&var-namespace=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-namespace.json'] },
           linkTooltip: 'Drill down to pods',
+          linkTargetBlank: true,
         },
         'Value #A': {
           alias: 'IOPS(Reads)',
