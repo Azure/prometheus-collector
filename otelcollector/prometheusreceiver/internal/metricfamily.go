@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/model/value"
@@ -34,7 +33,6 @@ type metricFamily struct {
 	isMonotonic bool
 	groups      map[uint64]*metricGroup
 	name        string
-	mc          MetadataCache
 	metadata    *scrape.MetricMetadata
 	groupOrders []*metricGroup
 }
@@ -54,7 +52,7 @@ type metricGroup struct {
 	complexValue []*dataPoint
 }
 
-func newMetricFamily(metricName string, mc MetadataCache, logger *zap.Logger) *metricFamily {
+func newMetricFamily(metricName string, mc scrape.MetricMetadataStore, logger *zap.Logger) *metricFamily {
 	metadata, familyName := metadataForMetric(metricName, mc)
 	mtype, isMonotonic := convToMetricType(metadata.Type)
 	if mtype == pmetric.MetricDataTypeNone {
@@ -66,20 +64,18 @@ func newMetricFamily(metricName string, mc MetadataCache, logger *zap.Logger) *m
 		isMonotonic: isMonotonic,
 		groups:      make(map[uint64]*metricGroup),
 		name:        familyName,
-		mc:          mc,
 		metadata:    metadata,
 	}
 }
 
 // includesMetric returns true if the metric is part of the family
 func (mf *metricFamily) includesMetric(metricName string) bool {
-	if mf.isCumulativeType() {
+	if mf.mtype != pmetric.MetricDataTypeGauge {
 		// If it is a merged family type, then it should match the
 		// family name when suffixes are trimmed.
 		return normalizeMetricName(metricName) == mf.name
 	}
-	// If it isn't a merged type, the metricName and family name
-	// should match
+	// If it isn't a merged type, the metricName and family name should match
 	return metricName == mf.name
 }
 
@@ -129,27 +125,22 @@ func (mg *metricGroup) toDistributionPoint(dest pmetric.HistogramDataPointSlice)
 	point := dest.AppendEmpty()
 
 	if pointIsStale {
-		point.SetFlagsImmutable(pmetric.DefaultMetricDataPointFlags.WithNoRecordedValue(true))
+		point.SetFlags(pmetric.DefaultMetricDataPointFlags.WithNoRecordedValue(true))
 	} else {
 		point.SetCount(uint64(mg.count))
-		point.SetSum(mg.sum)
+		if mg.hasSum {
+			point.SetSum(mg.sum)
+		}
 	}
 
-	point.SetExplicitBounds(pcommon.NewImmutableFloat64Slice(bounds))
-	point.SetBucketCounts(pcommon.NewImmutableUInt64Slice(bucketCounts))
+	point.ExplicitBounds().FromRaw(bounds)
+	point.BucketCounts().FromRaw(bucketCounts)
 
 	// The timestamp MUST be in retrieved from milliseconds and converted to nanoseconds.
-	tsNanos := pdataTimestampFromMs(mg.ts)
-	if mg.family.isCumulativeType() {
-		point.SetStartTimestamp(tsNanos) // metrics_adjuster adjusts the startTimestamp to the initial scrape timestamp
-	}
+	tsNanos := timestampFromMs(mg.ts)
+	point.SetStartTimestamp(tsNanos) // metrics_adjuster adjusts the startTimestamp to the initial scrape timestamp
 	point.SetTimestamp(tsNanos)
 	populateAttributes(pmetric.MetricDataTypeHistogram, mg.ls, point.Attributes())
-}
-
-func pdataTimestampFromMs(timeAtMs int64) pcommon.Timestamp {
-	secs, ns := timeAtMs/1e3, (timeAtMs%1e3)*1e6
-	return pcommon.NewTimestampFromTime(time.Unix(secs, ns))
 }
 
 func (mg *metricGroup) toSummaryPoint(dest pmetric.SummaryDataPointSlice) {
@@ -165,9 +156,11 @@ func (mg *metricGroup) toSummaryPoint(dest pmetric.SummaryDataPointSlice) {
 	point := dest.AppendEmpty()
 	pointIsStale := value.IsStaleNaN(mg.sum) || value.IsStaleNaN(mg.count)
 	if pointIsStale {
-		point.SetFlagsImmutable(pmetric.DefaultMetricDataPointFlags.WithNoRecordedValue(true))
+		point.SetFlags(pmetric.DefaultMetricDataPointFlags.WithNoRecordedValue(true))
 	} else {
-		point.SetSum(mg.sum)
+		if mg.hasSum {
+			point.SetSum(mg.sum)
+		}
 		point.SetCount(uint64(mg.count))
 	}
 
@@ -188,27 +181,22 @@ func (mg *metricGroup) toSummaryPoint(dest pmetric.SummaryDataPointSlice) {
 	// observations and the corresponding sum is a sum of all observed values, thus the sum and count used
 	// at the global level of the metricspb.SummaryValue
 	// The timestamp MUST be in retrieved from milliseconds and converted to nanoseconds.
-	tsNanos := pdataTimestampFromMs(mg.ts)
+	tsNanos := timestampFromMs(mg.ts)
 	point.SetTimestamp(tsNanos)
-	if mg.family.isCumulativeType() {
-		point.SetStartTimestamp(tsNanos) // metrics_adjuster adjusts the startTimestamp to the initial scrape timestamp
-	}
+	point.SetStartTimestamp(tsNanos) // metrics_adjuster adjusts the startTimestamp to the initial scrape timestamp
 	populateAttributes(pmetric.MetricDataTypeSummary, mg.ls, point.Attributes())
 }
 
 func (mg *metricGroup) toNumberDataPoint(dest pmetric.NumberDataPointSlice) {
-	var startTsNanos pcommon.Timestamp
-	tsNanos := pdataTimestampFromMs(mg.ts)
-	// gauge/undefined types have no start time.
-	if mg.family.isCumulativeType() {
-		startTsNanos = tsNanos // metrics_adjuster adjusts the startTimestamp to the initial scrape timestamp
-	}
-
+	tsNanos := timestampFromMs(mg.ts)
 	point := dest.AppendEmpty()
-	point.SetStartTimestamp(startTsNanos)
+	// gauge/undefined types have no start time.
+	if mg.family.mtype == pmetric.MetricDataTypeSum {
+		point.SetStartTimestamp(tsNanos) // metrics_adjuster adjusts the startTimestamp to the initial scrape timestamp
+	}
 	point.SetTimestamp(tsNanos)
 	if value.IsStaleNaN(mg.value) {
-		point.SetFlagsImmutable(pmetric.DefaultMetricDataPointFlags.WithNoRecordedValue(true))
+		point.SetFlags(pmetric.DefaultMetricDataPointFlags.WithNoRecordedValue(true))
 	} else {
 		point.SetDoubleVal(mg.value)
 	}
@@ -230,24 +218,17 @@ func populateAttributes(mType pmetric.MetricDataType, ls labels.Labels, dest pco
 			// empty label values should be omitted
 			continue
 		}
-		dest.InsertString(ls[i].Name, ls[i].Value)
+		dest.PutString(ls[i].Name, ls[i].Value)
 	}
-}
-
-func (mf *metricFamily) isCumulativeType() bool {
-	return mf.mtype == pmetric.MetricDataTypeSum ||
-		mf.mtype == pmetric.MetricDataTypeHistogram ||
-		mf.mtype == pmetric.MetricDataTypeSummary
 }
 
 func (mf *metricFamily) loadMetricGroupOrCreate(groupKey uint64, ls labels.Labels, ts int64) *metricGroup {
 	mg, ok := mf.groups[groupKey]
 	if !ok {
 		mg = &metricGroup{
-			family:       mf,
-			ts:           ts,
-			ls:           ls,
-			complexValue: make([]*dataPoint, 0),
+			family: mf,
+			ts:     ts,
+			ls:     ls,
 		}
 		mf.groups[groupKey] = mg
 		// maintaining data insertion order is helpful to generate stable/reproducible metric output
@@ -289,7 +270,6 @@ func (mf *metricFamily) Add(metricName string, ls labels.Labels, t int64, v floa
 
 func (mf *metricFamily) appendMetric(metrics pmetric.MetricSlice) {
 	metric := pmetric.NewMetric()
-	metric.SetDataType(mf.mtype)
 	metric.SetName(mf.name)
 	metric.SetDescription(mf.metadata.Help)
 	metric.SetUnit(mf.metadata.Unit)
@@ -298,7 +278,7 @@ func (mf *metricFamily) appendMetric(metrics pmetric.MetricSlice) {
 
 	switch mf.mtype {
 	case pmetric.MetricDataTypeHistogram:
-		histogram := metric.Histogram()
+		histogram := metric.SetEmptyHistogram()
 		histogram.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
 		hdpL := histogram.DataPoints()
 		for _, mg := range mf.groupOrders {
@@ -307,7 +287,7 @@ func (mf *metricFamily) appendMetric(metrics pmetric.MetricSlice) {
 		pointCount = hdpL.Len()
 
 	case pmetric.MetricDataTypeSummary:
-		summary := metric.Summary()
+		summary := metric.SetEmptySummary()
 		sdpL := summary.DataPoints()
 		for _, mg := range mf.groupOrders {
 			mg.toSummaryPoint(sdpL)
@@ -315,7 +295,7 @@ func (mf *metricFamily) appendMetric(metrics pmetric.MetricSlice) {
 		pointCount = sdpL.Len()
 
 	case pmetric.MetricDataTypeSum:
-		sum := metric.Sum()
+		sum := metric.SetEmptySum()
 		sum.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
 		sum.SetIsMonotonic(mf.isMonotonic)
 		sdpL := sum.DataPoints()
@@ -325,8 +305,7 @@ func (mf *metricFamily) appendMetric(metrics pmetric.MetricSlice) {
 		pointCount = sdpL.Len()
 
 	default: // Everything else should be set to a Gauge.
-		metric.SetDataType(pmetric.MetricDataTypeGauge)
-		gauge := metric.Gauge()
+		gauge := metric.SetEmptyGauge()
 		gdpL := gauge.DataPoints()
 		for _, mg := range mf.groupOrders {
 			mg.toNumberDataPoint(gdpL)
