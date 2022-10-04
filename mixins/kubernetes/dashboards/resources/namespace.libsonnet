@@ -32,7 +32,8 @@ local template = grafana.template;
       local tableStyles = {
         pod: {
           alias: 'Pod',
-          link: '%(prefix)s/d/%(uid)s/k8s-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-pod.json'] },
+          link: '%(prefix)s/d/%(uid)s/k8s-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&from=$__from&to=$__to&var-pod=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-pod.json'] },
+          linkTargetBlank: true,
         },
       };
 
@@ -48,8 +49,9 @@ local template = grafana.template;
       local networkTableStyles = {
         pod: {
           alias: 'Pod',
-          link: '%(prefix)s/d/%(uid)s/k8s-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-pod.json'] },
+          link: '%(prefix)s/d/%(uid)s/k8s-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&from=$__from&to=$__to&var-pod=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-pod.json'] },
           linkTooltip: 'Drill down to pods',
+          linkTargetBlank: true,
         },
         'Value #A': {
           alias: 'Current Receive Bandwidth',
@@ -97,8 +99,9 @@ local template = grafana.template;
       local storageIOTableStyles = {
         pod: {
           alias: 'Pod',
-          link: '%(prefix)s/d/%(uid)s/k8s-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&var-pod=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-pod.json'] },
+          link: '%(prefix)s/d/%(uid)s/k8s-resources-pod?var-datasource=$datasource&var-cluster=$cluster&var-namespace=$namespace&from=$__from&to=$__to&var-pod=$__cell' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-resources-pod.json'] },
           linkTooltip: 'Drill down to pods',
+          linkTargetBlank: true,
         },
         'Value #A': {
           alias: 'IOPS(Reads)',
