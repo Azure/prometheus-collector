@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/rollback-otelcollector
 
 pr:
   autoCancel: true
