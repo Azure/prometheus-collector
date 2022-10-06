@@ -83,7 +83,7 @@ func HasDuplicateLabelNames(ls labels.Labels, externalLabels labels.Labels, metr
 			fmt.Println("label-1: %s", ls[i-1].Name)
 			fmt.Println("metricName: %s", metricName)
 			fmt.Println("labelset: %v", ls)
-			fmt.Println("external labels: %v", t.externalLabels)
+			fmt.Println("external labels: %v", externalLabels)
 			return l.Name, true
 		}
 	}
