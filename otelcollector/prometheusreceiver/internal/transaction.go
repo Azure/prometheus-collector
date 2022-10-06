@@ -104,14 +104,19 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 		return 0, errMetricNameNotFound
 	}
 
-	if metricName == "kube_pod_info" {
-		fmt.Println("metricName is kubePodInfo")
+	if metricName == "kube_pod_container_info" {
+		fmt.Println("metricName is kube_pod_container_info")
 		fmt.Println("labelset: %v", ls)
 	}
 
 	if len(t.externalLabels) != 0 {
 		ls = append(ls, t.externalLabels...)
 		sort.Sort(ls)
+	}
+
+	if metricName == "kube_pod_container_info" {
+		fmt.Println("external labels: %v", t.externalLabels)
+		fmt.Println("sorted labelset: %v", ls)
 	}
 
 	if t.isNew {
