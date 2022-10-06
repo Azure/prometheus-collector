@@ -73,16 +73,17 @@ func newTransaction(
 
 // HasDuplicateLabelNames returns whether ls has duplicate label names.
 // It assumes that the labelset is sorted.
-func HasDuplicateLabelNames(ls labels.Labels, metricName string) (string, bool) {
+func HasDuplicateLabelNames(ls labels.Labels, externalLabels, labels.Labels, metricName string) (string, bool) {
 	for i, l := range ls {
 		if i == 0 {
 			continue
 		}
 		if l.Name == ls[i-1].Name {
-			if metricName == "kube_pod_info" {
-				fmt.Println("label: %s", l.Name)
-				fmt.Println("label-1: %s", ls[i-1].Name)
-			}
+			fmt.Println("label: %s", l.Name)
+			fmt.Println("label-1: %s", ls[i-1].Name)
+			fmt.Println("metricName: %s", metricName)
+			fmt.Println("labelset: %v", ls)
+			fmt.Println("external labels: %v", t.externalLabels)
 			return l.Name, true
 		}
 	}
@@ -111,11 +112,6 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	if len(t.externalLabels) != 0 {
 		ls = append(ls, t.externalLabels...)
 		sort.Sort(ls)
-	}
-
-	if metricName == "kube_pod_info" {
-		fmt.Println("external labels: %v", t.externalLabels)
-		fmt.Println("sorted labelset: %v", ls)
 	}
 
 	if t.isNew {
