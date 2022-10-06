@@ -71,6 +71,25 @@ func newTransaction(
 	}
 }
 
+// HasDuplicateLabelNames returns whether ls has duplicate label names.
+// It assumes that the labelset is sorted.
+func HasDuplicateLabelNames(ls Labels, string metricName) (string, bool) {
+	for i, l := range ls {
+		if i == 0 {
+			continue
+		}
+		if l.Name == ls[i-1].Name {
+			if metricName == "kube_pod_info" {
+				fmt.Println("label: %s", l.Name)
+				fmt.Println("label-1: %s", ls[i-1].Name)
+			}
+			return l.Name, true
+		}
+	}
+	return "", false
+}
+
+
 // Append always returns 0 to disable label caching.
 func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64, val float64) (storage.SeriesRef, error) {
 	select {
@@ -109,7 +128,7 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	// * https://github.com/open-telemetry/wg-prometheus/issues/44
 	// * https://github.com/open-telemetry/opentelemetry-collector/issues/3407
 	// as Prometheus rejects such too as of version 2.16.0, released on 2020-02-13.
-	if dupLabel, hasDup := ls.HasDuplicateLabelNames(); hasDup {
+	if dupLabel, hasDup := HasDuplicateLabelNames(ls, metricName); hasDup {
 		return 0, fmt.Errorf("invalid sample: non-unique label names: %q", dupLabel)
 	}
 
