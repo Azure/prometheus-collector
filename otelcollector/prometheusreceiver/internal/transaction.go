@@ -73,7 +73,7 @@ func newTransaction(
 
 // HasDuplicateLabelNames returns whether ls has duplicate label names.
 // It assumes that the labelset is sorted.
-func HasDuplicateLabelNames(ls Labels, string metricName) (string, bool) {
+func HasDuplicateLabelNames(ls labels.Labels, metricName string) (string, bool) {
 	for i, l := range ls {
 		if i == 0 {
 			continue
