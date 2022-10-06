@@ -73,7 +73,7 @@ func newTransaction(
 
 // HasDuplicateLabelNames returns whether ls has duplicate label names.
 // It assumes that the labelset is sorted.
-func HasDuplicateLabelNames(ls labels.Labels, externalLabels, labels.Labels, metricName string) (string, bool) {
+func HasDuplicateLabelNames(ls labels.Labels, externalLabels labels.Labels, metricName string) (string, bool) {
 	for i, l := range ls {
 		if i == 0 {
 			continue
@@ -124,7 +124,7 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	// * https://github.com/open-telemetry/wg-prometheus/issues/44
 	// * https://github.com/open-telemetry/opentelemetry-collector/issues/3407
 	// as Prometheus rejects such too as of version 2.16.0, released on 2020-02-13.
-	if dupLabel, hasDup := HasDuplicateLabelNames(ls, metricName); hasDup {
+	if dupLabel, hasDup := HasDuplicateLabelNames(ls, t.externalLabels, metricName); hasDup {
 		return 0, fmt.Errorf("invalid sample: non-unique label names: %q", dupLabel)
 	}
 
