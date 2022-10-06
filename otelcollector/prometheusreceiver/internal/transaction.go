@@ -79,9 +79,24 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	default:
 	}
 
+	metricName := ls.Get(model.MetricNameLabel)
+	if metricName == "" {
+		return 0, errMetricNameNotFound
+	}
+
+	if metricName == "kube_pod_info" {
+		fmt.Println("metricName is kubePodInfo")
+		fmt.Println("labelset: %v", ls)
+	}
+
 	if len(t.externalLabels) != 0 {
 		ls = append(ls, t.externalLabels...)
 		sort.Sort(ls)
+	}
+
+	if metricName == "kube_pod_info" {
+		fmt.Println("external labels: %v", t.externalLabels)
+		fmt.Println("sorted labelset: %v", ls)
 	}
 
 	if t.isNew {
@@ -96,11 +111,6 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	// as Prometheus rejects such too as of version 2.16.0, released on 2020-02-13.
 	if dupLabel, hasDup := ls.HasDuplicateLabelNames(); hasDup {
 		return 0, fmt.Errorf("invalid sample: non-unique label names: %q", dupLabel)
-	}
-
-	metricName := ls.Get(model.MetricNameLabel)
-	if metricName == "" {
-		return 0, errMetricNameNotFound
 	}
 
 	// See https://www.prometheus.io/docs/concepts/jobs_instances/#automatically-generated-labels-and-time-series

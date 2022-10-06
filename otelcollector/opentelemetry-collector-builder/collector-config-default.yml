@@ -41,7 +41,7 @@ service:
       processors: [batch,resource]
   telemetry:
     logs:
-      level: warn
+      level: debug
       encoding: json
     metrics:
       level: detailed
