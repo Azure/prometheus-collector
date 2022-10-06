@@ -1,8 +1,8 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Release TBA
+## Release 10-06-22
 
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:TBA`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.3.0-main-10-06-2022-c0c49872`
 * Change Log -
   * Add capability for the custom prometheus config global settings to apply to the default targets
   * Bug fix - Rollback from otelcollector version 0.59.0 to 0.58.0 due to external labels bug
