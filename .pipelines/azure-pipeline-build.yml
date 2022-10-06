@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - kaveesh/fix_no_global_in_custom_config
 
 pr:
   autoCancel: true
