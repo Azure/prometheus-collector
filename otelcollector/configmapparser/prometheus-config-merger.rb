@@ -432,6 +432,7 @@ def setGlobalScrapeConfigInDefaultFilesIfExists(configString)
     if !matched
       # set default global scrape interval to 1m if its not in the proper format
       customConfig["global"]["scrape_interval"] = "1m"
+      scrapeInterval = "30s"
     end
   end
   setDefaultFileScrapeInterval(scrapeInterval)
