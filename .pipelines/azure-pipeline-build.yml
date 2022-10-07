@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - updateTestIntervalsRetest
 
 pr:
   autoCancel: true
@@ -223,61 +224,6 @@ jobs:
         GdnBreakGdnToolSemmle: true
         GdnBreakGdnToolSemmleSeverity: 'Warning'
 
-- job: Windows
-  displayName: "Build windows image"
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-  dependsOn:
-  - Common
-  variables:
-    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-  steps:
-    - task: GoTool@0
-      displayName: "Build: specify golang version"
-      inputs:
-        version: '1.19'
-
-    - powershell: |
-        ./makefile_windows.ps1
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
-
-    - powershell: |
-        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)
-        New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
-        @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build image"
-
-    - powershell: |
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker push $(WINDOWS_FULL_IMAGE_NAME)
-      displayName: "Build: push image to dev ACR"
-      condition: eq(variables.IS_PR, false)
-
-    - task: ComponentGovernanceComponentDetection@0
-      displayName: "SDL: run component governance"
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        scanType: 'Register'
-        verbosity: 'Verbose'
-        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
-        alertWarningLevel: 'High'
-
-    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-      displayName: "Ev2: generate image artifacts"
-      inputs:
-        BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
-        DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
-
-    - task: PublishBuildArtifacts@1
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-      displayName: "Ev2: publish image artifacts"
-      inputs:
-        pathToPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: drop
-
 - job: Chart
   displayName: "Package helm chart"
   pool:
@@ -285,7 +231,6 @@ jobs:
   dependsOn:
   - Common
   - Linux
-  - Windows
   variables:
     HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
