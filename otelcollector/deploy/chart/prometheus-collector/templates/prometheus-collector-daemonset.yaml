@@ -224,7 +224,7 @@ spec:
       volumes:
         - name: settings-vol-config
           configMap:
-            name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
+            name: ama-metrics-settings-configmap
             optional: true
         - name: prometheus-config-vol
           configMap:
@@ -416,7 +416,7 @@ spec:
       volumes:
         - name: settings-vol-config
           configMap:
-            name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
+            name: ama-metrics-settings-configmap
             optional: true
         - name: prometheus-config-vol
           configMap:
