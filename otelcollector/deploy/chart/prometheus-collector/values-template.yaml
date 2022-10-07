@@ -39,6 +39,19 @@ scrapeTargets:
   # -- when true, automatically scrape info about the Prometheus-Collector such as the amount and size of timeseries scraped
   prometheusCollectorHealth: true
 
+# The following setting will set the scrape interval of each target
+scrapeIntervalTargets:
+  coreDns: "30s"
+  kubelet: "30s"
+  cAdvisor: "30s"
+  kubeProxy: "30s"
+  apiServer: "30s"
+  kubeState: "30s"
+  nodeExporter: "30s"
+  windowsExporter: "30s"
+  windowsKubeProxy: "30s"
+  prometheusCollectorHealth: "30s"
+    
 # when minimalIngestionProfile is enabled, we will ingest only hand-picked/selected metrics per default target. see the list of metrics included per default target in our docs.
 minimalIngestionProfile: true
   
