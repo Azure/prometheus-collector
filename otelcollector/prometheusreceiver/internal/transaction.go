@@ -253,7 +253,7 @@ func (t *transaction) UpdateMetadata(ref storage.SeriesRef, l labels.Labels, m m
 
 func (t *transaction) AddTargetInfo(labels labels.Labels) error {
 	attrs := t.nodeResource.Attributes()
-	kube_state_metricsTarget = false
+	kube_state_metricsTarget := false
 
 	for _, lbl := range labels {
     if lbl.Name == model.JobLabel && lbl.Value == "kube-state-metrics" {

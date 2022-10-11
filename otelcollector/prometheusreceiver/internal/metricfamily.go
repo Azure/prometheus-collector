@@ -204,7 +204,7 @@ func (mg *metricGroup) toNumberDataPoint(dest pmetric.NumberDataPointSlice) {
 }
 
 func populateAttributes(mType pmetric.MetricDataType, ls labels.Labels, dest pcommon.Map) {
-	metricIsKubePodContainerInfo = false
+	metricIsKubePodContainerInfo := false
 	dest.EnsureCapacity(ls.Len())
 	names := getSortedNotUsefulLabels(mType)
 	j := 0
