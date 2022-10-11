@@ -151,13 +151,11 @@ func (b *metricBuilder) AddDataPoint(ls labels.Labels, t int64, v float64) error
 	// * https://github.com/open-telemetry/wg-prometheus/issues/44
 	// * https://github.com/open-telemetry/opentelemetry-collector/issues/3407
 	// as Prometheus rejects such too as of version 2.16.0, released on 2020-02-13.
-	seen := make(map[string]bool, len(ls))
 	var dupLabels []string
-	for _, label := range ls {
-		if _, ok := seen[label.Name]; ok {
-			dupLabels = append(dupLabels, label.Name)
+	for i := 0; i < len(ls)-1; i++ {
+		if ls[i].Name == ls[i+1].Name {
+			dupLabels = append(dupLabels, ls[i].Name)
 		}
-		seen[label.Name] = true
 	}
 	if len(dupLabels) != 0 {
 		sort.Strings(dupLabels)
