@@ -166,7 +166,7 @@ func (mg *metricGroup) toDistributionPoint(orderedLabelKeys []string, dest pmetr
 		point.SetStartTimestamp(tsNanos) // metrics_adjuster adjusts the startTimestamp to the initial scrape timestamp
 	}
 	point.SetTimestamp(tsNanos)
-	populateAttributes(orderedLabelKeys, mg.ls, point.Attributes())
+	populateAttributes(pmetric.MetricDataTypeHistogram, mg.ls, point.Attributes())
 }
 
 func pdataTimestampFromMs(timeAtMs int64) pcommon.Timestamp {
@@ -215,7 +215,7 @@ func (mg *metricGroup) toSummaryPoint(orderedLabelKeys []string, dest pmetric.Su
 	if mg.family.isCumulativeType() {
 		point.SetStartTimestamp(tsNanos) // metrics_adjuster adjusts the startTimestamp to the initial scrape timestamp
 	}
-	populateAttributes(orderedLabelKeys, mg.ls, point.Attributes())
+	populateAttributes(pmetric.MetricDataTypeSummary, mg.ls, point.Attributes())
 }
 
 func (mg *metricGroup) toNumberDataPoint(orderedLabelKeys []string, dest pmetric.NumberDataPointSlice) {
@@ -234,18 +234,25 @@ func (mg *metricGroup) toNumberDataPoint(orderedLabelKeys []string, dest pmetric
 	} else {
 		point.SetDoubleVal(mg.value)
 	}
-	populateAttributes(orderedLabelKeys, mg.ls, point.Attributes())
+	populateAttributes(pmetric.MetricDataTypeGauge, mg.ls, point.Attributes())
 }
 
-func populateAttributes(orderedKeys []string, ls labels.Labels, dest pcommon.Map) {
-	dest.EnsureCapacity(len(orderedKeys))
-	for _, key := range orderedKeys {
-		val := ls.Get(key)
-		if val == "" {
+func populateAttributes(mType pmetric.MetricDataType, ls labels.Labels, dest pcommon.Map) {
+	dest.EnsureCapacity(ls.Len())
+	names := getSortedNotUsefulLabels(mType)
+	j := 0
+	for i := range ls {
+		for j < len(names) && names[j] < ls[i].Name {
+			j++
+		}
+		if j < len(names) && ls[i].Name == names[j] {
+			continue
+		}
+		if ls[i].Value == "" {
 			// empty label values should be omitted
 			continue
 		}
-		dest.InsertString(key, val)
+		dest.InsertString(ls[i].Name, ls[i].Value)
 	}
 }
 
