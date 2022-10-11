@@ -16,7 +16,6 @@ package prometheusreceiver // import "github.com/open-telemetry/opentelemetry-co
 
 import (
 	"context"
-	"os"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -25,13 +24,10 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/mitchellh/hashstructure/v2"
-	"github.com/prometheus/common/version"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	promHTTP "github.com/prometheus/prometheus/discovery/http"
 	"github.com/prometheus/prometheus/scrape"
-	"github.com/prometheus/prometheus/web"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.uber.org/zap"
@@ -43,10 +39,6 @@ import (
 const (
 	defaultGCInterval = 2 * time.Minute
 	gcIntervalDelta   = 1 * time.Minute
-
-	// Use same settings as Prometheus web server
-	maxConnections = 512
-	readTimeoutMinutes = 10
 )
 
 // pReceiver is the type that provides Prometheus scraper/receiver functionality.
@@ -233,54 +225,6 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 			host.ReportFatalError(err)
 		}
 	}()
-
-	// Setup settings and logger and create Prometheus web handler
-	webOptions := web.Options{
-		ScrapeManager: r.scrapeManager,
-		Context: ctx,
-		ListenAddress: ":9090",
-		ExternalURL: &url.URL{
-			Scheme: "http",
-			Host:   "localhost:9090",
-			Path:   "",
-		},
-		RoutePrefix:    "/",
-		ReadTimeout: time.Minute * readTimeoutMinutes,
-		PageTitle: "Prometheus Receiver",
-		Version: &web.PrometheusVersion{
-			Version:   version.Version,
-			Revision:  version.Revision,
-			Branch:    version.Branch,
-			BuildUser: version.BuildUser,
-			BuildDate: version.BuildDate,
-			GoVersion: version.GoVersion,
-		},
-		Flags: make(map[string]string),
-		MaxConnections: maxConnections,
-		IsAgent: true,
-		Gatherer:   prometheus.DefaultGatherer,
-	}
-	go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	webHandler := web.New(go_kit_logger, &webOptions)
-	
-	listener, err := webHandler.Listener()
-	if err != nil {
-		return err
-	}
-	
-	// Pass config and let the web handler know the config is ready.
-	// These are needed because Prometheus allows reloading the config without restarting.
-	webHandler.ApplyConfig(r.cfg.PrometheusConfig)
-	webHandler.SetReady(true)
-	
-	// Uses the same context as the discovery and scrape managers for shutting down
-	go func() {
-		if err := webHandler.Run(ctx, listener, ""); err != nil {
-			r.settings.Logger.Error("Web handler failed", zap.Error(err))
-			host.ReportFatalError(err)
-		}
-	}()
-
 	return nil
 }
 
