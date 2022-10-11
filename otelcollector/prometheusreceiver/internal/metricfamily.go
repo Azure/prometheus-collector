@@ -204,6 +204,7 @@ func (mg *metricGroup) toNumberDataPoint(dest pmetric.NumberDataPointSlice) {
 }
 
 func populateAttributes(mType pmetric.MetricDataType, ls labels.Labels, dest pcommon.Map) {
+	metricIsKubePodContainerInfo = false
 	dest.EnsureCapacity(ls.Len())
 	names := getSortedNotUsefulLabels(mType)
 	j := 0
@@ -212,6 +213,9 @@ func populateAttributes(mType pmetric.MetricDataType, ls labels.Labels, dest pco
 			j++
 		}
 		if j < len(names) && ls[i].Name == names[j] {
+			if ls[i].Name == model.MetricNameLabel && ls[i].Value == "kube_pod_container_info" {
+				metricIsKubePodContainerInfo = true
+			}
 			continue
 		}
 		if ls[i].Value == "" {
@@ -219,6 +223,9 @@ func populateAttributes(mType pmetric.MetricDataType, ls labels.Labels, dest pco
 			continue
 		}
 		dest.PutString(ls[i].Name, ls[i].Value)
+		if metricIsKubePodContainerInfo {
+			fmt.Println("attributes for kube_pod_container_info: %v", dest)
+		}
 	}
 }
 
