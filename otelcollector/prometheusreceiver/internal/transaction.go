@@ -125,13 +125,30 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 		}
 	}
 
+	seen := make(map[string]bool, len(ls))
+	var dupLabels []string
+	for _, label := range ls {
+		if _, ok := seen[label.Name]; ok {
+			dupLabels = append(dupLabels, label.Name)
+		}
+		seen[label.Name] = true
+	}
+	if len(dupLabels) != 0 {
+		sort.Strings(dupLabels)
+		fmt.Println("dupLabels: %v", dupLabels)
+		fmt.Println("metricName: %s", metricName)
+		fmt.Println("labelset: %v", ls)
+		fmt.Println("external labels: %v", t.externalLabels)
+		return 0, fmt.Errorf("invalid sample: non-unique label names: %q", dupLabels)
+	}
+
 	// Any datapoint with duplicate labels MUST be rejected per:
 	// * https://github.com/open-telemetry/wg-prometheus/issues/44
 	// * https://github.com/open-telemetry/opentelemetry-collector/issues/3407
 	// as Prometheus rejects such too as of version 2.16.0, released on 2020-02-13.
-	if dupLabel, hasDup := HasDuplicateLabelNames(ls, t.externalLabels, metricName); hasDup {
-		return 0, fmt.Errorf("invalid sample: non-unique label names: %q", dupLabel)
-	}
+	//if dupLabel, hasDup := HasDuplicateLabelNames(ls, t.externalLabels, metricName); hasDup {
+		//return 0, fmt.Errorf("invalid sample: non-unique label names: %q", dupLabel)
+	//}
 
 	// See https://www.prometheus.io/docs/concepts/jobs_instances/#automatically-generated-labels-and-time-series
 	// up: 1 if the instance is healthy, i.e. reachable, or 0 if the scrape failed.
