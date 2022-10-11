@@ -267,7 +267,7 @@ func (t *transaction) AddTargetInfo(labels labels.Labels) error {
 		attrs.PutString(lbl.Name, lbl.Value)
 	}
 	if kube_state_metricsTarget {
-		fmt.Println("target attributes: %v", attrs)
+		fmt.Println("target attributes: %v", attrs.AsRaw())
 	}
 
 	return nil

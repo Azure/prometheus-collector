@@ -225,7 +225,7 @@ func populateAttributes(mType pmetric.MetricDataType, ls labels.Labels, dest pco
 		}
 		dest.PutString(ls[i].Name, ls[i].Value)
 		if metricIsKubePodContainerInfo {
-			fmt.Println("attributes for kube_pod_container_info: %v", dest)
+			fmt.Println("attributes for kube_pod_container_info: %v", dest.AsRaw())
 		}
 	}
 }
