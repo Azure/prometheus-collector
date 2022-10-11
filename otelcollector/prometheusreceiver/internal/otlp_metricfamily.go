@@ -32,7 +32,7 @@ type metricFamily struct {
 	mtype pmetric.MetricDataType
 	// isMonotonic only applies to sums
 	isMonotonic      bool
-	groups           map[string]*metricGroup
+	groups           map[uint64]*metricGroup
 	name             string
 	mc               MetadataCache
 	labelKeys        map[string]bool
@@ -66,7 +66,7 @@ func newMetricFamily(metricName string, mc MetadataCache, logger *zap.Logger) *m
 	return &metricFamily{
 		mtype:            mtype,
 		isMonotonic:      isMonotonic,
-		groups:           make(map[string]*metricGroup),
+		groups:           make(map[uint64]*metricGroup),
 		name:             familyName,
 		mc:               mc,
 		labelKeys:        make(map[string]bool),
@@ -105,7 +105,7 @@ func (mf *metricFamily) includesMetric(metricName string) bool {
 	return metricName == mf.name
 }
 
-func (mf *metricFamily) getGroupKey(ls labels.Labels) string {
+func (mf *metricFamily) getGroupKey(ls labels.Labels) uint64 {
 	bytes := make([]byte, 0, 2048)
 	hash, _ := ls.HashWithoutLabels(bytes, getSortedNotUsefulLabels(mf.mtype)...)
 	return hash
@@ -255,7 +255,7 @@ func (mf *metricFamily) isCumulativeType() bool {
 		mf.mtype == pmetric.MetricDataTypeSummary
 }
 
-func (mf *metricFamily) loadMetricGroupOrCreate(groupKey string, ls labels.Labels, ts int64) *metricGroup {
+func (mf *metricFamily) loadMetricGroupOrCreate(groupKey uint64, ls labels.Labels, ts int64) *metricGroup {
 	mg, ok := mf.groups[groupKey]
 	if !ok {
 		mg = &metricGroup{
