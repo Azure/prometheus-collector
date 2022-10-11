@@ -120,7 +120,7 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	}
 
 	if t.isNew {
-		if err := t.initTransaction(ls); err != nil {
+		if err := t.initTransaction(ls, metricName); err != nil {
 			return 0, err
 		}
 	}
@@ -191,7 +191,7 @@ func (t *transaction) getMetrics(resource pcommon.Resource) (pmetric.Metrics, er
 	return md, nil
 }
 
-func (t *transaction) initTransaction(labels labels.Labels) error {
+func (t *transaction) initTransaction(labels labels.Labels, metricName string) error {
 	target, ok := scrape.TargetFromContext(t.ctx)
 	if !ok {
 		return errors.New("unable to find target in context")
@@ -205,6 +205,11 @@ func (t *transaction) initTransaction(labels labels.Labels) error {
 	if job == "" || instance == "" {
 		return errNoJobInstance
 	}
+
+	if metricName == "kube_pod_container_info" {
+		fmt.Println("discovered labels: %v", target.DiscoveredLabels())
+	}
+
 	t.nodeResource = CreateResource(job, instance, target.DiscoveredLabels())
 	t.isNew = false
 	return nil
@@ -248,13 +253,21 @@ func (t *transaction) UpdateMetadata(ref storage.SeriesRef, l labels.Labels, m m
 
 func (t *transaction) AddTargetInfo(labels labels.Labels) error {
 	attrs := t.nodeResource.Attributes()
+	kube_state_metricsTarget = false
 
 	for _, lbl := range labels {
+    if lbl.Name == model.JobLabel && lbl.Value == "kube-state-metrics" {
+			kube_state_metricsTarget = false
+		}
+
 		if lbl.Name == model.JobLabel || lbl.Name == model.InstanceLabel || lbl.Name == model.MetricNameLabel {
 			continue
 		}
 
 		attrs.PutString(lbl.Name, lbl.Value)
+	}
+	if kube_state_metricsTarget {
+		fmt.Println("target attributes: %v", attrs)
 	}
 
 	return nil
