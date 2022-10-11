@@ -106,8 +106,9 @@ func (mf *metricFamily) includesMetric(metricName string) bool {
 }
 
 func (mf *metricFamily) getGroupKey(ls labels.Labels) string {
-	mf.updateLabelKeys(ls)
-	return dpgSignature(mf.labelKeysOrdered, ls)
+	bytes := make([]byte, 0, 2048)
+	hash, _ := ls.HashWithoutLabels(bytes, getSortedNotUsefulLabels(mf.mtype)...)
+	return hash
 }
 
 func (mg *metricGroup) sortPoints() {

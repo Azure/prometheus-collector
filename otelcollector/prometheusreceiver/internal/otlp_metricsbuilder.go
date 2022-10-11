@@ -28,6 +28,28 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	notUsefulLabelsHistogram = sortString([]string{model.MetricNameLabel, model.InstanceLabel, model.SchemeLabel, model.MetricsPathLabel, model.JobLabel, model.BucketLabel})
+	notUsefulLabelsSummary   = sortString([]string{model.MetricNameLabel, model.InstanceLabel, model.SchemeLabel, model.MetricsPathLabel, model.JobLabel, model.QuantileLabel})
+	notUsefulLabelsOther     = sortString([]string{model.MetricNameLabel, model.InstanceLabel, model.SchemeLabel, model.MetricsPathLabel, model.JobLabel})
+)
+
+func sortString(strs []string) []string {
+	sort.Strings(strs)
+	return strs
+}
+
+func getSortedNotUsefulLabels(mType pmetric.MetricDataType) []string {
+	switch mType {
+	case pmetric.MetricDataTypeHistogram:
+		return notUsefulLabelsHistogram
+	case pmetric.MetricDataTypeSummary:
+		return notUsefulLabelsSummary
+	default:
+		return notUsefulLabelsOther
+	}
+}
+
 func isUsefulLabel(mType pmetric.MetricDataType, labelKey string) bool {
 	switch labelKey {
 	case model.MetricNameLabel, model.InstanceLabel, model.SchemeLabel, model.MetricsPathLabel, model.JobLabel:

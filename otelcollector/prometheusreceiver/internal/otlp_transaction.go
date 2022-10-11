@@ -17,6 +17,7 @@ package internal // import "github.com/open-telemetry/opentelemetry-collector-co
 import (
 	"context"
 	"time"
+	"sort"
 
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/exemplar"
@@ -82,6 +83,7 @@ func (t *transaction) Append(ref storage.SeriesRef, labels labels.Labels, atMs i
 
 	if len(t.externalLabels) != 0 {
 		labels = append(labels, t.externalLabels...)
+		sort.Sort(labels)
 	}
 
 	if t.isNew {
