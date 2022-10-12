@@ -50,18 +50,6 @@ func getSortedNotUsefulLabels(mType pmetric.MetricDataType) []string {
 	}
 }
 
-func isUsefulLabel(mType pmetric.MetricDataType, labelKey string) bool {
-	switch labelKey {
-	case model.MetricNameLabel, model.InstanceLabel, model.SchemeLabel, model.MetricsPathLabel, model.JobLabel:
-		return false
-	case model.BucketLabel:
-		return mType != pmetric.MetricDataTypeHistogram
-	case model.QuantileLabel:
-		return mType != pmetric.MetricDataTypeSummary
-	}
-	return true
-}
-
 func getBoundary(metricType pmetric.MetricDataType, labels labels.Labels) (float64, error) {
 	val := ""
 	switch metricType {
