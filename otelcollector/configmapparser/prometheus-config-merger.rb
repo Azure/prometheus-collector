@@ -488,15 +488,18 @@ end
 
 def setGlobalScrapeConfigInDefaultFilesIfExists(configString)
   customConfig = YAML.load(configString)
-  scrapeInterval = customConfig["global"]["scrape_interval"]
-  # Checking to see if the duration matches the pattern specified in the prometheus config
-  # Link to documenation with regex pattern -> https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file
-  matched = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$/.match(scrapeInterval)
-  if !matched
-    # set default global scrape interval to 1m if its not in the proper format
-    customConfig["global"]["scrape_interval"] = "1m"
-    # set scrape interval to 30s for updating the default merged config
-    scrapeInterval = "30s"
+  # set scrape interval to 30s for updating the default merged config
+  scrapeInterval = "30s"
+  if customConfig.has_key?("global") && customConfig["global"].has_key?("scrape_interval")
+    scrapeInterval = customConfig["global"]["scrape_interval"]
+    # Checking to see if the duration matches the pattern specified in the prometheus config
+    # Link to documenation with regex pattern -> https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file
+    matched = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$/.match(scrapeInterval)
+    if !matched
+      # set default global scrape interval to 1m if its not in the proper format
+      customConfig["global"]["scrape_interval"] = "1m"
+      scrapeInterval = "30s"
+    end
   end
   setDefaultFileScrapeInterval(scrapeInterval)
   return YAML::dump(customConfig)
