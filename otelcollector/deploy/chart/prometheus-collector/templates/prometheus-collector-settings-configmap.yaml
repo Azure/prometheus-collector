@@ -38,16 +38,16 @@ data:
   debug-mode: |-
     enabled = {{ .Values.debugMode.enabled }}
   default-targets-scrape-interval-settings: |-
-    kubelet = {{ .Values.scrapeIntervalTargets.kubelet }}
-    coredns = {{ .Values.scrapeIntervalTargets.coreDns }}
-    cadvisor = {{ .Values.scrapeIntervalTargets.cAdvisor }}
-    kubeproxy = {{ .Values.scrapeIntervalTargets.kubeProxy }}
-    apiserver = {{ .Values.scrapeIntervalTargets.apiServer }}
-    kubestate = {{ .Values.scrapeIntervalTargets.kubeState }}
-    nodeexporter = {{ .Values.scrapeIntervalTargets.nodeExporter }}
-    prometheuscollectorhealth = {{ .Values.scrapeIntervalTargets.prometheusCollectorHealth }}
-    windowsexporter = {{ .Values.scrapeIntervalTargets.windowsExporter }}
-    windowskubeproxy = {{ .Values.scrapeIntervalTargets.windowsKubeProxy }}
+    kubelet = {{ .Values.scrapeIntervalTargets.kubelet | toString | quote}}
+    coredns = {{ .Values.scrapeIntervalTargets.coreDns | toString | quote}}
+    cadvisor = {{ .Values.scrapeIntervalTargets.cAdvisor | toString | quote}}
+    kubeproxy = {{ .Values.scrapeIntervalTargets.kubeProxy | toString | quote}}
+    apiserver = {{ .Values.scrapeIntervalTargets.apiServer | toString | quote}}
+    kubestate = {{ .Values.scrapeIntervalTargets.kubeState | toString | quote}}
+    nodeexporter = {{ .Values.scrapeIntervalTargets.nodeExporter | toString | quote}}
+    prometheuscollectorhealth = {{ .Values.scrapeIntervalTargets.prometheusCollectorHealth | toString | quote}}
+    windowsexporter = {{ .Values.scrapeIntervalTargets.windowsExporter | toString | quote}}
+    windowskubeproxy = {{ .Values.scrapeIntervalTargets.windowsKubeProxy | toString | quote}}
 metadata:
   name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
   namespace: {{ .Release.Namespace }}
