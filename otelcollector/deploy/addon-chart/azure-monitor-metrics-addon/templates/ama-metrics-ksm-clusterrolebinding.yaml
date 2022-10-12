@@ -1,0 +1,18 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: ama-metrics
+    app.kubernetes.io/name: ama-metrics-ksm
+    app.kubernetes.io/part-of: ama-metrics-ksm
+    app.kubernetes.io/version: 2.6.0
+    helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+  name: ama-metrics-ksm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ama-metrics-ksm
+subjects:
+- kind: ServiceAccount
+  name: ama-metrics-ksm
+  namespace: kube-system
