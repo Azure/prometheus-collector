@@ -109,18 +109,18 @@ jobs:
       inputs:
         version: '1.19'
 
-    - bash: |
-        sudo apt-get install build-essential -y
-        make
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+    #- bash: |
+    #    sudo apt-get install build-essential -y
+    #    make
+    #  workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+    #  displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
-    - task: BinSkim@4
-      displayName: 'SDL: run binskim'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        InputType: 'CommandLine'
-        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+    #- task: BinSkim@4
+    #  displayName: 'SDL: run binskim'
+    #  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+    #  inputs:
+    #    InputType: 'CommandLine'
+    #    arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
     
     - task: Gosec@1
       displayName: 'SDL: run gosec'
@@ -146,14 +146,14 @@ jobs:
     
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
-        docker buildx create --name testbuilder
-        docker buildx use testbuilder
+        docker buildx create --name dockerbuilder
+        docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         if [ "$(Build.Reason)" != "PullRequest" ]; then
-          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          docker buildx build . --platform=linux/amd64,linux/arm64 -f --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           docker pull $(LINUX_FULL_IMAGE_NAME)
         else
-          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --load
+          docker buildx build . --platform=linux/amd64,linux/arm64 -f --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --load
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"

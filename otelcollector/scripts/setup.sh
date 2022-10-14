@@ -3,6 +3,12 @@
 TMPDIR="/opt"
 cd $TMPDIR
 
+if [ -z $1 ]; then
+    ARCH="amd64"
+else
+    ARCH=$1
+fi
+
 sudo tdnf install ca-certificates-microsoft -y
 
 #Need this for newer scripts
@@ -30,8 +36,9 @@ gem install re2
 echo "Installing MDSD dependencies"
 sudo tdnf install -y which
 echo "Downloading MDSD"
-wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.428_x86_64.rpm
-sudo tdnf install -y azure-mdsd_1.19.3-build.master.428_x86_64.rpm
+#wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.428_x86_64.rpm
+#sudo tdnf install -y azure-mdsd_1.19.3-build.master.428_x86_64.rpm
+sudo tdnf install -y azure-mdsd-1.20.0
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for logs
 mkdir /opt/microsoft/linuxmonagent
@@ -51,10 +58,15 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Installing ME
 echo "Installing Metrics Extension..."
-sudo tdnf install -y metricsext2-2.2022.811.1333
-sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
+if [ "${ARCH}" != "amd64" ]; then
+  wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.1013.1515-1.cm2.aarch64.rpm
+  sudo tdnf install -y metricsext2-2.2022.1013.1515-1.cm2.aarch64.rpm
+else 
+  sudo tdnf install -y metricsext2-2.2022.811.1333
+  sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
+fi
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
 #sudo tdnf remove g++ binutils libgcc-atomic make patch bison diffutils docbook-dtd-xml gawk glibc-devel installkernel kernel-headers libgcc-devel libgomp-devel libmpc libstdc++-devel libtool libxml2-devel libxslt m4 mariner-rpm-macros mpfr python3-lxml python3-pygments dnf -y
-rm -f $TMPDIR/azure-mdsd*.rpm
+rm -f $TMPDIR/metricsext2*.rpm
 rm /usr/sbin/telegraf
