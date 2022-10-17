@@ -25,7 +25,7 @@ sudo tdnf repolist --refresh
 sudo tdnf install inotify-tools -y
 
 echo "Installing packages for re2 gem install..."
-sudo tdnf install -y build-essential re2-devel
+sudo tdnf install -y build-essential re2-devel rpmdevtools
 
 echo "Installing MDSD dependencies"
 sudo tdnf install -y which
