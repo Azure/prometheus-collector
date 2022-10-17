@@ -48,10 +48,6 @@ ENV MALLOC_ARENA_MAX=2
 COPY ./logrotate/prometheus-collector /etc/logrotate.d/
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
-RUN tdnf repolist --refresh
-RUN tdnf install -y dnf
-RUN tdnf install -y wget sudo net-tools cronie vim ruby logrotate procps-ng busybox diffutils
-RUN mkdir /busybin && busybox --install /busybin
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
 COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
@@ -69,8 +65,12 @@ COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 
-RUN chmod 775 /etc/cron.daily/logrotate
 ARG TARGETARCH
+RUN tdnf repolist --refresh
+RUN tdnf install -y dnf
+RUN tdnf install -y wget sudo net-tools cronie vim ruby logrotate procps-ng busybox diffutils
+RUN mkdir /busybin && busybox --install /busybin
+RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh; sync; $tmpdir/setup.sh ${TARGETARCH}
 # If wanting to run without distroless, uncomment this line and comment everything after
 CMD [ "/opt/main.sh" ]
