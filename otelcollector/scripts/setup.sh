@@ -27,12 +27,6 @@ sudo tdnf install inotify-tools -y
 echo "Installing packages for re2 gem install..."
 sudo tdnf install -y build-essential re2-devel
 
-echo "Installing tomlrb, deep_merge and re2 gems..."
-gem install colorize
-gem install tomlrb
-gem install deep_merge
-gem install re2
-
 echo "Installing MDSD dependencies"
 sudo tdnf install -y which
 echo "Downloading MDSD"
@@ -65,6 +59,12 @@ else
   sudo tdnf install -y metricsext2-2.2022.811.1333
   sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 fi
+
+echo "Installing tomlrb, deep_merge and re2 gems..."
+gem install colorize
+gem install tomlrb
+gem install deep_merge
+gem install re2
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
 #sudo tdnf remove g++ binutils libgcc-atomic make patch bison diffutils docbook-dtd-xml gawk glibc-devel installkernel kernel-headers libgcc-devel libgomp-devel libmpc libstdc++-devel libtool libxml2-devel libxslt m4 mariner-rpm-macros mpfr python3-lxml python3-pygments dnf -y
