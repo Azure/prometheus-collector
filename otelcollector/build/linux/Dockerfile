@@ -68,12 +68,12 @@ COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 ARG TARGETARCH
 RUN tdnf repolist --refresh
 RUN tdnf install -y dnf
-RUN tdnf install -y wget sudo net-tools cronie vim ruby logrotate procps-ng busybox diffutils libstdc++ glibc-nscd
+RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils libstdc++ glibc-nscd
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh; 
 RUN sync;
-RUN [ "/bin/bash", "-c", "$tmpdir/setup.sh ${TARGETARCH}" ]
+RUN "$tmpdir/setup.sh ${TARGETARCH}"
 # If wanting to run without distroless, uncomment this line and comment everything after
 CMD [ "/opt/main.sh" ]
 
