@@ -319,6 +319,9 @@ echo_var "AZMON_CONTAINER_START_TIME" "$epochTimeNow"
 epochTimeNowReadable=`date --date @$epochTimeNow`
 echo_var "AZMON_CONTAINER_START_TIME_READABLE" "$epochTimeNowReadable"
 
+ls /usr/lib
+gem install re2
+
 shutdown() {
 	echo "shutting down"
 }
