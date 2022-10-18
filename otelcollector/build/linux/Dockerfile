@@ -73,7 +73,7 @@ RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh; 
 RUN sync;
-RUN "$tmpdir/setup.sh ${TARGETARCH}"
+RUN $tmpdir/setup.sh ${TARGETARCH}W
 # If wanting to run without distroless, uncomment this line and comment everything after
 CMD [ "/opt/main.sh" ]
 
