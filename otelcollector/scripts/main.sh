@@ -26,6 +26,8 @@ echo_var () {
 touch /opt/inotifyoutput.txt
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
+gem install re2
+
 if [ -z $MODE ]; then
   MODE="simple"
 fi
@@ -318,9 +320,6 @@ echo $epochTimeNow > /opt/microsoft/liveness/azmon-container-start-time
 echo_var "AZMON_CONTAINER_START_TIME" "$epochTimeNow"
 epochTimeNowReadable=`date --date @$epochTimeNow`
 echo_var "AZMON_CONTAINER_START_TIME_READABLE" "$epochTimeNowReadable"
-
-ls /usr/lib
-gem install re2
 
 shutdown() {
 	echo "shutting down"
