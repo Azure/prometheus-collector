@@ -66,9 +66,10 @@ echo "Installing tomlrb, deep_merge and re2 gems..."
 gem install colorize
 gem install tomlrb
 gem install deep_merge
-gem install re2 -v 1.4.0 -- --with-re2-dir=/usr/lib
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
 #sudo tdnf remove g++ binutils libgcc-atomic make patch bison diffutils docbook-dtd-xml gawk glibc-devel installkernel kernel-headers libgcc-devel libgomp-devel libmpc libstdc++-devel libtool libxml2-devel libxslt m4 mariner-rpm-macros mpfr python3-lxml python3-pygments dnf -y
 rm -f $TMPDIR/metricsext2*.rpm
 rm /usr/sbin/telegraf
+
+gem install re2
