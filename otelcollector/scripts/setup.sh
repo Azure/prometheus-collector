@@ -60,8 +60,6 @@ else
   sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 fi
 
-ls /usr/lib
-
 echo "Installing tomlrb, deep_merge and re2 gems..."
 gem install colorize
 gem install tomlrb

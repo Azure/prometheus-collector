@@ -26,7 +26,7 @@ echo_var () {
 touch /opt/inotifyoutput.txt
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
-gem install re2
+#gem install re2
 
 if [ -z $MODE ]; then
   MODE="simple"
