@@ -144,8 +144,13 @@ jobs:
       displayName: 'SDL: run brakeman'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
     
+      # Apt-get install necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
+
+        sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
