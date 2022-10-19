@@ -28,46 +28,35 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	notUsefulLabelsHistogram = sortString([]string{model.MetricNameLabel, model.InstanceLabel, model.SchemeLabel, model.MetricsPathLabel, model.JobLabel, model.BucketLabel})
-	notUsefulLabelsSummary   = sortString([]string{model.MetricNameLabel, model.InstanceLabel, model.SchemeLabel, model.MetricsPathLabel, model.JobLabel, model.QuantileLabel})
-	notUsefulLabelsOther     = sortString([]string{model.MetricNameLabel, model.InstanceLabel, model.SchemeLabel, model.MetricsPathLabel, model.JobLabel})
-)
-
-func sortString(strs []string) []string {
-	sort.Strings(strs)
-	return strs
-}
-
-func getSortedNotUsefulLabels(mType pmetric.MetricDataType) []string {
-	switch mType {
-	case pmetric.MetricDataTypeHistogram:
-		return notUsefulLabelsHistogram
-	case pmetric.MetricDataTypeSummary:
-		return notUsefulLabelsSummary
-	default:
-		return notUsefulLabelsOther
+func isUsefulLabel(mType pmetric.MetricDataType, labelKey string) bool {
+	switch labelKey {
+	case model.MetricNameLabel, model.InstanceLabel, model.SchemeLabel, model.MetricsPathLabel, model.JobLabel:
+		return false
+	case model.BucketLabel:
+		return mType != pmetric.MetricDataTypeHistogram
+	case model.QuantileLabel:
+		return mType != pmetric.MetricDataTypeSummary
 	}
+	return true
 }
 
 func getBoundary(metricType pmetric.MetricDataType, labels labels.Labels) (float64, error) {
-	val := ""
+	labelName := ""
 	switch metricType {
 	case pmetric.MetricDataTypeHistogram:
-		val = labels.Get(model.BucketLabel)
-		if val == "" {
-			return 0, errEmptyLeLabel
-		}
+		labelName = model.BucketLabel
 	case pmetric.MetricDataTypeSummary:
-		val = labels.Get(model.QuantileLabel)
-		if val == "" {
-			return 0, errEmptyQuantileLabel
-		}
+		labelName = model.QuantileLabel
 	default:
 		return 0, errNoBoundaryLabel
 	}
 
-	return strconv.ParseFloat(val, 64)
+	v := labels.Get(labelName)
+	if v == "" {
+		return 0, errEmptyBoundaryLabel
+	}
+
+	return strconv.ParseFloat(v, 64)
 }
 
 // convToMetricType returns the data type and if it is monotonic
@@ -96,10 +85,13 @@ func convToMetricType(metricType textparse.MetricType) (pmetric.MetricDataType, 
 }
 
 type metricBuilder struct {
+	metrics              pmetric.MetricSlice
 	families             map[string]*metricFamily
 	hasData              bool
 	hasInternalMetric    bool
 	mc                   MetadataCache
+	numTimeseries        int
+	droppedTimeseries    int
 	useStartTimeMetric   bool
 	startTimeMetricRegex *regexp.Regexp
 	startTime            float64
@@ -116,9 +108,12 @@ func newMetricBuilder(mc MetadataCache, useStartTimeMetric bool, startTimeMetric
 		regex, _ = regexp.Compile(startTimeMetricRegex)
 	}
 	return &metricBuilder{
+		metrics:              pmetric.NewMetricSlice(),
 		families:             map[string]*metricFamily{},
 		mc:                   mc,
 		logger:               logger,
+		numTimeseries:        0,
+		droppedTimeseries:    0,
 		useStartTimeMetric:   useStartTimeMetric,
 		startTimeMetricRegex: regex,
 		intervalStartTimeMs:  intervalStartTimeMs,
@@ -133,17 +128,19 @@ func (b *metricBuilder) matchStartTimeMetric(metricName string) bool {
 	return metricName == startTimeMetricName
 }
 
-// AddDataPoint is for feeding prometheus data values in its processing order
+// AddDataPoint is for feeding prometheus data complexValue in its processing order
 func (b *metricBuilder) AddDataPoint(ls labels.Labels, t int64, v float64) error {
 	// Any datapoint with duplicate labels MUST be rejected per:
 	// * https://github.com/open-telemetry/wg-prometheus/issues/44
 	// * https://github.com/open-telemetry/opentelemetry-collector/issues/3407
 	// as Prometheus rejects such too as of version 2.16.0, released on 2020-02-13.
-	var dupLabels []string
-	for i := 0; i < len(ls)-1; i++ {
-		if ls[i].Name == ls[i+1].Name {
-			dupLabels = append(dupLabels, ls[i].Name)
+	seen := make(map[string]bool)
+	dupLabels := make([]string, 0, len(ls))
+	for _, label := range ls {
+		if _, ok := seen[label.Name]; ok {
+			dupLabels = append(dupLabels, label.Name)
 		}
+		seen[label.Name] = true
 	}
 	if len(dupLabels) != 0 {
 		sort.Strings(dupLabels)
@@ -153,9 +150,12 @@ func (b *metricBuilder) AddDataPoint(ls labels.Labels, t int64, v float64) error
 	metricName := ls.Get(model.MetricNameLabel)
 	switch {
 	case metricName == "":
+		b.numTimeseries++
+		b.droppedTimeseries++
 		return errMetricNameNotFound
 	case isInternalMetric(metricName):
 		b.hasInternalMetric = true
+		lm := ls.Map()
 		// See https://www.prometheus.io/docs/concepts/jobs_instances/#automatically-generated-labels-and-time-series
 		// up: 1 if the instance is healthy, i.e. reachable, or 0 if the scrape failed.
 		// But it can also be a staleNaN, which is inserted when the target goes away.
@@ -163,12 +163,12 @@ func (b *metricBuilder) AddDataPoint(ls labels.Labels, t int64, v float64) error
 			if v == 0.0 {
 				b.logger.Warn("Failed to scrape Prometheus endpoint",
 					zap.Int64("scrape_timestamp", t),
-					zap.Stringer("target_labels", ls))
+					zap.String("target_labels", fmt.Sprintf("%v", lm)))
 			} else {
 				b.logger.Warn("The 'up' metric contains invalid value",
 					zap.Float64("value", v),
 					zap.Int64("scrape_timestamp", t),
-					zap.Stringer("target_labels", ls))
+					zap.String("target_labels", fmt.Sprintf("%v", lm)))
 			}
 		}
 	case b.useStartTimeMetric && b.matchStartTimeMetric(metricName):
@@ -191,19 +191,22 @@ func (b *metricBuilder) AddDataPoint(ls labels.Labels, t int64, v float64) error
 	return curMF.Add(metricName, ls, t, v)
 }
 
-// appendMetrics appends all metrics to the given slice.
+// Build an pmetric.MetricSlice based on all added data complexValue.
 // The only error returned by this function is errNoDataToBuild.
-func (b *metricBuilder) appendMetrics(metrics pmetric.MetricSlice) error {
+func (b *metricBuilder) Build() (*pmetric.MetricSlice, int, int, error) {
 	if !b.hasData {
 		if b.hasInternalMetric {
-			return nil
+			metricsL := pmetric.NewMetricSlice()
+			return &metricsL, 0, 0, nil
 		}
-		return errNoDataToBuild
+		return nil, 0, 0, errNoDataToBuild
 	}
 
 	for _, mf := range b.families {
-		mf.appendMetric(metrics)
+		ts, dts := mf.ToMetric(&b.metrics)
+		b.numTimeseries += ts
+		b.droppedTimeseries += dts
 	}
 
-	return nil
+	return &b.metrics, b.numTimeseries, b.droppedTimeseries, nil
 }
