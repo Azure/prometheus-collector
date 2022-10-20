@@ -1,0 +1,185 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: ama-metrics
+    app.kubernetes.io/name: ama-metrics-ksm
+    app.kubernetes.io/part-of: ama-metrics-ksm
+    app.kubernetes.io/version: 2.6.0
+    helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+  name: ama-metrics-ksm
+rules:
+{{- if .Values.AzureMonitorMetrics }}
+  {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
+    {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+      {{- if has "certificatesigningrequests" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["certificates.k8s.io"]
+  resources:
+  - certificatesigningrequests
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "configmaps" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "cronjobs" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["batch"]
+  resources:
+  - cronjobs
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "daemonsets" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - daemonsets
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "deployments" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - deployments
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "endpoints" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - endpoints
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "horizontalpodautoscalers" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["autoscaling"]
+  resources:
+  - horizontalpodautoscalers
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "ingresses" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources:
+  - ingresses
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "jobs" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "limitranges" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - limitranges
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "mutatingwebhookconfigurations" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources:
+    - mutatingwebhookconfigurations
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "namespaces" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - namespaces
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "networkpolicies" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["networking.k8s.io"]
+  resources:
+  - networkpolicies
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "nodes" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - nodes
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "persistentvolumeclaims" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - persistentvolumeclaims
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "persistentvolumes" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - persistentvolumes
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "poddisruptionbudgets" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["policy"]
+  resources:
+    - poddisruptionbudgets
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "pods" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "replicasets" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - replicasets
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "replicationcontrollers" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - replicationcontrollers
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "resourcequotas" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - resourcequotas
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "secrets" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - secrets
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "services" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: [""]
+  resources:
+  - services
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "statefulsets" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["apps"]
+  resources:
+  - statefulsets
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "storageclasses" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["storage.k8s.io"]
+  resources:
+    - storageclasses
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "validatingwebhookconfigurations" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources:
+    - validatingwebhookconfigurations
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "volumeattachments" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["storage.k8s.io"]
+  resources:
+    - volumeattachments
+  verbs: ["list", "watch"]
+      {{- end }}
+      {{- if has "verticalpodautoscalers" $.Values.AzureMonitorMetrics.KubeStateMetrics.Collectors }}
+- apiGroups: ["autoscaling.k8s.io"]
+  resources:
+    - verticalpodautoscalers
+  verbs: ["list", "watch"]
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
