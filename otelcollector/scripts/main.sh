@@ -256,7 +256,7 @@ else
       source /etc/mdsd.d/envmdsd
       echo "Starting MDSD"
       # Use options -T 0x1 or -T 0xFFFF for debug logging
-      mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
+      mdsd -T 0x1 -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 
       # Running mdsd --version can't be captured into a variable unlike telegraf and otelcollector, have to run after printing the string
       echo -n -e "${Cyan}MDSD_VERSION${Color_Off}="; mdsd --version
