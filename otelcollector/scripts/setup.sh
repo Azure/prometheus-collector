@@ -31,7 +31,7 @@ echo "Installing MDSD dependencies"
 sudo tdnf install -y which
 echo "Downloading MDSD"
 if [ "${ARCH}" != "amd64" ]; then
-  https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.428_aarch64.rpm
+  wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.428_aarch64.rpm
   sudo tdnf install -y azure-mdsd_1.19.3-build.master.428_aarch64.rpm
 else
   wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.428_x86_64.rpm
@@ -75,4 +75,4 @@ cat /usr/lib/ruby/gems/3.1.0/extensions/aarch64-linux/3.1.0/re2-1.5.0/mkmf.log
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
 #sudo tdnf remove g++ binutils libgcc-atomic make patch bison diffutils docbook-dtd-xml gawk glibc-devel installkernel kernel-headers libgcc-devel libgomp-devel libmpc libstdc++-devel libtool libxml2-devel libxslt m4 mariner-rpm-macros mpfr python3-lxml python3-pygments dnf -y
 rm -f $TMPDIR/metricsext2*.rpm
-rm /usr/sbin/telegraf
+#rm /usr/sbin/telegraf
