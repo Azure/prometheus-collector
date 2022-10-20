@@ -30,13 +30,14 @@ sudo tdnf install -y build-essential re2-devel rpmdevtools
 echo "Installing MDSD dependencies"
 sudo tdnf install -y which
 echo "Downloading MDSD"
-if [ "${ARCH}" != "amd64" ]; then
-  wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.428_aarch64.rpm
-  sudo tdnf install -y azure-mdsd_1.19.3-build.master.428_aarch64.rpm
-else
-  wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.428_x86_64.rpm
-  sudo tdnf install -y azure-mdsd_1.19.3-build.master.428_x86_64.rpm
-fi
+#if [ "${ARCH}" != "amd64" ]; then
+#  wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.428_aarch64.rpm
+#  sudo tdnf install -y azure-mdsd_1.19.3-build.master.428_aarch64.rpm
+#else
+#  wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.428_x86_64.rpm
+#  sudo tdnf install -y azure-mdsd_1.19.3-build.master.428_x86_64.rpm
+#fi
+sudo tdnf install -y azure-mdsd
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for logs
 mkdir /opt/microsoft/linuxmonagent
