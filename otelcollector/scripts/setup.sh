@@ -62,9 +62,9 @@ mkdir /opt/microsoft/linuxmonagent
 
 # Install Telegraf
 echo "Installing telegraf..."
-wget https://dl.influxdata.com/telegraf/releases/telegraf-1.24.2_linux_amd64.tar.gz
-tar -zxvf telegraf-1.24.2_linux_amd64.tar.gz
-mv /opt/telegraf-1.24.2/usr/bin/telegraf /opt/telegraf/telegraf
+wget https://dl.influxdata.com/telegraf/releases/telegraf-1.23.4_linux_amd64.tar.gz
+tar -zxvf telegraf-1.23.4_linux_amd64.tar.gz
+mv /opt/telegraf-1.23.4/usr/bin/telegraf /opt/telegraf/telegraf
 chmod 544 /opt/telegraf/telegraf
 
 # Install fluent-bit
