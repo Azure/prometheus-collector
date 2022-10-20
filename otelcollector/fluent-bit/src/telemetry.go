@@ -65,6 +65,8 @@ const (
 	virtualNodeCountTelemetryName         = "VirtualNodeCnt"
 	arm64CpuCapacityTelemetryName         = "ArmCapacity"
 	arm64NodeCountTelemetryName           = "ArmNodeCnt"
+	marinerNodeCountTelemetryName         = "MarNodeCnt"
+	marinerCpuCapacityTelemetryName       = "MarCapacity"
 	ksmCpuMemoryTelemetryName             = "ksmUsage"
 	envAgentVersion                       = "AGENT_VERSION"
 	envControllerType                     = "CONTROLLER_TYPE"
@@ -273,6 +275,7 @@ func SendCoreCountToAppInsightsMetrics() {
 		for _, node := range nodeList.Items {
 			osLabel := ""
 			archLabel := ""
+			distroLabel := ""
 			if node.Labels == nil {
 				SendException(fmt.Sprintf("Labels are missing for the node: %s when getting core capacity", node.Name))
 			} else if node.Labels["type"] == "virtual-kubelet" {
@@ -283,6 +286,7 @@ func SendCoreCountToAppInsightsMetrics() {
 			} else {
 				osLabel = node.Labels["kubernetes.io/os"]
 				archLabel = node.Labels["kubernetes.io/arch"]
+				distroLabel = node.Labels["kubernetes.azure.com/os-sku"]
 			}
 
 			if node.Status.Capacity == nil {
@@ -300,6 +304,10 @@ func SendCoreCountToAppInsightsMetrics() {
 				if archLabel == "arm64" {
 					telemetryProperties[arm64NodeCountTelemetryName] += 1
 					telemetryProperties[arm64CpuCapacityTelemetryName] += cpu.Value()
+				}
+				if strings.ToLower(distroLabel) == "mariner" {
+					telemetryProperties[marinerNodeCountTelemetryName] += 1
+					telemetryProperties[marinerCpuCapacityTelemetryName] += cpu.Value()
 				}
 			}
 		}
