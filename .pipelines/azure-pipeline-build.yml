@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/get-otelcollector-exe
 
 pr:
   autoCancel: true
@@ -110,6 +111,14 @@ jobs:
         make
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+    
+    - task: CopyFiles@2
+      displayName: "Build: copy otelcollector build"
+      inputs:
+        SourceFolder: "$(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/"
+        Contents: |
+          **/otelcollector
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/build'
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
