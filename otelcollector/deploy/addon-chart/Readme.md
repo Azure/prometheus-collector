@@ -1,7 +1,28 @@
-### **Step 1: Go to addon-chart directory**
-cd prometheus-collector\otelcollector\deploy\addon-chart
+### **Step 1: Enable and Disable Azure Monitor Metrics addon**
+Use cli to enable the addon and then disable the addon.  
+**Enable addon** - 
+```
+az aks update --enable-azuremonitormetrics -n <cluster-name> -g <cluster-resource-group>
+```
 
-### **Step 2: Update the chart/values file accordingly based on what needs to be tested with your backdoor deployment**
+**Disable addon** - 
+```
+az aks update --disable-azuremonitormetrics -n <cluster-name> -g <cluster-resource-group>
+```
+We need this step because we need to get the secret created for the addon-token-adapter to serve, which is only created when the addon is enabled.
+
+
+### **Step 2: Deploy ARM templates for configuration** 
+Instructions on how to deploy ARM template -
+https://learn.microsoft.com/en-us/azure/azure-monitor/containers/container-insights-prometheus-metrics-addon?tabs=resource-manager#download-and-edit-template-and-parameter-file
+
+In the ARM template, comment out the section that enables the addon (with name - **"azuremonitormetrics-profile-"**(Lines 147 to 187), please comment the section acccordingly if template is updated)
+
+### **Step 3: Go to addon-chart directory**
+```
+cd prometheus-collector\otelcollector\deploy\addon-chart
+```
+### **Step 4: Update the chart/values file accordingly based on what needs to be tested with your backdoor deployment**
 
 Charts and Values for the addon are in the folder azure-monitor-metrics-addon/
 
@@ -15,8 +36,12 @@ Values.yaml has some settings that need to be replaced, that are specific to you
 Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
 ImageTag: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/kube-control-plane/templates/_images.tpl&version=GBrashmi/prom-addon-arm64&line=530&lineEnd=530&lineStartColumn=28&lineEndColumn=53&lineStyle=plain&_a=contents
 
-### **Step 3: Install Helm chart**
+### **Step 5: Install Helm chart**
+```
 helm install ama-metrics azure-monitor-metrics-addon/ --values azure-monitor-metrics-addon/Values.yaml
+```
 
-### **Step 4: Uninstall helm chart**
+### **Step 6: Uninstall helm chart**
+```
 helm uninstall ama-metrics
+```
