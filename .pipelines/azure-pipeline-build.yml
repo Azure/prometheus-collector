@@ -120,6 +120,12 @@ jobs:
           **/otelcollector
         TargetFolder: '$(Build.ArtifactStagingDirectory)/build'
 
+    - task: PublishBuildArtifacts@1
+      displayName: "Build: publish otelcollector"
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: drop
+
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
