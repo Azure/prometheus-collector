@@ -34,8 +34,8 @@ AzureMonitorMetrics:
       - storageclasses
       - validatingwebhookconfigurations
       - volumeattachments
-  ImageRepository: "/azuremonitor/containerinsights/ciprod/prometheus-collector/images"
-  ImageTag: "5.3.0-main-10-06-2022-c0c49872"
+  ImageRepository: "/azuremonitor/containerinsights/cidev/prometheus-collector/images"
+  ImageTag: "5.2.0-grace-marinerv2-10-19-2022-2ea1065f"
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner. 
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP - 
   # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
@@ -46,6 +46,6 @@ AzureMonitorMetrics:
 global:
   commonGlobals:
     CloudEnvironment: "AzureCloud"
-    Region: "aks-region"
+    Region: "uksouth"
     Customer:
-      AzureResourceID: /subscriptions/test-sub/resourceGroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-resource
+      AzureResourceID: /subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/grace-backdoor/providers/Microsoft.ContainerService/managedClusters/grace-backdoor
