@@ -256,6 +256,20 @@ jobs:
         ./makefile_windows.ps1
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+    
+    - task: CopyFiles@2
+      displayName: "Build: copy otelcollector build"
+      inputs:
+        SourceFolder: "$(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/"
+        Contents: |
+          **/otelcollector.exe
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/build'
+
+    - task: PublishBuildArtifacts@1
+      displayName: "Build: publish otelcollector"
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: drop
 
     - powershell: |
         docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)
