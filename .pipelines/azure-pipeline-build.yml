@@ -149,6 +149,8 @@ jobs:
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
+        go version
+
         sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
