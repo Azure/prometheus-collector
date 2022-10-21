@@ -107,7 +107,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.19'
+        version: '1.19.2'
 
 
     #- bash: |
