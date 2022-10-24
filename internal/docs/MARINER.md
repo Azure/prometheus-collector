@@ -74,6 +74,7 @@ In the Dockerfile in the distroless stage:
   * If not all necssary `.so` files are available, there will be an error saying that file is missing during runtime
 
 ## Our Current Package Dependencies
+* All Mariner packages are supported for both AMD64 and ARM64.
 * `telegraf` and `fluent-bit` are both built and published by the Mariner team in the [Mariner base repository](https://packages.microsoft.com/cbl-mariner/2.0/preview/base/x86_64/). [ARM64 versions](https://packages.microsoft.com/cbl-mariner/2.0/preview/base/aarch64/) are available also.
 * `MetricsExtension` is published by their team to the Mariner extras repository. The package for [Mariner 2.0](https://packages.microsoft.com/cbl-mariner/2.0/prod/extras/x86_64/) is now available.
-* `mdsd` is published by their team to the Azure Core repository. [Release notes](https://eng.ms/docs/products/geneva/collect/instrument/linux/releasenotes) and [instructions](https://eng.ms/docs/products/geneva/getting_started/environments/linuxvm) for installing the RPM package.
+* `mdsd` is published by their team to the Mariner extras repository. [Release notes](https://eng.ms/docs/products/geneva/collect/instrument/linux/releasenotes). The package for [Mariner 2.0](https://packages.microsoft.com/cbl-mariner/2.0/prod/extras/x86_64/) is now available.
