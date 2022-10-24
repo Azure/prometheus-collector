@@ -19,7 +19,7 @@ RUN go mod download
 COPY ./opentelemetry-collector-builder /src/opentelemetry-collector-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
 ARG TARGETOS TARGETARCH
-RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -tags builtinassets -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -tags builtinassets -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; fi
+RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; fi
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang as prom-config-validator-builder
 WORKDIR /src
@@ -59,7 +59,7 @@ COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricex
 COPY ./telegraf/telegraf-prometheus-collector.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit.conf ./fluent-bit/fluent-bit-daemonset.conf ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
-#COPY ./react /static/react
+COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
