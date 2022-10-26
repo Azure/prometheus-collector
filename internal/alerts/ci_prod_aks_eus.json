@@ -293,7 +293,7 @@
                     },
                     {
                         "alert": "Build over build alert - CPU usage % exceeded for replicaset on cluster ci-prod-aks-eus",
-                        "expression": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) - sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=""}))) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"cpu\"}) > 0.0824",
+                        "expression": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) - sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"cpu\"}) > 0.0824",
                         "for": "PT15M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -316,7 +316,7 @@
                     },
                     {
                         "alert": "Build over build alert - CPU usage % exceeded for daemonset on cluster ci-prod-aks-eus",
-                        "expression": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=""}))) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"cpu\"}) > 0.00944",
+                        "expression": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"cpu\"}) > 0.00944",
                         "for": "PT15M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
