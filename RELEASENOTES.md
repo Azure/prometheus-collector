@@ -1,5 +1,13 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 10-27-2022
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.4.0-main-10-26-2022-16f02b39`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.4.0-main-10-26-2022-16f02b39-win`
+* Change Log -
+  * Release custom prometheus config global settings to apply to the default targets in AKS-Addon
+  * Rebuild with latest base image for latest security patches
+
 ## Release 10-06-22
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.3.0-main-10-06-2022-c0c49872`

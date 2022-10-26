@@ -72,11 +72,9 @@ Each merge into `main` will push the image to the public mcr and deploy to the d
     - Select `Create release`, then choose the build version which should be the same as the image tag.
     - This pushes the linux, windows, and chart builds to the prod ACR which is synchronized with the prod MCR.
     - Once pushed, you can manually start the `Deploy to prod clusters` stage to deploy the image to our prod clusters.
-- **PR 2**: Get the chart semver or container image tag from the commit used for **Build 1**, and also for the previously released version and run `./release.sh` script: 
-
-  - ```
-    previous_semver=<semver_for_currently_relased_chart> current_semver=<semver_for_to_be_relased_chart_from_pr_1_above> ./release.sh
-    ex;- previous_semver=0.0.5-main-10-11-2021-4a9de500 current_semver=0.0.6-main-10-12-2021-5c34d764 ./release.sh
-    ```
-  - This changes the image and helm chart tags in all the README files that contain it.
+- **PR 2**: Get the chart semver or container image tag from the commit used for **Build 1** and update the release notes with the changelog. Link to a similar PR [here](https://github.com/Azure/prometheus-collector/pull/298)
 - **PR 3**: Make a PR to update the [Geneva docs](https://msazure.visualstudio.com/One/_git/EngSys-MDA-GenevaDocs?path=%2Fdocumentation%2Fmetrics%2FPrometheus&version=GBmaster&_a=contents) with any changes made in `/otelcollector/deploy/eng.ms/docs/Prometheus`
+- **PR 4**: Make changes in AgentBaker for this new image version. Link to similar PR [here](https://github.com/Azure/AgentBaker/pull/2285/files)
+- **PR 5**: Update prometheus-addon image in AKS-RP. Link to similar PR [here](https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp/pullrequest/6876332?_a=files)
+    - To generate snapshots(required when you update the image and/or chart) –
+        - [Re-Render Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-charts&version=GBmaster)
