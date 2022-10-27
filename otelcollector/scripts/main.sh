@@ -294,9 +294,8 @@ echo_var "RUBY_VERSION" "$RUBY_VERSION"
 
 echo "starting telegraf"
 if [ "$TELEMETRY_DISABLED" != "true" ]; then
-  # Just running "telegraf" conflicts with MDSD's telegraf in "/usr/sbin/telegraf"
-  /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
-  TELEGRAF_VERSION=`/usr/bin/telegraf --version`
+  telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+  TELEGRAF_VERSION=`cat /opt/telegrafversion.txt`
   echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
 fi
 

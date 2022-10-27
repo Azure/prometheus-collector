@@ -50,6 +50,7 @@ mkdir /opt/microsoft/linuxmonagent
 # Install Telegraf
 echo "Installing telegraf..."
 sudo tdnf install telegraf-1.23.0 -y
+sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > telegrafversion.txt
 
 # Install fluent-bit
 echo "Installing fluent-bit..."
@@ -60,12 +61,12 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Installing ME
 echo "Installing Metrics Extension..."
-if [ "${ARCH}" != "amd64" ]; then
-  wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.1013.1515-1.cm2.aarch64.rpm
-  sudo tdnf install -y metricsext2-2.2022.1013.1515-1.cm2.aarch64.rpm
-else 
-  sudo tdnf install -y metricsext2-2.2022.811.1333
-fi
+#if [ "${ARCH}" != "amd64" ]; then
+  #wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.1013.1515-1.cm2.aarch64.rpm
+  #sudo tdnf install -y metricsext2-2.2022.1013.1515-1.cm2.aarch64.rpm
+#else 
+  sudo tdnf install -y metricsext2-2.2022.1013.1515
+#fi
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
