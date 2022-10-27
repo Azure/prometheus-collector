@@ -65,7 +65,7 @@ echo "Installing Metrics Extension..."
   #wget https://github.com/microsoft/Docker-Provider/releases/download/04012021/metricsext2-2.2022.1013.1515-1.cm2.aarch64.rpm
   #sudo tdnf install -y metricsext2-2.2022.1013.1515-1.cm2.aarch64.rpm
 #else 
-  sudo tdnf install -y metricsext2-2.2022.1013.1515
+  sudo tdnf install -y metricsext2-2.2022.1021.1309
 #fi
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
