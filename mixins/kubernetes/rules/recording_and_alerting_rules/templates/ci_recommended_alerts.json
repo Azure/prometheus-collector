@@ -48,7 +48,7 @@
                 "rules": [
                     {
                         "alert": "Average CPU usage per container is greater than 95%",
-                        "expression": "sum (rate(container_cpu_usage_seconds_total{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}[5m])) by (pod,cluster,container,namespace) / sum(container_spec_cpu_quota{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}/container_spec_cpu_period{name!~\".*prometheus.*\", image!=\"\", container_name!=\"POD\"}) by (pod,cluster,container,namespace) > .95",
+                        "expression": "sum (rate(container_cpu_usage_seconds_total{image!=\"\", container_name!=\"POD\"}[5m])) by (pod,cluster,container,namespace) / sum(container_spec_cpu_quota{image!=\"\", container_name!=\"POD\"}/container_spec_cpu_period{image!=\"\", container_name!=\"POD\"}) by (pod,cluster,container,namespace) > .95",
                         "for": "PT5M",
                         "annotations": {
                             "description": "Average CPU usage per container is greater than 95%"
