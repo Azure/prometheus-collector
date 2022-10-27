@@ -2,13 +2,14 @@
 # frozen_string_literal: true
 
 require "tomlrb"
-if (!ENV["OS_TYPE"].nil? && ENV["OS_TYPE"].downcase == "linux")
-  require "re2"
-end
 require "yaml"
 require_relative "ConfigParseErrorLogger"
 
 LOGGING_PREFIX = "default-scrape-interval-list"
+
+# Checking to see if the duration matches the pattern specified in the prometheus config
+# Link to documenation with regex pattern -> https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file
+MATCHER = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$/
 
 @configMapMountPath = "/etc/config/settings/default-targets-scrape-interval-settings"
 @configVersion = ""
@@ -47,82 +48,162 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   begin
     kubeletScrapeInterval = parsedConfig[:kubelet]
     if !kubeletScrapeInterval.nil?
+      matched = MATCHER.match(kubeletScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        kubeletScrapeInterval = "30s"
+        @kubeletScrapeInterval = kubeletScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
         @kubeletScrapeInterval = kubeletScrapeInterval
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for kubeletScrapeInterval")
+      end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubeletScrapeInterval either not specified or not of type integer")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubeletScrapeInterval not specified")
     end
 
     corednsScrapeInterval = parsedConfig[:coredns]
     if !corednsScrapeInterval.nil?
+      matched = MATCHER.match(corednsScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        corednsScrapeInterval = "30s"
+        @corednsScrapeInterval = corednsScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
         @corednsScrapeInterval = corednsScrapeInterval
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for corednsScrapeInterval")
+      end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "corednsScrapeInterval either not specified or not of type integer")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "corednsScrapeInterval not specified")
     end
 
     cadvisorScrapeInterval = parsedConfig[:cadvisor]
     if !cadvisorScrapeInterval.nil?
+      matched = MATCHER.match(cadvisorScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        cadvisorScrapeInterval = "30s"
+        @cadvisorScrapeInterval = cadvisorScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
         @cadvisorScrapeInterval = cadvisorScrapeInterval
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for cadvisorScrapeInterval")
+      end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "cadvisorScrapeInterval either not specified or not of type integer")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "cadvisorScrapeInterval not specified")
     end
 
     kubeproxyScrapeInterval = parsedConfig[:kubeproxy]
     if !kubeproxyScrapeInterval.nil?
+      matched = MATCHER.match(kubeproxyScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        kubeproxyScrapeInterval = "30s"
+        @kubeproxyScrapeInterval = kubeproxyScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
         @kubeproxyScrapeInterval = kubeproxyScrapeInterval
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for kubeproxyScrapeInterval")
+      end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubeproxyScrapeInterval either not specified or not of type integer")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubeproxyScrapeInterval not specified")
     end
 
     apiserverScrapeInterval = parsedConfig[:apiserver]
     if !apiserverScrapeInterval.nil?
+      matched = MATCHER.match(apiserverScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        apiserverScrapeInterval = "30s"
+        @apiserverScrapeInterval = apiserverScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
         @apiserverScrapeInterval = apiserverScrapeInterval
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for apiserverScrapeInterval")
+      end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "apiserverScrapeInterval either not specified or not of type integer")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "apiserverScrapeInterval not specified")
     end
 
     kubestateScrapeInterval = parsedConfig[:kubestate]
     if !kubestateScrapeInterval.nil?
+      matched = MATCHER.match(kubestateScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        kubestateScrapeInterval = "30s"
+        @kubestateScrapeInterval = kubestateScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
         @kubestateScrapeInterval = kubestateScrapeInterval
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for kubestateScrapeInterval")
+      end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubestateScrapeInterval either not specified or not of type integer")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubestateScrapeInterval not specified")
     end
 
     nodeexporterScrapeInterval = parsedConfig[:nodeexporter]
     if !nodeexporterScrapeInterval.nil?
+      matched = MATCHER.match(nodeexporterScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        nodeexporterScrapeInterval = "30s"
+        @nodeexporterScrapeInterval = nodeexporterScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
         @nodeexporterScrapeInterval = nodeexporterScrapeInterval
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for nodeexporterScrapeInterval")
+      end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "nodeexporterScrapeInterval either not specified or not of type integer")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "nodeexporterScrapeInterval not specified")
     end
 
     windowsexporterScrapeInterval = parsedConfig[:windowsexporter]
     if !windowsexporterScrapeInterval.nil?
+      matched = MATCHER.match(windowsexporterScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        windowsexporterScrapeInterval = "30s"
+        @windowsexporterScrapeInterval = windowsexporterScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
         @windowsexporterScrapeInterval = windowsexporterScrapeInterval
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for windowsexporterScrapeInterval")
+      end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowsexporterScrapeInterval either not specified or not of type integer")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowsexporterScrapeInterval not specified")
     end
 
     windowskubeproxyScrapeInterval = parsedConfig[:windowskubeproxy]
     if !windowskubeproxyScrapeInterval.nil?
+      matched = MATCHER.match(windowskubeproxyScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        windowskubeproxyScrapeInterval = "30s"
+        @windowskubeproxyScrapeInterval = windowskubeproxyScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
         @windowskubeproxyScrapeInterval = windowskubeproxyScrapeInterval
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for windowskubeproxyScrapeInterval")
+      end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowskubeproxyScrapeInterval either not specified or not of type integer")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowskubeproxyScrapeInterval not specified")
     end
 
     prometheusCollectorHealthInterval = parsedConfig[:prometheuscollectorhealth]
     if !prometheusCollectorHealthInterval.nil?
+      matched = MATCHER.match(prometheusCollectorHealthInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        prometheusCollectorHealthInterval = "30s"
+        @prometheusCollectorHealthInterval = prometheusCollectorHealthInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
         @prometheusCollectorHealthInterval = prometheusCollectorHealthInterval
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for prometheusCollectorHealthInterval")
+      end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "prometheusCollectorHealthInterval either not specified or not of type integer")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "prometheusCollectorHealthInterval not specified")
     end
   end
 end
