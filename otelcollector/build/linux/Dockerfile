@@ -11,10 +11,10 @@ RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as otelcollector-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
+RUN go version > goversion.txt
 COPY ./opentelemetry-collector-builder/go.mod ./opentelemetry-collector-builder/go.sum ./opentelemetry-collector-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
 WORKDIR /src/prometheusreceiver
-RUN go version > goversion.txt
 RUN go mod download
 WORKDIR /src/opentelemetry-collector-builder
 RUN go mod download
