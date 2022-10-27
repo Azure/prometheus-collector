@@ -18,6 +18,8 @@ CVE-2022-27664
 # kube-state-metrics
 CVE-2022-1996
 CVE-2022-27664
+# golang.org/x/text
+CVE-2022-32149
 
 # MEDIUM
 # opt/telegraf/telegraf
