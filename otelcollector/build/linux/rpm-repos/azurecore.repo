@@ -1,5 +1,0 @@
-[packages-microsoft-com-azurecore]
-  name=packages-microsoft-com-azurecore
-  baseurl=https://packages.microsoft.com/yumrepos/azurecore/
-  enabled=1
-  gpgcheck=0
