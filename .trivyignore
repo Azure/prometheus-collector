@@ -14,7 +14,6 @@ CVE-2022-27664
 CVE-2021-44716
 # otelcollector and promconfigvalidator
 CVE-2022-27664
-CVE-2022-32149
 # opt/telegraf/telegraf
 CVE-2022-27664
 CVE-2022-29190
@@ -33,8 +32,6 @@ CVE-2022-29526
 CVE-2022-29189
 CVE-2022-31030
 CVE-2022-29526
-# usr/sbin/telegraf
-CVE-2019-11254
 # opt/microsoft/otelcollector/otelcollector
 # opt/promconfigvalidator
 # opt/telegraf/telegraf

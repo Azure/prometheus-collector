@@ -68,5 +68,9 @@ sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversi
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
 #sudo tdnf remove g++ binutils libgcc-atomic make patch bison diffutils docbook-dtd-xml gawk glibc-devel installkernel kernel-headers libgcc-devel libgomp-devel libmpc libstdc++-devel libtool libxml2-devel libxslt m4 mariner-rpm-macros mpfr python3-lxml python3-pygments dnf -y
+
+# Remove any RPMs downloaded not from Mariner
 rm -f $TMPDIR/metricsext2*.rpm
+rm -f $TMPDIR/azure-mdsd*.rpm
+# Remove mdsd's telegraf
 rm /usr/sbin/telegraf

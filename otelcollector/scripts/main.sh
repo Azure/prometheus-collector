@@ -26,8 +26,6 @@ echo_var () {
 touch /opt/inotifyoutput.txt
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
-#gem install re2
-
 if [ -z $MODE ]; then
   MODE="simple"
 fi
@@ -256,7 +254,7 @@ else
       source /etc/mdsd.d/envmdsd
       echo "Starting MDSD"
       # Use options -T 0x1 or -T 0xFFFF for debug logging
-      mdsd -T 0x1 -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
+      mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 
       # Running mdsd --version can't be captured into a variable unlike telegraf and otelcollector, have to run after printing the string
       echo -n -e "${Cyan}MDSD_VERSION${Color_Off}="; mdsd --version
@@ -275,6 +273,14 @@ fi
 ME_VERSION=`cat /opt/metricsextversion.txt`
 echo_var "ME_VERSION" "$ME_VERSION"
 
+# Get ruby version
+RUBY_VERSION=`ruby --version`
+echo_var "RUBY_VERSION" "$RUBY_VERSION"
+
+# Get golang version
+GOLANG_VERSION=`cat /opt/goversion.txt`
+echo_var "GOLANG_VERSION" "$GOLANG_VERSION"
+
 # Start otelcollector
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
       echo_warning "Starting otelcollector with only default scrape configs enabled"
@@ -287,10 +293,6 @@ OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version`
 echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
 PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
 echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
-
-#get ruby version
-RUBY_VERSION=`ruby --version`
-echo_var "RUBY_VERSION" "$RUBY_VERSION"
 
 echo "starting telegraf"
 if [ "$TELEMETRY_DISABLED" != "true" ]; then
@@ -308,7 +310,8 @@ echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
 
 if [ "${MAC}" == "true" ]; then
-  echo "Starting inotify for watching mdsd config update"
+  # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.
+  echo "starting inotify for watching mdsd config update"
   touch /opt/inotifyoutput-mdsd-config.txt
   inotifywait /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
 fi

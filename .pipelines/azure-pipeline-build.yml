@@ -106,7 +106,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.19.2'
+        version: '1.19'
 
 
     - bash: |
@@ -122,7 +122,7 @@ jobs:
       inputs:
         InputType: 'CommandLine'
         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
-    
+ 
     - task: Gosec@1
       displayName: 'SDL: run gosec'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
@@ -145,12 +145,10 @@ jobs:
       displayName: 'SDL: run brakeman'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
     
-      # Apt-get install necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
-        go version
-
+        # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
         sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
