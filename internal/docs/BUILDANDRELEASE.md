@@ -77,4 +77,5 @@ Each merge into `main` will push the image to the public mcr and deploy to the d
 - **PR 4**: Make changes in AgentBaker for this new image version. Link to similar PR [here](https://github.com/Azure/AgentBaker/pull/2285/files)
 - **PR 5**: Update prometheus-addon image in AKS-RP. Link to similar PR [here](https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp/pullrequest/6876332?_a=files)
     - To generate snapshots(required when you update the image and/or chart) –
-        - [Re-Render Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-charts&version=GBmaster)
+        - [Re-Render Test Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-adapter-charts&version=GBmaster&_a=contents&anchor=re-render-test-snapshots)
+        - [Re-Render Addon Chart Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-charts/README.md&version=GBmaster&_a=contents)
