@@ -59,7 +59,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for kubeletScrapeInterval")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubeletScrapeInterval not specified")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "kubeletScrapeInterval override not specified in configmap")
     end
 
     corednsScrapeInterval = parsedConfig[:coredns]
@@ -75,7 +75,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for corednsScrapeInterval")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "corednsScrapeInterval not specified")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "corednsScrapeInterval override not specified in configmap")
     end
 
     cadvisorScrapeInterval = parsedConfig[:cadvisor]
@@ -91,7 +91,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for cadvisorScrapeInterval")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "cadvisorScrapeInterval not specified")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "cadvisorScrapeInterval override not specified in configmap")
     end
 
     kubeproxyScrapeInterval = parsedConfig[:kubeproxy]
@@ -107,7 +107,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for kubeproxyScrapeInterval")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubeproxyScrapeInterval not specified")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "kubeproxyScrapeInterval override not specified in configmap")
     end
 
     apiserverScrapeInterval = parsedConfig[:apiserver]
@@ -123,7 +123,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for apiserverScrapeInterval")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "apiserverScrapeInterval not specified")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "apiserverScrapeInterval override not specified in configmap")
     end
 
     kubestateScrapeInterval = parsedConfig[:kubestate]
@@ -139,7 +139,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for kubestateScrapeInterval")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubestateScrapeInterval not specified")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "kubestateScrapeInterval override not specified in configmap")
     end
 
     nodeexporterScrapeInterval = parsedConfig[:nodeexporter]
@@ -155,7 +155,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for nodeexporterScrapeInterval")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "nodeexporterScrapeInterval not specified")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "nodeexporterScrapeInterval override not specified in configmap")
     end
 
     windowsexporterScrapeInterval = parsedConfig[:windowsexporter]
@@ -171,7 +171,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for windowsexporterScrapeInterval")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowsexporterScrapeInterval not specified")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "windowsexporterScrapeInterval override not specified in configmap")
     end
 
     windowskubeproxyScrapeInterval = parsedConfig[:windowskubeproxy]
@@ -187,7 +187,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for windowskubeproxyScrapeInterval")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowskubeproxyScrapeInterval not specified")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "windowskubeproxyScrapeInterval override not specified in configmap")
     end
 
     prometheusCollectorHealthInterval = parsedConfig[:prometheuscollectorhealth]
@@ -203,7 +203,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for prometheusCollectorHealthInterval")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "prometheusCollectorHealthInterval not specified")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "prometheusCollectorHealthInterval override not specified in configmap")
     end
   end
 end
