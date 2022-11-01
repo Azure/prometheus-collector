@@ -37,6 +37,17 @@ data:
     windowskubeproxy = {{ .Values.keepListRegexes.windowsKubeProxy | toString | quote }}
   debug-mode: |-
     enabled = {{ .Values.debugMode.enabled }}
+  default-targets-scrape-interval-settings: |-
+    kubelet = {{ .Values.scrapeIntervalTargets.kubelet | toString | quote}}
+    coredns = {{ .Values.scrapeIntervalTargets.coreDns | toString | quote}}
+    cadvisor = {{ .Values.scrapeIntervalTargets.cAdvisor | toString | quote}}
+    kubeproxy = {{ .Values.scrapeIntervalTargets.kubeProxy | toString | quote}}
+    apiserver = {{ .Values.scrapeIntervalTargets.apiServer | toString | quote}}
+    kubestate = {{ .Values.scrapeIntervalTargets.kubeState | toString | quote}}
+    nodeexporter = {{ .Values.scrapeIntervalTargets.nodeExporter | toString | quote}}
+    prometheuscollectorhealth = {{ .Values.scrapeIntervalTargets.prometheusCollectorHealth | toString | quote}}
+    windowsexporter = {{ .Values.scrapeIntervalTargets.windowsExporter | toString | quote}}
+    windowskubeproxy = {{ .Values.scrapeIntervalTargets.windowsKubeProxy | toString | quote}}
 metadata:
   name: {{ template "prometheus-collector.fullname" . }}-settings-configmap
   namespace: {{ .Release.Namespace }}

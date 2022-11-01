@@ -97,7 +97,10 @@ fi
 # Parse the settings for default targets metrics keep list config
 ruby /opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb
 
-# Merge default anf custom prometheus config
+# Parse the settings for default-targets-scrape-interval-settings config
+ruby /opt/microsoft/configmapparser/tomlparser-scrape-interval.rb
+
+# Merge default and custom prometheus config
 ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
 
 echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false" >> ~/.bashrc
