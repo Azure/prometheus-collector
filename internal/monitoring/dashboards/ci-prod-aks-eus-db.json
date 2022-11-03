@@ -601,7 +601,32 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "Up{cluster=\"cimon-aks-wcus\", instance=\"10.240.0.61:9153\", job=\"kube-dns\", pod=\"coredns-59b6bf8b4f-p7c67\"}"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -627,11 +652,14 @@
             "type": "prometheus",
             "uid": "prometheus-mdm"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"node\"}) == 1",
+          "editorMode": "code",
+          "expr": "absent(up{cluster=\"cimon-aks-wcus\", job=\"node\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"node\"} == 0\r\n",
+          "format": "time_series",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = node in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = node",
       "type": "timeseries"
     },
     {
@@ -713,11 +741,11 @@
             "type": "prometheus",
             "uid": "prometheus-mdm"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-apiserver\"}) == 1",
+          "expr": "absent(up{cluster=\"cimon-aks-wcus\", job=\"kube-apiserver\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"kube-apiserver\"} == 0\r\n",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-apiserver in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kube-apiserver ",
       "type": "timeseries"
     },
     {
@@ -799,11 +827,11 @@
             "type": "prometheus",
             "uid": "prometheus-mdm"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy\"}) == 1",
+          "expr": "absent(up{cluster=\"cimon-aks-wcus\", job=\"kube-proxy\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"kube-proxy\"} == 0\r\n",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-proxy in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kube-proxy ",
       "type": "timeseries"
     },
     {
@@ -885,11 +913,11 @@
             "type": "prometheus",
             "uid": "prometheus-mdm"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kubelet\"}) == 1",
+          "expr": "absent(up{cluster=\"cimon-aks-wcus\", job=\"kubelet\"}) == 1",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kubelet in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kubelet",
       "type": "timeseries"
     },
     {
@@ -935,8 +963,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -971,11 +998,11 @@
             "type": "prometheus",
             "uid": "prometheus-mdm"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy-windows\"}) == 1",
+          "expr": "up{cluster=\"cimon-aks-wcus\", job=\"kube-proxy-windows\"} == 0\r\n",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-proxy-windows in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kube-proxy-windows",
       "type": "timeseries"
     },
     {
@@ -1021,8 +1048,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1057,11 +1083,11 @@
             "type": "prometheus",
             "uid": "prometheus-mdm"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"windows-exporter\"}) == 1",
+          "expr": "  up{cluster=\"cimon-aks-wcus\", job=\"windows-exporter\"} == 0\r\n",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = windows-exporter in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = windows-exporter",
       "type": "timeseries"
     },
     {
@@ -1107,8 +1133,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1143,11 +1168,11 @@
             "type": "prometheus",
             "uid": "prometheus-mdm"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-state-metrics\"}) == 1",
+          "expr": "\r\nabsent(up{cluster=\"cimon-aks-wcus\", job=\"kube-state-metrics\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"kube-state-metrics\"} == 0\r\n",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-state-metrics in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kube-state-metrics ",
       "type": "timeseries"
     },
     {
@@ -1193,8 +1218,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1229,11 +1253,11 @@
             "type": "prometheus",
             "uid": "prometheus-mdm"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"cadvisor\"}) == 1",
+          "expr": "absent(up{cluster=\"cimon-aks-wcus\", job=\"cadvisor\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"cadvisor\"} == 0\r\n",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = cadvisor in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = cadvisor",
       "type": "timeseries"
     },
     {
@@ -1279,8 +1303,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1315,11 +1338,11 @@
             "type": "prometheus",
             "uid": "prometheus-mdm"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-dns\"}) == 1",
+          "expr": "\r\nabsent(up{cluster=\"cimon-aks-wcus\", job=\"kube-dns\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"kube-dns\"} == 0\r\n",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-dns in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kube-dns ",
       "type": "timeseries"
     }
   ],
@@ -1338,6 +1361,6 @@
   "timezone": "",
   "title": "CPU and Memory utilization k-s-m, replicaset and daemonset",
   "uid": "dmzAODN4k",
-  "version": 28,
+  "version": 35,
   "weekStart": ""
 }

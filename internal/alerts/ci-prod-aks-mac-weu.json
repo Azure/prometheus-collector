@@ -5,7 +5,7 @@
     "variables": {},
     "resources": [
         {
-            "name": "containerinsights_mac_alerts",
+            "name": "containerinsights_prod_mac_weu_alerts",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
             "location": "westeurope",
@@ -17,7 +17,7 @@
                 "rules": [
                     {
                         "alert": "up metric missing for target = node in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
-                        "expression": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"node\"}) == 1",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"node\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"node\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
@@ -40,7 +40,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kubelet in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
-                        "expression": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kubelet\"}) == 1",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kubelet\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kubelet\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
@@ -63,7 +63,7 @@
                     },
                     {
                         "alert": "up metric missing for target = windows-exporter in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
-                        "expression": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"windows-exporter\"}) == 1",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"windows-exporter\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"windows-exporter\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
@@ -86,7 +86,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kube-proxy in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
-                        "expression": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kube-proxy\"}) == 1",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-proxy\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-proxy\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
@@ -109,7 +109,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kube-apiserver in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
-                        "expression": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kube-apiserver\"}) == 1",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-apiserver\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-apiserver\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
@@ -132,7 +132,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kube-proxy-windows in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
-                        "expression": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kube-proxy-windows\"}) == 1",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-proxy-windows\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-proxy-windows\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
@@ -155,7 +155,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kube-state-metrics in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
-                        "expression": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kube-state-metrics\"}) == 1",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-state-metrics\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-state-metrics\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
@@ -178,7 +178,7 @@
                     },
                     {
                         "alert": "up metric missing for target = cadvisor in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
-                        "expression": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"cadvisor\"}) == 1",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"cadvisor\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"cadvisor\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
@@ -201,7 +201,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kube-dns in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
-                        "expression": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kube-dns\"}) == 1",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-dns\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-dns\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu"
