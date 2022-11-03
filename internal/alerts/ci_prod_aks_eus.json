@@ -17,7 +17,7 @@
                 "rules": [
                     {
                         "alert": "up metric missing for target = node in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"cimon-aks-wcus\", job=\"node\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"node\"} == 0",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"node\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"node\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -40,7 +40,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kubelet in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"cimon-aks-wcus\", job=\"kubelet\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"kubelet\"} == 0",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kubelet\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kubelet\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -63,7 +63,7 @@
                     },
                     {
                         "alert": "up metric missing for target = windows-exporter in cluster ci-prod-aks-eus",
-                        "expression": "up{cluster=\"cimon-aks-wcus\", job=\"windows-exporter\"} == 0",
+                        "expression": "up{cluster=\"ci-prod-aks-eus\", job=\"windows-exporter\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -86,7 +86,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kube-proxy in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"cimon-aks-wcus\", job=\"kube-proxy\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"kube-proxy\"} == 0",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -109,7 +109,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kube-apiserver in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"cimon-aks-wcus\", job=\"kube-apiserver\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"kube-apiserver\"} == 0",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-apiserver\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-apiserver\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -132,7 +132,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kube-proxy-windows in cluster ci-prod-aks-eus",
-                        "expression": "up{cluster=\"cimon-aks-wcus\", job=\"kube-proxy-windows\"} == 0",
+                        "expression": "up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy-windows\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -155,7 +155,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kube-state-metrics in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"cimon-aks-wcus\", job=\"kube-state-metrics\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"kube-state-metrics\"} == 0",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-state-metrics\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-state-metrics\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -178,7 +178,7 @@
                     },
                     {
                         "alert": "up metric missing for target = cadvisor in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"cimon-aks-wcus\", job=\"cadvisor\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"cadvisor\"} == 0",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"cadvisor\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"cadvisor\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -201,7 +201,7 @@
                     },
                     {
                         "alert": "up metric missing for target = kube-dns in cluster ci-prod-aks-eus",
-                        "expression": "absent(up{cluster=\"cimon-aks-wcus\", job=\"kube-dns\"}) == 1 or  up{cluster=\"cimon-aks-wcus\", job=\"kube-dns\"} == 0",
+                        "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-dns\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-dns\"} == 0",
                         "for": "PT3M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -293,7 +293,7 @@
                     },
                     {
                         "alert": "Build over build alert - CPU usage % exceeded for replicaset on cluster ci-prod-aks-eus",
-                        "expression": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) - sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"cpu\"}) > 0.0824",
+                        "expression": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) - sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"}) > 0.28",
                         "for": "PT15M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -316,7 +316,7 @@
                     },
                     {
                         "alert": "Build over build alert - CPU usage % exceeded for daemonset on cluster ci-prod-aks-eus",
-                        "expression": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"cpu\"}) > 0.00944",
+                        "expression": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"}) > 0.0105",
                         "for": "PT15M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -339,7 +339,7 @@
                     },
                     {
                         "alert": "Build over build alert - CPU usage % exceeded for k-s-m on cluster ci-prod-aks-eus",
-                        "expression": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{ image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*kube-state-metrics.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"cpu\"}) > 0.000238",
+                        "expression": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{ image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*kube-state-metrics.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"}) > 0.000238",
                         "for": "PT15M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -362,7 +362,7 @@
                     },
                     {
                         "alert": "Build over build alert - Memory usage % exceeded for k-s-m on cluster ci-prod-aks-eus",
-                        "expression": "sum(container_memory_working_set_bytes{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*kube-state-metrics.*\"}) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"memory\"}) > 0.00364",
+                        "expression": "sum(container_memory_working_set_bytes{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*kube-state-metrics.*\"}) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"memory\"}) > 0.0022",
                         "for": "PT15M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -385,7 +385,7 @@
                     },
                     {
                         "alert": "Build over build alert - Memory usage % exceeded for replicaset on cluster ci-prod-aks-eus",
-                        "expression": "(sum(container_memory_working_set_bytes{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector.*\"}) - sum(container_memory_working_set_bytes{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector-node.*\"})) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"memory\"}) > 0.0362",
+                        "expression": "(sum(container_memory_working_set_bytes{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector.*\"}) - sum(container_memory_working_set_bytes{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector-node.*\"})) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"memory\"}) > 0.023",
                         "for": "PT15M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
@@ -408,7 +408,7 @@
                     },
                     {
                         "alert": "Build over build alert - Memory usage % exceeded for daemonset on cluster ci-prod-aks-eus",
-                        "expression": "sum(container_memory_working_set_bytes{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector-node.*\"}) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"memory\"}) > 0.0445",
+                        "expression": "sum(container_memory_working_set_bytes{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector-node.*\"}) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"memory\"}) > 0.0445",
                         "for": "PT15M",
                         "labels": {
                             "cluster": "ci-prod-aks-eus"
