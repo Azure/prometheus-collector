@@ -67,7 +67,7 @@
                     },
                     {
                         "alert": "Average Memory usage per container is greater than 95%.",
-                        "expression": "(container_memory_working_set_bytes{container!=\"\", image!=\"\", container_name!=\"POD\"} / on(namespace,cluster,pod,container) group_left kube_pod_container_resource_limits{resource=\"memory\"}) > .95 ",
+                        "expression": "(container_memory_working_set_bytes{container!=\"\", image!=\"\", container_name!=\"POD\"} / on(namespace,cluster,pod,container) group_left kube_pod_container_resource_limits{resource=\"memory\", node!=\"\"}) > .95 ",
                         "for": "PT10M",
                         "annotations": {
                             "description": "Average Memory usage per container is greater than 95%"
