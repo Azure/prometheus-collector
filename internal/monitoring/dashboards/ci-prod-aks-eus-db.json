@@ -31,7 +31,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -39,6 +39,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -95,7 +97,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -106,9 +109,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{ image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*kube-state-metrics.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"cpu\"})",
+          "editorMode": "code",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{ image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*kube-state-metrics.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"})",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -118,7 +123,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -126,6 +131,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -154,7 +161,7 @@
             }
           },
           "mappings": [],
-          "max": 0.0445,
+          "max": 0.04,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -164,7 +171,7 @@
               },
               {
                 "color": "red",
-                "value": 0.0445
+                "value": 0.04
               }
             ]
           }
@@ -182,7 +189,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -193,9 +201,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "sum(container_memory_working_set_bytes{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector-node.*\"}) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"memory\"})",
+          "editorMode": "code",
+          "expr": "sum(container_memory_working_set_bytes{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector-node.*\"}) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"memory\"})",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -205,7 +215,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -213,6 +223,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -241,6 +253,7 @@
             }
           },
           "mappings": [],
+          "max": 0.0105,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -250,7 +263,7 @@
               },
               {
                 "color": "red",
-                "value": 0.009
+                "value": 0.0105
               }
             ]
           }
@@ -268,7 +281,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -279,9 +293,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"cpu\"})",
+          "editorMode": "code",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"})",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -291,7 +307,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -299,6 +315,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -327,7 +345,7 @@
             }
           },
           "mappings": [],
-          "max": 0.0034,
+          "max": 0.0022,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -337,7 +355,7 @@
               },
               {
                 "color": "red",
-                "value": 0.0034
+                "value": 0.0022
               }
             ]
           }
@@ -355,7 +373,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -366,9 +385,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "sum(container_memory_working_set_bytes{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*kube-state-metrics.*\"}) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"memory\"})",
+          "editorMode": "code",
+          "expr": "sum(container_memory_working_set_bytes{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*kube-state-metrics.*\"}) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"memory\"})",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -378,7 +399,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -386,6 +407,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -414,6 +437,7 @@
             }
           },
           "mappings": [],
+          "max": 0.28,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -423,7 +447,7 @@
               },
               {
                 "color": "red",
-                "value": 0.0824
+                "value": 0.28
               }
             ]
           }
@@ -441,7 +465,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -452,9 +477,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) - sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\",cluster=\"cimon-aks-wcus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"cpu\"})",
+          "editorMode": "code",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) - sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"})",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -464,7 +491,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -472,6 +499,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -500,7 +529,7 @@
             }
           },
           "mappings": [],
-          "max": 0.0362,
+          "max": 0.023,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -510,7 +539,7 @@
               },
               {
                 "color": "red",
-                "value": 0.0362
+                "value": 0.023
               }
             ]
           }
@@ -528,7 +557,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -539,9 +569,11 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "(sum(container_memory_working_set_bytes{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector.*\"}) - sum(container_memory_working_set_bytes{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector-node.*\"})) / sum(kube_pod_container_resource_limits{cluster=\"cimon-aks-wcus\", namespace=\"monitoring\", resource=\"memory\"})",
+          "editorMode": "code",
+          "expr": "(sum(container_memory_working_set_bytes{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector.*\"}) - sum(container_memory_working_set_bytes{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\",container!=\"\", image!=\"\", pod=~\".*prometheus-collector-node.*\"})) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"memory\"})",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -551,7 +583,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -559,6 +591,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -601,7 +635,32 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "Up{cluster=\"cimon-aks-wcus\", instance=\"10.240.0.61:9153\", job=\"kube-dns\", pod=\"coredns-59b6bf8b4f-p7c67\"}"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -614,7 +673,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -625,19 +685,22 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"node\"}) == 1",
+          "editorMode": "code",
+          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"node\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"node\"} == 0\r\n",
+          "format": "time_series",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = node in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = node",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -645,6 +708,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -700,7 +765,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -711,19 +777,21 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-apiserver\"}) == 1",
+          "editorMode": "code",
+          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-apiserver\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-apiserver\"} == 0\r\n",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-apiserver in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kube-apiserver ",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -731,6 +799,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -786,7 +856,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -797,19 +868,21 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy\"}) == 1",
+          "editorMode": "code",
+          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy\"} == 0\r\n",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-proxy in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kube-proxy ",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -817,6 +890,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -872,7 +947,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -883,19 +959,21 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kubelet\"}) == 1",
+          "editorMode": "code",
+          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kubelet\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kubelet\"} == 0\r\n",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kubelet in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kubelet",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -903,6 +981,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -958,7 +1038,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -969,13 +1050,15 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy-windows\"}) == 1",
+          "editorMode": "code",
+          "expr": "  up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy-windows\"} == 0",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-proxy-windows in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kube-proxy-windows",
       "type": "timeseries"
     },
     {
@@ -989,6 +1072,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1044,7 +1129,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -1057,17 +1143,19 @@
             "type": "prometheus",
             "uid": "prometheus-mdm"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"windows-exporter\"}) == 1",
+          "editorMode": "code",
+          "expr": "  up{cluster=\"ci-prod-aks-eus\", job=\"windows-exporter\"} == 0 \r\n",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = windows-exporter in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = windows-exporter",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -1075,6 +1163,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1130,7 +1220,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -1141,19 +1232,21 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-state-metrics\"}) == 1",
+          "editorMode": "code",
+          "expr": "\r\nabsent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-state-metrics\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-state-metrics\"} == 0\r\n",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-state-metrics in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kube-state-metrics ",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -1161,6 +1254,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1216,7 +1311,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -1227,19 +1323,21 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"cadvisor\"}) == 1",
+          "editorMode": "code",
+          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"cadvisor\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"cadvisor\"} == 0\r\n",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = cadvisor in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = cadvisor",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "PB5CBmv4z"
       },
       "fieldConfig": {
         "defaults": {
@@ -1247,6 +1345,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1302,7 +1402,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -1313,18 +1414,20 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "PB5CBmv4z"
           },
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-dns\"}) == 1",
+          "editorMode": "code",
+          "expr": "\r\nabsent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-dns\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-dns\"} == 0\r\n",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-dns in cluster ci-prod-aks-eus",
+      "title": "up metric missing for target = kube-dns ",
       "type": "timeseries"
     }
   ],
   "refresh": false,
-  "schemaVersion": 36,
+  "schemaVersion": 37,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -1338,6 +1441,6 @@
   "timezone": "",
   "title": "CPU and Memory utilization k-s-m, replicaset and daemonset",
   "uid": "dmzAODN4k",
-  "version": 28,
+  "version": 42,
   "weekStart": ""
 }

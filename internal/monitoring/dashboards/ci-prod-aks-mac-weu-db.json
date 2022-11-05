@@ -250,7 +250,7 @@
               },
               {
                 "color": "red",
-                "value": 0.00051
+                "value": 0.00071
               }
             ]
           }
@@ -555,7 +555,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "ci-prod-aks-weu-mac"
       },
       "fieldConfig": {
         "defaults": {
@@ -629,19 +629,19 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "ci-prod-aks-weu-mac"
           },
-          "expr": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"cadvisor\"}) == 1",
+          "expr": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"cadvisor\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"cadvisor\"} == 0",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = cadvisor in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
+      "title": "up metric missing for target = cadvisor in cluster ci-prod-aks-mac-weu",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "ci-prod-aks-weu-mac"
       },
       "fieldConfig": {
         "defaults": {
@@ -715,19 +715,19 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "ci-prod-aks-weu-mac"
           },
-          "expr": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kube-dns\"}) == 1",
+          "expr": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-dns\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-dns\"} == 0",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-dns in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
+      "title": "up metric missing for target = kube-dns in cluster ci-prod-aks-mac-weu",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "ci-prod-aks-weu-mac"
       },
       "fieldConfig": {
         "defaults": {
@@ -801,19 +801,19 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "ci-prod-aks-weu-mac"
           },
-          "expr": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kube-proxy-windows\"}) == 1",
+          "expr": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-proxy-windows\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-proxy-windows\"} == 0",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-proxy-windows in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
+      "title": "up metric missing for target = kube-proxy-windows in cluster ci-prod-aks-mac-weu",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "ci-prod-aks-weu-mac"
       },
       "fieldConfig": {
         "defaults": {
@@ -887,19 +887,19 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "ci-prod-aks-weu-mac"
           },
-          "expr": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kube-state-metrics\"}) == 1",
+          "expr": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-state-metrics\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-state-metrics\"} == 0",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-state-metrics in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
+      "title": "up metric missing for target = kube-state-metrics in cluster ci-prod-aks-mac-weu",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "ci-prod-aks-weu-mac"
       },
       "fieldConfig": {
         "defaults": {
@@ -973,19 +973,19 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "ci-prod-aks-weu-mac"
           },
-          "expr": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kube-proxy\"}) == 1",
+          "expr": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-proxy\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-proxy\"} == 0",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-proxy in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
+      "title": "up metric missing for target = kube-proxy in cluster ci-prod-aks-mac-weu",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "ci-prod-aks-weu-mac"
       },
       "fieldConfig": {
         "defaults": {
@@ -1059,19 +1059,19 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "ci-prod-aks-weu-mac"
           },
-          "expr": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kube-apiserver\"}) == 1",
+          "expr": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-apiserver\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kube-apiserver\"} == 0",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-apiserver in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
+      "title": "up metric missing for target = kube-apiserver in cluster ci-prod-aks-mac-weu",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "ci-prod-aks-weu-mac"
       },
       "fieldConfig": {
         "defaults": {
@@ -1145,19 +1145,19 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "ci-prod-aks-weu-mac"
           },
-          "expr": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"kubelet\"}) == 1",
+          "expr": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"kubelet\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"kubelet\"} == 0",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kubelet in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
+      "title": "up metric missing for target = kubelet in cluster ci-prod-aks-mac-weu",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "ci-prod-aks-weu-mac"
       },
       "fieldConfig": {
         "defaults": {
@@ -1231,19 +1231,19 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "ci-prod-aks-weu-mac"
           },
-          "expr": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"windows-exporter\"}) == 1",
+          "expr": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"windows-exporter\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"windows-exporter\"} == 0",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = windows-exporter in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
+      "title": "up metric missing for target = windows-exporter in cluster ci-prod-aks-mac-weu",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-mdm"
+        "uid": "ci-prod-aks-weu-mac"
       },
       "fieldConfig": {
         "defaults": {
@@ -1317,13 +1317,13 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-mdm"
+            "uid": "ci-prod-aks-weu-mac"
           },
-          "expr": "absent(up{cluster=\"/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu\", job=\"node\"}) == 1",
+          "expr": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"node\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"node\"} == 0",
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = node in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
+      "title": "up metric missing for target = node in cluster ci-prod-aks-mac-weu",
       "type": "timeseries"
     }
   ],
@@ -1335,13 +1335,13 @@
     "list": []
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "CPU and Memory utilization k-s-m, replicaset and daemonset",
   "uid": "gp9556IVz",
-  "version": 12,
+  "version": 22,
   "weekStart": ""
 }
