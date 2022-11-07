@@ -16,6 +16,29 @@
                 ],
                 "rules": [
                     {
+                        "alert": "Amd64 metric missing in cluster ci-prod-aks-mac-weu",
+                        "expression": "absent(node_uname_info{cluster=\"ci-prod-aks-mac-weu\", machine=\"x86_64\"}) == 1 or node_uname_info{cluster=\"ci-prod-aks-mac-weu\", machine=\"x86_64\"} == 0",
+                        "for": "PT3M",
+                        "labels": {
+                            "cluster": "ci-prod-aks-mac-weu"
+                        },
+                        "annotations": {
+                            "description": "Amd64 metric missing in cluster ci-prod-aks-mac-weu"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "ActionProperties": {
+                                    "Icm.Enabled": "True"
+                                }
+                            }
+                        ]
+                    },
+                    {
                         "alert": "up metric missing for target = node in cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu",
                         "expression": "absent(up{cluster=\"ci-prod-aks-mac-weu\", job=\"node\"}) == 1 or  up{cluster=\"ci-prod-aks-mac-weu\", job=\"node\"} == 0",
                         "for": "PT3M",

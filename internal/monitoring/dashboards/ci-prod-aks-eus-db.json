@@ -65,11 +65,10 @@
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "line"
+              "mode": "off"
             }
           },
           "mappings": [],
-          "max": 0.000238,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -79,7 +78,7 @@
               },
               {
                 "color": "red",
-                "value": 0.000238
+                "value": 80
               }
             ]
           }
@@ -92,7 +91,7 @@
         "x": 0,
         "y": 0
       },
-      "id": 6,
+      "id": 32,
       "options": {
         "legend": {
           "calcs": [],
@@ -112,12 +111,13 @@
             "uid": "PB5CBmv4z"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{ image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*kube-state-metrics.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"})",
+          "expr": "absent(node_uname_info{cluster=\"ci-prod-aks-eus\", machine=\"x86_64\"}) == 1 or node_uname_info{cluster=\"ci-prod-aks-eus\", machine=\"x86_64\"} == 0",
+          "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "K-S-M CPU%",
+      "title": "Amd64 metric missing",
       "type": "timeseries"
     },
     {
@@ -253,7 +253,7 @@
             }
           },
           "mappings": [],
-          "max": 0.0105,
+          "max": 0.000238,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -263,7 +263,7 @@
               },
               {
                 "color": "red",
-                "value": 0.0105
+                "value": 0.000238
               }
             ]
           }
@@ -276,7 +276,7 @@
         "x": 0,
         "y": 8
       },
-      "id": 4,
+      "id": 6,
       "options": {
         "legend": {
           "calcs": [],
@@ -296,12 +296,12 @@
             "uid": "PB5CBmv4z"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"})",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{ image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*kube-state-metrics.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"})",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Daemonset CPU%",
+      "title": "K-S-M CPU%",
       "type": "timeseries"
     },
     {
@@ -437,7 +437,7 @@
             }
           },
           "mappings": [],
-          "max": 0.28,
+          "max": 0.0105,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -447,7 +447,7 @@
               },
               {
                 "color": "red",
-                "value": 0.28
+                "value": 0.0105
               }
             ]
           }
@@ -460,7 +460,7 @@
         "x": 0,
         "y": 16
       },
-      "id": 2,
+      "id": 4,
       "options": {
         "legend": {
           "calcs": [],
@@ -480,12 +480,12 @@
             "uid": "PB5CBmv4z"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) - sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"})",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"})",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Replicaset CPU %",
+      "title": "Daemonset CPU%",
       "type": "timeseries"
     },
     {
@@ -617,10 +617,11 @@
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "off"
+              "mode": "line"
             }
           },
           "mappings": [],
+          "max": 0.28,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -630,37 +631,12 @@
               },
               {
                 "color": "red",
-                "value": 80
+                "value": 0.28
               }
             ]
           }
         },
-        "overrides": [
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "Up{cluster=\"cimon-aks-wcus\", instance=\"10.240.0.61:9153\", job=\"kube-dns\", pod=\"coredns-59b6bf8b4f-p7c67\"}"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
@@ -668,7 +644,7 @@
         "x": 0,
         "y": 24
       },
-      "id": 14,
+      "id": 2,
       "options": {
         "legend": {
           "calcs": [],
@@ -688,13 +664,12 @@
             "uid": "PB5CBmv4z"
           },
           "editorMode": "code",
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"node\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"node\"} == 0\r\n",
-          "format": "time_series",
+          "expr": "sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) - sum(sum by (cluster, namespace, pod, container) (  irate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\",cluster=\"ci-prod-aks-eus\", pod=~\".*prometheus-collector-node.*\"}[5m])) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) (  1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\"}))) / sum(kube_pod_container_resource_limits{cluster=\"ci-prod-aks-eus\", namespace=\"monitoring\", resource=\"cpu\"})",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = node",
+      "title": "Replicaset CPU %",
       "type": "timeseries"
     },
     {
@@ -843,7 +818,32 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "Up{cluster=\"cimon-aks-wcus\", instance=\"10.240.0.61:9153\", job=\"kube-dns\", pod=\"coredns-59b6bf8b4f-p7c67\"}"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -851,7 +851,7 @@
         "x": 0,
         "y": 32
       },
-      "id": 20,
+      "id": 14,
       "options": {
         "legend": {
           "calcs": [],
@@ -871,12 +871,13 @@
             "uid": "PB5CBmv4z"
           },
           "editorMode": "code",
-          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy\"} == 0\r\n",
+          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"node\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"node\"} == 0\r\n",
+          "format": "time_series",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-proxy ",
+      "title": "up metric missing for target = node",
       "type": "timeseries"
     },
     {
@@ -1033,7 +1034,7 @@
         "x": 0,
         "y": 40
       },
-      "id": 24,
+      "id": 20,
       "options": {
         "legend": {
           "calcs": [],
@@ -1053,12 +1054,12 @@
             "uid": "PB5CBmv4z"
           },
           "editorMode": "code",
-          "expr": "  up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy-windows\"} == 0",
+          "expr": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy\"} == 0\r\n",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-proxy-windows",
+      "title": "up metric missing for target = kube-proxy ",
       "type": "timeseries"
     },
     {
@@ -1106,8 +1107,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1197,8 +1197,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1215,7 +1214,7 @@
         "x": 0,
         "y": 48
       },
-      "id": 26,
+      "id": 24,
       "options": {
         "legend": {
           "calcs": [],
@@ -1235,12 +1234,12 @@
             "uid": "PB5CBmv4z"
           },
           "editorMode": "code",
-          "expr": "\r\nabsent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-state-metrics\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-state-metrics\"} == 0\r\n",
+          "expr": "  up{cluster=\"ci-prod-aks-eus\", job=\"kube-proxy-windows\"} == 0",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "up metric missing for target = kube-state-metrics ",
+      "title": "up metric missing for target = kube-proxy-windows",
       "type": "timeseries"
     },
     {
@@ -1288,8 +1287,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1379,8 +1377,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1396,6 +1393,96 @@
         "w": 12,
         "x": 0,
         "y": 56
+      },
+      "id": 26,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PB5CBmv4z"
+          },
+          "editorMode": "code",
+          "expr": "\r\nabsent(up{cluster=\"ci-prod-aks-eus\", job=\"kube-state-metrics\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"kube-state-metrics\"} == 0\r\n",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "up metric missing for target = kube-state-metrics ",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PB5CBmv4z"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 64
       },
       "id": 30,
       "options": {
@@ -1441,6 +1528,6 @@
   "timezone": "",
   "title": "CPU and Memory utilization k-s-m, replicaset and daemonset",
   "uid": "dmzAODN4k",
-  "version": 42,
+  "version": 43,
   "weekStart": ""
 }

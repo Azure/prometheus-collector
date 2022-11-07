@@ -16,6 +16,29 @@
                 ],
                 "rules": [
                     {
+                        "alert": "Amd64 metric missing in cluster ci-prod-aks-eus",
+                        "expression": "absent(node_uname_info{cluster=\"ci-prod-aks-eus\", machine=\"x86_64\"}) == 1 or node_uname_info{cluster=\"ci-prod-aks-eus\", machine=\"x86_64\"} == 0",
+                        "for": "PT3M",
+                        "labels": {
+                            "cluster": "ci-prod-aks-eus"
+                        },
+                        "annotations": {
+                            "description": "Amd64 metric missing in cluster ci-prod-aks-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "ActionProperties": {
+                                    "Icm.Enabled": "True"
+                                }
+                            }
+                        ]
+                    },
+                    {
                         "alert": "up metric missing for target = node in cluster ci-prod-aks-eus",
                         "expression": "absent(up{cluster=\"ci-prod-aks-eus\", job=\"node\"}) == 1 or  up{cluster=\"ci-prod-aks-eus\", job=\"node\"} == 0",
                         "for": "PT3M",
