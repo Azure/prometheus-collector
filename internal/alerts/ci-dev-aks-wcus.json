@@ -16,6 +16,29 @@
                 ],
                 "rules": [
                     {
+                        "alert": "Amd64 metric missing in cluster ci-dev-aks-wcus",
+                        "expression": "absent(node_uname_info{cluster=\"ci-dev-aks-wcus\", machine=\"x86_64\"}) == 1 or node_uname_info{cluster=\"ci-dev-aks-wcus\", machine=\"x86_64\"} == 0",
+                        "for": "PT3M",
+                        "labels": {
+                            "cluster": "ci-dev-aks-wcus"
+                        },
+                        "annotations": {
+                            "description": "Amd64 metric missing in cluster ci-dev-aks-wcus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "ActionProperties": {
+                                    "Icm.Enabled": "True"
+                                }
+                            }
+                        ]
+                    },
+                    {
                         "alert": "up metric missing for target = node in cluster ci-dev-aks-wcus",
                         "expression": "absent(up{cluster=\"ci-dev-aks-wcus\", job=\"node\"}) == 1 or  up{cluster=\"ci-dev-aks-wcus\", job=\"node\"} == 0",
                         "for": "PT3M",
