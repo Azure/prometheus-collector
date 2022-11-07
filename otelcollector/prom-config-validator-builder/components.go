@@ -7,12 +7,13 @@ import (
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
 
-	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
+	//privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 	//"go.opentelemetry.io/collector/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 )
 
 func components() (component.Factories, error) {
