@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
 	//"github.com/vishiy/influxexporter"
-	"go.opentelemetry.io/collector/receiver/prometheusreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	//privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 	//"go.opentelemetry.io/collector/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
