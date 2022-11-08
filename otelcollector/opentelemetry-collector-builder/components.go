@@ -29,7 +29,7 @@ func components() (component.Factories, error) {
 	}
 
 	factories.Receivers, err = component.MakeReceiverFactoryMap(
-		privatepromreceiver.NewFactory(),
+		prometheusreceiver.NewFactory(),
 	)
 	if err != nil {
 		return component.Factories{}, err
