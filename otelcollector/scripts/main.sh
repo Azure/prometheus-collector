@@ -296,7 +296,7 @@ echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
 echo "starting telegraf"
 if [ "$TELEMETRY_DISABLED" != "true" ]; then
-  telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+  /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
   TELEGRAF_VERSION=`cat /opt/telegrafversion.txt`
   echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
 fi
