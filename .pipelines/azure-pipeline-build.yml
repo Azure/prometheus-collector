@@ -405,7 +405,7 @@ jobs:
       azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
       azureResourceGroup: 'ci-dev-aks-mac-eus-rg'
       kubernetesCluster: 'ci-dev-aks-mac-eus'
-      namespace: 'kube-system'
+      namespace: 'default'
       command: 'upgrade'
       chartType: 'FilePath'
       chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
