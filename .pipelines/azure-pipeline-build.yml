@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - grace/marinerv2
+    - grace/marinerv2-2
 
 pr:
   autoCancel: true

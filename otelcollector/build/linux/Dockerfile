@@ -72,7 +72,7 @@ COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 
 ARG TARGETARCH
 RUN tdnf repolist --refresh
-RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils
+RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh; 
@@ -115,6 +115,7 @@ COPY --from=builder /usr/share/vim /usr/share/vim
 COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
 COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
 COPY --from=builder /usr/bin/gzip /usr/bin/
+COPY --from=builder /usr/bin/curl /usr/bin/
 
 # bash dependencies
 COPY --from=builder /lib/libreadline.so.8 /lib/
