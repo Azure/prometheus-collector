@@ -365,6 +365,7 @@ function Start-FileSystemWatcher {
 
 #start Windows AMA
 function Start-MA {
+    Write-Output "Starting MA"
     Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\genevamonitoringagent\genevamonitoringagent\Monitoring\Agent\MonAgentLauncher.exe" -ArgumentList @("-useenv")}
 }
 
