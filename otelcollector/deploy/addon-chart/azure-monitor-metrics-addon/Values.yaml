@@ -16,6 +16,7 @@ AzureMonitorMetrics:
       - horizontalpodautoscalers
       - ingresses
       - jobs
+      - leases
       - limitranges
       - mutatingwebhookconfigurations
       - namespaces
