@@ -58,6 +58,15 @@ const (
 	coresAttachedTelemetryIntervalSeconds = 600
 	ksmAttachedTelemetryIntervalSeconds   = 600
 	coresAttachedTelemetryName            = "ClusterCoreCapacity"
+	linuxCpuCapacityTelemetryName         = "LiCapacity"
+	linuxNodeCountTelemetryName           = "LiNodeCnt"
+	windowsCpuCapacityTelemetryName       = "WiCapacity"
+	windowsNodeCountTelemetryName         = "WiNodeCnt"
+	virtualNodeCountTelemetryName         = "VirtualNodeCnt"
+	arm64CpuCapacityTelemetryName         = "ArmCapacity"
+	arm64NodeCountTelemetryName           = "ArmNodeCnt"
+	marinerNodeCountTelemetryName         = "MarNodeCnt"
+	marinerCpuCapacityTelemetryName       = "MarCapacity"
 	ksmCpuMemoryTelemetryName             = "ksmUsage"
 	envAgentVersion                       = "AGENT_VERSION"
 	envControllerType                     = "CONTROLLER_TYPE"
@@ -248,11 +257,13 @@ func SendCoreCountToAppInsightsMetrics() {
 
 	coreCountTelemetryTicker := time.NewTicker(time.Second * time.Duration(coresAttachedTelemetryIntervalSeconds))
 	for ; true; <-coreCountTelemetryTicker.C {
-		cpuCapacityTotalLinux := int64(0)
-		cpuCapacityTotalWindows := int64(0)
-		linuxNodeCount := 0
-		windowsNodeCount := 0
-		virtualNodeCount := 0
+		telemetryProperties := map[string]int64 {
+			windowsCpuCapacityTelemetryName: 0,
+			windowsNodeCountTelemetryName: 0,
+			virtualNodeCountTelemetryName: 0,
+			arm64CpuCapacityTelemetryName: 0,
+			arm64NodeCountTelemetryName: 0,
+		}
 
 		nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
@@ -260,18 +271,22 @@ func SendCoreCountToAppInsightsMetrics() {
 			continue
 		}
 
-		// Get core and node count by OS
+		// Get core and node count by OS/arch
 		for _, node := range nodeList.Items {
 			osLabel := ""
+			archLabel := ""
+			distroLabel := ""
 			if node.Labels == nil {
 				SendException(fmt.Sprintf("Labels are missing for the node: %s when getting core capacity", node.Name))
 			} else if node.Labels["type"] == "virtual-kubelet" {
 					// Do not add core capacity total for virtual nodes as this could be extremely large
 					// Just count how many virtual nodes exist
-					virtualNodeCount += 1
+					telemetryProperties[virtualNodeCountTelemetryName] += 1
 					continue
 			} else {
 				osLabel = node.Labels["kubernetes.io/os"]
+				archLabel = node.Labels["kubernetes.io/arch"]
+				distroLabel = node.Labels["kubernetes.azure.com/os-sku"]
 			}
 
 			if node.Status.Capacity == nil {
@@ -281,28 +296,29 @@ func SendCoreCountToAppInsightsMetrics() {
 			cpu := node.Status.Capacity["cpu"]
 
 			if osLabel == "windows" {
-				cpuCapacityTotalWindows += cpu.Value()
-				windowsNodeCount += 1
+				telemetryProperties[windowsCpuCapacityTelemetryName] += cpu.Value()
+				telemetryProperties[windowsNodeCountTelemetryName] += 1
 			} else {
-				cpuCapacityTotalLinux += cpu.Value()
-				linuxNodeCount += 1
+				telemetryProperties[linuxCpuCapacityTelemetryName] += cpu.Value()
+				telemetryProperties[linuxNodeCountTelemetryName] += 1
+				if archLabel == "arm64" {
+					telemetryProperties[arm64NodeCountTelemetryName] += 1
+					telemetryProperties[arm64CpuCapacityTelemetryName] += cpu.Value()
+				}
+				if strings.ToLower(distroLabel) == "mariner" {
+					telemetryProperties[marinerNodeCountTelemetryName] += 1
+					telemetryProperties[marinerCpuCapacityTelemetryName] += cpu.Value()
+				}
 			}
 		}
 		// Send metric to app insights for node and core capacity
-		cpuCapacityTotal := float64(cpuCapacityTotalLinux + cpuCapacityTotalWindows)
+		cpuCapacityTotal := float64(telemetryProperties[linuxCpuCapacityTelemetryName] + telemetryProperties[windowsCpuCapacityTelemetryName])
 		metricTelemetryItem := appinsights.NewMetricTelemetry(coresAttachedTelemetryName, cpuCapacityTotal)
 
-		// Abbreviated properties to save telemetry cost
-		metricTelemetryItem.Properties["LiCapacity"] = fmt.Sprintf("%d", cpuCapacityTotalLinux)
-		metricTelemetryItem.Properties["LiNodeCnt"] = fmt.Sprintf("%d", linuxNodeCount)
-		if cpuCapacityTotalWindows != 0 {
-			metricTelemetryItem.Properties["WiCapacity"] = fmt.Sprintf("%d", cpuCapacityTotalWindows)
-		}
-		if windowsNodeCount != 0 {
-			metricTelemetryItem.Properties["WiNodeCnt"] = fmt.Sprintf("%d", windowsNodeCount)
-		}
-		if virtualNodeCount != 0 {
-			metricTelemetryItem.Properties["VirtualNodeCnt"] = fmt.Sprintf("%d", virtualNodeCount)
+		for propertyName, propertyValue := range telemetryProperties {
+			if propertyValue != 0 {
+				metricTelemetryItem.Properties[propertyName] = fmt.Sprintf("%d", propertyValue)
+			}
 		}
 
 		TelemetryClient.Track(metricTelemetryItem)

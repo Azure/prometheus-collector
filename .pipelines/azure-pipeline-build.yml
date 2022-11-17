@@ -94,6 +94,8 @@ jobs:
   dependsOn: common
   variables:
     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+  # This is necessary because of: https://github.com/moby/moby/issues/37965
+    DOCKER_BUILDKIT: 1
   steps:
 
     - task: CodeQL3000Init@0
@@ -108,8 +110,9 @@ jobs:
     - bash: |
         sudo apt-get install build-essential -y
         make
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+      displayName: "SDL: build otelcollector, promconfigvalidator, and fluent-bit plugin for scanning"
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
@@ -139,17 +142,27 @@ jobs:
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-
+ 
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
-        docker buildx create --name testbuilder
-        docker buildx use testbuilder
+
+        # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+        sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+        docker buildx create --name dockerbuilder
+        docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         if [ "$(Build.Reason)" != "PullRequest" ]; then
-          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           docker pull $(LINUX_FULL_IMAGE_NAME)
         else
-          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --load
+          
+          # Build multiarch image to make sure there are no issues
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
+
+          # Load in amd64 image to run vulnerability scan
+          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
