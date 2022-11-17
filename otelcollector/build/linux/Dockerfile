@@ -72,7 +72,7 @@ COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 
 ARG TARGETARCH
 RUN tdnf repolist --refresh
-RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils
+RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh; 
@@ -115,6 +115,7 @@ COPY --from=builder /usr/share/vim /usr/share/vim
 COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
 COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
 COPY --from=builder /usr/bin/gzip /usr/bin/
+COPY --from=builder /usr/bin/curl /usr/bin/
 
 # bash dependencies
 COPY --from=builder /lib/libreadline.so.8 /lib/
@@ -140,6 +141,8 @@ COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.
 COPY --from=builder /usr/local/lib/libtcmalloc_minimal.so.4 /usr/local/lib/
 # logrotate dependencies
 COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
+# curl dependencies
+COPY --from=builder /lib/libcurl.so.4 lib/libz.so.1 /lib/libc.so.6 /lib/
 
 RUN [ "/bin/bash", "-c", "chmod 775 /etc/cron.daily/logrotate" ]
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
