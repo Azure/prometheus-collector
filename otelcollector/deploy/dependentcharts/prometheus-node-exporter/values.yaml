@@ -4,7 +4,7 @@
 image:
   repository: mcr.microsoft.com/oss/prometheus/node-exporter
   # Overrides the image tag whose default is {{ printf "v%s" .Chart.AppVersion }}
-  tag: ""
+  tag: "v1.4.0"
   pullPolicy: IfNotPresent
   sha: ""
 
@@ -119,7 +119,7 @@ rbac:
   create: true
   ## If true, create & use Pod Security Policy resources
   ## https://kubernetes.io/docs/concepts/policy/pod-security-policy/
-  pspEnabled: true
+  pspEnabled: false
   pspAnnotations: {}
 
 # for deployments that have node_exporter deployed outside of the cluster, list

@@ -1,7 +1,7 @@
 # Default values for kube-state-metrics.
 prometheusScrape: true
 image:
-  repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
+  repository: mcr.microsoft.com/oss/kubernetes/kube-state-metrics
   tag: v2.6.0
   sha: ""
   pullPolicy: IfNotPresent
