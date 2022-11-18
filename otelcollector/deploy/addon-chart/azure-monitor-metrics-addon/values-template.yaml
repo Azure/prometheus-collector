@@ -35,7 +35,7 @@ AzureMonitorMetrics:
       - storageclasses
       - validatingwebhookconfigurations
       - volumeattachments
-  ImageRepository: "/azuremonitor/containerinsights/ciprod/prometheus-collector/images"
+  ImageRepository: ${MCR_REPOSITORY}
   ImageTag: ${IMAGE_TAG}
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner. 
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP - 
@@ -47,6 +47,6 @@ AzureMonitorMetrics:
 global:
   commonGlobals:
     CloudEnvironment: "AzureCloud"
-    Region: "aks-region"
+    Region: "${AKS_REGION}"
     Customer:
-      AzureResourceID: /subscriptions/test-sub/resourceGroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-resource
+      AzureResourceID: ${AKS_RESOURCE_ID}
