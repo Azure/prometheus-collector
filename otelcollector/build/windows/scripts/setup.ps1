@@ -8,6 +8,9 @@ New-Item -Type Directory -Path /opt/otelcollector/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/certificate/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/state/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/ruby -ErrorAction SilentlyContinue
+New-Item -Type Directory -Path /opt/genevamonitoringagent -ErrorAction SilentlyContinue
+New-Item -Type Directory -Path /opt/genevamonitoringagent/datadirectory -ErrorAction SilentlyContinue
+New-Item -Type Directory -Path /etc/genevamonitoringagent
 ###########################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
@@ -76,6 +79,21 @@ If (Test-Path -Path $gemfile ) {
     Write-Host ("Renaming unused gemfile.lock for http_parser 0.6.0")
     Rename-Item -Path $gemfileFullPath -NewName  "renamed_Gemfile_lock.renamed"
 }
+###########################################################################################
+Write-Host ('Installing GenevaMonitoringAgent');
+try {
+    $genevamonitoringagentUri='https://github.com/microsoft/Docker-Provider/releases/download/windows-ama-bits/genevamonitoringagent.45.13.1.zip'
+    Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip
+    Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent
+    Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction SilentlyContinue
+}
+catch {
+    $ex = $_.Exception
+    Write-Host "exception while downloading genevamonitoringagent for windows"
+    Write-Host $ex
+    exit 1
+}
+Write-Host ('Finished downloading GenevaMonitoringAgent')
 ###########################################################################################
 Write-Host ("Removing Install folder")
 Remove-Item /installation -Recurse

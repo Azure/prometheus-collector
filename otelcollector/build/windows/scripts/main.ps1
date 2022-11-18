@@ -3,6 +3,39 @@ $me_config_file = '/opt/metricextension/me_ds.config'
 
 function Set-EnvironmentVariablesAndConfigParser {
 
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Process")
+
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $aksregion, "Process")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $aksResourceId, "Process")
+    # [System.Environment]::SetEnvironmentVariable("MCS_REGIONAL_ENDPOINT", "https://eastus2euap.handler.control.monitor.azure.com", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_PROCESS_START_TIME", "2022-09-12T00:00:00.360Z", "Process")
+    [System.Environment]::SetEnvironmentVariable("customResourceId", $aksResourceId, "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $aksResourceId, "Process")
+    [System.Environment]::SetEnvironmentVariable("customRegion", $aksRegion, "Process")
+
+
+    #     [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Machine")
+
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $aksregion, "Machine")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $aksResourceId, "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MCS_REGIONAL_ENDPOINT", "https://eastus2euap.handler.control.monitor.azure.com", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_Machine_START_TIME", "2022-09-12T00:00:00.360Z", "Machine")
+    [System.Environment]::SetEnvironmentVariable("customResourceId", $aksResourceId, "Machine")
+    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $aksResourceId, "Machine")
+    [System.Environment]::SetEnvironmentVariable("customRegion", $aksRegion, "Machine")
+
     if ([string]::IsNullOrEmpty($env:MODE)) {
         [System.Environment]::SetEnvironmentVariable("MODE", 'simple', "Process")
         [System.Environment]::SetEnvironmentVariable("MODE", 'simple', "Machine")
@@ -95,7 +128,7 @@ function Set-EnvironmentVariablesAndConfigParser {
     #       fi
     # fi
 
-    
+
     # run config parser
     ruby /opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb
 
@@ -199,7 +232,7 @@ function Set-EnvironmentVariablesAndConfigParser {
     $cluster_override = $env:CLUSTER_OVERRIDE
     if ($controllerType -eq "replicaset") {
         if ($cluster_override -eq "true") {
-           $meConfigFile = "/opt/metricextension/me_internal.config" 
+           $meConfigFile = "/opt/metricextension/me_internal.config"
         }
         else {
            $meConfigFile = "/opt/metricextension/me.config"
@@ -207,7 +240,7 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
     else {
         if ($cluster_override -eq "true") {
-           $meConfigFile = "/opt/metricextension/me_ds_internal.config" 
+           $meConfigFile = "/opt/metricextension/me_ds_internal.config"
         }
         else {
            $meConfigFile = "/opt/metricextension/me_ds.config"
@@ -288,7 +321,7 @@ function Start-ME {
     Write-Output "Starting Metrics Extension"
     Write-Output "ME_CONFIG_FILE = $env:ME_CONFIG_FILE"
     Write-Output "AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
-    Start-Job -ScriptBlock { 
+    Start-Job -ScriptBlock {
         $me_config_file = $env:ME_CONFIG_FILE
         $AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME
         $ME_ADDITIONAL_FLAGS = $env:ME_ADDITIONAL_FLAGS
@@ -317,9 +350,9 @@ function Start-OTEL-Collector {
 function Set-CertificateForME {
     # Make a copy of the mounted akv directory to see if it changes
     mkdir -p /opt/akv-copy > $null
-    Copy-Item -r /etc/config/settings/akv /opt/akv-copy 
+    Copy-Item -r /etc/config/settings/akv /opt/akv-copy
 
-    Get-ChildItem "C:\etc\config\settings\akv\" |  Foreach-Object { 
+    Get-ChildItem "C:\etc\config\settings\akv\" |  Foreach-Object {
         if (!($_.Name.startswith('..'))) {
           Import-PfxCertificate -FilePath $_.FullName -CertStoreLocation Cert:\CurrentUser\My > $null
         }
@@ -328,6 +361,12 @@ function Set-CertificateForME {
 
 function Start-FileSystemWatcher {
     Start-Process powershell -NoNewWindow /opt/scripts/filesystemwatcher.ps1 > $null
+}
+
+#start Windows AMA
+function Start-MA {
+    Write-Output "Starting MA"
+    Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\genevamonitoringagent\genevamonitoringagent\Monitoring\Agent\MonAgentLauncher.exe" -ArgumentList @("-useenv")}
 }
 
 Start-Transcript -Path main.txt
@@ -341,6 +380,7 @@ Start-Fluentbit
 Start-Telegraf
 Start-OTEL-Collector
 Start-ME
+Start-MA
 
 # Notepad.exe | Out-Null
 Write-Output "Starting ping to keep the container running"

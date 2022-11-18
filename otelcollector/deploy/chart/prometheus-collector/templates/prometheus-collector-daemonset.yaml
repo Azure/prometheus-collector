@@ -19,7 +19,7 @@ spec:
       maxUnavailable: {{ .Values.updateStrategy.daemonSet.maxUnavailable }}
         {{- end }}
       {{- end }}
-    {{- end }}  
+    {{- end }}
   template:
     metadata:
       labels:
@@ -67,11 +67,11 @@ spec:
             {{- if and (.Values.internalSettings.intEnvironment) (not .Values.useMonitoringAccount) }}
             - name: ME_ADDITIONAL_FLAGS
               value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
-            {{- end }}  
+            {{- end }}
             {{- if .Values.internalSettings.clusterOverride  }}
             - name: CLUSTER_OVERRIDE
               value: "true"
-            {{- end }}  
+            {{- end }}
             - name: CONTROLLER_TYPE
               value: "DaemonSet"
             - name: NODE_IP
@@ -243,12 +243,12 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: "{{ template "prometheus-collector.fullname" . }}-azure-kv-metricstore"
-            {{- if not .Values.azureKeyVault.useManagedIdentity }}  
+            {{- if not .Values.azureKeyVault.useManagedIdentity }}
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
             {{- end }}
         {{- end }}
-{{- end }}        
+{{- end }}
 ---
 {{- if and (eq .Values.mode.advanced true) (eq .Values.windowsDaemonset true) (not .Values.useMonitoringAccount) }}
 apiVersion: apps/v1
@@ -271,7 +271,7 @@ spec:
       maxUnavailable: {{ .Values.updateStrategy.daemonSet.maxUnavailable }}
         {{- end }}
       {{- end }}
-    {{- end }}  
+    {{- end }}
   template:
     metadata:
       labels:
@@ -300,7 +300,7 @@ spec:
             {{- if .Values.internalSettings.clusterOverride  }}
             - name: CLUSTER_OVERRIDE
               value: "true"
-            {{- end }}   
+            {{- end }}
             - name: CONTROLLER_TYPE
               value: "DaemonSet"
             - name: NODE_IP
@@ -391,6 +391,30 @@ spec:
             initialDelaySeconds: 300
             timeoutSeconds: 15
             failureThreshold: 3
+        - name: addon-token-adapter-win
+          command:
+           - addon-token-adapter-win
+          args:
+           - --secret-namespace=kube-system
+           - --secret-name=prometheus-collector-aad-msi-token
+          image: norshtein/addon-token-adapter-win:v0.8
+          imagePullPolicy: Always
+          livenessProbe:
+           httpGet:
+             path: /healthz
+             port: 9999
+           initialDelaySeconds: 10
+           periodSeconds: 60
+          resources:
+           limits:
+             memory: 500Mi
+           requests:
+             cpu: 100m
+             memory: 100Mi
+          securityContext:
+           capabilities:
+             add:
+               - NET_ADMIN
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -438,5 +462,9 @@ spec:
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
             {{- end }}
-{{- end }}       
+        - name: imds-token
+          secret:
+            secretName: prometheus-collector-aad-msi-token
+
+{{- end }}
 ---
