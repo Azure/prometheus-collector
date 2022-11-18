@@ -432,4 +432,4 @@ jobs:
       chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
       releaseName: 'ama-metrics'
       waitForExecution: false
-      arguments: '--dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml'
+      arguments: '--dependency-update'
