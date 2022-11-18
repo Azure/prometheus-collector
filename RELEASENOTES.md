@@ -1,5 +1,13 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 11-tbd-2022
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.5.0-main-tbd`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.5.0-main-tbd`
+* Change Log -
+  * Update Kube-state-metrics chart (from 4.18.0 to 4.23.0) [chart only upgrade]
+  * Update Prometheus node exporter chart (from 3.1.1 to 4.5.2) and image (from 1.3.1 to 1.4.0) [Remove selector label changes in 1.4.x chart that breaks upgrade]
+
 ## Release 10-27-2022
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.4.0-main-10-26-2022-16f02b39`
@@ -28,3 +36,4 @@
   * Bug fix - Remove virtual node core capacity from telemetry total
   * Bug fix - Update alert group names for default and CI alerts
   * Bug fix - Update prometheus custom config for Azure Monitor Metrics Addon
+  
