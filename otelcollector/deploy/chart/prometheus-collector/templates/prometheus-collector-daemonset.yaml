@@ -383,9 +383,11 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
+            {{- if .Values.useMonitoringAccount }}
             - mountPath: C:\etc\IMDS-access-token
               name: imds-token
               readOnly: true
+            {{- end }}
           livenessProbe:
             exec:
               command:
@@ -396,6 +398,7 @@ spec:
             initialDelaySeconds: 300
             timeoutSeconds: 15
             failureThreshold: 3
+        {{- if .Values.useMonitoringAccount }}
         - name: addon-token-adapter-win
           command:
            - addon-token-adapter-win
@@ -420,6 +423,7 @@ spec:
            capabilities:
              add:
                - NET_ADMIN
+        {{- end }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -457,6 +461,7 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
+        {{- if not .Values.useMonitoringAccount }}
         - name: secrets-store-inline
           csi:
             driver: secrets-store.csi.k8s.io
@@ -467,9 +472,10 @@ spec:
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
             {{- end }}
+        {{- else }}
         - name: imds-token
           secret:
             secretName: aad-msi-auth-token
-
+        {{- end }}
 {{- end }}
 ---
