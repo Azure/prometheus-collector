@@ -396,7 +396,7 @@ spec:
            - addon-token-adapter-win
           args:
            - --secret-namespace=kube-system
-           - --secret-name=prometheus-collector-aad-msi-token
+           - --secret-name=aad-msi-auth-token
           image: norshtein/addon-token-adapter-win:v0.8
           imagePullPolicy: Always
           livenessProbe:
@@ -464,7 +464,7 @@ spec:
             {{- end }}
         - name: imds-token
           secret:
-            secretName: prometheus-collector-aad-msi-token
+            secretName: aad-msi-auth-token
 
 {{- end }}
 ---
