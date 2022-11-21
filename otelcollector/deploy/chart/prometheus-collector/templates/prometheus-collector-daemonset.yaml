@@ -293,6 +293,8 @@ spec:
           env:
             - name: CLUSTER
               value: {{ required "clusterName is required" .Values.clusterName | toString | quote }}
+            - name: AKSREGION
+              value: {{ required "azureResourceRegion is required when using monitoring account" .Values.azureResourceRegion | toString | trim | lower | quote }}
             {{- if .Values.internalSettings.intEnvironment  }}
             - name: ME_ADDITIONAL_FLAGS
               value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
@@ -381,6 +383,9 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
+            - mountPath: C:\etc\IMDS-access-token
+              name: imds-token
+              readOnly: true
           livenessProbe:
             exec:
               command:
