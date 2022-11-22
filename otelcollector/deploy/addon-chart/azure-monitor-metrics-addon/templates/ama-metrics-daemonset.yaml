@@ -198,6 +198,7 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -211,7 +212,8 @@ spec:
       dsName: ama-metrics-win-node
   updateStrategy:
     type: RollingUpdate
-    rollingUpdate: 50%
+    rollingUpdate:
+      maxUnavailable: 50%
   template:
     metadata:
       labels:
