@@ -407,6 +407,8 @@ spec:
           args:
            - --secret-namespace=kube-system
            - --secret-name=aad-msi-auth-token
+           - --token-server-listening-port=7777
+           - --health-server-listening-port=9999
           image: norshtein/addon-token-adapter-win:v0.8
           imagePullPolicy: Always
           livenessProbe:
