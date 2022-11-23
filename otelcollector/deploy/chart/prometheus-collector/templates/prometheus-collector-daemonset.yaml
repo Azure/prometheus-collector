@@ -292,7 +292,7 @@ spec:
             {{- toYaml .Values.resources.daemonSetWindows | nindent 12 }}
           env:
             - name: CLUSTER
-              value: {{ required "clusterName is required" .Values.clusterName | toString | quote }}
+              value: {{ required "azureResourceId is required when using monitoring account" .Values.azureResourceId | toString | quote }}
             - name: AKSREGION
               value: {{ required "azureResourceRegion is required when using monitoring account" .Values.azureResourceRegion | toString | trim | lower | quote }}
             {{- if .Values.internalSettings.intEnvironment  }}
@@ -385,11 +385,6 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
-            {{- if .Values.useMonitoringAccount }}
-            - mountPath: C:\etc\IMDS-access-token
-              name: imds-token
-              readOnly: true
-            {{- end }}
           livenessProbe:
             exec:
               command:
@@ -476,10 +471,5 @@ spec:
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
             {{- end }}
-        {{- else }}
-        - name: imds-token
-          secret:
-            secretName: aad-msi-auth-token
-        {{- end }}
 {{- end }}
 ---

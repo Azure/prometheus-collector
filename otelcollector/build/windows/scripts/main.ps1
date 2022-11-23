@@ -22,41 +22,20 @@ function Set-EnvironmentVariablesAndConfigParser {
         Write-Output "customResourceId=$customResourceId"
     }
 
-    ############### Convert EAST US to region
-
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Process")
+    ############### Environment variables for MA {Start} ###############
     [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Process")
-
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", "eastus", "Process")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MCS_REGIONAL_ENDPOINT", "https://eastus2euap.handler.control.monitor.azure.com", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_PROCESS_START_TIME", "2022-09-12T00:00:00.360Z", "Process")
     [System.Environment]::SetEnvironmentVariable("customResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Process")
     [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Process")
     [System.Environment]::SetEnvironmentVariable("customRegion", "eastus", "Process")
-
-
-    #     [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Machine")
     [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Machine")
-
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", "eastus", "Machine")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MCS_REGIONAL_ENDPOINT", "https://eastus2euap.handler.control.monitor.azure.com", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_Machine_START_TIME", "2022-09-12T00:00:00.360Z", "Machine")
     [System.Environment]::SetEnvironmentVariable("customResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Machine")
     [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Machine")
     [System.Environment]::SetEnvironmentVariable("customRegion", "eastus", "Machine")
-
+    ############### Environment variables for MA {End} ###############
 
     if ([string]::IsNullOrEmpty($env:MODE)) {
         [System.Environment]::SetEnvironmentVariable("MODE", 'simple', "Process")
@@ -318,25 +297,6 @@ function Start-Telegraf {
         /opt/telegraf/telegraf.exe --service start
     }
 }
-
-function Start-ME {
-    Write-Output "Starting Metrics Extension"
-    Write-Output "ME_CONFIG_FILE = $env:ME_CONFIG_FILE"
-    Write-Output "AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
-    Start-Job -ScriptBlock {
-        $me_config_file = $env:ME_CONFIG_FILE
-        $AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME
-        $ME_ADDITIONAL_FLAGS = $env:ME_ADDITIONAL_FLAGS
-        if (![string]::IsNullOrEmpty($ME_ADDITIONAL_FLAGS)) {
-            Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc_prom", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file, $ME_ADDITIONAL_FLAGS) > $null
-        }
-        else {
-            Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc_prom", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file) > $null
-        }
-    }
-    tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
-}
-
 function Start-OTEL-Collector {
     if ($env:AZMON_USE_DEFAULT_PROMETHEUS_CONFIG -eq "true") {
         Write-Output "Starting otelcollector with only default scrape configs enabled"
@@ -371,18 +331,34 @@ function Start-MA {
     Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\genevamonitoringagent\genevamonitoringagent\Monitoring\Agent\MonAgentLauncher.exe" -ArgumentList @("-useenv") }
 }
 
+function Start-ME {
+    Write-Output "Starting Metrics Extension"
+    Write-Output "ME_CONFIG_FILE = $env:ME_CONFIG_FILE"
+    Write-Output "AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
+    Start-Job -ScriptBlock {
+        $me_config_file = $env:ME_CONFIG_FILE
+        $AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME
+        $ME_ADDITIONAL_FLAGS = $env:ME_ADDITIONAL_FLAGS
+        if (![string]::IsNullOrEmpty($ME_ADDITIONAL_FLAGS)) {
+            Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc_prom", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file, $ME_ADDITIONAL_FLAGS) > $null
+        }
+        else {
+            Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc_prom", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file) > $null
+        }
+    }
+    tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
+}
+
 Start-Transcript -Path main.txt
-
-Set-CertificateForME
+# Set-CertificateForME
 Set-EnvironmentVariablesAndConfigParser
-
 Start-FileSystemWatcher
-
 Start-Fluentbit
 Start-Telegraf
 Start-OTEL-Collector
-Start-ME
 Start-MA
+Start-Sleep 120
+Start-ME
 
 # Notepad.exe | Out-Null
 Write-Output "Starting ping to keep the container running"
