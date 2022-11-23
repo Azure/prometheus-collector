@@ -476,10 +476,5 @@ spec:
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
             {{- end }}
-        {{- else }}
-        - name: imds-token
-          secret:
-            secretName: aad-msi-auth-token
-        {{- end }}
 {{- end }}
 ---
