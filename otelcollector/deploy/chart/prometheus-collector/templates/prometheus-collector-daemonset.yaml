@@ -123,7 +123,7 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
-            {{- if and (.Values.windowsDaemonset) (not .Values.useMonitoringAccount) }}
+            {{- if and (.Values.windowsDaemonset) }}
             - name: WINMODE
               value: "advanced" # WINDOWS: only supported mode is 'advanced' [when not using MAC], any other value will be the default/non-advance mode
             {{- else }}
@@ -250,7 +250,7 @@ spec:
         {{- end }}
 {{- end }}
 ---
-{{- if and (eq .Values.mode.advanced true) (eq .Values.windowsDaemonset true) (not .Values.useMonitoringAccount) }}
+{{- if and (eq .Values.mode.advanced true) (eq .Values.windowsDaemonset true) }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -293,6 +293,8 @@ spec:
           env:
             - name: CLUSTER
               value: {{ required "clusterName is required" .Values.clusterName | toString | quote }}
+            - name: AKSREGION
+              value: {{ required "azureResourceRegion is required when using monitoring account" .Values.azureResourceRegion | toString | trim | lower | quote }}
             {{- if .Values.internalSettings.intEnvironment  }}
             - name: ME_ADDITIONAL_FLAGS
               value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
@@ -372,15 +374,22 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
+            {{- if not .Values.useMonitoringAccount }}
             - mountPath: /etc/config/settings/akv
               name: secrets-store-inline
               readOnly: true
+            {{- end }}
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
+            {{- if .Values.useMonitoringAccount }}
+            - mountPath: C:\etc\IMDS-access-token
+              name: imds-token
+              readOnly: true
+            {{- end }}
           livenessProbe:
             exec:
               command:
@@ -391,12 +400,15 @@ spec:
             initialDelaySeconds: 300
             timeoutSeconds: 15
             failureThreshold: 3
+        {{- if .Values.useMonitoringAccount }}
         - name: addon-token-adapter-win
           command:
            - addon-token-adapter-win
           args:
            - --secret-namespace=kube-system
-           - --secret-name=prometheus-collector-aad-msi-token
+           - --secret-name=aad-msi-auth-token
+           - --token-server-listening-port=7777
+           - --health-server-listening-port=9999
           image: norshtein/addon-token-adapter-win:v0.8
           imagePullPolicy: Always
           livenessProbe:
@@ -415,6 +427,7 @@ spec:
            capabilities:
              add:
                - NET_ADMIN
+        {{- end }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -452,6 +465,7 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
+        {{- if not .Values.useMonitoringAccount }}
         - name: secrets-store-inline
           csi:
             driver: secrets-store.csi.k8s.io
@@ -462,9 +476,10 @@ spec:
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
             {{- end }}
+        {{- else }}
         - name: imds-token
           secret:
-            secretName: prometheus-collector-aad-msi-token
-
+            secretName: aad-msi-auth-token
+        {{- end }}
 {{- end }}
 ---

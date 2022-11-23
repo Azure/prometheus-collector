@@ -2,45 +2,6 @@
 $me_config_file = '/opt/metricextension/me_ds.config'
 
 function Set-EnvironmentVariablesAndConfigParser {
-
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Process")
-    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Process")
-
-    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $aksregion, "Process")
-    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $aksResourceId, "Process")
-    # [System.Environment]::SetEnvironmentVariable("MCS_REGIONAL_ENDPOINT", "https://eastus2euap.handler.control.monitor.azure.com", "Process")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_PROCESS_START_TIME", "2022-09-12T00:00:00.360Z", "Process")
-    [System.Environment]::SetEnvironmentVariable("customResourceId", $aksResourceId, "Process")
-    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $aksResourceId, "Process")
-    [System.Environment]::SetEnvironmentVariable("customRegion", $aksRegion, "Process")
-
-
-    #     [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Machine")
-    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Machine")
-
-    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $aksregion, "Machine")
-    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $aksResourceId, "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MCS_REGIONAL_ENDPOINT", "https://eastus2euap.handler.control.monitor.azure.com", "Machine")
-    # [System.Environment]::SetEnvironmentVariable("MONITORING_Machine_START_TIME", "2022-09-12T00:00:00.360Z", "Machine")
-    [System.Environment]::SetEnvironmentVariable("customResourceId", $aksResourceId, "Machine")
-    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $aksResourceId, "Machine")
-    [System.Environment]::SetEnvironmentVariable("customRegion", $aksRegion, "Machine")
-
-    if ([string]::IsNullOrEmpty($env:MODE)) {
-        [System.Environment]::SetEnvironmentVariable("MODE", 'simple', "Process")
-        [System.Environment]::SetEnvironmentVariable("MODE", 'simple', "Machine")
-    }
-
     #resourceid override.
     if ([string]::IsNullOrEmpty($env:AKS_RESOURCE_ID)) {
         if ([string]::IsNullOrEmpty($env:CLUSTER)) {
@@ -59,6 +20,47 @@ function Set-EnvironmentVariablesAndConfigParser {
         [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Process")
         [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Machine")
         Write-Output "customResourceId=$customResourceId"
+    }
+
+    ############### Convert EAST US to region
+
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Process")
+
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", "eastus", "Process")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MCS_REGIONAL_ENDPOINT", "https://eastus2euap.handler.control.monitor.azure.com", "Process")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_PROCESS_START_TIME", "2022-09-12T00:00:00.360Z", "Process")
+    [System.Environment]::SetEnvironmentVariable("customResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Process")
+    [System.Environment]::SetEnvironmentVariable("customRegion", "eastus", "Process")
+
+
+    #     [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Machine")
+
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", "eastus", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MCS_REGIONAL_ENDPOINT", "https://eastus2euap.handler.control.monitor.azure.com", "Machine")
+    # [System.Environment]::SetEnvironmentVariable("MONITORING_Machine_START_TIME", "2022-09-12T00:00:00.360Z", "Machine")
+    [System.Environment]::SetEnvironmentVariable("customResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Machine")
+    [System.Environment]::SetEnvironmentVariable("customRegion", "eastus", "Machine")
+
+
+    if ([string]::IsNullOrEmpty($env:MODE)) {
+        [System.Environment]::SetEnvironmentVariable("MODE", 'simple', "Process")
+        [System.Environment]::SetEnvironmentVariable("MODE", 'simple', "Machine")
     }
 
     #set agent config schema version
@@ -176,7 +178,7 @@ function Set-EnvironmentVariablesAndConfigParser {
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Process")
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Machine")
             if (Test-Path -Path '/opt/defaultsMergedConfig.yml') {
-              Write-Output "prom-config-validator::Running validator on just default scrape configs"
+                Write-Output "prom-config-validator::Running validator on just default scrape configs"
                 C:\opt\promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
                 if ( (!($?)) -or (!(Test-Path -Path "/opt/collector-config-with-defaults.yml" ))) {
                     Write-Output "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used"
@@ -210,14 +212,14 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
 
     if (Test-Path -Path '/opt/microsoft/prom_config_validator_env_var') {
-      foreach ($line in Get-Content /opt/microsoft/prom_config_validator_env_var) {
-        if ($line.Contains('=')) {
-          $key = ($line -split '=')[0];
-          $value = ($line -split '=')[1];
-          [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
-          [System.Environment]::SetEnvironmentVariable($key, $value, "Machine")
+        foreach ($line in Get-Content /opt/microsoft/prom_config_validator_env_var) {
+            if ($line.Contains('=')) {
+                $key = ($line -split '=')[0];
+                $value = ($line -split '=')[1];
+                [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+                [System.Environment]::SetEnvironmentVariable($key, $value, "Machine")
+            }
         }
-      }
     }
 
     # #start cron daemon for logrotate
@@ -232,18 +234,18 @@ function Set-EnvironmentVariablesAndConfigParser {
     $cluster_override = $env:CLUSTER_OVERRIDE
     if ($controllerType -eq "replicaset") {
         if ($cluster_override -eq "true") {
-           $meConfigFile = "/opt/metricextension/me_internal.config"
+            $meConfigFile = "/opt/metricextension/me_internal.config"
         }
         else {
-           $meConfigFile = "/opt/metricextension/me.config"
+            $meConfigFile = "/opt/metricextension/me.config"
         }
     }
     else {
         if ($cluster_override -eq "true") {
-           $meConfigFile = "/opt/metricextension/me_ds_internal.config"
+            $meConfigFile = "/opt/metricextension/me_ds_internal.config"
         }
         else {
-           $meConfigFile = "/opt/metricextension/me_ds.config"
+            $meConfigFile = "/opt/metricextension/me_ds.config"
         }
     }
     [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $meConfigFile, "Process")
@@ -354,7 +356,7 @@ function Set-CertificateForME {
 
     Get-ChildItem "C:\etc\config\settings\akv\" |  Foreach-Object {
         if (!($_.Name.startswith('..'))) {
-          Import-PfxCertificate -FilePath $_.FullName -CertStoreLocation Cert:\CurrentUser\My > $null
+            Import-PfxCertificate -FilePath $_.FullName -CertStoreLocation Cert:\CurrentUser\My > $null
         }
     }
 }
@@ -366,7 +368,7 @@ function Start-FileSystemWatcher {
 #start Windows AMA
 function Start-MA {
     Write-Output "Starting MA"
-    Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\genevamonitoringagent\genevamonitoringagent\Monitoring\Agent\MonAgentLauncher.exe" -ArgumentList @("-useenv")}
+    Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\genevamonitoringagent\genevamonitoringagent\Monitoring\Agent\MonAgentLauncher.exe" -ArgumentList @("-useenv") }
 }
 
 Start-Transcript -Path main.txt
