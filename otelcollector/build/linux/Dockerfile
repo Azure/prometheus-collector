@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/mirror/docker/library/ubuntu:20.04
 LABEL description="Azure Monitor Prometheus metrics collector"
-LABEL maintainer="omscontainers@microsoft.com"
+LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "linux"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV AZMON_COLLECT_ENV False

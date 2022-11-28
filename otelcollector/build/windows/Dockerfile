@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/windows/servercore:ltsc2019
 LABEL description="Azure Monitor Prometheus metrics collector"
-LABEL maintainer="omscontainers@microsoft.com"
+LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "windows"
 ENV MONITORING_DATA_DIRECTORY "C:\\opt\\genevamonitoringagent\\datadirectory"
 ENV MONITORING_MCS_MODE "1"

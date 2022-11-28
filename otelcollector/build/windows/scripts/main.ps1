@@ -356,7 +356,11 @@ Start-FileSystemWatcher
 Start-Fluentbit
 Start-Telegraf
 Start-OTEL-Collector
+################################################################################################################
+# Should I wait for token sidecar adapter to serve IMDS requests as the main prometheus-collector pod takes a while to start??
+################################################################################################################
 Start-MA
+# "Waiting for 121s for MA to get the config and put them in place for ME"
 Start-Sleep 121
 Start-ME
 

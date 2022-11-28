@@ -390,11 +390,6 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
-            {{- if .Values.useMonitoringAccount }}
-            - mountPath: C:\etc\IMDS-access-token
-              name: imds-token
-              readOnly: true
-            {{- end }}
           livenessProbe:
             exec:
               command:
