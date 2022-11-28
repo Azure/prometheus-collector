@@ -365,7 +365,7 @@ Start-OTEL-Collector
 ################################################################################################################
 Start-MA
 # "Waiting for 121s for MA to get the config and put them in place for ME"
-Start-Sleep 121
+Start-Sleep 122
 Start-ME
 
 # Notepad.exe | Out-Null
