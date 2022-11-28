@@ -291,7 +291,7 @@ spec:
           resources:
             {{- toYaml .Values.resources.daemonSetWindows | nindent 12 }}
           env:
-             {{- if not .Values.useMonitoringAccount }}
+            {{- if not .Values.useMonitoringAccount }}
             - name: CLUSTER
               value: {{ required "clusterName is required" .Values.clusterName | toString | trim | quote }}
             {{- else }}
