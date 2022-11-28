@@ -47,3 +47,4 @@ data:
 metadata:
   name: ama-metrics-settings-configmap
   namespace: kube-system
+  
