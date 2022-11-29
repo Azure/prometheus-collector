@@ -23,6 +23,23 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
 
     ############### Environment variables for MA {Start} ###############
+
+    ############################################################################# test
+    [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Process")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Process")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Process")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Process")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Process")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Machine")
+    ############################################################################# test
+
+
     [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Process")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", "eastus", "Process")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Process")
@@ -348,8 +365,8 @@ function Start-ME {
 
         #     echo "Reading me config file as a string for configOverrides paramater"
         #   export meConfigString=`cat $ME_CONFIG_FILE | tr '\r' ' ' |  tr '\n' ' ' | sed 's/\"/\\"/g' | sed 's/ //g'`
-        Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Debug", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "\opt\genevamonitoringagent\datadirectory\", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", $me_config_file) > $null
-        # /opt/metricextension/MetricsExtension/MetricsExtension.Native.exe -Logger File -LogLevel Debug -LocalControlChannel -TokenSource AMCS -DataDirectory .\ -Input otlp_grpc_prom -ConfigOverridesFilePath '/opt/metricextension/me_ds.config'
+        Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Debug", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "C:\opt\genevamonitoringagent\datadirectory\", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", $me_config_file) > $null
+        # /opt/metricextension/MetricsExtension/MetricsExtension.Native.exe -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory C:\opt\genevamonitoringagent\datadirectory\ -Input otlp_grpc_prom -ConfigOverridesFilePath '/opt/metricextension/me_ds.config'
     }
     tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
 }
