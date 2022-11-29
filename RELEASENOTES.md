@@ -1,6 +1,6 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Release 11-tbd-2022
+## Release 11-29-2022
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.0.1-main-11-29-2022-97e2122e`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.0.1-main-11-29-2022-97e2122e-win`
