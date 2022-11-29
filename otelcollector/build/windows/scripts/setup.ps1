@@ -14,7 +14,7 @@ New-Item -Type Directory -Path /etc/genevamonitoringagent
 ###########################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri https://github.com/bragi92/tinkering/releases/download/untagged-e2920cbd40a3d5f51fa7/MdmMetricsExtension.2.2022.1026.1505.nupkg -OutFile /installation/ME/mdmmetricsextension.2.2022.1026.1505.zip
+    Invoke-WebRequest -Uri https://github.com/bragi92/tinkering/releases/download/test/MdmMetricsExtension.2.2022.1026.1505.nupkg -OutFile /installation/ME/mdmmetricsextension.2.2022.1026.1505.zip
     Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2022.1026.1505.zip -Destination /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
