@@ -228,15 +228,19 @@
                     },
                     {
                         "record": "node:windows_node_memory_bytes_total:sum",
+                        "expression": "sum by (instance) (windows_os_visible_memory_bytes{job=\"windows-exporter\"})"
+                    },
+                    {
+                        "record": "node:windows_node_memory_utilisation:ratio",
                         "expression": "(node:windows_node_memory_bytes_total:sum - node:windows_node_memory_bytes_available:sum) / scalar(sum(node:windows_node_memory_bytes_total:sum))"
                     },
                     {
                         "record": "node:windows_node_memory_utilisation:",
-                        "expression": "irate(windows_memory_swap_page_operations_total{job=\"windows-exporter\"}[5m])"
+                        "expression": "1 - (node:windows_node_memory_bytes_available:sum / node:windows_node_memory_bytes_total:sum)"
                     },
                     {
                         "record": "node:windows_node_memory_swap_io_pages:irate",
-                        "expression": "sum(rate(node_cpu_seconds_total{job=\"node\",mode!=\"idle\",mode!=\"iowait\",mode!=\"steal\"}[5m])) by (cluster) /count(sum(node_cpu_seconds_total{job=\"node\"}) by (cluster, instance, cpu)) by (cluster)"
+                        "expression": "irate(windows_memory_swap_page_operations_total{job=\"windows-exporter\"}[5m])"
                     },
                     {
                         "record": ":windows_node_disk_utilisation:avg_irate",

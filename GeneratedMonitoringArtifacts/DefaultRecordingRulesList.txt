@@ -38,6 +38,7 @@ node:windows_node_memory_totalCached_bytes:sum
 :windows_node_memory_MemTotal_bytes:sum
 node:windows_node_memory_bytes_available:sum
 node:windows_node_memory_bytes_total:sum
+node:windows_node_memory_utilisation:ratio
 node:windows_node_memory_utilisation:
 node:windows_node_memory_swap_io_pages:irate
 :windows_node_disk_utilisation:avg_irate
