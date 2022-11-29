@@ -1,45 +1,45 @@
 @REM REM "Checking if fluent-bit is running"
 
-tasklist /fi "imagename eq td-agent-bit.exe" /fo "table"  | findstr td-agent-bit
+@REM tasklist /fi "imagename eq td-agent-bit.exe" /fo "table"  | findstr td-agent-bit
 
-IF ERRORLEVEL 1 (
-    echo "Fluent-Bit is not running"
-    exit /b 1
-)
+@REM IF ERRORLEVEL 1 (
+@REM     echo "Fluent-Bit is not running"
+@REM     exit /b 1
+@REM )
 
-@REM "Checking if config map has been updated since agent start"
+@REM @REM "Checking if config map has been updated since agent start"
 
-IF EXIST C:\opt\microsoft\scripts\filesystemwatcher.txt (
-    echo "Config Map Updated since agent started"
-    exit /b  1
-)
+@REM IF EXIST C:\opt\microsoft\scripts\filesystemwatcher.txt (
+@REM     echo "Config Map Updated since agent started"
+@REM     exit /b  1
+@REM )
 
-@REM REM "Checking if Telegraf is running"
+@REM @REM REM "Checking if Telegraf is running"
 
-tasklist /fi "imagename eq telegraf.exe" /fo "table"  | findstr telegraf
+@REM tasklist /fi "imagename eq telegraf.exe" /fo "table"  | findstr telegraf
 
-IF ERRORLEVEL 1 (
-    echo "Telegraf is not running"
-    exit /b 1
-)
+@REM IF ERRORLEVEL 1 (
+@REM     echo "Telegraf is not running"
+@REM     exit /b 1
+@REM )
 
 
-@REM REM "Checking if MetricsExtension is running"
+@REM @REM REM "Checking if MetricsExtension is running"
 
-tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
+@REM tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
 
-IF ERRORLEVEL 1 (
-    echo "MetricsExtension is not running"
-    exit /b 1
-)
+@REM IF ERRORLEVEL 1 (
+@REM     echo "MetricsExtension is not running"
+@REM     exit /b 1
+@REM )
 
-@REM REM "Checking if otelcollector is running"
+@REM @REM REM "Checking if otelcollector is running"
 
-tasklist /fi "imagename eq otelcollector.exe" /fo "table"  | findstr otelcollector
+@REM tasklist /fi "imagename eq otelcollector.exe" /fo "table"  | findstr otelcollector
 
-IF ERRORLEVEL 1 (
-    echo "otelcollector is not running"
-    exit /b 1
-)
+@REM IF ERRORLEVEL 1 (
+@REM     echo "otelcollector is not running"
+@REM     exit /b 1
+@REM )
 
 exit /b 0
