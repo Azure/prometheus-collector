@@ -1,10 +1,12 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Release 11-tbd-2022
+## Release 11-29-2022
 
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.5.0-main-tbd`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.5.0-main-tbd`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.0.1-main-11-29-2022-97e2122e`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.0.1-main-11-29-2022-97e2122e-win`
 * Change Log -
+  * Move to mariner base for Linux image
+  * Enable ARM64 support (for addon based datacollection only) - Includes both Daemonset & Replicaset
   * Update Kube-state-metrics chart (from 4.18.0 to 4.23.0) [chart only upgrade]
   * Update Prometheus node exporter chart (from 3.1.1 to 4.5.2) and image (from 1.3.1 to 1.4.0) [Remove selector label changes in 1.4.x chart that breaks upgrade]
 
