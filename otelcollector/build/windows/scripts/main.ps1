@@ -40,6 +40,12 @@ function Set-EnvironmentVariablesAndConfigParser {
     ############################################################################# test
     [System.Environment]::SetEnvironmentVariable("MONITORING_USE_GENEVA_CONFIG_SERVICE", "false", "Process")
     [System.Environment]::SetEnvironmentVariable("MONITORING_USE_GENEVA_CONFIG_SERVICE", "false", "Machine")
+    [System.Environment]::SetEnvironmentVariable("SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH", "true", "Process")
+    [System.Environment]::SetEnvironmentVariable("SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH", "true", "Machine")
+    [System.Environment]::SetEnvironmentVariable("ENABLE_MCS", "true", "Process")
+    [System.Environment]::SetEnvironmentVariable("ENABLE_MCS", "true", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MDSD_USE_LOCAL_PERSISTENCY", "false", "Process")
+    [System.Environment]::SetEnvironmentVariable("MDSD_USE_LOCAL_PERSISTENCY", "false", "Machine")
     ############################################################################# test
 
 
