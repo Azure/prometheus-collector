@@ -38,6 +38,9 @@ function Set-EnvironmentVariablesAndConfigParser {
     [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Machine")
     [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Machine")
     ############################################################################# test
+    [System.Environment]::SetEnvironmentVariable("MONITORING_USE_GENEVA_CONFIG_SERVICE", "false", "Process")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_USE_GENEVA_CONFIG_SERVICE", "false", "Machine")
+    ############################################################################# test
 
 
     [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Process")
