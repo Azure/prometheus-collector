@@ -124,7 +124,7 @@
                     },
                     {
                         "alert": "Pod container restarted in last 1 hour",
-                        "expression": "sum by (namespace, pod, container, cluster) (kube_pod_container_status_restarts_total{job=\"kube-state-metrics\", namespace=\"kube-system\"}) > 0 ",
+                        "expression": "sum by (namespace, pod, container, cluster)(increase(kube_pod_container_status_restarts_total{job=\"kube-state-metrics\"}[1h])) > 0 ",
                         "for": "PT15M",
                         "annotations": {
                             "description": "Pod container restarted in last 1 hour"
