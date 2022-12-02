@@ -35,7 +35,8 @@
 
     // Grafana dashboard IDs are necessary for stable links for dashboards
     grafanaDashboardIDs: {
-      'k8s-resources-multicluster.json': '669757cdd4ef4e97b96164c62ac56738',
+      //non-default
+      'k8s-resources-multicluster.json': 'e6fd5c5a88514d61af69c0d97ee76738',
       'k8s-resources-cluster.json': 'efa86fd1d0c121a26444b636a3f56738',
       'k8s-resources-namespace.json': '85a562078cdf77779eaa1add43cc6738',
       'k8s-resources-pod.json': '6581e46e4e5c7ba40a07646395ef6738',
@@ -44,7 +45,8 @@
       //not-used 'k8s-node-rsrc-use.json': 'E577CMUOwmPsxVVqM9lj40czM1ZPjclw7hGa7OT7',
       // ? Confirm if I need to add the new dashboards here
       //not-used 'nodes.json': 'kcb9C2QDe4IYcjiTOmYyfhsImuzxRcvwWC3YLJPS',
-      'persistentvolumesusage.json': '919b92a8e8041bd567af9edab12c6738',
+      //non-default
+      'persistentvolumesusage.json': '497766c2c6ea4851b6b4397cb8a96738',
       //not-used 'pods.json': 'AMK9hS0rSbSz7cKjPHcOtk6CGHFjhSHwhbQ3sedK',
       //not-used 'statefulset.json': 'dPiBt0FRG5BNYo0XJ4L0Meoc7DWs9eL40c1CRc1g',
       'k8s-resources-windows-cluster.json': '6438557df4391b100730f2494bcc6738',
@@ -54,18 +56,22 @@
       'k8s-windows-node-rsrc-use.json': 'YCBDf6738',
       'k8s-resources-workloads-namespace.json': 'a87fb0d919ec0ea5f6543124e16c6738',
       'k8s-resources-workload.json': 'a164a7f0339f99e89cea5cb47e9b6738',
-      'apiserver.json': '09ec8aa1e996d6ffcd6817bbaff46738',
+      'apiserver.json': 'efe630eb6d9d4888ac542cad7a666738',
       'controller-manager.json': '3aa700ed75ce4c64ba52ef5ca23f6738',
       'scheduler.json': '0252eb9a5da7445a8787400871546738',
-      'proxy.json': '632e265de029684c40b21cb76bca6738',
+      'proxy.json': '6cc85d728d7245aeaa630a3486206738',
       'kubelet.json': '3138fa155d5915769fbded898ac06738',
-      //newly added
-      'workload-total.json': '728bf77cc1166d2f3133bf2584686738',
-      'pod-total.json': '7a18067ce943a40ae25454675c196738',
-      'namespace-by-workload.json': 'bbb2a765a623ae38130206c7d94a6738',
-      'namespace-by-pod.json': '8b7a8b326d7a6f1f04244066368c6738',
+      //newly added non-default
+      'workload-total.json': 'a11d4aaa68bb4018b6a83623ca046738',
+      //non-default
+      'pod-total.json': 'e7f918d9d1aa4d37a3933c0f9a816738',
+      //non-default
+      'namespace-by-workload.json': '2043d0bedbc24793aecdc5ed7dc16738',
+      //non-default
+      'namespace-by-pod.json': '6fd059f91b894b499a13fada53606738',
       'k8s-resources-node.json': '200ac8fdbfbb74b39aff88118e4d6738',
-      'cluster-total.json': 'ff635a025bcfea7bc3dd4f5089906738',
+      //non-default
+      'cluster-total.json': '2fdf7ea1f7c04f028a220e7835066738', 
 
     },
 
