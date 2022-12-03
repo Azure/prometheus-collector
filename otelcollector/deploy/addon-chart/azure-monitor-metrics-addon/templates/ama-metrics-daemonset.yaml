@@ -308,9 +308,11 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
+            {{- if not .Values.useMonitoringAccount }}
             - mountPath: /etc/config/settings/akv
               name: secrets-store-inline
               readOnly: true
+            {{- end }}
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
@@ -327,39 +329,34 @@ spec:
             initialDelaySeconds: 300
             timeoutSeconds: 15
             failureThreshold: 3
-        - name: addon-token-adapter
+        {{- if .Values.useMonitoringAccount }}
+        - name: addon-token-adapter-win
           command:
-            - /addon-token-adapter
+           - addon-token-adapter-win
           args:
-            - --secret-namespace=kube-system
-            - --secret-name=aad-msi-auth-token
-            - --token-server-listening-port=7777
-            - --health-server-listening-port=9999
-          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: AZMON_COLLECT_ENV
-              value: "false"
+           - --secret-namespace=kube-system
+           - --secret-name=aad-msi-auth-token
+           - --token-server-listening-port=7777
+           - --health-server-listening-port=9999
+          image: norshtein/addon-token-adapter-win:v0.8
+          imagePullPolicy: Always
           livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 9999
-            initialDelaySeconds: 10
-            periodSeconds: 60
+           httpGet:
+             path: /healthz
+             port: 9999
+           initialDelaySeconds: 10
+           periodSeconds: 60
           resources:
-            limits:
-              cpu: 500m
-              memory: 500Mi
-            requests:
-              cpu: 20m
-              memory: 30Mi
+           limits:
+             memory: 500Mi
+           requests:
+             cpu: 100m
+             memory: 100Mi
           securityContext:
-            capabilities:
-              drop:
-                - ALL
-              add:
-                - NET_ADMIN
-                - NET_RAW
+           capabilities:
+             add:
+               - NET_ADMIN
+        {{- end }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
