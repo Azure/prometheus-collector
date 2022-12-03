@@ -13,3 +13,5 @@
       - source_labels: [__name__]
         action: keep
         regex: "up"
+      kubernetes_sd_configs:
+      - role: node

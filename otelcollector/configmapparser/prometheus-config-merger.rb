@@ -82,7 +82,7 @@ def UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting)
     config = YAML.load(File.read(yamlConfigFile))
     scrapeIntervalConfig = scrapeIntervalSetting
 
-    # Iterate through each scrape config and update scrape interval config 
+    # Iterate through each scrape config and update scrape interval config
     if !config.nil?
       scrapeConfigs = config["scrape_configs"]
       if !scrapeConfigs.nil? && !scrapeConfigs.empty?
@@ -320,7 +320,7 @@ def populateDefaultPrometheusConfig
         defaultConfigs.push(@windowsexporterDefaultDsFile)
 
         # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
+      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "linux"
         UpdateScrapeIntervalConfig(@windowsexporterDefaultRsAdvancedFile, windowsexporterScrapeInterval)
         defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
 
@@ -359,7 +359,7 @@ def populateDefaultPrometheusConfig
         defaultConfigs.push(@windowskubeproxyDefaultDsFile)
 
       # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
+      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "linux"
         UpdateScrapeIntervalConfig(@windowskubeproxyDefaultRsAdvancedFile, windowskubeproxyScrapeInterval)
         defaultConfigs.push(@windowskubeproxyDefaultRsAdvancedFile)
 
