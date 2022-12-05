@@ -20,10 +20,10 @@
     Same config map containing scrape configurtion will work with addon. But the name of the configmap(s) are different between HELM chart and addon. See below . Also note that the addon config map(s) *must* be in kube-system namespace , where the addon runs.
 
 
-    | HELM Chart                           | Addon | 
-    | -----------------------                   |-------------| 
-    |<helm_release_name>-prometheus-config               | ama-metrics-prometheus-config    |
-    |<helm_release_name>-prometheus-config-node               | ama-metrics-prometheus-config-node       |
+| HELM Chart                           | Addon | 
+| -----------------------                   |-------------| 
+|<helm_release_name>-prometheus-config               | ama-metrics-prometheus-config    |
+|<helm_release_name>-prometheus-config-node               | ama-metrics-prometheus-config-node       |
 
     In addition to the above scrape configuration configmaps, some of the HELM chart parameters (like enabling/disabling predefined targets) acn be specified through `ama-metrics-settings-configmap` with the addon. See [here](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-metrics-scrape-configuration#metrics-addon-settings-configmap) for more details.
 
