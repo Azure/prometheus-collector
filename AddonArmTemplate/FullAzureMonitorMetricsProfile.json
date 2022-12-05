@@ -71,7 +71,6 @@
       "apiVersion": "2021-09-01-preview",
       "name": "[variables('dceName')]",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
-      "kind": "Linux",
       "properties": {}
     },
     {
@@ -79,7 +78,6 @@
       "apiVersion": "2021-09-01-preview",
       "name": "[variables('dcrName')]",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
-      "kind": "Linux",
       "properties": {
         "dataCollectionEndpointId": "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
         "dataFlows": [
