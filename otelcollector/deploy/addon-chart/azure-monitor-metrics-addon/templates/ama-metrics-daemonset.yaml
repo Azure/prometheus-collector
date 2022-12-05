@@ -229,7 +229,8 @@ spec:
           image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
           imagePullPolicy: IfNotPresent
           resources:
-            cpu: 200m
+            limits:
+              cpu: 200m
               memory: 1Gi
             requests:
               cpu: 75m
@@ -308,11 +309,6 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
-            {{- if not .Values.useMonitoringAccount }}
-            - mountPath: /etc/config/settings/akv
-              name: secrets-store-inline
-              readOnly: true
-            {{- end }}
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
