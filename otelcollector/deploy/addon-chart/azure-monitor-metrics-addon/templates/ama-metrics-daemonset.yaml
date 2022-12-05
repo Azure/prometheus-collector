@@ -227,7 +227,7 @@ spec:
       containers:
         - name: prometheus-collector
           image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: IfNotPresent
           resources:
             cpu: 200m
               memory: 1Gi

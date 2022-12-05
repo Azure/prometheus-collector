@@ -322,6 +322,7 @@ def populateDefaultPrometheusConfig
         # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "linux"
         UpdateScrapeIntervalConfig(@windowsexporterDefaultRsAdvancedFile, windowsexporterScrapeInterval)
+        AppendMetricRelabelConfig(@windowsexporterDefaultRsAdvancedFile, winexporterMetricsKeepListRegex)
         defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
 
         # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
@@ -361,6 +362,7 @@ def populateDefaultPrometheusConfig
       # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "linux"
         UpdateScrapeIntervalConfig(@windowskubeproxyDefaultRsAdvancedFile, windowskubeproxyScrapeInterval)
+        AppendMetricRelabelConfig(@windowskubeproxyDefaultRsAdvancedFile, winkubeproxyMetricsKeepListRegex)
         defaultConfigs.push(@windowskubeproxyDefaultRsAdvancedFile)
 
         # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
