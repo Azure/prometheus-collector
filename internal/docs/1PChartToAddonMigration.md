@@ -4,13 +4,13 @@
   
     Note this step is necessary, in the sense, that if you create AMW using Azure portal, internal only features like ICM integration will not work.
     
-## step 2 : Enable metrics addon in your AKS cluster using external [documentation](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-metrics-enable?tabs=azure-portal)
+## step 2 : Delete Prometheus-collecotr HELM chart and enable metrics addon in your AKS cluster. See external [documentation](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-metrics-enable?tabs=azure-portal) for enabling addon in your cluster.
   
     You can enable thrugh CLI/UX/ARM as specified in the above documentation link.
 
 ## step 3 : Tune collection settings (optional, as needed)
     
-    Prometheus collector chart by default scrapes more targets and hence collects more Prometheus metrics from AKS clusters. Add-on collects a subset of metrics that are being collected by Helm chart based deployment. If you want to enable other targets for addon , please follow the steps [here](../../GeneratedMonitoringArtifacts/non-default/README.md).
+    Prometheus collector chart by default scrapes more targets and hence collects more Prometheus metrics from AKS clusters. Add-on collects a subset of metrics that are being collected by Helm chart based deployment. If you want to enable other targets for addon , please follow the steps [here](https://github.com/Azure/prometheus-collector/blob/vishwa/1paddon/GeneratedMonitoringArtifacts/non-default/README.md).
     
 
 # FAQs
@@ -35,4 +35,12 @@
 ## 3) Where can i see the ingestion utilization/limits for my AMW, and how do i put a request to increase it ?
 
     You can see your quota/usage for ingestion from the `Metrics` menu for your Azure Monitor workspace in the Azure Portal. Check your geneva account's current usage. All AMW comes with default ingestion limits of `1 million events/min` and `1 million time-series per 12 hours`. If your current geneva account's Prometheus usage is more than that, you can file a support ticket from the Azure Monitor Workspace's `Support Request` menu in the portal to increase the limits.
+
+## 4) Can i run the HELM chart & the addon side-by-side ?
+    
+    Side by side scenario is neither tested not supported, as it will cause duplicate time-series to be ingested. Please uninstall the Helm chart before enabliong addon.
+
+## 5) Can i run addon on non-AKS clusters ?
+
+    Addon is only for AKS clusters. If you are currently using Helm chart for monitoring a non-AKS cluster, please reach out to us (ciprometheus@microsoft.com)
 
