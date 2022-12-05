@@ -6,7 +6,7 @@ Note this step is necessary, in the sense, that if you create AMW using Azure po
     
 ## step 2 : Delete Prometheus-collecotr HELM chart and enable metrics addon in your AKS cluster. See external [documentation](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-metrics-enable?tabs=azure-portal) for enabling addon in your cluster.
   
-    You can enable thrugh CLI/UX/ARM as specified in the above documentation link.
+You can enable thrugh CLI/UX/ARM as specified in the above documentation link.
 
 ## step 3 : Tune collection settings (optional, as needed)
     
