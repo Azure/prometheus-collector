@@ -4,7 +4,7 @@ AzureMonitorMetrics:
     #MetricLabelsAllowlist: "testlabel=[.*]"
     #MetricAnnotationsAllowList: ""
     ImageRepository: "/oss/kubernetes/kube-state-metrics"
-# Kube-state-metrics ImageTag - v2.6.0, corresponds to chart version - 4.18.0
+# Kube-state-metrics ImageTag - v2.6.0, corresponds to chart version - 4.23.0
     ImageTag: "v2.6.0"
     Collectors:
       - certificatesigningrequests
@@ -16,6 +16,7 @@ AzureMonitorMetrics:
       - horizontalpodautoscalers
       - ingresses
       - jobs
+      - leases
       - limitranges
       - mutatingwebhookconfigurations
       - namespaces
@@ -34,7 +35,7 @@ AzureMonitorMetrics:
       - storageclasses
       - validatingwebhookconfigurations
       - volumeattachments
-  ImageRepository: "/azuremonitor/containerinsights/ciprod/prometheus-collector/images"
+  ImageRepository: ${MCR_REPOSITORY}
   ImageTag: ${IMAGE_TAG}
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner. 
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP - 
@@ -42,10 +43,10 @@ AzureMonitorMetrics:
   # ImageTag: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/kube-control-plane/templates/_images.tpl&version=GBrashmi/prom-addon-arm64&line=530&lineEnd=530&lineStartColumn=28&lineEndColumn=53&lineStyle=plain&_a=contents
   AddonTokenAdapter:
     ImageRepository: "/aks/msi/addon-token-adapter"
-    ImageTag: "master.220916.1"
+    ImageTag: "master.221118.2"
 global:
   commonGlobals:
     CloudEnvironment: "AzureCloud"
-    Region: "aks-region"
+    Region: "${AKS_REGION}"
     Customer:
-      AzureResourceID: /subscriptions/test-sub/resourceGroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-resource
+      AzureResourceID: ${AKS_RESOURCE_ID}

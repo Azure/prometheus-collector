@@ -31,7 +31,7 @@
   "ServiceResourceGroups": [
     {
       "AzureResourceGroupName": "PrometheusCollector-Release",
-      "Location": "eastus2",
+      "Location": "eastus2euap",
       "InstanceOf": "PrometheusCollector-ServiceResourceGroupDefinition",
       "AzureSubscriptionId": "30c56c3a-54da-46ea-b004-06eb33432687",
       "ScopeTags": [
