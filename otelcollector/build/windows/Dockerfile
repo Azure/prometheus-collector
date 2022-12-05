@@ -1,4 +1,6 @@
-FROM mcr.microsoft.com/windows/servercore:ltsc2019
+# Supported values of windows version are ltsc2019 or ltsc2022 which are being passed manually or by the build pipeline
+ARG WINDOWS_VERSION=
+FROM mcr.microsoft.com/windows/servercore:${WINDOWS_VERSION}
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "windows"
