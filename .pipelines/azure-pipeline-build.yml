@@ -45,6 +45,8 @@ jobs:
 
         LINUX_IMAGE_TAG=$SEMVER
         WINDOWS_IMAGE_TAG=$SEMVER-win
+        WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
+        WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
 
         LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
         WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
@@ -55,6 +57,8 @@ jobs:
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
+        echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2019_BASE_IMAGE_VERSION"
+        echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2022_BASE_IMAGE_VERSION"
         echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
         echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
       displayName: 'Build: set image registry, repo, and tags'
@@ -72,6 +76,12 @@ jobs:
 
         envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
         tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector
+
+        cd $(Build.ArtifactStagingDirectory)
+        cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
+        export AKS_REGION="westeurope"
+        export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu"
+        envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
       displayName: 'Ev2: package artifacts.tar.gz for prod release'
 
     - task: CopyFiles@2
@@ -95,6 +105,8 @@ jobs:
   dependsOn: common
   variables:
     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+  # This is necessary because of: https://github.com/moby/moby/issues/37965
+    DOCKER_BUILDKIT: 1
   steps:
 
     - task: CodeQL3000Init@0
@@ -109,8 +121,9 @@ jobs:
     - bash: |
         sudo apt-get install build-essential -y
         make
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+      displayName: "SDL: build otelcollector, promconfigvalidator, and fluent-bit plugin for scanning"
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
@@ -140,17 +153,27 @@ jobs:
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-
+ 
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
-        docker buildx create --name testbuilder
-        docker buildx use testbuilder
+
+        # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+        sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+        docker buildx create --name dockerbuilder
+        docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         if [ "$(Build.Reason)" != "PullRequest" ]; then
-          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           docker pull $(LINUX_FULL_IMAGE_NAME)
         else
-          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --load
+          
+          # Build multiarch image to make sure there are no issues
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
+
+          # Load in amd64 image to run vulnerability scan
+          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
@@ -232,6 +255,8 @@ jobs:
   - Common
   variables:
     WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
+    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
   steps:
     - task: GoTool@0
       displayName: "Build: specify golang version"
@@ -244,15 +269,15 @@ jobs:
       displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
     - powershell: |
-        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)
+        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
-        @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
+        @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build image"
+      displayName: "Build: build WS2019 image"
 
     - powershell: |
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker push $(WINDOWS_FULL_IMAGE_NAME)
+        docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
       displayName: "Build: push image to dev ACR"
       condition: eq(variables.IS_PR, false)
 
@@ -262,8 +287,34 @@ jobs:
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
-        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
+        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
+
+    - powershell: |
+        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+        @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+      displayName: "Build: build WS2022 image"
+
+    - powershell: |
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+      displayName: "Build: push image to dev ACR"
+      condition: eq(variables.IS_PR, false)
+
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)'
         alertWarningLevel: 'High'
+
+    - powershell: |
+        docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+        docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+      displayName: "Build: Triggering manigest for multi-arc docker image"
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
@@ -303,11 +354,6 @@ jobs:
       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
       helm version
     displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
-
-  - bash: |
-      envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Values.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-      helm version
-    displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
 
   - bash: |
       helm dep update
@@ -399,6 +445,13 @@ jobs:
       waitForExecution: false
       arguments: '--dependency-update --set image.repository=$(MCR_REGISTRY)$(MCR_REPOSITORY) --set image.tag=$(IMAGE_TAG) --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-wcus" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.clientId=$(CI_PROMETHEUS_KV_CLIENTID) --set azureKeyVault.clientSecret=$(CI_PROMETHEUS_KV_CLIENTSECRET) --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi"'
 
+  - bash: |
+      export AKS_REGION="eastus"
+      export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
+      envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+      ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+    displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
+
   - task: HelmDeploy@0
     displayName: "Deploy: ci-dev-aks-mac-eus cluster"
     inputs:
@@ -412,4 +465,4 @@ jobs:
       chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
       releaseName: 'ama-metrics'
       waitForExecution: false
-      arguments: '--dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Values.yaml'
+      arguments: --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml

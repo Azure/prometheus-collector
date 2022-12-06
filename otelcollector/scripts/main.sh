@@ -23,6 +23,7 @@ echo_var () {
 }
 
 #Run inotify as a daemon to track changes to the mounted configmap.
+touch /opt/inotifyoutput.txt
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
 if [ -z $MODE ]; then
@@ -60,8 +61,7 @@ if [  -e "/etc/config/settings/config-version" ] && [  -s "/etc/config/settings/
       source ~/.bashrc
 fi
 
-# Get AppInsights key
-aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 --decode)	
+aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 -d)	
 export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey	
 echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc	
 source ~/.bashrc
@@ -159,7 +159,7 @@ source ~/.bashrc
 echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
 
 #start cron daemon for logrotate
-service cron restart > /dev/null
+/usr/sbin/crond -n -s &
 
 #get controller kind in lowercase, trimmed
 controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
@@ -273,8 +273,16 @@ else
 fi
 
 # Get ME version
-ME_VERSION=`dpkg -l | grep metricsext | awk '{print $2 " " $3}'`
+ME_VERSION=`cat /opt/metricsextversion.txt`
 echo_var "ME_VERSION" "$ME_VERSION"
+
+# Get ruby version
+RUBY_VERSION=`ruby --version`
+echo_var "RUBY_VERSION" "$RUBY_VERSION"
+
+# Get golang version
+GOLANG_VERSION=`cat /opt/goversion.txt`
+echo_var "GOLANG_VERSION" "$GOLANG_VERSION"
 
 # Start otelcollector
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
@@ -289,27 +297,26 @@ echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
 PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
 echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
-#get ruby version
-RUBY_VERSION=`ruby --version`
-echo_var "RUBY_VERSION" "$RUBY_VERSION"
-
-echo "Starting telegraf"
+echo "starting telegraf"
 if [ "$TELEMETRY_DISABLED" != "true" ]; then
-  /opt/telegraf/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
-  TELEGRAF_VERSION=`/opt/telegraf/telegraf --version`
+  /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+  TELEGRAF_VERSION=`cat /opt/telegrafversion.txt`
   echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
 fi
 
-echo "Starting fluent-bit"
-/opt/td-agent-bit/bin/td-agent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
-FLUENT_BIT_VERSION=`dpkg -l | grep td-agent-bit | awk '{print $2 " " $3}'`
+echo "starting fluent-bit"
+mkdir /opt/microsoft/fluent-bit
+touch /opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log
+fluent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
+FLUENT_BIT_VERSION=`fluent-bit --version`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
 
 if [ "${MAC}" == "true" ]; then
-      # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.
-      echo "starting inotify for watching mdsd config update"
-      inotifywait /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
+  # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.
+  echo "starting inotify for watching mdsd config update"
+  touch /opt/inotifyoutput-mdsd-config.txt
+  inotifywait /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
 fi
 
 # Setting time at which the container started running, so that it can be used for empty configuration checks in livenessprobe

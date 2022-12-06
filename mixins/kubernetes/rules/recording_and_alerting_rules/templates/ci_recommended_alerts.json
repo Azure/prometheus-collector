@@ -48,7 +48,7 @@
                 "rules": [
                     {
                         "alert": "Average CPU usage per container is greater than 95%",
-                        "expression": "sum (rate(container_cpu_usage_seconds_total{image!=\"\", container_name!=\"POD\"}[5m])) by (pod,cluster,container,namespace) / sum(container_spec_cpu_quota{image!=\"\", container_name!=\"POD\"}/container_spec_cpu_period{image!=\"\", container_name!=\"POD\"}) by (pod,cluster,container,namespace) > .95",
+                        "expression": "sum (rate(container_cpu_usage_seconds_total{image!=\"\", container!=\"POD\"}[5m])) by (pod,cluster,container,namespace) / sum(container_spec_cpu_quota{image!=\"\", container!=\"POD\"}/container_spec_cpu_period{image!=\"\", container!=\"POD\"}) by (pod,cluster,container,namespace) > .95",
                         "for": "PT5M",
                         "annotations": {
                             "description": "Average CPU usage per container is greater than 95%"
@@ -67,7 +67,7 @@
                     },
                     {
                         "alert": "Average Memory usage per container is greater than 95%.",
-                        "expression": "(container_memory_working_set_bytes{container!=\"\", image!=\"\", container_name!=\"POD\"} / on(namespace,cluster,pod,container) group_left kube_pod_container_resource_limits{resource=\"memory\", node!=\"\"}) > .95 ",
+                        "expression": "(container_memory_working_set_bytes{container!=\"\", image!=\"\", container!=\"POD\"} / on(namespace,cluster,pod,container) group_left kube_pod_container_resource_limits{resource=\"memory\", node!=\"\"}) > .95 ",
                         "for": "PT10M",
                         "annotations": {
                             "description": "Average Memory usage per container is greater than 95%"
@@ -124,8 +124,8 @@
                     },
                     {
                         "alert": "Pod container restarted in last 1 hour",
-                        "expression": "sum by (namespace, pod, container, cluster) (kube_pod_container_status_restarts_total{job=\"kube-state-metrics\", namespace=\"kube-system\"}) > 0 ",
-                        "for": "PT15M", 
+                        "expression": "sum by (namespace, pod, container, cluster)(increase(kube_pod_container_status_restarts_total{job=\"kube-state-metrics\"}[1h])) > 0 ",
+                        "for": "PT15M",
                         "annotations": {
                             "description": "Pod container restarted in last 1 hour"
                         },
@@ -254,7 +254,7 @@
                                 "actionGroupId": "[parameters('actionGroupResourceId')]"
                             }
                         ]
-                    }  
+                    }
                 ]
             }
         }
