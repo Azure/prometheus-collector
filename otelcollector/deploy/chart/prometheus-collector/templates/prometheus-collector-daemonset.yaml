@@ -123,7 +123,7 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
-            {{- if and (.Values.windowsDaemonset) }}
+            {{- if .Values.windowsDaemonset }}
             - name: WINMODE
               value: "advanced" # WINDOWS: only supported mode is 'advanced' [when not using MAC], any other value will be the default/non-advance mode
             {{- else }}
