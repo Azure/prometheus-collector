@@ -10,7 +10,7 @@ You can enable thrugh CLI/UX/ARM as specified in the above documentation link.
 
 ## step 3 : Tune collection settings (optional, as needed)
     
-Prometheus collector chart by default scrapes more targets and hence collects more Prometheus metrics from AKS clusters. Add-on collects a subset of metrics that are being collected by Helm chart based deployment. If you want to enable other targets for addon , please follow the steps [here](https://github.com/Azure/prometheus-collector/blob/vishwa/1paddon/GeneratedMonitoringArtifacts/non-default/README.md).
+Prometheus collector chart by default scrapes more targets and hence collects more Prometheus metrics from AKS clusters. Add-on collects a subset of metrics that are being collected by Helm chart based deployment. If you want to enable other targets for addon , please follow the steps [here](https://github.com/Azure/prometheus-collector/blob/main/GeneratedMonitoringArtifacts/non-default/README.md).
     
 
 # FAQs
