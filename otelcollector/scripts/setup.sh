@@ -42,6 +42,7 @@ else
   wget https://github.com/Azure/prometheus-collector/releases/download/azure-mdsd-1.23.3/azure-mdsd_1.23.4-build.master.28_x86_64.rpm
   sudo tdnf install -y azure-mdsd_1.23.4-build.master.28_x86_64.rpm
 fi
+
 # Install this way once moving to the Mariner published RPMs:
 # sudo tdnf install -y azure-mdsd
 
