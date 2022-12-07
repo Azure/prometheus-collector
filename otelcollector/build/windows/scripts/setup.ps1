@@ -11,7 +11,7 @@ New-Item -Type Directory -Path /opt/ruby -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/genevamonitoringagent -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/genevamonitoringagent/datadirectory -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /etc/genevamonitoringagent
-###########################################################################################
+############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
     Invoke-WebRequest -Uri https://github.com/bragi92/helloWorld/releases/download/test/MdmMetricsExtension.2.2022.1026.1505.nupkg -OutFile /installation/ME/mdmmetricsextension.2.2022.1026.1505.zip
@@ -25,7 +25,7 @@ catch {
     exit 1
 }
 Write-Host ('Finished installing Metrics Extension')
-###########################################################################################
+############################################################################################
 Write-Host ('Installing Fluent Bit');
 try {
     # Keep version in sync with linux in setup.sh file
@@ -42,7 +42,7 @@ catch {
     exit 1
 }
 Write-Host ('Finished installing fluentbit')
-###########################################################################################
+############################################################################################
 Write-Host ('Installing Visual C++ Redistributable Package')
 $vcRedistLocation = 'https://aka.ms/vs/16/release/vc_redist.x64.exe'
 $vcInstallerLocation = "\installation\vc_redist.x64.exe"
@@ -54,7 +54,7 @@ Copy-Item -Path /Windows/System32/msvcp140.dll -Destination /opt/fluent-bit/bin
 Copy-Item -Path /Windows/System32/vccorlib140.dll -Destination /opt/fluent-bit/bin
 Copy-Item -Path /Windows/System32/vcruntime140.dll -Destination /opt/fluent-bit/bin
 Write-Host ('Finished Installing Visual C++ Redistributable Package')
-###########################################################################################
+############################################################################################
 Write-Host ('Installing Telegraf');
 try {
     # Keep version in sync with linux in setup.sh file
@@ -70,7 +70,7 @@ catch {
     exit 1
 }
 Write-Host ('Finished downloading Telegraf')
-###########################################################################################
+############################################################################################
 #Remove gemfile.lock for http_parser gem 0.6.0
 #see  - https://github.com/fluent/fluentd/issues/3374 https://github.com/tmm1/http_parser.rb/issues/70
 $gemfile = "\ruby26\lib\ruby\gems\2.6.0\gems\http_parser.rb-0.6.0\Gemfile.lock"
@@ -79,7 +79,7 @@ If (Test-Path -Path $gemfile ) {
     Write-Host ("Renaming unused gemfile.lock for http_parser 0.6.0")
     Rename-Item -Path $gemfileFullPath -NewName  "renamed_Gemfile_lock.renamed"
 }
-###########################################################################################
+############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
     $genevamonitoringagentUri='https://github.com/bragi92/helloWorld/releases/download/MA/GenevaMonitoringAgent.46.2.54-jriego2233952464.zip'
@@ -94,6 +94,6 @@ catch {
     exit 1
 }
 Write-Host ('Finished downloading GenevaMonitoringAgent')
-###########################################################################################
+############################################################################################
 Write-Host ("Removing Install folder")
 Remove-Item /installation -Recurse
