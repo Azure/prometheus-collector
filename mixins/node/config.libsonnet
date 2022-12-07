@@ -65,8 +65,9 @@
     grafanaDashboardIDs: {
       'nodes.json': 'D4pVs6738',
       'node-rsrc-use.json': 't5aja6738',
-      'node-cluster-rsrc-use.json': 'VdrOA6738',
-      'node-multicluster-rsrc-use.json': 'bdjOM6738',
+      //non-default
+      'node-cluster-rsrc-use.json': 'Vdeba6738',
+      'node-multicluster-rsrc-use.json': 'abcjOM6738',
     },
   },
 }

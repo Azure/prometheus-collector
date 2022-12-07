@@ -4,7 +4,7 @@
     instanceLabel: 'pod',
 
     grafanaDashboardIDs: {
-      'coredns.json': 'vkQ0U6738',
+      'coredns.json': 'ddcc77bf776f4f5f97660c85e1e96738',
     },
 
     pluginNameLabel: 'name',
