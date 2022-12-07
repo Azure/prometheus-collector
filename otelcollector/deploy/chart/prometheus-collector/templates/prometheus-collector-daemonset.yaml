@@ -294,13 +294,13 @@ spec:
             {{- if not .Values.useMonitoringAccount }}
             - name: CLUSTER
               value: {{ required "clusterName is required" .Values.clusterName | toString | trim | quote }}
-            - name: customEnvironment
-              value: {{ required "customEnvironment is required when using monitoring account" .Values.customEnvironment | toString | trim | lower | quote }}
             {{- else }}
             - name: CLUSTER
               value: {{ required "azureResourceId is required when using monitoring account" .Values.azureResourceId | toString | quote }}
             - name: AKSREGION
               value: {{ required "azureResourceRegion is required when using monitoring account" .Values.azureResourceRegion | toString | trim | lower | quote }}
+            - name: customEnvironment
+              value: {{ required "customEnvironment is required when using monitoring account" .Values.customEnvironment | toString | trim | lower | quote }}
             {{- end }}
             {{- if .Values.internalSettings.intEnvironment  }}
             - name: ME_ADDITIONAL_FLAGS
