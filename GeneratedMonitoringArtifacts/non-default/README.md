@@ -41,4 +41,4 @@ By default Azure Managed Prometheus collects metrics used by node-exporter(Linux
 1. Import all other Kubernetes mixin dashboards from [here](https://github.com/Azure/prometheus-collector/tree/main/GeneratedMonitoringArtifacts/non-default/node-exporter) into your Grafana instance
    
 
-> NOTE: You can find a copy for settings config map with all the changes above [here](), in case if you just want to use it readily.
+> NOTE: You can find a copy for settings config map with all the changes above [here](https://github.com/Azure/prometheus-collector/blob/main/GeneratedMonitoringArtifacts/non-default/ama-metrics-settings-configmap.yaml), in case if you just want to use it readily.
