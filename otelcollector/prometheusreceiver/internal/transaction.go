@@ -88,7 +88,7 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	default:
 	}
 
-	lsCopy := labels.New(ls)
+	lsCopy := labels.Copy(ls)
 	if len(t.externalLabels) != 0 {
 		lsCopy = append(lsCopy, t.externalLabels...)
 		sort.Sort(lsCopy)
