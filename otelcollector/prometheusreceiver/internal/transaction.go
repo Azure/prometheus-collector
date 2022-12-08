@@ -88,14 +88,14 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	default:
 	}
 
-	labelset := ls
+	lsCopy := labels.New(ls)
 	if len(t.externalLabels) != 0 {
-		labelset := append(ls, t.externalLabels...)
-		sort.Sort(labelset)
+		lsCopy = append(lsCopy, t.externalLabels...)
+		sort.Sort(lsCopy)
 	}
 
 	if t.isNew {
-		if err := t.initTransaction(labelset); err != nil {
+		if err := t.initTransaction(lsCopy); err != nil {
 			return 0, err
 		}
 	}
@@ -104,11 +104,11 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	// * https://github.com/open-telemetry/wg-prometheus/issues/44
 	// * https://github.com/open-telemetry/opentelemetry-collector/issues/3407
 	// as Prometheus rejects such too as of version 2.16.0, released on 2020-02-13.
-	if dupLabel, hasDup := labelset.HasDuplicateLabelNames(); hasDup {
+	if dupLabel, hasDup := lsCopy.HasDuplicateLabelNames(); hasDup {
 		return 0, fmt.Errorf("invalid sample: non-unique label names: %q", dupLabel)
 	}
 
-	metricName := labelset.Get(model.MetricNameLabel)
+	metricName := lsCopy.Get(model.MetricNameLabel)
 	if metricName == "" {
 		return 0, errMetricNameNotFound
 	}
@@ -120,23 +120,23 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 		if val == 0.0 {
 			t.logger.Warn("Failed to scrape Prometheus endpoint",
 				zap.Int64("scrape_timestamp", atMs),
-				zap.Stringer("target_labels", labelset))
+				zap.Stringer("target_labels", lsCopy))
 		} else {
 			t.logger.Warn("The 'up' metric contains invalid value",
 				zap.Float64("value", val),
 				zap.Int64("scrape_timestamp", atMs),
-				zap.Stringer("target_labels", labelset))
+				zap.Stringer("target_labels", lsCopy))
 		}
 	}
 
 	// For the `target_info` metric we need to convert it to resource attributes.
 	if metricName == targetMetricName {
-		return 0, t.AddTargetInfo(labelset)
+		return 0, t.AddTargetInfo(lsCopy)
 	}
 
 	curMF := t.getOrCreateMetricFamily(metricName)
 
-	return 0, curMF.addSeries(t.getSeriesRef(labelset, curMF.mtype), metricName, labelset, atMs, val)
+	return 0, curMF.addSeries(t.getSeriesRef(lsCopy, curMF.mtype), metricName, lsCopy, atMs, val)
 }
 
 func (t *transaction) getOrCreateMetricFamily(mn string) *metricFamily {
