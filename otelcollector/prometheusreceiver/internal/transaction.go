@@ -88,7 +88,10 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	default:
 	}
 
-	sort.Sort(ls)
+	if len(t.externalLabels) != 0 {
+		ls := append(ls, t.externalLabels...)
+		sort.Sort(ls)
+	}
 
 	if t.isNew {
 		if err := t.initTransaction(ls); err != nil {
@@ -131,11 +134,6 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	}
 
 	curMF := t.getOrCreateMetricFamily(metricName)
-
-	if len(t.externalLabels) != 0 {
-		ls = append(ls, t.externalLabels...)
-		sort.Sort(ls)
-	}
 
 	return 0, curMF.addSeries(t.getSeriesRef(ls, curMF.mtype), metricName, ls, atMs, val)
 }
