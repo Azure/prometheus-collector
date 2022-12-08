@@ -88,14 +88,14 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 	default:
 	}
 
-	lsCopy := ls.Copy()
+	ls := ls.Copy()
 	if len(t.externalLabels) != 0 {
-		lsCopy = append(lsCopy, t.externalLabels...)
+		ls = append(ls, t.externalLabels...)
 		sort.Sort(lsCopy)
 	}
 
 	if t.isNew {
-		if err := t.initTransaction(lsCopy); err != nil {
+		if err := t.initTransaction(ls); err != nil {
 			return 0, err
 		}
 	}
@@ -108,7 +108,7 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 		return 0, fmt.Errorf("invalid sample: non-unique label names: %q", dupLabel)
 	}
 
-	metricName := lsCopy.Get(model.MetricNameLabel)
+	metricName := ls.Get(model.MetricNameLabel)
 	if metricName == "" {
 		return 0, errMetricNameNotFound
 	}
@@ -120,23 +120,23 @@ func (t *transaction) Append(ref storage.SeriesRef, ls labels.Labels, atMs int64
 		if val == 0.0 {
 			t.logger.Warn("Failed to scrape Prometheus endpoint",
 				zap.Int64("scrape_timestamp", atMs),
-				zap.Stringer("target_labels", lsCopy))
+				zap.Stringer("target_labels", ls))
 		} else {
 			t.logger.Warn("The 'up' metric contains invalid value",
 				zap.Float64("value", val),
 				zap.Int64("scrape_timestamp", atMs),
-				zap.Stringer("target_labels", lsCopy))
+				zap.Stringer("target_labels", ls))
 		}
 	}
 
 	// For the `target_info` metric we need to convert it to resource attributes.
 	if metricName == targetMetricName {
-		return 0, t.AddTargetInfo(lsCopy)
+		return 0, t.AddTargetInfo(ls)
 	}
 
 	curMF := t.getOrCreateMetricFamily(metricName)
 
-	return 0, curMF.addSeries(t.getSeriesRef(lsCopy, curMF.mtype), metricName, lsCopy, atMs, val)
+	return 0, curMF.addSeries(t.getSeriesRef(ls, curMF.mtype), metricName, ls, atMs, val)
 }
 
 func (t *transaction) getOrCreateMetricFamily(mn string) *metricFamily {
