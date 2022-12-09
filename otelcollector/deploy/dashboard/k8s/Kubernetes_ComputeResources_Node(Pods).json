@@ -950,7 +950,7 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(kube_node_info{cluster=\"$cluster\"}, node)",
+          "query": "label_values(kube_node_info{cluster=\"$cluster\", os_image!~\"windows.*\"}, node)",
           "refId": "Prometheus-INT-Cluster-node-Variable-Query"
         },
         "refresh": 2,
