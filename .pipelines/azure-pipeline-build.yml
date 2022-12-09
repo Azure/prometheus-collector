@@ -247,8 +247,8 @@ jobs:
         GdnBreakGdnToolSemmle: true
         GdnBreakGdnToolSemmleSeverity: 'Warning'
 
-- job: Windows
-  displayName: "Build windows image"
+- job: Windows2019
+  displayName: "Build windows 2019 image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
   dependsOn:
@@ -256,7 +256,6 @@ jobs:
   variables:
     WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
     WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
-    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
   steps:
     - task: GoTool@0
       displayName: "Build: specify golang version"
@@ -289,6 +288,26 @@ jobs:
         verbosity: 'Verbose'
         dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
 
+- job: Windows2022
+  displayName: "Build windows 2022 image"
+  pool:
+    name: Azure-Pipelines-Windows-CI-Test-EO
+  dependsOn:
+  - Common
+  variables:
+    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+  steps:
+    - task: GoTool@0
+      displayName: "Build: specify golang version"
+      inputs:
+        version: '1.19'
+
+    - powershell: |
+        ./makefile_windows.ps1
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+
     - powershell: |
         docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
         @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
@@ -309,6 +328,24 @@ jobs:
         verbosity: 'Verbose'
         dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)'
         alertWarningLevel: 'High'
+
+- job: WindowsMultiArch
+  displayName: "Build windows multi-arch image"
+  pool:
+    name: Azure-Pipelines-Windows-CI-Test-EO
+  dependsOn:
+  - Common
+  - Windows2019
+  - Windows2022
+  variables:
+    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
+    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+  steps:
+    - task: GoTool@0
+      displayName: "Build: specify golang version"
+      inputs:
+        version: '1.19'
 
     - powershell: |
         docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
@@ -337,7 +374,7 @@ jobs:
   dependsOn:
   - Common
   - Linux
-  - Windows
+  - WindowsMultiArch
   variables:
     HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
