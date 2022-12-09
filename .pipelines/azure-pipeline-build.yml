@@ -269,8 +269,8 @@ jobs:
 
     - powershell: |
         docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
-        New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
         @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
+        New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build WS2019 image"
 
@@ -310,8 +310,8 @@ jobs:
 
     - powershell: |
         docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
-        New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
         @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
+        New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build WS2022 image"
 
@@ -349,6 +349,8 @@ jobs:
         version: '1.19'
 
     - powershell: |
+        @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
         docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
