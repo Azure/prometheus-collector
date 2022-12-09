@@ -3,7 +3,7 @@ $me_config_file = '/opt/metricextension/me_ds.config'
 
 function Set-EnvironmentVariablesAndConfigParser {
     #resourceid override.
-    if ([string]::IsNullOrEmpty($env:AKS_RESOURCE_ID)) {
+    if ([string]::IsNullOrEmpty($env:MAC)) {
         if ([string]::IsNullOrEmpty($env:CLUSTER)) {
             Write-Output "CLUSTER is empty or not set. Using $env:NODE_NAME as CLUSTER"
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:NODE_NAME, "Process")
@@ -17,9 +17,14 @@ function Set-EnvironmentVariablesAndConfigParser {
         }
     }
     else {
-        [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Process")
-        [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Machine")
+        [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Process")
+        [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Machine")
+
+        [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Process")
+        [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Machine")
+
         Write-Output "customResourceId=$customResourceId"
+        Write-Output "customRegion=$customRegion"
     }
 
     ############### Environment variables for MA {Start} ###############
@@ -50,17 +55,17 @@ function Set-EnvironmentVariablesAndConfigParser {
 
 
     [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Process")
-    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", "eastus", "Process")
-    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Process")
-    [System.Environment]::SetEnvironmentVariable("customResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Process")
-    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Process")
-    [System.Environment]::SetEnvironmentVariable("customRegion", "eastus", "Process")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $env:AKSREGION, "Process")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $env:CLUSTER, "Process")
+    # [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $env:CLUSTER, "Process")
+    [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Process")
     [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Machine")
-    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", "eastus", "Machine")
-    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Machine")
-    [System.Environment]::SetEnvironmentVariable("customResourceId", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Machine")
-    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveesheternal/providers/Microsoft.ContainerService/managedClusters/kaveesheternal", "Machine")
-    [System.Environment]::SetEnvironmentVariable("customRegion", "eastus", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $env:AKSREGION, "Machine")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $env:CLUSTER, "Machine")
+    # [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Machine")
+    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $env:CLUSTER, "Machine")
+    [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Machine")
     ############### Environment variables for MA {End} ###############
 
     if ([string]::IsNullOrEmpty($env:MODE)) {

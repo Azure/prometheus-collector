@@ -301,6 +301,8 @@ spec:
               value: {{ required "azureResourceRegion is required when using monitoring account" .Values.azureResourceRegion | toString | trim | lower | quote }}
             - name: customEnvironment
               value: {{ required "customEnvironment is required when using monitoring account" .Values.customEnvironment | toString | trim | lower | quote }}
+            - name: MAC
+              value: "true"
             {{- end }}
             {{- if .Values.internalSettings.intEnvironment  }}
             - name: ME_ADDITIONAL_FLAGS
