@@ -2,6 +2,7 @@
   "name": "web-app",
   "version": "0.1.0",
   "private": true,
+  "homepage" : "./",
   "dependencies": {
     "@monaco-editor/react": "^4.4.6",
     "@rjsf/core": "^4.2.3",
