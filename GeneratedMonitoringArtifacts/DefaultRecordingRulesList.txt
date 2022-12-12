@@ -30,8 +30,8 @@ node_namespace_pod_container:container_memory_cache
 node_namespace_pod_container:container_memory_swap
 node:windows_node:sum
 node:windows_node_num_cpu:sum
-:windows_node_cpu_utilisation:avg1m
-node:windows_node_cpu_utilisation:avg1m
+:windows_node_cpu_utilisation:avg5m
+node:windows_node_cpu_utilisation:avg5m
 :windows_node_memory_utilisation:
 :windows_node_memory_MemFreeCached_bytes:sum
 node:windows_node_memory_totalCached_bytes:sum
