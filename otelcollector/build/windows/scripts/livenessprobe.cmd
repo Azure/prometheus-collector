@@ -1,45 +1,54 @@
-@REM REM "Checking if fluent-bit is running"
+@REM "Checking if fluent-bit is running"
 
-@REM tasklist /fi "imagename eq td-agent-bit.exe" /fo "table"  | findstr td-agent-bit
+tasklist /fi "imagename eq td-agent-bit.exe" /fo "table"  | findstr td-agent-bit
 
-@REM IF ERRORLEVEL 1 (
-@REM     echo "Fluent-Bit is not running"
-@REM     exit /b 1
-@REM )
+IF ERRORLEVEL 1 (
+    echo "Fluent-Bit is not running"
+    exit /b 1
+)
 
-@REM @REM "Checking if config map has been updated since agent start"
+@REM "Checking if config map has been updated since agent start"
 
-@REM IF EXIST C:\opt\microsoft\scripts\filesystemwatcher.txt (
-@REM     echo "Config Map Updated since agent started"
-@REM     exit /b  1
-@REM )
+IF EXIST C:\opt\microsoft\scripts\filesystemwatcher.txt (
+    echo "Config Map Updated since agent started"
+    exit /b  1
+)
 
-@REM @REM REM "Checking if Telegraf is running"
+@REM REM "Checking if Telegraf is running"
 
-@REM tasklist /fi "imagename eq telegraf.exe" /fo "table"  | findstr telegraf
+tasklist /fi "imagename eq telegraf.exe" /fo "table"  | findstr telegraf
 
-@REM IF ERRORLEVEL 1 (
-@REM     echo "Telegraf is not running"
-@REM     exit /b 1
-@REM )
+IF ERRORLEVEL 1 (
+    echo "Telegraf is not running"
+    exit /b 1
+)
+
+@REM REM "Checking if MA is running"
+
+tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher
+
+IF ERRORLEVEL 1 (
+    echo "MonAgentLauncher.exe is not running"
+    exit /b 1
+)
 
 
-@REM @REM REM "Checking if MetricsExtension is running"
+@REM REM "Checking if MetricsExtension is running"
 
-@REM tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
+tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
 
-@REM IF ERRORLEVEL 1 (
-@REM     echo "MetricsExtension is not running"
-@REM     exit /b 1
-@REM )
+IF ERRORLEVEL 1 (
+    echo "MetricsExtension is not running"
+    exit /b 1
+)
 
-@REM @REM REM "Checking if otelcollector is running"
+@REM REM "Checking if otelcollector is running"
 
-@REM tasklist /fi "imagename eq otelcollector.exe" /fo "table"  | findstr otelcollector
+tasklist /fi "imagename eq otelcollector.exe" /fo "table"  | findstr otelcollector
 
-@REM IF ERRORLEVEL 1 (
-@REM     echo "otelcollector is not running"
-@REM     exit /b 1
-@REM )
+IF ERRORLEVEL 1 (
+    echo "otelcollector is not running"
+    exit /b 1
+)
 
 exit /b 0
