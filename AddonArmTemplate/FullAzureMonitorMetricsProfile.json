@@ -69,147 +69,264 @@
     "kubernetesRecordingRuleGroupNameWin1": "[concat(variables('kubernetesRecordingRuleGroupWin1'), variables('clusterName'))]",
     "kubernetesRecordingRuleGroupDescriptionWin": "Kubernetes Recording Rules RuleGroup for Win",
     "version": " - 0.1"
-
-
   },
   "resources": [
     {
-            "name": "[variables('nodeRecordingRuleGroupName')]",
-            "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-            "apiVersion": "2021-07-22-preview",
-            "location": "[parameters('azureMonitorWorkspaceLocation')]",
-            "properties": {
-                "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
-                "scopes": [
-                    "[parameters('azureMonitorWorkspaceResourceId')]"
-                ],
-                "clusterName": "[variables('clusterName')]",
-                "interval": "PT1M",
-                "rules": [
-                    {
-                        "record": "instance:node_num_cpu:sum",
-                        "expression": "count without (cpu, mode) (  node_cpu_seconds_total{job=\"node\",mode=\"idle\"})"
-                    },
-                    {
-                        "record": "instance:node_cpu_utilisation:rate5m",
-                        "expression": "1 - avg without (cpu) (  sum without (mode) (rate(node_cpu_seconds_total{job=\"node\", mode=~\"idle|iowait|steal\"}[5m])))"
-                    },
-                    {
-                        "record": "instance:node_load1_per_cpu:ratio",
-                        "expression": "(  node_load1{job=\"node\"}/  instance:node_num_cpu:sum{job=\"node\"})"
-                    },
-                    {
-                        "record": "instance:node_memory_utilisation:ratio",
-                        "expression": "1 - (  (    node_memory_MemAvailable_bytes{job=\"node\"}    or    (      node_memory_Buffers_bytes{job=\"node\"}      +      node_memory_Cached_bytes{job=\"node\"}      +      node_memory_MemFree_bytes{job=\"node\"}      +      node_memory_Slab_bytes{job=\"node\"}    )  )/  node_memory_MemTotal_bytes{job=\"node\"})"
-                    },
-                    {
-                        "record": "instance:node_vmstat_pgmajfault:rate5m",
-                        "expression": "rate(node_vmstat_pgmajfault{job=\"node\"}[5m])"
-                    },
-                    {
-                        "record": "instance_device:node_disk_io_time_seconds:rate5m",
-                        "expression": "rate(node_disk_io_time_seconds_total{job=\"node\", device!=\"\"}[5m])"
-                    },
-                    {
-                        "record": "instance_device:node_disk_io_time_weighted_seconds:rate5m",
-                        "expression": "rate(node_disk_io_time_weighted_seconds_total{job=\"node\", device!=\"\"}[5m])"
-                    },
-                    {
-                        "record": "instance:node_network_receive_bytes_excluding_lo:rate5m",
-                        "expression": "sum without (device) (  rate(node_network_receive_bytes_total{job=\"node\", device!=\"lo\"}[5m]))"
-                    },
-                    {
-                        "record": "instance:node_network_transmit_bytes_excluding_lo:rate5m",
-                        "expression": "sum without (device) (  rate(node_network_transmit_bytes_total{job=\"node\", device!=\"lo\"}[5m]))"
-                    },
-                    {
-                        "record": "instance:node_network_receive_drop_excluding_lo:rate5m",
-                        "expression": "sum without (device) (  rate(node_network_receive_drop_total{job=\"node\", device!=\"lo\"}[5m]))"
-                    },
-                    {
-                        "record": "instance:node_network_transmit_drop_excluding_lo:rate5m",
-                        "expression": "sum without (device) (  rate(node_network_transmit_drop_total{job=\"node\", device!=\"lo\"}[5m]))"
-                    }
-                ]
+      "type": "Microsoft.Insights/dataCollectionEndpoints",
+      "apiVersion": "2021-09-01-preview",
+      "name": "[variables('dceName')]",
+      "location": "[parameters('azureMonitorWorkspaceLocation')]",
+      "kind": "Linux",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Insights/dataCollectionRules",
+      "apiVersion": "2021-09-01-preview",
+      "name": "[variables('dcrName')]",
+      "location": "[parameters('azureMonitorWorkspaceLocation')]",
+      "kind": "Linux",
+      "properties": {
+        "dataCollectionEndpointId": "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
+        "dataFlows": [
+          {
+            "destinations": ["MonitoringAccount1"],
+            "streams": ["Microsoft-PrometheusMetrics"]
+          }
+        ],
+        "dataSources": {
+          "prometheusForwarder": [
+            {
+              "name": "PrometheusDataSource",
+              "streams": ["Microsoft-PrometheusMetrics"],
+              "labelIncludeFilter": {}
             }
+          ]
         },
-        {
-            "name": "[variables('kubernetesRecordingRuleGroupNameWin')]",
-            "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-            "apiVersion": "2021-07-22-preview",
-            "location": "[parameters('azureMonitorWorkspaceLocation')]",
-            "properties": {
-                "description": "[concat(variables('kubernetesRecordingRuleGroupDescriptionWin'), variables('version'))]",
-                "scopes": [
-                    "[parameters('azureMonitorWorkspaceResourceId')]"
-                ],
-                "clusterName": "[variables('clusterName')]",
-                "interval": "PT1M",
-                "rules": [
-                    {
-                        "record": "node:windows_node:sum",
-                        "expression": "count (windows_system_system_up_time{job=\"windows-exporter\"})"
-                    },
-                    {
-                        "record": "node:windows_node_num_cpu:sum",
-                        "expression": "count by (instance) (sum by (instance, core) (windows_cpu_time_total{job=\"windows-exporter\"}))"
-                    },
-                    {
-                        "record": ":windows_node_cpu_utilisation:avg5m",
-                        "expression": "1 - avg(rate(windows_cpu_time_total{job=\"windows-exporter\",mode=\"idle\"}[5m]))"
-                    },
-                    {
-                        "record": "node:windows_node_cpu_utilisation:avg5m",
-                        "expression": "1 - avg by (instance) (rate(windows_cpu_time_total{job=\"windows-exporter\",mode=\"idle\"}[5m]))"
-                    },
-                    {
-                        "record": ":windows_node_memory_utilisation:",
-                        "expression": "1 -sum(windows_memory_available_bytes{job=\"windows-exporter\"})/sum(windows_os_visible_memory_bytes{job=\"windows-exporter\"})"
-                    },
-                    {
-                        "record": ":windows_node_memory_MemFreeCached_bytes:sum",
-                        "expression": "sum(windows_memory_available_bytes{job=\"windows-exporter\"} + windows_memory_cache_bytes{job=\"windows-exporter\"})"
-                    },
-                    {
-                        "record": "node:windows_node_memory_totalCached_bytes:sum",
-                        "expression": "(windows_memory_cache_bytes{job=\"windows-exporter\"} + windows_memory_modified_page_list_bytes{job=\"windows-exporter\"} + windows_memory_standby_cache_core_bytes{job=\"windows-exporter\"} + windows_memory_standby_cache_normal_priority_bytes{job=\"windows-exporter\"} + windows_memory_standby_cache_reserve_bytes{job=\"windows-exporter\"})"
-                    },
-                    {
-                        "record": ":windows_node_memory_MemTotal_bytes:sum",
-                        "expression": "sum(windows_os_visible_memory_bytes{job=\"windows-exporter\"})"
-                    },
-                    {
-                        "record": "node:windows_node_memory_bytes_available:sum",
-                        "expression": "sum by (instance) ((windows_memory_available_bytes{job=\"windows-exporter\"}))"
-                    },
-                    {
-                        "record": "node:windows_node_memory_bytes_total:sum",
-                        "expression": "sum by (instance) (windows_os_visible_memory_bytes{job=\"windows-exporter\"})"
-                    },
-                    {
-                        "record": "node:windows_node_memory_utilisation:ratio",
-                        "expression": "(node:windows_node_memory_bytes_total:sum - node:windows_node_memory_bytes_available:sum) / scalar(sum(node:windows_node_memory_bytes_total:sum))"
-                    },
-                    {
-                        "record": "node:windows_node_memory_utilisation:",
-                        "expression": "1 - (node:windows_node_memory_bytes_available:sum / node:windows_node_memory_bytes_total:sum)"
-                    },
-                    {
-                        "record": "node:windows_node_memory_swap_io_pages:irate",
-                        "expression": "irate(windows_memory_swap_page_operations_total{job=\"windows-exporter\"}[5m])"
-                    },
-                    {
-                        "record": ":windows_node_disk_utilisation:avg_irate",
-                        "expression": "avg(irate(windows_logical_disk_read_seconds_total{job=\"windows-exporter\"}[5m]) + irate(windows_logical_disk_write_seconds_total{job=\"windows-exporter\"}[5m]))"
-                    },
-                    {
-                        "record": "node:windows_node_disk_utilisation:avg_irate",
-                        "expression": "avg by (instance) ((irate(windows_logical_disk_read_seconds_total{job=\"windows-exporter\"}[5m]) + irate(windows_logical_disk_write_seconds_total{job=\"windows-exporter\"}[5m])))"
-                    }
-                ]
+        "description": "DCR for Azure Monitor Metrics Profile (Managed Prometheus)",
+        "destinations": {
+          "monitoringAccounts": [
+            {
+              "accountResourceId": "[parameters('azureMonitorWorkspaceResourceId')]",
+              "name": "MonitoringAccount1"
             }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "[Concat('azuremonitormetrics-dcra', '-',  uniqueString(parameters('clusterResourceId')))]",
+      "apiVersion": "2017-05-10",
+      "subscriptionId": "[variables('clusterSubscriptionId')]",
+      "resourceGroup": "[variables('clusterResourceGroup')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
+        "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {},
+          "variables": {},
+          "resources": [
+            {
+              "type": "Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations",
+              "name": "[concat(variables('clusterName'),'/microsoft.insights/', variables('dcraName'))]",
+              "apiVersion": "2021-09-01-preview",
+              "location": "[parameters('clusterLocation')]",
+              "properties": {
+                "description": "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster.",
+                "dataCollectionRuleId": "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrName'))]"
+              }
+            }
+          ]
         },
-        {
+        "parameters": {}
+      }
+    },
+    // {
+    //   "type": "Microsoft.Resources/deployments",
+    //   "name": "[Concat('azuremonitormetrics-profile-', '-',  uniqueString(parameters('clusterResourceId')))]",
+    //   "apiVersion": "2017-05-10",
+    //   "subscriptionId": "[variables('clusterSubscriptionId')]",
+    //   "resourceGroup": "[variables('clusterResourceGroup')]",
+    //   "dependsOn": [
+    //     "[Concat('azuremonitormetrics-dcra', '-',  uniqueString(parameters('clusterResourceId')))]"
+    //   ],
+    //   "properties": {
+    //     "mode": "Incremental",
+    //     "template": {
+    //       "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    //       "contentVersion": "1.0.0.0",
+    //       "parameters": {},
+    //       "variables": {},
+    //       "resources": [
+    //         {
+    //           "name": "[variables('clusterName')]",
+    //           "type": "Microsoft.ContainerService/managedClusters",
+    //           "location": "[parameters('clusterLocation')]",
+    //           "apiVersion": "2022-07-02-preview",
+    //           "properties": {
+    //             "mode": "Incremental",
+    //             "id": "[parameters('clusterResourceId')]",
+    //             "azureMonitorProfile": {
+    //               "metrics": {
+    //                 "enabled": true,
+    //                 "kubeStateMetrics": {
+    //                   "metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
+    //                   "metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
+    //                 }
+    //               }
+    //             }
+    //           }
+    //         }
+    //       ]
+    //     },
+    //     "parameters": {}
+    //   }
+    // },
+    {
+        "name": "[variables('nodeRecordingRuleGroupName')]",
+        "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+        "apiVersion": "2021-07-22-preview",
+        "location": "[parameters('azureMonitorWorkspaceLocation')]",
+        "properties": {
+            "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
+            "scopes": [
+                "[parameters('azureMonitorWorkspaceResourceId')]"
+            ],
+            "clusterName": "[variables('clusterName')]",
+            "interval": "PT1M",
+            "rules": [
+                {
+                    "record": "instance:node_num_cpu:sum",
+                    "expression": "count without (cpu, mode) (  node_cpu_seconds_total{job=\"node\",mode=\"idle\"})"
+                },
+                {
+                    "record": "instance:node_cpu_utilisation:rate5m",
+                    "expression": "1 - avg without (cpu) (  sum without (mode) (rate(node_cpu_seconds_total{job=\"node\", mode=~\"idle|iowait|steal\"}[5m])))"
+                },
+                {
+                    "record": "instance:node_load1_per_cpu:ratio",
+                    "expression": "(  node_load1{job=\"node\"}/  instance:node_num_cpu:sum{job=\"node\"})"
+                },
+                {
+                    "record": "instance:node_memory_utilisation:ratio",
+                    "expression": "1 - (  (    node_memory_MemAvailable_bytes{job=\"node\"}    or    (      node_memory_Buffers_bytes{job=\"node\"}      +      node_memory_Cached_bytes{job=\"node\"}      +      node_memory_MemFree_bytes{job=\"node\"}      +      node_memory_Slab_bytes{job=\"node\"}    )  )/  node_memory_MemTotal_bytes{job=\"node\"})"
+                },
+                {
+                    "record": "instance:node_vmstat_pgmajfault:rate5m",
+                    "expression": "rate(node_vmstat_pgmajfault{job=\"node\"}[5m])"
+                },
+                {
+                    "record": "instance_device:node_disk_io_time_seconds:rate5m",
+                    "expression": "rate(node_disk_io_time_seconds_total{job=\"node\", device!=\"\"}[5m])"
+                },
+                {
+                    "record": "instance_device:node_disk_io_time_weighted_seconds:rate5m",
+                    "expression": "rate(node_disk_io_time_weighted_seconds_total{job=\"node\", device!=\"\"}[5m])"
+                },
+                {
+                    "record": "instance:node_network_receive_bytes_excluding_lo:rate5m",
+                    "expression": "sum without (device) (  rate(node_network_receive_bytes_total{job=\"node\", device!=\"lo\"}[5m]))"
+                },
+                {
+                    "record": "instance:node_network_transmit_bytes_excluding_lo:rate5m",
+                    "expression": "sum without (device) (  rate(node_network_transmit_bytes_total{job=\"node\", device!=\"lo\"}[5m]))"
+                },
+                {
+                    "record": "instance:node_network_receive_drop_excluding_lo:rate5m",
+                    "expression": "sum without (device) (  rate(node_network_receive_drop_total{job=\"node\", device!=\"lo\"}[5m]))"
+                },
+                {
+                    "record": "instance:node_network_transmit_drop_excluding_lo:rate5m",
+                    "expression": "sum without (device) (  rate(node_network_transmit_drop_total{job=\"node\", device!=\"lo\"}[5m]))"
+                }
+            ]
+        }
+    },
+    {
+        "name": "[variables('kubernetesRecordingRuleGroupNameWin')]",
+        "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+        "apiVersion": "2021-07-22-preview",
+        "location": "[parameters('azureMonitorWorkspaceLocation')]",
+        "properties": {
+            "description": "[concat(variables('kubernetesRecordingRuleGroupDescriptionWin'), variables('version'))]",
+            "scopes": [
+                "[parameters('azureMonitorWorkspaceResourceId')]"
+            ],
+            "clusterName": "[variables('clusterName')]",
+            "interval": "PT1M",
+            "rules": [
+                {
+                    "record": "node:windows_node:sum",
+                    "expression": "count (windows_system_system_up_time{job=\"windows-exporter\"})"
+                },
+                {
+                    "record": "node:windows_node_num_cpu:sum",
+                    "expression": "count by (instance) (sum by (instance, core) (windows_cpu_time_total{job=\"windows-exporter\"}))"
+                },
+                {
+                    "record": ":windows_node_cpu_utilisation:avg5m",
+                    "expression": "1 - avg(rate(windows_cpu_time_total{job=\"windows-exporter\",mode=\"idle\"}[5m]))"
+                },
+                {
+                    "record": "node:windows_node_cpu_utilisation:avg5m",
+                    "expression": "1 - avg by (instance) (rate(windows_cpu_time_total{job=\"windows-exporter\",mode=\"idle\"}[5m]))"
+                },
+                {
+                    "record": ":windows_node_memory_utilisation:",
+                    "expression": "1 -sum(windows_memory_available_bytes{job=\"windows-exporter\"})/sum(windows_os_visible_memory_bytes{job=\"windows-exporter\"})"
+                },
+                {
+                    "record": ":windows_node_memory_MemFreeCached_bytes:sum",
+                    "expression": "sum(windows_memory_available_bytes{job=\"windows-exporter\"} + windows_memory_cache_bytes{job=\"windows-exporter\"})"
+                },
+                {
+                    "record": "node:windows_node_memory_totalCached_bytes:sum",
+                    "expression": "(windows_memory_cache_bytes{job=\"windows-exporter\"} + windows_memory_modified_page_list_bytes{job=\"windows-exporter\"} + windows_memory_standby_cache_core_bytes{job=\"windows-exporter\"} + windows_memory_standby_cache_normal_priority_bytes{job=\"windows-exporter\"} + windows_memory_standby_cache_reserve_bytes{job=\"windows-exporter\"})"
+                },
+                {
+                    "record": ":windows_node_memory_MemTotal_bytes:sum",
+                    "expression": "sum(windows_os_visible_memory_bytes{job=\"windows-exporter\"})"
+                },
+                {
+                    "record": "node:windows_node_memory_bytes_available:sum",
+                    "expression": "sum by (instance) ((windows_memory_available_bytes{job=\"windows-exporter\"}))"
+                },
+                {
+                    "record": "node:windows_node_memory_bytes_total:sum",
+                    "expression": "sum by (instance) (windows_os_visible_memory_bytes{job=\"windows-exporter\"})"
+                },
+                {
+                    "record": "node:windows_node_memory_utilisation:ratio",
+                    "expression": "(node:windows_node_memory_bytes_total:sum - node:windows_node_memory_bytes_available:sum) / scalar(sum(node:windows_node_memory_bytes_total:sum))"
+                },
+                {
+                    "record": "node:windows_node_memory_utilisation:",
+                    "expression": "1 - (node:windows_node_memory_bytes_available:sum / node:windows_node_memory_bytes_total:sum)"
+                },
+                {
+                    "record": "node:windows_node_memory_swap_io_pages:irate",
+                    "expression": "irate(windows_memory_swap_page_operations_total{job=\"windows-exporter\"}[5m])"
+                },
+                {
+                    "record": ":windows_node_disk_utilisation:avg_irate",
+                    "expression": "avg(irate(windows_logical_disk_read_seconds_total{job=\"windows-exporter\"}[5m]) + irate(windows_logical_disk_write_seconds_total{job=\"windows-exporter\"}[5m]))"
+                },
+                {
+                    "record": "node:windows_node_disk_utilisation:avg_irate",
+                    "expression": "avg by (instance) ((irate(windows_logical_disk_read_seconds_total{job=\"windows-exporter\"}[5m]) + irate(windows_logical_disk_write_seconds_total{job=\"windows-exporter\"}[5m])))"
+                }
+            ]
+        }
+    },
+    {
             "name": "[variables('kubernetesRecordingRuleGroupNameWin1')]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
@@ -292,8 +409,8 @@
                     }
                 ]
             }
-        },
-        {
+    },
+    {
             "name": "[variables('kubernetesRecordingRuleGroupName')]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
@@ -396,6 +513,24 @@
                     }
                 ]
             }
+    },
+    {
+      "type": "Microsoft.Dashboard/grafana",
+      "apiVersion": "2022-08-01",
+      "name": "[split(parameters('grafanaResourceId'),'/')[8]]",
+      "sku": {
+        "name": "[parameters('grafanaSku')]"
+      },
+      "location": "[parameters('grafanaLocation')]",
+      "properties": {
+        "grafanaIntegrations": {
+          "azureMonitorWorkspaceIntegrations": [
+            {
+              "azureMonitorWorkspaceResourceId": "[parameters('azureMonitorWorkspaceResourceId')]"
+            }
+          ]
         }
+      }
+    }
   ]
 }
