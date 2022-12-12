@@ -48,7 +48,7 @@
                "steppedLine": false,
                "targets": [
                   {
-                     "expr": "node:windows_node_cpu_utilisation:avg1m{cluster=\"$cluster\"} * node:windows_node_num_cpu:sum{cluster=\"$cluster\"} / scalar(sum(node:windows_node_num_cpu:sum{cluster=\"$cluster\"}))",
+                     "expr": "node:windows_node_cpu_utilisation:avg5m{cluster=\"$cluster\"} * node:windows_node_num_cpu:sum{cluster=\"$cluster\"} / scalar(sum(node:windows_node_num_cpu:sum{cluster=\"$cluster\"}))",
                      "format": "time_series",
                      "intervalFactor": 2,
                      "legendFormat": "{{instance}}",

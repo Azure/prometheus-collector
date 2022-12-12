@@ -48,7 +48,7 @@
                "steppedLine": false,
                "targets": [
                   {
-                     "expr": "node:windows_node_cpu_utilisation:avg1m{cluster=\"$cluster\", instance=\"$instance\"}",
+                     "expr": "node:windows_node_cpu_utilisation:avg5m{cluster=\"$cluster\", instance=\"$instance\"}",
                      "format": "time_series",
                      "intervalFactor": 2,
                      "legendFormat": "Utilisation",
