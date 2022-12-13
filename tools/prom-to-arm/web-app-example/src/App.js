@@ -6,6 +6,7 @@ import Col from 'react-bootstrap/Col';
 import Stack from 'react-bootstrap/Stack';
 import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
+import Button from 'react-bootstrap/Button';
 
 import Editor from "@monaco-editor/react";
 import {useState, useEffect} from 'react';
@@ -58,24 +59,20 @@ function App() {
         
       </Col>
       <Col xs={7}>
-        {resultState.success ? (
-          <Editor
-            height='90vh'
-            defaultLanguage='json'
-            value={JSON.stringify(resultState, null, 2)}
-            // onMount={console.log}
-          />
-        ) : (
-          <div>
-            <h1>{resultState?.error?.title}</h1>
+        <Card>
+          <Card.Header>
+            {resultState.success ? 
+            (<>ARM template output <Button onClick={()=>saveFile(resultState.output)}>Save file</Button></>) : 
+            (<><h1>ERROR:</h1>{resultState?.error?.title} </>)}
+          </Card.Header>
+          <Card.Body>
             <Editor
               height='90vh'
-              language='plaintext'
-              value={JSON.stringify(resultState?.error?.details, null, 2)}
-              // onMount={console.log}
+              defaultLanguage='json'
+              value={JSON.stringify(resultState.success ? resultState.output : resultState?.error?.details, null, 2)}
             />
-          </div>
-        )}
+          </Card.Body>
+        </Card>
       </Col>
     </Row>
     
@@ -97,4 +94,13 @@ const showFile = async (e, callBack) => {
     callBack(text);
   };
   reader.readAsText(e.target.files[0])
+}
+
+const saveFile = (fileData, fileName = 'template.json') => {
+  const blob = new Blob([JSON.stringify(fileData, null, 2)], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.download = fileName;
+  link.href = url;
+  link.click();
 }

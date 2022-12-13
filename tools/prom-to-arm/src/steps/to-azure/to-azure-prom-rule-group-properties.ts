@@ -14,7 +14,7 @@ const converters: any = {
 function createExtendedPropsFunc(params: any) {
   return {
     scopes: [
-      "[parameters('macResourceId')]"
+      "[parameters('azureMonitorWorkspace')]"
     ],
     clusterName: "[parameters('clusterName')]"
   };

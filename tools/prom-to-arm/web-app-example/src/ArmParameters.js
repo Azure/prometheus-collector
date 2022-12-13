@@ -5,9 +5,9 @@ const schema = {
   title: "ARM options parameters",
   type: "object",
   properties: {
-    macResourceId: {
+    azureMonitorWorkspace: {
       type: "string", 
-      title: "Mac resource Id"
+      title: "Azure monitor workspace id"
     },
     clusterName: {
       type: "string",

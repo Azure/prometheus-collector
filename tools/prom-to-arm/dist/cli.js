@@ -45,7 +45,7 @@ function yaml2arm(inputPath, options, command) {
 program //.command('yaml2arm')
     .description('Convert Prometheus rules Yaml file to ARM template')
     .argument('<input>', 'Input Prometheus rule groups Yaml file path.')
-    .option('-m, --mac-resource-id <string>', 'MAC resource id\'s that this rule group is scoped to.')
+    .option('-amw, --azure-monitor-workspace <string>', 'Azure monitor workspace id\'s that this rule group is scoped to.')
     .option('-c, --cluster-name <string>', 'The cluster name of the rule group evaluation.')
     .option('-a, --action-group-id <string>', 'The resource id of the action group to use for alerting rules.')
     .option('-o, --output <string>', 'Output path. If not set, output would be printed to std out.')

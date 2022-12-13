@@ -55,17 +55,17 @@ const getArmTemplateFormat = (params: any) : any => {
           "description": "Action Group ResourceId"
         }
       },
-      macResourceId: {
+      azureMonitorWorkspace: {
         "type": "string",
         "metadata": {
-          "description": "ResourceId of Monitoring Account (MAC) to associate to"
+          "description": "ResourceId of Azure monitor workspace to associate to"
         }
       }
     },
     variables: {  },
     resources: [  ]
   };
-  ['clusterName', 'actionGroupId', 'macResourceId'].forEach( (paramName) => {
+  ['clusterName', 'actionGroupId', 'azureMonitorWorkspace'].forEach( (paramName) => {
     if (params[paramName]) {
       result.parameters[paramName].defaultValue = params[paramName];
     }
