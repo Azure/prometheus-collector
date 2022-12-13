@@ -3,4 +3,5 @@ module.exports = {
   testEnvironment: 'node',
   transform: {},
   modulePaths: ['<rootDir>/src/'],
+  modulePathIgnorePatterns: ['<rootDir>/web-app-example/'],
 };

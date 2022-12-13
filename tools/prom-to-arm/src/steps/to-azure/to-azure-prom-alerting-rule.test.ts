@@ -9,7 +9,7 @@ test('Empty source should add the default properties', () => {
       autoResolve: true,
       timeToResolve: "PT10M"
   });
-  expect(converted.actions[0].actionGroupId).toBe('actionGroupId');
+  expect(converted.actions[0].actionGroupId).toBe("[parameters('actionGroupId')]");
 });
 
 

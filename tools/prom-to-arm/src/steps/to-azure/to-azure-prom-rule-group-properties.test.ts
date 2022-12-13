@@ -10,8 +10,8 @@ test('Empty source should add the default properties', () => {
   expect(converted.name).not.toBeDefined();
   expect(converted.limit).not.toBeDefined();
   expect(converted.rules).not.toBeDefined();
-  expect(converted.scopes[0]).toBe(params.macResourceId);
-  expect(converted.clusterName).toBe(params.clusterName);
+  expect(converted.scopes[0]).toBe("[parameters('azureMonitorWorkspace')]");
+  expect(converted.clusterName).toBe("[parameters('clusterName')]");
 });
 
 
@@ -45,6 +45,6 @@ test('Distinguish between alerting and recording rule', () => {
       autoResolve: true,
       timeToResolve: "PT10M"
   });
-  expect(converted.rules[1].actions[0].actionGroupId).toBe('actionGroupId');
+  expect(converted.rules[1].actions[0].actionGroupId).toBe("[parameters('actionGroupId')]");
 });
 
