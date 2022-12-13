@@ -12,7 +12,7 @@ npm i -g https://gitpkg.now.sh/Azure/prometheus-collector/tools/prom-to-arm
 ```bash
 prom-to-arm -h
 ```
-```bash
+```
 Usage: prom-to-arm [options] <input>
 
 Convert Prometheus rules Yaml file to ARM template
