@@ -1,5 +1,6 @@
 import { AlertingRule } from '../../types/prometheus-rules';
 import toAzurePromAlertingRule from './to-azure-prom-alerting-rule'
+import{test, expect} from '@jest/globals';
 
 
 test('Empty source should add the default properties', () => {
