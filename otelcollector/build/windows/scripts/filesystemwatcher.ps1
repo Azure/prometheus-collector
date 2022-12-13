@@ -3,12 +3,15 @@ Write-Host "Removing Existing Event Subscribers"
 Get-EventSubscriber -Force | ForEach-Object { $_.SubscriptionId } | ForEach-Object { Unregister-Event -SubscriptionId $_ } > $null
 Write-Host "Starting File System Watcher for config map updates"
 
-$Paths = @("C:\etc\config\settings", "C:\etc\config\settings\prometheus", "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json")
+$Paths = @("C:\etc\config\settings", "C:\etc\config\settings\prometheus", "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension")
 
 foreach ($path in $Paths)
 {
     $FileSystemWatcher = New-Object System.IO.FileSystemWatcher
     $FileSystemWatcher.Path = $path
+    if ($path -eq "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension") {
+        $FileSystemWatcher.Filter = "TokenConfig.json"
+    }
     $FileSystemWatcher.IncludeSubdirectories = $true
     $EventName = 'Changed', 'Created', 'Deleted', 'Renamed'
 
