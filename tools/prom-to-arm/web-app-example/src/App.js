@@ -11,7 +11,7 @@ import Editor from "@monaco-editor/react";
 import {useState, useEffect} from 'react';
 
 import ArmParametersForm from './ArmParameters';
-import toArmTemplate from 'azure-prom-tool';
+import toArmTemplate from 'prom-to-arm';
 
 
 function App() {
