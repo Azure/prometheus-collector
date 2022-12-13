@@ -25,7 +25,7 @@
     kubeSchedulerSelector: 'job="kube-scheduler"',
     kubeControllerManagerSelector: 'job="kube-controller-manager"',
     kubeApiserverSelector: 'job="kube-apiserver"',
-    kubeProxySelector: 'job="kube-proxy"',
+    kubeProxySelector: 'job=~"kube-proxy|kube-proxy-windows"',
     podLabel: 'pod',
     hostNetworkInterfaceSelector: 'device!~"veth.+"',
     hostMountpointSelector: 'mountpoint="/"',
