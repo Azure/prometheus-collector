@@ -2,8 +2,11 @@
 # ignore these CVEs, but continue scanning to catch other vulns. Note : this will ignore these cves globally
 
 # CRITICAL/HIGH
+# Ruby GEM
+CVE-2021-33621
 # node-exporter
 CVE-2021-38561
+CVE-2021-44716
 CVE-2022-21698
 CVE-2022-27191
 # kube-state-metrics
@@ -15,6 +18,9 @@ CVE-2021-44716
 CVE-2022-27664
 # opt/telegraf/telegraf
 CVE-2022-27664
+CVE-2022-29190
+CVE-2022-29222
+CVE-2022-41717
 # kube-state-metrics
 CVE-2022-1996
 CVE-2022-27664
@@ -24,13 +30,13 @@ CVE-2022-27664
 CVE-2019-3826
 # /bin/node_exporter
 CVE-2021-44716
+CVE-2022-46146
 # kube-state-metrics
 CVE-2022-29526
 CVE-2022-29189
 CVE-2022-31030
 CVE-2022-29526
-# usr/sbin/telegraf
-CVE-2019-11254
+CVE-2022-46146
 # opt/microsoft/otelcollector/otelcollector
 # opt/promconfigvalidator
 # opt/telegraf/telegraf
