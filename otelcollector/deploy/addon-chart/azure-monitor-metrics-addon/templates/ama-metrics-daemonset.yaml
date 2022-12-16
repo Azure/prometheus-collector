@@ -124,6 +124,16 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
+        {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+        - name: arc-msi-adapter
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: AZMON_COLLECT_ENV
+              value: "false"
+            - name: TOKEN_NAMESPACE
+              value: "azure-arc"
+        {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
+        {{- else }}
         - name: addon-token-adapter
           command:
             - /addon-token-adapter
@@ -157,6 +167,7 @@ spec:
               add:
                 - NET_ADMIN
                 - NET_RAW
+        {{- end }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
