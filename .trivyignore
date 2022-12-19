@@ -28,6 +28,7 @@ CVE-2019-3826
 # /bin/node_exporter
 CVE-2021-44716
 CVE-2022-46146
+CVE-2022-41717
 # kube-state-metrics
 CVE-2022-29526
 CVE-2022-29189
