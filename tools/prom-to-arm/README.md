@@ -3,8 +3,12 @@ A tool to convert [Prometheus rule group YAML](https://prometheus.io/docs/promet
 Azure prometheus roule group [ARM template](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/overview).
 
 ## install 
-Install it directly from this repo.
+### Prerequisite
+Install nodejs LTS version:
+https://nodejs.org/en/
 
+### Install package globaly 
+Install it directly from this repo.
 We use [gitpkg](https://gitpkg.vercel.app/) as a workaround to install a github repository sub folder as an npm package: 
 ```bash
 npm i -g https://gitpkg.now.sh/Azure/prometheus-collector/tools/prom-to-arm
