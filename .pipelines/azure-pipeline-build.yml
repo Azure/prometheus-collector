@@ -256,6 +256,14 @@ jobs:
       displayName: "Build: specify golang version"
       inputs:
         version: '1.19'
+    
+    - powershell: |
+        docker build . -f ./windows/Dockerfile -t $(ACR_REGISTRY)$(ACR_REPOSITORY):referenceapp-golang-122022
+      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+    
+    - powershell: |
+        docker build . -f ./windows/Dockerfile -t $(ACR_REGISTRY)$(ACR_REPOSITORY):referenceapp-python-122022
+      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
 
     - powershell: |
         ./makefile_windows.ps1
@@ -268,14 +276,6 @@ jobs:
         @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build image"
-
-    - powershell: |
-        docker build . -f ./windows/Dockerfile -t $(ACR_REGISTRY)$(ACR_REPOSITORY):referenceapp-golang-122022
-      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
-    
-    - powershell: |
-        docker build . -f ./windows/Dockerfile -t $(ACR_REGISTRY)$(ACR_REPOSITORY):referenceapp-python-122022
-      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
 
     - powershell: |
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
