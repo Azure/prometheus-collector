@@ -1,5 +1,14 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 12-14-2022 (This version is being released only internally due to deployment freeze during holidays)
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.0.2-main-12-14-2022-e0364da3`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.0.2-main-12-14-2022-e0364da3`
+* Change Log -
+  * Update addon token adapter (from master.220916.1 to master.221118.2)
+  * Enable non-default dashboards & their recording rules (apiserver, kube-proxy, kubedns and kubernetes*)
+  * Fix for excluding windows nodes in the node dropdown for k8s computer (nodes) dashboard
+
 ## Release 11-29-2022
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.0.1-main-11-29-2022-97e2122e`
