@@ -1,4 +1,4 @@
-FROM golang:1.16-nanoserver-ltsc2022
+FROM golang:1.19-nanoserver-ltsc2019
 
 # Set necessary environmet variables needed for our image
 ENV GO111MODULE=on \

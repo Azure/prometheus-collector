@@ -270,8 +270,18 @@ jobs:
       displayName: "Build: build image"
 
     - powershell: |
+        docker build . -f ./windows/Dockerfile -t $(ACR_REGISTRY)$(ACR_REPOSITORY):referenceapp-golang-122022
+      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+    
+    - powershell: |
+        docker build . -f ./windows/Dockerfile -t $(ACR_REGISTRY)$(ACR_REPOSITORY):referenceapp-python-122022
+      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+
+    - powershell: |
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker push $(WINDOWS_FULL_IMAGE_NAME)
+        docker push $(ACR_REGISTRY)$(ACR_REPOSITORY):referenceapp-golang-122022
+        docker push $(ACR_REGISTRY)$(ACR_REPOSITORY):referenceapp-python-122022
       displayName: "Build: push image to dev ACR"
       condition: eq(variables.IS_PR, false)
 
