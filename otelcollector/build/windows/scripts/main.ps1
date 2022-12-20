@@ -168,8 +168,24 @@ function Set-EnvironmentVariablesAndConfigParser {
         }
     }
 
+    # Parse the settings for debug mode
+    ruby /opt/microsoft/configmapparser/tomlparser-debug-mode.rb
+    if (Test-Path -Path '/opt/microsoft/configmapparser/config_debug_mode_env_var') {
+        foreach ($line in Get-Content /opt/microsoft/configmapparser/config_debug_mode_env_var) {
+            if ($line.Contains('=')) {
+                $key = ($line -split '=')[0];
+                $value = ($line -split '=')[1];
+                [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+                [System.Environment]::SetEnvironmentVariable($key, $value, "Machine")
+            }
+        }
+    }
+
     # Parse the settings for default targets metrics keep list config
     ruby /opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb
+
+    # Parse the settings for default-targets-scrape-interval-settings config
+    ruby /opt/microsoft/configmapparser/tomlparser-scrape-interval.rb
 
     # Merge default anf custom prometheus config
     ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
