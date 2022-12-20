@@ -11,7 +11,7 @@ https://nodejs.org/en/
 Install it directly from this repo.
 We use [gitpkg](https://gitpkg.vercel.app/) as a workaround to install a github repository sub folder as an npm package: 
 ```bash
-npm i -g https://gitpkg.now.sh/Azure/prometheus-collector/tools/prom-to-arm
+npm i -g https://gitpkg.now.sh/Azure/prometheus-collector/tools/prom-to-arm?main
 ```
 
 ## usage
