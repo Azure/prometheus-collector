@@ -40,3 +40,4 @@ CVE-2022-46146
 # kube-state-metrics
 # bin/node_exporter
 CVE-2022-32149
+CVE-2022-41717
