@@ -23,8 +23,8 @@ function Set-EnvironmentVariablesAndConfigParser {
         [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Process")
         [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Machine")
 
-        Write-Output "customResourceId=$customResourceId"
-        Write-Output "customRegion=$customRegion"
+        Write-Output "customResourceId=$env:customResourceId"
+        Write-Output "customRegion=$env:customRegion"
     }
 
     ############### Environment variables for MA {Start} ###############
