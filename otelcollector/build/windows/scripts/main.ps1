@@ -400,7 +400,6 @@ function Start-ME {
 Start-Transcript -Path main.txt
 # Set-CertificateForME
 Set-EnvironmentVariablesAndConfigParser
-Start-FileSystemWatcher
 Start-Fluentbit
 Start-Telegraf
 Start-OTEL-Collector
@@ -408,6 +407,7 @@ Start-MA
 # "Waiting for 60s for MA to get the config and put them in place for ME"
 Start-Sleep 60
 Start-ME
+Start-FileSystemWatcher
 
 # Notepad.exe | Out-Null
 Write-Output "Starting ping to keep the container running"
