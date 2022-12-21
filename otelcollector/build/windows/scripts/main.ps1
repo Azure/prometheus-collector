@@ -304,7 +304,7 @@ function Start-Fluentbit {
     # Run fluent-bit as a background job. Switch this to a windows service once fluent-bit supports natively running as a windows service
     Write-Host "Starting fluent-bit"
     Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\fluent-bit\bin\td-agent-bit.exe" -ArgumentList @("-c", "C:\opt\fluent-bit\fluent-bit-windows.conf", "-e", "C:\opt\fluent-bit\bin\out_appinsights.so") }
-
+    # C:\opt\fluent-bit\bin\td-agent-bit.exe -c "C:\opt\fluent-bit\fluent-bit-windows.conf" -e "C:\opt\fluent-bit\bin\out_appinsights.so"
 }
 
 function Start-Telegraf {
