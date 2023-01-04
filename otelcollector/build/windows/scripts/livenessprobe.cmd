@@ -1,4 +1,4 @@
-@echo off
+@REM @echo off
 
 setlocal enableDelayedExpansion
 rem Get the current date and time

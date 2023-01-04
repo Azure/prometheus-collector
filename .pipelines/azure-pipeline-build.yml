@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - kaveesh/windows_ma_integration
 
 pr:
   autoCancel: true
