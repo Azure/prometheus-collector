@@ -8,6 +8,7 @@ New-Item -Type Directory -Path /opt/otelcollector/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/certificate/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/state/ -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/ruby -ErrorAction SilentlyContinue
+New-Item -Type Directory -Path /opt/microsoft/liveness -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/genevamonitoringagent -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/genevamonitoringagent/datadirectory -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /etc/genevamonitoringagent

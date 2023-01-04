@@ -409,6 +409,9 @@ Start-Sleep 60
 Start-ME
 Start-FileSystemWatcher
 
+$epochTimeNow = Get-Date -UFormat %s
+Set-Content -Path /opt/microsoft/liveness/azmon-container-start-time $epochTimeNow
+
 # Notepad.exe | Out-Null
 Write-Output "Starting ping to keep the container running"
 ping -t 127.0.0.1 | Out-Null

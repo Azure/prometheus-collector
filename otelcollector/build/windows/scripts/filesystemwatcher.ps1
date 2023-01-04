@@ -1,7 +1,7 @@
 Start-Transcript -Path fileSystemWatcherTranscript.txt
 Write-Host "Removing Existing Event Subscribers"
 Get-EventSubscriber -Force | ForEach-Object { $_.SubscriptionId } | ForEach-Object { Unregister-Event -SubscriptionId $_ } > $null
-Write-Host "Starting File System Watcher for config map updates"
+Write-Host "Starting File System Watcher for config map updates and DCR/DCE updates"
 
 $Paths = @("C:\etc\config\settings", "C:\etc\config\settings\prometheus", "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension")
 
