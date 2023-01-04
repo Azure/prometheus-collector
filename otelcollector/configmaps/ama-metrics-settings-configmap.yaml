@@ -1,4 +1,6 @@
 kind: ConfigMap
+# This configmap below is pre-configured for Azure Monitor metrics addon to scrape more targets & metrics (in addition to defaults).
+# Please read the documentation for more explanation on when to use this configmap.
 apiVersion: v1
 data:
   schema-version:
@@ -11,21 +13,21 @@ data:
     cluster_alias = ""
   default-scrape-settings-enabled: |-
     kubelet = true
-    coredns = false
+    coredns = true
     cadvisor = true
-    kubeproxy = false
-    apiserver = false
+    kubeproxy = true
+    apiserver = true
     kubestate = true
     nodeexporter = true
-    windowsexporter = false
-    windowskubeproxy = false
-    prometheuscollectorhealth = false
+    windowsexporter = true
+    windowskubeproxy = true
+    prometheuscollectorhealth = true
   default-targets-metrics-keep-list: |-
-    kubelet = ""
+    kubelet = "kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_available_bytes|kubelet_volume_stats_inodes_used|kubelet_volume_stats_inodes"
     coredns = ""
     cadvisor = ""
     kubeproxy = ""
-    apiserver = ""
+    apiserver = "apiserver_request_slo_duration_seconds_bucket|apiserver_request_slo_duration_seconds_sum|apiserver_request_slo_duration_seconds_count"
     kubestate = ""
     nodeexporter = ""
     windowsexporter = ""

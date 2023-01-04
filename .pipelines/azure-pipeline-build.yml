@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - kaveesh/windows_ma_integration
+    - SohamTestNondefault
 
 pr:
   autoCancel: true
