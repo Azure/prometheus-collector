@@ -394,16 +394,16 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
-          livenessProbe:
-            exec:
-              command:
-                - cmd
-                - /c
-                - C:\opt\microsoft\scripts\livenessprobe.cmd
-            periodSeconds: 15
-            initialDelaySeconds: 300
-            timeoutSeconds: 15
-            failureThreshold: 3
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - cmd
+          #       - /c
+          #       - C:\opt\microsoft\scripts\livenessprobe.cmd
+          #   periodSeconds: 15
+          #   initialDelaySeconds: 300
+          #   timeoutSeconds: 15
+          #   failureThreshold: 3
         {{- if .Values.useMonitoringAccount }}
         - name: addon-token-adapter-win
           command:
