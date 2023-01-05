@@ -6,7 +6,7 @@ for /f "tokens=2 delims==" %%a in ('wmic os get LocalDateTime /VALUE') do set "d
 rem Convert the current date and time to epoch time
 set /a "epochTimeNow=((%dt:~0,4% - 1970) * 31536000 + (%dt:~4,2% - 1) * 2592000 + (%dt:~6,2% - 1) * 86400 + %dt:~8,2% * 3600 + %dt:~10,2% * 60 + %dt:~12,2%)"
 
-if "%MAC%"=="true" (
+if %MAC% == true (
     if not exist "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json" (
         if exist "C:\opt\microsoft\liveness\azmon-container-start-time" (
             set /p azmonContainerStartTime=<C:\opt\microsoft\liveness\azmon-container-start-time
