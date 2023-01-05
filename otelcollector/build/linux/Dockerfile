@@ -79,7 +79,7 @@ RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
 # If wanting to run without distroless, uncomment this line and comment everything after
-CMD [ "/opt/main.sh" ]
+#CMD [ "/opt/main.sh" ]
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
