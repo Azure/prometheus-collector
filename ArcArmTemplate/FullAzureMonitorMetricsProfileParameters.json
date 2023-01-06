@@ -3,16 +3,16 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "azureMonitorWorkspaceResourceId": {
-      "value": "/subscriptions/{sub_id}/resourceGroups/{rg_name}/providers/microsoft.monitor/accounts/{cluster_name}"
+      "value": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/marc-test-arc-prom/providers/microsoft.monitor/accounts/marc-test-arc-monitor-workspace"
     },
     "azureMonitorWorkspaceLocation": {
-      "value": "{amwLocation}"
+      "value": "westus2"
     },
     "clusterResourceId": {
-      "value": "/subscriptions/{sub_id}/resourcegroups/{rg_name}/providers/Microsoft.ContainerService/managedClusters/{cluster_name}"
+      "value": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourcegroups/marc-test-arc-prom/providers/Microsoft.Kubernetes/connectedClusters/marc-test-arc-aro"
     },
     "clusterLocation": {
-      "value": "{clusterLocation}"
+      "value": "westus3"
     },
     "metricLabelsAllowlist": {
       "value": ""
@@ -21,10 +21,10 @@
       "value": ""
     },
     "grafanaResourceId": {
-      "value": "/subscriptions/{sub_id}/resourceGroups/{rg_name}/providers/Microsoft.Dashboard/grafana/{cluster_name}"
+      "value": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/marc-test-arc-prom/providers/Microsoft.Dashboard/grafana/marc-test-arc-grafana"
     },
     "grafanaLocation": {
-      "value": "{grafanaLocation}"
+      "value": "westus3"
     },
     "grafanaSku": {
       "value": "Standard"

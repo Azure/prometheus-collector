@@ -24,7 +24,10 @@
       ]
     },
     "clusterResourceId": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "Resource Id of the Azure Arc Connected Cluster"
+      }
     },
     "clusterLocation": {
       "type": "string"
@@ -130,7 +133,7 @@
           "variables": {},
           "resources": [
             {
-              "type": "Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations",
+              "type": "Microsoft.Kubernetes/connectedClusters/providers/dataCollectionRuleAssociations",
               "name": "[concat(variables('clusterName'),'/microsoft.insights/', variables('dcraName'))]",
               "apiVersion": "2021-09-01-preview",
               "location": "[parameters('clusterLocation')]",
@@ -166,8 +169,8 @@
       "type": "Microsoft.Resources/deployments",
       "name": "[Concat('azuremonitormetrics-arc-k8s-extension', '-',  uniqueString(parameters('clusterResourceId')))]",
       "apiVersion": "2019-05-01",
-      "subscriptionId": "[split(parameters('clusterResourceId'),'/')[2]]",
-      "resourceGroup": "[split(parameters('clusterResourceId'),'/')[4]]",
+      "subscriptionId": "[variables('clusterSubscriptionId')]",
+      "resourceGroup": "[variables('clusterResourceGroup')]",
       "dependsOn": [
         "[Concat('azuremonitormetrics-dcra', '-',  uniqueString(parameters('clusterResourceId')))]"
       ],
@@ -183,7 +186,7 @@
               "type": "Microsoft.KubernetesConfiguration/extensions",
               "apiVersion": "2021-09-01",
               "name": "azuremonitor-metrics",
-              "location": "[parameters('clusterLocation')]",
+              "location": "westus",
               "identity": {
                 "type": "systemassigned"
               },
@@ -192,11 +195,9 @@
                 "configurationSettings": {
                 },
                 "configurationProtectedSettings": {
-                  "amalogs.secret.wsid": "[reference(parameters('azureMonitorWorkspaceResourceId'), '2015-03-20').customerId]",
-                  "amalogs.secret.key": "[listKeys(parameters('azureMonitorWorkspaceResourceId'), '2015-03-20').primarySharedKey]"
                 },
                 "autoUpgradeMinorVersion": true,
-                "releaseTrain": "Stable",
+                "releaseTrain": "Dev",
                 "scope": {
                   "Cluster": {
                     "releaseNamespace": "azuremonitor-containers"
