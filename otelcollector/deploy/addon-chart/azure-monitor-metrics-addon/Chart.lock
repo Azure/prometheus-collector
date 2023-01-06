@@ -1,0 +1,6 @@
+dependencies:
+- name: prometheus-node-exporter
+  repository: oci://mcr.microsoft.com/azuremonitor/containerinsights/cidev
+  version: 3.1.1
+digest: sha256:af8b68e529c9b5d19ff2972e7952020643cd1f60bedd22b6e72ff109b7a2356b
+generated: "2023-01-06T10:28:29.5614347-08:00"

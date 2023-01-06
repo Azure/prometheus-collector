@@ -35,8 +35,8 @@ AzureMonitorMetrics:
       - storageclasses
       - validatingwebhookconfigurations
       - volumeattachments
-  ImageRepository: ${MCR_REPOSITORY}
-  ImageTag: ${IMAGE_TAG}
+  ImageRepository: "/azuremonitor/containerinsights/ciprod/prometheus-collector/images"
+  ImageTag: "6.0.1-main-11-29-2022-97e2122e"
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner. 
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP - 
   # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
@@ -44,9 +44,43 @@ AzureMonitorMetrics:
   AddonTokenAdapter:
     ImageRepository: "/aks/msi/addon-token-adapter"
     ImageTag: "master.221118.2"
+  ArcExtension: true
 global:
   commonGlobals:
     CloudEnvironment: "AzureCloud"
-    Region: "${AKS_REGION}"
+    Region: "West US 3"
     Customer:
-      AzureResourceID: ${AKS_RESOURCE_ID}
+      AzureResourceID: "marc-test-arc-prom"
+
+Azure: 
+  Identity:
+      MSIAdapterYaml: |-
+        - command:
+            - /addon-token-adapter
+          args:
+            - --secret-namespace=kube-system          # Note that this must match consts.DefaultSecretNamespace in addon-token-reconciler
+            - --secret-name=extensions-aad-msi-token  # Note that this must match consts.ExtensionManagerGenevaTokenSecretName in addon-token-reconciler
+            - --token-server-listening-port=8888
+            - --token-server-forwarding-port=8889
+            - --ignore-aud-trailing-slash=true
+          image: "mcr.microsoft.com/aks/msi/addon-token-adapter:master.220916.1"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9090
+              scheme: "HTTP"
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            limits:
+              cpu: 50m
+              memory: 100Mi
+            requests:
+              cpu: 20m
+              memory: 50Mi
