@@ -1,53 +1,54 @@
 @REM @echo off
 
-setlocal enableDelayedExpansion
 rem Get the current date and time
-for /f "tokens=2 delims==" %%a in ('wmic os get LocalDateTime /VALUE') do set "dt=%%a"
-rem Convert the current date and time to epoch time
-set /a "epochTimeNow=((%dt:~0,4% - 1970) * 31536000 + (%dt:~4,2% - 1) * 2592000 + (%dt:~6,2% - 1) * 86400 + %dt:~8,2% * 3600 + %dt:~10,2% * 60 + %dt:~12,2%)"
+setlocal enableextensions
+for /f %%x in ('wmic path win32_utctime get /format:list ^| findstr "="') do (
+    set %%x)
+set /a z=(14-100%Month%%%100)/12, y=10000%Year%%%10000-z
+set /a ut=y*365+y/4-y/100+y/400+(153*(100%Month%%%100+12*z-3)+2)/5+Day-719469
+set /a epochTimeNow=%ut%*86400 + 100%Hour%%%100*3600 + 100%Minute%%%100*60 + 100%Second%%%100
+endlocal & set "epochTimeNow=%epochTimeNow%"
 
 if %MAC% == true (
     if not exist "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json" (
         if exist "C:\opt\microsoft\liveness\azmon-container-start-time" (
-            set /p azmonContainerStartTime=<C:\opt\microsoft\liveness\azmon-container-start-time
+            for /f "delims=" %%a in (D:\git_repos\prometheus-collector\azmon-container-start-time) do set firstline=%%a
+
+            set /a azmonContainerStartTime=%firstline%
             set /a duration=%epochTimeNow%-%azmonContainerStartTime%
             set /a durationInMinutes=%duration% / 60
+
             if %durationInMinutes%==0 (
-                echo %epochTimeNow% "No configuration present for the AKS resource" > C:\dev\write-to-traces
+                echo %epochTimeNow% "No configuration present for the AKS resource"
             )
             if %durationInMinutes% GTR 15 (
-                echo "(Greater than 15 mins) No configuration present for the AKS resource" > C:\dev\termination-log
+                echo "Greater than 15 mins, No configuration present for the AKS resource"
                 exit /b 1
             )
         )
     ) else (
         tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
         if errorlevel 1 (
-            echo "Metrics Extension is not running (configuration exists)" > C:\dev\termination-log
+            echo "Metrics Extension is not running (configuration exists)"
             exit /b 1
         )
         tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
         if errorlevel 1 (
-            echo "MonAgentLauncher is not running (configuration exists)" > C:\dev\termination-log
+            echo "MonAgentLauncher is not running (configuration exists)"
             exit /b 1
         )
-    )
-
-    if exist "C:\opt\microsoft\scripts\filesystemwatcher.txt" (
-        echo "Config Map Updated or DCR/DCE updated since agent started" > C:\dev\termination-log
-        exit /b  1
     )
 ) else (
     rem Non-MAC mode
     tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
     if errorlevel 1 (
-        echo "Metrics Extension is not running (configuration DOES NOT exist)" > C:\dev\termination-log
+        echo "Metrics Extension is not running (Non-MAC mode)" > C:\dev\termination-log
         exit /b 1
     )
 
     tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
     if errorlevel 1 (
-        echo "MonAgentLauncher is not running (configuration DOES NOT exist)" > C:\dev\termination-log
+        echo "MonAgentLauncher is not running (Non-MAC mode)" > C:\dev\termination-log
         exit /b 1
     )
 )

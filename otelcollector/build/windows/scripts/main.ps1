@@ -409,7 +409,8 @@ Start-Sleep 60
 Start-ME
 Start-FileSystemWatcher
 
-$epochTimeNow = Get-Date -UFormat %s
+# $epochTimeNow = [int](Get-Date).ToUniversalTime().Subtract([datetime]'1970-01-01T00:00:00Z').TotalSeconds
+$epochTimeNow = [int](Get-Date).Subtract([datetime]'1970-01-01T00:00:00Z').TotalSeconds
 Set-Content -Path /opt/microsoft/liveness/azmon-container-start-time $epochTimeNow
 
 # Notepad.exe | Out-Null
