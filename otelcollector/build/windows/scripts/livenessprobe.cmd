@@ -1,4 +1,4 @@
-@REM @echo off
+@echo off
 
 rem Get the current date and time
 setlocal enableextensions
@@ -9,9 +9,12 @@ set /a ut=y*365+y/4-y/100+y/400+(153*(100%Month%%%100+12*z-3)+2)/5+Day-719469
 set /a epochTimeNow=%ut%*86400 + 100%Hour%%%100*3600 + 100%Minute%%%100*60 + 100%Second%%%100
 endlocal & set "epochTimeNow=%epochTimeNow%"
 
+set /a durationInMinutes = -1
+
 if %MAC% == true (
     if not exist "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json" (
         if exist "C:\opt\microsoft\liveness\azmon-container-start-time" (
+            echo "REACHES HERE"
             for /f "delims=" %%a in (D:\git_repos\prometheus-collector\azmon-container-start-time) do set firstline=%%a
 
             set /a azmonContainerStartTime=%firstline%
