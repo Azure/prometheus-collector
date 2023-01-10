@@ -321,7 +321,6 @@ spec:
             initialDelaySeconds: 300
             timeoutSeconds: 15
             failureThreshold: 3
-        {{- if .Values.useMonitoringAccount }}
         - name: addon-token-adapter-win
           command:
            - addon-token-adapter-win
@@ -348,7 +347,6 @@ spec:
            capabilities:
              add:
                - NET_ADMIN
-        {{- end }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
