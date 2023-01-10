@@ -76,11 +76,19 @@ def loadIntervalHash
   end
 end
 
+<<<<<<< HEAD
 def UpdateScrapeIntervalConfig(yamlConfigFile, scrapeInterval)
   begin
     ConfigParseErrorLogger.log(LOGGING_PREFIX, "Updating scrape interval config for #{yamlConfigFile}")
     config = YAML.load(File.read(yamlConfigFile))
     scrapeIntervalConfig = scrapeInterval
+=======
+def UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting)
+  begin
+    ConfigParseErrorLogger.log(LOGGING_PREFIX, "Updating scrape interval config for #{yamlConfigFile}")
+    config = YAML.load(File.read(yamlConfigFile))
+    scrapeIntervalConfig = scrapeIntervalSetting
+>>>>>>> cfcb0cb4162eb34b2a2bff62963ed8e383df9b7f
 
     # Iterate through each scrape config and update scrape interval config 
     if !config.nil?
@@ -155,18 +163,22 @@ def populateDefaultPrometheusConfig
       kubeletScrapeInterval = @intervalHash["KUBELET_SCRAPE_INTERVAL"]
       if currentControllerType == @replicasetControllerType
         if advancedMode == false
+          UpdateScrapeIntervalConfig(@kubeletDefaultFileRsSimple, kubeletScrapeInterval)
           if !kubeletMetricsKeepListRegex.nil? && !kubeletMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@kubeletDefaultFileRsSimple, kubeletMetricsKeepListRegex)
             UpdateScrapeIntervalConfig(@kubeletDefaultFileRsSimple, kubeletScrapeInterval)
           end
           defaultConfigs.push(@kubeletDefaultFileRsSimple)
         elsif windowsDaemonset == true && @sendDSUpMetric == true
+          UpdateScrapeIntervalConfig(@kubeletDefaultFileRsAdvancedWindowsDaemonset, kubeletScrapeInterval)
           defaultConfigs.push(@kubeletDefaultFileRsAdvancedWindowsDaemonset)
         elsif @sendDSUpMetric == true
+          UpdateScrapeIntervalConfig(@kubeletDefaultFileRsAdvanced, kubeletScrapeInterval)
           defaultConfigs.push(@kubeletDefaultFileRsAdvanced)
         end
       else
         if advancedMode == true && (windowsDaemonset == true || ENV["OS_TYPE"].downcase == "linux")
+          UpdateScrapeIntervalConfig(@kubeletDefaultFileDs, kubeletScrapeInterval)
           if !kubeletMetricsKeepListRegex.nil? && !kubeletMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@kubeletDefaultFileDs, kubeletMetricsKeepListRegex)
             UpdateScrapeIntervalConfig(@kubeletDefaultFileRsSimple, kubeletScrapeInterval)
@@ -183,6 +195,10 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
       corednsMetricsKeepListRegex = @regexHash["COREDNS_METRICS_KEEP_LIST_REGEX"]
       corednsScrapeInterval = @intervalHash["COREDNS_SCRAPE_INTERVAL"]
+<<<<<<< HEAD
+=======
+      UpdateScrapeIntervalConfig(@corednsDefaultFile, corednsScrapeInterval)
+>>>>>>> cfcb0cb4162eb34b2a2bff62963ed8e383df9b7f
       if !corednsMetricsKeepListRegex.nil? && !corednsMetricsKeepListRegex.empty?
         AppendMetricRelabelConfig(@corednsDefaultFile, corednsMetricsKeepListRegex)
         UpdateScrapeIntervalConfig(@corednsDefaultFile, corednsScrapeInterval)
@@ -194,6 +210,7 @@ def populateDefaultPrometheusConfig
       cadvisorScrapeInterval = @intervalHash["CADVISOR_SCRAPE_INTERVAL"]
       if currentControllerType == @replicasetControllerType
         if advancedMode == false
+          UpdateScrapeIntervalConfig(@cadvisorDefaultFileRsSimple, cadvisorScrapeInterval)
           if !cadvisorMetricsKeepListRegex.nil? && !cadvisorMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@cadvisorDefaultFileRsSimple, cadvisorMetricsKeepListRegex)
             UpdateScrapeIntervalConfig(@cadvisorDefaultFileRsSimple, cadvisorScrapeInterval)
@@ -205,6 +222,7 @@ def populateDefaultPrometheusConfig
         end
       else
         if advancedMode == true && ENV["OS_TYPE"].downcase == "linux"
+          UpdateScrapeIntervalConfig(@cadvisorDefaultFileDs, cadvisorScrapeInterval)
           if !cadvisorMetricsKeepListRegex.nil? && !cadvisorMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@cadvisorDefaultFileDs, cadvisorMetricsKeepListRegex)
             UpdateScrapeIntervalConfig(@cadvisorDefaultFileDs, cadvisorScrapeInterval)
@@ -220,6 +238,10 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
       kubeproxyMetricsKeepListRegex = @regexHash["KUBEPROXY_METRICS_KEEP_LIST_REGEX"]
       kubeproxyScrapeInterval = @intervalHash["KUBEPROXY_SCRAPE_INTERVAL"]
+<<<<<<< HEAD
+=======
+      UpdateScrapeIntervalConfig(@kubeproxyDefaultFile, kubeproxyScrapeInterval)
+>>>>>>> cfcb0cb4162eb34b2a2bff62963ed8e383df9b7f
       if !kubeproxyMetricsKeepListRegex.nil? && !kubeproxyMetricsKeepListRegex.empty?
         AppendMetricRelabelConfig(@kubeproxyDefaultFile, kubeproxyMetricsKeepListRegex)
         UpdateScrapeIntervalConfig(@kubeproxyDefaultFile, kubeproxyScrapeInterval)
@@ -229,6 +251,10 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
       apiserverMetricsKeepListRegex = @regexHash["APISERVER_METRICS_KEEP_LIST_REGEX"]
       apiserverScrapeInterval = @intervalHash["APISERVER_SCRAPE_INTERVAL"]
+<<<<<<< HEAD
+=======
+      UpdateScrapeIntervalConfig(@apiserverDefaultFile, apiserverScrapeInterval)
+>>>>>>> cfcb0cb4162eb34b2a2bff62963ed8e383df9b7f
       if !apiserverMetricsKeepListRegex.nil? && !apiserverMetricsKeepListRegex.empty?
         AppendMetricRelabelConfig(@apiserverDefaultFile, apiserverMetricsKeepListRegex)
         UpdateScrapeIntervalConfig(@apiserverDefaultFile, apiserverScrapeInterval)
@@ -237,7 +263,12 @@ def populateDefaultPrometheusConfig
     end
     if !ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
       kubestateMetricsKeepListRegex = @regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
+<<<<<<< HEAD
       ubestateScrapeInterval = @intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
+=======
+      kubestateScrapeInterval = @intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
+      UpdateScrapeIntervalConfig(@kubestateDefaultFile, kubestateScrapeInterval)
+>>>>>>> cfcb0cb4162eb34b2a2bff62963ed8e383df9b7f
       if !kubestateMetricsKeepListRegex.nil? && !kubestateMetricsKeepListRegex.empty?
         AppendMetricRelabelConfig(@kubestateDefaultFile, kubestateMetricsKeepListRegex)
         UpdateScrapeIntervalConfig(@kubestateDefaultFile, kubestateScrapeInterval)
@@ -251,16 +282,21 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].downcase == "true"
       nodeexporterMetricsKeepListRegex = @regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
       nodeexporterScrapeInterval = @intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"]
+<<<<<<< HEAD
       UpdateScrapeIntervalConfig(@kubestateDefaultFile, kubestateScrapeInterval)
 
+=======
+>>>>>>> cfcb0cb4162eb34b2a2bff62963ed8e383df9b7f
       if currentControllerType == @replicasetControllerType
         if advancedMode == true && @sendDSUpMetric == true
+          UpdateScrapeIntervalConfig(@nodeexporterDefaultFileRsAdvanced, nodeexporterScrapeInterval)
           contents = File.read(@nodeexporterDefaultFileRsAdvanced)
           contents = contents.gsub("$$NODE_EXPORTER_NAME$$", ENV["NODE_EXPORTER_NAME"])
           contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
           File.open(@nodeexporterDefaultFileRsAdvanced, "w") { |file| file.puts contents }
           defaultConfigs.push(@nodeexporterDefaultFileRsAdvanced)
         elsif advancedMode == false
+          UpdateScrapeIntervalConfig(@nodeexporterDefaultFileRsSimple, nodeexporterScrapeInterval)
           if !nodeexporterMetricsKeepListRegex.nil? && !nodeexporterMetricsKeepListRegex.empty?
             UpdateScrapeIntervalConfig(@nodeexporterDefaultFileRsSimple, nodeexporterScrapeInterval)
             AppendMetricRelabelConfig(@nodeexporterDefaultFileRsSimple, nodeexporterMetricsKeepListRegex)
@@ -273,6 +309,7 @@ def populateDefaultPrometheusConfig
         end
       else
         if advancedMode == true && ENV["OS_TYPE"].downcase == "linux"
+          UpdateScrapeIntervalConfig(@nodeexporterDefaultFileDs, nodeexporterScrapeInterval)
           if !nodeexporterMetricsKeepListRegex.nil? && !nodeexporterMetricsKeepListRegex.empty?
             UpdateScrapeIntervalConfig(@nodeexporterDefaultFileDs, nodeexporterScrapeInterval)
             AppendMetricRelabelConfig(@nodeexporterDefaultFileDs, nodeexporterMetricsKeepListRegex)
@@ -298,6 +335,7 @@ def populateDefaultPrometheusConfig
       winexporterMetricsKeepListRegex = @regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
       windowsexporterScrapeInterval = @intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"]
       if currentControllerType == @replicasetControllerType && advancedMode == false && ENV["OS_TYPE"].downcase == "linux"
+        UpdateScrapeIntervalConfig(@windowsexporterDefaultRsSimpleFile, windowsexporterScrapeInterval)
         if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowsexporterDefaultRsSimpleFile, winexporterMetricsKeepListRegex)
           UpdateScrapeIntervalConfig(@windowsexporterDefaultRsSimpleFile, windowsexporterScrapeInterval)
@@ -308,6 +346,7 @@ def populateDefaultPrometheusConfig
         File.open(@windowsexporterDefaultRsSimpleFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowsexporterDefaultRsSimpleFile)
       elsif currentControllerType == @daemonsetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "windows"
+        UpdateScrapeIntervalConfig(@windowsexporterDefaultDsFile, windowsexporterScrapeInterval)
         if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowsexporterDefaultDsFile, winexporterMetricsKeepListRegex)
           UpdateScrapeIntervalConfig(@windowsexporterDefaultDsFile, windowsexporterScrapeInterval)
@@ -325,6 +364,7 @@ def populateDefaultPrometheusConfig
 
         # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
+        UpdateScrapeIntervalConfig(@windowsexporterDefaultRsSimpleFile, windowsexporterScrapeInterval)
         if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowsexporterDefaultRsSimpleFile, winexporterMetricsKeepListRegex)
           UpdateScrapeIntervalConfig(@windowsexporterDefaultRsSimpleFile, windowsexporterScrapeInterval)
@@ -337,6 +377,7 @@ def populateDefaultPrometheusConfig
       winkubeproxyMetricsKeepListRegex = @regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
       windowskubeproxyScrapeInterval = @intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"]
       if currentControllerType == @replicasetControllerType && advancedMode == false && ENV["OS_TYPE"].downcase == "linux"
+        UpdateScrapeIntervalConfig(@windowskubeproxyDefaultFileRsSimpleFile, windowskubeproxyScrapeInterval)
         if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowskubeproxyDefaultFileRsSimpleFile, winkubeproxyMetricsKeepListRegex)
           UpdateScrapeIntervalConfig(@windowskubeproxyDefaultFileRsSimpleFile, windowskubeproxyScrapeInterval)
@@ -347,6 +388,7 @@ def populateDefaultPrometheusConfig
         File.open(@windowskubeproxyDefaultFileRsSimpleFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeproxyDefaultFileRsSimpleFile)
       elsif currentControllerType == @daemonsetControllerType && advancedMode == true && windowsDaemonset == true && ENV["OS_TYPE"].downcase == "windows"
+        UpdateScrapeIntervalConfig(@windowskubeproxyDefaultDsFile, windowskubeproxyScrapeInterval)
         if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
           AppendMetricRelabelConfig(@windowskubeproxyDefaultDsFile, winkubeproxyMetricsKeepListRegex)
           UpdateScrapeIntervalConfig(@windowskubeproxyDefaultFileRsSimpleFile, windowskubeproxyScrapeInterval)
@@ -364,9 +406,14 @@ def populateDefaultPrometheusConfig
 
         # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
+        UpdateScrapeIntervalConfig(@windowskubeproxyDefaultFileRsSimpleFile, windowskubeproxyScrapeInterval)
         if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
+<<<<<<< HEAD
           AppendMetricRelabelConfig(@windowskubeproxyDefaultRsSimpleFile, winkubeproxyMetricsKeepListRegex)
           UpdateScrapeIntervalConfig(@windowskubeproxyDefaultRsSimpleFile, windowskubeproxyScrapeInterval)
+=======
+          AppendMetricRelabelConfig(@windowskubeproxyDefaultFileRsSimpleFile, winkubeproxyMetricsKeepListRegex)
+>>>>>>> cfcb0cb4162eb34b2a2bff62963ed8e383df9b7f
         end
         defaultConfigs.push(@windowskubeproxyDefaultFileRsSimpleFile)
       end
@@ -458,6 +505,7 @@ def writeDefaultScrapeTargetsFile()
   if !ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].downcase == "false"
     begin
       loadRegexHash
+      loadIntervalHash
       populateDefaultPrometheusConfig
       if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Starting to merge default prometheus config values in collector template as backup")

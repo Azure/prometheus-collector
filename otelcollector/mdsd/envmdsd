@@ -5,7 +5,7 @@ export MDSD_FLUENT_SOCKET_PORT="28230"
 export ENABLE_MCS="true"
 export MONITORING_USE_GENEVA_CONFIG_SERVICE="false"
 export MDSD_USE_LOCAL_PERSISTENCY="false"
-export SSL_CERT_DIR="/etc/ssl/certs"
+export SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
 ## Commenting these variables for now. Will need to set these if we start usig mdsd for purposes other than fetching AMCS config
 #export MDSD_ROLE_PREFIX="/var/run/mdsd/default"
 #export MDSD_OPTIONS="-d -A -r ${MDSD_ROLE_PREFIX}"

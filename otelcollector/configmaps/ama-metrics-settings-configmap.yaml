@@ -31,6 +31,7 @@ data:
     windowsexporter = ""
     windowskubeproxy = ""
     minimalingestionprofile = true
+<<<<<<< HEAD
   default-targets-scrape-interval-list: |-
     kubelet = 30
     coredns = 30
@@ -42,6 +43,19 @@ data:
     windowsexporter = 30
     windowskubeproxy = 30
     prometheusCollectorHealth = 30
+=======
+  default-targets-scrape-interval-settings: |-
+    kubelet = "30s"
+    coredns = "30s"
+    cadvisor = "30s"
+    kubeproxy = "30s"
+    apiserver = "30s"
+    kubestate = "30s"
+    nodeexporter = "30s"
+    windowsexporter = "30s"
+    windowskubeproxy = "30s"
+    prometheusCollectorHealth = "30s"
+>>>>>>> cfcb0cb4162eb34b2a2bff62963ed8e383df9b7f
   debug-mode: |-
     enabled = false
 metadata:

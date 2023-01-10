@@ -72,6 +72,12 @@ jobs:
 
         envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
         tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector
+
+        cd $(Build.ArtifactStagingDirectory)
+        cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
+        export AKS_REGION="westeurope"
+        export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu"
+        envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
       displayName: 'Ev2: package artifacts.tar.gz for prod release'
 
     - task: CopyFiles@2
@@ -95,6 +101,8 @@ jobs:
   dependsOn: common
   variables:
     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+  # This is necessary because of: https://github.com/moby/moby/issues/37965
+    DOCKER_BUILDKIT: 1
   steps:
 
     - task: CodeQL3000Init@0
@@ -109,8 +117,9 @@ jobs:
     - bash: |
         sudo apt-get install build-essential -y
         make
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+      displayName: "SDL: build otelcollector, promconfigvalidator, and fluent-bit plugin for scanning"
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
@@ -140,17 +149,27 @@ jobs:
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-
+ 
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
-        docker buildx create --name testbuilder
-        docker buildx use testbuilder
+
+        # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+        sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+        docker buildx create --name dockerbuilder
+        docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         if [ "$(Build.Reason)" != "PullRequest" ]; then
-          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           docker pull $(LINUX_FULL_IMAGE_NAME)
         else
-          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --load
+          
+          # Build multiarch image to make sure there are no issues
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
+
+          # Load in amd64 image to run vulnerability scan
+          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
@@ -394,20 +413,12 @@ jobs:
       waitForExecution: false
       arguments: '--dependency-update --set image.repository=$(MCR_REGISTRY)$(MCR_REPOSITORY) --set image.tag=$(IMAGE_TAG) --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-wcus" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.clientId=$(CI_PROMETHEUS_KV_CLIENTID) --set azureKeyVault.clientSecret=$(CI_PROMETHEUS_KV_CLIENTSECRET) --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi"'
 
-  - task: HelmDeploy@0
-    displayName: "Deploy: ci-dev-aks-msi-eus2 cluster"
-    inputs:
-      connectionType: 'Azure Resource Manager'
-      azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-      azureResourceGroup: 'ci-dev-aks-msi-eus2-rg'
-      kubernetesCluster: 'ci-dev-aks-msi-eus2'
-      namespace: 'monitoring'
-      command: 'upgrade'
-      chartType: 'FilePath'
-      chartPath: '$(Build.StagingDirectory)/$(HELM_CHART_NAME)-$(HELM_SEMVER).tgz'
-      releaseName: 'prom-dev-msi'
-      waitForExecution: false
-      arguments: '--dependency-update --set image.repository=$(MCR_REGISTRY)$(MCR_REPOSITORY) --set image.tag=$(IMAGE_TAG) --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-msi-eus2" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.useManagedIdentity=true --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set minimalIngestionProfile="false"'
+  - bash: |
+      export AKS_REGION="eastus"
+      export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
+      envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+      ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+    displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
 
   - task: HelmDeploy@0
     displayName: "Deploy: ci-dev-aks-mac-eus cluster"
@@ -416,10 +427,10 @@ jobs:
       azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
       azureResourceGroup: 'ci-dev-aks-mac-eus-rg'
       kubernetesCluster: 'ci-dev-aks-mac-eus'
-      namespace: 'kube-system'
+      namespace: 'default'
       command: 'upgrade'
       chartType: 'FilePath'
-      chartPath: '$(Build.StagingDirectory)/$(HELM_CHART_NAME)-$(HELM_SEMVER).tgz'
-      releaseName: 'prom-dev-mac'
+      chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+      releaseName: 'ama-metrics'
       waitForExecution: false
-      arguments: '--dependency-update --set image.repository=$(MCR_REGISTRY)$(MCR_REPOSITORY) --set image.tag=$(IMAGE_TAG) --set useMonitoringAccount=true --set scrapeTargets.coreDns="false" --set scrapeTargets.kubeProxy="false" --set scrapeTargets.apiServer="false" --set scrapeTargets.prometheusCollectorHealth=true --set mode.advanced=true --set windowsDaemonset=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi" --set azureResourceId="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus" --set azureResourceRegion="eastus"'
+      arguments: --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml

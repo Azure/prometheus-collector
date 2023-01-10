@@ -40,6 +40,7 @@ scrapeTargets:
   prometheusCollectorHealth: true
 
 # The following setting will set the scrape interval of each target
+<<<<<<< HEAD
   scrapeIntervalTargets:
     coreDns: 30
     kubelet: 30
@@ -51,6 +52,19 @@ scrapeTargets:
     windowsExporter: 30
     windowsKubeProxy: 30
     prometheusCollectorHealth: 30
+=======
+scrapeIntervalTargets:
+  coreDns: "30s"
+  kubelet: "30s"
+  cAdvisor: "30s"
+  kubeProxy: "30s"
+  apiServer: "30s"
+  kubeState: "30s"
+  nodeExporter: "30s"
+  windowsExporter: "30s"
+  windowsKubeProxy: "30s"
+  prometheusCollectorHealth: "30s"
+>>>>>>> cfcb0cb4162eb34b2a2bff62963ed8e383df9b7f
     
 # when minimalIngestionProfile is enabled, we will ingest only hand-picked/selected metrics per default target. see the list of metrics included per default target in our docs.
 minimalIngestionProfile: true
