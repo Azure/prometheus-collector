@@ -12,8 +12,6 @@ CVE-2021-43565
 CVE-2022-27664
 # /bin/node_exporter
 CVE-2021-44716
-# otelcollector and promconfigvalidator
-CVE-2022-27664
 # opt/telegraf/telegraf
 CVE-2022-27664
 CVE-2022-29190
