@@ -144,7 +144,9 @@ COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /li
 # curl dependencies
 COPY --from=builder /lib/libcurl.so.4 lib/libz.so.1 /lib/libc.so.6 /lib/
 
-RUN [ "/bin/bash", "-c", "chmod 775 /etc/cron.daily/logrotate" ]
+RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
+RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
+RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
 ENTRYPOINT [ "/bin/bash" ]
 CMD [ "/opt/main.sh" ]
