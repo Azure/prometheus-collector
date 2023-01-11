@@ -52,35 +52,32 @@ global:
     Customer:
       AzureResourceID: "marc-test-arc-prom"
 
-Azure: 
-  Identity:
-      MSIAdapterYaml: |-
-        - command:
-            - /addon-token-adapter
-          args:
-            - --secret-namespace=kube-system          # Note that this must match consts.DefaultSecretNamespace in addon-token-reconciler
-            - --secret-name=extensions-aad-msi-token  # Note that this must match consts.ExtensionManagerGenevaTokenSecretName in addon-token-reconciler
-            - --token-server-listening-port=8888
-            - --token-server-forwarding-port=8889
-            - --ignore-aud-trailing-slash=true
-          image: "mcr.microsoft.com/aks/msi/addon-token-adapter:master.220916.1"
-          imagePullPolicy: IfNotPresent
-          securityContext:
-            capabilities:
-              add:
-                - NET_ADMIN
-                - NET_RAW
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 9090
-              scheme: "HTTP"
-            initialDelaySeconds: 10
-            periodSeconds: 15
-          resources:
-            limits:
-              cpu: 50m
-              memory: 100Mi
-            requests:
-              cpu: 20m
-              memory: 50Mi
+# Azure: 
+#   Identity:
+#       MSIAdapterYaml: |- 
+#         - name: MANAGED_IDENTITY_AUTH
+#           value: "true"
+#         - name: TEST_MODE
+#           value: "false"
+#         - name: TEST_FILE
+#           value: "/data/token"
+#         image: "mcr.microsoft.com/aks/msi/addon-token-adapter:master.220916.1"
+#         securityContext:
+#           capabilities:
+#             add:
+#               - NET_ADMIN
+#               - NET_RAW
+#         livenessProbe:
+#           httpGet:
+#             path: /healthz
+#             port: 9090
+#             scheme: "HTTP"
+#         initialDelaySeconds: 10
+#         periodSeconds: 15
+#         resources:
+#           limits:
+#             cpu: 50m
+#             memory: 100Mi
+#           requests:
+#             cpu: 20m
+#             memory: 50Mi

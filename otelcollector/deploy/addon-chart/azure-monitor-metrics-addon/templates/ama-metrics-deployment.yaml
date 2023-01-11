@@ -138,10 +138,10 @@ spec:
         - name: arc-msi-adapter
           imagePullPolicy: IfNotPresent
           env:
-            - name: AZMON_COLLECT_ENV
-              value: "false"
-            - name: TOKEN_NAMESPACE
-              value: "azure-arc"
+          - name: AZMON_COLLECT_ENV
+            value: "false"
+          - name: TOKEN_NAMESPACE
+            value: "azure-arc"
           {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
         {{- else }}
         - name: addon-token-adapter
