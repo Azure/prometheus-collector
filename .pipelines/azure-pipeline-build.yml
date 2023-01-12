@@ -2,13 +2,13 @@ trigger:
   branches:
     include:
     - main
+    - grace/no-9090
 
 pr:
   autoCancel: true
   branches:
     include:
     - main
-    - grace/no-9090
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
