@@ -12,6 +12,8 @@ endlocal & set "epochTimeNow=%epochTimeNow%"
 set /a durationInMinutes = -1
 
 if %MAC% == true (
+    @rem Checking if TokenConfig file exists, if it doesn't, it means that there is no DCR/DCE config for this resource and ME/MDSD will fail to start
+    @rem avoid the pods from going into crashloopbackoff, we are restarting the pod with this message every 15 minutes.
     if not exist "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json" (
         if exist "C:\opt\microsoft\liveness\azmon-container-start-time" (
             echo "REACHES HERE"

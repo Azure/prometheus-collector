@@ -2,6 +2,11 @@
 $me_config_file = '/opt/metricextension/me_ds.config'
 
 function Set-EnvironmentVariablesAndConfigParser {
+    # Set windows 2019 or 2022 version (Microsoft Windows Server 2019 Datacenter or Microsoft Windows Server 2022 Datacenter)
+    $windowsVersion = (Get-WmiObject -class Win32_OperatingSystem).Caption
+    [System.Environment]::SetEnvironmentVariable("windowsVersion", $windowsVersion, "Process")
+    [System.Environment]::SetEnvironmentVariable("windowsVersion", $windowsVersion, "Machine")
+
     #resourceid override.
     if ([string]::IsNullOrEmpty($env:MAC)) {
         if ([string]::IsNullOrEmpty($env:CLUSTER)) {
@@ -28,8 +33,6 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
 
     ############### Environment variables for MA {Start} ###############
-
-    ############################################################################# test
     [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Process")
     [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Process")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Process")
@@ -42,7 +45,6 @@ function Set-EnvironmentVariablesAndConfigParser {
     [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Machine")
     [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Machine")
     [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Machine")
-    ############################################################################# test
     [System.Environment]::SetEnvironmentVariable("MONITORING_USE_GENEVA_CONFIG_SERVICE", "false", "Process")
     [System.Environment]::SetEnvironmentVariable("MONITORING_USE_GENEVA_CONFIG_SERVICE", "false", "Machine")
     [System.Environment]::SetEnvironmentVariable("SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH", "true", "Process")
@@ -51,19 +53,14 @@ function Set-EnvironmentVariablesAndConfigParser {
     [System.Environment]::SetEnvironmentVariable("ENABLE_MCS", "true", "Machine")
     [System.Environment]::SetEnvironmentVariable("MDSD_USE_LOCAL_PERSISTENCY", "false", "Process")
     [System.Environment]::SetEnvironmentVariable("MDSD_USE_LOCAL_PERSISTENCY", "false", "Machine")
-    ############################################################################# test
-
-
     [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Process")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $env:AKSREGION, "Process")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $env:CLUSTER, "Process")
-    # [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Process")
     [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $env:CLUSTER, "Process")
     [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Process")
     [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Machine")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $env:AKSREGION, "Machine")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $env:CLUSTER, "Machine")
-    # [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Machine")
     [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $env:CLUSTER, "Machine")
     [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Machine")
     ############### Environment variables for MA {End} ###############
@@ -398,7 +395,9 @@ function Start-ME {
 }
 
 Start-Transcript -Path main.txt
-# Set-CertificateForME
+if ($env:MAC = = false) {
+    Set-CertificateForME
+}
 Set-EnvironmentVariablesAndConfigParser
 Start-Fluentbit
 Start-Telegraf
@@ -409,7 +408,6 @@ Start-Sleep 60
 Start-ME
 Start-FileSystemWatcher
 
-# $epochTimeNow = [int](Get-Date).ToUniversalTime().Subtract([datetime]'1970-01-01T00:00:00Z').TotalSeconds
 $epochTimeNow = [int](Get-Date).Subtract([datetime]'1970-01-01T00:00:00Z').TotalSeconds
 Set-Content -Path /opt/microsoft/liveness/azmon-container-start-time $epochTimeNow
 

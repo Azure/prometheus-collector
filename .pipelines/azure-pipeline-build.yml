@@ -276,7 +276,6 @@ jobs:
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
       displayName: "Build: push image to dev ACR"
-      condition: eq(variables.IS_PR, false)
 
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
