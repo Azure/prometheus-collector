@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/test-size
 
 pr:
   autoCancel: true
@@ -162,6 +163,7 @@ jobs:
         if [ "$(Build.Reason)" != "PullRequest" ]; then
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           docker pull $(LINUX_FULL_IMAGE_NAME)
+          docker image ls
         else
           
           # Build multiarch image to make sure there are no issues
