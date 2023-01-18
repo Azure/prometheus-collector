@@ -28,6 +28,13 @@ function Set-EnvironmentVariablesAndConfigParser {
         [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Process")
         [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Machine")
 
+        [System.Environment]::SetEnvironmentVariable("AKSREGION", $env:AKSREGION, "Process")
+        [System.Environment]::SetEnvironmentVariable("AKSREGION", $env:AKSREGION, "Machine")
+        [System.Environment]::SetEnvironmentVariable("CLUSTER", $env:CLUSTER, "Process")
+        [System.Environment]::SetEnvironmentVariable("CLUSTER", $env:CLUSTER, "Machine")
+        [System.Environment]::SetEnvironmentVariable("AZMON_CLUSTER_ALIAS", $env:AZMON_CLUSTER_ALIAS, "Process")
+        [System.Environment]::SetEnvironmentVariable("AZMON_CLUSTER_ALIAS", $env:AZMON_CLUSTER_ALIAS, "Machine")
+
         Write-Output "customResourceId=$env:customResourceId"
         Write-Output "customRegion=$env:customRegion"
     }
