@@ -395,7 +395,7 @@ function Start-ME {
 }
 
 Start-Transcript -Path main.txt
-if ($env:MAC == false) {
+if ($env:MAC -ne $true) {
     Set-CertificateForME
 }
 Set-EnvironmentVariablesAndConfigParser
