@@ -1,4 +1,5 @@
-01 * * * * root run-parts /etc/cron.hourly
-02 4 * * * root run-parts /etc/cron.daily
-22 4 * * 0 root run-parts /etc/cron.weekly
-42 4 1 * * root run-parts /etc/cron.monthly
+SHELL=/bin/bash
+01 * * * * root /busybin/run-parts /etc/cron.hourly
+02 4 * * * root /busybin/run-parts /etc/cron.daily
+22 4 * * 0 root /busybin/run-parts /etc/cron.weekly
+42 4 1 * * root /busybin/run-parts /etc/cron.monthly
