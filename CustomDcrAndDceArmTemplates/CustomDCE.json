@@ -1,0 +1,41 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dataCollectionEndpointName": {
+            "type": "string"
+        },
+        "location": {
+            "type": "string",
+            "allowedValues": [
+                "eastus2euap",
+                "centraluseuap",
+                "centralus",
+                "eastus",
+                "eastus2",
+                "northeurope",
+                "southcentralus",
+                "southeastasia",
+                "uksouth",
+                "westeurope",
+                "westus",
+                "westus2"
+            ]
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Insights/dataCollectionEndpoints",
+            "apiVersion": "2021-09-01-preview",
+            "name": "[parameters('dataCollectionEndpointName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "description": "Custom DCE created for Monitoring Account",
+                "networkAcls": {
+                    "publicNetworkAccess": "Enabled"
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
