@@ -15,8 +15,8 @@ New-Item -Type Directory -Path /etc/genevamonitoringagent
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri https://github.com/bragi92/helloWorld/releases/download/test/MdmMetricsExtension.2.2022.1026.1505.nupkg -OutFile /installation/ME/mdmmetricsextension.2.2022.1026.1505.zip
-    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2022.1026.1505.zip -Destination /installation/ME/
+    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MetricsExtensionAndMA-Windows-1.18.2023/MdmMetricsExtension.2.2022.1201.1140.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2022.1201.1140.zip
+    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2022.1201.1140.zip -Destination /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
 catch {
@@ -83,7 +83,8 @@ If (Test-Path -Path $gemfile ) {
 ############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
-    $genevamonitoringagentUri='https://github.com/bragi92/helloWorld/releases/download/MA/GenevaMonitoringAgent.46.2.54-jriego2233952464.zip'
+    # $genevamonitoringagentUri='https://github.com/bragi92/helloWorld/releases/download/MA/GenevaMonitoringAgent.46.2.54-jriego2233952464.zip'
+    $genevamonitoringagentUri='https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MetricsExtensionAndMA-Windows-1.18.2023/GenevaMonitoringAgent.46.2.3.zip'
     Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip
     Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent
     Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction SilentlyContinue

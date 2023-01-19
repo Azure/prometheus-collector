@@ -28,6 +28,7 @@ function Set-EnvironmentVariablesAndConfigParser {
         [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Process")
         [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Machine")
 
+        # Setting these variables for telegraf
         [System.Environment]::SetEnvironmentVariable("AKSREGION", $env:AKSREGION, "Process")
         [System.Environment]::SetEnvironmentVariable("AKSREGION", $env:AKSREGION, "Machine")
         [System.Environment]::SetEnvironmentVariable("CLUSTER", $env:CLUSTER, "Process")
