@@ -29,5 +29,5 @@ data:
       static_configs:
       - targets: ['$NODE_IP:10250']
 metadata:
-  name: ama-metrics-prometheus-config-node
+  name: ama-metrics-prometheus-config-node-windows
   namespace: kube-system
