@@ -83,8 +83,8 @@ If (Test-Path -Path $gemfile ) {
 ############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
-    # $genevamonitoringagentUri='https://github.com/bragi92/helloWorld/releases/download/MA/GenevaMonitoringAgent.46.2.54-jriego2233952464.zip'
-    $genevamonitoringagentUri='https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MetricsExtensionAndMA-Windows-1.18.2023/GenevaMonitoringAgent.46.2.3.zip'
+    $genevamonitoringagentUri='https://github.com/bragi92/helloWorld/releases/download/MA/GenevaMonitoringAgent.46.2.54-jriego2233952464.zip'
+    # $genevamonitoringagentUri='https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MetricsExtensionAndMA-Windows-1.18.2023/GenevaMonitoringAgent.46.2.3.zip'
     Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip
     Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent
     Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction SilentlyContinue
