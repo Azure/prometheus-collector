@@ -19,6 +19,7 @@ data:
     nodeexporter = true
     windowsexporter = false
     windowskubeproxy = false
+    kappiebasic = true
     prometheuscollectorhealth = false
   default-targets-metrics-keep-list: |-
     kubelet = ""
@@ -30,6 +31,7 @@ data:
     nodeexporter = ""
     windowsexporter = ""
     windowskubeproxy = ""
+    kappiebasic = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
@@ -41,6 +43,7 @@ data:
     nodeexporter = "30s"
     windowsexporter = "30s"
     windowskubeproxy = "30s"
+    kappiebasic = "30s"
     prometheusCollectorHealth = "30s"
   debug-mode: |-
     enabled = false

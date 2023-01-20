@@ -20,6 +20,7 @@ LOGGING_PREFIX = "default-scrape-settings"
 @prometheusCollectorHealthEnabled = true
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
+@kappiebasicEnabled = true
 @noDefaultsEnabled = false
 @sendDSUpMetric = false
 
@@ -83,6 +84,10 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @windowskubeproxyEnabled = parsedConfig[:windowskubeproxy]
       puts "config::Using configmap scrape settings for windowskubeproxy: #{@windowskubeproxyEnabled}"
     end
+    if !parsedConfig[:kappiebasic].nil?
+      @kappiebasicEnabled = parsedConfig[:kappiebasic]
+      puts "config::Using configmap scrape settings for kappiebasic: #{@kappiebasicEnabled}"
+    end
 
     windowsDaemonset = false
     if ENV["WINMODE"].nil? && ENV["WINMODE"].strip.downcase == "advanced"
@@ -91,9 +96,9 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
-      if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@kubeletEnabled && !@prometheusCollectorHealthEnabled
+      if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@kubeletEnabled && !@prometheusCollectorHealthEnabled && !@kappiebasicEnabled
         @noDefaultsEnabled = true
-      elsif controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "linux" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled
+      elsif controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "linux" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled && !kappiebasicEnabled
         @noDefaultsEnabled = true
       elsif controllerType == "ReplicaSet" && @sendDsUpMetric && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
         @noDefaultsEnabled = true
@@ -118,7 +123,7 @@ end
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start default-scrape-settings Processing")
 # set default targets for MAC mode
 if !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true"
-  ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "MAC mode is enabled. Only enabling targets kubestate,cadvisor,kubelet & nodeexporter for linux before config map processing....")
+  ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "MAC mode is enabled. Only enabling targets kubestate,cadvisor,kubelet,kappiebasic & nodeexporter for linux before config map processing....")
   
   @corednsEnabled = false
   @kubeproxyEnabled = false
@@ -157,6 +162,7 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED=#{@prometheusCollectorHealthEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=#{@windowsexporterEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED=#{@kappiebasicEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
 else
