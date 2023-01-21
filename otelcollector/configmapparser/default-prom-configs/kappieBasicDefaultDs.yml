@@ -18,7 +18,3 @@ scrape_configs:
       - source_labels: [__address__]
         replacement: '$$NODE_NAME$$'
         target_label: instance
-    metric_relabel_configs:
-      - source_labels: [__name__]
-        action: keep
-        regex: (kappie.*)
