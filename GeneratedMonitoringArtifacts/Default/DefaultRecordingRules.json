@@ -22,11 +22,6 @@
     "variables": {
         "nodeRecordingRuleGroup": "NodeRecordingRulesRuleGroup-",
         "nodeRecordingRuleGroupName": "[concat(variables('nodeRecordingRuleGroup'), parameters('clusterName'))]",
-        "kubernetesRecordingRuleGroupWin": "KubernetesRecordingRulesRuleGroup-Win-",
-        "kubernetesRecordingRuleGroupWin1": "KubernetesRecordingRulesRuleGroup-Win-1-",
-        "kubernetesRecordingRuleGroupNameWin": "[concat(variables('kubernetesRecordingRuleGroupWin'), parameters('clusterName'))]",
-        "kubernetesRecordingRuleGroupNameWin1": "[concat(variables('kubernetesRecordingRuleGroupWin1'), parameters('clusterName'))]",
-        "kubernetesRecordingRuleGroupDescriptionWin": "Kubernetes Recording Rules RuleGroup for Win",
         "nodeRecordingRuleGroupDescription": "Node Recording Rules RuleGroup",
         "kubernetesRecordingRuleGroup": "KubernetesReccordingRulesRuleGroup-",
         "kubernetesRecordingRuleGroupName": "[concat(variables('kubernetesRecordingRuleGroup'), parameters('clusterName'))]",
