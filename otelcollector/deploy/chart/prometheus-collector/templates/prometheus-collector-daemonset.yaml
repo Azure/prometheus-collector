@@ -19,7 +19,7 @@ spec:
       maxUnavailable: {{ .Values.updateStrategy.daemonSet.maxUnavailable }}
         {{- end }}
       {{- end }}
-    {{- end }}  
+    {{- end }}
   template:
     metadata:
       labels:
@@ -67,11 +67,11 @@ spec:
             {{- if and (.Values.internalSettings.intEnvironment) (not .Values.useMonitoringAccount) }}
             - name: ME_ADDITIONAL_FLAGS
               value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
-            {{- end }}  
+            {{- end }}
             {{- if .Values.internalSettings.clusterOverride  }}
             - name: CLUSTER_OVERRIDE
               value: "true"
-            {{- end }}  
+            {{- end }}
             - name: CONTROLLER_TYPE
               value: "DaemonSet"
             - name: NODE_IP
@@ -123,7 +123,7 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
-            {{- if and (.Values.windowsDaemonset) (not .Values.useMonitoringAccount) }}
+            {{- if .Values.windowsDaemonset }}
             - name: WINMODE
               value: "advanced" # WINDOWS: only supported mode is 'advanced' [when not using MAC], any other value will be the default/non-advance mode
             {{- else }}
@@ -243,14 +243,14 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: "{{ template "prometheus-collector.fullname" . }}-azure-kv-metricstore"
-            {{- if not .Values.azureKeyVault.useManagedIdentity }}  
+            {{- if not .Values.azureKeyVault.useManagedIdentity }}
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
             {{- end }}
         {{- end }}
-{{- end }}        
+{{- end }}
 ---
-{{- if and (eq .Values.mode.advanced true) (eq .Values.windowsDaemonset true) (not .Values.useMonitoringAccount) }}
+{{- if and (eq .Values.mode.advanced true) (eq .Values.windowsDaemonset true) }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -271,7 +271,7 @@ spec:
       maxUnavailable: {{ .Values.updateStrategy.daemonSet.maxUnavailable }}
         {{- end }}
       {{- end }}
-    {{- end }}  
+    {{- end }}
   template:
     metadata:
       labels:
@@ -291,8 +291,19 @@ spec:
           resources:
             {{- toYaml .Values.resources.daemonSetWindows | nindent 12 }}
           env:
+            {{- if not .Values.useMonitoringAccount }}
             - name: CLUSTER
-              value: {{ required "clusterName is required" .Values.clusterName | toString | quote }}
+              value: {{ required "clusterName is required" .Values.clusterName | toString | trim | quote }}
+            {{- else }}
+            - name: CLUSTER
+              value: {{ required "azureResourceId is required when using monitoring account" .Values.azureResourceId | toString | quote }}
+            - name: AKSREGION
+              value: {{ required "azureResourceRegion is required when using monitoring account" .Values.azureResourceRegion | toString | trim | lower | quote }}
+            - name: customEnvironment
+              value: {{ required "customEnvironment is required when using monitoring account" .Values.customEnvironment | toString | trim | lower | quote }}
+            - name: MAC
+              value: "true"
+            {{- end }}
             {{- if .Values.internalSettings.intEnvironment  }}
             - name: ME_ADDITIONAL_FLAGS
               value: "-FrontEndUrl https://az-int.int.microsoftmetrics.com"
@@ -300,7 +311,7 @@ spec:
             {{- if .Values.internalSettings.clusterOverride  }}
             - name: CLUSTER_OVERRIDE
               value: "true"
-            {{- end }}   
+            {{- end }}
             - name: CONTROLLER_TYPE
               value: "DaemonSet"
             - name: NODE_IP
@@ -372,9 +383,11 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
+            {{- if not .Values.useMonitoringAccount }}
             - mountPath: /etc/config/settings/akv
               name: secrets-store-inline
               readOnly: true
+            {{- end }}
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
@@ -391,6 +404,34 @@ spec:
             initialDelaySeconds: 300
             timeoutSeconds: 15
             failureThreshold: 3
+        {{- if .Values.useMonitoringAccount }}
+        - name: addon-token-adapter-win
+          command:
+           - addon-token-adapter-win
+          args:
+           - --secret-namespace=kube-system
+           - --secret-name=aad-msi-auth-token
+           - --token-server-listening-port=7777
+           - --health-server-listening-port=9999
+          image: "mcr.microsoft.com/aks/hcp/addon-token-adapter:20230120winbeta"
+          imagePullPolicy: Always
+          livenessProbe:
+           httpGet:
+             path: /healthz
+             port: 9999
+           initialDelaySeconds: 10
+           periodSeconds: 60
+          resources:
+           limits:
+             memory: 500Mi
+           requests:
+             cpu: 100m
+             memory: 100Mi
+          securityContext:
+           capabilities:
+             add:
+               - NET_ADMIN
+        {{- end }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -428,6 +469,7 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
+        {{- if not .Values.useMonitoringAccount }}
         - name: secrets-store-inline
           csi:
             driver: secrets-store.csi.k8s.io
@@ -438,5 +480,6 @@ spec:
             nodePublishSecretRef:           # Only required when using service principal mode
               name: {{ template "prometheus-collector.fullname" . }}-akv-creds               # Only required when using service principal mode. The name of the Kubernetes secret that contains the service principal credentials to access keyvault
             {{- end }}
-{{- end }}       
+        {{- end }}
+{{- end }}
 ---

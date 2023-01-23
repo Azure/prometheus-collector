@@ -40,7 +40,7 @@ RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
-LABEL maintainer="omscontainers@microsoft.com"
+LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "linux"
 ENV tmpdir /opt
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource

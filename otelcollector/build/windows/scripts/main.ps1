@@ -2,14 +2,13 @@
 $me_config_file = '/opt/metricextension/me_ds.config'
 
 function Set-EnvironmentVariablesAndConfigParser {
-
-    if ([string]::IsNullOrEmpty($env:MODE)) {
-        [System.Environment]::SetEnvironmentVariable("MODE", 'simple', "Process")
-        [System.Environment]::SetEnvironmentVariable("MODE", 'simple', "Machine")
-    }
+    # Set windows 2019 or 2022 version (Microsoft Windows Server 2019 Datacenter or Microsoft Windows Server 2022 Datacenter)
+    $windowsVersion = (Get-WmiObject -class Win32_OperatingSystem).Caption
+    [System.Environment]::SetEnvironmentVariable("windowsVersion", $windowsVersion, "Process")
+    [System.Environment]::SetEnvironmentVariable("windowsVersion", $windowsVersion, "Machine")
 
     #resourceid override.
-    if ([string]::IsNullOrEmpty($env:AKS_RESOURCE_ID)) {
+    if ([string]::IsNullOrEmpty($env:MAC)) {
         if ([string]::IsNullOrEmpty($env:CLUSTER)) {
             Write-Output "CLUSTER is empty or not set. Using $env:NODE_NAME as CLUSTER"
             [System.Environment]::SetEnvironmentVariable("customResourceId", $env:NODE_NAME, "Process")
@@ -23,9 +22,60 @@ function Set-EnvironmentVariablesAndConfigParser {
         }
     }
     else {
-        [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Process")
-        [System.Environment]::SetEnvironmentVariable("customResourceId", $env:AKS_RESOURCE_ID, "Machine")
-        Write-Output "customResourceId=$customResourceId"
+        [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Process")
+        [System.Environment]::SetEnvironmentVariable("customResourceId", $env:CLUSTER, "Machine")
+
+        [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Process")
+        [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Machine")
+
+        # Setting these variables for telegraf
+        [System.Environment]::SetEnvironmentVariable("AKSREGION", $env:AKSREGION, "Process")
+        [System.Environment]::SetEnvironmentVariable("AKSREGION", $env:AKSREGION, "Machine")
+        [System.Environment]::SetEnvironmentVariable("CLUSTER", $env:CLUSTER, "Process")
+        [System.Environment]::SetEnvironmentVariable("CLUSTER", $env:CLUSTER, "Machine")
+        [System.Environment]::SetEnvironmentVariable("AZMON_CLUSTER_ALIAS", $env:AZMON_CLUSTER_ALIAS, "Process")
+        [System.Environment]::SetEnvironmentVariable("AZMON_CLUSTER_ALIAS", $env:AZMON_CLUSTER_ALIAS, "Machine")
+
+        Write-Output "customResourceId=$env:customResourceId"
+        Write-Output "customRegion=$env:customRegion"
+    }
+
+    ############### Environment variables for MA {Start} ###############
+    [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Process")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Process")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Process")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Process")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Process")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_USE_GENEVA_CONFIG_SERVICE", "false", "Process")
+    [System.Environment]::SetEnvironmentVariable("MONITORING_USE_GENEVA_CONFIG_SERVICE", "false", "Machine")
+    [System.Environment]::SetEnvironmentVariable("SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH", "true", "Process")
+    [System.Environment]::SetEnvironmentVariable("SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH", "true", "Machine")
+    [System.Environment]::SetEnvironmentVariable("ENABLE_MCS", "true", "Process")
+    [System.Environment]::SetEnvironmentVariable("ENABLE_MCS", "true", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MDSD_USE_LOCAL_PERSISTENCY", "false", "Process")
+    [System.Environment]::SetEnvironmentVariable("MDSD_USE_LOCAL_PERSISTENCY", "false", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Process")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $env:AKSREGION, "Process")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $env:CLUSTER, "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $env:CLUSTER, "Process")
+    [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Machine")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $env:AKSREGION, "Machine")
+    [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $env:CLUSTER, "Machine")
+    [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $env:CLUSTER, "Machine")
+    [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Machine")
+    ############### Environment variables for MA {End} ###############
+
+    if ([string]::IsNullOrEmpty($env:MODE)) {
+        [System.Environment]::SetEnvironmentVariable("MODE", 'simple', "Process")
+        [System.Environment]::SetEnvironmentVariable("MODE", 'simple', "Machine")
     }
 
     #set agent config schema version
@@ -95,7 +145,7 @@ function Set-EnvironmentVariablesAndConfigParser {
     #       fi
     # fi
 
-    
+
     # run config parser
     ruby /opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb
 
@@ -123,8 +173,24 @@ function Set-EnvironmentVariablesAndConfigParser {
         }
     }
 
+    # Parse the settings for debug mode
+    ruby /opt/microsoft/configmapparser/tomlparser-debug-mode.rb
+    if (Test-Path -Path '/opt/microsoft/configmapparser/config_debug_mode_env_var') {
+        foreach ($line in Get-Content /opt/microsoft/configmapparser/config_debug_mode_env_var) {
+            if ($line.Contains('=')) {
+                $key = ($line -split '=')[0];
+                $value = ($line -split '=')[1];
+                [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+                [System.Environment]::SetEnvironmentVariable($key, $value, "Machine")
+            }
+        }
+    }
+
     # Parse the settings for default targets metrics keep list config
     ruby /opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb
+
+    # Parse the settings for default-targets-scrape-interval-settings config
+    ruby /opt/microsoft/configmapparser/tomlparser-scrape-interval.rb
 
     # Merge default anf custom prometheus config
     ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
@@ -143,7 +209,7 @@ function Set-EnvironmentVariablesAndConfigParser {
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Process")
             [System.Environment]::SetEnvironmentVariable("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", "Machine")
             if (Test-Path -Path '/opt/defaultsMergedConfig.yml') {
-              Write-Output "prom-config-validator::Running validator on just default scrape configs"
+                Write-Output "prom-config-validator::Running validator on just default scrape configs"
                 C:\opt\promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
                 if ( (!($?)) -or (!(Test-Path -Path "/opt/collector-config-with-defaults.yml" ))) {
                     Write-Output "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used"
@@ -177,14 +243,14 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
 
     if (Test-Path -Path '/opt/microsoft/prom_config_validator_env_var') {
-      foreach ($line in Get-Content /opt/microsoft/prom_config_validator_env_var) {
-        if ($line.Contains('=')) {
-          $key = ($line -split '=')[0];
-          $value = ($line -split '=')[1];
-          [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
-          [System.Environment]::SetEnvironmentVariable($key, $value, "Machine")
+        foreach ($line in Get-Content /opt/microsoft/prom_config_validator_env_var) {
+            if ($line.Contains('=')) {
+                $key = ($line -split '=')[0];
+                $value = ($line -split '=')[1];
+                [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+                [System.Environment]::SetEnvironmentVariable($key, $value, "Machine")
+            }
         }
-      }
     }
 
     # #start cron daemon for logrotate
@@ -199,18 +265,18 @@ function Set-EnvironmentVariablesAndConfigParser {
     $cluster_override = $env:CLUSTER_OVERRIDE
     if ($controllerType -eq "replicaset") {
         if ($cluster_override -eq "true") {
-           $meConfigFile = "/opt/metricextension/me_internal.config" 
+            $meConfigFile = "/opt/metricextension/me_internal.config"
         }
         else {
-           $meConfigFile = "/opt/metricextension/me.config"
+            $meConfigFile = "/opt/metricextension/me.config"
         }
     }
     else {
         if ($cluster_override -eq "true") {
-           $meConfigFile = "/opt/metricextension/me_ds_internal.config" 
+            $meConfigFile = "/opt/metricextension/me_ds_internal.config"
         }
         else {
-           $meConfigFile = "/opt/metricextension/me_ds.config"
+            $meConfigFile = "/opt/metricextension/me_ds.config"
         }
     }
     [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $meConfigFile, "Process")
@@ -243,7 +309,7 @@ function Start-Fluentbit {
     # Run fluent-bit as a background job. Switch this to a windows service once fluent-bit supports natively running as a windows service
     Write-Host "Starting fluent-bit"
     Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\fluent-bit\bin\td-agent-bit.exe" -ArgumentList @("-c", "C:\opt\fluent-bit\fluent-bit-windows.conf", "-e", "C:\opt\fluent-bit\bin\out_appinsights.so") }
-
+    # C:\opt\fluent-bit\bin\td-agent-bit.exe -c "C:\opt\fluent-bit\fluent-bit-windows.conf" -e "C:\opt\fluent-bit\bin\out_appinsights.so"
 }
 
 function Start-Telegraf {
@@ -283,25 +349,6 @@ function Start-Telegraf {
         /opt/telegraf/telegraf.exe --service start
     }
 }
-
-function Start-ME {
-    Write-Output "Starting Metrics Extension"
-    Write-Output "ME_CONFIG_FILE = $env:ME_CONFIG_FILE"
-    Write-Output "AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
-    Start-Job -ScriptBlock { 
-        $me_config_file = $env:ME_CONFIG_FILE
-        $AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME
-        $ME_ADDITIONAL_FLAGS = $env:ME_ADDITIONAL_FLAGS
-        if (![string]::IsNullOrEmpty($ME_ADDITIONAL_FLAGS)) {
-            Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc_prom", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file, $ME_ADDITIONAL_FLAGS) > $null
-        }
-        else {
-            Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc_prom", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file) > $null
-        }
-    }
-    tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
-}
-
 function Start-OTEL-Collector {
     if ($env:AZMON_USE_DEFAULT_PROMETHEUS_CONFIG -eq "true") {
         Write-Output "Starting otelcollector with only default scrape configs enabled"
@@ -317,11 +364,11 @@ function Start-OTEL-Collector {
 function Set-CertificateForME {
     # Make a copy of the mounted akv directory to see if it changes
     mkdir -p /opt/akv-copy > $null
-    Copy-Item -r /etc/config/settings/akv /opt/akv-copy 
+    Copy-Item -r /etc/config/settings/akv /opt/akv-copy
 
-    Get-ChildItem "C:\etc\config\settings\akv\" |  Foreach-Object { 
+    Get-ChildItem "C:\etc\config\settings\akv\" |  Foreach-Object {
         if (!($_.Name.startswith('..'))) {
-          Import-PfxCertificate -FilePath $_.FullName -CertStoreLocation Cert:\CurrentUser\My > $null
+            Import-PfxCertificate -FilePath $_.FullName -CertStoreLocation Cert:\CurrentUser\My > $null
         }
     }
 }
@@ -330,17 +377,59 @@ function Start-FileSystemWatcher {
     Start-Process powershell -NoNewWindow /opt/scripts/filesystemwatcher.ps1 > $null
 }
 
+#start Windows AMA
+function Start-MA {
+    Write-Output "Starting MA"
+    Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\genevamonitoringagent\genevamonitoringagent\Monitoring\Agent\MonAgentLauncher.exe" -ArgumentList @("-useenv") }
+}
+
+function Start-ME {
+    Write-Output "Starting Metrics Extension"
+    Write-Output "ME_CONFIG_FILE = $env:ME_CONFIG_FILE"
+    Write-Output "AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
+    Start-Job -ScriptBlock {
+        $me_config_file = $env:ME_CONFIG_FILE
+        $AZMON_DEFAULT_METRIC_ACCOUNT_NAME = $env:AZMON_DEFAULT_METRIC_ACCOUNT_NAME
+        $ME_ADDITIONAL_FLAGS = $env:ME_ADDITIONAL_FLAGS
+        if ($env:MAC -eq $true) {
+            if (![string]::IsNullOrEmpty($ME_ADDITIONAL_FLAGS)) {
+                Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Debug", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", $me_config_file, $ME_ADDITIONAL_FLAGS) > $null
+            }
+            else {
+                Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Debug", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", $me_config_file) > $null
+                # /opt/metricextension/MetricsExtension/MetricsExtension.Native.exe -Logger Console -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\ -Input otlp_grpc_prom -ConfigOverridesFilePath '/opt/metricextension/me_ds.config'
+            }
+        }
+        else {
+            if (![string]::IsNullOrEmpty($ME_ADDITIONAL_FLAGS)) {
+                Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc_prom", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file, $ME_ADDITIONAL_FLAGS) > $null
+            }
+            else {
+                Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\", "-Input", "otlp_grpc_prom", "-MonitoringAccount", $AZMON_DEFAULT_METRIC_ACCOUNT_NAME, "-ConfigOverridesFilePath", $me_config_file) > $null
+            }
+        }
+    }
+    tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
+}
+
 Start-Transcript -Path main.txt
-
-Set-CertificateForME
+if ($env:MAC -ne $true) {
+    Set-CertificateForME
+}
 Set-EnvironmentVariablesAndConfigParser
-
-Start-FileSystemWatcher
-
 Start-Fluentbit
 Start-Telegraf
 Start-OTEL-Collector
+if ($env:MAC -eq $true) {
+    Start-MA
+}
+# "Waiting for 60s for MA to get the config and put them in place for ME"
+Start-Sleep 60
 Start-ME
+Start-FileSystemWatcher
+
+$epochTimeNow = [int](Get-Date).Subtract([datetime]'1970-01-01T00:00:00Z').TotalSeconds
+Set-Content -Path /opt/microsoft/liveness/azmon-container-start-time $epochTimeNow
 
 # Notepad.exe | Out-Null
 Write-Output "Starting ping to keep the container running"

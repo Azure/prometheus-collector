@@ -16,8 +16,8 @@
                 ],
                 "rules": [
                     {
-                        "record": "node:windows_node_cpu_utilisation:avg3m",
-                        "expression": "1 - avg by (instance, job, cluster) (rate(windows_cpu_time_total{ job=\"windows-exporter\",mode=\"idle\"}[3m]))"
+                        "record": "node:windows_node_cpu_utilisation:avg5m",
+                        "expression": "1 - avg by (instance, job, cluster) (rate(windows_cpu_time_total{ job=\"windows-exporter\",mode=\"idle\"}[5m]))"
                     },
                     {
                         "record": "node:windows_node_num_cpu:sum",
@@ -45,15 +45,15 @@
                     },
                     {
                         "record": "node:windows_node_disk_utilisation:avg_irate",
-                        "expression": "avg by (instance, cluster, job) ((irate(windows_logical_disk_read_seconds_total{ job=\"windows-exporter\"}[3m]) + irate(windows_logical_disk_write_seconds_total{ job=\"windows-exporter\"}[3m])))"
+                        "expression": "avg by (instance, cluster, job) ((irate(windows_logical_disk_read_seconds_total{ job=\"windows-exporter\"}[5m]) + irate(windows_logical_disk_write_seconds_total{ job=\"windows-exporter\"}[5m])))"
                     },
                     {
                         "record": "node:windows_node_net_utilisation:sum_irate",
-                        "expression": "sum by (instance, cluster, job) ((irate(windows_net_bytes_total{ job=\"windows-exporter\"}[3m])))"
+                        "expression": "sum by (instance, cluster, job) ((irate(windows_net_bytes_total{ job=\"windows-exporter\"}[5m])))"
                     },
                     {
                         "record": "node:windows_node_net_saturation:sum_irate",
-                        "expression": "sum by (instance, cluster, job) ((irate(windows_net_packets_received_discarded_total{ job=\"windows-exporter\"}[3m]) + irate(windows_net_packets_outbound_discarded_total{ job=\"windows-exporter\"}[3m])))"
+                        "expression": "sum by (instance, cluster, job) ((irate(windows_net_packets_received_discarded_total{ job=\"windows-exporter\"}[5m]) + irate(windows_net_packets_outbound_discarded_total{ job=\"windows-exporter\"}[5m])))"
                     },
                     {
                         "record": "node:windows_node_filesystem_usage:",

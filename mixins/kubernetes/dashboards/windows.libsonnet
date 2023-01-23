@@ -418,7 +418,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('CPU')
         .addPanel(
           g.panel('CPU Utilisation') +
-          g.queryPanel('node:windows_node_cpu_utilisation:avg1m{%(clusterLabel)s="$cluster"} * node:windows_node_num_cpu:sum{%(clusterLabel)s="$cluster"} / scalar(sum(node:windows_node_num_cpu:sum{%(clusterLabel)s="$cluster"}))' % $._config, '{{instance}}', legendLink) +
+          g.queryPanel('node:windows_node_cpu_utilisation:avg5m{%(clusterLabel)s="$cluster"} * node:windows_node_num_cpu:sum{%(clusterLabel)s="$cluster"} / scalar(sum(node:windows_node_num_cpu:sum{%(clusterLabel)s="$cluster"}))' % $._config, '{{instance}}', legendLink) +
           g.stack +
           { yaxes: g.yaxes({ format: 'percentunit', max: 1 }) },
         )
@@ -525,7 +525,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('CPU')
         .addPanel(
           g.panel('CPU Utilisation') +
-          g.queryPanel('node:windows_node_cpu_utilisation:avg1m{%(clusterLabel)s="$cluster", instance="$instance"}' % $._config, 'Utilisation') +
+          g.queryPanel('node:windows_node_cpu_utilisation:avg5m{%(clusterLabel)s="$cluster", instance="$instance"}' % $._config, 'Utilisation') +
           { yaxes: g.yaxes('percentunit') },
         )
         .addPanel(
