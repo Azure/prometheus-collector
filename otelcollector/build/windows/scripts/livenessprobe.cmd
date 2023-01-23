@@ -1,4 +1,3 @@
-@echo off
 
 rem Get the current date and time
 setlocal enableextensions
@@ -11,50 +10,52 @@ endlocal & set "epochTimeNow=%epochTimeNow%"
 
 set /a durationInMinutes = -1
 
-if %MAC% == true (
-    @rem Checking if TokenConfig file exists, if it doesn't, it means that there is no DCR/DCE config for this resource and ME/MDSD will fail to start
-    @rem avoid the pods from going into crashloopbackoff, we are restarting the pod with this message every 15 minutes.
-    if not exist "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json" (
-        if exist "C:\opt\microsoft\liveness\azmon-container-start-time" (
-            echo "REACHES HERE"
-            for /f "delims=" %%a in (D:\git_repos\prometheus-collector\azmon-container-start-time) do set firstline=%%a
+if defined %MAC(
+    if %MAC% == true (
+        @rem Checking if TokenConfig file exists, if it doesn't, it means that there is no DCR/DCE config for this resource and ME/MDSD will fail to start
+        @rem avoid the pods from going into crashloopbackoff, we are restarting the pod with this message every 15 minutes.
+        if not exist "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json" (
+            if exist "C:\opt\microsoft\liveness\azmon-container-start-time" (
+                echo "REACHES HERE"
+                for /f "delims=" %%a in (D:\git_repos\prometheus-collector\azmon-container-start-time) do set firstline=%%a
 
-            set /a azmonContainerStartTime=%firstline%
-            set /a duration=%epochTimeNow%-%azmonContainerStartTime%
-            set /a durationInMinutes=%duration% / 60
+                set /a azmonContainerStartTime=%firstline%
+                set /a duration=%epochTimeNow%-%azmonContainerStartTime%
+                set /a durationInMinutes=%duration% / 60
 
-            if %durationInMinutes%==0 (
-                echo %epochTimeNow% "No configuration present for the AKS resource"
+                if %durationInMinutes%==0 (
+                    echo %epochTimeNow% "No configuration present for the AKS resource"
+                )
+                if %durationInMinutes% GTR 15 (
+                    echo "Greater than 15 mins, No configuration present for the AKS resource"
+                    exit /b 1
+                )
             )
-            if %durationInMinutes% GTR 15 (
-                echo "Greater than 15 mins, No configuration present for the AKS resource"
+        ) else (
+            tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
+            if errorlevel 1 (
+                echo "Metrics Extension is not running (configuration exists)"
+                exit /b 1
+            )
+            tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
+            if errorlevel 1 (
+                echo "MonAgentLauncher is not running (configuration exists)"
                 exit /b 1
             )
         )
     ) else (
+        rem Non-MAC mode
         tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
         if errorlevel 1 (
-            echo "Metrics Extension is not running (configuration exists)"
+            echo "Metrics Extension is not running (Non-MAC mode)" > C:\dev\termination-log
             exit /b 1
         )
+
         tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
         if errorlevel 1 (
-            echo "MonAgentLauncher is not running (configuration exists)"
+            echo "MonAgentLauncher is not running (Non-MAC mode)" > C:\dev\termination-log
             exit /b 1
         )
-    )
-) else (
-    rem Non-MAC mode
-    tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
-    if errorlevel 1 (
-        echo "Metrics Extension is not running (Non-MAC mode)" > C:\dev\termination-log
-        exit /b 1
-    )
-
-    tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
-    if errorlevel 1 (
-        echo "MonAgentLauncher is not running (Non-MAC mode)" > C:\dev\termination-log
-        exit /b 1
     )
 )
 
