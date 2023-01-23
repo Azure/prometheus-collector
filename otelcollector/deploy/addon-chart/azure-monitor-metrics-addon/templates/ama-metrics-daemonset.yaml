@@ -329,7 +329,7 @@ spec:
            - --secret-name=aad-msi-auth-token
            - --token-server-listening-port=7777
            - --health-server-listening-port=9999
-          image: "mcr.microsoft.com/aks/hcp/addon-token-adapter:20230120winbeta"
+          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepositoryWin }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTagWin }}"
           imagePullPolicy: Always
           livenessProbe:
            httpGet:
