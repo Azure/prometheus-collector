@@ -36,12 +36,13 @@ gem install re2
 
 echo "Installing mdsd..."
 if [ "${ARCH}" != "amd64" ]; then
-  wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.428_aarch64.rpm
-  sudo tdnf install -y azure-mdsd_1.19.3-build.master.428_aarch64.rpm
+  wget https://github.com/Azure/prometheus-collector/releases/download/azure-mdsd-1.23.3/azure-mdsd_1.23.4-build.master.28_aarch64.rpm
+  sudo tdnf install -y azure-mdsd_1.23.4-build.master.28_aarch64.rpm
 else
-  wget https://github.com/microsoft/Docker-Provider/releases/download/mdsd-mac-official-06-13/azure-mdsd_1.19.3-build.master.428_x86_64.rpm
-  sudo tdnf install -y azure-mdsd_1.19.3-build.master.428_x86_64.rpm
+  wget https://github.com/Azure/prometheus-collector/releases/download/azure-mdsd-1.23.3/azure-mdsd_1.23.4-build.master.28_x86_64.rpm
+  sudo tdnf install -y azure-mdsd_1.23.4-build.master.28_x86_64.rpm
 fi
+
 # Install this way once moving to the Mariner published RPMs:
 # sudo tdnf install -y azure-mdsd
 
@@ -63,7 +64,7 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Install ME
 echo "Installing Metrics Extension..."
-sudo tdnf install -y metricsext2-2.2022.1021.1309
+sudo tdnf install -y metricsext2-2.2022.1201.1140
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
