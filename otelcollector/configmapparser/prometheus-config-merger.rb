@@ -37,7 +37,6 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @prometheusCollectorHealthDefaultFile = @defaultPromConfigPathPrefix + "prometheusCollectorHealth.yml"
 @windowsexporterDefaultRsSimpleFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultRsSimple.yml"
 @windowsexporterDefaultDsFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultDs.yml"
-@windowsexporterDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultRsAdvanced.yml"
 @windowskubeproxyDefaultFileRsSimpleFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsSimple.yml"
 @windowskubeproxyDefaultDsFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultDs.yml"
 @windowskubeproxyDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
@@ -83,7 +82,7 @@ def UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting)
     config = YAML.load(File.read(yamlConfigFile))
     scrapeIntervalConfig = scrapeIntervalSetting
 
-    # Iterate through each scrape config and update scrape interval config 
+    # Iterate through each scrape config and update scrape interval config
     if !config.nil?
       scrapeConfigs = config["scrape_configs"]
       if !scrapeConfigs.nil? && !scrapeConfigs.empty?
@@ -340,11 +339,6 @@ def populateDefaultPrometheusConfig
         File.open(@windowsexporterDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowsexporterDefaultDsFile)
 
-        # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
-        UpdateScrapeIntervalConfig(@windowsexporterDefaultRsAdvancedFile, windowsexporterScrapeInterval)
-        defaultConfigs.push(@windowsexporterDefaultRsAdvancedFile)
-
         # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
         UpdateScrapeIntervalConfig(@windowsexporterDefaultRsSimpleFile, windowsexporterScrapeInterval)
@@ -378,11 +372,6 @@ def populateDefaultPrometheusConfig
         contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
         File.open(@windowskubeproxyDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeproxyDefaultDsFile)
-
-      # If advanced mode and windows daemonset are enabled, only the up metric is needed from the replicaset
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == true && @sendDSUpMetric == true && ENV["OS_TYPE"].downcase == "linux"
-        UpdateScrapeIntervalConfig(@windowskubeproxyDefaultRsAdvancedFile, windowskubeproxyScrapeInterval)
-        defaultConfigs.push(@windowskubeproxyDefaultRsAdvancedFile)
 
         # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
       elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
@@ -498,8 +487,8 @@ def setDefaultFileScrapeInterval(scrapeInterval)
     @kubeletDefaultFileRsSimple, @kubeletDefaultFileRsAdvanced, @kubeletDefaultFileDs, @kubeletDefaultFileRsAdvancedWindowsDaemonset,
     @corednsDefaultFile, @cadvisorDefaultFileRsSimple, @cadvisorDefaultFileRsAdvanced, @cadvisorDefaultFileDs, @kubeproxyDefaultFile,
     @apiserverDefaultFile, @kubestateDefaultFile, @nodeexporterDefaultFileRsSimple, @nodeexporterDefaultFileRsAdvanced, @nodeexporterDefaultFileDs,
-    @prometheusCollectorHealthDefaultFile, @windowsexporterDefaultRsSimpleFile, @windowsexporterDefaultDsFile, @windowsexporterDefaultRsAdvancedFile,
-    @windowskubeproxyDefaultFileRsSimpleFile, @windowskubeproxyDefaultDsFile, @windowskubeproxyDefaultRsAdvancedFile
+    @prometheusCollectorHealthDefaultFile, @windowsexporterDefaultRsSimpleFile, @windowsexporterDefaultDsFile,
+    @windowskubeproxyDefaultFileRsSimpleFile, @windowskubeproxyDefaultDsFile
   ]
 
   defaultFilesArray.each { |currentFile|

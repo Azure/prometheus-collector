@@ -67,7 +67,7 @@ spec:
             {{- if .Values.internalSettings.clusterOverride  }}
             - name: CLUSTER_OVERRIDE
               value: "true"
-            {{- end }}  
+            {{- end }}
             - name: CONTROLLER_TYPE
               value: "ReplicaSet"
             - name: NODE_IP
@@ -109,7 +109,7 @@ spec:
             - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
               value: "{{ index .Values "kube-state-metrics" "metricLabelsAllowlist" | join "," }}"
             - name: KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST
-              value: "{{ index .Values "kube-state-metrics" "metricAnnotationsAllowList" | join "," }}" 
+              value: "{{ index .Values "kube-state-metrics" "metricAnnotationsAllowList" | join "," }}"
             - name: NODE_EXPORTER_VERSION
               value: "{{ index .Values "prometheus-node-exporter" "image" "repository" }}:{{ index .Values "prometheus-node-exporter" "image" "tag" }}"
             - name: HELM_RELEASE_NAME
@@ -123,9 +123,9 @@ spec:
             - name: MODE
               value: "" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- end }}
-            {{- if and (.Values.windowsDaemonset) (not .Values.useMonitoringAccount) }}
+            {{- if and (.Values.windowsDaemonset) }}
             - name: WINMODE
-              value: "advanced" # WINDOWS: only supported mode is 'advanced' [when not using MAC], any other value will be the default/non-advance mode
+              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             {{- else }}
             - name: WINMODE
               value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
