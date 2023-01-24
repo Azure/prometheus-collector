@@ -10,7 +10,7 @@ endlocal & set "epochTimeNow=%epochTimeNow%"
 
 set /a durationInMinutes = -1
 
-if defined %MAC(
+if exist %MAC% (
     if %MAC% == true (
         @rem Checking if TokenConfig file exists, if it doesn't, it means that there is no DCR/DCE config for this resource and ME/MDSD will fail to start
         @rem avoid the pods from going into crashloopbackoff, we are restarting the pod with this message every 15 minutes.
