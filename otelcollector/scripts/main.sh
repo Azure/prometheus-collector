@@ -33,22 +33,31 @@ echo_var "MODE" "$MODE"
 echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
 
-export HTTP_PROXY=""
-export HTTPS_PROXY=""
-export NO_PROXY=""
-export TRUSTED_CA=""
-if [ -e "/etc/ama-metrics-secret/HTTPPROXY" ]; then
-  export HTTP_PROXY=$(cat /etc/ama-metrics-secret/HTTPPROXY)
+#export HTTP_PROXY=""
+#export HTTPS_PROXY=""
+#export NO_PROXY=""
+#export TRUSTED_CA=""
+#if [ -e "/etc/ama-metrics-secret/HTTPPROXY" ]; then
+#  export HTTP_PROXY=$(cat /etc/ama-metrics-secret/HTTPPROXY)
+#fi
+#if [ -e "/etc/ama-metrics-secret/HTTPSPROXY" ]; then
+#  export HTTPS_PROXY=$(cat /etc/ama-metrics-secret/HTTPSPROXY)
+#fi
+#if [ -e "/etc/ama-metrics-secret/NOPROXY" ]; then
+#  export NO_PROXY=$(cat /etc/ama-metrics-secret/NOPROXY)
+#fi
+#if [ -e "/etc/ama-metrics-secret/TRUSTEDCA" ]; then
+#  cp /etc/ama-metrics-secret/TRUSTEDCA /etc/pki/ca-trust/source/anchors
+#  update-ca-trust
+#fi
+
+if [ "$HTTP_PROXY" != "" ];
+  export http_proxy=${http_proxy::-1}
+  export HTTP_PROXY=${HTTP_PROXY::-1}
 fi
-if [ -e "/etc/ama-metrics-secret/HTTPSPROXY" ]; then
-  export HTTPS_PROXY=$(cat /etc/ama-metrics-secret/HTTPSPROXY)
-fi
-if [ -e "/etc/ama-metrics-secret/NOPROXY" ]; then
-  export NO_PROXY=$(cat /etc/ama-metrics-secret/NOPROXY)
-fi
-if [ -e "/etc/ama-metrics-secret/TRUSTEDCA" ]; then
-  cp /etc/ama-metrics-secret/TRUSTEDCA /etc/pki/ca-trust/source/anchors
-  update-ca-trust
+if [ "$HTTPS_PROXY" != "" ];
+  export https_proxy=${https_proxy::-1}
+  export HTTPS_PROXY=${HTTPS_PROXY::-1}
 fi
 
 #set agent config schema version
