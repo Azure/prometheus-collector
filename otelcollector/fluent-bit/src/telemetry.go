@@ -52,6 +52,8 @@ var (
 	WinExporterKeepListRegex string
 	// Windows KubeProxy metrics keep list regex
 	WinKubeProxyKeepListRegex string
+	// URL if a proxy is configured on the cluster
+	//ProxyEndpoint string
 )
 
 const (
@@ -126,6 +128,41 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 		Log("Overriding the default AppInsights EndpointUrl with %s", appInsightsEndpoint)
 		telemetryClientConfig.EndpointUrl = appInsightsEndpoint
 	}
+
+	// if the proxy configured set the customized httpclient with proxy
+	// read proxyendpoint if proxy configured
+	/*ProxyEndpoint = ""
+	proxySecretPath := pluginConfig["amalogsproxy_secret_path"]
+	if _, err := os.Stat(proxySecretPath); err == nil {
+		Log("Reading proxy configuration for Linux from %s", proxySecretPath)
+		proxyConfig, err := ioutil.ReadFile(proxySecretPath)
+		if err != nil {
+			message := fmt.Sprintf("Error Reading omsproxy configuration %s\n", err.Error())
+			Log(message)
+			// if we fail to read proxy secret, AI telemetry might not be working as well
+			SendException(message)
+		} else {
+			ProxyEndpoint = strings.TrimSpace(string(proxyConfig))
+		}
+	}
+	if ProxyEndpoint != "" {
+		Log("Using proxy endpoint for telemetry client since proxy configured")
+		proxyEndpointUrl, err := url.Parse(ProxyEndpoint)
+		if err != nil {
+			Log("Failed Parsing of Proxy endpoint %s", err.Error())
+			return -1, err
+		}
+		//adding the proxy settings to the Transport object
+		transport := &http.Transport{
+			Proxy: http.ProxyURL(proxyEndpointUrl),
+		}
+	  httpClient := &http.Client{
+			Transport: transport,
+		}
+		telemetryClientConfig.Client = httpClient
+		isProxyConfigured = true
+	}*/
+
 	TelemetryClient = appinsights.NewTelemetryClientFromConfig(telemetryClientConfig)
 
 	telemetryOffSwitch := os.Getenv(envTelemetryOffSwitch)
