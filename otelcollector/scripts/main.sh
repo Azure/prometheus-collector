@@ -51,11 +51,11 @@ echo_var "CLUSTER" "$CLUSTER"
 #  update-ca-trust
 #fi
 
-if [ "$HTTP_PROXY" != "" ];
+if [ "$HTTP_PROXY" != "" ]; then
   export http_proxy=${http_proxy::-1}
   export HTTP_PROXY=${HTTP_PROXY::-1}
 fi
-if [ "$HTTPS_PROXY" != "" ];
+if [ "$HTTPS_PROXY" != "" ]; then
   export https_proxy=${https_proxy::-1}
   export HTTPS_PROXY=${HTTPS_PROXY::-1}
 fi
