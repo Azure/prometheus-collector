@@ -385,7 +385,7 @@ def populateDefaultPrometheusConfig
 
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
   rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default scrape targets - #{errorStr}. No default scrape tragets will be included")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default scrape targets - #{errorStr}. No default scrape targets will be included")
     @mergedDefaultConfigs = ""
   end
 end
