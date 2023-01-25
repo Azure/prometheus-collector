@@ -15,7 +15,6 @@ if "%MAC%" == "true" (
     @rem avoid the pods from going into crashloopbackoff, we are restarting the pod with this message every 15 minutes.
     if not exist "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json" (
         if exist "C:\opt\microsoft\liveness\azmon-container-start-time" (
-            echo "REACHES HERE"
             for /f "delims=" %%a in (D:\git_repos\prometheus-collector\azmon-container-start-time) do set firstline=%%a
             set /a azmonContainerStartTime=%firstline%
             set /a duration=%epochTimeNow%-%azmonContainerStartTime%
