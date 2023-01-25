@@ -123,9 +123,6 @@ spec:
             - mountPath: /anchors/ubuntu
               name: anchors-ubuntu
               readOnly: true
-            - mountPath: /etc/ssl/certs
-              name: ca-certs
-              readOnly: true
           livenessProbe:
             exec:
               command:
@@ -216,10 +213,6 @@ spec:
         - name: anchors-ubuntu
           hostPath:
             path: /usr/local/share/ca-certificates/
-            type: DirectoryOrCreate
-        - name: ca-certs
-          hostPath:
-            path: /etc/ssl/certs
             type: DirectoryOrCreate
 ---
 apiVersion: apps/v1
