@@ -46,11 +46,6 @@ if "%MAC%" == "true" and "%MAC%" != "" (
         echo "Metrics Extension is not running (Non-MAC mode)"
         exit /b 1
     )
-    tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
-    if errorlevel 1 (
-        echo "MonAgentLauncher is not running (Non-MAC mode)"
-        exit /b 1
-    )
 )
 
 @REM "Checking if fluent-bit is running"
