@@ -94,7 +94,6 @@ jobs:
 
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: publish Ev2 deployment artifacts"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
@@ -112,7 +111,7 @@ jobs:
 
     - task: CodeQL3000Init@0
       displayName: 'SDL: init codeql'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
 
     - task: GoTool@0
       displayName: "Build: specify golang version"
@@ -122,20 +121,20 @@ jobs:
     - bash: |
         sudo apt-get install build-essential -y
         make
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: "SDL: build otelcollector, promconfigvalidator, and fluent-bit plugin for scanning"
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
       inputs:
         InputType: 'CommandLine'
         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
 
     - task: Gosec@1
       displayName: 'SDL: run gosec'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
       inputs:
         targetPattern: 'gosecPattern'
         targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
@@ -146,14 +145,14 @@ jobs:
         chmod 775 DevSkim_linux_0.6.9/devskim
         ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
       displayName: 'SDL: run devskim'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
       workingDirectory: $(Build.SourcesDirectory)
 
     - bash: |
         sudo gem install brakeman
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
 
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
@@ -189,11 +188,11 @@ jobs:
 
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
 
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, false))
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
@@ -202,14 +201,14 @@ jobs:
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Ev2: Generate image artifacts"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, false))
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
 
     - task: SdtReport@2
       displayName: 'SDL: generate report'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
       inputs:
         GdnExportAllTools: false
         GdnExportGdnToolBinSkim: true
@@ -221,7 +220,7 @@ jobs:
 
     - task: PublishSecurityAnalysisLogs@3
       displayName: 'SDL: publish report'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
       inputs:
         ArtifactName: 'CodeAnalysisLogs'
         ArtifactType: 'Container'
@@ -231,14 +230,14 @@ jobs:
 
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: Publish image artifacts"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, false))
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
 
     - task: PostAnalysis@2
       displayName: 'SDL: Post-Build Analysis'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
       inputs:
         GdnBreakAllTools: false
         GdnBreakGdnToolBinSkim: true
@@ -280,7 +279,7 @@ jobs:
 
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
@@ -319,7 +318,7 @@ jobs:
 
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
@@ -354,14 +353,14 @@ jobs:
       displayName: "Build: Triggering manigest for multi-arc docker image"
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, false))
       displayName: "Ev2: generate image artifacts"
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
         DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
 
     - task: PublishBuildArtifacts@1
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, false))
       displayName: "Ev2: publish image artifacts"
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
@@ -413,7 +412,7 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     displayName: "Ev2: publish helm chart artifacts"
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, false))
     inputs:
       pathToPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: drop
