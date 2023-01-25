@@ -3,6 +3,7 @@ trigger:
     include:
     - main
     - vishwa/kapbasic
+    - tset
 
 pr:
   autoCancel: true
