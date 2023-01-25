@@ -33,6 +33,10 @@ echo_var "MODE" "$MODE"
 echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
 
+cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors
+cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors
+update-ca-trust
+
 #export HTTP_PROXY=""
 #export HTTPS_PROXY=""
 #export NO_PROXY=""

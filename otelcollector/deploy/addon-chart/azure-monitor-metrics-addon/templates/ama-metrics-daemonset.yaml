@@ -117,6 +117,15 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
+            - mountPath: /anchors/mariner
+              name: anchors-mariner
+              readOnly: true
+            - mountPath: /anchors/ubuntu
+              name: anchors-ubuntu
+              readOnly: true
+            - mountPath: /etc/ssl/certs
+              name: ca-certs
+              readOnly: true
           livenessProbe:
             exec:
               command:
@@ -200,6 +209,18 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
+        - name: anchors-mariner
+          hostPath:
+            path: /etc/pki/ca-trust/extracted
+            type: DirectoryOrCreate
+        - name: anchors-ubuntu
+          hostPath:
+            path: /usr/local/share/ca-certificates/
+            type: DirectoryOrCreate
+        - name: ca-certs
+          hostPath:
+            path: /etc/ssl/certs
+            type: DirectoryOrCreate
 ---
 apiVersion: apps/v1
 kind: DaemonSet
