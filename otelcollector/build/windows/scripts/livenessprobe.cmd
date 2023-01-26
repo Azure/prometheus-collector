@@ -10,13 +10,12 @@ endlocal & set "epochTimeNow=%epochTimeNow%"
 
 set /a durationInMinutes = -1
 
-if "%MAC%" == "true" (
+if "%MAC%" == "true" and "%MAC%" != "" (
     @rem Checking if TokenConfig file exists, if it doesn't, it means that there is no DCR/DCE config for this resource and ME/MDSD will fail to start
     @rem avoid the pods from going into crashloopbackoff, we are restarting the pod with this message every 15 minutes.
     if not exist "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json" (
         if exist "C:\opt\microsoft\liveness\azmon-container-start-time" (
-            echo "REACHES HERE"
-            for /f "delims=" %%a in (D:\git_repos\prometheus-collector\azmon-container-start-time) do set firstline=%%a
+            for /f "delims=" %%a in (C:\opt\microsoft\liveness\azmon-container-start-time) do set firstline=%%a
             set /a azmonContainerStartTime=%firstline%
             set /a duration=%epochTimeNow%-%azmonContainerStartTime%
             set /a durationInMinutes=%duration% / 60
@@ -44,12 +43,7 @@ if "%MAC%" == "true" (
     rem Non-MAC mode
     tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
     if errorlevel 1 (
-        echo "Metrics Extension is not running (Non-MAC mode)" > C:\dev\termination-log
-        exit /b 1
-    )
-    tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
-    if errorlevel 1 (
-        echo "MonAgentLauncher is not running (Non-MAC mode)" > C:\dev\termination-log
+        echo "Metrics Extension is not running (Non-MAC mode)"
         exit /b 1
     )
 )

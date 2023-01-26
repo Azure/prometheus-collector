@@ -422,9 +422,9 @@ Start-Telegraf
 Start-OTEL-Collector
 if ($env:MAC -eq $true) {
     Start-MA
+    # "Waiting for 60s for MA to get the config and put them in place for ME"
+    Start-Sleep 60
 }
-# "Waiting for 60s for MA to get the config and put them in place for ME"
-Start-Sleep 60
 Start-ME
 Start-FileSystemWatcher
 
