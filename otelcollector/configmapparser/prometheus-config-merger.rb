@@ -367,9 +367,9 @@ def populateDefaultPrometheusConfig
       podannotationScrapeInterval = @intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
       UpdateScrapeIntervalConfig(@podannotationsDefaultFile, podannotationScrapeInterval)
       if !podannotationMetricsKeepListRegex.nil? && !podannotationMetricsKeepListRegex.empty?
-        AppendMetricRelabelConfig(@podannotationDefaultFile, podannotationMetricsKeepListRegex)
+        AppendMetricRelabelConfig(@podannotationsDefaultFile, podannotationMetricsKeepListRegex)
       end
-      defaultConfigs.push(@podannotationDefaultFile)
+      defaultConfigs.push(@podannotationsDefaultFile)
     end
 
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
