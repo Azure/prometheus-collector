@@ -191,7 +191,7 @@ jobs:
 
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
-      condition: and(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
@@ -200,7 +200,7 @@ jobs:
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Ev2: Generate image artifacts"
-      condition: and(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
@@ -229,7 +229,7 @@ jobs:
 
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: Publish image artifacts"
-      condition: and(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
@@ -313,7 +313,7 @@ jobs:
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
       displayName: "Build: push image to dev ACR"
-      condition: eq(variables.IS_PR, true)
+      condition: eq(variables.IS_PR, false)
 
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
@@ -352,14 +352,14 @@ jobs:
       displayName: "Build: Triggering manigest for multi-arc docker image"
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      condition: and(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       displayName: "Ev2: generate image artifacts"
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
         DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
 
     - task: PublishBuildArtifacts@1
-      condition: and(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       displayName: "Ev2: publish image artifacts"
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
@@ -407,7 +407,7 @@ jobs:
       echo {\"image.name\":\"$(HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/chart/metadata.json
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
     displayName: "Build: push helm chart to dev ACR"
-    condition: eq(variables.IS_PR, true)
+    condition: eq(variables.IS_PR, false)
 
   - task: PublishBuildArtifacts@1
     displayName: "Ev2: publish helm chart artifacts"
@@ -420,7 +420,7 @@ jobs:
   displayName: "Deploy to dev clusters"
   pool:
     name: Azure-Pipelines-CI-Test-EO
-  condition: and(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+  condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   dependsOn:
   - Common
   - Chart
