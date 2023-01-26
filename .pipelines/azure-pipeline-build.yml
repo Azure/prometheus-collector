@@ -411,7 +411,7 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     displayName: "Ev2: publish helm chart artifacts"
-    condition: and(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
     inputs:
       pathToPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: drop
