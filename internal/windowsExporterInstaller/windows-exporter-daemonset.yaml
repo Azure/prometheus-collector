@@ -55,7 +55,7 @@ metadata:
 data:
   config.yml: |
     collectors:
-      enabled: 'cpu,memory,net,logical_disk,container,cs,os,service,system,textfile'
+      enabled: 'cpu,cs,logical_disk,net,os,service,system,textfile,container,cpu_info,memory,process'
     collector:
       service:
         services-where: "Name='containerd' or Name='kubelet'"
