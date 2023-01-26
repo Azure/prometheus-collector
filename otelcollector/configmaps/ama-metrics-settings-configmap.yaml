@@ -20,6 +20,7 @@ data:
     windowsexporter = false
     windowskubeproxy = false
     prometheuscollectorhealth = false
+    podannotations = true
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""
@@ -30,6 +31,7 @@ data:
     nodeexporter = ""
     windowsexporter = ""
     windowskubeproxy = ""
+    podannotations = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
@@ -42,6 +44,7 @@ data:
     windowsexporter = "30s"
     windowskubeproxy = "30s"
     prometheusCollectorHealth = "30s"
+    podannotations = "30s"
   debug-mode: |-
     enabled = false
 metadata:

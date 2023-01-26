@@ -23,6 +23,7 @@ LOGGING_PREFIX = "default-scrape-keep-lists"
 @nodeexporterRegex = ""
 @windowsexporterRegex = ""
 @windowskubeproxyRegex = ""
+@podannotationRegex = ""
 
 #This will always be string "true" as we set the string value in the chart for both MAC and non MAC modes
 @minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"]
@@ -230,6 +231,20 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     else
       ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowskubeproxyRegex either not specified or not of type string")
     end
+
+    podannotationRegex = parsedConfig[:podannotations]
+    if !podannotationRegex.nil? && podannotationRegex.kind_of?(String)
+      if !podannotationRegex.empty?
+        if isValidRegex(podannotationRegex) == true
+          @podannotationRegex = podannotationRegex
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for podannotations")
+        else
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for podannotations")
+        end
+      end
+    else
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "podannotationRegex either not specified or not of type string")
+    end
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for default targets metrics keep list - #{errorStr}, using defaults, please check config map for errors")
   end
@@ -312,6 +327,7 @@ regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"] = @kubestateRegex
 regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"] = @nodeexporterRegex
 regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"] = @windowsexporterRegex
 regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"] = @windowskubeproxyRegex
+regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"] = @podannotationRegex
 
 if !file.nil?
   # Close file after writing regex keep list hash

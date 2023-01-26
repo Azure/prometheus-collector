@@ -39,6 +39,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @windowsexporterDefaultDsFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultDs.yml"
 @windowskubeproxyDefaultFileRsSimpleFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsSimple.yml"
 @windowskubeproxyDefaultDsFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultDs.yml"
+@podannotationsDefaultFile = @defaultPromConfigPathPrefix + "podannotationsDefault.yml"
 
 def parseConfigMap
   begin
@@ -359,6 +360,16 @@ def populateDefaultPrometheusConfig
         end
         defaultConfigs.push(@windowskubeproxyDefaultFileRsSimpleFile)
       end
+    end
+
+    if !ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+      podannotationMetricsKeepListRegex = @regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
+      podannotationScrapeInterval = @intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
+      UpdateScrapeIntervalConfig(@podannotationsDefaultFile, podannotationScrapeInterval)
+      if !podannotationMetricsKeepListRegex.nil? && !podannotationMetricsKeepListRegex.empty?
+        AppendMetricRelabelConfig(@podannotationDefaultFile, podannotationMetricsKeepListRegex)
+      end
+      defaultConfigs.push(@podannotationDefaultFile)
     end
 
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)

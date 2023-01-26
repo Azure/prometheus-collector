@@ -25,6 +25,7 @@ MATCHER = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]
 @windowsexporterScrapeInterval = "30s"
 @windowskubeproxyScrapeInterval = "30s"
 @prometheusCollectorHealthInterval = "30s"
+@podannotationScrapeInterval = "30s"
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -205,6 +206,21 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     else
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "prometheusCollectorHealthInterval override not specified in configmap")
     end
+
+    podannotationScrapeInterval = parsedConfig[:podannoations]
+    if !podannotationScrapeInterval.nil?
+      matched = MATCHER.match(podannotationScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        podannotationScrapeInterval = "30s"
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for podannotationScrapeInterval")
+      end
+      @podannotationScrapeInterval = podannotationScrapeInterval
+    else
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "podannotationScrapeInterval override not specified in configmap")
+    end
   end
 end
 
@@ -235,6 +251,7 @@ intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"] = @nodeexporterScrapeInterval
 intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"] = @windowsexporterScrapeInterval
 intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = @windowskubeproxyScrapeInterval
 intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = @prometheusCollectorHealthInterval
+intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = @podannotationScrapeInterval
 
 if !file.nil?
   # Close file after writing scrape interval list hash
