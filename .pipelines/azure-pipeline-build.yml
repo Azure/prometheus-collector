@@ -449,9 +449,12 @@ jobs:
       for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 30
-            echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG)
+            echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
-            if docker manifest inspect $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) && docker manifest inspect $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
+
+            output1=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+            output2=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY_HELM)/tags/list)
+            if (echo $output1 | grep $(IMAGE_TAG_WINDOWS)) && (echo $output2 | grep $(IMAGE_TAG))
             then
               echo "Images and chart are published to mcr"
               exit 0
