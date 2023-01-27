@@ -35,7 +35,6 @@ If you are building locally, you will need to set `DOCKER_BUILDKIT=1` because of
 
   | Old Command | New Command |
   | --- | --- |
-  | `kubectl exec -it <pod name> -- bash` | `kubectl exec -it <pod name> -- sh` |
   | `ps -aux` | `ps` |
 
 Note: You can still call `kubectl exec -it <pod name> -- bash`, there will just be a weird warning from `busybox` in the beginning.
