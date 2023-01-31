@@ -67,4 +67,3 @@
   * Bug fix - Remove virtual node core capacity from telemetry total
   * Bug fix - Update alert group names for default and CI alerts
   * Bug fix - Update prometheus custom config for Azure Monitor Metrics Addon
-
