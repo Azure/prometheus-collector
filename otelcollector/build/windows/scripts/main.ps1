@@ -426,6 +426,8 @@ if ($env:MAC -eq $true) {
     Start-Sleep 60
 }
 Start-ME
+# Waiting 60 more seconds since C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension needs to be created
+Start-Sleep 60
 Start-FileSystemWatcher
 
 $epochTimeNow = [int](Get-Date).Subtract([datetime]'1970-01-01T00:00:00Z').TotalSeconds
