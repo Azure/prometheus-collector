@@ -26,7 +26,7 @@ spec:
       containers:
         - name: prometheus-collector
           image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           resources:
             limits:
               cpu: 200m
@@ -95,7 +95,6 @@ spec:
               {{- else }}
               value: "19100"
               {{- end }}
-              
             {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION 
@@ -179,28 +178,30 @@ spec:
                 - NET_ADMIN
                 - NET_RAW
         {{- end }}
-      # affinity:
-      #   nodeAffinity:
-      #     requiredDuringSchedulingIgnoredDuringExecution:
-      #       nodeSelectorTerms:
-      #         - matchExpressions:
-      #             - key: kubernetes.io/os
-      #               operator: In
-      #               values:
-      #                 - linux
-      #             - key: type
-      #               operator: NotIn
-      #               values:
-      #                 - virtual-kubelet
-      #             - key: kubernetes.azure.com/cluster
-      #               operator: Exists
-      # tolerations:
-      #   - key: CriticalAddonsOnly
-      #     operator: Exists
-      #   - operator: "Exists"
-      #     effect: NoExecute
-      #   - operator: "Exists"
-      #     effect: NoSchedule
+      {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+                  - key: kubernetes.azure.com/cluster
+                    operator: Exists
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - operator: "Exists"
+          effect: NoExecute
+        - operator: "Exists"
+          effect: NoSchedule
+      {{- end }}
       volumes:
         - name: settings-vol-config
           configMap:

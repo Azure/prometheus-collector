@@ -35,8 +35,8 @@ AzureMonitorMetrics:
       - storageclasses
       - validatingwebhookconfigurations
       - volumeattachments
-  ImageRepository: "/azuremonitor/containerinsights/cidev/prometheus-collector/images"
-  ImageTag: "6.1.0-grace-no-9090-01-12-2023-094e4e1a"
+  ImageRepository: ${MCR_REPOSITORY}
+  ImageTag: ${IMAGE_TAG}
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner. 
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP - 
   # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
@@ -44,18 +44,18 @@ AzureMonitorMetrics:
   AddonTokenAdapter:
     ImageRepository: "/aks/msi/addon-token-adapter"
     ImageTag: "master.221118.2"
-  ArcExtension: true
+  ArcExtension: false
+
 global:
   commonGlobals:
-    CloudEnvironment: "Public"
-    Region: "West US 3"
+    CloudEnvironment: "AzureCloud"
+    Region: "${AKS_REGION}"
     Customer:
-      # might need to figure out what the arc values path is to add to collector
-      # if arc extension, use the arc version of this in daemonset and deployment
-      AzureResourceID: "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourcegroups/marc-test-arc-prom/providers/Microsoft.Kubernetes/connectedClusters/marc-test-arc-onprem3"
+      AzureResourceID: ${AKS_RESOURCE_ID}
+
 # Azure:
 #   Cluster:
-#     ResourceID: "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourcegroups/marc-test-arc-prom/providers/Microsoft.Kubernetes/connectedClusters/marc-test-arc-onprem3"
+#     ResourceID: "/subscriptions/<subscriptionID>/resourcegroups/<resourceGroup>/providers/Microsoft.Kubernetes/connectedClusters/<clusterName>"
 #     Region: "westus3"
 
 # Azure: 

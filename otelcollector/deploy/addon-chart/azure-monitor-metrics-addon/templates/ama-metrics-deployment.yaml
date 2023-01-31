@@ -28,7 +28,7 @@ spec:
       containers:
         - name: prometheus-collector
           image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           resources:
             limits:
               cpu: 7
@@ -206,17 +206,19 @@ spec:
                 operator: In
                 values:
                 - "true"
-          # requiredDuringSchedulingIgnoredDuringExecution:
-          #   nodeSelectorTerms:
-          #     - matchExpressions:
-          #         - key: kubernetes.io/os
-          #           operator: In
-          #           values:
-          #             - linux
-                  # - key: type
-                  #   operator: NotIn
-                  #   values:
-                  #     - virtual-kubelet
+          {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+          {{- end }}
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
