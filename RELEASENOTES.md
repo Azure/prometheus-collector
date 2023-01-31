@@ -1,5 +1,16 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 01-31-2023
+
+* Linux image - `tbd`
+* Windows image - `tbd`
+* Change log -
+  * Adding Bicep template to monitoring addon
+  * Added custom DCR and DCE arm templates for Remote Write
+  * Adding monitoring reader role to Azure Monitor Workspace in ARM and Bicep templates
+  * Fix fluent-bit daemonset tailing path and mariner docs
+  * Liveness probe update for NON-MAC mode (windows)
+
 ## Release 01-11-2023
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.1.0-main-01-11-2023-5bf41607`
@@ -56,4 +67,4 @@
   * Bug fix - Remove virtual node core capacity from telemetry total
   * Bug fix - Update alert group names for default and CI alerts
   * Bug fix - Update prometheus custom config for Azure Monitor Metrics Addon
-  
+
