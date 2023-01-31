@@ -10,6 +10,7 @@
   * Adding monitoring reader role to Azure Monitor Workspace in ARM and Bicep templates
   * Fix fluent-bit daemonset tailing path and mariner docs
   * Liveness probe update for NON-MAC mode (windows)
+  * Adds windows daemonset support with MSI (only in deprecated chart mode)
 
 ## Release 01-11-2023
 
@@ -67,4 +68,3 @@
   * Bug fix - Remove virtual node core capacity from telemetry total
   * Bug fix - Update alert group names for default and CI alerts
   * Bug fix - Update prometheus custom config for Azure Monitor Metrics Addon
-
