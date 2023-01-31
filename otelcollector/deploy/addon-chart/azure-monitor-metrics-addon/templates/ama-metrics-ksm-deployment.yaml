@@ -103,19 +103,21 @@ spec:
                 operator: In
                 values:
                 - system
-          # requiredDuringSchedulingIgnoredDuringExecution:
-          #   nodeSelectorTerms:
-          #     - matchExpressions:
-          #         - key: kubernetes.io/os
-          #           operator: In
-          #           values:
-          #             - linux
-          #         - key: type
-          #           operator: NotIn
-          #           values:
-          #             - virtual-kubelet
-          #         - key: kubernetes.azure.com/cluster
-          #           operator: Exists
+          {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+                  - key: kubernetes.azure.com/cluster
+                    operator: Exists
+          {{- end }}
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
