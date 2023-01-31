@@ -9,7 +9,7 @@
       "value": "westus2"
     },
     "clusterResourceId": {
-      "value": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourcegroups/marc-test-arc-prom/providers/Microsoft.Kubernetes/connectedClusters/marc-test-arc-aro"
+      "value": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourcegroups/marc-test-arc-prom/providers/Microsoft.Kubernetes/connectedClusters/marc-test-arc-onprem3"
     },
     "clusterLocation": {
       "value": "westus3"

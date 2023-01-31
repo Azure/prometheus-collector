@@ -28,7 +28,7 @@ spec:
       containers:
         - name: prometheus-collector
           image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           resources:
             limits:
               cpu: 7
@@ -38,9 +38,17 @@ spec:
               memory: 500Mi
           env:
             - name: CLUSTER
+              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ .Values.Azure.Cluster.ResourceId }}"
+              {{- else }}
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+              {{- end }}
             - name: AKSREGION
+              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ .Values.Azure.Cluster.Region }}"
+              {{- else }}
               value: "{{ .Values.global.commonGlobals.Region }}"
+              {{- end }}
             - name: MAC
               value: "true"
             - name: AZMON_COLLECT_ENV
@@ -84,7 +92,11 @@ spec:
             - name: NODE_EXPORTER_NAME
               value: "" # Replace this with the node exporter shipped out of box with AKS
             - name: NODE_EXPORTER_TARGETPORT
+              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "9100"
+              {{- else }}
               value: "19100"
+              {{- end }}
             {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION 
@@ -138,8 +150,6 @@ spec:
         - name: arc-msi-adapter
           imagePullPolicy: IfNotPresent
           env:
-          - name: AZMON_COLLECT_ENV
-            value: "false"
           - name: TOKEN_NAMESPACE
             value: "azure-arc"
           {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
@@ -196,17 +206,17 @@ spec:
                 operator: In
                 values:
                 - "true"
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/os
-                    operator: In
-                    values:
-                      - linux
-                  - key: type
-                    operator: NotIn
-                    values:
-                      - virtual-kubelet
+          # requiredDuringSchedulingIgnoredDuringExecution:
+          #   nodeSelectorTerms:
+          #     - matchExpressions:
+          #         - key: kubernetes.io/os
+          #           operator: In
+          #           values:
+          #             - linux
+                  # - key: type
+                  #   operator: NotIn
+                  #   values:
+                  #     - virtual-kubelet
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists

@@ -197,10 +197,10 @@
                 "configurationProtectedSettings": {
                 },
                 "autoUpgradeMinorVersion": true,
-                "releaseTrain": "Dev",
+                "releaseTrain": "Dev",    
                 "scope": {
                   "Cluster": {
-                    "releaseNamespace": "azuremonitor-containers"
+                    "releaseNamespace": "kube-system"
                   }
                 }
               },
