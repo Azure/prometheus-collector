@@ -108,9 +108,6 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
-            - mountPath: /etc/ama-metrics-secret
-              name: ama-metrics-secret
-              readOnly: true
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
@@ -197,9 +194,6 @@ spec:
           configMap:
             name: ama-metrics-prometheus-config-node
             optional: true
-        - name: ama-metrics-secret
-          secret:
-            secretName: ama-metrics-secret
         - name: host-log-containers
           hostPath:
             path: /var/log/containers

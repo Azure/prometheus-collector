@@ -118,15 +118,18 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
-            - mountPath: /etc/ama-metrics-secret
-              name: ama-metrics-secret
-              readOnly: true
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
+            - mountPath: /anchors/mariner
+              name: anchors-mariner
+              readOnly: true
+            - mountPath: /anchors/ubuntu
+              name: anchors-ubuntu
+              readOnly: true
           livenessProbe:
             exec:
               command:
@@ -217,12 +220,17 @@ spec:
           configMap:
             name: ama-metrics-prometheus-config
             optional: true
-        - name: ama-metrics-secret
-          secret:
-            secretName: ama-metrics-secret
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
+        - name: anchors-mariner
+          hostPath:
+            path: /etc/pki/ca-trust/extracted
+            type: DirectoryOrCreate
+        - name: anchors-ubuntu
+          hostPath:
+            path: /usr/local/share/ca-certificates/
+            type: DirectoryOrCreate

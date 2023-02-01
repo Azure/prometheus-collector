@@ -37,24 +37,7 @@ cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors
 cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors
 update-ca-trust
 
-#export HTTP_PROXY=""
-#export HTTPS_PROXY=""
-#export NO_PROXY=""
-#export TRUSTED_CA=""
-#if [ -e "/etc/ama-metrics-secret/HTTPPROXY" ]; then
-#  export HTTP_PROXY=$(cat /etc/ama-metrics-secret/HTTPPROXY)
-#fi
-#if [ -e "/etc/ama-metrics-secret/HTTPSPROXY" ]; then
-#  export HTTPS_PROXY=$(cat /etc/ama-metrics-secret/HTTPSPROXY)
-#fi
-#if [ -e "/etc/ama-metrics-secret/NOPROXY" ]; then
-#  export NO_PROXY=$(cat /etc/ama-metrics-secret/NOPROXY)
-#fi
-#if [ -e "/etc/ama-metrics-secret/TRUSTEDCA" ]; then
-#  cp /etc/ama-metrics-secret/TRUSTEDCA /etc/pki/ca-trust/source/anchors
-#  update-ca-trust
-#fi
-
+# Remove ending '/' character since mdsd doesn't recognize this as a valid url
 if [ "$HTTP_PROXY" != "" ]; then
   export http_proxy=${http_proxy::-1}
   export HTTP_PROXY=${HTTP_PROXY::-1}
