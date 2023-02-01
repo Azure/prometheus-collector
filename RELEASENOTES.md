@@ -2,8 +2,8 @@
 
 ## Release 01-31-2023
 
-* Linux image - `tbd`
-* Windows image - `tbd`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.2.0-main-01-31-2023-e1e3858b`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.2.0-main-01-31-2023-e1e3858b-win`
 * Change log -
   * Adding Bicep template to monitoring addon
   * Added custom DCR and DCE arm templates for Remote Write
