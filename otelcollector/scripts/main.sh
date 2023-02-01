@@ -100,6 +100,9 @@ ruby /opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list
 # Parse the settings for default-targets-scrape-interval-settings config
 ruby /opt/microsoft/configmapparser/tomlparser-scrape-interval.rb
 
+# Parse the settings for default targets namespace keep list config
+ruby /opt/microsoft/configmapparser/tomlparser-namespace-keep-list.rb
+
 # Merge default and custom prometheus config
 ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
 

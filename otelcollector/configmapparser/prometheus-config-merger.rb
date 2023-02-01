@@ -19,6 +19,8 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @sendDSUpMetric = false
 @intervalHashFile = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
 @intervalHash = {}
+@namespaceRegexFile = "/opt/microsoft/configmapparser/config_def_targets_namespace_keep_list_regex_hash"
+@namespaceRegexHash = {}
 
 @kubeletDefaultFileRsSimple = @defaultPromConfigPathPrefix + "kubeletDefaultRsSimple.yml"
 @kubeletDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "kubeletDefaultRsAdvanced.yml"
@@ -75,6 +77,14 @@ def loadIntervalHash
   end
 end
 
+def loadNamespaceRegexHash
+  begin
+    @namespaceRegexHash = YAML.load_file(@namespaceRegexHashFile)
+  rescue => errorStr
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception in loadNamespaceRegexHash for prometheus config: #{errorStr}. Namespace keep list regexes will not be used")
+  end
+end
+
 def UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting)
   begin
     ConfigParseErrorLogger.log(LOGGING_PREFIX, "Updating scrape interval config for #{yamlConfigFile}")
@@ -124,6 +134,32 @@ def AppendMetricRelabelConfig(yamlConfigFile, keepListRegex)
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while appending metric relabel config in default target file - #{yamlConfigFile} : #{errorStr}. The keep list regex will not be used")
+  end
+end
+
+def AppendRelabelConfig(yamlConfigFile, relabelConfig, keepRegex)
+  begin
+    ConfigParseErrorLogger.log(LOGGING_PREFIX, "Adding relabel config for #{yamlConfigFile}")
+    config = YAML.load(File.read(yamlConfigFile))
+
+    # Iterate through each scrape config and append metric relabel config for keep list
+    if !config.nil?
+      scrapeConfigs = config["scrape_configs"]
+      if !scrapeConfigs.nil? && !scrapeConfigs.empty?
+        scrapeConfigs.each { |scfg|
+          relabelCfgs = scfg["relabel_configs"]
+          if relabelCfgs.nil?
+            scfg["relabel_configs"] = relabelConfig
+          else
+            scfg["relabel_configs"] = relabelCfgs.concat(relabelConfig)
+          end
+        }
+        cfgYamlWithRelabelConfig = YAML::dump(config)
+        File.open(yamlConfigFile, "w") { |file| file.puts cfgYamlWithRelabelConfig }
+      end
+    end
+  rescue => errorStr
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while appending relabel config in default target file - #{yamlConfigFile} : #{errorStr}. The keep list regex will not be used")
   end
 end
 
@@ -365,9 +401,14 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
       podannotationMetricsKeepListRegex = @regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
       podannotationScrapeInterval = @intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
+      podannotationNamespaceKeepListRegex = @regexHash["POD_ANNOTATION_NAMESPACE_KEEP_LIST_REGEX"]
       UpdateScrapeIntervalConfig(@podannotationsDefaultFile, podannotationScrapeInterval)
       if !podannotationMetricsKeepListRegex.nil? && !podannotationMetricsKeepListRegex.empty?
         AppendMetricRelabelConfig(@podannotationsDefaultFile, podannotationMetricsKeepListRegex)
+      end
+      if !podannotationNamespaceKeepListRegex.nil? && !podannotationNamespaceKeepListRegex.empty?
+        relabelConfig = [{ "source_labels" => ["__meta_kubernetes_namespace"], "action" => "keep", "regex" => keepRegex }]
+        AppendRelabelConfig(@podannotationsDefaultFile, relabelConfig, podannotationNamespaceKeepListRegex)
       end
       defaultConfigs.push(@podannotationsDefaultFile)
     end
@@ -459,6 +500,7 @@ def writeDefaultScrapeTargetsFile()
     begin
       loadRegexHash
       loadIntervalHash
+      loadNamespaceRegexHash
       populateDefaultPrometheusConfig
       if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Starting to merge default prometheus config values in collector template as backup")
