@@ -367,8 +367,15 @@ function Set-CertificateForME {
     Copy-Item -r /etc/config/settings/akv /opt/akv-copy
 
     Get-ChildItem "C:\etc\config\settings\akv\" |  Foreach-Object {
-        if (!($_.Name.startswith('..'))) {
-            Import-PfxCertificate -FilePath $_.FullName -CertStoreLocation Cert:\CurrentUser\My > $null
+        # check if child is a file and not a directory
+        $filePath = $_.FullName
+        if (Test-Path $filePath -PathType Leaf) {
+            $filePath = $_.FullName
+            $file = Get-Content $filePath -Encoding Byte
+            if (($null -ne $file)) {
+                Write-Output "Importing PFX cert : $filePath"
+                Import-PfxCertificate -FilePath $filePath -CertStoreLocation Cert:\CurrentUser\My > $null
+            }
         }
     }
 }
