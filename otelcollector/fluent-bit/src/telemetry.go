@@ -403,16 +403,16 @@ func SendKsmCpuMemoryToAppInsightsMetrics() {
 				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "ama-metrics-ksm" {
 					cpuKsmUsageNanoCoresLinux += p.Pods[podId].Containers[containerId].Cpu.UsageNanoCores
 					memoryKsmRssBytesLinux += p.Pods[podId].Containers[containerId].Memory.RssBytes
+					// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
+		      metricTelemetryItem := appinsights.NewMetricTelemetry(ksmCpuMemoryTelemetryName, cpuKsmUsageNanoCoresLinux)
+
+		      // Abbreviated properties to save telemetry cost
+		      metricTelemetryItem.Properties["MemKsmRssBytesLinux"] = fmt.Sprintf("%d", memoryKsmRssBytesLinux)
+
+		      TelemetryClient.Track(metricTelemetryItem)
 				}
 			}
 		}
-		// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
-		metricTelemetryItem := appinsights.NewMetricTelemetry(ksmCpuMemoryTelemetryName, cpuKsmUsageNanoCoresLinux)
-
-		// Abbreviated properties to save telemetry cost
-		metricTelemetryItem.Properties["MemKsmRssBytesLinux"] = fmt.Sprintf("%d", memoryKsmRssBytesLinux)
-
-		TelemetryClient.Track(metricTelemetryItem)
 	}
 
 }
