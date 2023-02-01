@@ -38,7 +38,7 @@ ImageTag: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/
 
 ### **Step 5: Install Helm chart**
 ```
-helm upgrade --install ama-metrics azure-monitor-metrics-addon/ --values azure-monitor-metrics-addon/values.yaml
+helm install ama-metrics azure-monitor-metrics-addon/ --values azure-monitor-metrics-addon/Values.yaml
 ```
 
 ### **Step 6: Uninstall helm chart**

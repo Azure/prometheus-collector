@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/http-proxy
 
 pr:
   autoCancel: true
