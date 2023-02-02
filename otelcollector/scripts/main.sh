@@ -53,6 +53,15 @@ if [ "$HTTPS_PROXY" != "" ] && [[ "$HTTPS_PROXY" =~ '/'$ ]]; then
   export HTTPS_PROXY=${HTTPS_PROXY::-1}
 fi
 
+# If HTTP Proxy is enabled, HTTP_PROXY will always have a value.
+# HTTPS_PROXY will be set to same value as HTTP_PROXY if not specified.
+export HTTP_PROXY_ENABLED="false"
+if [ "$HTTP_PROXY" != "" ]; then
+  export HTTP_PROXY_ENABLED="true"
+else
+
+echo "export HTTP_PROXY_ENABLED='true'" >> ~/.bashrc
+
 #set agent config schema version
 if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
       #trim
