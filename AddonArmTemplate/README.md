@@ -2,10 +2,6 @@ You can deploy the templates using a command like :
 
 ```az deployment group create -g <resource_group> -n <deployment_name> --template-file .\FullAzureMonitorMetricsProfile.json --parameters .\FullAzureMonitorMetricsProfileParameters.json```
 
-In order to deploy community alerts and ci recommended alerts through template, deploy using command like:
-
-```az deployment group create -g <resource_group> -n <deployment_name> --template-file .\AzureMonitorAlertsProfileParameters.json --parameters .\AzureMonitorAlertsProfileParameters.json```
-
 **NOTE**
 
 - Please edit the FullAzureMonitorMetricsProfileParameters.json file appropriately before running the ARM tempalte

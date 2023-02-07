@@ -476,25 +476,6 @@ resource communityALerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-0
         ]
       }
       {
-        alert: 'KubeNodeNotReady'
-        expression: 'kube_node_status_condition{job="kube-state-metrics",condition="Ready",status="true"} == 0'
-        for: 'PT15M'
-        labels: {
-          severity: 'warning'
-        }
-        severity: 3
-        enabled: true
-        resolveConfiguration: {
-          autoResolved: true
-          timeToResolve: 'PT10M'
-        }
-        actions: [
-          {
-            actionGroupId: actionGroupResourceId
-          }
-        ]
-      }
-      {
         alert: 'KubeNodeUnreachable'
         expression: '(kube_node_spec_taint{job="kube-state-metrics",key="node.kubernetes.io/unreachable",effect="NoSchedule"} unless ignoring(key,value) kube_node_spec_taint{job="kube-state-metrics",key=~"ToBeDeletedByClusterAutoscaler|cloud.google.com/impending-node-termination|aws-node-termination-handler/spot-itn"}) == 1'
         for: 'PT15M'
