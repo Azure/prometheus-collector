@@ -36,6 +36,7 @@ echo_var "CLUSTER" "$CLUSTER"
 # If using a trusted CA for HTTP Proxy, copy this over from the node and install
 cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors
 cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors
+cp /anchors/proxy/* /etc/pki/ca-trust/source/anchors
 update-ca-trust
 
 # These env variables are populated by AKS in every kube-system pod

@@ -151,7 +151,7 @@ spec:
             - mountPath: /etc/ama-metrics-proxy-config
               name: ama-metrics-proxy-config
               readOnly: true
-            - mountPath: /anchors/ubuntu
+            - mountPath: /anchors/proxy
               name: ama-metrics-proxy-cert
               readOnly: true
             {{- end }}
