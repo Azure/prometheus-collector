@@ -40,7 +40,7 @@ RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
-LABEL maintainer="omscontainers@microsoft.com"
+LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "linux"
 ENV tmpdir /opt
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
@@ -144,7 +144,9 @@ COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /li
 # curl dependencies
 COPY --from=builder /lib/libcurl.so.4 lib/libz.so.1 /lib/libc.so.6 /lib/
 
-RUN [ "/bin/bash", "-c", "chmod 775 /etc/cron.daily/logrotate" ]
+RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
+RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
+RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
 ENTRYPOINT [ "/bin/bash" ]
 CMD [ "/opt/main.sh" ]

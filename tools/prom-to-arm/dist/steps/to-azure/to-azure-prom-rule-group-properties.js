@@ -14,6 +14,7 @@ const converters = {
 };
 function createExtendedPropsFunc(params) {
     return {
+        interval: "PT1M",
         scopes: [
             "[parameters('azureMonitorWorkspace')]"
         ],
