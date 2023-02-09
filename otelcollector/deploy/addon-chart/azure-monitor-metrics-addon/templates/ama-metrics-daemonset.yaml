@@ -102,7 +102,7 @@ spec:
               {{- end }}
             {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            - name: KUBE_STATE_VERSION 
+            - name: KUBE_STATE_VERSION
               value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
               {{-  end  }}
             {{-  end  }}
