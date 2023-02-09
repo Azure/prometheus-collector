@@ -116,6 +116,7 @@ COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
 COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
 COPY --from=builder /usr/bin/gzip /usr/bin/
 COPY --from=builder /usr/bin/curl /usr/bin/
+COPY --from=builder /usr/bin/update-ca-trust /usr/bin
 
 # bash dependencies
 COPY --from=builder /lib/libreadline.so.8 /lib/
