@@ -1,0 +1,23 @@
+{
+    "clusterResourceId": {
+        "type": "string",
+        "metadata": {
+          "displayName": "Resource Id of the existing AKS cluster",
+          "description": "Resource Id of the existing AKS cluster"
+        }
+      },
+      "metricLabelsAllowlist": {
+        "type": "string",
+        "metadata": {
+          "displayName": "comma-separated list of additional Kubernetes label keys",
+          "description": "comma-separated list of additional Kubernetes label keys"
+        }
+      },
+      "metricAnnotationsAllowList": {
+        "type": "string",
+        "metadata": {
+          "displayName": "comma-separated list of Kubernetes annotations keys",
+          "description": "comma-separated list of Kubernetes annotations keys"
+        }
+      }
+}

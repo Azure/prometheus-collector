@@ -1,0 +1,91 @@
+{
+	"if": {
+		"field": "type",
+		"equals": "Microsoft.ContainerService/managedClusters"
+	},
+	"then": {
+		"effect": "deployIfNotExists",
+		"details": {
+			"type": "Microsoft.ContainerService/managedClusters",
+			"name": "[field('name')]",
+			"existenceCondition": {
+				"field": "Microsoft.ContainerService/managedClusters/azureMonitorProfile.metrics.enabled",
+				"equals": "true"
+			},
+			"deployment": {
+				"properties": {
+					"mode": "incremental",
+					"template": {
+						"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+						"contentVersion": "1.0.0.0",
+						"parameters": {
+							"clusterLocation": {
+								"type": "string"
+							},
+							"clusterResourceId": {
+								"type": "string"
+							},
+							"metricLabelsAllowlist": {
+								"type": "string"
+							},
+							"metricAnnotationsAllowList": {
+								"type": "string"
+							}
+						},
+						"resources": [
+							{
+								"type": "Microsoft.Resources/deployments",
+								"name": "[Concat('azuremonitormetrics-profile-', '-',  uniqueString(parameters('clusterResourceId')))]",
+								"apiVersion": "2019-05-01",
+								"properties": {
+									"mode": "Incremental",
+									"template": {
+										"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+										"contentVersion": "1.0.0.0",
+										"parameters": {},
+										"variables": {},
+										"resources": [
+											{
+												"name": "[split(parameters('clusterResourceId'),'/')[8]]",
+												"type": "Microsoft.ContainerService/managedClusters",
+												"location": "[parameters('clusterLocation')]",
+												"apiVersion": "2018-03-31",
+												"properties": {
+													"mode": "Incremental",
+													"id": "[parameters('clusterResourceId')]",
+													"azureMonitorProfile": {
+														"metrics": {
+														  "enabled": true,
+														  "kubeStateMetrics": {
+															"metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
+															"metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
+														  }
+														}
+													}
+												}
+											}
+										]
+									}
+								}
+							}
+						]
+					},
+					"parameters": {
+						"clusterLocation": {
+							"value": "[field('location')]"
+						},
+						"clusterResourceId": {
+							"value": "[parameters('clusterResourceId')]"
+						},
+						"metricLabelsAllowlist": {
+							"value": "[parameters('metricLabelsAllowlist')]"
+						},
+						"metricAnnotationsAllowList": {
+							"value": "[parameters('metricAnnotationsAllowList')]"
+						}
+					}
+				}
+			}
+		}
+	}
+}
