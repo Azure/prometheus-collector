@@ -21,11 +21,11 @@ spec:
               memory: 2Gi
           env:
             - name: RUN_PERF_TEST
-              value: "false"
+              value: "true"
             - name: SCRAPE_INTERVAL
               value: "15"
             - name: METRIC_COUNT
-              value: "6250"
+              value: "62500"
           ports:
             - containerPort: 2112
               protocol: TCP

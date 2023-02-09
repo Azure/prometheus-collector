@@ -13,7 +13,7 @@ function createExtendedPropsFunc(params: any) {
   return {
     severity: 3,
     resolveConfiguration: {
-        autoResolve: true,
+        autoResolved: true,
         timeToResolve: "PT10M"
     },
     actions: [

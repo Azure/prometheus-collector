@@ -82,6 +82,25 @@ receivers:
               action: keep
 ```
 
+## OpenTelemetry Operator 
+Additional to this static job definitions this receiver allows to query a list of jobs from the 
+OpenTelemetryOperators TargetAllocator or a compatible endpoint. 
+
+```yaml
+receivers:
+  prometheus:
+    target_allocator:
+      endpoint: http://my-targetallocator-service
+      interval: 30s
+      collector_id: collector-1
+```
+## Exemplars
+This receiver accepts exemplars coming in Prometheus format and converts it to OTLP format.
+1. Value is expected to be received in `float64` format
+2. Timestamp is expected to be received in `ms`
+3. Labels with key `span_id` in prometheus exemplars are set as OTLP `span id` and labels with key `trace_id` are set as `trace id`
+4. Rest of the labels are copied as it is to OTLP format
+
 [sc]: https://github.com/prometheus/prometheus/blob/v2.28.1/docs/configuration/configuration.md#scrape_config
 
 [beta]: https://github.com/open-telemetry/opentelemetry-collector#beta
