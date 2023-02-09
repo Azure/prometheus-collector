@@ -152,6 +152,7 @@ COPY --from=builder /lib/libcurl.so.4 lib/libz.so.1 /lib/libc.so.6 /lib/libssh2.
 # sh dependencies
 COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /lib/
 # update-ca-trust dependencies
+COPY --from=builder /usr/lib64/pkcs11 /usr/lib64
 COPY --from=builder /lib/libp11-kit.so.0 ./usr/lib/libp11-kit.so.0 /lib/libffi.so.8 /lib/
 COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/libffi.so.8 /lib/
 
