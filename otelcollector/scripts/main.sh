@@ -61,7 +61,7 @@ fi
 export HTTP_PROXY_ENABLED="false"
 if [ "$HTTP_PROXY" != "" ]; then
   export HTTP_PROXY_ENABLED="true"
-else
+fi
 
 echo "export HTTP_PROXY_ENABLED='true'" >> ~/.bashrc
 
