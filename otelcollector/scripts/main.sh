@@ -41,6 +41,10 @@ cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors
 cp /anchors/proxy/* /etc/pki/ca-trust/source/anchors
 update-ca-trust
 
+echo $HTTP_PROXY
+echo $HTTPS_PROXY
+echo $NO_PROXY
+
 # These env variables are populated by AKS in every kube-system pod
 # Remove ending '/' character since mdsd doesn't recognize this as a valid url
 if [ "$http_proxy" != "" ] && [[ "$http_proxy" =~ '/'$ ]]; then
