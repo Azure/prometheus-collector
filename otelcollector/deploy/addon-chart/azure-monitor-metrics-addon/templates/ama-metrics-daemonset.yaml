@@ -34,7 +34,7 @@ spec:
             requests:
               cpu: 75m
               memory: 150Mi
-          {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.global.isProxyEnabled) }}
+          {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
           envFrom:
             - secretRef:
                 name: ama-metrics-proxy-config

@@ -36,10 +36,11 @@ spec:
             requests:
               cpu: 150m
               memory: 500Mi
-          {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.global.isProxyEnabled) }}
+          {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
           envFrom:
             - secretRef:
                 name: ama-metrics-proxy-config
+                optional: true
           {{- end }}
           env:
             - name: CLUSTER

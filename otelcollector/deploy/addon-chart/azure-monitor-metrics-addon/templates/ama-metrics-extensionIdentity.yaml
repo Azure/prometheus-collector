@@ -1,4 +1,4 @@
-{{- if or ( contains "microsoft.kubernetes/connectedclusters" (.Values.Azure.Cluster.ResourceId | lower)) ( contains "microsoft.hybridcontainerservice/provisionedclusters" (.Values.Azure.Cluster.ResourceId | lower)) }}
+{{- if or ( contains "microsoft.kubernetes/connectedclusters" (.Values.Azure.Cluster.ResourceID | lower)) ( contains "microsoft.hybridcontainerservice/provisionedclusters" (.Values.Azure.Cluster.ResourceID | lower)) }}
 #extension model
 {{- if not (empty .Values.Azure.Extension.Name) }}
 apiVersion: clusterconfig.azure.com/v1beta1
