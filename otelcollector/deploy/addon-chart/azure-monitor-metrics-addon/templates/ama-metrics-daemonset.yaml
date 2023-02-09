@@ -91,7 +91,7 @@ spec:
               value: "" # Replace this with the node exporter shipped out of box with AKS
             - name: NODE_EXPORTER_TARGETPORT
               {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "9100"
+              value: {{ .Values.prometheus-node-exporter.service.targetPort }}
               {{- else }}
               value: "19100"
               {{- end }}
@@ -178,7 +178,6 @@ spec:
                 - NET_ADMIN
                 - NET_RAW
         {{- end }}
-      {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -192,8 +191,10 @@ spec:
                     operator: NotIn
                     values:
                       - virtual-kubelet
+                  {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
+                  {{- end }}
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
@@ -201,7 +202,12 @@ spec:
           effect: NoExecute
         - operator: "Exists"
           effect: NoSchedule
-      {{- end }}
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
       volumes:
         - name: settings-vol-config
           configMap:

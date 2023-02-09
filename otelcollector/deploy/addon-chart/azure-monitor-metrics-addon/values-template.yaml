@@ -53,6 +53,12 @@ global:
     Customer:
       AzureResourceID: ${AKS_RESOURCE_ID}
 
+prometheus-node-exporter:
+  service:
+    port: 9110
+    targetPort: 9110
+
+# Arc testing variables (Test in helm without an Arc environment)
 # Azure:
 #   Cluster:
 #     ResourceID: "/subscriptions/<subscriptionID>/resourcegroups/<resourceGroup>/providers/Microsoft.Kubernetes/connectedClusters/<clusterName>"
