@@ -20,7 +20,7 @@ LOGGING_PREFIX = "default-scrape-settings"
 @prometheusCollectorHealthEnabled = true
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
-@kappiebasicEnabled = true
+@kappiebasicEnabled = false
 @noDefaultsEnabled = false
 @sendDSUpMetric = false
 

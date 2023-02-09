@@ -19,7 +19,7 @@ data:
     nodeexporter = true
     windowsexporter = false
     windowskubeproxy = false
-    kappiebasic = true
+    kappiebasic = false
     prometheuscollectorhealth = false
   default-targets-metrics-keep-list: |-
     kubelet = ""
