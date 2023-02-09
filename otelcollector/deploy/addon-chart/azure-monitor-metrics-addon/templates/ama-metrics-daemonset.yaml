@@ -96,7 +96,7 @@ spec:
               value: "" # Replace this with the node exporter shipped out of box with AKS
             - name: NODE_EXPORTER_TARGETPORT
               {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: {{ .Values.prometheus-node-exporter.service.targetPort }}
+              value: "9100"
               {{- else }}
               value: "19100"
               {{- end }}

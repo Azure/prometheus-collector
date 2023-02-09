@@ -94,5 +94,5 @@ Azure:
             memory: 50Mi
 prometheus-node-exporter:
   service:
-    port: 9110
-    targetPort: 9110
+    port: "9110"
+    targetPort: "9110"
