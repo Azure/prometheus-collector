@@ -67,7 +67,7 @@ if [ "$HTTP_PROXY" != "" ]; then
   export HTTP_PROXY_ENABLED="true"
 fi
 
-echo "export HTTP_PROXY_ENABLED='true'" >> ~/.bashrc
+echo "export HTTP_PROXY_ENABLED=$HTTP_PROXY_ENABLED" >> ~/.bashrc
 
 #set agent config schema version
 if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then

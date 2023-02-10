@@ -100,6 +100,7 @@ COPY --from=builder /var/opt/microsoft /var/opt/microsoft
 COPY --from=builder /var/lib/logrotate /var/lib/logrotate
 COPY --from=builder /var/spool/cron /var/spool/cron
 COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
+COPY --from=builder /usr/share/pki/ /usr/share/pki
 
 # executables
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
@@ -154,6 +155,7 @@ COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so
 COPY --from=builder /usr/lib64/pkcs11 /usr/lib64
 COPY --from=builder /lib/libp11-kit.so.0 ./usr/lib/libp11-kit.so.0 /lib/libffi.so.8 /lib/
 COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/libffi.so.8 /lib/
+COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/pkcs11/p11-kit-trust.so /usr/lib
 
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
