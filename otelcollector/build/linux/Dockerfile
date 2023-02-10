@@ -100,6 +100,7 @@ COPY --from=builder /var/opt/microsoft /var/opt/microsoft
 COPY --from=builder /var/lib/logrotate /var/lib/logrotate
 COPY --from=builder /var/spool/cron /var/spool/cron
 COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
+COPY --from=builder /usr/share/p11-kit/modules /etc/p11-kit/modules
 COPY --from=builder /usr/share/pki/ /usr/share/pki
 
 # executables
