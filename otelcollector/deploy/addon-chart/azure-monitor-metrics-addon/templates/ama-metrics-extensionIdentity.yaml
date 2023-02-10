@@ -4,7 +4,7 @@
 apiVersion: clusterconfig.azure.com/v1beta1
 kind: AzureExtensionIdentity
 metadata:
-  name: {{ .Values.Azure.Extension.Name }}
+  name: ama-metrics
   namespace: azure-arc
 spec:
   serviceAccounts:
