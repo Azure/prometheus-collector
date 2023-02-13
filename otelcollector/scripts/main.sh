@@ -36,14 +36,10 @@ echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
 
 # If using a trusted CA for HTTP Proxy, copy this over from the node and install
-cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors
-cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors
-cp /anchors/proxy/* /etc/pki/ca-trust/source/anchors
+cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors 2>/dev/null
+cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors 2>/dev/null
+cp /anchors/proxy/* /etc/pki/ca-trust/source/anchors 2>/dev/null
 update-ca-trust
-
-echo $HTTP_PROXY
-echo $HTTPS_PROXY
-echo $NO_PROXY
 
 # These env variables are populated by AKS in every kube-system pod
 # Remove ending '/' character since mdsd doesn't recognize this as a valid url

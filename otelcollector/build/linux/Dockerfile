@@ -100,7 +100,6 @@ COPY --from=builder /var/opt/microsoft /var/opt/microsoft
 COPY --from=builder /var/lib/logrotate /var/lib/logrotate
 COPY --from=builder /var/spool/cron /var/spool/cron
 COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
-COPY --from=builder /usr/share/p11-kit/modules /etc/p11-kit/modules
 COPY --from=builder /usr/share/pki/ /usr/share/pki
 
 # executables
@@ -123,8 +122,6 @@ COPY --from=builder /usr/bin/update-ca-trust /usr/bin
 COPY --from=builder /bin/sh /bin/sh
 COPY --from=builder /usr/bin/p11-kit /usr/bin
 COPY --from=builder /usr/bin/trust /usr/bin
-COPY --from=builder /usr/lib/pkcs11 /usr/lib/
-COPY --from=builder /usr/libexec/p11-kit /usr/libexec
 
 # bash dependencies
 COPY --from=builder /lib/libreadline.so.8 /lib/
@@ -156,7 +153,8 @@ COPY --from=builder /lib/libcurl.so.4 lib/libz.so.1 /lib/libc.so.6 /lib/libssh2.
 COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /lib/
 # update-ca-trust dependencies
 COPY --from=builder /usr/lib64/pkcs11 /usr/lib64
-COPY --from=builder /lib/libp11-kit.so.0 ./usr/lib/libp11-kit.so.0 /lib/libffi.so.8 /lib/
+COPY --from=builder /usr/lib/pkcs11 /usr/lib/
+COPY --from=builder /usr/libexec/p11-kit /usr/libexec
 COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/libffi.so.8 /lib/
 COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
 COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
