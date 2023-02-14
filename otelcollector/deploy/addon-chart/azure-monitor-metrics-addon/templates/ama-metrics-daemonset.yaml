@@ -36,9 +36,17 @@ spec:
               memory: 150Mi
           env:
             - name: CLUSTER
+              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ .Values.Azure.Cluster.ResourceId }}"
+              {{- else }}
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+              {{- end }}
             - name: AKSREGION
+              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ .Values.Azure.Cluster.Region }}"
+              {{- else }}
               value: "{{ .Values.global.commonGlobals.Region }}"
+              {{- end }}
             - name: MAC
               value: "true"
             - name: AZMON_COLLECT_ENV
@@ -82,7 +90,11 @@ spec:
             - name: NODE_EXPORTER_NAME
               value: "" # Replace this with the node exporter shipped out of box with AKS
             - name: NODE_EXPORTER_TARGETPORT
+              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
+              {{- else }}
               value: "19100"
+              {{- end }}
             {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
@@ -130,6 +142,14 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
+        {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+        - name: arc-msi-adapter
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: TOKEN_NAMESPACE
+            value: "azure-arc"
+          {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
+        {{- else }}
         - name: addon-token-adapter
           command:
             - /addon-token-adapter
@@ -163,6 +183,7 @@ spec:
               add:
                 - NET_ADMIN
                 - NET_RAW
+        {{- end }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -176,14 +197,22 @@ spec:
                     operator: NotIn
                     values:
                       - virtual-kubelet
+                  {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
+                  {{- end }}
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
         - operator: "Exists"
           effect: NoExecute
         - operator: "Exists"
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
           effect: NoSchedule
       volumes:
         - name: settings-vol-config

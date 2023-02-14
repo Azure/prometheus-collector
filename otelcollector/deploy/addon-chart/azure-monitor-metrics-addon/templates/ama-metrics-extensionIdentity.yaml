@@ -1,0 +1,34 @@
+{{- if or ( contains "microsoft.kubernetes/connectedclusters" (.Values.Azure.Cluster.ResourceId | lower)) ( contains "microsoft.hybridcontainerservice/provisionedclusters" (.Values.Azure.Cluster.ResourceId | lower)) }}
+#extension model
+{{- if not (empty .Values.Azure.Extension.Name) }}
+apiVersion: clusterconfig.azure.com/v1beta1
+kind: AzureExtensionIdentity
+metadata:
+  name: {{ .Values.Azure.Extension.Name }}
+  namespace: azure-arc
+spec:
+  serviceAccounts:
+    - name: ama-metrics-serviceaccount
+      namespace: kube-system
+  tokenNamespace: azure-arc
+---
+{{- end }}
+apiVersion:  clusterconfig.azure.com/v1beta1
+kind: AzureClusterIdentityRequest
+metadata:
+  name: ama-metrics-clusteridentityrequest
+  namespace: azure-arc
+spec:
+  {{- if eq (.Values.Azure.Cluster.Cloud | lower) "azurepubliccloud" }}
+  audience: https://monitoring.azure.com/
+  {{- else if eq (.Values.Azure.Cluster.Cloud | lower) "azurechinacloud" }}
+  audience: https://monitoring.azure.cn/
+  {{- else if eq (.Values.Azure.Cluster.Cloud | lower) "azureusgovernmentcloud" }}
+  audience: https://monitoring.azure.us/
+  {{- else }}
+  audience: https://monitoring.azure.com/
+  {{- end }}
+  {{- if not (empty .Values.Azure.Extension.Name) }}
+  resourceId: {{ .Values.Azure.Extension.Name }}
+  {{- end }}
+{{- end }}

@@ -91,6 +91,7 @@ spec:
           timeoutSeconds: 5
       nodeSelector:
         kubernetes.io/os: linux
+      {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
       affinity:
         nodeAffinity:
           # affinity to schedule on to ephemeral os node if its available
@@ -102,6 +103,7 @@ spec:
                 operator: In
                 values:
                 - system
+          {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
@@ -115,6 +117,7 @@ spec:
                       - virtual-kubelet
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
+          {{- end }}
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
@@ -122,3 +125,4 @@ spec:
           effect: NoExecute
         - operator: "Exists"
           effect: NoSchedule
+      {{- end }}
