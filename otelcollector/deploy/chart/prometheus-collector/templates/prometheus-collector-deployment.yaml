@@ -213,6 +213,9 @@ spec:
                 - NET_ADMIN
                 - NET_RAW
         {{- end }}
+      {{- if .Values.deploymentPriorityClass }}
+      priorityClassName: {{ .Values.deploymentPriorityClass }}
+      {{- end}}
       affinity:
         nodeAffinity:
           # affinity to schedule on to ephemeral os node if its available

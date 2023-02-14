@@ -177,3 +177,7 @@ prometheus-node-exporter:
     kubernetes.io/arch: amd64
 
 prometheusConfig: ""
+
+# To set a priority class for the deployment, unomment the line below and set the priority class name
+# this can be used to give the deployment a higher priority than other Pods to make sure it gets scheduled
+# deploymentPriorityClass: cluster-high-priority
