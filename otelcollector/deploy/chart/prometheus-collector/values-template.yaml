@@ -178,6 +178,6 @@ prometheus-node-exporter:
 
 prometheusConfig: ""
 
-# To set a priority class for the deployment, unomment the line below and set the priority class name
-# this can be used to give the deployment a higher priority than other Pods to make sure it gets scheduled
-# deploymentPriorityClass: cluster-high-priority
+# To set a priority class for the deployment, set the priority class name below
+# this can be used to give the deployment a higher priority than other Pods to let it evict other Pods if there are not enough resources
+deploymentPriorityClass: ""
