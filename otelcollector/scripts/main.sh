@@ -34,33 +34,34 @@ echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
 
 # If using a trusted CA for HTTP Proxy, copy this over from the node and install
-# cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors
-# cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors
-# update-ca-trust
+cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors 2>/dev/null
+cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors 2>/dev/null
+cp /anchors/proxy/* /etc/pki/ca-trust/source/anchors 2>/dev/null
+update-ca-trust
 
 # These env variables are populated by AKS in every kube-system pod
 # Remove ending '/' character since mdsd doesn't recognize this as a valid url
-# if [ "$http_proxy" != "" ] && [[ "$http_proxy" =~ '/'$ ]]; then
-#  export http_proxy=${http_proxy::-1}
-# fi
-# if [ "$HTTP_PROXY" != "" ] && [[ "$HTTP_PROXY" =~ '/'$ ]]; then
-#  export HTTP_PROXY=${HTTP_PROXY::-1}
-#fi
-#if [ "$https_proxy" != "" ] && [[ "$https_proxy" =~ '/'$ ]]; then
-#  export https_proxy=${https_proxy::-1}
-#fi
-#if [ "$HTTPS_PROXY" != "" ] && [[ "$HTTPS_PROXY" =~ '/'$ ]]; then
-#  export HTTPS_PROXY=${HTTPS_PROXY::-1}
-#fi
+if [ "$http_proxy" != "" ] && [[ "$http_proxy" =~ '/'$ ]]; then
+  export http_proxy=${http_proxy::-1}
+fi
+if [ "$HTTP_PROXY" != "" ] && [[ "$HTTP_PROXY" =~ '/'$ ]]; then
+ export HTTP_PROXY=${HTTP_PROXY::-1}
+fi
+if [ "$https_proxy" != "" ] && [[ "$https_proxy" =~ '/'$ ]]; then
+  export https_proxy=${https_proxy::-1}
+fi
+if [ "$HTTPS_PROXY" != "" ] && [[ "$HTTPS_PROXY" =~ '/'$ ]]; then
+  export HTTPS_PROXY=${HTTPS_PROXY::-1}
+fi
 
 # If HTTP Proxy is enabled, HTTP_PROXY will always have a value.
 # HTTPS_PROXY will be set to same value as HTTP_PROXY if not specified.
-#export HTTP_PROXY_ENABLED="false"
-#if [ "$HTTP_PROXY" != "" ]; then
-#  export HTTP_PROXY_ENABLED="true"
-#else
+export HTTP_PROXY_ENABLED="false"
+if [ "$HTTP_PROXY" != "" ]; then
+  export HTTP_PROXY_ENABLED="true"
+fi
 
-#echo "export HTTP_PROXY_ENABLED='true'" >> ~/.bashrc
+echo "export HTTP_PROXY_ENABLED=$HTTP_PROXY_ENABLED" >> ~/.bashrc
 
 #set agent config schema version
 if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
