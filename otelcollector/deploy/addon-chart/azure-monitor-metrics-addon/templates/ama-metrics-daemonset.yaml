@@ -138,9 +138,6 @@ spec:
               name: anchors-ubuntu
               readOnly: true
             {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-            - mountPath: /etc/ama-metrics-proxy-config
-              name: ama-metrics-proxy-config
-              readOnly: true
             - mountPath: /anchors/proxy
               name: ama-metrics-proxy-cert
               readOnly: true
@@ -251,10 +248,6 @@ spec:
             path: /usr/local/share/ca-certificates/
             type: DirectoryOrCreate
         {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-        - name: ama-metrics-proxy-config
-          secret:
-            secretName: ama-metrics-proxy-config
-            optional: true
         - name: ama-metrics-proxy-cert
           secret:
             secretName: ama-metrics-proxy-cert
