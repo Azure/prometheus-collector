@@ -39,6 +39,8 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @windowsexporterDefaultDsFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultDs.yml"
 @windowskubeproxyDefaultFileRsSimpleFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsSimple.yml"
 @windowskubeproxyDefaultDsFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultDs.yml"
+@windowskubeproxyDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
+@kappiebasicDefaultFileDs = @defaultPromConfigPathPrefix + "kappieBasicDefaultDs.yml"
 
 def parseConfigMap
   begin
@@ -286,6 +288,26 @@ def populateDefaultPrometheusConfig
       end
     end
 
+    if !ENV["AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED"].downcase == "true"
+      kappiebasicMetricsKeepListRegex = @regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
+      kappiebasicScrapeInterval = @intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
+      if currentControllerType == @replicasetControllerType
+        #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
+      else #kappie scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
+        if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" #&& ENV["OS_TYPE"].downcase == "linux"
+          UpdateScrapeIntervalConfig(@kappiebasicDefaultFileDs, kappiebasicScrapeInterval)
+          if !kappiebasicMetricsKeepListRegex.nil? && !kappiebasicMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@kappiebasicDefaultFileDs, kappiebasicMetricsKeepListRegex)
+          end
+          contents = File.read(@kappiebasicDefaultFileDs)
+          contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+          File.open(@kappiebasicDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@kappiebasicDefaultFileDs)
+        end
+      end
+    end
+
     # Collector health config should be enabled or disabled for both replicaset and daemonset
     if !ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].downcase == "true"
       prometheusCollectorHealthInterval = @intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
@@ -363,7 +385,7 @@ def populateDefaultPrometheusConfig
 
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
   rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default scrape targets - #{errorStr}. No default scrape tragets will be included")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default scrape targets - #{errorStr}. No default scrape targets will be included")
     @mergedDefaultConfigs = ""
   end
 end
