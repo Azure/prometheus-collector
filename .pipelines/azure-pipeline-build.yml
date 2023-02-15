@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/arc-proxy
 
 pr:
   autoCancel: true
@@ -504,4 +503,4 @@ jobs:
       chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
       releaseName: 'ama-metrics'
       waitForExecution: false
-      arguments: --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+      arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
