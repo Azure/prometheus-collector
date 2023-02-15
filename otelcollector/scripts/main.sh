@@ -34,33 +34,33 @@ echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
 
 # If using a trusted CA for HTTP Proxy, copy this over from the node and install
-cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors
-cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors
-update-ca-trust
+# cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors
+# cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors
+# update-ca-trust
 
 # These env variables are populated by AKS in every kube-system pod
 # Remove ending '/' character since mdsd doesn't recognize this as a valid url
-if [ "$http_proxy" != "" ] && [[ "$http_proxy" =~ '/'$ ]]; then
-  export http_proxy=${http_proxy::-1}
-fi
-if [ "$HTTP_PROXY" != "" ] && [[ "$HTTP_PROXY" =~ '/'$ ]]; then
-  export HTTP_PROXY=${HTTP_PROXY::-1}
-fi
-if [ "$https_proxy" != "" ] && [[ "$https_proxy" =~ '/'$ ]]; then
-  export https_proxy=${https_proxy::-1}
-fi
-if [ "$HTTPS_PROXY" != "" ] && [[ "$HTTPS_PROXY" =~ '/'$ ]]; then
-  export HTTPS_PROXY=${HTTPS_PROXY::-1}
-fi
+# if [ "$http_proxy" != "" ] && [[ "$http_proxy" =~ '/'$ ]]; then
+#  export http_proxy=${http_proxy::-1}
+# fi
+# if [ "$HTTP_PROXY" != "" ] && [[ "$HTTP_PROXY" =~ '/'$ ]]; then
+#  export HTTP_PROXY=${HTTP_PROXY::-1}
+#fi
+#if [ "$https_proxy" != "" ] && [[ "$https_proxy" =~ '/'$ ]]; then
+#  export https_proxy=${https_proxy::-1}
+#fi
+#if [ "$HTTPS_PROXY" != "" ] && [[ "$HTTPS_PROXY" =~ '/'$ ]]; then
+#  export HTTPS_PROXY=${HTTPS_PROXY::-1}
+#fi
 
 # If HTTP Proxy is enabled, HTTP_PROXY will always have a value.
 # HTTPS_PROXY will be set to same value as HTTP_PROXY if not specified.
-export HTTP_PROXY_ENABLED="false"
-if [ "$HTTP_PROXY" != "" ]; then
-  export HTTP_PROXY_ENABLED="true"
-else
+#export HTTP_PROXY_ENABLED="false"
+#if [ "$HTTP_PROXY" != "" ]; then
+#  export HTTP_PROXY_ENABLED="true"
+#else
 
-echo "export HTTP_PROXY_ENABLED='true'" >> ~/.bashrc
+#echo "export HTTP_PROXY_ENABLED='true'" >> ~/.bashrc
 
 #set agent config schema version
 if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
@@ -207,6 +207,32 @@ else
       meConfigFile="/usr/sbin/me_ds.config"
    fi
 fi
+
+#wait for addon-token-adapter to be healthy
+tokenAdapterWaitsecs=45
+waitedSecsSoFar=1
+while true; do
+      if [ $waitedSecsSoFar -gt $tokenAdapterWaitsecs ]; then
+            wget -T 2 -S http://localhost:9999/healthz 2>&1
+            echo "giving up waiting for token adapter to become healthy after $waitedSecsSoFar secs"
+            # log telemetry about failure after waiting for waitedSecsSoFar and break
+            echo "export tokenadapterUnhealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
+            break
+      else
+           echo "checking health of token adapter after $waitedSecsSoFar secs"
+           tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
+           if [ ! -z $tokenAdapterResult ]; then
+                  echo "found token adapter to be healthy after $waitedSecsSoFar secs" 
+                  # log telemetry about success after waiting for waitedSecsSoFar and break
+                  echo "export tokenadapterHealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
+                  break
+           fi
+           sleep 1
+           waitedSecsSoFar=$(($waitedSecsSoFar + 1))
+      fi 
+done
+source ~/.bashrc
+#end wait for addon-token-adapter to be healthy
 
 export ME_CONFIG_FILE=$meConfigFile	
 export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile
