@@ -43,16 +43,16 @@ jobs:
         SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
 
         LINUX_IMAGE_TAG=$SEMVER
+        # Truncating to 128 characters as it is required by docker
+        LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
         WINDOWS_IMAGE_TAG=$SEMVER-win
+        # Truncating to 120 characters as it is required by docker (8 characters used in lts2019/ltsc2022)
+        WINDOWS_IMAGE_TAG=$(echo "${WINDOWS_IMAGE_TAG}" | cut -c1-120)
         WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
         WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
 
         LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
-        # Truncating to 128 characters as it is required by docker
-        LINUX_FULL_IMAGE_NAME=$(echo "${LINUX_FULL_IMAGE_NAME}" | cut -c1-128)
         WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
-        # Truncating to 120 characters as it is required by docker (8 characters used in lts2019/ltsc2022)
-        WINDOWS_FULL_IMAGE_NAME=$(echo "${WINDOWS_FULL_IMAGE_NAME}" | cut -c1-120)
         HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
 
         echo "##vso[build.updatebuildnumber]$SEMVER"
