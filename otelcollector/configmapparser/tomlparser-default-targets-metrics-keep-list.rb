@@ -23,6 +23,7 @@ LOGGING_PREFIX = "default-scrape-keep-lists"
 @nodeexporterRegex = ""
 @windowsexporterRegex = ""
 @windowskubeproxyRegex = ""
+@kappiebasicRegex = ""
 
 #This will always be string "true" as we set the string value in the chart for both MAC and non MAC modes
 @minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"]
@@ -40,6 +41,7 @@ end
 @apiserverRegex_minimal = "apiserver_request_duration_seconds|apiserver_request_duration_seconds_bucket|apiserver_request_duration_seconds_sum|apiserver_request_duration_seconds_count|apiserver_request_total|workqueue_adds_total|workqueue_depth|workqueue_queue_duration_seconds|workqueue_queue_duration_seconds_bucket|workqueue_queue_duration_seconds_sum|workqueue_queue_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info|apiserver_request_slo_duration_seconds_bucket|apiserver_request_slo_duration_seconds_sum|apiserver_request_slo_duration_seconds_count"
 @kubestateRegex_minimal = "kube_node_status_capacity|kube_job_status_succeeded|kube_job_spec_completions|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_number_ready|kube_deployment_spec_replicas|kube_deployment_status_replicas_ready|kube_pod_container_status_last_terminated_reason|kube_node_status_condition|kube_pod_container_status_restarts_total|kube_pod_container_resource_requests|kube_pod_status_phase|kube_pod_container_resource_limits|kube_node_status_allocatable|kube_pod_info|kube_pod_owner|kube_resourcequota|kube_statefulset_replicas|kube_statefulset_status_replicas|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas_current|kube_statefulset_status_replicas_updated|kube_namespace_status_phase|kube_node_info|kube_statefulset_metadata_generation|kube_pod_labels|kube_pod_annotations|kube_horizontalpodautoscaler_status_current_replicas|kube_horizontalpodautoscaler_spec_max_replicas|kube_node_status_condition|kube_node_spec_taint|kube_pod_container_status_waiting_reason|kube_job_failed|kube_job_status_start_time|kube_deployment_spec_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_updated|kube_replicaset_owner|kubernetes_build_info|kube_pod_container_info"
 @nodeexporterRegex_minimal = "node_cpu_seconds_total|node_memory_MemAvailable_bytes|node_memory_Buffers_bytes|node_memory_Cached_bytes|node_memory_MemFree_bytes|node_memory_Slab_bytes|node_memory_MemTotal_bytes|node_netstat_Tcp_RetransSegs|node_netstat_Tcp_OutSegs|node_netstat_TcpExt_TCPSynRetrans|node_load1|node_load5|node_load15|node_disk_read_bytes_total|node_disk_written_bytes_total|node_disk_io_time_seconds_total|node_filesystem_size_bytes|node_filesystem_avail_bytes|node_network_receive_bytes_total|node_network_transmit_bytes_total|node_vmstat_pgmajfault|node_network_receive_drop_total|node_network_transmit_drop_total|node_disk_io_time_weighted_seconds_total|node_exporter_build_info|node_time_seconds|node_uname_info|kubernetes_build_info"
+@kappiebasicRegex_minimal = "kappie.*"
 @windowsexporterRegex_minimal = "windows_system_system_up_time|windows_cpu_time_total|windows_memory_available_bytes|windows_os_visible_memory_bytes|windows_memory_cache_bytes|windows_memory_modified_page_list_bytes|windows_memory_standby_cache_core_bytes|windows_memory_standby_cache_normal_priority_bytes|windows_memory_standby_cache_reserve_bytes|windows_memory_swap_page_operations_total|windows_logical_disk_read_seconds_total|windows_logical_disk_write_seconds_total|windows_logical_disk_size_bytes|windows_logical_disk_free_bytes|windows_net_bytes_total|windows_net_packets_received_discarded_total|windows_net_packets_outbound_discarded_total|windows_container_available|windows_container_cpu_usage_seconds_total|windows_container_memory_usage_commit_bytes|windows_container_memory_usage_private_working_set_bytes|windows_container_network_receive_bytes_total|windows_container_network_transmit_bytes_total"
 @windowskubeproxyRegex_minimal = "kubeproxy_sync_proxy_rules_duration_seconds|kubeproxy_sync_proxy_rules_duration_seconds_bucket|kubeproxy_sync_proxy_rules_duration_seconds_sum|kubeproxy_sync_proxy_rules_duration_seconds_count|rest_client_requests_total|rest_client_request_duration_seconds|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines"
 
@@ -51,6 +53,7 @@ end
 @apiserverRegex_minimal_mac = "apiserver_request_duration_seconds|apiserver_request_duration_seconds_bucket|apiserver_request_duration_seconds_sum|apiserver_request_duration_seconds_count|apiserver_request_total|workqueue_adds_total|workqueue_depth|workqueue_queue_duration_seconds|workqueue_queue_duration_seconds_bucket|workqueue_queue_duration_seconds_sum|workqueue_queue_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info|apiserver_request_slo_duration_seconds_bucket|apiserver_request_slo_duration_seconds_sum|apiserver_request_slo_duration_seconds_count"
 @kubestateRegex_minimal_mac = "kube_node_status_allocatable|kube_pod_owner|kube_pod_container_resource_requests|kube_pod_status_phase|kube_pod_container_resource_limits|kube_replicaset_owner|kube_resourcequota|kube_namespace_status_phase|kube_node_status_capacity|kube_node_info|kube_pod_info|kube_deployment_spec_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_updated|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas|kube_statefulset_status_replicas_updated|kube_job_status_start_time|kube_job_status_active|kube_job_failed|kube_horizontalpodautoscaler_status_desired_replicas|kube_horizontalpodautoscaler_status_current_replicas|kube_horizontalpodautoscaler_spec_min_replicas|kube_horizontalpodautoscaler_spec_max_replicas|kubernetes_build_info|kube_node_status_condition|kube_node_spec_taint|kube_pod_container_info"
 @nodeexporterRegex_minimal_mac = "node_memory_MemTotal_bytes|node_cpu_seconds_total|node_memory_MemAvailable_bytes|node_memory_Buffers_bytes|node_memory_Cached_bytes|node_memory_MemFree_bytes|node_memory_Slab_bytes|node_filesystem_avail_bytes|node_filesystem_size_bytes|node_time_seconds|node_exporter_build_info|node_load1|node_vmstat_pgmajfault|node_network_receive_bytes_total|node_network_transmit_bytes_total|node_network_receive_drop_total|node_network_transmit_drop_total|node_disk_io_time_seconds_total|node_disk_io_time_weighted_seconds_total|node_load5|node_load15|node_disk_read_bytes_total|node_disk_written_bytes_total|node_uname_info|kubernetes_build_info"
+@kappiebasicRegex_minimal_mac = "kappie.*"
 @windowsexporterRegex_minimal_mac = "windows_system_system_up_time|windows_cpu_time_total|windows_memory_available_bytes|windows_os_visible_memory_bytes|windows_memory_cache_bytes|windows_memory_modified_page_list_bytes|windows_memory_standby_cache_core_bytes|windows_memory_standby_cache_normal_priority_bytes|windows_memory_standby_cache_reserve_bytes|windows_memory_swap_page_operations_total|windows_logical_disk_read_seconds_total|windows_logical_disk_write_seconds_total|windows_logical_disk_size_bytes|windows_logical_disk_free_bytes|windows_net_bytes_total|windows_net_packets_received_discarded_total|windows_net_packets_outbound_discarded_total|windows_container_available|windows_container_cpu_usage_seconds_total|windows_container_memory_usage_commit_bytes|windows_container_memory_usage_private_working_set_bytes|windows_container_network_receive_bytes_total|windows_container_network_transmit_bytes_total"
 @windowskubeproxyRegex_minimal_mac = "kubeproxy_sync_proxy_rules_duration_seconds|kubeproxy_sync_proxy_rules_duration_seconds_bucket|kubeproxy_sync_proxy_rules_duration_seconds_sum|kubeproxy_sync_proxy_rules_duration_seconds_count|rest_client_requests_total|rest_client_request_duration_seconds|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines"
 
@@ -203,6 +206,21 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.logError(LOGGING_PREFIX, "nodeexporterRegex either not specified or not of type string")
     end
 
+    kappiebasicRegex= parsedConfig[:kappiebasic]
+    if !kappiebasicRegex.nil? && kappiebasicRegex.kind_of?(String)
+      if !kappiebasicRegex.empty?
+        if isValidRegex(kappiebasicRegex) == true
+          @kappiebasicRegex = kappiebasicRegex
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for kappiebasic")
+        else
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for kappiebasic")
+        end
+      end
+    else
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kappiebasicRegex either not specified or not of type string")
+    end
+
+
     windowsexporterRegex = parsedConfig[:windowsexporter]
     if !windowsexporterRegex.nil? && windowsexporterRegex.kind_of?(String)
       if !windowsexporterRegex.empty?
@@ -261,6 +279,7 @@ def populateRegexValuesWithMinimalIngestionProfile
         @apiserverRegex = @apiserverRegex + "|" + @apiserverRegex_minimal_mac
         @kubestateRegex = @kubestateRegex + "|" + @kubestateRegex_minimal_mac
         @nodeexporterRegex = @nodeexporterRegex + "|" + @nodeexporterRegex_minimal_mac
+        @kappiebasicRegex = @kappiebasicRegex + "|" + @kappiebasicRegex_minimal_mac
         @windowsexporterRegex = @windowsexporterRegex + "|" + @windowsexporterRegex_minimal_mac
         @windowskubeproxyRegex = @windowskubeproxyRegex + "|" + @windowskubeproxyRegex_minimal_mac
       else
@@ -272,6 +291,7 @@ def populateRegexValuesWithMinimalIngestionProfile
         @apiserverRegex = @apiserverRegex + "|" + @apiserverRegex_minimal
         @kubestateRegex = @kubestateRegex + "|" + @kubestateRegex_minimal
         @nodeexporterRegex = @nodeexporterRegex + "|" + @nodeexporterRegex_minimal
+        @kappiebasicRegex = @kappiebasicRegex + "|" + @kappiebasicRegex_minimal
         @windowsexporterRegex = @windowsexporterRegex + "|" + @windowsexporterRegex_minimal
         @windowskubeproxyRegex = @windowskubeproxyRegex + "|" + @windowskubeproxyRegex_minimal
       end
@@ -312,6 +332,7 @@ regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"] = @kubestateRegex
 regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"] = @nodeexporterRegex
 regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"] = @windowsexporterRegex
 regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"] = @windowskubeproxyRegex
+regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"] = @kappiebasicRegex
 
 if !file.nil?
   # Close file after writing regex keep list hash

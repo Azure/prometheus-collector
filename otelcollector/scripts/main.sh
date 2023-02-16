@@ -45,7 +45,7 @@ if [ "$http_proxy" != "" ] && [[ "$http_proxy" =~ '/'$ ]]; then
   export http_proxy=${http_proxy::-1}
 fi
 if [ "$HTTP_PROXY" != "" ] && [[ "$HTTP_PROXY" =~ '/'$ ]]; then
-  export HTTP_PROXY=${HTTP_PROXY::-1}
+ export HTTP_PROXY=${HTTP_PROXY::-1}
 fi
 if [ "$https_proxy" != "" ] && [[ "$https_proxy" =~ '/'$ ]]; then
   export https_proxy=${https_proxy::-1}
@@ -208,6 +208,32 @@ else
       meConfigFile="/usr/sbin/me_ds.config"
    fi
 fi
+
+#wait for addon-token-adapter to be healthy
+tokenAdapterWaitsecs=45
+waitedSecsSoFar=1
+while true; do
+      if [ $waitedSecsSoFar -gt $tokenAdapterWaitsecs ]; then
+            wget -T 2 -S http://localhost:9999/healthz 2>&1
+            echo "giving up waiting for token adapter to become healthy after $waitedSecsSoFar secs"
+            # log telemetry about failure after waiting for waitedSecsSoFar and break
+            echo "export tokenadapterUnhealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
+            break
+      else
+           echo "checking health of token adapter after $waitedSecsSoFar secs"
+           tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
+           if [ ! -z $tokenAdapterResult ]; then
+                  echo "found token adapter to be healthy after $waitedSecsSoFar secs" 
+                  # log telemetry about success after waiting for waitedSecsSoFar and break
+                  echo "export tokenadapterHealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
+                  break
+           fi
+           sleep 1
+           waitedSecsSoFar=$(($waitedSecsSoFar + 1))
+      fi 
+done
+source ~/.bashrc
+#end wait for addon-token-adapter to be healthy
 
 export ME_CONFIG_FILE=$meConfigFile	
 export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile
