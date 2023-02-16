@@ -218,7 +218,7 @@ spec:
       {{- end}}
       affinity:
         nodeAffinity:
-          # affinity to schedule on to ephemeral os node if its available
+          # affinity to schedule on to ephemeral os node if its available 
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 1
             preference:
