@@ -43,18 +43,16 @@ jobs:
         SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
 
         LINUX_IMAGE_TAG=$SEMVER
+        # Truncating to 128 characters as it is required by docker
+        LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
         WINDOWS_IMAGE_TAG=$SEMVER-win
+        # Truncating to 120 characters as it is required by docker (8 characters used in lts2019/ltsc2022)
+        WINDOWS_IMAGE_TAG=$(echo "${WINDOWS_IMAGE_TAG}" | cut -c1-120)
         WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
         WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
 
         LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
-        # Truncating to 128 characters as it is required by docker
-        LINUX_FULL_IMAGE_NAME=$(echo "${LINUX_FULL_IMAGE_NAME}" | cut -c1-128)
         WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
-        # Truncating to 120 characters as it is required by docker (8 characters used in lts2019/ltsc2022)
-        WINDOWS_FULL_IMAGE_NAME=$(echo "${WINDOWS_FULL_IMAGE_NAME}" | cut -c1-120)
-        # Get windows image tag for chart/image push check in deploy to dev clusters
-        WINDOWS_IMAGE_TAG_FOR_DEV=$(echo $WINDOWS_FULL_IMAGE_NAME | cut -d ':' -f 2)
         HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
 
         echo "##vso[build.updatebuildnumber]$SEMVER"
@@ -62,7 +60,6 @@ jobs:
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
-        echo "##vso[task.setvariable variable=WINDOWS_IMAGE_TAG_FOR_DEV;isOutput=true]$WINDOWS_IMAGE_TAG_FOR_DEV"
         echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2019_BASE_IMAGE_VERSION"
         echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2022_BASE_IMAGE_VERSION"
         echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
@@ -427,7 +424,7 @@ jobs:
   displayName: "Deploy to dev clusters"
   pool:
     name: Azure-Pipelines-CI-Test-EO
-  condition: and(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
+  condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   dependsOn:
   - Common
   - Chart
@@ -435,7 +432,7 @@ jobs:
     HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
-    IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG_FOR_DEV'] ]
+    IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
   steps:
   - checkout: self
