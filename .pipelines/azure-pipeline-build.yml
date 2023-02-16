@@ -427,7 +427,7 @@ jobs:
   displayName: "Deploy to dev clusters"
   pool:
     name: Azure-Pipelines-CI-Test-EO
-  condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, false))
+  condition: and(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, false))
   dependsOn:
   - Common
   - Chart
