@@ -284,6 +284,9 @@ spec:
         schema-versions: "v1"
     spec:
       serviceAccountName: {{ template "prometheus-collector.fullname" . }}-serviceaccount
+      {{- if .Values.daemonsetPriorityClass }}
+      priorityClassName: {{ .Values.daemonsetPriorityClass }}
+      {{- end}}
       containers:
         - name: prometheus-collector-win
           image: &collectorimagewindowstag "{{ .Values.image.repository }}:{{ .Values.image.windows.tag }}"
