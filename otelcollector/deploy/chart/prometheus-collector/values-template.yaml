@@ -177,3 +177,8 @@ prometheus-node-exporter:
     kubernetes.io/arch: amd64
 
 prometheusConfig: ""
+
+# To set a priority class for the deployment or daemonset, set the priority class name below
+# this can be used to give the deployment a higher priority than other Pods to let it evict other Pods if there are not enough resources
+deploymentPriorityClass: ""
+daemonsetPriorityClass: ""
