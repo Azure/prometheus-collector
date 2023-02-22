@@ -48,7 +48,7 @@
                "steppedLine": false,
                "targets": [
                   {
-                     "expr": "sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
+                     "expr": "sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
                      "format": "time_series",
                      "intervalFactor": 2,
                      "legendFormat": "{{pod}}",
@@ -225,7 +225,7 @@
                      "link": true,
                      "linkTargetBlank": false,
                      "linkTooltip": "Drill down",
-                     "linkUrl": "/d/40597a704a610e936dc6ed374a7ce023/k8s-resources-windows-pod?var-datasource=$datasource&var-namespace=$namespace&var-pod=$__cell",
+                     "linkUrl": "/d/56497a7ea5610e936dc6ed374a7c6738/k8s-resources-windows-pod?var-datasource=$datasource&var-namespace=$namespace&var-pod=$__cell",
                      "pattern": "pod",
                      "thresholds": [ ],
                      "type": "number",
@@ -245,7 +245,7 @@
                ],
                "targets": [
                   {
-                     "expr": "sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
+                     "expr": "sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
                      "format": "table",
                      "instant": true,
                      "intervalFactor": 2,
@@ -254,7 +254,7 @@
                      "step": 10
                   },
                   {
-                     "expr": "sum(kube_pod_windows_container_resource_cpu_cores_request{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
+                     "expr": "sum(kube_pod_windows_container_resource_cpu_cores_request{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
                      "format": "table",
                      "instant": true,
                      "intervalFactor": 2,
@@ -263,7 +263,7 @@
                      "step": 10
                   },
                   {
-                     "expr": "sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_cpu_cores_request{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
+                     "expr": "sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_cpu_cores_request{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
                      "format": "table",
                      "instant": true,
                      "intervalFactor": 2,
@@ -272,7 +272,7 @@
                      "step": 10
                   },
                   {
-                     "expr": "sum(kube_pod_windows_container_resource_cpu_cores_limit{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
+                     "expr": "sum(kube_pod_windows_container_resource_cpu_cores_limit{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
                      "format": "table",
                      "instant": true,
                      "intervalFactor": 2,
@@ -281,7 +281,7 @@
                      "step": 10
                   },
                   {
-                     "expr": "sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_cpu_cores_limit{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
+                     "expr": "sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_cpu_cores_limit{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
                      "format": "table",
                      "instant": true,
                      "intervalFactor": 2,
@@ -371,7 +371,7 @@
                "steppedLine": false,
                "targets": [
                   {
-                     "expr": "sum(windows_container_private_working_set_usage{job=\"windows-exporter\", cluster = \"$cluster\", namespace=\"$namespace\"}) by (pod)",
+                     "expr": "sum(windows_container_private_working_set_usage{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
                      "format": "time_series",
                      "intervalFactor": 2,
                      "legendFormat": "{{pod}}",
@@ -548,7 +548,7 @@
                      "link": true,
                      "linkTargetBlank": false,
                      "linkTooltip": "Drill down",
-                     "linkUrl": "/d/40597a704a610e936dc6ed374a7ce023/k8s-resources-windows-pod?var-datasource=$datasource&var-namespace=$namespace&var-pod=$__cell",
+                     "linkUrl": "/d/56497a7ea5610e936dc6ed374a7c6738/k8s-resources-windows-pod?var-datasource=$datasource&var-namespace=$namespace&var-pod=$__cell",
                      "pattern": "pod",
                      "thresholds": [ ],
                      "type": "number",
@@ -568,7 +568,7 @@
                ],
                "targets": [
                   {
-                     "expr": "sum(windows_container_private_working_set_usage{job=\"windows-exporter\", cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
+                     "expr": "sum(windows_container_private_working_set_usage{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
                      "format": "table",
                      "instant": true,
                      "intervalFactor": 2,
@@ -577,7 +577,7 @@
                      "step": 10
                   },
                   {
-                     "expr": "sum(kube_pod_windows_container_resource_memory_request{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
+                     "expr": "sum(kube_pod_windows_container_resource_memory_request{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
                      "format": "table",
                      "instant": true,
                      "intervalFactor": 2,
@@ -586,7 +586,7 @@
                      "step": 10
                   },
                   {
-                     "expr": "sum(windows_container_private_working_set_usage{job=\"windows-exporter\", cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_memory_request{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
+                     "expr": "sum(windows_container_private_working_set_usage{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_memory_request{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
                      "format": "table",
                      "instant": true,
                      "intervalFactor": 2,
@@ -595,7 +595,7 @@
                      "step": 10
                   },
                   {
-                     "expr": "sum(kube_pod_windows_container_resource_memory_limit{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
+                     "expr": "sum(kube_pod_windows_container_resource_memory_limit{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
                      "format": "table",
                      "instant": true,
                      "intervalFactor": 2,
@@ -604,7 +604,7 @@
                      "step": 10
                   },
                   {
-                     "expr": "sum(windows_container_private_working_set_usage{job=\"windows-exporter\", cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_memory_limit{cluster = \"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
+                     "expr": "sum(windows_container_private_working_set_usage{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_memory_limit{cluster=\"$cluster\", namespace=\"$namespace\"}) by (cluster, namespace, pod)",
                      "format": "table",
                      "instant": true,
                      "intervalFactor": 2,
@@ -672,7 +672,7 @@
                "value": "default"
             },
             "hide": 0,
-            "label": null,
+            "label": "Data Source",
             "name": "datasource",
             "options": [ ],
             "query": "prometheus",
@@ -686,11 +686,11 @@
             "datasource": "$datasource",
             "hide": 0,
             "includeAll": false,
-            "label": "Cluster",
+            "label": "Namespace",
             "multi": false,
-            "name": "cluster",
+            "name": "namespace",
             "options": [ ],
-            "query": "label_values(windows_system_system_up_time, cluster)",
+            "query": "label_values(windows_pod_container_available, namespace)",
             "refresh": 2,
             "regex": "",
             "sort": 1,
@@ -706,11 +706,11 @@
             "datasource": "$datasource",
             "hide": 0,
             "includeAll": false,
-            "label": "Namespace",
+            "label": "cluster",
             "multi": false,
-            "name": "namespace",
+            "name": "cluster",
             "options": [ ],
-            "query": "label_values(windows_pod_container_available{cluster = \"$cluster\"}, namespace)",
+            "query": "label_values(up{job=\"windows-exporter\"}, cluster)",
             "refresh": 2,
             "regex": "",
             "sort": 1,
@@ -753,6 +753,6 @@
    },
    "timezone": "browser",
    "title": "Kubernetes / Compute Resources / Namespace(Windows)",
-   "uid": "98e54027a2724ab1d4c45666c1fa674e",
+   "uid": "98e54027a2724ab1d4c45666c1fa6738",
    "version": 0
 }

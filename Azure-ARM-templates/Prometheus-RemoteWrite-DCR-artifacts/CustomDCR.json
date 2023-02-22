@@ -1,0 +1,70 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dataCollectionRulesName": {
+            "type": "String"
+        },
+        "dataCollectionEndpointsResourceId": {
+            "type": "string"
+        },
+        "azureMonitorWorkspaceResourceId": {
+            "type": "string"
+        },
+        "azureMonitorWorkspaceAccountId": {
+            "type": "string"
+        },
+        "azureMonitorWorkspaceName": {
+            "type": "string"
+        },
+        "location": {
+            "type": "string",
+            "allowedValues": [
+                "eastus2euap",
+                "centraluseuap",
+                "centralus",
+                "eastus",
+                "eastus2",
+                "northeurope",
+                "southcentralus",
+                "southeastasia",
+                "uksouth",
+                "westeurope",
+                "westus",
+                "westus2"
+            ]
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Insights/dataCollectionRules",
+            "apiVersion": "2021-09-01-preview",
+            "name": "[parameters('dataCollectionRulesName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "description": "Custom DCR created for Monitoring Account",
+                "dataCollectionEndpointId": "[parameters('dataCollectionEndpointsResourceId')]",
+                "dataSources": {},
+                "destinations": {
+                    "monitoringAccounts": [
+                        {
+                            "accountResourceId": "[parameters('azureMonitorWorkspaceResourceId')]",
+                            "accountId": "[parameters('azureMonitorWorkspaceAccountId')]",
+                            "name": "[parameters('azureMonitorWorkspaceName')]"
+                        }
+                    ]
+                },
+                "dataFlows": [
+                    {
+                        "streams": [
+                            "Microsoft-PrometheusMetrics"
+                        ],
+                        "destinations": [
+                            "[parameters('azureMonitorWorkspaceName')]"
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

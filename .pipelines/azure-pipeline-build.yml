@@ -44,7 +44,13 @@ jobs:
         SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
 
         LINUX_IMAGE_TAG=$SEMVER
+        # Truncating to 128 characters as it is required by docker
+        LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
         WINDOWS_IMAGE_TAG=$SEMVER-win
+        # Truncating to 120 characters as it is required by docker (8 characters used in lts2019/ltsc2022)
+        WINDOWS_IMAGE_TAG=$(echo "${WINDOWS_IMAGE_TAG}" | cut -c1-120)
+        WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
+        WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
 
         LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
         WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
@@ -55,6 +61,8 @@ jobs:
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
+        echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2019_BASE_IMAGE_VERSION"
+        echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2022_BASE_IMAGE_VERSION"
         echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
         echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
       displayName: 'Build: set image registry, repo, and tags'
@@ -149,7 +157,7 @@ jobs:
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
- 
+
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
@@ -164,7 +172,7 @@ jobs:
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           docker pull $(LINUX_FULL_IMAGE_NAME)
         else
-          
+
           # Build multiarch image to make sure there are no issues
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
 
@@ -243,14 +251,15 @@ jobs:
         GdnBreakGdnToolSemmle: true
         GdnBreakGdnToolSemmleSeverity: 'Warning'
 
-- job: Windows
-  displayName: "Build windows image"
+- job: Windows2019
+  displayName: "Build windows 2019 image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
   dependsOn:
   - Common
   variables:
     WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
   steps:
     - task: GoTool@0
       displayName: "Build: specify golang version"
@@ -263,15 +272,51 @@ jobs:
       displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
     - powershell: |
-        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)
-        New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
-        @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
+        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build image"
+      displayName: "Build: build WS2019 image"
 
     - powershell: |
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker push $(WINDOWS_FULL_IMAGE_NAME)
+        docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+      displayName: "Build: push image to dev ACR"
+
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
+
+- job: Windows2022
+  displayName: "Build windows 2022 image"
+  pool:
+    name: Azure-Pipelines-Windows-CI-Test-EO
+  dependsOn:
+  - Common
+  variables:
+    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+  steps:
+    - task: GoTool@0
+      displayName: "Build: specify golang version"
+      inputs:
+        version: '1.19'
+
+    - powershell: |
+        ./makefile_windows.ps1
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+
+    - powershell: |
+        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+      displayName: "Build: build WS2022 image"
+
+    - powershell: |
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
       displayName: "Build: push image to dev ACR"
       condition: eq(variables.IS_PR, false)
 
@@ -281,8 +326,35 @@ jobs:
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
-        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
+        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)'
         alertWarningLevel: 'High'
+
+- job: WindowsMultiArch
+  displayName: "Build windows multi-arch image"
+  pool:
+    name: Azure-Pipelines-Windows-CI-Test-EO
+  dependsOn:
+  - Common
+  - Windows2019
+  - Windows2022
+  variables:
+    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
+    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+  steps:
+    - task: GoTool@0
+      displayName: "Build: specify golang version"
+      inputs:
+        version: '1.19'
+
+    - powershell: |
+        New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
+        @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+        docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+      displayName: "Build: Triggering manigest for multi-arc docker image"
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
@@ -305,7 +377,7 @@ jobs:
   dependsOn:
   - Common
   - Linux
-  - Windows
+  - WindowsMultiArch
   variables:
     HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
@@ -381,9 +453,12 @@ jobs:
       for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 30
-            echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG)
+            echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
-            if docker manifest inspect $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) && docker manifest inspect $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
+
+            output1=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+            output2=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY_HELM)/tags/list)
+            if (echo $output1 | grep $(IMAGE_TAG_WINDOWS)) && (echo $output2 | grep $(IMAGE_TAG))
             then
               echo "Images and chart are published to mcr"
               exit 0
@@ -418,6 +493,8 @@ jobs:
       export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
       ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+      cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+      helm dependency update
     displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
 
   - task: HelmDeploy@0
@@ -433,4 +510,4 @@ jobs:
       chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
       releaseName: 'ama-metrics'
       waitForExecution: false
-      arguments: --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+      arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml

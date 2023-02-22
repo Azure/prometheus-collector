@@ -36,11 +36,25 @@ spec:
             requests:
               cpu: 150m
               memory: 500Mi
+          {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
+          envFrom:
+            - secretRef:
+                name: ama-metrics-proxy-config
+                optional: true
+          {{- end }}
           env:
             - name: CLUSTER
+              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ .Values.Azure.Cluster.ResourceId }}"
+              {{- else }}
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+              {{- end }}
             - name: AKSREGION
+              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ .Values.Azure.Cluster.Region }}"
+              {{- else }}
               value: "{{ .Values.global.commonGlobals.Region }}"
+              {{- end }}
             - name: MAC
               value: "true"
             - name: AZMON_COLLECT_ENV
@@ -84,7 +98,11 @@ spec:
             - name: NODE_EXPORTER_NAME
               value: "" # Replace this with the node exporter shipped out of box with AKS
             - name: NODE_EXPORTER_TARGETPORT
+              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
+              {{- else }}
               value: "19100"
+              {{- end }}
             {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION 
@@ -124,6 +142,17 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
+            - mountPath: /anchors/mariner
+              name: anchors-mariner
+              readOnly: true
+            - mountPath: /anchors/ubuntu
+              name: anchors-ubuntu
+              readOnly: true
+            {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+            - mountPath: /anchors/proxy
+              name: ama-metrics-proxy-cert
+              readOnly: true
+            {{- end }}
           livenessProbe:
             exec:
               command:
@@ -134,6 +163,14 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
+        {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+        - name: arc-msi-adapter
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: TOKEN_NAMESPACE
+            value: "azure-arc"
+          {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
+        {{- else }}
         - name: addon-token-adapter
           command:
             - /addon-token-adapter
@@ -167,6 +204,7 @@ spec:
               add:
                 - NET_ADMIN
                 - NET_RAW
+        {{- end }}
       affinity:
         nodeAffinity:
           # affinity to schedule on to ephemeral os node if its available
@@ -196,14 +234,22 @@ spec:
                     operator: NotIn
                     values:
                       - virtual-kubelet
+                  {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
+                  {{- end }}
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
         - operator: "Exists"
           effect: NoExecute
         - operator: "Exists"
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
           effect: NoSchedule
       volumes:
         - name: settings-vol-config
@@ -220,3 +266,17 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
+        - name: anchors-mariner
+          hostPath:
+            path: /etc/pki/ca-trust/extracted
+            type: DirectoryOrCreate
+        - name: anchors-ubuntu
+          hostPath:
+            path: /usr/local/share/ca-certificates/
+            type: DirectoryOrCreate
+        {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+        - name: ama-metrics-proxy-cert
+          secret:
+            secretName: ama-metrics-proxy-cert
+            optional: true
+        {{- end }}

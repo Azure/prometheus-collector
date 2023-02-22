@@ -1,0 +1,20 @@
+  scrape_configs:
+  - job_name: "kappie-basic"
+    scrape_interval: $$SCRAPE_INTERVAL$$
+    label_limit: 63
+    label_name_length_limit: 511
+    label_value_length_limit: 1023
+    kubernetes_sd_configs:
+    - role: service
+    scheme: http
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+      action: keep
+      regex: kube-system;kappie-svc
+    - source_labels: [__address__]
+      target_label: __address__
+      replacement: '$$NODE_IP$$:10093'
+      action: replace
+    - source_labels: [__address__]
+      replacement: '$$NODE_NAME$$'
+      target_label: instance
