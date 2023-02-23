@@ -238,7 +238,7 @@
                     },
                     {
                         "alert": "Disk space usage for a node is greater than 85%.",
-                        "expression": "1 - avg by (namespace,cluster,job,device,mountpoint)(node_filesystem_avail_bytes{job=\"node\"}) / avg by (namespace,cluster,job,device,mountpoint)(node_filesystem_size_bytes{job=\"node\"}) > .85",
+                        "expression": "1 - avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_avail_bytes{job=\"node\"}) / avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_size_bytes{job=\"node\"}) > .85",
                         "for": "PT5M",
                         "annotations": {
                             "description": "Disk space usage for a node is greater than 85%."
