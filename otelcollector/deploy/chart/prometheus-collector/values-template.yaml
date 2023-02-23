@@ -80,7 +80,7 @@ azureKeyVault:
   # -- cloudName for the azure key vault resource
   cloudName: "" # optional for public cloud.
   # -- clientid for a service principal that has access to read the Pfx certificates from keyvault specified above
-  clientId: "" #required when using service principal to access keyvault
+  clientId: "" #required when using service principal or workload identities to access keyvault
   # -- client secret for the above service principal
   clientSecret: "" #required when using service principal to access keyvault
   # -- name of the Pfx certificate(s) - one per metric account
