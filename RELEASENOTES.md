@@ -2,8 +2,8 @@
 
 ## Release 02-22-2023
 
-* Linux image - `tbd`
-* Windows image - `tbd`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.4.0-main-02-22-2023-731f0f15`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.4.0-main-02-22-2023-731f0f15-win`
 * Change log -
   * feat: Allow setting a priority class for the daemonset and deployment objects
   * fix:  Truncate the tag to 128 characters (docker requirement)
