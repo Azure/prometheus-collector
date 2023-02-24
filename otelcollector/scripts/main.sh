@@ -92,7 +92,7 @@ else
   echo "successfully validated provided proxy endpoint is valid and expected format"
 fi
 echo $pwd | base64 > /opt/microsoft/proxy_password
-export MDSD_PROXY_MODE=system
+export MDSD_PROXY_MODE=application
 echo "export MDSD_PROXY_MODE=$MDSD_PROXY_MODE" >> ~/.bashrc
 export MDSD_PROXY_ADDRESS=$proto$hostport
 echo "export MDSD_PROXY_ADDRESS=$MDSD_PROXY_ADDRESS" >> ~/.bashrc
