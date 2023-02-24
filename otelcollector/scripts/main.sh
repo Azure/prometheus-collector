@@ -91,7 +91,7 @@ if [ -z "$host" -o -z "$port" ]; then
 else
   echo "successfully validated provided proxy endpoint is valid and expected format"
 fi
-echo $pwd > /opt/microsoft/proxy_password
+echo $pwd | base64 > /opt/microsoft/proxy_password
 export MDSD_PROXY_MODE=application
 echo "export MDSD_PROXY_MODE=$MDSD_PROXY_MODE" >> ~/.bashrc
 export MDSD_PROXY_ADDRESS=$proto$hostport
