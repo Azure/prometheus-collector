@@ -241,7 +241,7 @@
                         "expression": "1 - avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_avail_bytes{job=\"node\"}) / avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_size_bytes{job=\"node\"}) > .85",
                         "for": "PT5M",
                         "annotations": {
-                            "description": "Filesystem on {{ $labels.device }} at {{ $labels.instance }} for a node is greater than 85%."
+                            "description": "Disk space usage on {{ $labels.device }} at {{ $labels.instance }} for a node is greater than 85%."
                         },
                         "enabled": true,
                         "severity": 4,
