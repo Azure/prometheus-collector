@@ -108,7 +108,7 @@
                         "expression": "sum by (namespace,cluster,container,pod)(kubelet_volume_stats_used_bytes{job=\"kubelet\"}) / sum by (namespace,cluster,container,pod)(kubelet_volume_stats_capacity_bytes{job=\"kubelet\"})  >.8",
                         "for": "PT5M",
                         "annotations": {
-                            "description": "Average PV usage is greater than 80%"
+                            "description": "Average PV usage on {{ $labels.pod }} at {{ $labels.container }}  is greater than 80%"
                         },
                         "enabled": true,
                         "severity": 4,
@@ -222,7 +222,7 @@
                         "expression": "1 - avg by (namespace,cluster,job,instance)(node_memory_MemAvailable_bytes{job=\"node\"}) / avg by (namespace,cluster,job,instance)(node_memory_MemTotal_bytes{job=\"node\"}) > .8",
                         "for": "PT5M",
                         "annotations": {
-                            "description": "Working set memory for a node is greater than 80%."
+                            "description": "Working set memory on {{ $labels.instance }} for a node is greater than 80%."
                         },
                         "enabled": true,
                         "severity": 4,
@@ -241,7 +241,7 @@
                         "expression": "1 - avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_avail_bytes{job=\"node\"}) / avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_size_bytes{job=\"node\"}) > .85",
                         "for": "PT5M",
                         "annotations": {
-                            "description": "Disk space usage for a node is greater than 85%."
+                            "description": "Filesystem on {{ $labels.device }} at {{ $labels.instance }} for a node is greater than 85%."
                         },
                         "enabled": true,
                         "severity": 4,
