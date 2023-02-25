@@ -46,6 +46,42 @@
                 "interval": "PT1M",
                 "rules": [
                     {
+                        "alert": "NodeFilesystemSpaceFillingUp",
+                        "expression": "avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_avail_bytes{job=\"node\",fstype!=\"\"}) / avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_size_bytes{job=\"node\",fstype!=\"\"}) * 100 < 40 and avg by (namespace,cluster,job,device,instance,mountpoint)(predict_linear(node_filesystem_avail_bytes{job=\"node\",fstype!=\"\"}[6h], 24*60*60)) < 0 and avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_readonly{job=\"node\",fstype!=\"\"}) == 0",
+                        "for": "PT15M",
+                        "labels": {
+                          "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "NodeFilesystemSpaceUsageFull85Pct",
+                        "expression": "1 - avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_avail_bytes{job=\"node\"}) / avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_size_bytes{job=\"node\"}) > .85",
+                        "for": "PT15M",
+                        "labels": {
+                          "severity": "warning"
+                        },
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
                         "alert": "KubePodCrashLooping",
                         "expression": "max_over_time(kube_pod_container_status_waiting_reason{reason=\"CrashLoopBackOff\", job=\"kube-state-metrics\"}[5m]) >= 1",
                         "for": "PT15M",
