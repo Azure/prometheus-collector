@@ -71,7 +71,7 @@ if [[ $CLUSTER_nocase =~ "connectedclusters" ]]; then
     echo_error "HTTP Proxy specified does not include http:// or https://"
   fi
 
-  url="$(echo ${PROXY_ENDPOINT/$proxyprotocol/})"
+  url="$(echo ${HTTPS_PROXY/$proxyprotocol/})"
   creds="$(echo $url | grep @ | cut -d@ -f1)"
   user="$(echo $creds | cut -d':' -f1)"
   password="$(echo $creds | cut -d':' -f2)"
