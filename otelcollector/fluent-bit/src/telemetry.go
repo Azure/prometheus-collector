@@ -405,6 +405,7 @@ func retrieveKsmData() []byte {
 		message := fmt.Sprintf("Error creating the http request - %v\n", err)
 		Log(message)
 		SendException(message)
+		return nil
 	}
 	// Get token data
 	tokendata, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
@@ -412,6 +413,7 @@ func retrieveKsmData() []byte {
 		message := fmt.Sprintf("Error accessing the token data - %v\n", err)
 		Log(message)
 		SendException(message)
+		return nil
 	}
 	// Create bearer token
 	bearerToken := "Bearer" + " " + string(tokendata)
@@ -422,6 +424,7 @@ func retrieveKsmData() []byte {
 		message := fmt.Sprintf("Error getting response from cadvisor- %v\n", err)
 		Log(message)
 		SendException(message)
+		return nil
 	}
 
 	defer resp.Body.Close()
@@ -430,6 +433,7 @@ func retrieveKsmData() []byte {
 		message := fmt.Sprintf("Error reading reponse body - %v\n", err)
 		Log(message)
 		SendException(message)
+		return nil
 	}
 	return body
 }
