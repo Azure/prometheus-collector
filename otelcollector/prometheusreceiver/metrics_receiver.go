@@ -304,10 +304,10 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 	webOptions := web.Options{
 		ScrapeManager: r.scrapeManager,
 		Context: ctx,
-		ListenAddress: ":9090",
+		ListenAddress: ":9092",
 		ExternalURL: &url.URL{
 			Scheme: "http",
-			Host:   "localhost:9090",
+			Host:   "localhost:9092",
 			Path:   "",
 		},
 		RoutePrefix:    "/",
