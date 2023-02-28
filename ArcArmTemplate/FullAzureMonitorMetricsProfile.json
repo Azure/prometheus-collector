@@ -186,7 +186,7 @@
               "type": "Microsoft.KubernetesConfiguration/extensions",
               "apiVersion": "2021-09-01",
               "name": "azuremonitor-metrics",
-              "location": "westus",
+              "location": "[parameters('clusterLocation')]",
               "identity": {
                 "type": "systemassigned"
               },

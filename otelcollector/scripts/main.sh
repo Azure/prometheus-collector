@@ -63,6 +63,36 @@ fi
 
 echo "export HTTP_PROXY_ENABLED=$HTTP_PROXY_ENABLED" >> ~/.bashrc
 
+CLUSTER_nocase=$(echo $CLUSTER | tr "[:upper:]" "[:lower:]")
+if [[ $CLUSTER_nocase =~ "connectedclusters" ]]; then
+  proxyprotocol="$(echo $HTTPS_PROXY | grep :// | sed -e's,^\(.*://\).*,\1,g')"
+  proxyprotocol=$(echo $proxyprotocol | tr "[:upper:]" "[:lower:]")
+  if [ "$proxyprotocol" != "http://" -a "$proxyprotocol" != "https://" ]; then
+    echo_error "HTTP Proxy specified does not include http:// or https://"
+  fi
+
+  url="$(echo ${PROXY_ENDPOINT/$proto/})"
+  creds="$(echo $url | grep @ | cut -d@ -f1)"
+  user="$(echo $creds | cut -d':' -f1)"
+  password="$(echo $creds | cut -d':' -f2)"
+  hostport="$(echo ${url/$creds@/} | cut -d/ -f1)"
+  host="$(echo $hostport | sed -e 's,:.*,,g')"
+  if [ -z "$host" ]; then
+    echo_error "HTTP Proxy specified does not include a host"
+  fi
+  echo $password | base64 > /opt/microsoft/proxy_password
+  export MDSD_PROXY_MODE=application
+  echo "export MDSD_PROXY_MODE=$MDSD_PROXY_MODE" >> ~/.bashrc
+  export MDSD_PROXY_ADDRESS=$proto$hostport
+  echo "export MDSD_PROXY_ADDRESS=$MDSD_PROXY_ADDRESS" >> ~/.bashrc
+  if [ ! -z "$user" -a ! -z "$pwd" ]; then
+    export MDSD_PROXY_USERNAME=$user
+    echo "export MDSD_PROXY_USERNAME=$MDSD_PROXY_USERNAME" >> ~/.bashrc
+    export MDSD_PROXY_PASSWORD_FILE=/opt/microsoft/proxy_password
+    echo "export MDSD_PROXY_PASSWORD_FILE=$MDSD_PROXY_PASSWORD_FILE" >> ~/.bashrc
+  fi
+fi
+
 #set agent config schema version
 if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
       #trim
