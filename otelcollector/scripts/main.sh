@@ -71,7 +71,7 @@ if [[ $CLUSTER_nocase =~ "connectedclusters" ]]; then
     echo_error "HTTP Proxy specified does not include http:// or https://"
   fi
 
-  url="$(echo ${PROXY_ENDPOINT/$proto/})"
+  url="$(echo ${PROXY_ENDPOINT/$proxyprotocol/})"
   creds="$(echo $url | grep @ | cut -d@ -f1)"
   user="$(echo $creds | cut -d':' -f1)"
   password="$(echo $creds | cut -d':' -f2)"
@@ -83,9 +83,9 @@ if [[ $CLUSTER_nocase =~ "connectedclusters" ]]; then
   echo $password | base64 > /opt/microsoft/proxy_password
   export MDSD_PROXY_MODE=application
   echo "export MDSD_PROXY_MODE=$MDSD_PROXY_MODE" >> ~/.bashrc
-  export MDSD_PROXY_ADDRESS=$proto$hostport
+  export MDSD_PROXY_ADDRESS=$proxyprotocol$hostport
   echo "export MDSD_PROXY_ADDRESS=$MDSD_PROXY_ADDRESS" >> ~/.bashrc
-  if [ ! -z "$user" -a ! -z "$pwd" ]; then
+  if [ ! -z "$user" -a ! -z "$password" ]; then
     export MDSD_PROXY_USERNAME=$user
     echo "export MDSD_PROXY_USERNAME=$MDSD_PROXY_USERNAME" >> ~/.bashrc
     export MDSD_PROXY_PASSWORD_FILE=/opt/microsoft/proxy_password
