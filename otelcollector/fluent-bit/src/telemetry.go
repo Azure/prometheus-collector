@@ -481,7 +481,6 @@ func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
 		var metricScrapeInfoRegex = regexp.MustCompile(`\s*([^\s]+)\s*([^\s]+)\s*([^\s]+).*ProcessedCount: ([\d]+).*ProcessedBytes: ([\d]+).*SentToPublicationCount: ([\d]+).*SentToPublicationBytes: ([\d]+).*`)
-		var bytesProcessedCount float64
 		groupMatches := metricScrapeInfoRegex.FindStringSubmatch(logEntry)
 
 		if len(groupMatches) > 7 {
@@ -491,16 +490,18 @@ func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 				metricsAccountName := groupMatches[3]
 				
 				bytesProcessedCount, e := strconv.ParseFloat(groupMatches[5], 64)
-				if e != nil
+				if e != nil{
 					bytesProcessedCount = 0.0
+				}
 			
 				metricsSentToPubCount,e := strconv.ParseFloat(groupMatches[6], 64)
-				if e != nil
+				if e != nil {
 					metricsSentToPubCount = 0.0
-
+				}
 				bytesSentToPubCount,e := strconv.ParseFloat(groupMatches[7], 64)
-				if e != nil
+				if e != nil {
 					bytesSentToPubCount = 0.0
+				}
 				
 				//update map
 				meMetricsProcessedCountMapMutex.Lock()
