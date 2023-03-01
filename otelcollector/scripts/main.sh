@@ -60,8 +60,43 @@ export HTTP_PROXY_ENABLED="false"
 if [ "$HTTP_PROXY" != "" ]; then
   export HTTP_PROXY_ENABLED="true"
 fi
-
 echo "export HTTP_PROXY_ENABLED=$HTTP_PROXY_ENABLED" >> ~/.bashrc
+
+export IS_ARC_CLUSTER="false"
+CLUSTER_nocase=$(echo $CLUSTER | tr "[:upper:]" "[:lower:]")
+if [[ $CLUSTER_nocase =~ "connectedclusters" ]]; then
+  export IS_ARC_CLUSTER="true"
+fi
+echo "export IS_ARC_CLUSTER=$IS_ARC_CLUSTER" >> ~/.bashrc
+  
+if [ $IS_ARC_CLUSTER == "true" ] && [ $HTTP_PROXY_ENABLED == "true" ]; then
+  proxyprotocol="$(echo $HTTPS_PROXY | grep :// | sed -e's,^\(.*://\).*,\1,g')"
+  proxyprotocol=$(echo $proxyprotocol | tr "[:upper:]" "[:lower:]")
+  if [ "$proxyprotocol" != "http://" -a "$proxyprotocol" != "https://" ]; then
+    echo_error "HTTP Proxy specified does not include http:// or https://"
+  fi
+
+  url="$(echo ${HTTPS_PROXY/$proxyprotocol/})"
+  creds="$(echo $url | grep @ | cut -d@ -f1)"
+  user="$(echo $creds | cut -d':' -f1)"
+  password="$(echo $creds | cut -d':' -f2)"
+  hostport="$(echo ${url/$creds@/} | cut -d/ -f1)"
+  host="$(echo $hostport | sed -e 's,:.*,,g')"
+  if [ -z "$host" ]; then
+    echo_error "HTTP Proxy specified does not include a host"
+  fi
+  echo $password | base64 > /opt/microsoft/proxy_password
+  export MDSD_PROXY_MODE=application
+  echo "export MDSD_PROXY_MODE=$MDSD_PROXY_MODE" >> ~/.bashrc
+  export MDSD_PROXY_ADDRESS=$proxyprotocol$hostport
+  echo "export MDSD_PROXY_ADDRESS=$MDSD_PROXY_ADDRESS" >> ~/.bashrc
+  if [ ! -z "$user" -a ! -z "$password" ]; then
+    export MDSD_PROXY_USERNAME=$user
+    echo "export MDSD_PROXY_USERNAME=$MDSD_PROXY_USERNAME" >> ~/.bashrc
+    export MDSD_PROXY_PASSWORD_FILE=/opt/microsoft/proxy_password
+    echo "export MDSD_PROXY_PASSWORD_FILE=$MDSD_PROXY_PASSWORD_FILE" >> ~/.bashrc
+  fi
+fi
 
 #set agent config schema version
 if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
@@ -215,14 +250,22 @@ if [ "${MAC}" == "true" ]; then
       waitedSecsSoFar=1
       while true; do
             if [ $waitedSecsSoFar -gt $tokenAdapterWaitsecs ]; then
-                  wget -T 2 -S http://localhost:9999/healthz 2>&1
+                  if [ $IS_ARC_CLUSTER == "true" ]; then
+                    wget -T 2 -S http://localhost:9090/healthz 2>&1
+                  else
+                    wget -T 2 -S http://localhost:9999/healthz 2>&1
+                  fi
                   echo "giving up waiting for token adapter to become healthy after $waitedSecsSoFar secs"
                   # log telemetry about failure after waiting for waitedSecsSoFar and break
                   echo "export tokenadapterUnhealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
                   break
             else
             echo "checking health of token adapter after $waitedSecsSoFar secs"
-            tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
+            if [ $IS_ARC_CLUSTER == "true" ]; then
+                tokenAdapterResult=$(wget -T 2 -S http://localhost:9090/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
+            else
+                tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
+            fi
             if [ ! -z $tokenAdapterResult ]; then
                         echo "found token adapter to be healthy after $waitedSecsSoFar secs" 
                         # log telemetry about success after waiting for waitedSecsSoFar and break
