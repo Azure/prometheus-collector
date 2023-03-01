@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"sync"
 
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
@@ -656,7 +657,7 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 				//update map
 				meMetricsReceivedCountMapMutex.Lock()
 
-				ref, ok := meMetricsProcessedCountMap["na"]
+				ref, ok := meMetricsReceivedCountMap["na"]
 
 				if ok {
 					ref.Value += metricsReceivedCount
@@ -665,7 +666,7 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 					m := &meMetricsReceivedCount { 
 													Value: metricsReceivedCount, 
 												  }
-					meMetricsProcessedCountMap["na"] = m
+					meMetricsReceivedCountMap["na"] = m
 				}
 				meMetricsReceivedCountMapMutex.Unlock()
 				
