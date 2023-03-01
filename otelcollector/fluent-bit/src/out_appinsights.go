@@ -47,7 +47,7 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 		go SendKsmCpuMemoryToAppInsightsMetrics()
 	}
 
-	go PushMEProcessedAndReceivedCountToAppInsightsMetrics
+	go PushMEProcessedAndReceivedCountToAppInsightsMetrics()
 
 	return output.FLB_OK
 }
