@@ -481,6 +481,7 @@ func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
 		var metricScrapeInfoRegex = regexp.MustCompile(`\s*([^\s]+)\s*([^\s]+)\s*([^\s]+).*ProcessedCount: ([\d]+).*ProcessedBytes: ([\d]+).*SentToPublicationCount: ([\d]+).*SentToPublicationBytes: ([\d]+).*`)
+		var bytesProcessedCount float64
 		groupMatches := metricScrapeInfoRegex.FindStringSubmatch(logEntry)
 
 		if len(groupMatches) > 7 {
