@@ -268,7 +268,7 @@ spec:
             path: /var/log/pods
         - name: anchors-mariner
           hostPath:
-            path: /etc/pki/ca-trust/extracted
+            path: /etc/pki/ca-trust/anchors/
             type: DirectoryOrCreate
         - name: anchors-ubuntu
           hostPath:
