@@ -491,15 +491,15 @@ func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 				
 				bytesProcessedCount, e := strconv.ParseFloat(groupMatches[5], 64)
 				if e != nil
-					bytesProcessedCount = 0
+					bytesProcessedCount = 0.0
 			
 				metricsSentToPubCount,e := strconv.ParseFloat(groupMatches[6], 64)
 				if e != nil
-					metricsSentToPubCount = 0
+					metricsSentToPubCount = 0.0
 
 				bytesSentToPubCount,e := strconv.ParseFloat(groupMatches[7], 64)
 				if e != nil
-					bytesSentToPubCount = 0
+					bytesSentToPubCount = 0.0
 				
 				//update map
 				meMetricsProcessedCountMapMutex.Lock()
@@ -517,7 +517,7 @@ func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 													DimBytesProcessedCount: bytesProcessedCount,
 													DimBytesSentToPubCount: bytesSentToPubCount,
 													DimMetricsSentToPubCount: metricsSentToPubCount,
-													Value: metricsProcessedCount
+													Value: metricsProcessedCount, 
 												  }
 					meMetricsProcessedCountMap[metricsAccountName] = m
 				}
@@ -661,7 +661,7 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 
 				} else {
 					m := &meMetricsReceivedCount { 
-													Value: metricsReceivedCount
+													Value: metricsReceivedCount, 
 												  }
 					meMetricsProcessedCountMap["na"] = m
 				}
