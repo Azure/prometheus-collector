@@ -181,7 +181,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         template.new(
           'namespace',
           '$datasource',
-          'label_values(windows_pod_container_available{%(clusterLabel)s="$cluster"}, namespace)',
+          'label_values(windows_pod_container_available{%(clusterLabel)s="$cluster"}, namespace)' % $._config,
           label='Namespace',
           refresh='time',
           sort=1,
@@ -287,7 +287,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         template.new(
           'namespace',
           '$datasource',
-          'label_values(windows_pod_container_available{%(clusterLabel)s="$cluster"}, namespace)',
+          'label_values(windows_pod_container_available{%(clusterLabel)s="$cluster"}, namespace)' % $._config,
           label='Namespace',
           refresh='time',
           sort=1,
@@ -297,7 +297,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         template.new(
           'pod',
           '$datasource',
-          'label_values(windows_pod_container_available{%(clusterLabel)s="$cluster", namespace="$namespace"}, pod)',
+          'label_values(windows_pod_container_available{%(clusterLabel)s="$cluster", namespace="$namespace"}, pod)' % $._config,
           label='Pod',
           refresh='time',
           sort=1,
