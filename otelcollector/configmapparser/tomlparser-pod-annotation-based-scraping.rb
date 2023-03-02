@@ -46,11 +46,8 @@ end
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Processing")
 if !configMapSettings.nil?
     populateSettingValuesFromConfigMap(configMapSettings)
-  end
-else
-  if (File.file?(@configMapMountPath))
+elsif (File.file?(@configMapMountPath))
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Error loading configmap section - using defaults")
-  end
 end
 
 # Write the settings to file, so that they can be set as environment variables
