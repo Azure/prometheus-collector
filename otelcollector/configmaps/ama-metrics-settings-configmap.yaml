@@ -21,7 +21,8 @@ data:
     windowskubeproxy = false
     kappiebasic = false
     prometheuscollectorhealth = false
-    podannotations = false
+  pod-annotation-based-scraping: |-
+    podannotationnamepsaceregex = ""
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""
@@ -35,8 +36,6 @@ data:
     podannotations = ""
     kappiebasic = ""
     minimalingestionprofile = true
-  default-targets-namespace-keep-list: |-
-    podannotations = ""
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
     coredns = "30s"

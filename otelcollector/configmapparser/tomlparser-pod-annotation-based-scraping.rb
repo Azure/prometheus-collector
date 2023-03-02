@@ -5,9 +5,9 @@ require "tomlrb"
 require "yaml"
 require_relative "ConfigParseErrorLogger"
 
-LOGGING_PREFIX = "default-targets-namespace-keep-list-settings"
-@configMapMountPath = "/etc/config/settings/default-targets-namespace-keep-list-settings"
-@podannotationNamespaceKeepListRegex = ""
+LOGGING_PREFIX = "pod-annotation-based-scraping"
+@configMapMountPath = "/etc/config/settings/pod-annotation-based-scraping-settings"
+@podannotationNamespaceRegex = ""
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -17,11 +17,11 @@ def parseConfigMap
       parsedConfig = Tomlrb.load_file(@configMapMountPath, symbolize_keys: true)
       return parsedConfig
     else
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "configmap prometheus-collector-configmap for default-targets-namespace-keep-list-settings not mounted, using defaults")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "configmap section not mounted, using defaults")
       return nil
     end
   rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing config map for default-targets-namespace-keep-list-settings: #{errorStr}, using defaults, please check config map for errors")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing config map: #{errorStr}, using defaults, please check config map for errors")
     return nil
   end
 end
@@ -29,40 +29,40 @@ end
 # Use the ruby structure created after config parsing to set the right values to be used for otel collector settings
 def populateSettingValuesFromConfigMap(parsedConfig)
   begin
-    podannotationRegex = parsedConfig[:podannoations]
+    podannotationRegex = parsedConfig[:podannotationnamepsaceregex]
     if !podannotationRegex.nil? && podannotationRegex.kind_of?(String) && !podannotationRegex.empty?
       if isValidRegex(podAnnotationRegex) == true
         @podannotationNamespaceKeepListRegex = podAnnotationRegex
-        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap namepace keep list regex for podannotations")
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap namepace regex for podannotations")
       else
-        ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid namespace keep list regex for podannotations")
+        ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid namespace regex for podannotations")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "podannotations namespace keep list regex either not specified or not of type string")
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "podannotations namespace regex either not specified or not of type string")
     end
   end
 end
 
-ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start default-targets-namespace-keep-list-settings Processing")
+ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Processing")
 if !configMapSettings.nil?
     populateSettingValuesFromConfigMap(configMapSettings)
   end
 else
   if (File.file?(@configMapMountPath))
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Error loading default-targets-namespace-keep-list-settings - using defaults")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Error loading configmap section - using defaults")
   end
 end
 
 # Write the settings to file, so that they can be set as environment variables
-file = File.open("/opt/microsoft/configmapparser/config_def_targets_namespace_keep_list_regex_hash", "w")
+file = File.open("/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping", "w")
 
 namespaceRegexHash = {}
-namespaceRegexHash["POD_ANNOTATION_NAMESPACE_KEEP_LIST_REGEX"] = @podannotationNamespaceKeepListRegex
+namespaceRegexHash["POD_ANNOTATION_NAMESPACES_REGEX"] = @podannotationNamespaceRegex
 
 if !file.nil?
   # Close file after writing scrape interval list hash
   # Writing it as yaml as it is easy to read and write hash
-  file.write(namespaceRegexHash.to_yaml)
+  file.write($export + "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX=#{@podannotationNamespaceRegex}\n")
   file.close
 else
   ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while opening file for writing regex config hash")

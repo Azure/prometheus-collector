@@ -159,14 +159,21 @@ if [ -e "/opt/microsoft/configmapparser/config_debug_mode_env_var" ]; then
       source ~/.bashrc
 fi
 
+# Parse the settings for default targets namespace keep list config
+ruby /opt/microsoft/configmapparser/tomlparser-namespace-keep-list.rb
+if [ -e "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping" ]; then
+      cat /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping | while read line; do
+            echo $line >> ~/.bashrc
+      done
+      source /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping
+      source ~/.bashrc
+fi
+
 # Parse the settings for default targets metrics keep list config
 ruby /opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb
 
 # Parse the settings for default-targets-scrape-interval-settings config
 ruby /opt/microsoft/configmapparser/tomlparser-scrape-interval.rb
-
-# Parse the settings for default targets namespace keep list config
-ruby /opt/microsoft/configmapparser/tomlparser-namespace-keep-list.rb
 
 # Merge default and custom prometheus config
 ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb

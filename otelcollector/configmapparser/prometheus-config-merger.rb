@@ -19,8 +19,6 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @sendDSUpMetric = false
 @intervalHashFile = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
 @intervalHash = {}
-@namespaceRegexFile = "/opt/microsoft/configmapparser/config_def_targets_namespace_keep_list_regex_hash"
-@namespaceRegexHash = {}
 
 @kubeletDefaultFileRsSimple = @defaultPromConfigPathPrefix + "kubeletDefaultRsSimple.yml"
 @kubeletDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "kubeletDefaultRsAdvanced.yml"
@@ -76,14 +74,6 @@ def loadIntervalHash
     @intervalHash = YAML.load_file(@intervalHashFile)
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception in loadIntervalHash for prometheus config: #{errorStr}. Scrape interval will not be used")
-  end
-end
-
-def loadNamespaceRegexHash
-  begin
-    @namespaceRegexHash = YAML.load_file(@namespaceRegexHashFile)
-  rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception in loadNamespaceRegexHash for prometheus config: #{errorStr}. Namespace keep list regexes will not be used")
   end
 end
 
@@ -420,17 +410,17 @@ def populateDefaultPrometheusConfig
       end
     end
 
-    if !ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+    if !ENV["POD_ANNOTATION_NAMESPACES_REGEX"].nil? && currentControllerType == @replicasetControllerType
+      podannotationNamespacesRegex = ENV["POD_ANNOTATION_NAMESPACES_REGEX"]
       podannotationMetricsKeepListRegex = @regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
       podannotationScrapeInterval = @intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
-      podannotationNamespaceKeepListRegex = @regexHash["POD_ANNOTATION_NAMESPACE_KEEP_LIST_REGEX"]
       UpdateScrapeIntervalConfig(@podannotationsDefaultFile, podannotationScrapeInterval)
       if !podannotationMetricsKeepListRegex.nil? && !podannotationMetricsKeepListRegex.empty?
         AppendMetricRelabelConfig(@podannotationsDefaultFile, podannotationMetricsKeepListRegex)
       end
-      if !podannotationNamespaceKeepListRegex.nil? && !podannotationNamespaceKeepListRegex.empty?
-        relabelConfig = [{ "source_labels" => ["__meta_kubernetes_namespace"], "action" => "keep", "regex" => keepRegex }]
-        AppendRelabelConfig(@podannotationsDefaultFile, relabelConfig, podannotationNamespaceKeepListRegex)
+      if !podannotationNamespacesRegex.nil? && !podannotationNamespacesRegex.empty?
+        relabelConfig = [{ "source_labels" => ["__meta_kubernetes_namespace"], "action" => "keep", "regex" => podannotationNamespacesRegex }]
+        AppendRelabelConfig(@podannotationsDefaultFile, relabelConfig, podannotationsNamespaceRegex)
       end
       defaultConfigs.push(@podannotationsDefaultFile)
     end
