@@ -160,7 +160,7 @@ if [ -e "/opt/microsoft/configmapparser/config_debug_mode_env_var" ]; then
 fi
 
 # Parse the settings for default targets namespace keep list config
-ruby /opt/microsoft/configmapparser/tomlparser-namespace-keep-list.rb
+ruby /opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb
 if [ -e "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping" ]; then
       cat /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping | while read line; do
             echo $line >> ~/.bashrc
