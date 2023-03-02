@@ -72,7 +72,7 @@ var (
 	meMetricsProcessedCountMapMutex = &sync.Mutex{}
 	// meMetricsReceivedCount map, which holds references to metrics per metric account
 	meMetricsReceivedCountMap = make(map[string]*meMetricsReceivedCount)
-	// meMetricsDroppedCountMapMutex -- used for reading & writing locks on meMetricsReceivedCountMap
+	// meMetricsReceivedCountMapMutex -- used for reading & writing locks on meMetricsReceivedCountMap
 	meMetricsReceivedCountMapMutex = &sync.Mutex{}
 )
 
