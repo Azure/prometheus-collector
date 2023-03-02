@@ -16,6 +16,7 @@ spec:
       rsName: {{ template "prometheus-collector.fullname" . }}
   strategy:
     type: RollingUpdate
+  progressDeadlineSeconds: {{.values.deploymentProgressDeadlineSeconds }}
   template:
     metadata:
       labels:
