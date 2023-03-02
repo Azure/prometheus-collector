@@ -47,9 +47,62 @@ AzureMonitorMetrics:
     ImageTag: "master.221118.2"
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
     ImageTagWin: "20230120winbeta"
+  ArcExtension: false
 global:
   commonGlobals:
     CloudEnvironment: "AzureCloud"
     Region: "${AKS_REGION}"
     Customer:
       AzureResourceID: ${AKS_RESOURCE_ID}
+
+# For ARC backdoor testing
+Azure:
+  Cluster:
+    ResourceID: "${ARC_RESOURCE_ID}"
+    Region: "${ARC_REGION}"
+  proxySettings:
+    isProxyEnabled: "false"
+    httpProxy: ""
+    httpsProxy: ""
+    noProxy: ""
+    proxyCert: ""
+  Identity:
+      MSIAdapterYaml: |- 
+        - name: EXTENSION_ARMID
+          value: ${ARC_RESOURCE_ID}/providers/Microsoft.KubernetesConfiguration/extensions/azuremonitor-metrics
+        - name: EXTENSION_NAME
+          value: azuremonitor-metrics
+        - name: CLUSTER_IDENTITY
+          value: "false"
+        - name: CLUSTER_TYPE
+          value:  ConnectedClusters
+        - name: MANAGED_IDENTITY_AUTH
+          value: "true"
+        - name: TEST_MODE
+          value: "false"
+        - name: TEST_FILE
+          value: "/data/token"
+        image: "mcr.microsoft.com/azurearck8s/msi-adapter:1.0.2"
+        securityContext:
+          capabilities:
+            add:
+              - NET_ADMIN
+              - NET_RAW
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9090
+            scheme: "HTTP"
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        resources:
+          limits:
+            cpu: 50m
+            memory: 100Mi
+          requests:
+            cpu: 20m
+            memory: 50Mi
+prometheus-node-exporter:
+  service:
+    port: 9110
+    targetPort: 9110

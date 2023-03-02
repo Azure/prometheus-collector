@@ -26,6 +26,7 @@ MATCHER = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]
 @windowskubeproxyScrapeInterval = "30s"
 @prometheusCollectorHealthInterval = "30s"
 @podannotationScrapeInterval = "30s"
+@kappiebasicScrapeInterval = "30s"
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -191,6 +192,22 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "windowskubeproxyScrapeInterval override not specified in configmap")
     end
 
+    kappiebasicScrapeInterval = parsedConfig[:kappiebasic]
+    if !kappiebasicScrapeInterval.nil?
+      matched = MATCHER.match(kappiebasicScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        kappiebasicScrapeInterval = "30s"
+        @kappiebasicScrapeInterval = kappiebasicScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for kappie")
+      else
+        @kappiebasicScrapeInterval = kappiebasicScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for kappiebasicScrapeInterval")
+      end
+    else
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "kappiebasicScrapeInterval override not specified in configmap")
+    end
+
     prometheusCollectorHealthInterval = parsedConfig[:prometheuscollectorhealth]
     if !prometheusCollectorHealthInterval.nil?
       matched = MATCHER.match(prometheusCollectorHealthInterval)
@@ -252,6 +269,7 @@ intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"] = @windowsexporterScrapeInterval
 intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = @windowskubeproxyScrapeInterval
 intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = @prometheusCollectorHealthInterval
 intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = @podannotationScrapeInterval
+intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = @kappiebasicScrapeInterval
 
 if !file.nil?
   # Close file after writing scrape interval list hash

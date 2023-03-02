@@ -367,8 +367,15 @@ function Set-CertificateForME {
     Copy-Item -r /etc/config/settings/akv /opt/akv-copy
 
     Get-ChildItem "C:\etc\config\settings\akv\" |  Foreach-Object {
-        if (!($_.Name.startswith('..'))) {
-            Import-PfxCertificate -FilePath $_.FullName -CertStoreLocation Cert:\CurrentUser\My > $null
+        # check if child is a file and not a directory
+        $filePath = $_.FullName
+        if (Test-Path $filePath -PathType Leaf) {
+            $filePath = $_.FullName
+            $file = Get-Content $filePath -Encoding Byte
+            if (($null -ne $file)) {
+                Write-Output "Importing PFX cert : $filePath"
+                Import-PfxCertificate -FilePath $filePath -CertStoreLocation Cert:\CurrentUser\My > $null
+            }
         }
     }
 }
@@ -426,6 +433,8 @@ if ($env:MAC -eq $true) {
     Start-Sleep 60
 }
 Start-ME
+# Waiting 60 more seconds since C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension needs to be created
+Start-Sleep 60
 Start-FileSystemWatcher
 
 $epochTimeNow = [int](Get-Date).Subtract([datetime]'1970-01-01T00:00:00Z').TotalSeconds

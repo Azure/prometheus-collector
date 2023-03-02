@@ -1,5 +1,32 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 02-22-2023
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.4.0-main-02-22-2023-3ee44b9e`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.4.0-main-02-22-2023-3ee44b9e-win`
+* Change log -
+  * feat: Allow setting a priority class for the daemonset and deployment objects
+  * fix:  Truncate the tag to 128 characters (docker requirement)
+  * fix:  Bump github.com/prometheus/client_golang from 1.9.0 to 1.11.1 in /internal/referenceapp/golang
+  * feat: HTTP Proxy for distroless and ARC
+  * fix:  Wait for token adapter to be healthy before starting dependencies
+  * feat: Add azure policy templates for metrics addon
+  * feat: enable network monitoring metrics (kappie)
+  * feat: AKS addon HTTP Proxy Support
+  * fix:  certificate import for windows ME startup
+
+## Release 01-31-2023
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.2.0-main-01-31-2023-e1e3858b`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.2.0-main-01-31-2023-e1e3858b-win`
+* Change log -
+  * Adding Bicep template to monitoring addon
+  * Added custom DCR and DCE arm templates for Remote Write
+  * Adding monitoring reader role to Azure Monitor Workspace in ARM and Bicep templates
+  * Fix fluent-bit daemonset tailing path and mariner docs
+  * Liveness probe update for NON-MAC mode (windows)
+  * Adds windows daemonset support with MSI (only in deprecated chart mode)
+
 ## Release 01-11-2023
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.1.0-main-01-11-2023-5bf41607`
@@ -56,4 +83,3 @@
   * Bug fix - Remove virtual node core capacity from telemetry total
   * Bug fix - Update alert group names for default and CI alerts
   * Bug fix - Update prometheus custom config for Azure Monitor Metrics Addon
-  

@@ -19,6 +19,7 @@ data:
     nodeexporter = true
     windowsexporter = false
     windowskubeproxy = false
+    kappiebasic = false
     prometheuscollectorhealth = false
     podannotations = false
   default-targets-metrics-keep-list: |-
@@ -32,6 +33,7 @@ data:
     windowsexporter = ""
     windowskubeproxy = ""
     podannotations = ""
+    kappiebasic = ""
     minimalingestionprofile = true
   default-targets-namespace-keep-list: |-
     podannotations = ""
@@ -45,6 +47,7 @@ data:
     nodeexporter = "30s"
     windowsexporter = "30s"
     windowskubeproxy = "30s"
+    kappiebasic = "30s"
     prometheusCollectorHealth = "30s"
     podannotations = "30s"
   debug-mode: |-
