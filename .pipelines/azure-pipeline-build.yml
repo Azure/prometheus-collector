@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - kaveesh/test_credscan
 
 pr:
   autoCancel: true
@@ -89,7 +88,7 @@ jobs:
       displayName: 'Ev2: package artifacts.tar.gz for prod release'
 
     - task: CredScan@3
-      displayName: "SDL : Run credscan always"
+      displayName: "SDL : Run credscan"
     - task: CopyFiles@2
       displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
       inputs:
