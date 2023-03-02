@@ -677,8 +677,6 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 					TimeseriesVolumeMutex.Unlock()
 				}
 
-				//metric := appinsights.NewMetricTelemetry("meMetricsReceivedCount", metricsReceivedCount)
-				//TelemetryClient.Track(metric)
 			}
 		}
 	}
