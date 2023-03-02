@@ -512,7 +512,6 @@ def writeDefaultScrapeTargetsFile()
     begin
       loadRegexHash
       loadIntervalHash
-      loadNamespaceRegexHash
       populateDefaultPrometheusConfig
       if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Starting to merge default prometheus config values in collector template as backup")
