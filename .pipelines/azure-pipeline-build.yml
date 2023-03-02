@@ -87,6 +87,8 @@ jobs:
         envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
       displayName: 'Ev2: package artifacts.tar.gz for prod release'
 
+    - task: CredScan@3
+      displayName: "SDL : Run credscan"
     - task: CopyFiles@2
       displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
       inputs:
