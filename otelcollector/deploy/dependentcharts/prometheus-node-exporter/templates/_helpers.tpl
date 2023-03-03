@@ -55,8 +55,8 @@ release: {{ .Release.Name }}
 Selector labels
 */}}
 {{- define "prometheus-node-exporter.selectorLabels" -}}
-app: {{ template "prometheus-node-exporter.name" . }}
-release: {{.Release.Name }}
+app.kubernetes.io/name: {{ include "prometheus-node-exporter.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 
@@ -76,9 +76,17 @@ The image to use
 */}}
 {{- define "prometheus-node-exporter.image" -}}
 {{- if .Values.image.sha }}
-{{- printf "%s:%s@%s" .Values.image.repository (default (printf "v%s" .Chart.AppVersion) .Values.image.tag) .Values.image.sha }}
+{{- if .Values.global.imageRegistry }}
+{{- printf "%s/%s:%s@%s" .Values.global.imageRegistry .Values.image.repository (default (printf "v%s" .Chart.AppVersion) .Values.image.tag) .Values.image.sha }}
 {{- else }}
-{{- printf "%s:%s" .Values.image.repository (default (printf "v%s" .Chart.AppVersion) .Values.image.tag) }}
+{{- printf "%s/%s:%s@%s" .Values.image.registry .Values.image.repository (default (printf "v%s" .Chart.AppVersion) .Values.image.tag) .Values.image.sha }}
+{{- end }}
+{{- else }}
+{{- if .Values.global.imageRegistry }}
+{{- printf "%s/%s:%s" .Values.global.imageRegistry .Values.image.repository (default (printf "v%s" .Chart.AppVersion) .Values.image.tag) }}
+{{- else }}
+{{- printf "%s/%s:%s" .Values.image.registry .Values.image.repository (default (printf "v%s" .Chart.AppVersion) .Values.image.tag) }}
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -110,6 +118,53 @@ Create the namespace name of the service monitor
 
 {{/* Sets default scrape limits for servicemonitor */}}
 {{- define "servicemonitor.scrapeLimits" -}}
+{{- with .sampleLimit }}
+sampleLimit: {{ . }}
+{{- end }}
+{{- with .targetLimit }}
+targetLimit: {{ . }}
+{{- end }}
+{{- with .labelLimit }}
+labelLimit: {{ . }}
+{{- end }}
+{{- with .labelNameLengthLimit }}
+labelNameLengthLimit: {{ . }}
+{{- end }}
+{{- with .labelValueLengthLimit }}
+labelValueLengthLimit: {{ . }}
+{{- end }}
+{{- end }}
+
+{{/*
+Formats imagePullSecrets. Input is (dict "Values" .Values "imagePullSecrets" .{specific imagePullSecrets})
+*/}}
+{{- define "prometheus-node-exporter.imagePullSecrets" -}}
+{{- range (concat .Values.global.imagePullSecrets .imagePullSecrets) }}
+  {{- if eq (typeOf .) "map[string]interface {}" }}
+- {{ toYaml . | trim }}
+  {{- else }}
+- name: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Create the namespace name of the pod monitor
+*/}}
+{{- define "prometheus-node-exporter.podmonitor-namespace" -}}
+{{- if .Values.namespaceOverride }}
+{{- .Values.namespaceOverride }}
+{{- else }}
+{{- if .Values.prometheus.podMonitor.namespace }}
+{{- .Values.prometheus.podMonitor.namespace }}
+{{- else }}
+{{- .Release.Namespace }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/* Sets default scrape limits for podmonitor */}}
+{{- define "podmonitor.scrapeLimits" -}}
 {{- with .sampleLimit }}
 sampleLimit: {{ . }}
 {{- end }}

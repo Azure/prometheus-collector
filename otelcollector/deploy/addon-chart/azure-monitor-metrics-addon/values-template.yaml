@@ -5,7 +5,7 @@ AzureMonitorMetrics:
     #MetricAnnotationsAllowList: ""
     ImageRepository: "/oss/kubernetes/kube-state-metrics"
 # Kube-state-metrics ImageTag - v2.6.0, corresponds to chart version - 4.23.0
-    ImageTag: "v2.6.0"
+    ImageTag: "v2.8.0"
     Collectors:
       - certificatesigningrequests
       - configmaps
@@ -67,7 +67,7 @@ Azure:
     noProxy: ""
     proxyCert: ""
   Identity:
-      MSIAdapterYaml: |- 
+      MSIAdapterYaml: |-
         - name: EXTENSION_ARMID
           value: ${ARC_RESOURCE_ID}/providers/Microsoft.KubernetesConfiguration/extensions/azuremonitor-metrics
         - name: EXTENSION_NAME
