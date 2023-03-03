@@ -160,10 +160,10 @@ def populateDefaultPrometheusConfig
             AppendMetricRelabelConfig(@kubeletDefaultFileRsSimple, kubeletMetricsKeepListRegex)
           end
           defaultConfigs.push(@kubeletDefaultFileRsSimple)
-        elsif windowsDaemonset == true && @sendDSUpMetric == true
+        elsif windowsDaemonset == true
           UpdateScrapeIntervalConfig(@kubeletDefaultFileRsAdvancedWindowsDaemonset, kubeletScrapeInterval)
           defaultConfigs.push(@kubeletDefaultFileRsAdvancedWindowsDaemonset)
-        elsif @sendDSUpMetric == true
+        else
           UpdateScrapeIntervalConfig(@kubeletDefaultFileRsAdvanced, kubeletScrapeInterval)
           defaultConfigs.push(@kubeletDefaultFileRsAdvanced)
         end
@@ -201,7 +201,7 @@ def populateDefaultPrometheusConfig
             AppendMetricRelabelConfig(@cadvisorDefaultFileRsSimple, cadvisorMetricsKeepListRegex)
           end
           defaultConfigs.push(@cadvisorDefaultFileRsSimple)
-        elsif @sendDSUpMetric == true
+        else
           UpdateScrapeIntervalConfig(@cadvisorDefaultFileRsAdvanced, cadvisorScrapeInterval)
           defaultConfigs.push(@cadvisorDefaultFileRsAdvanced)
         end
@@ -254,7 +254,7 @@ def populateDefaultPrometheusConfig
       nodeexporterMetricsKeepListRegex = @regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
       nodeexporterScrapeInterval = @intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"]
       if currentControllerType == @replicasetControllerType
-        if advancedMode == true && @sendDSUpMetric == true
+        if advancedMode == true
           UpdateScrapeIntervalConfig(@nodeexporterDefaultFileRsAdvanced, nodeexporterScrapeInterval)
           contents = File.read(@nodeexporterDefaultFileRsAdvanced)
           contents = contents.gsub("$$NODE_EXPORTER_NAME$$", ENV["NODE_EXPORTER_NAME"])
