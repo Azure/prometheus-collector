@@ -224,7 +224,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "prometheusCollectorHealthInterval override not specified in configmap")
     end
 
-    podannotationScrapeInterval = parsedConfig[:podannoations]
+    podannotationScrapeInterval = parsedConfig[:podannotations]
     if !podannotationScrapeInterval.nil?
       matched = MATCHER.match(podannotationScrapeInterval)
       if !matched

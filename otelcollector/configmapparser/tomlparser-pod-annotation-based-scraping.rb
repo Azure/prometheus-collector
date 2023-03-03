@@ -4,6 +4,7 @@
 require "tomlrb"
 require "yaml"
 require_relative "ConfigParseErrorLogger"
+require_relative "tomlparer-default-targets-metrics-keep-list"
 
 LOGGING_PREFIX = "pod-annotation-based-scraping"
 @configMapMountPath = "/etc/config/settings/pod-annotation-based-scraping"
@@ -31,8 +32,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   begin
     podannotationRegex = parsedConfig[:podannotationnamepsaceregex]
     if !podannotationRegex.nil? && podannotationRegex.kind_of?(String) && !podannotationRegex.empty?
-      if isValidRegex(podAnnotationRegex) == true
-        @podannotationNamespaceKeepListRegex = podAnnotationRegex
+      if isValidRegex(podannotationRegex) == true
+        @podannotationNamespaceKeepListRegex = podannotationRegex
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap namepace regex for podannotations")
       else
         ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid namespace regex for podannotations")
