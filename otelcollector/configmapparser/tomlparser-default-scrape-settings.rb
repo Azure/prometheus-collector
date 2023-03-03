@@ -85,7 +85,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @windowskubeproxyEnabled = parsedConfig[:windowskubeproxy]
       puts "config::Using configmap scrape settings for windowskubeproxy: #{@windowskubeproxyEnabled}"
     end
-    if if !ENV['AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX'].nil? && !ENV['AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX'].empty?
+    if !ENV['AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX'].nil? && !ENV['AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX'].empty?
       @podannotationEnabled = "true"
       puts "config::Using configmap scrape settings for podannotations: #{@podannotationEnabled}"
     end

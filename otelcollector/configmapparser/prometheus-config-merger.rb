@@ -410,8 +410,8 @@ def populateDefaultPrometheusConfig
       end
     end
 
-    if !ENV["POD_ANNOTATION_NAMESPACES_REGEX"].nil? && currentControllerType == @replicasetControllerType
-      podannotationNamespacesRegex = ENV["POD_ANNOTATION_NAMESPACES_REGEX"]
+    if !ENV["AZMON_PROMETHEUSPOD_ANNOTATION_NAMESPACES_REGEX"].nil? && currentControllerType == @replicasetControllerType
+      podannotationNamespacesRegex = ENV["AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"]
       podannotationMetricsKeepListRegex = @regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
       podannotationScrapeInterval = @intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
       UpdateScrapeIntervalConfig(@podannotationsDefaultFile, podannotationScrapeInterval)
@@ -420,7 +420,7 @@ def populateDefaultPrometheusConfig
       end
       if !podannotationNamespacesRegex.nil? && !podannotationNamespacesRegex.empty?
         relabelConfig = [{ "source_labels" => ["__meta_kubernetes_namespace"], "action" => "keep", "regex" => podannotationNamespacesRegex }]
-        AppendRelabelConfig(@podannotationsDefaultFile, relabelConfig, podannotationsNamespaceRegex)
+        AppendRelabelConfig(@podannotationsDefaultFile, relabelConfig, podannotationNamespacesRegex)
       end
       defaultConfigs.push(@podannotationsDefaultFile)
     end
