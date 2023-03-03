@@ -44,6 +44,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 end
 
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Processing")
+configMapSettings = parseConfigMap
 if !configMapSettings.nil?
     populateSettingValuesFromConfigMap(configMapSettings)
 elsif (File.file?(@configMapMountPath))
