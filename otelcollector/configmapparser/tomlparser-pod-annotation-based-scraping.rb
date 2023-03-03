@@ -33,7 +33,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     podannotationRegex = parsedConfig[:podannotationnamepsaceregex]
     if !podannotationRegex.nil? && podannotationRegex.kind_of?(String) && !podannotationRegex.empty?
       if isValidRegex(podannotationRegex) == true
-        @podannotationNamespaceKeepListRegex = podannotationRegex
+        @podannotationNamespaceRegex = podannotationRegex
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap namepace regex for podannotations")
       else
         ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid namespace regex for podannotations")
