@@ -85,8 +85,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @windowskubeproxyEnabled = parsedConfig[:windowskubeproxy]
       puts "config::Using configmap scrape settings for windowskubeproxy: #{@windowskubeproxyEnabled}"
     end
-    if !parsedConfig[:podannotations].nil?
-      @podannotationEnabled = parsedConfig[:podannotations]
+    if if !ENV['AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX'].nil? && !ENV['AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX'].empty?
+      @podannotationEnabled = "true"
       puts "config::Using configmap scrape settings for podannotations: #{@podannotationEnabled}"
     end
     if !parsedConfig[:kappiebasic].nil?
@@ -167,7 +167,6 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED=#{@prometheusCollectorHealthEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=#{@windowsexporterEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=#{@podannotationEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED=#{@kappiebasicEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close

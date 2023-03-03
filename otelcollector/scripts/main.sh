@@ -131,6 +131,16 @@ export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey
 echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc	
 source ~/.bashrc
 
+# Parse the settings for pod annotations
+ruby /opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb
+if [ -e "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping" ]; then
+      cat /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping | while read line; do
+            echo $line >> ~/.bashrc
+      done
+      source /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping
+      source ~/.bashrc
+fi
+
 # Parse the configmap to set the right environment variables for prometheus collector settings
 ruby /opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb
 cat /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var | while read line; do
@@ -156,16 +166,6 @@ if [ -e "/opt/microsoft/configmapparser/config_debug_mode_env_var" ]; then
             echo $line >> ~/.bashrc
       done
       source /opt/microsoft/configmapparser/config_debug_mode_env_var
-      source ~/.bashrc
-fi
-
-# Parse the settings for default targets namespace keep list config
-ruby /opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb
-if [ -e "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping" ]; then
-      cat /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping | while read line; do
-            echo $line >> ~/.bashrc
-      done
-      source /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping
       source ~/.bashrc
 fi
 
