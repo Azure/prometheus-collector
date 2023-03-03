@@ -7,6 +7,7 @@ if (!ENV["OS_TYPE"].nil? && ENV["OS_TYPE"].downcase == "linux")
 end
 require "yaml"
 require_relative "ConfigParseErrorLogger"
+require_relative "tomlparser-utils"
 
 LOGGING_PREFIX = "default-scrape-keep-lists"
 
@@ -72,37 +73,6 @@ def parseConfigMap
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing config map for default-targets-metrics-keep-list: #{errorStr}, using defaults, please check config map for errors")
     return nil
-  end
-end
-
-# RE2 is not supported for windows
-def isValidRegex_linux(str)
-  begin
-    # invalid regex example -> 'sel/\\'
-    re2Regex = RE2::Regexp.new(str)
-    return re2Regex.ok?
-  rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while validating regex for target metric keep list - #{errorStr}, regular expression str - #{str}")
-    return false
-  end
-end
-
-def isValidRegex_windows(str)
-  begin
-    # invalid regex example -> 'sel/\\'
-    re2Regex = Regexp.new(str)
-    return true
-  rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while validating regex for target metric keep list - #{errorStr}, regular expression str - #{str}")
-    return false
-  end
-end
-
-def isValidRegex(str)
-  if ENV["OS_TYPE"] == "linux"
-    return isValidRegex_linux(str)
-  else
-    return isValidRegex_windows(str)
   end
 end
 

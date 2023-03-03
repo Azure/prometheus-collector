@@ -4,7 +4,7 @@
 require "tomlrb"
 require "yaml"
 require_relative "ConfigParseErrorLogger"
-require_relative "tomlparer-default-targets-metrics-keep-list"
+require_relative "tomlparser-utils"
 
 LOGGING_PREFIX = "pod-annotation-based-scraping"
 @configMapMountPath = "/etc/config/settings/pod-annotation-based-scraping"
