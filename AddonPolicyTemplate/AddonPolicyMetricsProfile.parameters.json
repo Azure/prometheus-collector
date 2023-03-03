@@ -1,0 +1,30 @@
+{
+    "azureMonitorWorkspaceResourceId": {
+      "type": "string",
+      "metadata": {
+        "displayName": "Resource Id of the existing Azure Monitor Workspace",
+        "description": "Resource Id of the existing Azure Monitor Workspace"
+      }
+    },
+    "azureMonitorWorkspaceLocation": {
+      "type": "string",
+      "metadata": {
+        "displayName": "Location of the existing Azure Monitor Workspace",
+        "description": "Location of the existing Azure Monitor Workspace"
+      }
+    },
+    "metricLabelsAllowlist": {
+      "type": "string",
+      "metadata": {
+        "displayName": "comma-separated list of additional Kubernetes label keys",
+        "description": "comma-separated list of additional Kubernetes label keys"
+      }
+    },
+    "metricAnnotationsAllowList": {
+      "type": "string",
+      "metadata": {
+        "displayName": "comma-separated list of Kubernetes annotations keys",
+        "description": "comma-separated list of Kubernetes annotations keys"
+      }
+    }
+}

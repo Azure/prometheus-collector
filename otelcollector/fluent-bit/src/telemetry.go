@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"sync"
 
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
@@ -24,6 +25,19 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
+
+type meMetricsProcessedCount struct {
+	DimBytesProcessedCount	float64
+	DimBytesSentToPubCount float64
+	DimMetricsSentToPubCount	float64
+	Value	float64
+}
+
+type meMetricsReceivedCount struct {
+	Value	float64
+}
+
+
 
 var (
 	// CommonProperties indicates the dimensions that are sent with every event/metric
@@ -52,11 +66,20 @@ var (
 	WinExporterKeepListRegex string
 	// Windows KubeProxy metrics keep list regex
 	WinKubeProxyKeepListRegex string
+	// meMetricsProcessedCount map, which holds references to metrics per metric account
+	meMetricsProcessedCountMap = make(map[string]*meMetricsProcessedCount)
+	// meMetricsProcessedCountMapMutex -- used for reading & writing locks on meMetricsProcessedCountMap
+	meMetricsProcessedCountMapMutex = &sync.Mutex{}
+	// meMetricsReceivedCount map, which holds references to metrics per metric account
+	meMetricsReceivedCountMap = make(map[string]*meMetricsReceivedCount)
+	// meMetricsReceivedCountMapMutex -- used for reading & writing locks on meMetricsReceivedCountMap
+	meMetricsReceivedCountMapMutex = &sync.Mutex{}
 )
 
 const (
 	coresAttachedTelemetryIntervalSeconds = 600
 	ksmAttachedTelemetryIntervalSeconds   = 600
+	meMetricsTelemetryIntervalSeconds	  = 300
 	coresAttachedTelemetryName            = "ClusterCoreCapacity"
 	linuxCpuCapacityTelemetryName         = "LiCapacity"
 	linuxNodeCountTelemetryName           = "LiNodeCnt"
@@ -405,6 +428,7 @@ func retrieveKsmData() []byte {
 		message := fmt.Sprintf("Error creating the http request - %v\n", err)
 		Log(message)
 		SendException(message)
+		return nil
 	}
 	// Get token data
 	tokendata, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
@@ -412,6 +436,7 @@ func retrieveKsmData() []byte {
 		message := fmt.Sprintf("Error accessing the token data - %v\n", err)
 		Log(message)
 		SendException(message)
+		return nil
 	}
 	// Create bearer token
 	bearerToken := "Bearer" + " " + string(tokendata)
@@ -422,6 +447,7 @@ func retrieveKsmData() []byte {
 		message := fmt.Sprintf("Error getting response from cadvisor- %v\n", err)
 		Log(message)
 		SendException(message)
+		return nil
 	}
 
 	defer resp.Body.Close()
@@ -430,6 +456,7 @@ func retrieveKsmData() []byte {
 		message := fmt.Sprintf("Error reading reponse body - %v\n", err)
 		Log(message)
 		SendException(message)
+		return nil
 	}
 	return body
 }
@@ -455,9 +482,7 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 	return output.FLB_OK
 }
 
-// Get the account name, metrics/bytes processed count, and metrics/bytes sent count from metrics extension log line
-// that was filtered by fluent-bit
-func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
 		var metricScrapeInfoRegex = regexp.MustCompile(`\s*([^\s]+)\s*([^\s]+)\s*([^\s]+).*ProcessedCount: ([\d]+).*ProcessedBytes: ([\d]+).*SentToPublicationCount: ([\d]+).*SentToPublicationBytes: ([\d]+).*`)
@@ -466,45 +491,44 @@ func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{
 		if len(groupMatches) > 7 {
 			metricsProcessedCount, err := strconv.ParseFloat(groupMatches[4], 64)
 			if err == nil {
-				metric := appinsights.NewMetricTelemetry("meMetricsProcessedCount", metricsProcessedCount)
-				metric.Properties["metricsAccountName"] = groupMatches[3]
-				metric.Properties["bytesProcessedCount"] = groupMatches[5]
-				metric.Properties["metricsSentToPubCount"] = groupMatches[6]
-				metric.Properties["bytesSentToPubCount"] = groupMatches[7]
-				if InvalidCustomPrometheusConfig != "" {
-					metric.Properties["InvalidCustomPrometheusConfig"] = InvalidCustomPrometheusConfig
+
+				metricsAccountName := groupMatches[3]
+				
+				bytesProcessedCount, e := strconv.ParseFloat(groupMatches[5], 64)
+				if e != nil{
+					bytesProcessedCount = 0.0
 				}
-				if DefaultPrometheusConfig != "" {
-					metric.Properties["DefaultPrometheusConfig"] = DefaultPrometheusConfig
+			
+				metricsSentToPubCount,e := strconv.ParseFloat(groupMatches[6], 64)
+				if e != nil {
+					metricsSentToPubCount = 0.0
 				}
-				if KubeletKeepListRegex != "" {
-					metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
+				bytesSentToPubCount,e := strconv.ParseFloat(groupMatches[7], 64)
+				if e != nil {
+					bytesSentToPubCount = 0.0
 				}
-				if CoreDNSKeepListRegex != "" {
-					metric.Properties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
+				
+				//update map
+				meMetricsProcessedCountMapMutex.Lock()
+
+				ref, ok := meMetricsProcessedCountMap[metricsAccountName]
+
+				if ok {
+					ref.DimBytesProcessedCount += bytesProcessedCount
+					ref.DimBytesSentToPubCount += bytesSentToPubCount
+					ref.DimMetricsSentToPubCount += metricsSentToPubCount
+					ref.Value += metricsProcessedCount
+
+				} else {
+					m := &meMetricsProcessedCount { 
+													DimBytesProcessedCount: bytesProcessedCount,
+													DimBytesSentToPubCount: bytesSentToPubCount,
+													DimMetricsSentToPubCount: metricsSentToPubCount,
+													Value: metricsProcessedCount, 
+												  }
+					meMetricsProcessedCountMap[metricsAccountName] = m
 				}
-				if CAdvisorKeepListRegex != "" {
-					metric.Properties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
-				}
-				if KubeProxyKeepListRegex != "" {
-					metric.Properties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
-				}
-				if ApiServerKeepListRegex != "" {
-					metric.Properties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
-				}
-				if KubeStateKeepListRegex != "" {
-					metric.Properties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
-				}
-				if NodeExporterKeepListRegex != "" {
-					metric.Properties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
-				}
-				if WinExporterKeepListRegex != "" {
-					metric.Properties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
-				}
-				if WinKubeProxyKeepListRegex != "" {
-					metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
-				}
-				TelemetryClient.Track(metric)
+				meMetricsProcessedCountMapMutex.Unlock()
 			}
 
 			if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
@@ -525,9 +549,83 @@ func PushProcessedCountToAppInsightsMetrics(records []map[interface{}]interface{
 				}
 			}
 		}
-	}
 
+	}
 	return output.FLB_OK
+}
+
+// Get the account name, metrics/bytes processed count, and metrics/bytes sent count from metrics extension log line
+// that was filtered by fluent-bit
+func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
+
+	ticker := time.NewTicker(time.Second * time.Duration(meMetricsTelemetryIntervalSeconds))
+	for ; true; <-ticker.C {
+
+		meMetricsProcessedCountMapMutex.Lock()
+		for k,v := range meMetricsProcessedCountMap {
+			metric := appinsights.NewMetricTelemetry("meMetricsProcessedCount", v.Value)
+			metric.Properties["metricsAccountName"] = k
+			metric.Properties["bytesProcessedCount"] = fmt.Sprintf("%.2f",v.DimBytesProcessedCount)
+			metric.Properties["metricsSentToPubCount"] = fmt.Sprintf("%.2f",v.DimMetricsSentToPubCount)
+			metric.Properties["bytesSentToPubCount"] = fmt.Sprintf("%.2f",v.DimBytesSentToPubCount)
+
+			if InvalidCustomPrometheusConfig != "" {
+				metric.Properties["InvalidCustomPrometheusConfig"] = InvalidCustomPrometheusConfig
+			}
+			if DefaultPrometheusConfig != "" {
+				metric.Properties["DefaultPrometheusConfig"] = DefaultPrometheusConfig
+			}
+			if KubeletKeepListRegex != "" {
+				metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
+			}
+			if CoreDNSKeepListRegex != "" {
+				metric.Properties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
+			}
+			if CAdvisorKeepListRegex != "" {
+				metric.Properties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
+			}
+			if KubeProxyKeepListRegex != "" {
+				metric.Properties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
+			}
+			if ApiServerKeepListRegex != "" {
+				metric.Properties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
+			}
+			if KubeStateKeepListRegex != "" {
+				metric.Properties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
+			}
+			if NodeExporterKeepListRegex != "" {
+				metric.Properties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
+			}
+			if WinExporterKeepListRegex != "" {
+				metric.Properties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
+			}
+			if WinKubeProxyKeepListRegex != "" {
+				metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
+			}
+			
+			TelemetryClient.Track(metric)
+
+		}
+
+		meMetricsProcessedCountMap = make(map[string]*meMetricsProcessedCount)
+
+		meMetricsProcessedCountMapMutex.Unlock()
+
+		//send meMetricsReceivedCount
+
+		ref, ok := meMetricsReceivedCountMap["na"]
+
+		if ok {
+			meMetricsReceivedCountMapMutex.Lock()
+
+			metric := appinsights.NewMetricTelemetry("meMetricsReceivedCount", ref.Value)
+			TelemetryClient.Track(metric)
+			meMetricsReceivedCountMap = make(map[string]*meMetricsReceivedCount)
+
+			meMetricsReceivedCountMapMutex.Unlock()
+		}
+
+	}
 }
 
 func PushMetricsDroppedCountToAppInsightsMetrics(records []map[interface{}]interface{}) int {
@@ -550,7 +648,7 @@ func PushMetricsDroppedCountToAppInsightsMetrics(records []map[interface{}]inter
 	return output.FLB_OK
 }
 
-func PushReceivedMetricsCountToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
 		var metricScrapeInfoRegex = regexp.MustCompile(`.*EventsProcessedLastPeriod: (\d+).*`)
@@ -560,6 +658,22 @@ func PushReceivedMetricsCountToAppInsightsMetrics(records []map[interface{}]inte
 			metricsReceivedCount, err := strconv.ParseFloat(groupMatches[1], 64)
 			if err == nil {
 
+				//update map
+				meMetricsReceivedCountMapMutex.Lock()
+
+				ref, ok := meMetricsReceivedCountMap["na"]
+
+				if ok {
+					ref.Value += metricsReceivedCount
+
+				} else {
+					m := &meMetricsReceivedCount { 
+													Value: metricsReceivedCount, 
+												  }
+					meMetricsReceivedCountMap["na"] = m
+				}
+				meMetricsReceivedCountMapMutex.Unlock()
+				
 				// Add to the total that PublishTimeseriesVolume() uses
 				if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
 					TimeseriesVolumeMutex.Lock()
@@ -567,8 +681,6 @@ func PushReceivedMetricsCountToAppInsightsMetrics(records []map[interface{}]inte
 					TimeseriesVolumeMutex.Unlock()
 				}
 
-				metric := appinsights.NewMetricTelemetry("meMetricsReceivedCount", metricsReceivedCount)
-				TelemetryClient.Track(metric)
 			}
 		}
 	}

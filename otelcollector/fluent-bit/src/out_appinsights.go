@@ -47,6 +47,8 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 		go SendKsmCpuMemoryToAppInsightsMetrics()
 	}
 
+	go PushMEProcessedAndReceivedCountToAppInsightsMetrics()
+
 	return output.FLB_OK
 }
 
@@ -74,9 +76,9 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
 	case fluentbitEventsProcessedLastPeriodTag:
-		return PushReceivedMetricsCountToAppInsightsMetrics(records)
+		return UpdateMEReceivedMetricsCount(records)
 	case fluentbitProcessedCountTag:
-		return PushProcessedCountToAppInsightsMetrics(records)
+		return UpdateMEMetricsProcessedCount(records)
 	case fluentbitDiagnosticHeartbeatTag:
 		return PushMetricsDroppedCountToAppInsightsMetrics(records)
 	case fluentbitInfiniteMetricTag:

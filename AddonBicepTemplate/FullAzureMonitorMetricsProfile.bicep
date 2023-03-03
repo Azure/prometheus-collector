@@ -23,6 +23,9 @@ param grafanaResourceId string
 param grafanaLocation string
 param grafanaSku string
 
+@description('A new GUID used to identify the role assignment')
+param roleNameGuid string = newGuid()
+
 var clusterSubscriptionId = split(clusterResourceId, '/')[2]
 var clusterResourceGroup = split(clusterResourceId, '/')[4]
 var clusterName = split(clusterResourceId, '/')[8]
@@ -90,7 +93,7 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2021-09-01-preview' = {
   }
 }
 
-module azuremonitormetrics_dcra_clusterResourceId '../AddonBicepTemplate/nested_azuremonitormetrics_dcra_clusterResourceId.bicep' = {
+module azuremonitormetrics_dcra_clusterResourceId './nested_azuremonitormetrics_dcra_clusterResourceId.bicep' = {
   name: 'azuremonitormetrics-dcra-${uniqueString(clusterResourceId)}'
   scope: resourceGroup(clusterSubscriptionId, clusterResourceGroup)
   params: {
@@ -99,9 +102,13 @@ module azuremonitormetrics_dcra_clusterResourceId '../AddonBicepTemplate/nested_
     variables_dcraName: dcraName
     clusterLocation: clusterLocation
   }
+  dependsOn: [
+    dce
+
+  ]
 }
 
-module azuremonitormetrics_profile_clusterResourceId '../AddonBicepTemplate/nested_azuremonitormetrics_profile_clusterResourceId.bicep' = {
+module azuremonitormetrics_profile_clusterResourceId './nested_azuremonitormetrics_profile_clusterResourceId.bicep' = {
   name: 'azuremonitormetrics-profile--${uniqueString(clusterResourceId)}'
   scope: resourceGroup(clusterSubscriptionId, clusterResourceGroup)
   params: {
@@ -111,6 +118,9 @@ module azuremonitormetrics_profile_clusterResourceId '../AddonBicepTemplate/nest
     metricLabelsAllowlist: metricLabelsAllowlist
     metricAnnotationsAllowList: metricAnnotationsAllowList
   }
+  dependsOn: [
+    azuremonitormetrics_dcra_clusterResourceId
+  ]
 }
 
 resource nodeRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview' = {
@@ -430,6 +440,11 @@ resource kubernetesRecordingRuleGroupNameWin1 'Microsoft.AlertsManagement/promet
         expression: 'sum by (namespace, pod, container) (rate(windows_container_total_runtime{}[5m]))'
       }
     ]
+resource roleNameGuid_resource 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: roleNameGuid
+  properties: {
+    roleDefinitionId: '/subscriptions/${clusterSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/b0d8363b-8ddd-447d-831f-62ca05bff136'
+    principalId: reference(grafanaResourceId_8.id, '2022-08-01', 'Full').identity.principalId
   }
 }
 
