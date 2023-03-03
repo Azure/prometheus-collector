@@ -6,7 +6,7 @@ require "yaml"
 require_relative "ConfigParseErrorLogger"
 
 LOGGING_PREFIX = "pod-annotation-based-scraping"
-@configMapMountPath = "/etc/config/settings/pod-annotation-based-scraping-settings"
+@configMapMountPath = "/etc/config/settings/pod-annotation-based-scraping"
 @podannotationNamespaceRegex = ""
 
 # Use parser to parse the configmap toml file to a ruby structure
