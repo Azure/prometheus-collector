@@ -410,7 +410,7 @@ def populateDefaultPrometheusConfig
       end
     end
 
-    if !ENV["AZMON_PROMETHEUSPOD_ANNOTATION_NAMESPACES_REGEX"].nil? && currentControllerType == @replicasetControllerType
+    if !ENV["AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"].nil? && currentControllerType == @replicasetControllerType
       podannotationNamespacesRegex = ENV["AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"]
       podannotationMetricsKeepListRegex = @regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
       podannotationScrapeInterval = @intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
