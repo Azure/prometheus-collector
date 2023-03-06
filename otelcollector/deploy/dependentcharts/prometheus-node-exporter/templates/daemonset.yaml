@@ -42,7 +42,7 @@ spec:
       containers:
         {{- $servicePort := ternary 8100 .Values.service.port .Values.kubeRBACProxy.enabled }}
         - name: node-exporter
-          image: {{ include "prometheus-node-exporter.image" . }}
+          image: {{- include "prometheus-node-exporter.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - --path.procfs=/host/proc
