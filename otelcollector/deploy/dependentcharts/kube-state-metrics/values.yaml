@@ -2,7 +2,7 @@
 prometheusScrape: true
 image:
   repository: mcr.microsoft.com/oss/kubernetes/kube-state-metrics
-  tag: v2.8.0
+  tag: v2.8.1
   sha: ""
   pullPolicy: IfNotPresent
 
@@ -179,6 +179,17 @@ podSecurityPolicy:
     # apparmor.security.beta.kubernetes.io/defaultProfileName: 'runtime/default'
 
   additionalVolumes: []
+
+## Configure network policy for kube-state-metrics
+networkPolicy:
+  enabled: false
+  # egress:
+  # - {}
+  # ingress:
+  # - {}
+  # podSelector:
+  #   matchLabels:
+  #     app.kubernetes.io/name: kube-state-metrics
 
 securityContext:
   enabled: true
