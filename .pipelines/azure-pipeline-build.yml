@@ -441,7 +441,7 @@ jobs:
 
   - bash: |
       helm dep update
-    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
     displayName: "Build: update helm dependencies"
 
   - bash: |
