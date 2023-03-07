@@ -69,18 +69,22 @@ jobs:
     - bash: |
         cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts
         cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
+        cp ../../../../otelcollector/deploy/chart/addon-chart/azure-monitor-metrics-addon ama-metrics-arc -r
         export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
         export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
         export HELM_SEMVER=$SETUP_SEMVER
         export IMAGE_TAG=$SETUP_SEMVER
         export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
+        export ARC_EXTENSION=true
         env
 
         envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
-        tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector
+        envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
+        tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-arc
 
         cd $(Build.ArtifactStagingDirectory)
         cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
+        export ARC_EXTENSION=false
         export AKS_REGION="westeurope"
         export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu"
         envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
@@ -412,7 +416,7 @@ jobs:
     displayName: "Build: push helm chart to dev ACR"
     condition: eq(variables.IS_PR, false)
 
-- job: ARC-Chart
+- job: ARC_Chart
   displayName: "Package Arc helm chart"
   pool:
     name: Azure-Pipelines-CI-Test-EO

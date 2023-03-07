@@ -47,9 +47,16 @@
       "dependsOn": [ ]
     },
     {
-      "name": "PushHelmChart",
+      "name": "Push1PHelmChart",
       "targetType": "ServiceResource",
-      "targetName": "PushHelmChart",
+      "targetName": "Push1PHelmChart",
+      "actions": [ "Shell/PushAgentToACR" ],
+      "dependsOn": [ "PushLinuxAgent", "PushWindowsAgent", "PushKSMChart", "PushNEChart" ]
+    },
+    {
+      "name": "PushARCHelmChart",
+      "targetType": "ServiceResource",
+      "targetName": "PushARCHelmChart",
       "actions": [ "Shell/PushAgentToACR" ],
       "dependsOn": [ "PushLinuxAgent", "PushWindowsAgent", "PushKSMChart", "PushNEChart" ]
     }

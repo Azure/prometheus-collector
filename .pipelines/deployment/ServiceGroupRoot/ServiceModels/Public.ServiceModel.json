@@ -51,9 +51,14 @@
           "RolloutParametersPath": "Parameters\\PrometheusCollector.Windows.Parameters.json"
         },
         {
-          "Name": "PushHelmChart",
+          "Name": "Push1PHelmChart",
           "InstanceOf": "ShellExtension",
           "RolloutParametersPath": "Parameters\\PrometheusCollector.Chart.Parameters.json"
+        },
+        {
+          "Name": "PushARCHelmChart",
+          "InstanceOf": "ShellExtension",
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.ARCChart.Parameters.json"
         },
         {
           "Name": "PushKSMChart",
