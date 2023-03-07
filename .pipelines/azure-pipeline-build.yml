@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - marcj/ci-cd-arc
 
 pr:
   autoCancel: true
@@ -11,6 +12,7 @@ pr:
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
+  ARC_HELM_CHART_NAME: 'ama-metrics-arc'
   ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
   ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
@@ -59,6 +61,7 @@ jobs:
         echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2019_BASE_IMAGE_VERSION"
         echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2022_BASE_IMAGE_VERSION"
         echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
+        echo "##vso[task.setvariable variable=ARC_HELM_CHART_NAME;isOutput=true]$ARC_HELM_CHART_NAME"
         echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
       displayName: 'Build: set image registry, repo, and tags'
       name: setup
@@ -409,13 +412,6 @@ jobs:
     displayName: "Build: push helm chart to dev ACR"
     condition: eq(variables.IS_PR, false)
 
-  - task: PublishBuildArtifacts@1
-    displayName: "Ev2: publish helm chart artifacts"
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-    inputs:
-      pathToPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: drop
-
 - job: ARC-Chart
   displayName: "Package Arc helm chart"
   pool:
@@ -423,13 +419,10 @@ jobs:
   dependsOn:
   - Common
   - Linux
-  - WindowsMultiArch
   variables:
-    HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-    HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
     ARC_EXTENSION: true
   steps:
   - task: HelmInstaller@1
@@ -454,7 +447,7 @@ jobs:
 
   - bash: |
       helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-      helm push $(HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+      helm push $(ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
       mkdir -p $(Build.ArtifactStagingDirectory)/arc-chart
       echo {\"image.name\":\"$(HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
