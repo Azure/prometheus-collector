@@ -69,7 +69,7 @@ jobs:
     - bash: |
         cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts
         cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
-        cp ../../../../otelcollector/deploy/chart/addon-chart/azure-monitor-metrics-addon ama-metrics-arc -r
+        cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics-arc -r
         export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
         export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
         export HELM_SEMVER=$SETUP_SEMVER
