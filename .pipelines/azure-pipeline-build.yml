@@ -445,7 +445,7 @@ jobs:
     displayName: "Build: update helm dependencies"
 
   - bash: |
-      helm package .\azure-monitor-metrics-addon\
+      helm package ./azure-monitor-metrics-addon/
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
     displayName: "Build: package helm chart"
 
