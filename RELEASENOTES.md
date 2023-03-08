@@ -1,5 +1,20 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 02-22-2023
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.4.0-main-02-22-2023-3ee44b9e`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.4.0-main-02-22-2023-3ee44b9e-win`
+* Change log -
+  * feat: Allow setting a priority class for the daemonset and deployment objects
+  * fix:  Truncate the tag to 128 characters (docker requirement)
+  * fix:  Bump github.com/prometheus/client_golang from 1.9.0 to 1.11.1 in /internal/referenceapp/golang
+  * feat: HTTP Proxy for distroless and ARC
+  * fix:  Wait for token adapter to be healthy before starting dependencies
+  * feat: Add azure policy templates for metrics addon
+  * feat: enable network monitoring metrics (kappie)
+  * feat: AKS addon HTTP Proxy Support
+  * fix:  certificate import for windows ME startup
+
 ## Release 01-31-2023
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.2.0-main-01-31-2023-e1e3858b`

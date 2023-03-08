@@ -34,6 +34,9 @@ spec:
         {{- with .Values.podAnnotations }}{{ toYaml . | trim | nindent 8 }}{{- end }}
     spec:
       serviceAccountName: {{ template "prometheus-collector.fullname" . }}-serviceaccount
+      {{- if .Values.daemonsetPriorityClass }}
+      priorityClassName: {{ .Values.daemonsetPriorityClass }}
+      {{- end}}
       containers:
         - name: prometheus-collector
           image: &collectorimagetag "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

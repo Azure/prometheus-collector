@@ -16,6 +16,9 @@ spec:
       rsName: {{ template "prometheus-collector.fullname" . }}
   strategy:
     type: RollingUpdate
+  {{- if .Values.deploymentProgressDeadlineSeconds }}
+  progressDeadlineSeconds: {{.Values.deploymentProgressDeadlineSeconds }}
+  {{- end }}
   template:
     metadata:
       labels:
@@ -213,6 +216,9 @@ spec:
                 - NET_ADMIN
                 - NET_RAW
         {{- end }}
+      {{- if .Values.deploymentPriorityClass }}
+      priorityClassName: {{ .Values.deploymentPriorityClass }}
+      {{- end}}
       affinity:
         nodeAffinity:
           # affinity to schedule on to ephemeral os node if its available
