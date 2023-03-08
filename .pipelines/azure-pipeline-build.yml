@@ -457,7 +457,7 @@ jobs:
       helm push $(ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
       mkdir -p $(Build.ArtifactStagingDirectory)/arc-chart
       echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
-    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
     displayName: "Build: push helm chart to dev ACR"
     condition: eq(variables.IS_PR, false)
 
