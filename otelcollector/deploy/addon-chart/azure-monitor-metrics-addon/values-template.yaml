@@ -47,7 +47,7 @@ AzureMonitorMetrics:
     ImageTag: "master.221118.2"
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
     ImageTagWin: "20230120winbeta"
-    ArcExtension: ${ARC_EXTENSION}
+  ArcExtension: ${ARC_EXTENSION}
 
 global:
   commonGlobals:
