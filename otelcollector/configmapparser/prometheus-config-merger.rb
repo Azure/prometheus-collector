@@ -39,6 +39,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @windowsexporterDefaultDsFile = @defaultPromConfigPathPrefix + "windowsexporterDefaultDs.yml"
 @windowskubeproxyDefaultFileRsSimpleFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsSimple.yml"
 @windowskubeproxyDefaultDsFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultDs.yml"
+@podannotationsDefaultFile = @defaultPromConfigPathPrefix + "podannotationsDefault.yml"
 @windowskubeproxyDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
 @kappiebasicDefaultFileDs = @defaultPromConfigPathPrefix + "kappieBasicDefaultDs.yml"
 
@@ -125,6 +126,32 @@ def AppendMetricRelabelConfig(yamlConfigFile, keepListRegex)
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while appending metric relabel config in default target file - #{yamlConfigFile} : #{errorStr}. The keep list regex will not be used")
+  end
+end
+
+def AppendRelabelConfig(yamlConfigFile, relabelConfig, keepRegex)
+  begin
+    ConfigParseErrorLogger.log(LOGGING_PREFIX, "Adding relabel config for #{yamlConfigFile}")
+    config = YAML.load(File.read(yamlConfigFile))
+
+    # Iterate through each scrape config and append metric relabel config for keep list
+    if !config.nil?
+      scrapeConfigs = config["scrape_configs"]
+      if !scrapeConfigs.nil? && !scrapeConfigs.empty?
+        scrapeConfigs.each { |scfg|
+          relabelCfgs = scfg["relabel_configs"]
+          if relabelCfgs.nil?
+            scfg["relabel_configs"] = relabelConfig
+          else
+            scfg["relabel_configs"] = relabelCfgs.concat(relabelConfig)
+          end
+        }
+        cfgYamlWithRelabelConfig = YAML::dump(config)
+        File.open(yamlConfigFile, "w") { |file| file.puts cfgYamlWithRelabelConfig }
+      end
+    end
+  rescue => errorStr
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while appending relabel config in default target file - #{yamlConfigFile} : #{errorStr}. The keep list regex will not be used")
   end
 end
 
@@ -381,6 +408,21 @@ def populateDefaultPrometheusConfig
         end
         defaultConfigs.push(@windowskubeproxyDefaultFileRsSimpleFile)
       end
+    end
+
+    if !ENV["AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"].nil? && currentControllerType == @replicasetControllerType
+      podannotationNamespacesRegex = ENV["AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"]
+      podannotationMetricsKeepListRegex = @regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
+      podannotationScrapeInterval = @intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
+      UpdateScrapeIntervalConfig(@podannotationsDefaultFile, podannotationScrapeInterval)
+      if !podannotationMetricsKeepListRegex.nil? && !podannotationMetricsKeepListRegex.empty?
+        AppendMetricRelabelConfig(@podannotationsDefaultFile, podannotationMetricsKeepListRegex)
+      end
+      if !podannotationNamespacesRegex.nil? && !podannotationNamespacesRegex.empty?
+        relabelConfig = [{ "source_labels" => ["__meta_kubernetes_namespace"], "action" => "keep", "regex" => podannotationNamespacesRegex }]
+        AppendRelabelConfig(@podannotationsDefaultFile, relabelConfig, podannotationNamespacesRegex)
+      end
+      defaultConfigs.push(@podannotationsDefaultFile)
     end
 
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
