@@ -19,8 +19,8 @@ LOGGING_PREFIX = "default-scrape-settings"
 @nodeexporterEnabled = true
 @prometheusCollectorHealthEnabled = true
 @podannotationEnabled = false
-@windowsexporterEnabled = false
-@windowskubeproxyEnabled = false
+@windowsexporterEnabled = true
+@windowskubeproxyEnabled = true
 @kappiebasicEnabled = false
 @noDefaultsEnabled = false
 @sendDSUpMetric = false
@@ -129,12 +129,12 @@ ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start default-scrape-settings
 # set default targets for MAC mode
 if !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true"
   ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "MAC mode is enabled. Only enabling targets kubestate,cadvisor,kubelet,kappiebasic & nodeexporter for linux before config map processing....")
-  
+
   @corednsEnabled = false
   @kubeproxyEnabled = false
   @apiserverEnabled = false
   @prometheusCollectorHealthEnabled = false
-  
+
 end
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
