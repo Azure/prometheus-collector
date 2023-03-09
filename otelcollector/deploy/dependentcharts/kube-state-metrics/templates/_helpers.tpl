@@ -81,7 +81,6 @@ Selector labels
 {{ toYaml .Values.selectorOverride }}
 {{- else }}
 app.kubernetes.io/name: {{ include "kube-state-metrics.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
@@ -104,7 +103,7 @@ labelValueLengthLimit: {{ . }}
 {{- end }}
 {{- end -}}
 
-{{/* 
+{{/*
 Formats imagePullSecrets. Input is (dict "Values" .Values "imagePullSecrets" .{specific imagePullSecrets})
 */}}
 {{- define "kube-state-metrics.imagePullSecrets" -}}
