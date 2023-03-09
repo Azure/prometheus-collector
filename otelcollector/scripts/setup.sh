@@ -44,7 +44,7 @@ echo "Installing mdsd..."
 #fi
 
 # Install this way once moving to the Mariner published RPMs:
-sudo tdnf install -y azure-mdsd_1.23.5
+sudo tdnf install -y azure-mdsd
 
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
