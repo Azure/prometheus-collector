@@ -17,8 +17,8 @@ data:
     apiserver = false
     kubestate = true
     nodeexporter = true
-    windowsexporter = false
-    windowskubeproxy = false
+    windowsexporter = true
+    windowskubeproxy = true
     kappiebasic = false
     prometheuscollectorhealth = false
   # Regex for which namespaces to scrape through pod annotation based scraping.
