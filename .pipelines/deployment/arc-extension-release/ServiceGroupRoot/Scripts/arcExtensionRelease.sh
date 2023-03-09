@@ -2,16 +2,27 @@
 export HELM_EXPERIMENTAL_OCI=1
 
 RELEASE_TRAINS_PATH='"'$(echo "$RELEASE_TRAINS_STABLE_PATH" | sed 's/,/","/g')'"'
-REGISTER_REGIONS_BATCH='"'$(echo "$REGISTER_REGIONS_BATCH" | sed 's/,/","/g')'"'
+REGIONS_BATCH='"'$(echo "$REGISTER_REGIONS_BATCH" | sed 's/,/","/g')'"'
 IS_CUSTOMER_HIDDEN=$IS_CUSTOMER_HIDDEN
 CHART_VERSION=${CHART_VERSION}
 
-PACKAGE_CONFIG_NAME="${PACKAGE_CONFIG_NAME:-microsoft.azuremonitor.containers-prometheuscollector}"
+PACKAGE_CONFIG_NAME="${PACKAGE_CONFIG_NAME:-microsoft.azuremonitor.containers-prom030823}"
 API_VERSION="${API_VERSION:-2021-05-01}"
 METHOD="${METHOD:-put}"
 REGISTRY_PATH="https://mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics-arc"
 
-if [ -z "$REGISTER_REGIONS_BATCH" ]; then
+CANARY_BATCH="\"eastus2euap\",\"centraluseuap\"
+SMALL_REGION="$CANARY_BATCH,\"westcentralus\""
+MEDIUM_REGION="$SMALL_REGION,\"westeurope\""
+LARGE_REGION="$MEDIUM_REGION,\"westus2\""
+BATCH_1_REGIONS="$LARGE_REGION,\"eastus\",\"southcentralus\",\"uksouth\",\"southeastasia\",\"koreacentral\",\"centralus\",\"japaneast\""
+BATCH_2_REGIONS="$BATCH_1_REGIONS,\"australiaeast\",\"northeurope\",\"eastus2\",\"francecentral\",\"westus\",\"northcentralus\",\"eastasia\",\"westus3\""
+
+RELEASE_TRAIN_DEV="\"dev\""
+RELEASE_TRAIN_STAGING="$RELEASE_TRAIN_DEV,\"staging\""
+RELEASE_TRAIN_STABLE="$RELEASE_TRAIN_STAGING,\"stable\""
+
+if [ -z "$REGIONS_BATCH" ]; then
     echo "-e error release regions must be provided "
     exit 1
 fi
@@ -48,7 +59,7 @@ cat <<EOF > "request.json"
             ],
             "FullPathToHelmChart": "$REGISTRY_PATH",
             "ExtensionUpdateFrequencyInMinutes": 60,
-            "IsCustomerHidden": false,
+            "IsCustomerHidden": $IS_CUSTOMER_HIDDEN,
             "ReadyforRollout": true,
             "RollbackVersion": null,
             "PackageConfigName": "$PACKAGE_CONFIG_NAME"

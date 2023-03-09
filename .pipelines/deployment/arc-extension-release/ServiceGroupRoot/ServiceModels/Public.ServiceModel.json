@@ -43,7 +43,7 @@
         {
           "Name": "ReleaseToRegions",
           "InstanceOf": "ShellExtension",
-          "RolloutParametersPath": "Parameters\\PrometheusCollector.CanaryPreview.Parameters.json"
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.ARCExtension.Parameters.json"
         }
       ]
     },
@@ -61,7 +61,7 @@
         {
           "Name": "ReleaseToRegions",
           "InstanceOf": "ShellExtension",
-          "RolloutParametersPath": "Parameters\\PrometheusCollector.CanaryStable.Parameters.json"
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.ARCExtension.Parameters.json"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "Name": "ReleaseToRegions",
           "InstanceOf": "ShellExtension",
-          "RolloutParametersPath": "Parameters\\PrometheusCollector.Pilot.Parameters.json"
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.ARCExtension.Parameters.json"
         }
       ]
     }
