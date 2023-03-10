@@ -77,11 +77,8 @@ release: {{ .Release.Name }}
 Selector labels
 */}}
 {{- define "kube-state-metrics.selectorLabels" }}
-{{- if .Values.selectorOverride }}
-{{ toYaml .Values.selectorOverride }}
-{{- else }}
-app.kubernetes.io/name: {{ include "kube-state-metrics.name" . }}
-{{- end }}
+app: {{ template "prometheus-node-exporter.name" . }}
+release: {{.Release.Name }}
 {{- end }}
 
 {{/* Sets default scrape limits for servicemonitor */}}
