@@ -77,7 +77,7 @@ release: {{ .Release.Name }}
 Selector labels
 */}}
 {{- define "kube-state-metrics.selectorLabels" }}
-app: {{ template "prometheus-node-exporter.name" . }}
+app: {{ template "kube-state-metrics.name" . }}
 release: {{.Release.Name }}
 {{- end }}
 
