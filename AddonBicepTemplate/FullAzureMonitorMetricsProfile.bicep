@@ -38,10 +38,10 @@ var nodeRecordingRuleGroupDescription = 'Node Recording Rules RuleGroup'
 var kubernetesRecordingRuleGroup_var = 'KubernetesReccordingRulesRuleGroup-'
 var kubernetesRecordingRuleGroupName = concat(kubernetesRecordingRuleGroup_var, clusterName)
 var kubernetesRecordingRuleGroupDescription = 'Kubernetes Recording Rules RuleGroup'
-var kubernetesRecordingRuleGroupWin = 'KubernetesRecordingRulesRuleGroup-Win-'
-var kubernetesRecordingRuleGroupWin1 = 'KubernetesRecordingRulesRuleGroup-Win-1-'
-var kubernetesRecordingRuleGroupNameWin_var = concat(kubernetesRecordingRuleGroupWin, clusterName)
-var kubernetesRecordingRuleGroupNameWin1_var = concat(kubernetesRecordingRuleGroupWin1, clusterName)
+var nodeRecordingRuleGroupWin = 'NodeRecordingRulesRuleGroup-Win-'
+var nodeAndKubernetesRecordingRuleGroupWin = 'NodeAndKubernetesRecordingRulesRuleGroup-Win-'
+var kubernetesRecordingRuleGroupNameWin_var = concat(nodeRecordingRuleGroupWin, clusterName)
+var kubernetesRecordingRuleGroupNameWin1_var = concat(nodeAndKubernetesRecordingRuleGroupWin, clusterName)
 var kubernetesRecordingRuleGroupDescriptionWin = 'Kubernetes Recording Rules RuleGroup for Win'
 var version = ' - 0.1'
 
