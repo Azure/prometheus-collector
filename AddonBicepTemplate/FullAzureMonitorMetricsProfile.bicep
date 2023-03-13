@@ -19,6 +19,7 @@ param clusterResourceId string
 param clusterLocation string
 param metricLabelsAllowlist string
 param metricAnnotationsAllowList string
+param enableWindowsRecordingRules bool
 param grafanaResourceId string
 param grafanaLocation string
 param grafanaSku string
@@ -40,9 +41,9 @@ var kubernetesRecordingRuleGroupName = concat(kubernetesRecordingRuleGroup_var, 
 var kubernetesRecordingRuleGroupDescription = 'Kubernetes Recording Rules RuleGroup'
 var nodeRecordingRuleGroupWin = 'NodeRecordingRulesRuleGroup-Win-'
 var nodeAndKubernetesRecordingRuleGroupWin = 'NodeAndKubernetesRecordingRulesRuleGroup-Win-'
-var kubernetesRecordingRuleGroupNameWin_var = concat(nodeRecordingRuleGroupWin, clusterName)
-var kubernetesRecordingRuleGroupNameWin1_var = concat(nodeAndKubernetesRecordingRuleGroupWin, clusterName)
-var kubernetesRecordingRuleGroupDescriptionWin = 'Kubernetes Recording Rules RuleGroup for Win'
+var nodeRecordingRuleGroupNameWin_var = concat(nodeRecordingRuleGroupWin, clusterName)
+var nodeAndKubernetesRecordingRuleGroupWin_var = concat(nodeAndKubernetesRecordingRuleGroupWin, clusterName)
+var RecordingRuleGroupDescriptionWin = 'Recording Rules RuleGroup for Win'
 var version = ' - 0.1'
 
 resource dce 'Microsoft.Insights/dataCollectionEndpoints@2021-09-01-preview' = {
@@ -131,6 +132,7 @@ resource nodeRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRuleGroups
     scopes: [
       azureMonitorWorkspaceResourceId
     ]
+    enabled: true
     clusterName: clusterName
     interval: 'PT1M'
     rules: [
@@ -190,6 +192,7 @@ resource kubernetesRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRule
     scopes: [
       azureMonitorWorkspaceResourceId
     ]
+    enabled: true
     clusterName: clusterName
     interval: 'PT1M'
     rules: [
@@ -285,14 +288,15 @@ resource kubernetesRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRule
   }
 }
 
-resource kubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview' = {
-  name: kubernetesRecordingRuleGroupNameWin_var
+resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview' = {
+  name: nodeRecordingRuleGroupNameWin_var
   location: azureMonitorWorkspaceLocation
   properties: {
-    description: concat(kubernetesRecordingRuleGroupDescriptionWin, version)
+    description: concat(RecordingRuleGroupDescriptionWin, version)
     scopes: [
       azureMonitorWorkspaceResourceId
     ]
+    enabled: enableWindowsRecordingRules
     clusterName: clusterName
     interval: 'PT1M'
     rules: [
@@ -360,14 +364,15 @@ resource kubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometh
   }
 }
 
-resource kubernetesRecordingRuleGroupNameWin1 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview' = {
-  name: kubernetesRecordingRuleGroupNameWin1_var
+resource nodeAndKubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview' = {
+  name: nodeAndKubernetesRecordingRuleGroupWin_var
   location: azureMonitorWorkspaceLocation
   properties: {
-    description: concat(kubernetesRecordingRuleGroupDescriptionWin, version)
+    description: concat(RecordingRuleGroupDescriptionWin, version)
     scopes: [
       azureMonitorWorkspaceResourceId
     ]
+    enabled: enableWindowsRecordingRules
     clusterName: clusterName
     interval: 'PT1M'
     rules: [
@@ -440,6 +445,9 @@ resource kubernetesRecordingRuleGroupNameWin1 'Microsoft.AlertsManagement/promet
         expression: 'sum by (namespace, pod, container) (rate(windows_container_total_runtime{}[5m]))'
       }
     ]
+  }
+}
+
 resource roleNameGuid_resource 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: roleNameGuid
   properties: {

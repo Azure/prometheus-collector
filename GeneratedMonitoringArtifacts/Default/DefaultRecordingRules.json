@@ -28,9 +28,9 @@
         "kubernetesRecordingRuleGroupDescription": "Kubernetes Recording Rules RuleGroup",
         "nodeRecordingRuleGroupWin": "NodeRecordingRulesRuleGroup-Win-",
         "nodeAndKubernetesRecordingRuleGroupWin": "NodeAndKubernetesRecordingRulesRuleGroup-Win-",
-        "kubernetesRecordingRuleGroupNameWin": "[concat(variables('nodeRecordingRuleGroupWin'), parameters('clusterName'))]",
-        "kubernetesRecordingRuleGroupNameWin1": "[concat(variables('nodeAndKubernetesRecordingRuleGroupWin'), parameters('clusterName'))]",
-        "kubernetesRecordingRuleGroupDescriptionWin": "Kubernetes Recording Rules RuleGroup for Win",
+        "nodeRecordingRuleGroupNameWin": "[concat(variables('nodeRecordingRuleGroupWin'), parameters('clusterName'))]",
+        "nodeAndKubernetesRecordingRuleGroupNameWin": "[concat(variables('nodeAndKubernetesRecordingRuleGroupWin'), parameters('clusterName'))]",
+        "RecordingRuleGroupDescriptionWin": "Kubernetes Recording Rules RuleGroup for Win",
         "version": " - 0.1"
     },
     "resources": [
@@ -42,6 +42,7 @@
             "properties": {
                 "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
                 "scopes": [ "[parameters('azureMonitorWorkspaceResourceId')]" ],
+                "enabled": true,
                 "clusterName": "[parameters('clusterName')]",
                 "interval": "PT1M",
                 "rules": [
@@ -100,6 +101,7 @@
             "properties": {
                 "description": "[concat(variables('kubernetesRecordingRuleGroupDescription'), variables('version'))]",
                 "scopes": [ "[parameters('azureMonitorWorkspaceResourceId')]" ],
+                "enabled": true,
                 "clusterName": "[parameters('clusterName')]",
                 "interval": "PT1M",
                 "rules": [
@@ -195,13 +197,14 @@
             }
         },
         {
-            "name": "[variables('kubernetesRecordingRuleGroupNameWin')]",
+            "name": "[variables('nodeRecordingRuleGroupNameWin')]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
             "location": "[parameters('location')]",
             "properties": {
-                "description": "[concat(variables('kubernetesRecordingRuleGroupDescriptionWin'), variables('version'))]",
+                "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
                 "scopes": [ "[parameters('azureMonitorWorkspaceResourceId')]" ],
+                "enabled": false,
                 "clusterName": "[parameters('clusterName')]",
                 "interval": "PT1M",
                 "rules": [
@@ -269,13 +272,14 @@
             }
         },
         {
-            "name": "[variables('kubernetesRecordingRuleGroupNameWin1')]",
+            "name": "[variables('nodeAndKubernetesRecordingRuleGroupNameWin')]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2021-07-22-preview",
             "location": "[parameters('location')]",
             "properties": {
-                "description": "[concat(variables('kubernetesRecordingRuleGroupDescriptionWin'), variables('version'))]",
+                "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
                 "scopes": [ "[parameters('azureMonitorWorkspaceResourceId')]" ],
+                "enabled": false,
                 "clusterName": "[parameters('clusterName')]",
                 "interval": "PT1M",
                 "rules": [
