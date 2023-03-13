@@ -8,7 +8,7 @@
                 "description": "Cluster name"
             }
         },
-        "macResourceId": {
+        "azureMonitorWorkspaceResourceId": {
             "type": "string",
             "metadata": {
                 "description": "ResourceId of Monitoring Account (MAC) to associate to"
@@ -41,7 +41,7 @@
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
-                "scopes": [ "[parameters('macResourceId')]" ],
+                "scopes": [ "[parameters('azureMonitorWorkspaceResourceId')]" ],
                 "clusterName": "[parameters('clusterName')]",
                 "interval": "PT1M",
                 "rules": [
@@ -99,7 +99,7 @@
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('kubernetesRecordingRuleGroupDescription'), variables('version'))]",
-                "scopes": [ "[parameters('macResourceId')]" ],
+                "scopes": [ "[parameters('azureMonitorWorkspaceResourceId')]" ],
                 "clusterName": "[parameters('clusterName')]",
                 "interval": "PT1M",
                 "rules": [
@@ -201,7 +201,7 @@
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('kubernetesRecordingRuleGroupDescriptionWin'), variables('version'))]",
-                "scopes": [ "[parameters('macResourceId')]" ],
+                "scopes": [ "[parameters('azureMonitorWorkspaceResourceId')]" ],
                 "clusterName": "[parameters('clusterName')]",
                 "interval": "PT1M",
                 "rules": [
@@ -275,7 +275,7 @@
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('kubernetesRecordingRuleGroupDescriptionWin'), variables('version'))]",
-                "scopes": [ "[parameters('macResourceId')]" ],
+                "scopes": [ "[parameters('azureMonitorWorkspaceResourceId')]" ],
                 "clusterName": "[parameters('clusterName')]",
                 "interval": "PT1M",
                 "rules": [
