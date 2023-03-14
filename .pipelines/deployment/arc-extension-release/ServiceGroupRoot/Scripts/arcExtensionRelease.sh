@@ -1,17 +1,16 @@
 #!/bin/bash
 export HELM_EXPERIMENTAL_OCI=1
 
-RELEASE_TRAINS_PATH='"'$(echo "$RELEASE_TRAINS_STABLE_PATH" | sed 's/,/","/g')'"'
-REGIONS_BATCH='"'$(echo "$REGISTER_REGIONS_BATCH" | sed 's/,/","/g')'"'
 IS_CUSTOMER_HIDDEN=$IS_CUSTOMER_HIDDEN
 CHART_VERSION=${CHART_VERSION}
+RELEASE_STAGE=${RELEASE_STAGE}
 
 PACKAGE_CONFIG_NAME="${PACKAGE_CONFIG_NAME:-microsoft.azuremonitor.containers-prom030823}"
 API_VERSION="${API_VERSION:-2021-05-01}"
 METHOD="${METHOD:-put}"
 REGISTRY_PATH="https://mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics-arc"
 
-CANARY_BATCH="\"eastus2euap\",\"centraluseuap\"
+CANARY_BATCH="\"eastus2euap\",\"centraluseuap\""
 SMALL_REGION="$CANARY_BATCH,\"westcentralus\""
 MEDIUM_REGION="$SMALL_REGION,\"westeurope\""
 LARGE_REGION="$MEDIUM_REGION,\"westus2\""
@@ -21,6 +20,14 @@ BATCH_2_REGIONS="$BATCH_1_REGIONS,\"australiaeast\",\"northeurope\",\"eastus2\",
 RELEASE_TRAIN_DEV="\"dev\""
 RELEASE_TRAIN_STAGING="$RELEASE_TRAIN_DEV,\"staging\""
 RELEASE_TRAIN_STABLE="$RELEASE_TRAIN_STAGING,\"stable\""
+
+if [ "$REGIONS_BATCH_NAME" == "small" ]; then
+  REGIONS_BATCH=$SMALL_REGION
+elif [ "$REGIONS_BATCH_NAME" == "medium" ]
+elif [ "$REGIONS_BATCH_NAME" == "large" ]
+elif [ "$REGIONS_BATCH_NAME" == "batch1" ]
+elif [ "$REGIONS_BATCH" == "batch2" ]
+fi
 
 if [ -z "$REGIONS_BATCH" ]; then
     echo "-e error release regions must be provided "
@@ -52,10 +59,10 @@ cat <<EOF > "request.json"
     "artifactEndpoints": [
         {
             "Regions": [
-                $REGISTER_REGIONS_BATCH
+                $REGIONS_BATCH
             ],
             "Releasetrains": [
-                "$RELEASE_TRAINS_PATH"
+                $RELEASE_TRAINS
             ],
             "FullPathToHelmChart": "$REGISTRY_PATH",
             "ExtensionUpdateFrequencyInMinutes": 60,
@@ -74,7 +81,7 @@ RESOURCE_AUDIENCE=${RESOURCE_AUDIENCE}
 
 echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $CHART_VERSION, SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
 
-# msi is not supported yet since msi always linked to an Azure Resource
+# MSI is not supported
 echo "Login cli using spn"
 az login --service-principal --username=${SPN_CLIENT_ID} --password=${SPN_SECRET} --tenant=${SPN_TENANT_ID}
 if [ $? -eq 0 ]; then
