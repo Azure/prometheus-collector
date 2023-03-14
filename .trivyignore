@@ -22,10 +22,16 @@ CVE-2022-41717
 # kube-state-metrics
 CVE-2022-1996
 CVE-2022-27664
+# otelcollector
+CVE-2022-41721
+CVE-2022-41723
 
 # MEDIUM
 # opt/telegraf/telegraf
 CVE-2019-3826
+CVE-2022-23471
+GHSA-4xgv-j62q-h3rj
+GHSA-hxp2-xqf3-v83h
 # /bin/node_exporter
 CVE-2021-44716
 CVE-2022-46146
