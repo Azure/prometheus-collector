@@ -58,6 +58,7 @@
     }
   },
   "variables": {
+    "azureMonitorWorkspaceSubscriptionId": "[split(parameters('azureMonitorWorkspaceResourceId'),'/')[2]]",
     "clusterSubscriptionId": "[split(parameters('clusterResourceId'),'/')[2]]",
     "clusterResourceGroup": "[split(parameters('clusterResourceId'),'/')[4]]",
     "clusterName": "[split(parameters('clusterResourceId'),'/')[8]]",
@@ -358,7 +359,7 @@
       "name": "[parameters('roleNameGuid')]",
       "scope": "[parameters('azureMonitorWorkspaceResourceId')]",
       "properties": {
-          "roleDefinitionId": "[concat('/subscriptions/', variables('clusterSubscriptionId'), '/providers/Microsoft.Authorization/roleDefinitions/', 'b0d8363b-8ddd-447d-831f-62ca05bff136')]",
+          "roleDefinitionId": "[concat('/subscriptions/', variables('azureMonitorWorkspaceSubscriptionId'), '/providers/Microsoft.Authorization/roleDefinitions/', 'b0d8363b-8ddd-447d-831f-62ca05bff136')]",
           "principalId": "[reference(resourceId('Microsoft.Dashboard/grafana', split(parameters('grafanaResourceId'),'/')[8]), '2022-08-01', 'Full').identity.principalId]"
       }
     },
