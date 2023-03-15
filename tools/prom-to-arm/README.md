@@ -1,6 +1,6 @@
 # prom-to-arm
-A tool to convert [Prometheus rule group YAML](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/#configuring-rules) files to
-Azure prometheus roule group [ARM template](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/overview).
+A tool to convert [Prometheus rules YAML file](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/#configuring-rules) files to
+Azure Prometheus rule groups [ARM template](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/overview).
 
 ## install 
 ### Prerequisite
@@ -27,10 +27,11 @@ Arguments:
   input                           Input Prometheus rule groups Yaml file path.
 
 Options:
-  -m, --mac-resource-id <string>  MAC resource id's that this rule group is scoped to.
-  -c, --cluster-name <string>     The cluster name of the rule group evaluation.
-  -a, --action-group-id <string>  The resource id of the action group to use for alerting rules.
-  -o, --output <string>           Output path. If not set, output would be printed to std out.
-  -s, --skip-validation           Skip validation.
-  -h, --help                      display help for command
+  -amw, --azure-monitor-workspace <string>  Azure monitor workspace id's that this rule group is scoped to.
+  -c, --cluster-name <string>               The cluster name of the rule group evaluation.
+  -a, --action-group-id <string>            The resource id of the action group to use for alerting rules.
+  -o, --output <string>                     Output path. If not set, output would be printed to std out.
+  -s, --skip-validation                     Skip validation.
+  -l, --location <string>                   Rule group location.
+  -h, --help                                display help for command
 ```
