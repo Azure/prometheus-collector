@@ -1,6 +1,7 @@
 # prom-rules-converter
 A tool to convert [Prometheus rules YAML file](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/#configuring-rules) files to
 Azure Prometheus rule groups [ARM template](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/overview).
+Currently support [API version 2023-03-01](https://learn.microsoft.com/en-us/rest/api/monitor/prometheusrulegroups/prometheus-rule-groups).
 
 ## install 
 ### Prerequisite
