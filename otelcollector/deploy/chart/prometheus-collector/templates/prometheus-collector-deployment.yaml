@@ -17,7 +17,7 @@ spec:
   strategy:
     type: RollingUpdate
   {{- if .Values.deploymentProgressDeadlineSeconds }}
-  progressDeadlineSeconds: {{.values.deploymentProgressDeadlineSeconds }}
+  progressDeadlineSeconds: {{.Values.deploymentProgressDeadlineSeconds }}
   {{- end }}
   template:
     metadata:
