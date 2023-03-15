@@ -1,4 +1,4 @@
-# prom-to-arm
+# prom-rules-converter
 A tool to convert [Prometheus rules YAML file](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/#configuring-rules) files to
 Azure Prometheus rule groups [ARM template](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/overview).
 
@@ -11,15 +11,15 @@ https://nodejs.org/en/
 Install it directly from this repo.
 We use [gitpkg](https://gitpkg.vercel.app/) as a workaround to install a github repository sub folder as an npm package: 
 ```bash
-npm i -g https://gitpkg.now.sh/Azure/prometheus-collector/tools/prom-to-arm?main
+npm i -g https://gitpkg.now.sh/Azure/prometheus-collector/tools/prom-rules-converter?main
 ```
 
 ## usage
 ```bash
-prom-to-arm -h
+prom-rules-converter -h
 ```
 ```
-Usage: prom-to-arm [options] <input>
+Usage: prom-rules-converter [options] <input>
 
 Convert Prometheus rules Yaml file to ARM template
 

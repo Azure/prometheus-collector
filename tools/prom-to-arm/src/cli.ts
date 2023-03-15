@@ -7,7 +7,7 @@ import StepResult from './types/step-result';
 
 const program = new Command();
 
-program.name('prom-to-arm');
+program.name('prom-rules-converter');
 program.description('Azure Prometheus rule groups tool');
 // program.version(pack.version);
 
