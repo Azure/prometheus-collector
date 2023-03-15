@@ -39,6 +39,7 @@ program//.command('yaml2arm')
   .option('-a, --action-group-id <string>', 'The resource id of the action group to use for alerting rules.')
   .option('-o, --output <string>', 'Output path. If not set, output would be printed to std out.')
   .option('-s, --skip-validation', 'Skip validation.')
+  .option('-l, --location <string>', 'Rule group location.')
   .action(yaml2arm);
 
 program.parse();
