@@ -7,6 +7,7 @@ if (!ENV["OS_TYPE"].nil? && ENV["OS_TYPE"].downcase == "linux")
 end
 require "yaml"
 require_relative "ConfigParseErrorLogger"
+require_relative "tomlparser-utils"
 
 LOGGING_PREFIX = "default-scrape-keep-lists"
 
@@ -23,6 +24,7 @@ LOGGING_PREFIX = "default-scrape-keep-lists"
 @nodeexporterRegex = ""
 @windowsexporterRegex = ""
 @windowskubeproxyRegex = ""
+@podannotationRegex = ""
 @kappiebasicRegex = ""
 
 #This will always be string "true" as we set the string value in the chart for both MAC and non MAC modes
@@ -71,37 +73,6 @@ def parseConfigMap
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing config map for default-targets-metrics-keep-list: #{errorStr}, using defaults, please check config map for errors")
     return nil
-  end
-end
-
-# RE2 is not supported for windows
-def isValidRegex_linux(str)
-  begin
-    # invalid regex example -> 'sel/\\'
-    re2Regex = RE2::Regexp.new(str)
-    return re2Regex.ok?
-  rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while validating regex for target metric keep list - #{errorStr}, regular expression str - #{str}")
-    return false
-  end
-end
-
-def isValidRegex_windows(str)
-  begin
-    # invalid regex example -> 'sel/\\'
-    re2Regex = Regexp.new(str)
-    return true
-  rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while validating regex for target metric keep list - #{errorStr}, regular expression str - #{str}")
-    return false
-  end
-end
-
-def isValidRegex(str)
-  if ENV["OS_TYPE"] == "linux"
-    return isValidRegex_linux(str)
-  else
-    return isValidRegex_windows(str)
   end
 end
 
@@ -248,6 +219,20 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     else
       ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowskubeproxyRegex either not specified or not of type string")
     end
+
+    podannotationRegex = parsedConfig[:podannotations]
+    if !podannotationRegex.nil? && podannotationRegex.kind_of?(String)
+      if !podannotationRegex.empty?
+        if isValidRegex(podannotationRegex) == true
+          @podannotationRegex = podannotationRegex
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for podannotations")
+        else
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for podannotations")
+        end
+      end
+    else
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "podannotationRegex either not specified or not of type string")
+    end
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for default targets metrics keep list - #{errorStr}, using defaults, please check config map for errors")
   end
@@ -332,6 +317,7 @@ regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"] = @kubestateRegex
 regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"] = @nodeexporterRegex
 regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"] = @windowsexporterRegex
 regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"] = @windowskubeproxyRegex
+regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"] = @podannotationRegex
 regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"] = @kappiebasicRegex
 
 if !file.nil?
