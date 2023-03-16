@@ -15,8 +15,8 @@ New-Item -Type Directory -Path /etc/genevamonitoringagent
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MetricsExtensionAndMA-Windows-1.18.2023/MdmMetricsExtension.2.2022.1201.1140.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2022.1201.1140.zip
-    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2022.1201.1140.zip -Destination /installation/ME/
+    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MetricsExtension-Windows-3.15.2023/MdmMetricsExtension.2.2023.224.2214.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2023.224.2214.zip
+    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2023.224.2214.zip -Destination /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
 catch {
@@ -59,7 +59,7 @@ Write-Host ('Finished Installing Visual C++ Redistributable Package')
 Write-Host ('Installing Telegraf');
 try {
     # Keep version in sync with linux in setup.sh file
-    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.23.4_windows_amd64.zip'
+    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.25.2_windows_amd64.zip'
     Invoke-WebRequest -Uri $telegrafUri -OutFile /installation/telegraf.zip
     Expand-Archive -Path /installation/telegraf.zip -Destination /installation/telegraf
     Move-Item -Path /installation/telegraf/*/* -Destination /opt/telegraf/ -ErrorAction SilentlyContinue
@@ -83,8 +83,8 @@ If (Test-Path -Path $gemfile ) {
 ############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
-    $genevamonitoringagentUri='https://github.com/bragi92/helloWorld/releases/download/MA/GenevaMonitoringAgent.46.2.54-jriego2233952464.zip'
-    # $genevamonitoringagentUri='https://github.com/Azure/prometheus-collector/releases/download/Prometheus-MetricsExtensionAndMA-Windows-1.18.2023/GenevaMonitoringAgent.46.2.3.zip'
+    # $genevamonitoringagentUri='https://github.com/bragi92/helloWorld/releases/download/MA/GenevaMonitoringAgent.46.2.54-jriego2233952464.zip'
+    $genevamonitoringagentUri='https://github.com/Azure/prometheus-collector/releases/download/Promtheus-MA-Windows-3.9.2023/genevamonitoringagent.46.4.1.zip'
     Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip
     Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent
     Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction SilentlyContinue

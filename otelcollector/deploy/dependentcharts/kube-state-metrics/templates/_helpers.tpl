@@ -77,7 +77,8 @@ release: {{ .Release.Name }}
 Selector labels
 */}}
 {{- define "kube-state-metrics.selectorLabels" }}
-app.kubernetes.io/name: {{ include "kube-state-metrics.name" . }}
+app: {{ template "kube-state-metrics.name" . }}
+release: {{.Release.Name }}
 {{- end }}
 
 {{/* Sets default scrape limits for servicemonitor */}}
@@ -96,5 +97,18 @@ labelNameLengthLimit: {{ . }}
 {{- end }}
 {{- with .labelValueLengthLimit }}
 labelValueLengthLimit: {{ . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Formats imagePullSecrets. Input is (dict "Values" .Values "imagePullSecrets" .{specific imagePullSecrets})
+*/}}
+{{- define "kube-state-metrics.imagePullSecrets" -}}
+{{- range (concat .Values.global.imagePullSecrets .imagePullSecrets) }}
+  {{- if eq (typeOf .) "map[string]interface {}" }}
+- {{ toYaml . | trim }}
+  {{- else }}
+- name: {{ . }}
+  {{- end }}
 {{- end }}
 {{- end -}}

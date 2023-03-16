@@ -9,37 +9,23 @@ CVE-2021-38561
 CVE-2021-44716
 CVE-2022-21698
 CVE-2022-27191
-# kube-state-metrics
-CVE-2021-43565
-CVE-2022-27664
-# /bin/node_exporter
-CVE-2021-44716
+
 # opt/telegraf/telegraf
-CVE-2022-27664
-CVE-2022-29190
-CVE-2022-29222
-CVE-2022-41717
-# kube-state-metrics
-CVE-2022-1996
-CVE-2022-27664
+CVE-2022-23471
+CVE-2023-25153
+CVE-2023-25173
 
 # MEDIUM
 # opt/telegraf/telegraf
 CVE-2019-3826
-# /bin/node_exporter
-CVE-2021-44716
-CVE-2022-46146
-CVE-2022-41717
+
 # kube-state-metrics
-CVE-2022-29526
-CVE-2022-29189
-CVE-2022-31030
-CVE-2022-29526
-CVE-2022-46146
+CVE-2022-41723
 # opt/microsoft/otelcollector/otelcollector
 # opt/promconfigvalidator
 # opt/telegraf/telegraf
 # kube-state-metrics
 # bin/node_exporter
-CVE-2022-32149
 CVE-2022-41717
+CVE-2022-46146
+CVE-2022-41721
