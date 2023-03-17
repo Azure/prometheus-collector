@@ -21,6 +21,10 @@ data:
     windowskubeproxy = false
     kappiebasic = false
     prometheuscollectorhealth = false
+  # Regex for which namespaces to scrape through pod annotation based scraping.
+  # This is none by default. Use '.*' to scrape all namespaces of annotated pods.
+  pod-annotation-based-scraping: |-
+    podannotationnamepsaceregex = ""
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""
@@ -31,6 +35,7 @@ data:
     nodeexporter = ""
     windowsexporter = ""
     windowskubeproxy = ""
+    podannotations = ""
     kappiebasic = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
@@ -44,7 +49,8 @@ data:
     windowsexporter = "30s"
     windowskubeproxy = "30s"
     kappiebasic = "30s"
-    prometheusCollectorHealth = "30s"
+    prometheuscollectorhealth = "30s"
+    podannotations = "30s"
   debug-mode: |-
     enabled = false
 metadata:
