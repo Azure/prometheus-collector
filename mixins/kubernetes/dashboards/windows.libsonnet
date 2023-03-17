@@ -16,7 +16,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       };
 
       dashboard.new(
-        '%(dashboardNamePrefix)sCompute Resources / Cluster(Windows)' % $._config.grafanaK8s,
+        '%(dashboardNamePrefix)sCompute Resources / Cluster (Windows)' % $._config.grafanaK8s,
         uid=($._config.grafanaDashboardIDs['k8s-resources-windows-cluster.json']),
         refresh=($._config.grafanaK8s.refresh),
         time_from='now-1h',
@@ -55,7 +55,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
          })
         .addPanel(
           g.panel('CPU Utilisation') +
-          g.statPanel('1 - avg(rate(windows_cpu_time_total{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, mode="idle"}[%(grafanaIntervalVar)s]))' % $._config)
+          g.statPanel('1 - avg by (job, cluster)(rate(windows_cpu_time_total{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, mode="idle"}[%(grafanaIntervalVar)s]))' % $._config)
         )
         .addPanel(
           g.panel('CPU Requests Commitment') +
@@ -82,7 +82,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('CPU')
         .addPanel(
           g.panel('CPU Usage') +
-          g.queryPanel('sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config, '{{namespace}}') +
+          g.queryPanel('sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config, '{{namespace}}') +
           g.stack
         )
       )
@@ -91,11 +91,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         .addPanel(
           g.panel('CPU Quota') +
           g.tablePanel([
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config,
-            'sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config,
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster"}) by (namespace) / sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config,
-            'sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config,
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster"}) by (namespace) / sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config,
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config,
+            'sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config,
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster"}) by (cluster, namespace) / sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config,
+            'sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config,
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster"}) by (cluster, namespace) / sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config,
           ], tableStyles {
             'Value #A': { alias: 'CPU Usage' },
             'Value #B': { alias: 'CPU Requests' },
@@ -110,7 +110,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         .addPanel(
           g.panel('Memory Usage (Private Working Set)') +
           // Not using container_memory_usage_bytes here because that includes page cache
-          g.queryPanel('sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config, '{{namespace}}') +
+          g.queryPanel('sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config, '{{namespace}}') +
           g.stack +
           { yaxes: g.yaxes('decbytes') },
         )
@@ -121,11 +121,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
           g.panel('Requests by Namespace') +
           g.tablePanel([
             // Not using container_memory_usage_bytes here because that includes page cache
-            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config,
-            'sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config,
-            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster"}) by (namespace) / sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config,
-            'sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config,
-            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster"}) by (namespace) / sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster"}) by (namespace)' % $._config,
+            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config,
+            'sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config,
+            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster"}) by (cluster, namespace) / sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config,
+            'sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config,
+            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster"}) by (cluster, namespace) / sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster"}) by (cluster, namespace)' % $._config,
           ], tableStyles {
             'Value #A': { alias: 'Memory Usage', unit: 'decbytes' },
             'Value #B': { alias: 'Memory Requests', unit: 'decbytes' },
@@ -145,7 +145,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       };
 
       dashboard.new(
-        '%(dashboardNamePrefix)sCompute Resources / Namespace(Windows)' % $._config.grafanaK8s,
+        '%(dashboardNamePrefix)sCompute Resources / Namespace (Windows)' % $._config.grafanaK8s,
         uid=($._config.grafanaDashboardIDs['k8s-resources-windows-namespace.json']),
         refresh=($._config.grafanaK8s.refresh),
         time_from='now-1h',
@@ -168,15 +168,6 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       )
       .addTemplate(
         template.new(
-          'namespace',
-          '$datasource',
-          'label_values(windows_pod_container_available, namespace)',
-          label='Namespace',
-          refresh='time',
-          sort=1,
-        )
-      ).addTemplate(
-        template.new(
           'cluster',
           '$datasource',
           'label_values(up{%(windowsExporterSelector)s}, %(clusterLabel)s)' % $._config,
@@ -186,11 +177,21 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
           sort=1,
         )
       )
+      .addTemplate(
+        template.new(
+          'namespace',
+          '$datasource',
+          'label_values(windows_pod_container_available{%(clusterLabel)s="$cluster"}, namespace)' % $._config,
+          label='Namespace',
+          refresh='time',
+          sort=1,
+        )
+      )
       .addRow(
         g.row('CPU Usage')
         .addPanel(
           g.panel('CPU Usage') +
-          g.queryPanel('sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config, '{{pod}}') +
+          g.queryPanel('sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config, '{{pod}}') +
           g.stack,
         )
       )
@@ -199,11 +200,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         .addPanel(
           g.panel('CPU Quota') +
           g.tablePanel([
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config,
-            'sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config,
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod) / sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config,
-            'sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config,
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod) / sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config,
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config,
+            'sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config,
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config,
+            'sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config,
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config,
           ], tableStyles {
             'Value #A': { alias: 'CPU Usage' },
             'Value #B': { alias: 'CPU Requests' },
@@ -217,7 +218,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('Memory Usage')
         .addPanel(
           g.panel('Memory Usage') +
-          g.queryPanel('sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config, '{{pod}}') +
+          g.queryPanel('sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config, '{{pod}}') +
           g.stack +
           { yaxes: g.yaxes('decbytes') },
         )
@@ -227,11 +228,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         .addPanel(
           g.panel('Memory Quota') +
           g.tablePanel([
-            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config,
-            'sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config,
-            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod) / sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config,
-            'sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config,
-            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod) / sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (pod)' % $._config,
+            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config,
+            'sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config,
+            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config,
+            'sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config,
+            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod) / sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster", namespace="$namespace"}) by (cluster, namespace, pod)' % $._config,
           ], tableStyles {
             'Value #A': { alias: 'Memory Usage', unit: 'decbytes' },
             'Value #B': { alias: 'Memory Requests', unit: 'decbytes' },
@@ -250,7 +251,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       };
 
       dashboard.new(
-        '%(dashboardNamePrefix)sCompute Resources / Pod(Windows)' % $._config.grafanaK8s,
+        '%(dashboardNamePrefix)sCompute Resources / Pod (Windows)' % $._config.grafanaK8s,
         uid=($._config.grafanaDashboardIDs['k8s-resources-windows-pod.json']),
         refresh=($._config.grafanaK8s.refresh),
         time_from='now-1h',
@@ -273,25 +274,6 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       )
       .addTemplate(
         template.new(
-          'namespace',
-          '$datasource',
-          'label_values(windows_pod_container_available, namespace)',
-          label='Namespace',
-          refresh='time',
-          sort=1,
-        )
-      )
-      .addTemplate(
-        template.new(
-          'pod',
-          '$datasource',
-          'label_values(windows_pod_container_available{namespace="$namespace"}, pod)',
-          label='Pod',
-          refresh='time',
-          sort=1,
-        )
-      ).addTemplate(
-        template.new(
           'cluster',
           '$datasource',
           'label_values(up{%(windowsExporterSelector)s}, %(clusterLabel)s)' % $._config,
@@ -301,11 +283,31 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
           sort=1,
         )
       )
+      .addTemplate(
+        template.new(
+          'namespace',
+          '$datasource',
+          'label_values(windows_pod_container_available{%(clusterLabel)s="$cluster"}, namespace)' % $._config,
+          label='Namespace',
+          refresh='time',
+          sort=1,
+        )
+      )
+      .addTemplate(
+        template.new(
+          'pod',
+          '$datasource',
+          'label_values(windows_pod_container_available{%(clusterLabel)s="$cluster", namespace="$namespace"}, pod)' % $._config,
+          label='Pod',
+          refresh='time',
+          sort=1,
+        )
+      )
       .addRow(
         g.row('CPU Usage')
         .addPanel(
           g.panel('CPU Usage') +
-          g.queryPanel('sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config, '{{container}}') +
+          g.queryPanel('sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config, '{{container}}') +
           g.stack,
         )
       )
@@ -314,11 +316,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         .addPanel(
           g.panel('CPU Quota') +
           g.tablePanel([
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config,
-            'sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config,
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container) / sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config,
-            'sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config,
-            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container) / sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config,
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config,
+            'sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config,
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_cpu_cores_request{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config,
+            'sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config,
+            'sum(namespace_pod_container:windows_container_cpu_usage_seconds_total:sum_rate{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_cpu_cores_limit{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config,
           ], tableStyles {
             'Value #A': { alias: 'CPU Usage' },
             'Value #B': { alias: 'CPU Requests' },
@@ -332,7 +334,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         g.row('Memory Usage')
         .addPanel(
           g.panel('Memory Usage') +
-          g.queryPanel('sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config, '{{container}}') +
+          g.queryPanel('sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config, '{{container}}') +
           g.stack,
         )
       )
@@ -341,11 +343,11 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
         .addPanel(
           g.panel('Memory Quota') +
           g.tablePanel([
-            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config,
-            'sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config,
-            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container) / sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config,
-            'sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config,
-            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container) / sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (container)' % $._config,
+            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config,
+            'sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config,
+            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_memory_request{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config,
+            'sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config,
+            'sum(windows_container_private_working_set_usage{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container) / sum(kube_pod_windows_container_resource_memory_limit{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}) by (cluster, namespace, pod, container)' % $._config,
           ], tableStyles {
             'Value #A': { alias: 'Memory Usage', unit: 'decbytes' },
             'Value #B': { alias: 'Memory Requests', unit: 'decbytes' },
@@ -383,7 +385,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
       local legendLink = '%(prefix)s/d/%(uid)s/k8s-windows-node-rsrc-use' % { prefix: $._config.grafanaK8s.linkPrefix, uid: $._config.grafanaDashboardIDs['k8s-windows-node-rsrc-use.json'] };
 
       dashboard.new(
-        '%(dashboardNamePrefix)sUSE Method / Cluster(Windows)' % $._config.grafanaK8s,
+        '%(dashboardNamePrefix)sUSE Method / Cluster (Windows)' % $._config.grafanaK8s,
         uid=($._config.grafanaDashboardIDs['k8s-windows-cluster-rsrc-use.json']),
         refresh=($._config.grafanaK8s.refresh),
         time_from='now-1h',
@@ -480,7 +482,7 @@ local g = import 'github.com/grafana/jsonnet-libs/grafana-builder/grafana.libson
 
     'k8s-windows-node-rsrc-use.json':
       dashboard.new(
-        '%(dashboardNamePrefix)sUSE Method / Node(Windows)' % $._config.grafanaK8s,
+        '%(dashboardNamePrefix)sUSE Method / Node (Windows)' % $._config.grafanaK8s,
         uid=($._config.grafanaDashboardIDs['k8s-windows-node-rsrc-use.json']),
         refresh=($._config.grafanaK8s.refresh),
         time_from='now-1h',

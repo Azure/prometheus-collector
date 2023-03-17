@@ -182,3 +182,6 @@ prometheusConfig: ""
 # this can be used to give the deployment a higher priority than other Pods to let it evict other Pods if there are not enough resources
 deploymentPriorityClass: ""
 daemonsetPriorityClass: ""
+
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#progress-deadline-seconds
+deploymentProgressDeadlineSeconds: 600

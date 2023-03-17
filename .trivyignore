@@ -18,7 +18,6 @@ CVE-2023-25173
 # MEDIUM
 # opt/telegraf/telegraf
 CVE-2019-3826
-
 # kube-state-metrics
 CVE-2022-41723
 # opt/microsoft/otelcollector/otelcollector
