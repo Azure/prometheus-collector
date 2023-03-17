@@ -77,7 +77,7 @@ release: {{ .Release.Name }}
 Selector labels
 */}}
 {{- define "kube-state-metrics.selectorLabels" }}
-app: {{ template "kube-state-metrics.name" . }}
+app.kubernetes.io/name: {{ include "kube-state-metrics.name" . }}
 release: {{.Release.Name }}
 {{- end }}
 
