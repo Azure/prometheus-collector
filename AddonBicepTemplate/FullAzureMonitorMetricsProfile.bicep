@@ -27,7 +27,7 @@ param grafanaSku string
 @description('A new GUID used to identify the role assignment')
 param roleNameGuid string = newGuid()
 
-var azureMonitorWorkspaceId = split(azureMonitorWorkspaceResourceId, '/')[2]
+var azureMonitorWorkspaceSubscriptionId = split(azureMonitorWorkspaceResourceId, '/')[2]
 var clusterSubscriptionId = split(clusterResourceId, '/')[2]
 var clusterResourceGroup = split(clusterResourceId, '/')[4]
 var clusterName = split(clusterResourceId, '/')[8]
@@ -452,7 +452,7 @@ resource nodeAndKubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/
 resource roleNameGuid_resource 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: roleNameGuid
   properties: {
-    roleDefinitionId: '/subscriptions/${azureMonitorWorkspaceId}/providers/Microsoft.Authorization/roleDefinitions/b0d8363b-8ddd-447d-831f-62ca05bff136'
+    roleDefinitionId: '/subscriptions/${azureMonitorWorkspaceSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/b0d8363b-8ddd-447d-831f-62ca05bff136'
     principalId: reference(grafanaResourceId_8.id, '2022-08-01', 'Full').identity.principalId
   }
 }
