@@ -48,6 +48,12 @@ AzureMonitorMetrics:
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
     ImageTagWin: "20230120winbeta"
   ArcExtension: false
+  # Do not change the below settings. They are reserved for Arc Autonomous
+  isArcACluster: false
+  arcAutonomousSettings:
+    customRegionalEndpoint: ""
+    customGlobalEndpoint: ""
+    customResourceEndpoint: ""
 global:
   commonGlobals:
     CloudEnvironment: "AzureCloud"

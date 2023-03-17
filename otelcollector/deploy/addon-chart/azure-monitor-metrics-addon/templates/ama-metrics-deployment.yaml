@@ -60,9 +60,21 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
+              {{- if not .Values.AzureMonitorMetrics.isArcACluster }}
               value: "azurepubliccloud"
+              {{- else }}
+              value: "arcautonomous"
+              {{- end }}
             - name: OMS_TLD
               value: "opinsights.azure.com"
+            {{- if .Values.AzureMonitorMetrics.isArcACluster }}
+            - name: customRegionalEndpoint
+              value: {{ required "customRegionalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
+            - name: customGlobalEndpoint
+              value: {{ required "customGlobalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
+            - name: customResourceEndpoint
+              value: {{ required "customResourceEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
+            {{- end }}
             - name: CONTROLLER_TYPE
               value: "ReplicaSet"
             - name: NODE_IP
