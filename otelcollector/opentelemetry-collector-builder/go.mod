@@ -12,6 +12,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.73.0
 	go.opentelemetry.io/collector v0.73.0
 	go.opentelemetry.io/collector/component v0.73.0
+	go.opentelemetry.io/collector/service v0.73.0
 	go.opentelemetry.io/collector/exporter/loggingexporter v0.73.0
 	go.opentelemetry.io/collector/exporter/otlpexporter v0.73.0
 	go.opentelemetry.io/collector/extension/zpagesextension v0.73.0
