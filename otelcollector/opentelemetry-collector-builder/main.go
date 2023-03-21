@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/service"
+	"go.opentelemetry.io/collector/otelcol"
 )
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 		Version:     "0.73.0",
 	}
 
-	app := service.NewCommand(service.CollectorSettings{BuildInfo: info, Factories: factories})
+	app := otelcol.NewCommand(otelcol.CollectorSettings{BuildInfo: info, Factories: factories})
 	err = app.Execute()
 	if err != nil {
 		log.Fatal("collector server run finished with error: %w", err)

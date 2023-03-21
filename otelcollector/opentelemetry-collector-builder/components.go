@@ -1,57 +1,69 @@
 package main
 
 import (
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
-	"go.opentelemetry.io/collector/exporter/loggingexporter"
-	"go.opentelemetry.io/collector/exporter/otlpexporter"
+	"go.opentelemetry.io/collector/otelcol"
+	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
-	"go.opentelemetry.io/collector/service"
 
 	//"github.com/vishiy/influxexporter"
 	//"go.opentelemetry.io/collector/receiver/prometheusreceiver"
-	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
+
 	//"go.opentelemetry.io/collector/extension/healthcheckextension"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
-	"go.opentelemetry.io/collector/extension/zpagesextension"
+	"go.opentelemetry.io/collector/connector"
+	forwardconnector "go.opentelemetry.io/collector/connector/forwardconnector"
+	"go.opentelemetry.io/collector/exporter"
+	loggingexporter "go.opentelemetry.io/collector/exporter/loggingexporter"
+	otlpexporter "go.opentelemetry.io/collector/exporter/otlpexporter"
+	otlphttpexporter "go.opentelemetry.io/collector/exporter/otlphttpexporter"
+	"go.opentelemetry.io/collector/extension"
+	ballastextension "go.opentelemetry.io/collector/extension/ballastextension"
+	zpagesextension "go.opentelemetry.io/collector/extension/zpagesextension"
+	memorylimiterprocessor "go.opentelemetry.io/collector/processor/memorylimiterprocessor"
+	"go.opentelemetry.io/collector/receiver"
+	otlpreceiver "go.opentelemetry.io/collector/receiver/otlpreceiver"
 )
 
-func components() (service.Factories, error) {
+func components() (otelcol.Factories, error) {
 	var err error
-	factories := service.Factories{}
+	factories := otelcol.Factories{}
 
-	factories.Processors, err = service.MakeProcessorFactoryMap(
-		batchprocessor.NewFactory(),
-		resourceprocessor.NewFactory(),
-	)
-	if err != nil {
-		return service.Factories{}, err
-	}
-
-	factories.Receivers, err = service.MakeReceiverFactoryMap(
-		privatepromreceiver.NewFactory(),
-	)
-	if err != nil {
-		return service.Factories{}, err
-	}
-
-	factories.Exporters, err = service.MakeExporterFactoryMap(
-		loggingexporter.NewFactory(),
-		otlpexporter.NewFactory(),
-		fileexporter.NewFactory(),
-		prometheusexporter.NewFactory(),
-	)
-	if err != nil {
-		return service.Factories{}, err
-	}
-
-	factories.Extensions, err = service.MakeExtensionFactoryMap(
-		pprofextension.NewFactory(),
+	factories.Extensions, err = extension.MakeFactoryMap(
+		ballastextension.NewFactory(),
 		zpagesextension.NewFactory(),
 	)
 	if err != nil {
-		return service.Factories{}, err
+		return otelcol.Factories{}, err
+	}
+
+	factories.Receivers, err = receiver.MakeFactoryMap(
+		otlpreceiver.NewFactory(),
+	)
+	if err != nil {
+		return otelcol.Factories{}, err
+	}
+
+	factories.Exporters, err = exporter.MakeFactoryMap(
+		loggingexporter.NewFactory(),
+		otlpexporter.NewFactory(),
+		otlphttpexporter.NewFactory(),
+	)
+	if err != nil {
+		return otelcol.Factories{}, err
+	}
+
+	factories.Processors, err = processor.MakeFactoryMap(
+		batchprocessor.NewFactory(),
+		memorylimiterprocessor.NewFactory(),
+	)
+	if err != nil {
+		return otelcol.Factories{}, err
+	}
+
+	factories.Connectors, err = connector.MakeFactoryMap(
+		forwardconnector.NewFactory(),
+	)
+	if err != nil {
+		return otelcol.Factories{}, err
 	}
 
 	return factories, nil
