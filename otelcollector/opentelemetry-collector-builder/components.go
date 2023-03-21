@@ -1,6 +1,10 @@
 package main
 
 import (
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
+	"go.opentelemetry.io/collector/extension/zpagesextension"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
@@ -9,18 +13,15 @@ import (
 	//"go.opentelemetry.io/collector/receiver/prometheusreceiver"
 
 	//"go.opentelemetry.io/collector/extension/healthcheckextension"
+	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
 	"go.opentelemetry.io/collector/connector"
 	forwardconnector "go.opentelemetry.io/collector/connector/forwardconnector"
 	"go.opentelemetry.io/collector/exporter"
 	loggingexporter "go.opentelemetry.io/collector/exporter/loggingexporter"
 	otlpexporter "go.opentelemetry.io/collector/exporter/otlpexporter"
-	otlphttpexporter "go.opentelemetry.io/collector/exporter/otlphttpexporter"
 	"go.opentelemetry.io/collector/extension"
-	ballastextension "go.opentelemetry.io/collector/extension/ballastextension"
-	zpagesextension "go.opentelemetry.io/collector/extension/zpagesextension"
-	memorylimiterprocessor "go.opentelemetry.io/collector/processor/memorylimiterprocessor"
 	"go.opentelemetry.io/collector/receiver"
-	otlpreceiver "go.opentelemetry.io/collector/receiver/otlpreceiver"
 )
 
 func components() (otelcol.Factories, error) {
@@ -28,15 +29,15 @@ func components() (otelcol.Factories, error) {
 	factories := otelcol.Factories{}
 
 	factories.Extensions, err = extension.MakeFactoryMap(
-		ballastextension.NewFactory(),
-		zpagesextension.NewFactory(),
+		batchprocessor.NewFactory(),
+		resourceprocessor.NewFactory(),
 	)
 	if err != nil {
 		return otelcol.Factories{}, err
 	}
 
 	factories.Receivers, err = receiver.MakeFactoryMap(
-		otlpreceiver.NewFactory(),
+		privatepromreceiver.NewFactory(),
 	)
 	if err != nil {
 		return otelcol.Factories{}, err
@@ -45,15 +46,16 @@ func components() (otelcol.Factories, error) {
 	factories.Exporters, err = exporter.MakeFactoryMap(
 		loggingexporter.NewFactory(),
 		otlpexporter.NewFactory(),
-		otlphttpexporter.NewFactory(),
+		fileexporter.NewFactory(),
+		prometheusexporter.NewFactory(),
 	)
 	if err != nil {
 		return otelcol.Factories{}, err
 	}
 
 	factories.Processors, err = processor.MakeFactoryMap(
-		batchprocessor.NewFactory(),
-		memorylimiterprocessor.NewFactory(),
+		pprofextension.NewFactory(),
+		zpagesextension.NewFactory(),
 	)
 	if err != nil {
 		return otelcol.Factories{}, err
