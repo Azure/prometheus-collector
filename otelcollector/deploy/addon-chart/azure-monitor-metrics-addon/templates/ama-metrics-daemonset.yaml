@@ -58,7 +58,7 @@ spec:
               value: "false"
             - name: customEnvironment
               {{- if not .Values.AzureMonitorMetrics.isArcACluster }}
-              value: "azurepubliccloud"
+              value: "{{ .Values.global.commonGlobals.CloudEnvironment }}"
               {{- else }}
               value: "arcautonomous"
               {{- end }}
@@ -312,7 +312,7 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              value: "azurepubliccloud"
+              value: "{{ .Values.global.commonGlobals.CloudEnvironment }}"
             - name: OMS_TLD
               value: "opinsights.azure.com"
             - name: CONTROLLER_TYPE
