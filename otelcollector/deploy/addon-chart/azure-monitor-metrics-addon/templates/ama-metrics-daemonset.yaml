@@ -57,7 +57,7 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              value: "azurepubliccloud"
+              value: "{{ .Values.global.commonGlobals.CloudEnvironment }}"
             - name: OMS_TLD
               value: "opinsights.azure.com"
             - name: CONTROLLER_TYPE
@@ -300,7 +300,7 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              value: "azurepubliccloud"
+              value: "{{ .Values.global.commonGlobals.CloudEnvironment }}"
             - name: OMS_TLD
               value: "opinsights.azure.com"
             - name: CONTROLLER_TYPE

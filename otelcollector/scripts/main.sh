@@ -256,7 +256,7 @@ fi
 
 if [ "${MAC}" == "true" ]; then
       #wait for addon-token-adapter to be healthy
-      tokenAdapterWaitsecs=45
+      tokenAdapterWaitsecs=60
       waitedSecsSoFar=1
       while true; do
             if [ $waitedSecsSoFar -gt $tokenAdapterWaitsecs ]; then
