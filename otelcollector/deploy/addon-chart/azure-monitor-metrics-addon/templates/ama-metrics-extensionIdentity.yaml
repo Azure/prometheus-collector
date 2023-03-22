@@ -26,6 +26,8 @@ spec:
   audience: https://monitoring.azure.cn/
   {{- else if eq (.Values.Azure.Cluster.Cloud | lower) "azureusgovernmentcloud" }}
   audience: https://monitoring.azure.us/
+  {{- else if .Values.AzureMonitorMetrics.isArcACluster }}
+  audience: {{ required "customResourceEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
   {{- else }}
   audience: https://monitoring.azure.com/
   {{- end }}

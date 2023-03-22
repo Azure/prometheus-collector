@@ -26,5 +26,12 @@
         "displayName": "comma-separated list of Kubernetes annotations keys",
         "description": "comma-separated list of Kubernetes annotations keys"
       }
+    },
+    "enableWindowsRecordingRules": {
+      "type": "bool",
+      "metadata": {
+        "displayName": "Enable recording rule group for windows metrics",
+        "description": "Enable recording rule group for windows metrics"
+      }
     }
 }

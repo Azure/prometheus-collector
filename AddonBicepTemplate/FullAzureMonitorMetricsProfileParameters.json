@@ -20,6 +20,9 @@
     "metricAnnotationsAllowList": {
       "value": ""
     },
+    "enableWindowsRecordingRules": {
+      "value": false
+    },
     "grafanaResourceId": {
       "value": "/subscriptions/{sub_id}/resourceGroups/{rg_name}/providers/Microsoft.Dashboard/grafana/{cluster_name}"
     },
