@@ -168,7 +168,7 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=#{@windowsexporterEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED=#{@kappiebasicEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_POD_ANNOTAION_SCRAPING_ENABLED=#{@podannotationEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=#{@podannotationEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
 else
