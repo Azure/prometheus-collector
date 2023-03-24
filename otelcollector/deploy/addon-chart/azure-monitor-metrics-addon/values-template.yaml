@@ -72,6 +72,7 @@ Azure:
     httpsProxy: ""
     noProxy: ""
     proxyCert: ""
+    autonomousFqdn: ""
   Identity:
       MSIAdapterYaml: |-
         - name: EXTENSION_ARMID

@@ -69,9 +69,21 @@ spec:
               value: "opinsights.azure.com"
             {{- if .Values.AzureMonitorMetrics.isArcACluster }}
             - name: customRegionalEndpoint
-              value: {{ required "customRegionalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
+              {{- if ne .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint "" }}
+              value: {{ .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
+              {{- else if ne .Values.Azure.proxySettings.autonomousFqdn "" }}
+              value: "https://amcs.monitoring.{{ .Values.Azure.proxySettings.autonomousFqdn | toString | trim }}"
+              {{- else }}
+                {{- fail "customRegionalEndpoint is required in Arc Autonomous" }}
+              {{- end }}
             - name: customGlobalEndpoint
-              value: {{ required "customGlobalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
+              {{- if ne .Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint "" }}
+              value: {{ .Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
+              {{- else if ne .Values.Azure.proxySettings.autonomousFqdn "" }}
+              value: "https://amcs.monitoring.{{ .Values.Azure.proxySettings.autonomousFqdn | toString | trim }}"
+              {{- else }}
+                {{- fail "customGlobalEndpoint is required in Arc Autonomous" }}
+              {{- end }}
             - name: customResourceEndpoint
               value: {{ required "customResourceEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
             {{- end }}
