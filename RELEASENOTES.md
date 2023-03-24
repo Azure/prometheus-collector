@@ -16,9 +16,10 @@
   * fix:  Upgrades
           Node exporter - image from: `v1.3.1` to:`v1.5.0`; chart from:`3.1.1` to:`4.14.0`
           Kube state    - image from: `v2.6.0` to:`v2.8.1`; chart from:`4.23.0` to `4.32.0`
-          ME            - from:`2.2022.1201.1140` to:`2.2023.224.2214` 
+          ME            - from:`2.2022.1201.1140` to:`2.2023.224.2214`
           MDSD          - from:`1.23.4` to:`1.23.5`
           MA            - from:`46.2.3` to: `46.4.1`
+          Telegraf(linux) - from `1.23.0` to `1.25.2`
   * fix: CVEs (many)
 
 ## Release 02-22-2023
