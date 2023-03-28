@@ -1,5 +1,5 @@
 {
-  "name": "prom-to-arm",
+  "name": "prom-rules-converter",
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
