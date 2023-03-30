@@ -31,9 +31,9 @@ Write-Host ('Installing Fluent Bit');
 try {
     # Keep version in sync with linux in setup.sh file
     # $fluentBitUri = 'https://github.com/microsoft/OMS-docker/releases/download/winakslogagent/td-agent-bit-1.4.0-win64.zip'
-    $fluentBitUri = 'https://fluentbit.io/releases/1.9/td-agent-bit-1.9.7-win64.zip'
-    Invoke-WebRequest -Uri $fluentBitUri -OutFile /installation/td-agent-bit.zip
-    Expand-Archive -Path /installation/td-agent-bit.zip -Destination /installation/fluent-bit
+    $fluentBitUri = 'https://fluentbit.io/releases/2.0/fluent-bit-2.0.9-win64.zip'
+    Invoke-WebRequest -Uri $fluentBitUri -OutFile /installation/fluent-bit.zip
+    Expand-Archive -Path /installation/fluent-bit.zip -Destination /installation/fluent-bit
     Move-Item -Path /installation/fluent-bit/*/bin/* -Destination /opt/fluent-bit/bin/ -ErrorAction SilentlyContinue
 }
 catch {
@@ -59,7 +59,7 @@ Write-Host ('Finished Installing Visual C++ Redistributable Package')
 Write-Host ('Installing Telegraf');
 try {
     # Keep version in sync with linux in setup.sh file
-    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.23.4_windows_amd64.zip'
+    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.26.0_windows_amd64.zip'
     Invoke-WebRequest -Uri $telegrafUri -OutFile /installation/telegraf.zip
     Expand-Archive -Path /installation/telegraf.zip -Destination /installation/telegraf
     Move-Item -Path /installation/telegraf/*/* -Destination /opt/telegraf/ -ErrorAction SilentlyContinue
