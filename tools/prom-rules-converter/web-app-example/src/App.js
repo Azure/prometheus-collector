@@ -12,7 +12,7 @@ import Editor from "@monaco-editor/react";
 import {useState, useEffect} from 'react';
 
 import ArmParametersForm from './ArmParameters';
-import toArmTemplate from 'prom-to-arm';
+import toArmTemplate from 'prom-rules-converter';
 
 
 function App() {
