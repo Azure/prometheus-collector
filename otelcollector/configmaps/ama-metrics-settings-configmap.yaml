@@ -24,7 +24,7 @@ data:
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default. Use '.*' to scrape all namespaces of annotated pods.
   pod-annotation-based-scraping: |-
-    podannotationnamepsaceregex = ""
+    podannotationnamespaceregex = ""
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""
