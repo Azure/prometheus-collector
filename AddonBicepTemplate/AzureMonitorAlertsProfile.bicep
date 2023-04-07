@@ -3,7 +3,7 @@ param location string
 param aksResourceId string
 param actionGroupResourceId string
 
-resource monitorWorkspace 'Microsoft.Monitor/accounts@2021-06-03-preview' = {
+resource monitorWorkspace 'Microsoft.Monitor/accounts@2023-04-03' = {
   name: monitorWorkspaceName
   location: location
   tags: {}
@@ -11,7 +11,7 @@ resource monitorWorkspace 'Microsoft.Monitor/accounts@2021-06-03-preview' = {
 }
 
 
-resource recommendedAlerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview' = {
+resource recommendedAlerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01' = {
   name: 'RecommendedCIAlerts-${split(aksResourceId, '/')[8]}'
   location: location
   properties: {
@@ -236,7 +236,7 @@ resource recommendedAlerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2021
   }
 }
 
-resource communityALerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview' = {
+resource communityALerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01' = {
   name: 'communityCIAlerts-${split(aksResourceId, '/')[8]}'
   location: location
   properties: {

@@ -7,7 +7,7 @@
         {
             "name": "containerinsightsprodclusteraccount_alerts_2",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-            "apiVersion": "2021-07-22-preview",
+            "apiVersion": "2023-03-01",
             "location": "eastus2euap",
             "properties": {
                 "description": "rule group for cluster ci-prod-aks-msi-eus2 in containerinsightsprodclusteraccount",

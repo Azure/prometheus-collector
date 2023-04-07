@@ -7,7 +7,7 @@
         {
             "name": "containerinsights_dev_wcus_alerts",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-            "apiVersion": "2021-07-22-preview",
+            "apiVersion": "2023-03-01",
             "location": "westcentralus",
             "properties": {
                 "description": "rule group for cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-wcus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-wcus in MAC: /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-wcus-rg/providers/microsoft.monitor/accounts/ci-dev-aks-wcus-mac",

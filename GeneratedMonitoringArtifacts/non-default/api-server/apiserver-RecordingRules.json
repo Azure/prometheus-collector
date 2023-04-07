@@ -32,7 +32,7 @@
         {
             "name": "[variables('apiserverRecordingRuleGroupName')]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-            "apiVersion": "2021-07-22-preview",
+            "apiVersion": "2023-03-01",
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('apiserverRecordingRuleGroupDescription'), variables('version'))]",
@@ -128,7 +128,7 @@
         {
             "name": "[variables('apiserverAvailabilityRecordingRuleGroupName')]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-            "apiVersion": "2021-07-22-preview",
+            "apiVersion": "2023-03-01",
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('apiserverAvailabilityRecordingRuleGroupDescription'), variables('version'))]",

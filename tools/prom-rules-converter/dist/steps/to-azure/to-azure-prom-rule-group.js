@@ -9,7 +9,7 @@ function toAzurePromRuleGroup(group, params) {
     return {
         name: group.name,
         "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-        "apiVersion": "2021-07-22-preview",
+        "apiVersion": "2023-03-01",
         "location": "[parameters('location')]",
         properties
     };

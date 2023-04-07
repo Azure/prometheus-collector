@@ -47,7 +47,7 @@ var nodeAndKubernetesRecordingRuleGroupWin_var = concat(nodeAndKubernetesRecordi
 var RecordingRuleGroupDescriptionWin = 'Recording Rules RuleGroup for Win'
 var version = ' - 0.1'
 
-resource dce 'Microsoft.Insights/dataCollectionEndpoints@2021-09-01-preview' = {
+resource dce 'Microsoft.Insights/dataCollectionEndpoints@2022-06-01' = {
   name: dceName
   location: azureMonitorWorkspaceLocation
   kind: 'Linux'
@@ -55,7 +55,7 @@ resource dce 'Microsoft.Insights/dataCollectionEndpoints@2021-09-01-preview' = {
   }
 }
 
-resource dcr 'Microsoft.Insights/dataCollectionRules@2021-09-01-preview' = {
+resource dcr 'Microsoft.Insights/dataCollectionRules@2022-06-01' = {
   name: dcrName
   location: azureMonitorWorkspaceLocation
   kind: 'Linux'
@@ -125,7 +125,7 @@ module azuremonitormetrics_profile_clusterResourceId './nested_azuremonitormetri
   ]
 }
 
-resource nodeRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview' = {
+resource nodeRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01' = {
   name: nodeRecordingRuleGroupName
   location: azureMonitorWorkspaceLocation
   properties: {
@@ -185,7 +185,7 @@ resource nodeRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRuleGroups
   }
 }
 
-resource kubernetesRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview' = {
+resource kubernetesRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01' = {
   name: kubernetesRecordingRuleGroupName
   location: azureMonitorWorkspaceLocation
   properties: {
@@ -289,7 +289,7 @@ resource kubernetesRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRule
   }
 }
 
-resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview' = {
+resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01' = {
   name: nodeRecordingRuleGroupNameWin_var
   location: azureMonitorWorkspaceLocation
   properties: {
@@ -365,7 +365,7 @@ resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRul
   }
 }
 
-resource nodeAndKubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview' = {
+resource nodeAndKubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01' = {
   name: nodeAndKubernetesRecordingRuleGroupWin_var
   location: azureMonitorWorkspaceLocation
   properties: {

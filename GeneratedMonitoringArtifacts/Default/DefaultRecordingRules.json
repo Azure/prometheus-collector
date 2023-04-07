@@ -37,7 +37,7 @@
         {
             "name": "[variables('nodeRecordingRuleGroupName')]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-            "apiVersion": "2021-07-22-preview",
+            "apiVersion": "2023-03-01",
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
@@ -96,7 +96,7 @@
         {
             "name": "[variables('kubernetesRecordingRuleGroupName')]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-            "apiVersion": "2021-07-22-preview",
+            "apiVersion": "2023-03-01",
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('kubernetesRecordingRuleGroupDescription'), variables('version'))]",
@@ -199,7 +199,7 @@
         {
             "name": "[variables('nodeRecordingRuleGroupNameWin')]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-            "apiVersion": "2021-07-22-preview",
+            "apiVersion": "2023-03-01",
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
@@ -274,7 +274,7 @@
         {
             "name": "[variables('nodeAndKubernetesRecordingRuleGroupNameWin')]",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-            "apiVersion": "2021-07-22-preview",
+            "apiVersion": "2023-03-01",
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",

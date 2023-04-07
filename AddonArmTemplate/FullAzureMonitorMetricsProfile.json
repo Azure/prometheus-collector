@@ -85,7 +85,7 @@
   "resources": [
     {
       "type": "Microsoft.Insights/dataCollectionEndpoints",
-      "apiVersion": "2021-09-01-preview",
+      "apiVersion": "2022-06-01",
       "name": "[variables('dceName')]",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "kind": "Linux",
@@ -93,7 +93,7 @@
     },
     {
       "type": "Microsoft.Insights/dataCollectionRules",
-      "apiVersion": "2021-09-01-preview",
+      "apiVersion": "2022-06-01",
       "name": "[variables('dcrName')]",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "kind": "Linux",
@@ -149,7 +149,7 @@
             {
               "type": "Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations",
               "name": "[concat(variables('clusterName'),'/microsoft.insights/', variables('dcraName'))]",
-              "apiVersion": "2021-09-01-preview",
+              "apiVersion": "2022-06-01",
               "location": "[parameters('clusterLocation')]",
               "properties": {
                 "description": "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster.",
@@ -182,7 +182,7 @@
               "name": "[variables('clusterName')]",
               "type": "Microsoft.ContainerService/managedClusters",
               "location": "[parameters('clusterLocation')]",
-              "apiVersion": "2022-07-02-preview",
+              "apiVersion": "2023-01-01",
               "properties": {
                 "mode": "Incremental",
                 "id": "[parameters('clusterResourceId')]",
@@ -205,7 +205,7 @@
     {
       "name": "[variables('nodeRecordingRuleGroupName')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2021-07-22-preview",
+      "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "properties": {
         "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
@@ -265,7 +265,7 @@
     {
       "name": "[variables('kubernetesRecordingRuleGroupName')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2021-07-22-preview",
+      "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "properties": {
         "description": "[concat(variables('kubernetesRecordingRuleGroupDescription'), variables('version'))]",
@@ -369,7 +369,7 @@
     {
       "name": "[variables('nodeRecordingRuleGroupNameWin')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2021-07-22-preview",
+      "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
@@ -446,7 +446,7 @@
     {
       "name": "[variables('nodeAndKubernetesRecordingRuleGroupNameWin')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2021-07-22-preview",
+      "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
