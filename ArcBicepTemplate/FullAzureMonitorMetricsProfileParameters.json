@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "azureMonitorWorkspaceResourceId": {
+      "value": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/sohamtestbiceparc/providers/microsoft.monitor/accounts/shamtestbiceparc"
+    },
+    "azureMonitorWorkspaceLocation": {
+      "value": "eastus"
+    },
+    "clusterResourceId": {
+      "value": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/sohamtestbiceparc/providers/Microsoft.Kubernetes/connectedClusters/sohamtestbiceparc"
+    },
+    "clusterLocation": {
+      "value": "eastus"
+    },
+    "metricLabelsAllowlist": {
+      "value": ""
+    },
+    "metricAnnotationsAllowList": {
+      "value": ""
+    },
+    "grafanaResourceId": {
+      "value": "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/sohamtestbiceparc/providers/Microsoft.Dashboard/grafana/sohamtestbiceparc"
+    },
+    "grafanaLocation": {
+      "value": "eastus"
+    },
+    "grafanaSku": {
+      "value": "Standard"
+    }
+  }
+}
