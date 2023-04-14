@@ -1,19 +1,19 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"context"
 	"regexp"
 	"strings"
 
-	"go.opentelemetry.io/collector/service"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/converter/expandconverter"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
+	"go.opentelemetry.io/collector/otelcol"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -25,25 +25,25 @@ type OtelConfig struct {
 			Config interface{} `yaml:"config"`
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
-	Service struct { 
+	Service struct {
 		Pipelines struct {
 			Metrics struct {
-				Exporters interface{} `yaml:"exporters"`
+				Exporters  interface{} `yaml:"exporters"`
 				Processors interface{} `yaml:"processors"`
-				Receivers interface{} `yaml:"receivers"`
+				Receivers  interface{} `yaml:"receivers"`
 			} `yaml:"metrics"`
 		} `yaml:"pipelines"`
 		Telemetry struct {
 			Logs struct {
-				Level interface{} `yaml:"level"`
+				Level    interface{} `yaml:"level"`
 				Encoding interface{} `yaml:"encoding"`
 			} `yaml:"logs"`
 		} `yaml:"telemetry"`
 	} `yaml:"service"`
 }
 
-var RESET  = "\033[0m"
-var RED    = "\033[31m"
+var RESET = "\033[0m"
+var RED = "\033[31m"
 
 func logFatalError(message string) {
 	// Do not set env var if customer is running outside of agent to just validate config
@@ -65,11 +65,11 @@ func setFatalErrorMessageAsEnvVar(message string) {
 	// Replace newlines for env var to be set correctly
 	re := regexp.MustCompile("\\n")
 	truncatedMessage = re.ReplaceAllString(truncatedMessage, "")
-	
+
 	// Write env var to a file so it can be used by other processes
 	file, err := os.Create("/opt/microsoft/prom_config_validator_env_var")
 	if err != nil {
-			log.Println("prom-config-validator::Unable to create file for prom_config_validator_env_var")
+		log.Println("prom-config-validator::Unable to create file for prom_config_validator_env_var")
 	}
 	setEnvVarString := fmt.Sprintf("export INVALID_CONFIG_FATAL_ERROR=\"%s\"\n", truncatedMessage)
 	if os.Getenv("OS_TYPE") != "linux" {
@@ -243,7 +243,7 @@ func main() {
 		//parserProvider.Flags(flags)
 		configFlagEx := new(stringArrayValue)
 		flags.Var(configFlagEx, "config", "Locations to the config file(s), note that only a"+
-		" single location can be set per flag entry e.g. `-config=file:/path/to/first --config=file:path/to/second`.")
+			" single location can be set per flag entry e.g. `-config=file:/path/to/first --config=file:path/to/second`.")
 		configFlag := fmt.Sprintf("--config=%s", outputFilePath)
 
 		err = flags.Parse([]string{
@@ -260,14 +260,13 @@ func main() {
 			os.Exit(1)
 		}
 
-		cp, err := service.NewConfigProvider(
-			service.ConfigProviderSettings{
-				ResolverSettings: 
-					confmap.ResolverSettings {
-						URIs:     []string{fmt.Sprintf("file:%s", outputFilePath)},
-						Providers:  map[string]confmap.Provider{"file": fileprovider.New()},
-						Converters: []confmap.Converter{expandconverter.New()},
-					},
+		cp, err := otelcol.NewConfigProvider(
+			otelcol.ConfigProviderSettings{
+				ResolverSettings: confmap.ResolverSettings{
+					URIs:       []string{fmt.Sprintf("file:%s", outputFilePath)},
+					Providers:  map[string]confmap.Provider{"file": fileprovider.New()},
+					Converters: []confmap.Converter{expandconverter.New()},
+				},
 			},
 		)
 		if err != nil {
