@@ -22,6 +22,9 @@ spec:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
     spec:
+# {{- if semverCompare ">=1.11.0" .Values.global.commonGlobals.Versions.Kubernetes }}
+#         priorityClassName: system-node-critical
+# {{- end }}
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
@@ -290,6 +293,9 @@ spec:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
     spec:
+# {{- if semverCompare ">=1.11.0" .Values.global.commonGlobals.Versions.Kubernetes }}
+#         priorityClassName: system-node-critical
+# {{- end }}
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector

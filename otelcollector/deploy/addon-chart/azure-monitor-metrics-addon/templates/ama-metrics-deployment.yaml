@@ -24,6 +24,9 @@ spec:
         schema-versions: "v1"
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
+# {{- if semverCompare ">=1.11.0" .Values.global.commonGlobals.Versions.Kubernetes }}
+#         priorityClassName: system-node-critical
+# {{- end }}
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
