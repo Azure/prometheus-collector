@@ -26,9 +26,7 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
-# {{- if semverCompare ">=1.11.0" .Values.global.commonGlobals.Versions.Kubernetes }}
-#         priorityClassName: system-node-critical
-# {{- end }}
+      priorityClassName: system-node-critical
       hostNetwork: false
       serviceAccountName: ama-metrics-ksm
       securityContext:
