@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - kaveesh/add_priorityclass_system_node_critical
 
 pr:
   autoCancel: true
