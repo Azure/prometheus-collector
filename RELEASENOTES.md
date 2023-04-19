@@ -1,5 +1,17 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 04-17-2023
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.6.0-main-<TBD>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.6.0-main-<TBD>-win`
+* Change log -
+  * feat: Add priorityclass system node critical for RS, DS & KSM pods
+  * fix:  Upgrades
+          Fluent bit           - from: `v1.9.6` to:`v2.0.9`
+          Telegraf(windows)    - from: `v1.23.4` to:`v1.24.2`
+          Otelcol              - from:`v0.66.0` to:`v0.73.0`
+  * fix:  pod annotations bug
+
 ## Release 03-22-2023
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.5.0-main-03-24-2023-7eb3f5c7`
