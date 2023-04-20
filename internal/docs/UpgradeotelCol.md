@@ -1,3 +1,7 @@
+Here is the shareable screenshare video link for how to upgrade Otel Collector -> https://microsoft-my.sharepoint.com/:v:/p/sohdasgupta/EYk_qxXtMEtGvz7nfK87N70BVrea5psydVKMO2p4PDsVjA?e=UnotGp
+
+Below are details for steps to upgrade Otel Collector.
+
 Get latest release version and latest prometheusreceiver code:
 1. Check for the latest release here: https://github.com/open-telemetry/opentelemetry-collector-contrib/releases
 2. git clone https://github.com/open-telemetry/opentelemetry-collector-contrib.git
@@ -21,6 +25,9 @@ prom-config-validator-builder
 * try to build to check for any breaking changes to the interfaces used: run make
 opentelemetry-collector-builder
 go mod tidy
+
+Code block
+```
 module github.com/gracewehner/prometheusreceiver
     "github.com/prometheus/client_golang/prometheus"
     "github.com/prometheus/common/version"
@@ -71,3 +78,4 @@ module github.com/gracewehner/prometheusreceiver
             host.ReportFatalError(err)
         }
     }()
+```
