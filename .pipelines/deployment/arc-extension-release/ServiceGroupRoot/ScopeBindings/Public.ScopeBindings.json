@@ -11,11 +11,11 @@
               },
               {
                   "find": "__ADMIN_SUBSCRIPTION_ID__",
-                  "replaceWith": "$(ADMIN_SUBSCRIPTION_ID)"
+                  "replaceWith": "$(ARCAdminSubscriptionID)"
               },
               {
                   "find": "__CHART_VERSION__",
-                  "replaceWith": "$(CHART_TAG)"
+                  "replaceWith": "$(ChartTag)"
               },
               {
                   "find": "__IS_CUSTOMER_HIDDEN__",
@@ -31,23 +31,23 @@
               },
               {
                   "find": "__RESOURCE_AUDIENCE__",
-                  "replaceWith": "$(RESOURCE_AUDIENCE)"
+                  "replaceWith": "$(ARCResourceAudience)"
               },
               {
                   "find": "__SPN_CLIENT_ID__",
-                  "replaceWith": "$(SPN_CLIENT_ID)"
+                  "replaceWith": "$(ARCSPNClientID)"
               },
               {
                   "find": "__SPN_SECRET__",
-                  "replaceWith": "$(SPN_SECRET)"
+                  "replaceWith": "$(ARCSPNSecret)"
               },
               {
                   "find": "__SPN_TENANT_ID__",
-                  "replaceWith": "$(SPN_TENANT_ID)"
+                  "replaceWith": "$(ARCSPNTenant)"
               },   
               {
                   "find": "__MANAGED_IDENTITY__",
-                  "replaceWith": "$(MANAGED_IDENTITY)"
+                  "replaceWith": "$(ManagedIdentity)"
               }
           ]
       },
@@ -60,11 +60,11 @@
               },
               {
                   "find": "__ADMIN_SUBSCRIPTION_ID__",
-                  "replaceWith": "$(ADMIN_SUBSCRIPTION_ID)"
+                  "replaceWith": "$(ARCAdminSubscriptionID)"
               },
               {
                   "find": "__CHART_VERSION__",
-                  "replaceWith": "$(CHART_VERSION)"
+                  "replaceWith": "$(ChartTag)"
               },
               {
                   "find": "__IS_CUSTOMER_HIDDEN__",
@@ -76,23 +76,23 @@
               },
               {
                   "find": "__RESOURCE_AUDIENCE__",
-                  "replaceWith": "$(RESOURCE_AUDIENCE)"
+                  "replaceWith": "$(ARCResourceAudience)"
               },
               {
                   "find": "__SPN_CLIENT_ID__",
-                  "replaceWith": "$(SPN_CLIENT_ID)"
+                  "replaceWith": "$(ARCSPNClientID)"
               },
               {
                   "find": "__SPN_SECRET__",
-                  "replaceWith": "$(SPN_SECRET)"
+                  "replaceWith": "$(ARCSPNSecret)"
               },
               {
                   "find": "__SPN_TENANT_ID__",
-                  "replaceWith": "$(SPN_TENANT_ID)"
+                  "replaceWith": "$(ARCSPNTenant)"
               }, 
               {
                   "find": "__MANAGED_IDENTITY__",
-                  "replaceWith": "$(MANAGED_IDENTITY)"
+                  "replaceWith": "$(ManagedIdentity)"
               }
           ]
       },
@@ -105,11 +105,11 @@
               },
               {
                   "find": "__ADMIN_SUBSCRIPTION_ID__",
-                  "replaceWith": "$(ADMIN_SUBSCRIPTION_ID)"
+                  "replaceWith": "$(ARCAdminSubscriptionID)"
               },
               {
                   "find": "__CHART_VERSION__",
-                  "replaceWith": "$(CHART_VERSION)"
+                  "replaceWith": "$(ChartTag)"
               },
               {
                   "find": "__IS_CUSTOMER_HIDDEN__",
@@ -125,23 +125,23 @@
               },
               {
                   "find": "__RESOURCE_AUDIENCE__",
-                  "replaceWith": "$(RESOURCE_AUDIENCE)"
+                  "replaceWith": "$(ARCResourceAudience)"
               },
               {
                   "find": "__SPN_CLIENT_ID__",
-                  "replaceWith": "$(SPN_CLIENT_ID)"
+                  "replaceWith": "$(ARCSPNClientID)"
               },
               {
                   "find": "__SPN_SECRET__",
-                  "replaceWith": "$(SPN_SECRET)"
+                  "replaceWith": "$(ARCSPNSecret)"
               },
               {
                   "find": "__SPN_TENANT_ID__",
-                  "replaceWith": "$(SPN_TENANT_ID)"
+                  "replaceWith": "$(ARCSPNTenant)"
               }, 
               {
                   "find": "__MANAGED_IDENTITY__",
-                  "replaceWith": "$(MANAGED_IDENTITY)"
+                  "replaceWith": "$(ManagedIdentity)"
               }
           ]
       }                                                                                                                                         

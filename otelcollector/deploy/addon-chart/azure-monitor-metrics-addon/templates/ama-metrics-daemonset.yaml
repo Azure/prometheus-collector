@@ -158,6 +158,8 @@ spec:
           env:
           - name: TOKEN_NAMESPACE
             value: "azure-arc"
+          - name: LIVENESS_PROBE_PORT
+            value: "9999"
           {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
         {{- else }}
         - name: addon-token-adapter
@@ -253,6 +255,7 @@ spec:
             secretName: ama-metrics-proxy-cert
             optional: true
         {{- end }}
+{{- if not .Values.AzureMonitorMetrics.ArcExtension }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -442,3 +445,4 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
+{{- end }}
