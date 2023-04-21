@@ -18,6 +18,7 @@ LOGGING_PREFIX = "default-scrape-settings"
 @kubestateEnabled = true
 @nodeexporterEnabled = true
 @prometheusCollectorHealthEnabled = true
+@podannotationEnabled = false
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
 @kappiebasicEnabled = false
@@ -84,6 +85,10 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @windowskubeproxyEnabled = parsedConfig[:windowskubeproxy]
       puts "config::Using configmap scrape settings for windowskubeproxy: #{@windowskubeproxyEnabled}"
     end
+    if !ENV['AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX'].nil? && !ENV['AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX'].empty?
+      @podannotationEnabled = "true"
+      puts "config::Using configmap scrape settings for podannotations: #{@podannotationEnabled}"
+    end
     if !parsedConfig[:kappiebasic].nil?
       @kappiebasicEnabled = parsedConfig[:kappiebasic]
       puts "config::Using configmap scrape settings for kappiebasic: #{@kappiebasicEnabled}"
@@ -100,15 +105,15 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         @noDefaultsEnabled = true
       elsif controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "linux" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled && !kappiebasicEnabled
         @noDefaultsEnabled = true
-      elsif controllerType == "ReplicaSet" && @sendDsUpMetric && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
+      elsif controllerType == "ReplicaSet" && @sendDsUpMetric && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled
         @noDefaultsEnabled = true
-      elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@prometheusCollectorHealthEnabled
+      elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled
         @noDefaultsEnabled = true
       # Windows daemonset is not enabled so Windows kube-proxy and node-exporter are scraped from replica
-      elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && !windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
+      elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && !windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled
         @noDefaultsEnabled = true
       end
-    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled
+    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled
       @noDefaultsEnabled = true
     end
     if @noDefaultsEnabled
@@ -163,6 +168,7 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=#{@windowsexporterEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED=#{@kappiebasicEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=#{@podannotationEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
 else

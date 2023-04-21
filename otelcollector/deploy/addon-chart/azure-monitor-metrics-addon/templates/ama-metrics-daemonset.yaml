@@ -57,9 +57,21 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              value: "azurepubliccloud"
+              {{- if not .Values.AzureMonitorMetrics.isArcACluster }}
+              value: "{{ .Values.global.commonGlobals.CloudEnvironment }}"
+              {{- else }}
+              value: "arcautonomous"
+              {{- end }}
             - name: OMS_TLD
               value: "opinsights.azure.com"
+            {{- if .Values.AzureMonitorMetrics.isArcACluster }}
+            - name: customRegionalEndpoint
+              value: {{ required "customRegionalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
+            - name: customGlobalEndpoint
+              value: {{ required "customGlobalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
+            - name: customResourceEndpoint
+              value: {{ required "customResourceEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
+            {{- end }}
             - name: CONTROLLER_TYPE
               value: "DaemonSet"
             - name: NODE_IP
@@ -107,7 +119,7 @@ spec:
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
-              value: "" # Replace this with the version shipped by default
+              value: "v1.5.0" # Replace this with the version shipped by default
             - name: AGENT_VERSION
               value: {{ .Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE
@@ -303,7 +315,7 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              value: "azurepubliccloud"
+              value: "{{ .Values.global.commonGlobals.CloudEnvironment }}"
             - name: OMS_TLD
               value: "opinsights.azure.com"
             - name: CONTROLLER_TYPE
@@ -349,7 +361,7 @@ spec:
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
-              value: "" # Replace this with the version shipped by default
+              value: "v1.5.0" # Replace this with the version shipped by default
             - name: AGENT_VERSION
               value: {{ .Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE

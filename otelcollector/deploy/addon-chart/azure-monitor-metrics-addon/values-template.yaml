@@ -4,8 +4,8 @@ AzureMonitorMetrics:
     #MetricLabelsAllowlist: "testlabel=[.*]"
     #MetricAnnotationsAllowList: ""
     ImageRepository: "/oss/kubernetes/kube-state-metrics"
-# Kube-state-metrics ImageTag - v2.6.0, corresponds to chart version - 4.23.0
-    ImageTag: "v2.6.0"
+# Kube-state-metrics ImageTag - 2.8.1, corresponds to chart version - 4.32.0
+    ImageTag: "v2.8.1"
     Collectors:
       - certificatesigningrequests
       - configmaps
@@ -48,7 +48,12 @@ AzureMonitorMetrics:
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
     ImageTagWin: "20230120winbeta"
   ArcExtension: ${ARC_EXTENSION}
-
+  # Do not change the below settings. They are reserved for Arc Autonomous
+  isArcACluster: false
+  arcAutonomousSettings:
+    customRegionalEndpoint: ""
+    customGlobalEndpoint: ""
+    customResourceEndpoint: ""
 global:
   commonGlobals:
     CloudEnvironment: "AzureCloud"
@@ -68,7 +73,7 @@ Azure:
     noProxy: ""
     proxyCert: ""
   Identity:
-      MSIAdapterYaml: |- 
+      MSIAdapterYaml: |-
         - name: EXTENSION_ARMID
           value: ${ARC_RESOURCE_ID}/providers/Microsoft.KubernetesConfiguration/extensions/azuremonitor-metrics
         - name: EXTENSION_NAME

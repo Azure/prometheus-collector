@@ -60,9 +60,21 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              value: "azurepubliccloud"
+              {{- if not .Values.AzureMonitorMetrics.isArcACluster }}
+              value: "{{ .Values.global.commonGlobals.CloudEnvironment }}"
+              {{- else }}
+              value: "arcautonomous"
+              {{- end }}
             - name: OMS_TLD
               value: "opinsights.azure.com"
+            {{- if .Values.AzureMonitorMetrics.isArcACluster }}
+            - name: customRegionalEndpoint
+              value: {{ required "customRegionalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
+            - name: customGlobalEndpoint
+              value: {{ required "customGlobalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
+            - name: customResourceEndpoint
+              value: {{ required "customResourceEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
+            {{- end }}
             - name: CONTROLLER_TYPE
               value: "ReplicaSet"
             - name: NODE_IP
@@ -105,7 +117,7 @@ spec:
               {{- end }}
             {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            - name: KUBE_STATE_VERSION 
+            - name: KUBE_STATE_VERSION
               value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
             - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
@@ -118,7 +130,7 @@ spec:
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
-              value: ""# Replace this with the version shipped by default
+              value: "v1.5.0" # Replace this with the version shipped by default
             - name: AGENT_VERSION
               value: {{ .Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE
