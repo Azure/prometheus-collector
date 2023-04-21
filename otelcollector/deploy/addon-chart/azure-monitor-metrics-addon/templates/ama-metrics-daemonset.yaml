@@ -57,10 +57,12 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              {{- if not .Values.AzureMonitorMetrics.isArcACluster }}
-              value: "{{ .Values.global.commonGlobals.CloudEnvironment }}"
-              {{- else }}
+              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ lower .Values.Azure.Cluster.Cloud }}"
+              {{- else if .Values.AzureMonitorMetrics.isArcACluster }}
               value: "arcautonomous"
+              {{- else }}
+              value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
               {{- end }}
             - name: OMS_TLD
               value: "opinsights.azure.com"
