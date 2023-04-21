@@ -266,8 +266,8 @@ if [ "${MAC}" == "true" ]; then
                   echo "export tokenadapterUnhealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
                   break
             else
-            echo "checking health of token adapter after $waitedSecsSoFar secs"
-            tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
+                  echo "checking health of token adapter after $waitedSecsSoFar secs"
+                  tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
             fi
             if [ ! -z $tokenAdapterResult ]; then
                         echo "found token adapter to be healthy after $waitedSecsSoFar secs" 
@@ -277,7 +277,6 @@ if [ "${MAC}" == "true" ]; then
             fi
             sleep 1
             waitedSecsSoFar=$(($waitedSecsSoFar + 1))
-            fi 
       done
       source ~/.bashrc
       #end wait for addon-token-adapter to be healthy
