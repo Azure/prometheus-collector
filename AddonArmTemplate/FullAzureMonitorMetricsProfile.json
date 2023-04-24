@@ -483,7 +483,7 @@
           },
           {
             "record": "windows_pod_container_available",
-            "expression": "windows_container_available{job=\"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\"}, container_id != \"\") by(container, container_id, pod, namespace)"
+            "expression": "windows_container_available{job=\"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\", container_id != \"\"}) by(container, container_id, pod, namespace)"
           },
           {
             "record": "windows_container_total_runtime",
