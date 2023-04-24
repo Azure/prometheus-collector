@@ -24,17 +24,17 @@
           },
           {
             // CPU utilisation is % CPU is not idle.
-            record: ':windows_node_cpu_utilisation:avg1m',
+            record: ':windows_node_cpu_utilisation:avg5m',
             expr: |||
-              1 - avg(rate(windows_cpu_time_total{%(windowsExporterSelector)s,mode="idle"}[1m]))
+              1 - avg(rate(windows_cpu_time_total{%(windowsExporterSelector)s,mode="idle"}[5m]))
             ||| % $._config,
           },
           {
             // CPU utilisation is % CPU is not idle.
-            record: 'node:windows_node_cpu_utilisation:avg1m',
+            record: 'node:windows_node_cpu_utilisation:avg5m',
             expr: |||
               1 - avg by (instance) (
-                rate(windows_cpu_time_total{%(windowsExporterSelector)s,mode="idle"}[1m])
+                rate(windows_cpu_time_total{%(windowsExporterSelector)s,mode="idle"}[5m])
               )
             ||| % $._config,
           },
@@ -111,8 +111,8 @@
             // Disk utilisation (ms spent, by rate() it's bound by 1 second)
             record: ':windows_node_disk_utilisation:avg_irate',
             expr: |||
-              avg(irate(windows_logical_disk_read_seconds_total{%(windowsExporterSelector)s}[1m]) +
-                  irate(windows_logical_disk_write_seconds_total{%(windowsExporterSelector)s}[1m])
+              avg(irate(windows_logical_disk_read_seconds_total{%(windowsExporterSelector)s}[5m]) +
+                  irate(windows_logical_disk_write_seconds_total{%(windowsExporterSelector)s}[5m])
                 )
             ||| % $._config,
           },
@@ -121,8 +121,8 @@
             record: 'node:windows_node_disk_utilisation:avg_irate',
             expr: |||
               avg by (instance) (
-                (irate(windows_logical_disk_read_seconds_total{%(windowsExporterSelector)s}[1m]) +
-                 irate(windows_logical_disk_write_seconds_total{%(windowsExporterSelector)s}[1m]))
+                (irate(windows_logical_disk_read_seconds_total{%(windowsExporterSelector)s}[5m]) +
+                 irate(windows_logical_disk_write_seconds_total{%(windowsExporterSelector)s}[5m]))
               )
             ||| % $._config,
           },
@@ -145,30 +145,30 @@
           {
             record: ':windows_node_net_utilisation:sum_irate',
             expr: |||
-              sum(irate(windows_net_bytes_total{%(windowsExporterSelector)s}[1m]))
+              sum(irate(windows_net_bytes_total{%(windowsExporterSelector)s}[5m]))
             ||| % $._config,
           },
           {
             record: 'node:windows_node_net_utilisation:sum_irate',
             expr: |||
               sum by (instance) (
-                (irate(windows_net_bytes_total{%(windowsExporterSelector)s}[1m]))
+                (irate(windows_net_bytes_total{%(windowsExporterSelector)s}[5m]))
               )
             ||| % $._config,
           },
           {
             record: ':windows_node_net_saturation:sum_irate',
             expr: |||
-              sum(irate(windows_net_packets_received_discarded_total{%(windowsExporterSelector)s}[1m])) +
-              sum(irate(windows_net_packets_outbound_discarded_total{%(windowsExporterSelector)s}[1m]))
+              sum(irate(windows_net_packets_received_discarded_total{%(windowsExporterSelector)s}[5m])) +
+              sum(irate(windows_net_packets_outbound_discarded_total{%(windowsExporterSelector)s}[5m]))
             ||| % $._config,
           },
           {
             record: 'node:windows_node_net_saturation:sum_irate',
             expr: |||
               sum by (instance) (
-                (irate(windows_net_packets_received_discarded_total{%(windowsExporterSelector)s}[1m]) +
-                irate(windows_net_packets_outbound_discarded_total{%(windowsExporterSelector)s}[1m]))
+                (irate(windows_net_packets_received_discarded_total{%(windowsExporterSelector)s}[5m]) +
+                irate(windows_net_packets_outbound_discarded_total{%(windowsExporterSelector)s}[5m]))
               )
             ||| % $._config,
           },
@@ -180,37 +180,37 @@
           {
             record: 'windows_pod_container_available',
             expr: |||
-              windows_container_available{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s}) by(container, container_id, pod, namespace)
+              windows_container_available{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s, container_id != ""}) by(container, container_id, pod, namespace)
             ||| % $._config,
           },
           {
             record: 'windows_container_total_runtime',
             expr: |||
-              windows_container_cpu_usage_seconds_total{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s}) by(container, container_id, pod, namespace)
+              windows_container_cpu_usage_seconds_total{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s, container_id != ""}) by(container, container_id, pod, namespace)
             ||| % $._config,
           },
           {
             record: 'windows_container_memory_usage',
             expr: |||
-              windows_container_memory_usage_commit_bytes{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s}) by(container, container_id, pod, namespace)
+              windows_container_memory_usage_commit_bytes{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s, container_id != ""}) by(container, container_id, pod, namespace)
             ||| % $._config,
           },
           {
             record: 'windows_container_private_working_set_usage',
             expr: |||
-              windows_container_memory_usage_private_working_set_bytes{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s}) by(container, container_id, pod, namespace)
+              windows_container_memory_usage_private_working_set_bytes{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s, container_id != ""}) by(container, container_id, pod, namespace)
             ||| % $._config,
           },
           {
             record: 'windows_container_network_received_bytes_total',
             expr: |||
-              windows_container_network_receive_bytes_total{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s}) by(container, container_id, pod, namespace)
+              windows_container_network_receive_bytes_total{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s, container_id != ""}) by(container, container_id, pod, namespace)
             ||| % $._config,
           },
           {
             record: 'windows_container_network_transmitted_bytes_total',
             expr: |||
-              windows_container_network_transmit_bytes_total{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s}) by(container, container_id, pod, namespace)
+              windows_container_network_transmit_bytes_total{%(windowsExporterSelector)s, container_id != ""} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{%(kubeStateMetricsSelector)s, container_id != ""}) by(container, container_id, pod, namespace)
             ||| % $._config,
           },
           {
