@@ -84,7 +84,7 @@ These dashboards are based on metrics populated by [windows-exporter](https://gi
 
 ### Recording Rules
 
-The recording rules where taken from the default [kubernetes mixin](https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/rules) and incorporated into our repo for the default dashboards that the Azure Monitor Metrics addon provides. If there is a need to update any of them then please note that the following places need to be updated too:
+The recording rules were taken from the default [kubernetes mixin](https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/rules) and incorporated into our repo for the default dashboards that the Azure Monitor Metrics addon provides. If there is a need to update any of them then please note that the following places need to be updated too:
 
 1) OSS Communityu kuberenetes mixin - [link to rules](https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/rules)
 2) Azure Monitor Metrics UX Extension
