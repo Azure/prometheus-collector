@@ -82,6 +82,15 @@ There are separate dashboards for windows resources.
 
 These dashboards are based on metrics populated by [windows-exporter](https://github.com/prometheus-community/windows_exporter) from each Windows node.
 
+### Recording Rules
+
+The recording rules where taken from the default [kubernetes mixin](https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/rules) and incorporated into our repo for the default dashboards that the Azure Monitor Metrics addon provides. If there is a need to update any of them then please note that the following places need to be updated too:
+
+1) OSS Communityu kuberenetes mixin - [link to rules](https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/rules)
+2) Azure Monitor Metrics UX Extension
+3) Alerts RP (stores recording rules for CLI)
+4) Prometheus collector repo - [Sample PR](https://github.com/Azure/prometheus-collector/pull/470/)
+
 ## Running the tests
 
 ```sh
