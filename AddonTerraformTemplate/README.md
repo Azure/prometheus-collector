@@ -5,26 +5,12 @@ If you are deploying a new AKS cluster using Terraform with managed Prometheus a
 3. Run `terraform plan -out main.tfplan` to initialize the Terraform deployment.
 3. Run `terraform apply main.tfplan` to apply the execution plan to your cloud infrastructure.
 
-Assign the Monitoring Data Reader role to the Grafana MSI on the Azure Monitor workspace resource so that it can read data for displaying the charts. Use the following instructions.
 
-1. On the Overview page for the Azure Managed Grafana instance in the Azure portal, select JSON view.
+Note: Pass the variables for `annotations_allowed` and `labels_allowed` keys only when those values exist. These are optional blocks.
 
-2. Copy the value of the principalId field for the SystemAssigned identity.
-
-```
-"identity": {
-        "principalId": "00000000-0000-0000-0000-000000000000",
-        "tenantId": "00000000-0000-0000-0000-000000000000",
-        "type": "SystemAssigned"
-    },
-```
-
-3. On the Access control (IAM) page for the Azure Monitor Workspace in the Azure portal, select Add > Add role assignment.
-
-4. Select Monitoring Data Reader.
-
-5. Select Managed identity > Select members.
-
-6. Select the system-assigned managed identity with the principalId from the Grafana resource.
-
-7. Choose Select > Review+assign.
+**NOTE**
+- Please edit the main.tf file appropriately before running the terraform template
+- Please add in any existing azure_monitor_workspace_integrations values to the grafana resource before running the template otherwise the older values will get deleted and replaced with what is there in the template at the time of deployment
+- Users with 'User Access Administrator' role in the subscription  of the AKS cluster can be able to enable 'Monitoring Data Reader' role directly by deploying the template.
+- Please edit the grafanaSku parameter if you are using a non standard SKU.
+- Please run this template in the Grafana Resources RG.

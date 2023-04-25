@@ -1,11 +1,6 @@
-# Generate random resource group name
-resource "random_pet" "rg_name" {
-  prefix = var.resource_group_name_prefix
-}
-
 resource "azurerm_resource_group" "rg" {
   location = var.resource_group_location
-  name     = random_pet.rg_name.id
+  name     = "defaultPrometheusOnboardingResourceGroup"
 }
 
 resource "azurerm_kubernetes_cluster" "k8s" {
@@ -26,17 +21,10 @@ resource "azurerm_kubernetes_cluster" "k8s" {
   }
 
   monitor_metrics {
-    annotations_allowed = "string"
-    labels_allowed = "string"
+    annotations_allowed = var.metric_annotations_allowlist
+    labels_allowed = var.metric_labels_allowlist
   }
 
-  linux_profile {
-    admin_username = "ubuntu"
-
-    ssh_key {
-      key_data = file(var.ssh_public_key)
-    }
-  }
   network_profile {
     network_plugin    = "kubenet"
     load_balancer_sku = "standard"
@@ -46,17 +34,19 @@ resource "azurerm_kubernetes_cluster" "k8s" {
     type = "SystemAssigned"
   }
 }
-resource "azurerm_monitor_data_collection_endpoint" "example" {
-  name                          = "example-mdce"
+
+resource "azurerm_monitor_data_collection_endpoint" "dce" {
+  name                          = "MSProm-${var.monitor_workspace_location}-${var.cluster_name}"
   resource_group_name           = azurerm_resource_group.rg.name
   location                      = azurerm_resource_group.rg.location
   kind                          = "Linux"
 }
-resource "azurerm_monitor_data_collection_rule" "example" {
-  name                = "example-rule"
+
+resource "azurerm_monitor_data_collection_rule" "dcr" {
+  name                = "MSProm-${var.monitor_workspace_location}-${var.cluster_name}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
-  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.example.id
+  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dce.id
   kind                          = "Linux"
 
   destinations {
@@ -81,18 +71,20 @@ resource "azurerm_monitor_data_collection_rule" "example" {
 
   description = "DCR for Azure Monitor Metrics Profile (Managed Prometheus)"
   depends_on = [
-    azurerm_monitor_data_collection_endpoint.example
+    azurerm_monitor_data_collection_endpoint.dce
   ]
 }
-resource "azurerm_monitor_data_collection_rule_association" "example2" {
+
+resource "azurerm_monitor_data_collection_rule_association" "dcra" {
   target_resource_id          = azurerm_kubernetes_cluster.k8s.id
-  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.example.id
+  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dce.id
   description                 = "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster."
 }
-resource "azurerm_dashboard_grafana" "example" {
-  name                              = "example-dg"
+
+resource "azurerm_dashboard_grafana" "grafana" {
+  name                              = "grafana-prometheus"
   resource_group_name               = azurerm_resource_group.rg.name
-  location                          = azurerm_resource_group.rg.location
+  location                          = var.grafana_location
 
   identity {
     type = "SystemAssigned"
@@ -101,12 +93,17 @@ resource "azurerm_dashboard_grafana" "example" {
   azure_monitor_workspace_integrations {
     resource_id  = var.monitor_workspace_id
   }
+}
 
+resource "azurerm_role_assignment" "datareaderrole" {
+  scope              = var.monitor_workspace_id
+  role_definition_id = "/subscriptions/${split("/",var.monitor_workspace_id)[2]}/providers/Microsoft.Authorization/roleDefinitions/b0d8363b-8ddd-447d-831f-62ca05bff136"
+  principal_id       = azurerm_dashboard_grafana.grafana.identity.0.principal_id
 }
 
 resource "azapi_resource" "NodeRecordingRulesRuleGroup" {
   type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
-  name = "example-NodeRecordingRulesRuleGroup"
+  name = "NodeRecordingRulesRuleGroup-${var.cluster_name}"
   location = "eastus"
   parent_id = azurerm_resource_group.rg.id
   body = jsonencode({
@@ -170,8 +167,8 @@ resource "azapi_resource" "NodeRecordingRulesRuleGroup" {
 }
 
 resource "azapi_resource" "KubernetesReccordingRulesRuleGroup" {
-  type = "Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview"
-  name = "example-KubernetesReccordingRulesRuleGroup"
+  type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
+  name = "KubernetesReccordingRulesRuleGroup-${var.cluster_name}"
   location = azurerm_resource_group.rg.location
   parent_id = azurerm_resource_group.rg.id
   body = jsonencode({
@@ -279,8 +276,8 @@ resource "azapi_resource" "KubernetesReccordingRulesRuleGroup" {
 }
 
 resource "azapi_resource" "NodeRecordingRulesRuleGroupWin" {
-  type = "Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview"
-  name = "example-NodeRecordingRulesRuleGroup-Win"
+  type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
+  name = "NodeRecordingRulesRuleGroup-Win-${var.cluster_name}"
   location = azurerm_resource_group.rg.location
   parent_id = azurerm_resource_group.rg.id
   body = jsonencode({
@@ -360,8 +357,8 @@ resource "azapi_resource" "NodeRecordingRulesRuleGroupWin" {
 
 
 resource "azapi_resource" "NodeAndKubernetesRecordingRulesRuleGroupWin" {
-  type = "Microsoft.AlertsManagement/prometheusRuleGroups@2021-07-22-preview"
-  name = "example-NodeAndKubernetesRecordingRulesRuleGroup-Win"
+  type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
+  name = "NodeAndKubernetesRecordingRulesRuleGroup-Win-${var.cluster_name}"
   location = azurerm_resource_group.rg.location
   parent_id = azurerm_resource_group.rg.id
   body = jsonencode({
