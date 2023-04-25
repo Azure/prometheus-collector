@@ -17,7 +17,7 @@
                 "rules": [
                     {
                         "record": "windows_pod_container_available_2",
-                        "expression": "windows_container_available{job = \"windows-exporter\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\"}) by(container, container_id, pod, namespace, cluster)"
+                        "expression": "windows_container_available{job = \"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\", container_id != \"\"}) by(container, container_id, pod, namespace, cluster)"
                     },
                     {
                         "record": ":windows_node_memory_MemTotal_bytes_2:sum",
@@ -29,7 +29,7 @@
                     },
                     {
                         "record": "memory_requests_commitment",
-                        "expression": "sum( max by (namespace, pod, container, cluster) (kube_pod_container_resource_requests{resource = \"memory\",job = \"kube-state-metrics\"}) * on (container, pod, namespace, cluster) (windows_container_available{job = \"windows-exporter\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job = \"windows-exporter\" }))"
+                        "expression": "sum( max by (namespace, pod, container, cluster) (kube_pod_container_resource_requests{resource = \"memory\",job = \"kube-state-metrics\"}) * on (container, pod, namespace, cluster) (windows_container_available{job = \"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\", container_id != \"\"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job = \"windows-exporter\" }))"
                     },
                     {
                         "record": "kube_pod_windows_container_resource_memory_limit",
@@ -37,7 +37,7 @@
                     },
                     {
                         "record": "memory_limits_commitment",
-                        "expression": "sum(kube_pod_container_resource_limits{resource = \"memory\", job = \"kube-state-metrics\"} * on(container, pod, namespace, cluster) (windows_container_available{job = \"windows-exporter\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job = \"windows-exporter\" }))"
+                        "expression": "sum(kube_pod_container_resource_limits{resource = \"memory\", job = \"kube-state-metrics\"} * on(container, pod, namespace, cluster) (windows_container_available{job = \"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\", container_id != \"\"}) by(container, container_id, pod, namespace, cluster))) / sum(sum(windows_os_visible_memory_bytes{job = \"windows-exporter\" }))"
                     },
                     {
                         "record": "windows_container_total_runtime",
@@ -69,7 +69,7 @@
                     },
                     {
                         "record": "windows_container_private_working_set_usage",
-                        "expression": "windows_container_memory_usage_private_working_set_bytes{job = \"windows-exporter\", } * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\"}) by(container, container_id, pod, namespace, cluster)"
+                        "expression": "windows_container_memory_usage_private_working_set_bytes{job = \"windows-exporter\", , container_id != \"\"} * on(container_id) group_left(container, pod, namespace, cluster) max(kube_pod_container_info{job = \"kube-state-metrics\"}) by(container, container_id, pod, namespace, cluster)"
                     },
                     {
                         "record": "memory_usage_private_working_set",
