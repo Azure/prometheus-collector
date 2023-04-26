@@ -1,218 +1,117 @@
-{
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "azureMonitorWorkspaceResourceId": {
-      "type": "string"
-    },
-    "azureMonitorWorkspaceLocation": {
-      "type": "string",
-      "defaultValue": "",
-      "allowedValues": [
-        "eastus2euap",
-        "centraluseuap",
-        "centralus",
-        "eastus",
-        "eastus2",
-        "northeurope",
-        "southcentralus",
-        "southeastasia",
-        "uksouth",
-        "westeurope",
-        "westus",
-        "westus2"
-      ]
-    },
-    "clusterResourceId": {
-      "type": "string"
-    },
-    "clusterLocation": {
-      "type": "string"
-    },
-    "metricLabelsAllowlist": {
-      "type": "string",
-      "defaultValue": ""
-    },
-    "metricAnnotationsAllowList": {
-      "type": "string",
-      "defaultValue": ""
-    },
-    "enableWindowsRecordingRules" : {
-      "type": "bool",
-      "defaultValue": false
-    },
-    "grafanaResourceId": {
-      "type": "string",
-      "defaultValue": ""
-    },
-    "grafanaLocation": {
-      "type": "string",
-      "defaultValue": ""
-    },
-    "grafanaSku": {
-      "type": "string",
-      "defaultValue": ""
-    },
-    "roleNameGuid": {
-      "type": "string",
-      "defaultValue": "[newGuid()]",
-      "metadata": {
-        "description": "A new GUID used to identify the role assignment"
-      }
+resource "azurerm_resource_group" "rg" {
+  location = var.resource_group_location
+  name     = "defaultPrometheusOnboardingResourceGroup"
+}
+
+resource "azurerm_kubernetes_cluster" "k8s" {
+  location            = azurerm_resource_group.rg.location
+  name                = var.cluster_name
+  resource_group_name = azurerm_resource_group.rg.name
+
+
+  dns_prefix          = var.dns_prefix
+  tags                = {
+    Environment = "Development"
+  }
+
+  default_node_pool {
+    name       = "agentpool"
+    vm_size    = "Standard_D2_v2"
+    node_count = var.agent_count
+  }
+
+  monitor_metrics {
+    annotations_allowed = var.metric_annotations_allowlist
+    labels_allowed = var.metric_labels_allowlist
+  }
+
+  network_profile {
+    network_plugin    = "kubenet"
+    load_balancer_sku = "standard"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+resource "azurerm_monitor_data_collection_endpoint" "dce" {
+  name                          = "MSProm-${var.monitor_workspace_location}-${var.cluster_name}"
+  resource_group_name           = azurerm_resource_group.rg.name
+  location                      = azurerm_resource_group.rg.location
+  kind                          = "Linux"
+}
+
+resource "azurerm_monitor_data_collection_rule" "dcr" {
+  name                = "MSProm-${var.monitor_workspace_location}-${var.cluster_name}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dce.id
+  kind                          = "Linux"
+
+  destinations {
+    monitor_account {
+      monitor_account_id = var.monitor_workspace_id
+      name = "MonitoringAccount1"
     }
-  },
-  "variables": {
-    "azureMonitorWorkspaceSubscriptionId": "[split(parameters('azureMonitorWorkspaceResourceId'),'/')[2]]",
-    "clusterSubscriptionId": "[split(parameters('clusterResourceId'),'/')[2]]",
-    "clusterResourceGroup": "[split(parameters('clusterResourceId'),'/')[4]]",
-    "clusterName": "[split(parameters('clusterResourceId'),'/')[8]]",
-    "dceName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', variables('clusterName'))]",
-    "dcrName": "[Concat('MSProm', '-', parameters('azureMonitorWorkspaceLocation'), '-', variables('clusterName'))]",
-    "dcraName": "[Concat('MSProm', '-', parameters('clusterLocation'), '-', variables('clusterName'))]",
-    "nodeRecordingRuleGroup": "NodeRecordingRulesRuleGroup-",
-    "nodeRecordingRuleGroupName": "[concat(variables('nodeRecordingRuleGroup'), variables('clusterName'))]",
-    "nodeRecordingRuleGroupDescription": "Node Recording Rules RuleGroup",
-    "kubernetesRecordingRuleGroup": "KubernetesReccordingRulesRuleGroup-",
-    "kubernetesRecordingRuleGroupName": "[concat(variables('kubernetesRecordingRuleGroup'), variables('clusterName'))]",
-    "kubernetesRecordingRuleGroupDescription": "Kubernetes Recording Rules RuleGroup",
-    "nodeRecordingRuleGroupWin": "NodeRecordingRulesRuleGroup-Win-",
-    "nodeAndKubernetesRecordingRuleGroupWin": "NodeAndKubernetesRecordingRulesRuleGroup-Win-",
-    "nodeRecordingRuleGroupNameWin": "[concat(variables('nodeRecordingRuleGroupWin'), variables('clusterName'))]",
-    "nodeAndKubernetesRecordingRuleGroupNameWin": "[concat(variables('nodeAndKubernetesRecordingRuleGroupWin'), variables('clusterName'))]",
-    "RecordingRuleGroupDescriptionWin": "Kubernetes Recording Rules RuleGroup for Win",
-    "version": " - 0.1"
-  },
-  "resources": [
-    {
-      "type": "Microsoft.Insights/dataCollectionEndpoints",
-      "apiVersion": "2022-06-01",
-      "name": "[variables('dceName')]",
-      "location": "[parameters('azureMonitorWorkspaceLocation')]",
-      "kind": "Linux",
-      "properties": {}
-    },
-    {
-      "type": "Microsoft.Insights/dataCollectionRules",
-      "apiVersion": "2022-06-01",
-      "name": "[variables('dcrName')]",
-      "location": "[parameters('azureMonitorWorkspaceLocation')]",
-      "kind": "Linux",
+  }
+
+  data_flow {
+    streams      = ["Microsoft-PrometheusMetrics"]
+    destinations = ["MonitoringAccount1"]
+  }
+
+
+  data_sources {
+    prometheus_forwarder {
+      streams                       = ["Microsoft-PrometheusMetrics"]
+      name                          = "PrometheusDataSource"
+    }
+  }
+
+  description = "DCR for Azure Monitor Metrics Profile (Managed Prometheus)"
+  depends_on = [
+    azurerm_monitor_data_collection_endpoint.dce
+  ]
+}
+
+resource "azurerm_monitor_data_collection_rule_association" "dcra" {
+  target_resource_id          = azurerm_kubernetes_cluster.k8s.id
+  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dce.id
+  description                 = "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster."
+}
+
+resource "azurerm_dashboard_grafana" "grafana" {
+  name                              = "grafana-prometheus"
+  resource_group_name               = azurerm_resource_group.rg.name
+  location                          = var.grafana_location
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  azure_monitor_workspace_integrations {
+    resource_id  = var.monitor_workspace_id
+  }
+}
+
+resource "azurerm_role_assignment" "datareaderrole" {
+  scope              = var.monitor_workspace_id
+  role_definition_id = "/subscriptions/${split("/",var.monitor_workspace_id)[2]}/providers/Microsoft.Authorization/roleDefinitions/b0d8363b-8ddd-447d-831f-62ca05bff136"
+  principal_id       = azurerm_dashboard_grafana.grafana.identity.0.principal_id
+}
+
+resource "azapi_resource" "NodeRecordingRulesRuleGroup" {
+  type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
+  name = "NodeRecordingRulesRuleGroup-${var.cluster_name}"
+  location = "eastus"
+  parent_id = azurerm_resource_group.rg.id
+  body = jsonencode({
       "properties": {
-        "dataCollectionEndpointId": "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
-        "dataFlows": [
-          {
-            "destinations": [ "MonitoringAccount1" ],
-            "streams": [ "Microsoft-PrometheusMetrics" ]
-          }
-        ],
-        "dataSources": {
-          "prometheusForwarder": [
-            {
-              "name": "PrometheusDataSource",
-              "streams": [ "Microsoft-PrometheusMetrics" ],
-              "labelIncludeFilter": {}
-            }
-          ]
-        },
-        "description": "DCR for Azure Monitor Metrics Profile (Managed Prometheus)",
-        "destinations": {
-          "monitoringAccounts": [
-            {
-              "accountResourceId": "[parameters('azureMonitorWorkspaceResourceId')]",
-              "name": "MonitoringAccount1"
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "[Concat('azuremonitormetrics-dcra', '-',  uniqueString(parameters('clusterResourceId')))]",
-      "apiVersion": "2017-05-10",
-      "subscriptionId": "[variables('clusterSubscriptionId')]",
-      "resourceGroup": "[variables('clusterResourceGroup')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
-        "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrName'))]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "parameters": {},
-          "variables": {},
-          "resources": [
-            {
-              "type": "Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations",
-              "name": "[concat(variables('clusterName'),'/microsoft.insights/', variables('dcraName'))]",
-              "apiVersion": "2022-06-01",
-              "location": "[parameters('clusterLocation')]",
-              "properties": {
-                "description": "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster.",
-                "dataCollectionRuleId": "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrName'))]"
-              }
-            }
-          ]
-        },
-        "parameters": {}
-      }
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "[Concat('azuremonitormetrics-profile-', '-',  uniqueString(parameters('clusterResourceId')))]",
-      "apiVersion": "2017-05-10",
-      "subscriptionId": "[variables('clusterSubscriptionId')]",
-      "resourceGroup": "[variables('clusterResourceGroup')]",
-      "dependsOn": [
-        "[Concat('azuremonitormetrics-dcra', '-',  uniqueString(parameters('clusterResourceId')))]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "parameters": {},
-          "variables": {},
-          "resources": [
-            {
-              "name": "[variables('clusterName')]",
-              "type": "Microsoft.ContainerService/managedClusters",
-              "location": "[parameters('clusterLocation')]",
-              "apiVersion": "2023-01-01",
-              "properties": {
-                "mode": "Incremental",
-                "id": "[parameters('clusterResourceId')]",
-                "azureMonitorProfile": {
-                  "metrics": {
-                    "enabled": true,
-                    "kubeStateMetrics": {
-                      "metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
-                      "metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        "parameters": {}
-      }
-    },
-    {
-      "name": "[variables('nodeRecordingRuleGroupName')]",
-      "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2023-03-01",
-      "location": "[parameters('azureMonitorWorkspaceLocation')]",
-      "properties": {
-        "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          var.monitor_workspace_id
         ],
-        "clusterName": "[variables('clusterName')]",
+        "clusterName": var.cluster_name,
         "interval": "PT1M",
         "rules": [
           {
@@ -261,18 +160,23 @@
           }
         ]
       }
-    },
-    {
-      "name": "[variables('kubernetesRecordingRuleGroupName')]",
-      "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2023-03-01",
-      "location": "[parameters('azureMonitorWorkspaceLocation')]",
+  })
+
+  schema_validation_enabled = false
+  ignore_missing_property   = false
+}
+
+resource "azapi_resource" "KubernetesReccordingRulesRuleGroup" {
+  type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
+  name = "KubernetesReccordingRulesRuleGroup-${var.cluster_name}"
+  location = azurerm_resource_group.rg.location
+  parent_id = azurerm_resource_group.rg.id
+  body = jsonencode({
       "properties": {
-        "description": "[concat(variables('kubernetesRecordingRuleGroupDescription'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          var.monitor_workspace_id
         ],
-        "clusterName": "[variables('clusterName')]",
+        "clusterName": var.cluster_name,
         "interval": "PT1M",
         "rules": [
           {
@@ -365,19 +269,23 @@
           }
         ]
       }
-    },
-    {
-      "name": "[variables('nodeRecordingRuleGroupNameWin')]",
-      "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2023-03-01",
-      "location": "[parameters('azureMonitorWorkspaceLocation')]",
+  })
+
+  schema_validation_enabled = false
+  ignore_missing_property   = false
+}
+
+resource "azapi_resource" "NodeRecordingRulesRuleGroupWin" {
+  type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
+  name = "NodeRecordingRulesRuleGroup-Win-${var.cluster_name}"
+  location = azurerm_resource_group.rg.location
+  parent_id = azurerm_resource_group.rg.id
+  body = jsonencode({
       "properties": {
-        "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          var.monitor_workspace_id
         ],
-        "enabled": "[parameters('enableWindowsRecordingRules')]",
-        "clusterName": "[variables('clusterName')]",
+        "clusterName": var.cluster_name,
         "interval": "PT1M",
         "rules": [
           {
@@ -442,18 +350,22 @@
           }
         ]
       }
-    },
-    {
-      "name": "[variables('nodeAndKubernetesRecordingRuleGroupNameWin')]",
-      "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2023-03-01",
-      "location": "[parameters('azureMonitorWorkspaceLocation')]",
+  })
+  schema_validation_enabled = false
+  ignore_missing_property   = false
+}
+
+
+resource "azapi_resource" "NodeAndKubernetesRecordingRulesRuleGroupWin" {
+  type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
+  name = "NodeAndKubernetesRecordingRulesRuleGroup-Win-${var.cluster_name}"
+  location = azurerm_resource_group.rg.location
+  parent_id = azurerm_resource_group.rg.id
+  body = jsonencode({
       "properties": {
-        "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          var.monitor_workspace_id
         ],
-        "enabled": "[parameters('enableWindowsRecordingRules')]",
         "clusterName": "[variables('clusterName')]",
         "interval": "PT1M",
         "rules": [
@@ -483,27 +395,27 @@
           },
           {
             "record": "windows_pod_container_available",
-            "expression": "windows_container_available{job=\"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\", container_id != \"\"}) by(container, container_id, pod, namespace)"
+            "expression": "windows_container_available{job=\"windows-exporter\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\"}) by(container, container_id, pod, namespace)"
           },
           {
             "record": "windows_container_total_runtime",
-            "expression": "windows_container_cpu_usage_seconds_total{job=\"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\", container_id != \"\"}) by(container, container_id, pod, namespace)"
+            "expression": "windows_container_cpu_usage_seconds_total{job=\"windows-exporter\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\"}) by(container, container_id, pod, namespace)"
           },
           {
             "record": "windows_container_memory_usage",
-            "expression": "windows_container_memory_usage_commit_bytes{job=\"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\", container_id != \"\"}) by(container, container_id, pod, namespace)"
+            "expression": "windows_container_memory_usage_commit_bytes{job=\"windows-exporter\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\"}) by(container, container_id, pod, namespace)"
           },
           {
             "record": "windows_container_private_working_set_usage",
-            "expression": "windows_container_memory_usage_private_working_set_bytes{job=\"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\", container_id != \"\"}) by(container, container_id, pod, namespace)"
+            "expression": "windows_container_memory_usage_private_working_set_bytes{job=\"windows-exporter\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\"}) by(container, container_id, pod, namespace)"
           },
           {
             "record": "windows_container_network_received_bytes_total",
-            "expression": "windows_container_network_receive_bytes_total{job=\"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\", container_id != \"\"}) by(container, container_id, pod, namespace)"
+            "expression": "windows_container_network_receive_bytes_total{job=\"windows-exporter\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\"}) by(container, container_id, pod, namespace)"
           },
           {
             "record": "windows_container_network_transmitted_bytes_total",
-            "expression": "windows_container_network_transmit_bytes_total{job=\"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\", container_id != \"\"}) by(container, container_id, pod, namespace)"
+            "expression": "windows_container_network_transmit_bytes_total{job=\"windows-exporter\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\"}) by(container, container_id, pod, namespace)"
           },
           {
             "record": "kube_pod_windows_container_resource_memory_request",
@@ -527,34 +439,7 @@
           }
         ]
       }
-    },
-    {
-      "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2022-04-01",
-      "name": "[parameters('roleNameGuid')]",
-      "scope": "[parameters('azureMonitorWorkspaceResourceId')]",
-      "properties": {
-          "roleDefinitionId": "[concat('/subscriptions/', variables('azureMonitorWorkspaceSubscriptionId'), '/providers/Microsoft.Authorization/roleDefinitions/', 'b0d8363b-8ddd-447d-831f-62ca05bff136')]",
-          "principalId": "[reference(resourceId('Microsoft.Dashboard/grafana', split(parameters('grafanaResourceId'),'/')[8]), '2022-08-01', 'Full').identity.principalId]"
-      }
-    },
-    {
-      "type": "Microsoft.Dashboard/grafana",
-      "apiVersion": "2022-08-01",
-      "name": "[split(parameters('grafanaResourceId'),'/')[8]]",
-      "sku": {
-        "name": "[parameters('grafanaSku')]"
-      },
-      "location": "[parameters('grafanaLocation')]",
-      "properties": {
-        "grafanaIntegrations": {
-          "azureMonitorWorkspaceIntegrations": [
-            {
-              "azureMonitorWorkspaceResourceId": "[parameters('azureMonitorWorkspaceResourceId')]"
-            }
-          ]
-        }
-      }
-    }
-  ]
+  })
+  schema_validation_enabled = false
+  ignore_missing_property   = false
 }

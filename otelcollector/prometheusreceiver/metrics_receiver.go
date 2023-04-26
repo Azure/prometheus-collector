@@ -32,26 +32,25 @@ import (
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	promHTTP "github.com/prometheus/prometheus/discovery/http"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/version"
-	"github.com/prometheus/prometheus/web"
 	"github.com/prometheus/prometheus/scrape"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/featuregate"
+	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 
-	//"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
 	"github.com/gracewehner/prometheusreceiver/internal"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/version"
+	"github.com/prometheus/prometheus/web"
 )
 
 const (
 	defaultGCInterval = 2 * time.Minute
 	gcIntervalDelta   = 1 * time.Minute
-
 	// Use same settings as Prometheus web server
-	maxConnections = 512
+	maxConnections     = 512
 	readTimeoutMinutes = 10
 )
 
@@ -64,14 +63,14 @@ type pReceiver struct {
 	configLoaded        chan struct{}
 	loadConfigOnce      sync.Once
 
-	settings         component.ReceiverCreateSettings
+	settings         receiver.CreateSettings
 	registry         *featuregate.Registry
 	scrapeManager    *scrape.Manager
 	discoveryManager *discovery.Manager
 }
 
 // New creates a new prometheus.Receiver reference.
-func newPrometheusReceiver(set component.ReceiverCreateSettings, cfg *Config, next consumer.Metrics, registry *featuregate.Registry) *pReceiver {
+func newPrometheusReceiver(set receiver.CreateSettings, cfg *Config, next consumer.Metrics, registry *featuregate.Registry) *pReceiver {
 	pr := &pReceiver{
 		cfg:                 cfg,
 		consumer:            next,
@@ -281,7 +280,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 		gcInterval(r.cfg.PrometheusConfig),
 		r.cfg.UseStartTimeMetric,
 		startTimeMetricRegex,
-		r.cfg.ID(),
+		useCreatedMetricGate.IsEnabled(),
 		r.cfg.PrometheusConfig.GlobalConfig.ExternalLabels,
 		r.registry,
 	)
@@ -299,20 +298,19 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 			host.ReportFatalError(err)
 		}
 	}()
-
-  // Setup settings and logger and create Prometheus web handler
+	// Setup settings and logger and create Prometheus web handler
 	webOptions := web.Options{
 		ScrapeManager: r.scrapeManager,
-		Context: ctx,
+		Context:       ctx,
 		ListenAddress: ":9090",
 		ExternalURL: &url.URL{
 			Scheme: "http",
 			Host:   "localhost:9090",
 			Path:   "",
 		},
-		RoutePrefix:    "/",
+		RoutePrefix: "/",
 		ReadTimeout: time.Minute * readTimeoutMinutes,
-		PageTitle: "Prometheus Receiver",
+		PageTitle:   "Prometheus Receiver",
 		Version: &web.PrometheusVersion{
 			Version:   version.Version,
 			Revision:  version.Revision,
@@ -321,24 +319,21 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 			BuildDate: version.BuildDate,
 			GoVersion: version.GoVersion,
 		},
-		Flags: make(map[string]string),
+		Flags:          make(map[string]string),
 		MaxConnections: maxConnections,
-		IsAgent: true,
-		Gatherer:   prometheus.DefaultGatherer,
+		IsAgent:        true,
+		Gatherer:       prometheus.DefaultGatherer,
 	}
 	go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 	webHandler := web.New(go_kit_logger, &webOptions)
-	
 	listener, err := webHandler.Listener()
 	if err != nil {
 		return err
 	}
-	
 	// Pass config and let the web handler know the config is ready.
 	// These are needed because Prometheus allows reloading the config without restarting.
 	webHandler.ApplyConfig(r.cfg.PrometheusConfig)
 	webHandler.SetReady(true)
-	
 	// Uses the same context as the discovery and scrape managers for shutting down
 	go func() {
 		if err := webHandler.Run(ctx, listener, ""); err != nil {
@@ -368,8 +363,12 @@ func gcInterval(cfg *config.Config) time.Duration {
 
 // Shutdown stops and cancels the underlying Prometheus scrapers.
 func (r *pReceiver) Shutdown(context.Context) error {
-	r.cancelFunc()
-	r.scrapeManager.Stop()
+	if r.cancelFunc != nil {
+		r.cancelFunc()
+	}
+	if r.scrapeManager != nil {
+		r.scrapeManager.Stop()
+	}
 	close(r.targetAllocatorStop)
 	return nil
 }

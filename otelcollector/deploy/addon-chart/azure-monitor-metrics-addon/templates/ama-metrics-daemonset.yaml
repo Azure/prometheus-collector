@@ -22,6 +22,7 @@ spec:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
     spec:
+      priorityClassName: system-node-critical
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
@@ -290,6 +291,7 @@ spec:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
     spec:
+      priorityClassName: system-node-critical
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
