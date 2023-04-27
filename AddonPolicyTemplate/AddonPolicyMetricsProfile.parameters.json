@@ -28,7 +28,7 @@
       }
     },
     "enableWindowsRecordingRules": {
-      "type": "bool",
+      "type": "boolean",
       "metadata": {
         "displayName": "Enable recording rule group for windows metrics",
         "description": "Enable recording rule group for windows metrics"

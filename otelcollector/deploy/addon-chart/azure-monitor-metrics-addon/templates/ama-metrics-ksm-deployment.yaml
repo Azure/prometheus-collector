@@ -26,6 +26,7 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
+      priorityClassName: system-node-critical
       hostNetwork: false
       serviceAccountName: ama-metrics-ksm
       securityContext:

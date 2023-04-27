@@ -21,7 +21,7 @@ LOGGING_PREFIX = "default-scrape-settings"
 @podannotationEnabled = false
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
-@kappiebasicEnabled = false
+@kappiebasicEnabled = true
 @noDefaultsEnabled = false
 @sendDSUpMetric = false
 
