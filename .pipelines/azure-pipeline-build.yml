@@ -503,7 +503,7 @@ jobs:
   variables:
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
   steps:
-    - bash: |
+  - bash: |
       # Create JSON request body
       cat <<EOF > "request.json"
         {
@@ -530,7 +530,7 @@ jobs:
       SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
       RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85"
 
-      echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $CHART_VERSION, SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
+      echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER, SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
 
       # MSI is not supported
       echo "Login cli using spn"
