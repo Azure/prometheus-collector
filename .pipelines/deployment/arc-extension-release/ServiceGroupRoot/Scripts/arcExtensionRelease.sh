@@ -1,11 +1,11 @@
 #!/bin/bash
 export HELM_EXPERIMENTAL_OCI=1
 
-IS_CUSTOMER_HIDDEN=${IS_CUSTOMER_HIDDEN}
+IS_CUSTOMER_HIDDEN=${IS_CUSTOMER_HIDDEN:-true}
 CHART_VERSION=${CHART_VERSION}
-RELEASE_STAGE=${RELEASE_STAGE}
+RELEASE_STAGE=${RELEASE_STAGE:-pipeline}
 
-PACKAGE_CONFIG_NAME="${PACKAGE_CONFIG_NAME:-microsoft.azuremonitor.containers-prom030823}"
+PACKAGE_CONFIG_NAME="${PACKAGE_CONFIG_NAME:-Microsoft.AzureMonitor.Containers.Metrics-Prom041823}"
 API_VERSION="${API_VERSION:-2021-05-01}"
 METHOD="${METHOD:-put}"
 REGISTRY_PATH="https://mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics-arc"
@@ -71,7 +71,7 @@ cat <<EOF > "request.json"
             "ReadyforRollout": true,
             "RollbackVersion": null,
             "PackageConfigName": "$PACKAGE_CONFIG_NAME"
-        },
+        }
     ]
 }
 EOF
