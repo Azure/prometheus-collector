@@ -26,7 +26,7 @@
     "resources": [
         {
             "type": "Microsoft.Insights/dataCollectionEndpoints",
-            "apiVersion": "2021-09-01-preview",
+            "apiVersion": "2022-06-01",
             "name": "[parameters('dataCollectionEndpointName')]",
             "location": "[parameters('location')]",
             "properties": {

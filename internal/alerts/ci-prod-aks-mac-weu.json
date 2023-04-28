@@ -7,7 +7,7 @@
         {
             "name": "containerinsights_prod_mac_weu_alerts",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-            "apiVersion": "2021-07-22-preview",
+            "apiVersion": "2023-03-01",
             "location": "westeurope",
             "properties": {
                 "description": "rule group for cluster /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-prod-aks-mac-weu-rg/providers/microsoft.containerservice/managedclusters/ci-prod-aks-mac-weu in MAC: /subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.Monitor/accounts/ci-prod-aks-weu-mac",
