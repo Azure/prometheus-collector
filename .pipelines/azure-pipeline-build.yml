@@ -511,7 +511,7 @@ jobs:
     - bash: |
       # Create JSON request body
       cat <<EOF > "request.json"
-      {
+        {
           "artifactEndpoints": [
               {
                   "Regions": [
@@ -528,8 +528,8 @@ jobs:
                   "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
               }
           ]
-      }
-      EOF
+        }
+        EOF
 
       # Send Request
       SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
