@@ -18,7 +18,7 @@ const commander_1 = require("commander");
 const promises_1 = __importDefault(require("fs/promises"));
 const _1 = __importDefault(require("."));
 const program = new commander_1.Command();
-program.name('prom-to-arm');
+program.name('prom-rules-converter');
 program.description('Azure Prometheus rule groups tool');
 // program.version(pack.version);
 function yaml2arm(inputPath, options, command) {
@@ -50,5 +50,6 @@ program //.command('yaml2arm')
     .option('-a, --action-group-id <string>', 'The resource id of the action group to use for alerting rules.')
     .option('-o, --output <string>', 'Output path. If not set, output would be printed to std out.')
     .option('-s, --skip-validation', 'Skip validation.')
+    .option('-l, --location <string>', 'Rule group location.')
     .action(yaml2arm);
 program.parse();

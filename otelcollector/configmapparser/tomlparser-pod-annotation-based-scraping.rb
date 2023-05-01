@@ -30,7 +30,11 @@ end
 # Use the ruby structure created after config parsing to set the right values to be used for otel collector settings
 def populateSettingValuesFromConfigMap(parsedConfig)
   begin
-    podannotationRegex = parsedConfig[:podannotationnamepsaceregex]
+    podannotationRegex = parsedConfig[:podannotationnamespaceregex]
+    # Make backwards compatible
+    if podannotationRegex.nil? || podannotationRegex.empty?
+      podannotationRegex = parsedConfig[:podannotationnamepsaceregex]
+    end
     if !podannotationRegex.nil? && podannotationRegex.kind_of?(String) && !podannotationRegex.empty?
       if isValidRegex(podannotationRegex) == true
         @podannotationNamespaceRegex = podannotationRegex

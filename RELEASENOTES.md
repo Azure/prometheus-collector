@@ -1,9 +1,21 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 04-17-2023
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.6.0-main-<TBD>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.6.0-main-<TBD>-win`
+* Change log -
+  * feat: Add priorityclass system node critical for RS, DS & KSM pods
+  * fix:  Upgrades
+          Fluent bit           - from: `v1.9.6` to:`v2.0.9`
+          Telegraf(windows)    - from: `v1.23.4` to:`v1.24.2`
+          Otelcol              - from:`v0.66.0` to:`v0.73.0`
+  * fix:  pod annotations bug
+
 ## Release 03-22-2023
 
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.5.0-main-<TBD>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.5.0-main-<TBD>-win`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.5.0-main-03-24-2023-7eb3f5c7`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.5.0-main-03-24-2023-7eb3f5c7-win`
 * Change log -
   * feat: Support for ARC-A
   * fix:  Match ME setings between DS & RS
@@ -16,9 +28,10 @@
   * fix:  Upgrades
           Node exporter - image from: `v1.3.1` to:`v1.5.0`; chart from:`3.1.1` to:`4.14.0`
           Kube state    - image from: `v2.6.0` to:`v2.8.1`; chart from:`4.23.0` to `4.32.0`
-          ME            - from:`2.2022.1201.1140` to:`2.2023.224.2214` 
+          ME            - from:`2.2022.1201.1140` to:`2.2023.224.2214`
           MDSD          - from:`1.23.4` to:`1.23.5`
           MA            - from:`46.2.3` to: `46.4.1`
+          Telegraf(linux) - from `1.23.0` to `1.25.2`
   * fix: CVEs (many)
 
 ## Release 02-22-2023

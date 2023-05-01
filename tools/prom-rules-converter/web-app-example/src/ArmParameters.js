@@ -17,6 +17,10 @@ const schema = {
       type: "string",
       title: "Action group Id"
     },
+    location: {
+      type: "string",
+      title: "Action group location"
+    },
     skipValidation: {
       type: "boolean",
       title: "Skip validation"
