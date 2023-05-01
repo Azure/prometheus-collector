@@ -524,17 +524,19 @@ jobs:
               }
           ]
         }
-        EOF
+      EOF
 
       # Send Request
       SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
       RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85"
+      SPN_CLIENT_ID="9a4c55e9-576a-450a-88bd-53bd634db38d"
+      SPN_TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
 
       echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER, SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
 
       # MSI is not supported
       echo "Login cli using spn"
-      az login --service-principal --username=SPN_CLIENT_ID --password=$(ARC_SPN_SECRET) --tenant=SPN_TENANT_ID
+      az login --service-principal --username=$SPN_CLIENT_ID --password=$(ARC_SPN_SECRET) --tenant=$SPN_TENANT_ID
       if [ $? -eq 0 ]; then
         echo "Logged in successfully with spn"
       else
