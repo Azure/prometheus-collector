@@ -566,7 +566,14 @@ jobs:
         echo "-e error failed to register arc extension"
         exit 1
       fi
+    displayName: "Deploy: Release to dev release train"
+  - task: AzureCLI@2
     displayName: "Deploy: ci-dev-arc-wcus cluster"
+    inputs:
+      azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      inlineScript: 'az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline'
 
 - job: Deploy
   displayName: "Deploy to dev clusters"
