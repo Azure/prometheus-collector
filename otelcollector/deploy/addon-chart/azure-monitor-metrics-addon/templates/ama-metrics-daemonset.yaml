@@ -299,11 +299,11 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 200m
+              cpu: 500m
               memory: 1Gi
             requests:
-              cpu: 75m
-              memory: 150Mi
+              cpu: 500m
+              memory: 500Mi
           env:
             - name: CLUSTER
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
