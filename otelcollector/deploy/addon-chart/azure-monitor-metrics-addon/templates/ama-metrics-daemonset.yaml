@@ -303,7 +303,7 @@ spec:
               memory: 1Gi
             requests:
               cpu: 500m
-              memory: 1Gi
+              memory: 500Mi
           env:
             - name: CLUSTER
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
