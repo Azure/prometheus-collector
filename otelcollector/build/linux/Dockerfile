@@ -71,6 +71,7 @@ COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 
 ARG TARGETARCH
+RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update
 RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl

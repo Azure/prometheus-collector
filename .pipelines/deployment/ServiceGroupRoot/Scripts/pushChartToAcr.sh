@@ -49,7 +49,7 @@ fi
 echo "Done checking that all necessary variables exist."
 
 # Wait for KSM and node-exporter charts to push
-cd prometheus-collector/
+cd ${HELM_CHART_NAME}
 for i in 1 2 3 4 5 6 7 8 9 10; do
   sleep 30
   helm dep update
@@ -65,7 +65,7 @@ if [ "$DEPENDENT_CHARTS_PUBLISHED" != "true" ]; then
 fi
 
 cd ../
-helm package ./prometheus-collector/
+helm package ./${HELM_CHART_NAME}
 
 # Login to az cli and authenticate to acr
 echo "Login cli using managed identity"

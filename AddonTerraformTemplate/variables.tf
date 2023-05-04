@@ -10,11 +10,11 @@ variable "cluster_location" {
 }
 
 variable "metric_labels_allowlist" {
-  default = "optional"
+  default = null
 }
 
 variable "metric_annotations_allowlist" {
-  default = "optional"
+  default = null
 }
 
 variable "dns_prefix" {
@@ -25,6 +25,9 @@ variable "monitor_workspace_id" {
   default = "/subscriptions/{sub_id}/resourceGroups/{rg_name}/providers/microsoft.monitor/accounts/{amw_name}"
 }
 
+variable "grafana_name" {
+  default = "grafana-prometheus"
+}
 
 variable "grafana_sku" {
   default = "Standard"

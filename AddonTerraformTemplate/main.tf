@@ -82,7 +82,7 @@ resource "azurerm_monitor_data_collection_rule_association" "dcra" {
 }
 
 resource "azurerm_dashboard_grafana" "grafana" {
-  name                              = "grafana-prometheus"
+  name                              = var.grafana_name
   resource_group_name               = azurerm_resource_group.rg.name
   location                          = var.grafana_location
 

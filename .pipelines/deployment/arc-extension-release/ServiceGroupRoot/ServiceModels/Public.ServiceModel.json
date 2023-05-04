@@ -1,0 +1,87 @@
+{
+  "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/serviceModel.json",
+  "contentVersion": "1.0.0.2",
+  "ServiceMetadata": {
+    "ServiceGroup": "ContainerInsightsAgent",
+    "Environment": "Prod"
+  },
+  "ServiceResourceGroupDefinitions": [
+    {
+      "Name": "AMA-Metrics-ARC-Extension-ServiceResourceGroupDefinition",
+      "ServiceResourceDefinitions": [
+        {
+          "Name": "ShellExtension",
+          "ComposedOf": {
+            "Extension": {
+              "Shell": [
+                {
+                  "type": "ShellExtensionType",
+                  "properties": {
+                    "imageName": "adm-ubuntu-1804-l",
+                    "imageVersion": "v27"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "ServiceResourceGroups": [
+    {
+      "AzureResourceGroupName": "PrometheusCollector-Release-Canary-Preview",
+      "Location": "eastus2euap",
+      "InstanceOf": "AMA-Metrics-ARC-Extension-ServiceResourceGroupDefinition",
+      "AzureSubscriptionId": "30c56c3a-54da-46ea-b004-06eb33432687",
+      "ScopeTags": [
+        {
+          "Name": "CanaryPreview"
+        }
+      ],
+      "ServiceResources": [
+        {
+          "Name": "ReleaseToRegions",
+          "InstanceOf": "ShellExtension",
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.ARCExtension.Parameters.json"
+        }
+      ]
+    },
+    {
+      "AzureResourceGroupName": "PrometheusCollector-Release-Canary-Stable",
+      "Location": "eastus2euap",
+      "InstanceOf": "AMA-Metrics-ARC-Extension-ServiceResourceGroupDefinition",
+      "AzureSubscriptionId": "30c56c3a-54da-46ea-b004-06eb33432687",
+      "ScopeTags": [
+        {
+          "Name": "CanaryStable"
+        }
+      ],
+      "ServiceResources": [
+        {
+          "Name": "ReleaseToRegions",
+          "InstanceOf": "ShellExtension",
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.ARCExtension.Parameters.json"
+        }
+      ]
+    },
+    {
+      "AzureResourceGroupName": "PrometheusCollector-Release-Pilot",
+      "Location": "eastus2euap",
+      "InstanceOf": "AMA-Metrics-ARC-Extension-ServiceResourceGroupDefinition",
+      "AzureSubscriptionId": "30c56c3a-54da-46ea-b004-06eb33432687",
+      "ScopeTags": [
+        {
+          "Name": "Pilot"
+        }
+      ],
+      "ServiceResources": [
+        {
+          "Name": "ReleaseToRegions",
+          "InstanceOf": "ShellExtension",
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.ARCExtension.Parameters.json"
+        }
+      ]
+    }
+  ]
+}

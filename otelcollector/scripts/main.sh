@@ -41,16 +41,16 @@ update-ca-trust
 
 # These env variables are populated by AKS in every kube-system pod
 # Remove ending '/' character since mdsd doesn't recognize this as a valid url
-if [ "$http_proxy" != "" ] && [[ "$http_proxy" =~ '/'$ ]]; then
+if [ "$http_proxy" != "" ] && [ "${http_proxy: -1}" == "/" ]; then
   export http_proxy=${http_proxy::-1}
 fi
-if [ "$HTTP_PROXY" != "" ] && [[ "$HTTP_PROXY" =~ '/'$ ]]; then
+if [ "$HTTP_PROXY" != "" ] && [ "${HTTP_PROXY: -1}" == "/" ]; then
  export HTTP_PROXY=${HTTP_PROXY::-1}
 fi
-if [ "$https_proxy" != "" ] && [[ "$https_proxy" =~ '/'$ ]]; then
+if [ "$https_proxy" != "" ] && [ "${https_proxy: -1}" == "/" ]; then
   export https_proxy=${https_proxy::-1}
 fi
-if [ "$HTTPS_PROXY" != "" ] && [[ "$HTTPS_PROXY" =~ '/'$ ]]; then
+if [ "$HTTPS_PROXY" != "" ] && [ "${HTTPS_PROXY: -1}" == "/" ]; then
   export HTTPS_PROXY=${HTTPS_PROXY::-1}
 fi
 
@@ -68,7 +68,12 @@ if [[ $CLUSTER_nocase =~ "connectedclusters" ]]; then
   export IS_ARC_CLUSTER="true"
 fi
 echo "export IS_ARC_CLUSTER=$IS_ARC_CLUSTER" >> ~/.bashrc
-  
+
+# EULA statement is required for Arc extension
+if IS_ARC_CLUSTER; then
+  echo "MICROSOFT SOFTWARE LICENSE TERMS\n\nMICROSOFT Azure Arc-enabled Kubernetes\n\nThis software is licensed to you as part of your or your company's subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/"
+fi
+
 if [ $IS_ARC_CLUSTER == "true" ] && [ $HTTP_PROXY_ENABLED == "true" ]; then
   proxyprotocol="$(echo $HTTPS_PROXY | grep :// | sed -e's,^\(.*://\).*,\1,g')"
   proxyprotocol=$(echo $proxyprotocol | tr "[:upper:]" "[:lower:]")
@@ -260,21 +265,14 @@ if [ "${MAC}" == "true" ]; then
       waitedSecsSoFar=1
       while true; do
             if [ $waitedSecsSoFar -gt $tokenAdapterWaitsecs ]; then
-                  if [ $IS_ARC_CLUSTER == "true" ]; then
-                    wget -T 2 -S http://localhost:9090/healthz 2>&1
-                  else
-                    wget -T 2 -S http://localhost:9999/healthz 2>&1
-                  fi
+                  wget -T 2 -S http://localhost:9999/healthz 2>&1
                   echo "giving up waiting for token adapter to become healthy after $waitedSecsSoFar secs"
                   # log telemetry about failure after waiting for waitedSecsSoFar and break
                   echo "export tokenadapterUnhealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
                   break
             else
-            echo "checking health of token adapter after $waitedSecsSoFar secs"
-            if [ $IS_ARC_CLUSTER == "true" ]; then
-                tokenAdapterResult=$(wget -T 2 -S http://localhost:9090/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
-            else
-                tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
+                  echo "checking health of token adapter after $waitedSecsSoFar secs"
+                  tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
             fi
             if [ ! -z $tokenAdapterResult ]; then
                         echo "found token adapter to be healthy after $waitedSecsSoFar secs" 
@@ -284,7 +282,6 @@ if [ "${MAC}" == "true" ]; then
             fi
             sleep 1
             waitedSecsSoFar=$(($waitedSecsSoFar + 1))
-            fi 
       done
       source ~/.bashrc
       #end wait for addon-token-adapter to be healthy
