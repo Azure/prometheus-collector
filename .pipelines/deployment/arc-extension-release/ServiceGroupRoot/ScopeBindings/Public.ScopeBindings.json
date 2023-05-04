@@ -3,107 +3,9 @@
   "contentVersion": "0.0.0.1",
   "scopeBindings": [       
       {
-          "scopeTagName": "CanaryPreview",
-          "bindings": [
-              {
-                  "find": "__RELEASE_STAGE__",
-                  "replaceWith": "CanaryPreview"
-              },
-              {
-                  "find": "__ADMIN_SUBSCRIPTION_ID__",
-                  "replaceWith": "$(ARCAdminSubscriptionID)"
-              },
-              {
-                  "find": "__CHART_VERSION__",
-                  "replaceWith": "$(ChartTag)"
-              },
-              {
-                  "find": "__IS_CUSTOMER_HIDDEN__",
-                  "replaceWith": "true"
-              },
-              {
-                  "find": "__REGISTER_REGIONS_CANARY__",
-                  "replaceWith": "$(REGISTER_REGIONS_CANARY)"
-              },
-              {
-                  "find": "__RELEASE_TRAINS_PATH__",
-                  "replaceWith": "$(RELEASE_TRAINS_PREVIEW_PATH)"
-              },
-              {
-                  "find": "__RESOURCE_AUDIENCE__",
-                  "replaceWith": "$(ARCResourceAudience)"
-              },
-              {
-                  "find": "__SPN_CLIENT_ID__",
-                  "replaceWith": "$(ARCSPNClientID)"
-              },
-              {
-                  "find": "__SPN_SECRET__",
-                  "replaceWith": "$(ARCSPNSecret)"
-              },
-              {
-                  "find": "__SPN_TENANT_ID__",
-                  "replaceWith": "$(ARCSPNTenant)"
-              },   
-              {
-                  "find": "__MANAGED_IDENTITY__",
-                  "replaceWith": "$(ManagedIdentity)"
-              }
-          ]
-      },
-      {
-          "scopeTagName": "CanaryStable",
-          "bindings": [
-              {
-                  "find": "__RELEASE_STAGE__",
-                  "replaceWith": "CanaryStable"
-              },
-              {
-                  "find": "__ADMIN_SUBSCRIPTION_ID__",
-                  "replaceWith": "$(ARCAdminSubscriptionID)"
-              },
-              {
-                  "find": "__CHART_VERSION__",
-                  "replaceWith": "$(ChartTag)"
-              },
-              {
-                  "find": "__IS_CUSTOMER_HIDDEN__",
-                  "replaceWith": "true"
-              },
-              {
-                  "find": "__RELEASE_TRAINS_PATH__",
-                  "replaceWith": "$(RELEASE_TRAINS_STABLE_PATH)"
-              },
-              {
-                  "find": "__RESOURCE_AUDIENCE__",
-                  "replaceWith": "$(ARCResourceAudience)"
-              },
-              {
-                  "find": "__SPN_CLIENT_ID__",
-                  "replaceWith": "$(ARCSPNClientID)"
-              },
-              {
-                  "find": "__SPN_SECRET__",
-                  "replaceWith": "$(ARCSPNSecret)"
-              },
-              {
-                  "find": "__SPN_TENANT_ID__",
-                  "replaceWith": "$(ARCSPNTenant)"
-              }, 
-              {
-                  "find": "__MANAGED_IDENTITY__",
-                  "replaceWith": "$(ManagedIdentity)"
-              }
-          ]
-      },
-      {
           "scopeTagName": "Stable",
           "bindings": [
               {
-                  "find": "__RELEASE_STAGE__",
-                  "replaceWith": "Stable"
-              },
-              {
                   "find": "__ADMIN_SUBSCRIPTION_ID__",
                   "replaceWith": "$(ARCAdminSubscriptionID)"
               },
@@ -116,12 +18,8 @@
                   "replaceWith": "true"
               },
               {
-                  "find": "__RELEASE_TRAINS_STABLE_PATH__",
-                  "replaceWith": "$(RELEASE_TRAINS_STABLE_PATH)"
-              },
-              {
-                  "find": "__REGISTER_REGIONS_BATCH__",
-                  "replaceWith": "$(REGISTER_REGIONS_BATCH)"
+                  "find": "__REGIONS_BATCH_NAME__",
+                  "replaceWith": "$(RegionsBatchName)"
               },
               {
                   "find": "__RESOURCE_AUDIENCE__",

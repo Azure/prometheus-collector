@@ -12,16 +12,20 @@ REGISTRY_PATH="https://mcr.microsoft.com/azuremonitor/containerinsights/ciprod/a
 
 CANARY_BATCH="\"eastus2euap\",\"centraluseuap\""
 SMALL_REGION="$CANARY_BATCH,\"westcentralus\""
-MEDIUM_REGION="$SMALL_REGION,\"westeurope\""
-LARGE_REGION="$MEDIUM_REGION,\"westus2\""
-BATCH_1_REGIONS="$LARGE_REGION,\"eastus\",\"southcentralus\",\"uksouth\",\"southeastasia\",\"koreacentral\",\"centralus\",\"japaneast\""
-BATCH_2_REGIONS="$BATCH_1_REGIONS,\"australiaeast\",\"northeurope\",\"eastus2\",\"francecentral\",\"westus\",\"northcentralus\",\"eastasia\",\"westus3\""
+MEDIUM_REGION="$SMALL_REGION,\"eastus2\""
+LARGE_REGION="$MEDIUM_REGION,\"eastus\""
+BATCH_1_REGIONS="$LARGE_REGION,\"westus2\",\"southcentralus\",\",\"southeastasia\",\"koreacentral\",\"centralus\",\"japaneast\",\"australiaeast\""
+BATCH_2_REGIONS="$BATCH_1_REGIONS,\"northeurope\",\"uksouth\",\"francecentral\",\"westus\",\"northcentralus\",\"eastasia\",\"westus3\",\"usgovvirginia\""
+BATCH_3_REGIONS="$BATCH_2_REGIONS,\"westeurope\",\"canadacentral\",\"canadaeast\",\"australiasoutheast\",\"centralindia\",\"switzerlandnorth\",\"germanywestcentral\",\"norwayeast\",\"germanynorth\""
+BATCH_4_REGIONS="$BATCH_3_REGIONS,\"japanwest\",\"ukwest\",\"koreasouth\",\"southafricanorth\",\"southindia\",\"brazilsouth\",\"uaenorth\",\"norwaywest\""
 
-RELEASE_TRAIN_DEV="\"dev\""
-RELEASE_TRAIN_STAGING="$RELEASE_TRAIN_DEV,\"staging\""
+RELEASE_TRAIN_STAGING="\"staging\""
 RELEASE_TRAIN_STABLE="$RELEASE_TRAIN_STAGING,\"stable\""
+RELEASE_TRAINS="$RELEASE_TRAIN_STABLE"
 
-if [ "$REGIONS_BATCH_NAME" == "small" ]; then
+if [ "$REGIONS_BATCH_NAME" == "canary" ]; then
+  REGIONS_BATCH=$CANARY_BATCH
+elif [ "$REGIONS_BATCH_NAME" == "small" ]; then
   REGIONS_BATCH=$SMALL_REGION
 elif [ "$REGIONS_BATCH_NAME" == "medium" ]
   REGIONS_BATCH=$MEDIUM_REGION
@@ -31,6 +35,10 @@ elif [ "$REGIONS_BATCH_NAME" == "batch1" ]
   REGIONS_BATCH=$BATCH_1_REGIONS
 elif [ "$REGIONS_BATCH_NAME" == "batch2" ]
   REGIONS_BATCH=$BATCH_2_REGIONS
+elif [ "$REGIONS_BATCH_NAME" == "batch3" ]
+  REGIONS_BATCH=$BATCH_3_REGIONS
+elif [ "$REGIONS_BATCH_NAME" == "batch4" ]
+  REGIONS_BATCH=$BATCH_4_REGIONS
 fi
 
 if [ -z "$REGIONS_BATCH" ]; then
@@ -55,7 +63,7 @@ else
   exit 1
 fi   
 
-echo "Start arc extension release stage ${RELEASE_STAGE}, REGISTER_REGIONS is $REGISTER_REGIONS_BATCH, RELEASE_TRAINS are $RELEASE_TRAINS_PREVIEW_PATH, $RELEASE_TRAINS_STABLE_PATH, PACKAGE_CONFIG_NAME is $PACKAGE_CONFIG_NAME, API_VERSION is $API_VERSION, METHOD is $METHOD"
+echo "Start arc extension release stage ${RELEASE_STAGE}, REGISTER_REGIONS is REGIONS_BATCH, RELEASE_TRAINS are $RELEASE_TRAINS, PACKAGE_CONFIG_NAME is $PACKAGE_CONFIG_NAME, API_VERSION is $API_VERSION, METHOD is $METHOD"
 
 # Create JSON request body
 cat <<EOF > "request.json"
