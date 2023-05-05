@@ -3,13 +3,13 @@ import toArmPrometheusRulesGroupProperties from './to-azure-prom-rule-group-prop
 
 
 export default function toAzurePromRuleGroup(group: PrometheusRulesGroup, params: any) {
-  const properties = toArmPrometheusRulesGroupProperties(group, params);  
-  
+  const properties = toArmPrometheusRulesGroupProperties(group, params);
+
   return {
       name: group.name,
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2021-07-22-preview",
+      "apiVersion": "2023-03-01",
       "location": "[parameters('location')]",
-      properties 
+      properties
   };
 }

@@ -40,7 +40,7 @@
     {
       "name": "[variables('nodeRecordingRuleGroupNameWin')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2021-07-22-preview",
+      "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
@@ -117,7 +117,7 @@
     {
       "name": "[variables('nodeAndKubernetesRecordingRuleGroupNameWin')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2021-07-22-preview",
+      "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",

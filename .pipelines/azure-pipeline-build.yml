@@ -80,6 +80,7 @@ jobs:
         export HELM_SEMVER=$SETUP_SEMVER
         export IMAGE_TAG=$SETUP_SEMVER
         export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
+        export ARC_EXTENSION=true
         env
 
         envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
@@ -90,7 +91,6 @@ jobs:
         export ARC_EXTENSION=false
         export AKS_REGION="westeurope"
         export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu"
-        envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
       displayName: 'Ev2: package artifacts.tar.gz for prod release'
 
       - bash: |
@@ -440,6 +440,50 @@ jobs:
       mkdir -p $(Build.ArtifactStagingDirectory)/chart
       echo {\"image.name\":\"$(HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/chart/metadata.json
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
+    displayName: "Build: push helm chart to dev ACR"
+    condition: eq(variables.IS_PR, false)
+
+- job: ARC_Chart
+  displayName: "Package Arc helm chart"
+  pool:
+    name: Azure-Pipelines-CI-Test-EO
+  dependsOn:
+  - Common
+  - Linux
+  variables:
+    HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
+    IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
+    IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+    ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
+    ARC_EXTENSION: true
+  steps:
+  - task: HelmInstaller@1
+    displayName: 'Build: install Helm version'
+    inputs:
+      helmVersionToInstall: latest
+
+  - bash: |
+      export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
+      envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+      helm version
+    displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
+
+  - bash: |
+      helm dep update
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+    displayName: "Build: update helm dependencies"
+
+  - bash: |
+      helm package ./azure-monitor-metrics-addon/
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
+    displayName: "Build: package helm chart"
+
+  - bash: |
+      helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+      helm push $(ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+      mkdir -p $(Build.ArtifactStagingDirectory)/arc-chart
+      echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
     displayName: "Build: push helm chart to dev ACR"
     condition: eq(variables.IS_PR, false)
 

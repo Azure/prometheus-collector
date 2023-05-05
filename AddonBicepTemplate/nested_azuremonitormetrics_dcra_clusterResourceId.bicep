@@ -3,7 +3,7 @@ param variables_clusterName string
 param variables_dcraName string
 param clusterLocation string
 
-resource variables_clusterName_microsoft_insights_variables_dcra 'Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations@2021-09-01-preview' = {
+resource variables_clusterName_microsoft_insights_variables_dcra 'Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations@2022-06-01' = {
   name: '${variables_clusterName}/microsoft.insights/${variables_dcraName}'
   location: clusterLocation
   properties: {

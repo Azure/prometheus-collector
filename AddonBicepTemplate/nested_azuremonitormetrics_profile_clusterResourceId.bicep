@@ -4,7 +4,7 @@ param clusterResourceId string
 param metricLabelsAllowlist string
 param metricAnnotationsAllowList string
 
-resource variables_cluster 'Microsoft.ContainerService/managedClusters@2022-07-02-preview' = {
+resource variables_cluster 'Microsoft.ContainerService/managedClusters@2023-01-01' = {
   name: variables_clusterName
   location: clusterLocation
   properties: {
