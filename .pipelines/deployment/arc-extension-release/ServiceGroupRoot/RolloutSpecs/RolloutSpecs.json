@@ -4,7 +4,7 @@
   "RolloutMetadata": {
     "ServiceModelPath": "ServiceModels//Public.ServiceModel.json",   
     "ScopeBindingsPath": "ScopeBindings//Public.ScopeBindings.json", 
-    "Name": "ContainerInsightsExtension-Stable",
+    "Name": "PrometheusCollectorExtension-Stable",
     "RolloutType": "Major",
     "BuildSource": {
       "Parameters": {
@@ -13,7 +13,7 @@
     },
     "notification": {
       "email": {
-        "to": "omscontainers@microsoft.com"
+        "to": "ciprometheus@microsoft.com"
       }
     }  
   },

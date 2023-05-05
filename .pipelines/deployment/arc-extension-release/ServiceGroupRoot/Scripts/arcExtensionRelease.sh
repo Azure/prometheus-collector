@@ -19,7 +19,8 @@ BATCH_2_REGIONS="$BATCH_1_REGIONS,\"northeurope\",\"uksouth\",\"francecentral\",
 BATCH_3_REGIONS="$BATCH_2_REGIONS,\"westeurope\",\"canadacentral\",\"canadaeast\",\"australiasoutheast\",\"centralindia\",\"switzerlandnorth\",\"germanywestcentral\",\"norwayeast\",\"germanynorth\""
 BATCH_4_REGIONS="$BATCH_3_REGIONS,\"japanwest\",\"ukwest\",\"koreasouth\",\"southafricanorth\",\"southindia\",\"brazilsouth\",\"uaenorth\",\"norwaywest\""
 
-RELEASE_TRAIN_STAGING="\"staging\""
+RELEASE_TRAIN_PIPELINE="\"pipeline\""
+RELEASE_TRAIN_STAGING="$RELEASE_TRAIN_PIPELINE,\"staging\""
 RELEASE_TRAIN_STABLE="$RELEASE_TRAIN_STAGING,\"stable\""
 RELEASE_TRAINS="$RELEASE_TRAIN_STABLE"
 
