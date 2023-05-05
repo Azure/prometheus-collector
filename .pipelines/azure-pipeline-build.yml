@@ -80,12 +80,9 @@ jobs:
         export HELM_SEMVER=$SETUP_SEMVER
         export IMAGE_TAG=$SETUP_SEMVER
         export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
-        export ARC_EXTENSION=true
         env
 
         envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
-        export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
-        envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
         tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-arc
 
         cd $(Build.ArtifactStagingDirectory)
@@ -95,6 +92,11 @@ jobs:
         export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu"
         envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
       displayName: 'Ev2: package artifacts.tar.gz for prod release'
+
+      - bash: |
+        cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
+        tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
+      displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
 
     - task: CredScan@3
       displayName: "SDL : Run credscan"
@@ -440,6 +442,13 @@ jobs:
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
     displayName: "Build: push helm chart to dev ACR"
     condition: eq(variables.IS_PR, false)
+
+  - task: PublishBuildArtifacts@1
+    displayName: "Ev2: publish helm chart artifacts"
+    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    inputs:
+      pathToPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: drop
 
 - job: ARC_Chart
   displayName: "Package Arc helm chart"
