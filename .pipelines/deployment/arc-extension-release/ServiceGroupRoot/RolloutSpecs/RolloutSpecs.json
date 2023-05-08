@@ -21,7 +21,7 @@
     {
       "name": "ArcExtensionRelease",
       "targetType": "ServiceResource",
-      "targetName": "ArcExtensionReleaseStable",
+      "targetName": "ArcExtensionRelease",
       "actions": [ "Shell/ArcExtensionRelease" ],
       "dependsOn": [ ]
     }

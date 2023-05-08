@@ -41,7 +41,7 @@
       ],
       "ServiceResources": [
         {
-          "Name": "ReleaseToRegions",
+          "Name": "ArcExtensionRelease",
           "InstanceOf": "ShellExtension",
           "RolloutParametersPath": "Parameters\\PrometheusCollector.ARCExtension.Parameters.json"
         }
