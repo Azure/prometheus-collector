@@ -28,17 +28,17 @@ if [ "$REGIONS_BATCH_NAME" == "canary" ]; then
   REGIONS_BATCH=$CANARY_BATCH
 elif [ "$REGIONS_BATCH_NAME" == "small" ]; then
   REGIONS_BATCH=$SMALL_REGION
-elif [ "$REGIONS_BATCH_NAME" == "medium" ]
+elif [ "$REGIONS_BATCH_NAME" == "medium" ]; then
   REGIONS_BATCH=$MEDIUM_REGION
-elif [ "$REGIONS_BATCH_NAME" == "large" ]
+elif [ "$REGIONS_BATCH_NAME" == "large" ]; then
   REGIONS_BATCH=$LARGE_REGION
-elif [ "$REGIONS_BATCH_NAME" == "batch1" ]
+elif [ "$REGIONS_BATCH_NAME" == "batch1" ]; then
   REGIONS_BATCH=$BATCH_1_REGIONS
-elif [ "$REGIONS_BATCH_NAME" == "batch2" ]
+elif [ "$REGIONS_BATCH_NAME" == "batch2" ]; then
   REGIONS_BATCH=$BATCH_2_REGIONS
-elif [ "$REGIONS_BATCH_NAME" == "batch3" ]
+elif [ "$REGIONS_BATCH_NAME" == "batch3" ]; then
   REGIONS_BATCH=$BATCH_3_REGIONS
-elif [ "$REGIONS_BATCH_NAME" == "batch4" ]
+elif [ "$REGIONS_BATCH_NAME" == "batch4" ]; then
   REGIONS_BATCH=$BATCH_4_REGIONS
 fi
 
