@@ -485,7 +485,7 @@ resource selfRoleAssignmentGrafana 'Microsoft.Authorization/roleAssignments@2022
 }
 
 // Provide Grafana access to the AMW instance
-module roleAssignmentGrafanaAMW './grafana_amw_role_assignment.bicep' = {
+module roleAssignmentGrafanaAMW './nested_grafana_amw_role_assignment.bicep' = {
   name: roleNameGuid
   scope: resourceGroup(split(azureMonitorWorkspaceResourceId, '/')[2], split(azureMonitorWorkspaceResourceId, '/')[4])
   params: {
