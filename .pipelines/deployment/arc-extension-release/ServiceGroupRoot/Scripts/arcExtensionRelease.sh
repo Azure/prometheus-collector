@@ -68,7 +68,7 @@ else
   exit 1
 fi
 
-echo "Start arc extension release. REGISTER_REGIONS is REGIONS_BATCH, RELEASE_TRAINS are $RELEASE_TRAINS, PACKAGE_CONFIG_NAME is $PACKAGE_CONFIG_NAME, API_VERSION is $API_VERSION, METHOD is $METHOD"
+echo "Start arc extension release. REGISTER_REGIONS is $REGIONS_BATCH, RELEASE_TRAINS are $RELEASE_TRAINS, PACKAGE_CONFIG_NAME is $PACKAGE_CONFIG_NAME, API_VERSION is $API_VERSION, METHOD is $METHOD"
 
 # Create JSON request body
 cat <<EOF > "request.json"
@@ -81,7 +81,7 @@ cat <<EOF > "request.json"
             "Releasetrains": [
                 $RELEASE_TRAINS
             ],
-            "FullPathToHelmChart": "https://$REGISTRY_PATH",
+            "FullPathToHelmChart": "https://${REGISTRY_PATH}",
             "ExtensionUpdateFrequencyInMinutes": 60,
             "IsCustomerHidden": $IS_CUSTOMER_HIDDEN,
             "ReadyforRollout": true,
