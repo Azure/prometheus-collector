@@ -23,11 +23,13 @@ param enableWindowsRecordingRules bool
 param grafanaResourceId string
 param grafanaLocation string
 param grafanaSku string
+param grafanaAdminObjectId string
 
 @description('A new GUID used to identify the role assignment')
 param roleNameGuid string = newGuid()
 
 var azureMonitorWorkspaceSubscriptionId = split(azureMonitorWorkspaceResourceId, '/')[2]
+var azureMonitorWorkspaceResourceGroup = split(azureMonitorWorkspaceResourceId, '/')[4]
 var clusterSubscriptionId = split(clusterResourceId, '/')[2]
 var clusterResourceGroup = split(clusterResourceId, '/')[4]
 var clusterName = split(clusterResourceId, '/')[8]
@@ -449,18 +451,13 @@ resource nodeAndKubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/
   }
 }
 
-resource roleNameGuid_resource 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: roleNameGuid
-  properties: {
-    roleDefinitionId: '/subscriptions/${azureMonitorWorkspaceSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/b0d8363b-8ddd-447d-831f-62ca05bff136'
-    principalId: reference(grafanaResourceId_8.id, '2022-08-01', 'Full').identity.principalId
-  }
-}
-
 resource grafanaResourceId_8 'Microsoft.Dashboard/grafana@2022-08-01' = {
   name: split(grafanaResourceId, '/')[8]
   sku: {
     name: grafanaSku
+  }
+  identity: {
+    type: 'SystemAssigned'
   }
   location: grafanaLocation
   properties: {
@@ -472,4 +469,30 @@ resource grafanaResourceId_8 'Microsoft.Dashboard/grafana@2022-08-01' = {
       ]
     }
   }
+}
+
+// Add user's as Grafana Admin for the Grafana instance
+resource selfRoleAssignmentGrafana 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: roleNameGuid
+  scope: grafanaResourceId_8
+  properties: {
+    roleDefinitionId: '/subscriptions/${azureMonitorWorkspaceSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/22926164-76b3-42b3-bc55-97df8dab3e41'
+    principalId: grafanaAdminObjectId
+  }
+  dependsOn: [
+    grafanaResourceId_8
+  ]
+}
+
+// Provide Grafana access to the AMW instance
+module roleAssignmentGrafanaAMW './grafana_amw_role_assignment.bicep' = {
+  name: roleNameGuid
+  scope: resourceGroup(split(azureMonitorWorkspaceResourceId, '/')[2], split(azureMonitorWorkspaceResourceId, '/')[4])
+  params: {
+    azureMonitorWorkspaceSubscriptionId: azureMonitorWorkspaceSubscriptionId
+    grafanaPrincipalId: reference(grafanaResourceId_8.id, '2022-08-01', 'Full').identity.principalId
+  }
+  dependsOn: [
+    grafanaResourceId_8
+  ]
 }
