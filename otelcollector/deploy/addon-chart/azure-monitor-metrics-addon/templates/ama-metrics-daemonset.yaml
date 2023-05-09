@@ -53,6 +53,10 @@ spec:
               {{- else }}
               value: "{{ .Values.global.commonGlobals.Region }}"
               {{- end }}
+            {{- if .Values.internalSettings.clusterOverride  }}
+            - name: CLUSTER_OVERRIDE
+              value: "true"
+            {{- end }}
             - name: MAC
               value: "true"
             - name: AZMON_COLLECT_ENV
@@ -316,6 +320,10 @@ spec:
               value: "{{ .Values.global.commonGlobals.Region }}"
             - name: MAC
               value: "true"
+            {{- if .Values.internalSettings.clusterOverride  }}
+            - name: CLUSTER_OVERRIDE
+              value: "true"
+            {{- end }}
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
