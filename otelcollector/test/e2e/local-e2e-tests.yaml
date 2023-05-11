@@ -94,33 +94,23 @@ data:
       # Update values of CLIENT_ID, CLIENT_SECRET of the service principal which has permission to query LA and Metrics API
       # Update value of TENANT_ID corresponding your Azure Service principal
       - name: CLIENT_ID
-        value: ""
+        value: "3d036301-8521-4b17-9090-e9fc62ef696d"
       - name: CLIENT_SECRET
         value: ""
       - name: TENANT_ID
         value: "72f988bf-86f1-41af-91ab-2d7cd011db47"
-      - name: DEFAULT_QUERY_TIME_INTERVAL_IN_MINUTES
-        value: "10"
-      - name: DEFAULT_METRICS_QUERY_TIME_INTERVAL_IN_MINUTES
-        value: "10"
-      - name: AGENT_POD_EXPECTED_RESTART_COUNT
-        value: "0"
-      - name: AZURE_CLOUD
-        value: "AZURE_PUBLIC_CLOUD"
       - name: SUBSCRIPTION_ID
-        value: "9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb"
+        value: "b9842c7c-1a38-4385-8f39-a51314758bcf"
       - name: RESOURCE_GROUP
-        value: "ci-dev-arc-wcus"
+        value: "container-insights-arc"
       - name: CLUSTER_NAME
-        value: "ci-dev-arc-wcus"
+        value: "container-insights-arc"
       - name: AMA_METRICS_ARC_RELEASE_TRAIN
-        value: "pipeline"
-      - name: AMA_METRICS_ARC_VERSION
-        value: "6.6.0-marcj-ci-cd-arc-05-02-2023-942cf50e"
-      - name: AGENT_WAIT_TIME_SECS
-        value: "200"
+        value: "stable"
+      #- name: AMA_METRICS_ARC_VERSION
+      #  value: ""
       # image tag should be updated if new tests being added after this image
-      image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:conftest050323-2
+      image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:conf-0.0.2
       imagePullPolicy: IfNotPresent
       name: plugin
       resources: {}

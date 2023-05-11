@@ -127,7 +127,7 @@ createArcAMAMetricsExtension() {
        basicparameters="$basicparameters  --release-train $AMA_METRICS_ARC_RELEASE_TRAIN"
     fi
     if [ ! -z "$AMA_METRICS_ARC_VERSION" ]; then
-       basicparameters="$basicparameters  --version $AMA_METRICS_ARC_VERSION"
+       basicparameters="$basicparameters  --version $AMA_METRICS_ARC_VERSION --AutoUpgradeMinorVersion false"
     fi
     
     az k8s-extension create $basicparameters

@@ -34,20 +34,9 @@ def env_dict():
             env_dict['CLIENT_ID'] = os.getenv('CLIENT_ID')
             env_dict['CLIENT_SECRET'] = os.getenv('CLIENT_SECRET')
             env_dict['IS_NON_ARC_K8S_TEST_ENVIRONMENT'] = os.getenv('IS_NON_ARC_K8S_TEST_ENVIRONMENT')
-            # released agent for Arc K8s still uses ama-logs and when we rollout the agent with mdsd
-            # this shouldnt set after agent rollout with mdsd
-            env_dict['USING_AMA_LOGS_BASE_AGENT'] = os.getenv('USING_AMA_LOGS_BASE_AGENT')
 
             waitTimeInterval = int(os.getenv('AGENT_WAIT_TIME_SECS')) if os.getenv('AGENT_WAIT_TIME_SECS') else constants.AGENT_WAIT_TIME_SECS
             env_dict['AGENT_WAIT_TIME_SECS'] = waitTimeInterval
-            # get default query time interval for log analytics queries
-            queryTimeInterval = int(os.getenv('DEFAULT_QUERY_TIME_INTERVAL_IN_MINUTES')) if os.getenv('DEFAULT_QUERY_TIME_INTERVAL_IN_MINUTES') else constants.DEFAULT_QUERY_TIME_INTERVAL_IN_MINUTES
-            # add minute suffix since this format required for LA queries
-            env_dict['DEFAULT_QUERY_TIME_INTERVAL_IN_MINUTES'] = str(queryTimeInterval) + "m"
-
-            # get default query time interval for metrics queries
-            env_dict['DEFAULT_METRICS_QUERY_TIME_INTERVAL_IN_MINUTES'] = int(os.getenv('DEFAULT_METRICS_QUERY_TIME_INTERVAL_IN_MINUTES')) if os.getenv('DEFAULT_METRICS_QUERY_TIME_INTERVAL_IN_MINUTES') else constants.DEFAULT_METRICS_QUERY_TIME_INTERVAL_IN_MINUTES
-
 
             # expected agent pod restart count
             env_dict['AGENT_POD_EXPECTED_RESTART_COUNT'] = int(os.getenv('AGENT_POD_EXPECTED_RESTART_COUNT')) if os.getenv('AGENT_POD_EXPECTED_RESTART_COUNT') else constants.AGENT_POD_EXPECTED_RESTART_COUNT

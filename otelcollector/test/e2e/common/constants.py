@@ -53,9 +53,6 @@ AGENT_DAEMONSET_NAME = 'ama-metrics-node'
 AGENT_DEPLOYMENT_PODS_LABEL_SELECTOR = 'rsName=ama-metrics'
 AGENT_DAEMON_SET_PODS_LABEL_SELECTOR = 'dsName=ama-metrics-node'
 AGENT_DAEMON_SET_PODS_LABEL_SELECTOR_NON_ARC = 'component=ama-metrics'
-AGENT_FLUENTD_LOG_PATH = '/var/opt/microsoft/docker-cimprov/log/fluentd.log'
-AGENT_AMA_LOGS_LOG_PATH = '/var/opt/microsoft/ama-logs/log/ama-logs.log'
-AGENT_REPLICASET_WORKFLOWS = ["kubePodInventoryEmitStreamSuccess", "kubeNodeInventoryEmitStreamSuccess"]
 
 # override this through setting enviornment variable if the expected restart count is > 0 for example applying configmap
 AGENT_POD_EXPECTED_RESTART_COUNT = 0
