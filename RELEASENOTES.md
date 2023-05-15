@@ -1,14 +1,14 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 05-04-2023
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.0-main-TBD`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.0-main-TBD-win`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.0-main-05-04-2023-4450ad10`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.0-main-05-04-2023-4450ad10-win`
 * Change log -
   * feat: Add release and CI/CD support for Arc extension
   * fix:  Allowlist all metrics used in alerting
   * fix:  Update CPU and memory limits for Windows pods
 
-## Release 04-17-2023
+## Release 04-25-2023
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.6.0-main-04-25-2023-2eb2a81c`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.6.0-main-04-25-2023-2eb2a81c-win`
@@ -20,7 +20,7 @@
           Otelcol              - from:`v0.66.0` to:`v0.73.0`
   * fix:  pod annotations bug
 
-## Release 03-22-2023
+## Release 03-24-2023
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.5.0-main-03-24-2023-7eb3f5c7`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.5.0-main-03-24-2023-7eb3f5c7-win`
