@@ -217,7 +217,7 @@
                 "configurationProtectedSettings": {
                 },
                 "autoUpgradeMinorVersion": true,
-                "releaseTrain": "Dev",
+                "releaseTrain": "Stable",
                 "scope": {
                   "Cluster": {
                     "releaseNamespace": "kube-system"
