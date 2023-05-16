@@ -31,6 +31,9 @@
     },
     "grafanaSku": {
       "value": "Standard"
+    },
+    "grafanaAdminObjectId": {
+      "value": "{grafanaAdminObjectId}"
     }
   }
 }
