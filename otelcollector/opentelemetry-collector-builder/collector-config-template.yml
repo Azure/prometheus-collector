@@ -32,7 +32,10 @@ processors:
 receivers:
     prometheus:
       config:
+extensions:
+    health_check:
 service:
+  extensions: [health_check]
   pipelines:
     metrics:
       receivers: [prometheus]

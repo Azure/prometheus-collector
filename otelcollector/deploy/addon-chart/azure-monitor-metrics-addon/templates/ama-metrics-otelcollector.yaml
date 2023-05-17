@@ -4,7 +4,7 @@ metadata:
   name: "ama-metrics-otelcollector"
 spec:
   mode: statefulset
-  image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.0-main-05-04-2023-4450ad10
+  image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.0-grace-operator-05-17-2023-9be81d7a
   replicas: 1
   ports:
     - name: "metrics"
@@ -112,16 +112,16 @@ spec:
       hostPath:
         path: /usr/local/share/ca-certificates/
         type: DirectoryOrCreate
-  # livenessProbe:
+  livenessProbe:
   #   exec:
   #     command:
   #       - /bin/bash
   #       - -c
   #       - /opt/microsoft/liveness/livenessprobe.sh
-  #   initialDelaySeconds: 60
+    initialDelaySeconds: 120
   #   periodSeconds: 15
   #   timeoutSeconds: 5
-  #   failureThreshold: 3
+    failureThreshold: 3
   resources:
     limits:
       cpu: 200m

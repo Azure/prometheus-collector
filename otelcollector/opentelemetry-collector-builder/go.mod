@@ -23,6 +23,7 @@ require (
 	go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.74.0
 	go.opentelemetry.io/collector/receiver v0.74.0
 	go.opentelemetry.io/collector/receiver/otlpreceiver v0.74.0
+  github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.74.0
 )
 
 require (
