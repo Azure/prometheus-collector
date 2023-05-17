@@ -33,7 +33,10 @@ receivers:
         scrape_configs:
         # scrape_configs must be non-null for collector to start
         - job_name: empty_job
+extensions:
+    health_check:
 service:
+  extensions: [health_check]
   pipelines:
     metrics:
       receivers: [prometheus]
@@ -41,7 +44,7 @@ service:
       processors: [batch,resource]
   telemetry:
     logs:
-      level: warn
+      level: debug
       encoding: json
     metrics:
       level: detailed

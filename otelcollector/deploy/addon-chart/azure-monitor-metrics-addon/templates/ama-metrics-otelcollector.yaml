@@ -1,0 +1,317 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: "ama-metrics-otelcollector"
+spec:
+  mode: statefulset
+  image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.0-main-05-04-2023-4450ad10
+  replicas: 1
+  ports:
+    - name: "metrics"
+      protocol: TCP
+      port: 8888
+  targetAllocator:
+    enabled: true
+    serviceAccount: ama-metrics-otelcollector-targetallocator
+    prometheusCR:
+      enabled: true
+  env:
+    - name: KUBE_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    - name: KUBE_POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: MODE
+      value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
+    - name: WINMODE
+      value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+    - name: MINIMAL_INGESTION_PROFILE
+      value: "true" # only supported value is the string "true"
+    - name: CLUSTER
+      value: "/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/grace-addon/providers/Microsoft.ContainerService/managedClusters/grace-addon"
+    - name: AKSREGION
+      value: "eastus"
+    - name: MAC
+      value: "true"
+    - name: customEnvironment
+      value: "azurepubliccloud"
+    - name: OMS_TLD
+      value: "opinsights.azure.com"
+    - name: CONTROLLER_TYPE
+      value: "ReplicaSet"
+    - name: NODE_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    - name: KUBE_STATE_NAME
+      value: ama-metrics-ksm
+    - name: NODE_EXPORTER_NAME
+      value: ""
+    - name: NODE_EXPORTER_TARGETPORT
+      value: "19100"
+    - name: KUBE_STATE_VERSION
+      value: ""
+    - name: NODE_EXPORTER_VERSION
+      value: "v1.5.0"
+    - name: AGENT_VERSION
+      value: 6.7.0-main-05-04-2023-4450ad10
+  volumeMounts:
+    - mountPath: /etc/config/settings
+      name: settings-vol-config
+      readOnly: true
+    - mountPath: /etc/config/settings/prometheus
+      name: prometheus-config-vol
+      readOnly: true
+    - name: host-log-containers
+      readOnly: true
+      mountPath: /var/log/containers
+    - name: host-log-pods
+      readOnly: true
+      mountPath: /var/log/pods
+    - mountPath: /anchors/mariner
+      name: anchors-mariner
+      readOnly: true
+    - mountPath: /anchors/ubuntu
+      name: anchors-ubuntu
+      readOnly: true
+  volumes:
+    - name: settings-vol-config
+      configMap:
+        name: ama-metrics-settings-configmap
+        optional: true
+    - name: prometheus-config-vol
+      configMap:
+        name: ama-metrics-prometheus-config-node
+        optional: true
+    - name: host-log-containers
+      hostPath:
+        path: /var/log/containers
+    - name: host-log-pods
+      hostPath:
+        path: /var/log/pods
+    - name: anchors-mariner
+      hostPath:
+        path: /etc/pki/ca-trust/anchors/
+        type: DirectoryOrCreate
+    - name: anchors-ubuntu
+      hostPath:
+        path: /usr/local/share/ca-certificates/
+        type: DirectoryOrCreate
+  # livenessProbe:
+  #   exec:
+  #     command:
+  #       - /bin/bash
+  #       - -c
+  #       - /opt/microsoft/liveness/livenessprobe.sh
+  #   initialDelaySeconds: 60
+  #   periodSeconds: 15
+  #   timeoutSeconds: 5
+  #   failureThreshold: 3
+  resources:
+    limits:
+      cpu: 200m
+      memory: 1Gi
+    requests:
+      cpu: 75m
+      memory: 150Mi
+  containers:
+  - name: addon-token-adapter
+    command:
+      - /addon-token-adapter
+    args:
+      - --secret-namespace=kube-system
+      - --secret-name=aad-msi-auth-token
+      - --token-server-listening-port=7777
+      - --health-server-listening-port=9999
+    image: "mcr.microsoft.com/aks/msi/addon-token-adapter:master.221118.2"
+    imagePullPolicy: IfNotPresent
+    env:
+      - name: AZMON_COLLECT_ENV
+        value: "false"
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 9999
+      initialDelaySeconds: 10
+      periodSeconds: 60
+    resources:
+      limits:
+        cpu: 500m
+        memory: 500Mi
+      requests:
+        cpu: 20m
+        memory: 30Mi
+    securityContext:
+      capabilities:
+        drop:
+          - ALL
+        add:
+          - NET_ADMIN
+          - NET_RAW
+  config: |
+    exporters:
+      prometheus:
+        endpoint: "127.0.0.1:9091"
+        const_labels:
+          cluster: "cluster"
+    processors:
+      batch:
+        send_batch_size: 7000
+        timeout: 200ms
+        send_batch_max_size: 7000
+      resource:
+        attributes:
+        - key: cluster
+          value: "grace-addon"
+          action: "upsert"
+        - key: job
+          from_attribute: service.name
+          action: insert
+        - key: instance
+          from_attribute: service.instance.id
+          action: insert
+    receivers:
+        prometheus:
+          config:
+            scrape_configs:
+            - job_name: health_check
+              static_configs: 
+              - targets: ["localhost:8888"]
+    extensions:
+      health_check:
+    service:
+      extensions: [health_check]
+      pipelines:
+        metrics:
+          receivers: [prometheus]
+          exporters: [prometheus]
+      telemetry:
+        logs:
+          level: debug
+          encoding: json
+        metrics:
+          level: detailed
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: "ama-metrics-otelcollector"
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/proxy
+  - nodes/metrics
+  - services
+  - endpoints
+  - pods
+  - namespaces
+  - ingress
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["monitoring.coreos.com"]
+  resources:
+  - servicemonitors
+  - podmonitors
+  verbs: ["get", "list", "watch"]
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs: ["get", "list", "watch"]
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs: ["get", "list", "watch"]
+- nonResourceURLs: ["/metrics", "/metrics/cadvisor"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["aad-msi-auth-token"]
+  verbs: ["get", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: "ama-metrics-otelcollector"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: "ama-metrics-otelcollector"
+subjects:
+- kind: ServiceAccount
+  # quirk of the Operator
+  name: "ama-metrics-otelcollector-collector"
+  namespace: default
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ama-metrics-otelcollector-targetallocator
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ama-metrics-otelcollector-targetallocator-role
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/metrics
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["get"]
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs: ["get", "list", watch"]
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs: ["get", "list", "watch"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  - podmonitors
+  verbs:
+  - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: "ama-metrics-otelcollector-targetallocator"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: "ama-metrics-otelcollector-targetallocator-role"
+subjects:
+- kind: ServiceAccount
+  # quirk of the Operator
+  name: "ama-metrics-otelcollector-targetallocator"
+  namespace: default
