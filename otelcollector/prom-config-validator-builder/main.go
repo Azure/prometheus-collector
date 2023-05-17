@@ -20,6 +20,7 @@ import (
 type OtelConfig struct {
 	Exporters  interface{} `yaml:"exporters"`
 	Processors interface{} `yaml:"processors"`
+	Extensions interface{} `yaml:"extensions"`
 	Receivers  struct {
 		Prometheus struct {
 			Config interface{} `yaml:"config"`
