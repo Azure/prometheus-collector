@@ -27,6 +27,7 @@ type OtelConfig struct {
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
 	Service struct {
+		Extensions interface{} `yaml:"extensions"`
 		Pipelines struct {
 			Metrics struct {
 				Exporters  interface{} `yaml:"exporters"`
