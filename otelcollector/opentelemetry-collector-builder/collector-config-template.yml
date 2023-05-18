@@ -32,6 +32,10 @@ processors:
 receivers:
     prometheus:
       config:
+      target_allocator:
+          endpoint: http://ama-metrics-otelcollector-targetallocator.default.svc.cluster.local
+          interval: 30s
+          collector_id: "${POD_NAME}"
 extensions:
     health_check:
 service:
