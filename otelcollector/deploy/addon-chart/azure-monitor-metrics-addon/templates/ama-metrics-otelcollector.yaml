@@ -119,10 +119,10 @@ spec:
   #       - /bin/bash
   #       - -c
   #       - /opt/microsoft/liveness/livenessprobe.sh
-    initialDelaySeconds: 120
-  #   periodSeconds: 15
+    initialDelaySeconds: 360
+    periodSeconds: 15
   #   timeoutSeconds: 5
-    failureThreshold: 3
+    failureThreshold: 20
   resources:
     limits:
       cpu: 200m
