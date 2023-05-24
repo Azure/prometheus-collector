@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-reference-app
+  labels:
+    app.kubernetes.io/name: prometheus-reference-app
+spec:
+  selector:
+    matchLabels:
+       app: "prometheus-reference-app"
+  endpoints:
+    - path: /metrics
+      targetPort: 2112
+      honorLabels: true
+      scheme: http

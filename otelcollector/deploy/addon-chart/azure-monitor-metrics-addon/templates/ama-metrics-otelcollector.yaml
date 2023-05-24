@@ -4,7 +4,7 @@ metadata:
   name: "ama-metrics-otelcollector"
 spec:
   mode: statefulset
-  image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.0-grace-operator-05-17-2023-9be81d7a
+  image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.0-grace-operator-05-17-2023-eaf53278
   replicas: 1
   ports:
     - name: "metrics"
@@ -12,6 +12,7 @@ spec:
       port: 8888
   targetAllocator:
     enabled: true
+    #image: ghcr.io/open-telemetry/opentelemetry-operator/target-allocator:0.72
     serviceAccount: ama-metrics-otelcollector-targetallocator
     prometheusCR:
       enabled: true
@@ -69,7 +70,7 @@ spec:
     - name: NODE_EXPORTER_VERSION
       value: "v1.5.0"
     - name: AGENT_VERSION
-      value: 6.7.0-main-05-04-2023-4450ad10
+      value: 6.7.0-grace-operator-05-17-2023-eaf53278
   volumeMounts:
     - mountPath: /etc/config/settings
       name: settings-vol-config
@@ -257,13 +258,13 @@ subjects:
 - kind: ServiceAccount
   # quirk of the Operator
   name: "ama-metrics-otelcollector-collector"
-  namespace: default
+  namespace: kube-system
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: ama-metrics-otelcollector-targetallocator
-  namespace: default
+  namespace: kube-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -282,11 +283,10 @@ rules:
   resources:
   - configmaps
   verbs: ["get"]
-- apiGroups:
-  - discovery.k8s.io
+- apiGroups: ["discovery.k8s.io"]
   resources:
   - endpointslices
-  verbs: ["get", "list", watch"]
+  verbs: ["get", "watch", "list"]
 - apiGroups:
   - networking.k8s.io
   resources:
@@ -314,4 +314,4 @@ subjects:
 - kind: ServiceAccount
   # quirk of the Operator
   name: "ama-metrics-otelcollector-targetallocator"
-  namespace: default
+  namespace: kube-system
