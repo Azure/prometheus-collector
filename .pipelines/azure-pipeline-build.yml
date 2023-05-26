@@ -171,6 +171,9 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)
 
     - bash: |
+        ruby --version
+        sudo apt-get install ruby-full
+        ruby --version
         sudo gem install brakeman
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
