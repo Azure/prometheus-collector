@@ -3,6 +3,12 @@ exporters:
     endpoint: "127.0.0.1:9091"
     const_labels:
       cluster: $AZMON_CLUSTER_LABEL
+  prometheus/otelapps:
+    endpoint: "127.0.0.1:9393"
+    metric_expiration: 180m
+    enable_open_metrics: true
+    resource_to_telemetry_conversion:
+      enabled: true
   file:
     path: /opt/microsoft/otelcollector/promotel.json
   otlp:
@@ -32,12 +38,20 @@ processors:
 receivers:
     prometheus:
       config:
+    otlp:
+      protocols:
+        grpc: 0.0.0.0:9191
+        http: 0.0.0.0:9292
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
       exporters: [otlp]
       processors: [batch, resource]
+    otlpapps:
+      receivers: [otlp]
+      processors: []
+      exporters: [prometheus/otelapps]
   telemetry:
     logs:
       level: warn

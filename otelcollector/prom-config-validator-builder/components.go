@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
 	"go.opentelemetry.io/collector/receiver"
+	otlpreceiver "go.opentelemetry.io/collector/receiver/otlpreceiver"
 )
 
 func components() (otelcol.Factories, error) {
@@ -38,6 +39,7 @@ func components() (otelcol.Factories, error) {
 
 	factories.Receivers, err = receiver.MakeFactoryMap(
 		privatepromreceiver.NewFactory(),
+		otlpreceiver.NewFactory(),
 	)
 	if err != nil {
 		return otelcol.Factories{}, err

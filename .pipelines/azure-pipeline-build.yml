@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - vishwa/app
 
 pr:
   autoCancel: true
@@ -170,7 +171,7 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)
 
     - bash: |
-        sudo gem install brakeman
+        sudo gem install brakeman -v 5.4.1
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
