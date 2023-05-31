@@ -48,7 +48,7 @@ service:
       receivers: [prometheus]
       exporters: [otlp]
       processors: [batch, resource]
-    otlpapps:
+    metrics/2:
       receivers: [otlp]
       processors: []
       exporters: [prometheus/otelapps]
