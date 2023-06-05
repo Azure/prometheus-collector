@@ -1,8 +1,8 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 06-02-2023
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.1-main-06-02-2023-<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.1-main-06-02-2023-<tbd>-win`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.1-main-06-02-2023-d384b035`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.1-main-06-02-2023-d384b035-win`
 * Change log -
   * fix: Terraform template fixes for Azure Monitor Metrics addon
   * fix: Reduce image tag length to docker limit of 128 characters
