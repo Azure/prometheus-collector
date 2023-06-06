@@ -1,5 +1,9 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Pending
+
+* fix: Upgrades Kube state - image from: `v2.8.1` to:`v2.9.2`; chart from:`4.32.0` to `5.7.0`
+
 ## Release 06-02-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.1-main-06-02-2023-d384b035`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.1-main-06-02-2023-d384b035-win`
