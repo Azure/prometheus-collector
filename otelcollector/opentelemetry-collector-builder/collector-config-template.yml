@@ -33,9 +33,9 @@ receivers:
     prometheus:
       config:
       target_allocator:
-          endpoint: http://ama-metrics-otelcollector-targetallocator.kube-system.svc.cluster.local
+          endpoint: http://ama-metrics-otelcollector-targetallocator-node.kube-system.svc.cluster.local
           interval: 30s
-          collector_id: "$POD_NAME"
+          collector_id: "ds"
 extensions:
     health_check:
 service:
@@ -47,7 +47,7 @@ service:
       processors: [batch, resource]
   telemetry:
     logs:
-      level: warn
+      level: debug
       encoding: json
     metrics:
       level: detailed
