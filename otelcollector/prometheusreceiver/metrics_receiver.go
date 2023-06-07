@@ -67,6 +67,7 @@ type pReceiver struct {
 	registry         *featuregate.Registry
 	scrapeManager    *scrape.Manager
 	discoveryManager *discovery.Manager
+	webHandler       *web.Handler
 }
 
 // New creates a new prometheus.Receiver reference.
@@ -256,6 +257,9 @@ func (r *pReceiver) applyCfg(cfg *config.Config) error {
 	if err := r.discoveryManager.ApplyConfig(discoveryCfg); err != nil {
 		return err
 	}
+
+	r.webHandler.ApplyConfig(cfg)
+
 	return nil
 }
 
@@ -330,18 +334,18 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 		Gatherer:       prometheus.DefaultGatherer,
 	}
 	go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	webHandler := web.New(go_kit_logger, &webOptions)
-	listener, err := webHandler.Listener()
+	r.webHandler = web.New(go_kit_logger, &webOptions)
+	listener, err := r.webHandler.Listener()
 	if err != nil {
 		return err
 	}
 	// Pass config and let the web handler know the config is ready.
 	// These are needed because Prometheus allows reloading the config without restarting.
-	webHandler.ApplyConfig(r.cfg.PrometheusConfig)
-	webHandler.SetReady(true)
+	r.webHandler.ApplyConfig(r.cfg.PrometheusConfig)
+	r.webHandler.SetReady(true)
 	// Uses the same context as the discovery and scrape managers for shutting down
 	go func() {
-		if err := webHandler.Run(ctx, listener, ""); err != nil {
+		if err := r.webHandler.Run(ctx, listener, ""); err != nil {
 			r.settings.Logger.Error("Web handler failed", zap.Error(err))
 			host.ReportFatalError(err)
 		}
