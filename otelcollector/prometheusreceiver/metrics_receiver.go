@@ -170,7 +170,8 @@ func (r *pReceiver) syncTargetAllocator(compareHash uint64, allocConf *targetAll
 	}
 
 	// Clear out the current configurations
-	allScrapeConfigs := []*config.ScrapeConfig{}
+	fullCfg := *baseCfg
+	fullCfgPntr := &fullCfg
 
 	for jobName, scrapeConfig := range scrapeConfigsResponse {
 		var httpSD promHTTP.SDConfig
@@ -191,10 +192,10 @@ func (r *pReceiver) syncTargetAllocator(compareHash uint64, allocConf *targetAll
 		r.settings.Logger.Info(fmt.Sprintf("extra scrape config %v", scrapeConfig))
     
 		// Need to make a deep copy of baseCfg.ScrapeConfigs and then apply that as the config
-		allScrapeConfigs = append(baseCfg.ScrapeConfigs, scrapeConfig)
+		fullCfgPntr.ScrapeConfigs = append(fullCfgPntr.ScrapeConfigs, scrapeConfig)
 	}
 
-	err = r.applyCfg(allScrapeConfigs)
+	err = r.applyCfg(fullCfgPntr)
 	if err != nil {
 		r.settings.Logger.Error("Failed to apply new scrape configuration", zap.Error(err))
 		return 0, err
