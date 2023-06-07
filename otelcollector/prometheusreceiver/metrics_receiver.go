@@ -170,7 +170,7 @@ func (r *pReceiver) syncTargetAllocator(compareHash uint64, allocConf *targetAll
 	}
 
 	// Clear out the current configurations
-	allScrapeConfigs = []*config.ScrapeConfig{}
+	allScrapeConfigs := []*config.ScrapeConfig{}
 
 	for jobName, scrapeConfig := range scrapeConfigsResponse {
 		var httpSD promHTTP.SDConfig
