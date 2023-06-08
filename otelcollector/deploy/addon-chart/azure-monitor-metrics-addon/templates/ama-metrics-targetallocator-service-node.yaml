@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: opentelemetry-targetallocator-node
+    app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector-node
+    app.kubernetes.io/managed-by: opentelemetry-operator
+    app.kubernetes.io/name: ama-metrics-otelcollector-targetallocator-node
+    app.kubernetes.io/part-of: opentelemetry
+  name: ama-metrics-otelcollector-targetallocator-node
+  namespace: kube-system
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: targetallocation
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/component: opentelemetry-targetallocator-node
+    app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector-node
+    app.kubernetes.io/managed-by: opentelemetry-operator
+    app.kubernetes.io/name: ama-metrics-otelcollector-targetallocator-node
+    app.kubernetes.io/part-of: opentelemetry
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
