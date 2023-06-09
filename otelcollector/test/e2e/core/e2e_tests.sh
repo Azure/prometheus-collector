@@ -16,7 +16,8 @@ waitForResourcesReady() {
     fi
     for i in $(seq 1 $max_retries)
     do
-    if [[ ! $(kubectl wait --for=condition=Ready ${RESOURCETYPE} ${RESOURCE} --namespace ${NAMESPACE}) ]]; then
+    allPodsAreReady=$(kubectl wait --for=condition=Ready ${RESOURCETYPE} ${RESOURCE} --namespace ${NAMESPACE})
+    if [ $allPodsAreReady -ne 0 ]; then
         echo "waiting for the resource:${RESOURCE} of the type:${RESOURCETYPE} in namespace:${NAMESPACE} to be ready state, iteration:${i}"
         sleep ${sleep_seconds}
     else
@@ -94,7 +95,7 @@ validateArcConfTestParameters() {
 	   python3 setup_failure_handler.py
 	fi
 
-	if [ -z $RESOURCE_GROUP ]]; then
+	if [ -z $RESOURCE_GROUP ]; then
 		echo "ERROR: parameter RESOURCE_GROUP is required." > ${results_dir}/error
 		python3 setup_failure_handler.py
 	fi

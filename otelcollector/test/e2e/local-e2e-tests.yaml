@@ -106,12 +106,12 @@ data:
       - name: CLUSTER_NAME
         value: "container-insights-arc"
       - name: AMA_METRICS_ARC_RELEASE_TRAIN
-        value: "stable"
+        value: "Pipeline"
       #- name: AMA_METRICS_ARC_VERSION
       #  value: ""
       # image tag should be updated if new tests being added after this image
-      image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:conf-0.0.2
-      imagePullPolicy: IfNotPresent
+      image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector:conf-0.0.3
+      imagePullPolicy: Always
       name: plugin
       resources: {}
       volumeMounts:
