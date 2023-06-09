@@ -219,7 +219,7 @@
                     },
                     {
                         "alert": "Working set memory for a node is greater than 80%.",
-                        "expression": "1 - avg by (namespace,cluster,job,instance)(node_memory_MemAvailable_bytes{job=\"node\"}) / avg by (namespace,cluster,job,instance)(node_memory_MemTotal_bytes{job=\"node\"}) > .8",
+                        "expression": "1 - avg by (namespace,cluster,job,nodename)(node_memory_MemAvailable_bytes{job=\"node\"}* on(instance) group_left(nodename) (node_uname_info)) / avg by (namespace,cluster,job,nodename)(node_memory_MemTotal_bytes{job=\"node\"}* on(instance) group_left(nodename) (node_uname_info))  > .8",
                         "for": "PT5M",
                         "annotations": {
                             "description": "Working set memory for node {{ $labels.instance }} is greater than 80%."
