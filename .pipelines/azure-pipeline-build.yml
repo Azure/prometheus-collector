@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - rashmi/add-ksm-label-annotation-metrics
 
 pr:
   autoCancel: true
