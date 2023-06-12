@@ -124,11 +124,11 @@ spec:
               value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
             - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
-              value: {{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
+              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}"
                 {{-  end  }}
                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
             - name: KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST
-              value: {{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
+              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}"
                 {{-  end  }}
               {{-  end  }}
             {{-  end  }}
