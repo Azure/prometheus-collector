@@ -17,7 +17,7 @@ waitForResourcesReady() {
     for i in $(seq 1 $max_retries)
     do
     allPodsAreReady=$(kubectl wait --for=condition=Ready ${RESOURCETYPE} ${RESOURCE} --namespace ${NAMESPACE})
-    if [ $allPodsAreReady -ne 0 ]; then
+    if [ $? -ne 0 ]; then
         echo "waiting for the resource:${RESOURCE} of the type:${RESOURCETYPE} in namespace:${NAMESPACE} to be ready state, iteration:${i}"
         sleep ${sleep_seconds}
     else
