@@ -108,8 +108,6 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        - mountPath: /conf
-          name: otc-internal
         - mountPath: /etc/config/settings
           name: settings-vol-config
           readOnly: true
@@ -175,13 +173,6 @@ spec:
       serviceAccountName: ama-metrics-otelcollector-collector
       terminationGracePeriodSeconds: 30
       volumes:
-      - configMap:
-          defaultMode: 420
-          items:
-          - key: collector.yaml
-            path: collector.yaml
-          name: ama-metrics-otelcollector-collector
-        name: otc-internal
       - configMap:
           defaultMode: 420
           name: ama-metrics-settings-configmap
