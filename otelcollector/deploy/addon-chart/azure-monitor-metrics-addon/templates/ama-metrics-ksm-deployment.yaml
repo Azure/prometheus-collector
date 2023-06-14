@@ -13,7 +13,7 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: ama-metrics-ksm
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 2
   template:
     metadata:
