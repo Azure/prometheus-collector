@@ -5,7 +5,6 @@ metadata:
   namespace: kube-system
   labels:
     component: ama-metrics
-    app.kubernetes.io/component: opentelemetry-collector
 spec:
   selector:
     matchLabels:
@@ -19,8 +18,6 @@ spec:
       labels:
         dsName: ama-metrics-node
         kubernetes.azure.com/managedby: aks
-        app.kubernetes.io/component: opentelemetry-collector
-        app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector-node
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"

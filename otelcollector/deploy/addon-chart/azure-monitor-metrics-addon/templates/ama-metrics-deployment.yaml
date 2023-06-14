@@ -16,7 +16,8 @@ spec:
   revisionHistoryLimit: 2
   paused: false
   selector:
-    rsName: ama-metrics
+    matchLabels:
+      rsName: ama-metrics
   strategy:
     type: RollingUpdate
   template:
