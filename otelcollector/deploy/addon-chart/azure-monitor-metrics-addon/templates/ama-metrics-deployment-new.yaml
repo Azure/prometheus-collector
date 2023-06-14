@@ -1,0 +1,210 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: opentelemetry-collector
+    app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
+    app.kubernetes.io/managed-by: opentelemetry-operator
+    app.kubernetes.io/name: ama-metrics-otelcollector-collector
+    app.kubernetes.io/part-of: opentelemetry
+    app.kubernetes.io/version: 6.7.0-grace-operator-06-07-2023-eedf2835
+  name: ama-metrics-otelcollector-collector
+  namespace: kube-system
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: opentelemetry-collector
+      app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
+      app.kubernetes.io/managed-by: opentelemetry-operator
+      app.kubernetes.io/part-of: opentelemetry
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: opentelemetry-collector
+        app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
+        app.kubernetes.io/managed-by: opentelemetry-operator
+        app.kubernetes.io/name: ama-metrics-otelcollector-collector
+        app.kubernetes.io/part-of: opentelemetry
+        app.kubernetes.io/version: 6.7.0-grace-operator-06-07-2023-eedf2835
+    spec:
+      containers:
+      - env:
+        - name: KUBE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: KUBE_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: MODE
+          value: advanced
+        - name: WINMODE
+          value: advanced
+        - name: MINIMAL_INGESTION_PROFILE
+          value: "true"
+        - name: CLUSTER
+          value: /subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/grace-addon/providers/Microsoft.ContainerService/managedClusters/grace-addon
+        - name: AKSREGION
+          value: eastus
+        - name: MAC
+          value: "true"
+        - name: customEnvironment
+          value: azurepubliccloud
+        - name: OMS_TLD
+          value: opinsights.azure.com
+        - name: CONTROLLER_TYPE
+          value: ReplicaSet
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: KUBE_STATE_NAME
+          value: ama-metrics-ksm
+        - name: NODE_EXPORTER_NAME
+        - name: NODE_EXPORTER_TARGETPORT
+          value: "19100"
+        - name: KUBE_STATE_VERSION
+        - name: NODE_EXPORTER_VERSION
+          value: v1.5.0
+        - name: AGENT_VERSION
+          value: 6.7.0-grace-operator-05-17-2023-eaf53278
+        - name: SHARD
+          value: "0"
+        image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.0-grace-operator-06-07-2023-eedf2835
+        imagePullPolicy: IfNotPresent
+        name: otc-container
+        ports:
+        - containerPort: 8888
+          name: metrics
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 200m
+            memory: 1Gi
+          requests:
+            cpu: 75m
+            memory: 150Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /conf
+          name: otc-internal
+        - mountPath: /etc/config/settings
+          name: settings-vol-config
+          readOnly: true
+        - mountPath: /etc/config/settings/prometheus
+          name: prometheus-config-vol
+          readOnly: true
+        - mountPath: /var/log/containers
+          name: host-log-containers
+          readOnly: true
+        - mountPath: /var/log/pods
+          name: host-log-pods
+          readOnly: true
+        - mountPath: /anchors/mariner
+          name: anchors-mariner
+          readOnly: true
+        - mountPath: /anchors/ubuntu
+          name: anchors-ubuntu
+          readOnly: true
+      - args:
+        - --secret-namespace=kube-system
+        - --secret-name=aad-msi-auth-token
+        - --token-server-listening-port=7777
+        - --health-server-listening-port=9999
+        command:
+        - /addon-token-adapter
+        env:
+        - name: AZMON_COLLECT_ENV
+          value: "false"
+        image: mcr.microsoft.com/aks/msi/addon-token-adapter:master.221118.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 9999
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 60
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: addon-token-adapter
+        resources:
+          limits:
+            cpu: 500m
+            memory: 500Mi
+          requests:
+            cpu: 20m
+            memory: 30Mi
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            drop:
+            - ALL
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: ama-metrics-otelcollector-collector
+      serviceAccountName: ama-metrics-otelcollector-collector
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: collector.yaml
+            path: collector.yaml
+          name: ama-metrics-otelcollector-collector
+        name: otc-internal
+      - configMap:
+          defaultMode: 420
+          name: ama-metrics-settings-configmap
+          optional: true
+        name: settings-vol-config
+      - configMap:
+          defaultMode: 420
+          name: ama-metrics-prometheus-config
+          optional: true
+        name: prometheus-config-vol
+      - hostPath:
+          path: /var/log/containers
+          type: ""
+        name: host-log-containers
+      - hostPath:
+          path: /var/log/pods
+          type: ""
+        name: host-log-pods
+      - hostPath:
+          path: /etc/pki/ca-trust/anchors/
+          type: DirectoryOrCreate
+        name: anchors-mariner
+      - hostPath:
+          path: /usr/local/share/ca-certificates/
+          type: DirectoryOrCreate
+        name: anchors-ubuntu

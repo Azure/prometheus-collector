@@ -4,34 +4,10 @@ data:
     allocation_strategy: consistent-hashing
     config:
       scrape_configs:
-      - job_name: kubelet
-        scheme: https
-        metrics_path: /metrics
-        scrape_interval: 30s
-        label_limit: 63
-        label_name_length_limit: 511
-        label_value_length_limit: 1023
-        tls_config:
-          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          insecure_skip_verify: true
-        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-        relabel_configs:
-        - source_labels: [__metrics_path__]
-          regex: (.*)
-          target_label: metrics_path
-        - source_labels: [__address__]
-          replacement: '$$NODE_NAME'
-          target_label: instance
-        static_configs:
-        - targets: ['$$NODE_IP:10250']
     label_selector:
       app.kubernetes.io/component: opentelemetry-collector
       app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
       app.kubernetes.io/managed-by: opentelemetry-operator
-    pod_monitor_selector:
-      component: ds
-    service_monitor_selector:
-      component: ds
 kind: ConfigMap
 metadata:
   labels:
