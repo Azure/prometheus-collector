@@ -180,16 +180,16 @@ spec:
               name: ama-metrics-proxy-cert
               readOnly: true
             {{- end }}
-          livenessProbe:
-            exec:
-              command:
-                - /bin/bash
-                - -c
-                - /opt/microsoft/liveness/livenessprobe.sh
-            initialDelaySeconds: 60
-            periodSeconds: 15
-            timeoutSeconds: 5
-            failureThreshold: 3
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - /opt/microsoft/liveness/livenessprobe.sh
+          #   initialDelaySeconds: 60
+          #   periodSeconds: 15
+          #   timeoutSeconds: 5
+          #   failureThreshold: 3
         {{- if .Values.AzureMonitorMetrics.ArcExtension }}
         - name: arc-msi-adapter
           imagePullPolicy: IfNotPresent

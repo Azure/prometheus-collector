@@ -17,13 +17,6 @@ data:
         static_configs:
         - targets:
           - ama-metrics-ksm.kube-system.svc.cluster.local:8080
-      - job_name: prometheus_collector_health
-        label_limit: 63
-        label_name_length_limit: 511
-        label_value_length_limit: 1023
-        static_configs:
-        - targets:
-          - 127.0.0.1:2234
     label_selector:
       app.kubernetes.io/component: opentelemetry-collector
       app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
