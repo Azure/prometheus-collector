@@ -31,3 +31,10 @@ rules:
   - apiGroups: ["clusterconfig.azure.com"]
     resources: ["azureclusteridentityrequests", "azureclusteridentityrequests/status"]
     verbs: ["get", "update", "list", "create"]
+  - apiGroups:
+    - monitoring.coreos.com
+    resources:
+    - servicemonitors
+    - podmonitors
+    verbs:
+    - '*'
