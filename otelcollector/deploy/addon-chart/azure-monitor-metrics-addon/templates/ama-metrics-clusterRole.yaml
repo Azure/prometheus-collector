@@ -17,6 +17,15 @@ rules:
         "ingress"
       ]
     verbs: ["list", "get", "watch"]
+  - apiGroups: [""]
+    resources:
+    - configmaps
+    verbs: ["get"]
+  - apiGroups:
+    - discovery.k8s.io
+    resources:
+    - endpointslices
+    verbs: ["get", "list", watch"]
   - apiGroups:
     - networking.k8s.io
     resources:
