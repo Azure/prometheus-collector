@@ -419,6 +419,8 @@ function Start-ME {
     tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
 }
 
+Set-ProcessAndMachineEnvVariables "COMPlus_ThreadPool_UnfairSemaphoreSpinLimit" "0"
+
 Start-Transcript -Path main.txt
 if ($env:MAC -ne $true) {
     Set-CertificateForME
