@@ -11,3 +11,6 @@ fluentbitplugin:
 
 promconfigvalidator:
 	make -C ../prom-config-validator-builder
+
+configurationreader:
+	make -C ../configuration-reader-builder

@@ -219,6 +219,8 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 
+      echo "running configuration reader"
+      /opt/configurationreader
 else
       # This else block is needed, when there is no custom config mounted as config map or default configs enabled
       echo_error "prom-config-validator::No custom config or default scrape configs enabled. No scrape configs will be used"
