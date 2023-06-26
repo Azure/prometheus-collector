@@ -56,17 +56,17 @@ type Config struct {
 
 func updateConfigMap(clientset *kubernetes.Clientset) {
 	targetAllocatorConfigmap := "ama-metrics-otelcollector-targetallocator"
-	configMaps, err := clientset.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), targetAllocatorConfigmap, metav1.GetOptions{})
+	// configMaps, err := clientset.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), targetAllocatorConfigmap, metav1.GetOptions{})
 	// jobs := clientset.BatchV1().Jobs("default")
 	// var backOffLimit int32 = 0
 
 	// _, err := jobs.Create(context.TODO(), jobSpec, metav1.CreateOptions{})
-	if err != nil {
-		log.Fatalln("Failed to get configmpap")
-	}
+	// if err != nil {
+	// 	log.Fatalln("Failed to get configmpap")
+	// }
 
 	//print job details
-	log.Println("Got configmaps successfully - Name: ", configMaps.Name)
+	// log.Println("Got configmaps successfully - Name: ", configMaps.Name)
 	configMapClient := clientset.CoreV1().ConfigMaps("kube-system")
 
 	defaultsMergedConfigFileContents, err := ioutil.ReadFile("/opt/defaultsMergedConfig.yml")
@@ -97,7 +97,7 @@ func updateConfigMap(clientset *kubernetes.Clientset) {
 	targetAllocatorConfigYaml, _ := yaml.Marshal(targetAllocatorConfig)
 	newConfigMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "demo-configmap",
+			Name: targetAllocatorConfigmap,
 		},
 		Data: map[string]string{
 			"targetallocator.yaml": string(targetAllocatorConfigYaml),

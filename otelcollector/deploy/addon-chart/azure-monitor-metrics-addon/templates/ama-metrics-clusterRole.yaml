@@ -21,6 +21,11 @@ rules:
     resources:
     - configmaps
     verbs: ["get"]
+  - apiGroups: [""]
+    resources:
+    - configmaps
+    resourceNames: ["ama-metrics-otelcollector-targetallocator"]
+    verbs: ["update"]
   - apiGroups:
     - discovery.k8s.io
     resources:
