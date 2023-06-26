@@ -1,8 +1,8 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 06-26-2023
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-<tbd>-win`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-06-26-2023-6ee07896`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-06-26-2023-6ee07896-win`
 * Change log -
   * fix: Bicep template warnings
   * fix: Adding kube_*_labels and kube_*_annotations to the default list of metrics
