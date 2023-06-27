@@ -308,7 +308,7 @@ jobs:
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         InputType: 'CommandLine'
-        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/configuration-reader-builder/configurationreader
+        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/configuration-reader-builder/configurationreader'
 
     # - task: Gosec@1
     #   displayName: 'SDL: run gosec'
