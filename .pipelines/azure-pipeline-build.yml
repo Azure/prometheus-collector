@@ -276,7 +276,7 @@ jobs:
         GdnBreakGdnToolSemmle: true
         GdnBreakGdnToolSemmleSeverity: 'Warning'
 
-- job: Linux-ConfigReader
+- job: Linux_ConfigReader
   displayName: Build linux image for config reader
   pool:
     name: Azure-Pipelines-CI-Test-EO
