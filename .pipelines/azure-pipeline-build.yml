@@ -428,124 +428,124 @@ jobs:
         GdnBreakGdnToolSemmle: true
         GdnBreakGdnToolSemmleSeverity: 'Warning'
 
-- job: Windows2019
-  displayName: "Build windows 2019 image"
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-  dependsOn:
-  - Common
-  variables:
-    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
-  steps:
-    - task: GoTool@0
-      displayName: "Build: specify golang version"
-      inputs:
-        version: '1.19'
+# - job: Windows2019
+#   displayName: "Build windows 2019 image"
+#   pool:
+#     name: Azure-Pipelines-Windows-CI-Test-EO
+#   dependsOn:
+#   - Common
+#   variables:
+#     WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+#     WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
+#   steps:
+#     - task: GoTool@0
+#       displayName: "Build: specify golang version"
+#       inputs:
+#         version: '1.19'
 
-    - powershell: |
-        ./makefile_windows.ps1
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+#     - powershell: |
+#         ./makefile_windows.ps1
+#       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+#       displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
-    - powershell: |
-        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build WS2019 image"
+#     - powershell: |
+#         docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+#       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+#       displayName: "Build: build WS2019 image"
 
-    - powershell: |
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
-      displayName: "Build: push image to dev ACR"
+#     - powershell: |
+#         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+#         docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+#       displayName: "Build: push image to dev ACR"
 
-    - task: ComponentGovernanceComponentDetection@0
-      displayName: "SDL: run component governance"
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        scanType: 'Register'
-        verbosity: 'Verbose'
-        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
+#     - task: ComponentGovernanceComponentDetection@0
+#       displayName: "SDL: run component governance"
+#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+#       inputs:
+#         scanType: 'Register'
+#         verbosity: 'Verbose'
+#         dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
 
-- job: Windows2022
-  displayName: "Build windows 2022 image"
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-  dependsOn:
-  - Common
-  variables:
-    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
-  steps:
-    - task: GoTool@0
-      displayName: "Build: specify golang version"
-      inputs:
-        version: '1.19'
+# - job: Windows2022
+#   displayName: "Build windows 2022 image"
+#   pool:
+#     name: Azure-Pipelines-Windows-CI-Test-EO
+#   dependsOn:
+#   - Common
+#   variables:
+#     WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+#     WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+#   steps:
+#     - task: GoTool@0
+#       displayName: "Build: specify golang version"
+#       inputs:
+#         version: '1.19'
 
-    - powershell: |
-        ./makefile_windows.ps1
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+#     - powershell: |
+#         ./makefile_windows.ps1
+#       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+#       displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
-    - powershell: |
-        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build WS2022 image"
+#     - powershell: |
+#         docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+#       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+#       displayName: "Build: build WS2022 image"
 
-    - powershell: |
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-      displayName: "Build: push image to dev ACR"
-      condition: eq(variables.IS_PR, false)
+#     - powershell: |
+#         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+#         docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+#       displayName: "Build: push image to dev ACR"
+#       condition: eq(variables.IS_PR, false)
 
-    - task: ComponentGovernanceComponentDetection@0
-      displayName: "SDL: run component governance"
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        scanType: 'Register'
-        verbosity: 'Verbose'
-        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)'
-        alertWarningLevel: 'High'
+#     - task: ComponentGovernanceComponentDetection@0
+#       displayName: "SDL: run component governance"
+#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+#       inputs:
+#         scanType: 'Register'
+#         verbosity: 'Verbose'
+#         dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)'
+#         alertWarningLevel: 'High'
 
-- job: WindowsMultiArch
-  displayName: "Build windows multi-arch image"
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-  dependsOn:
-  - Common
-  - Windows2019
-  - Windows2022
-  variables:
-    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
-    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
-  steps:
-    - task: GoTool@0
-      displayName: "Build: specify golang version"
-      inputs:
-        version: '1.19'
+# - job: WindowsMultiArch
+#   displayName: "Build windows multi-arch image"
+#   pool:
+#     name: Azure-Pipelines-Windows-CI-Test-EO
+#   dependsOn:
+#   - Common
+#   - Windows2019
+#   - Windows2022
+#   variables:
+#     WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+#     WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
+#     WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+#   steps:
+#     - task: GoTool@0
+#       displayName: "Build: specify golang version"
+#       inputs:
+#         version: '1.19'
 
-    - powershell: |
-        New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
-        @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-        docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: Triggering manigest for multi-arc docker image"
+#     - powershell: |
+#         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
+#         @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
+#         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+#         docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+#         docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
+#       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+#       displayName: "Build: Triggering manigest for multi-arc docker image"
 
-    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-      displayName: "Ev2: generate image artifacts"
-      inputs:
-        BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
-        DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
+#     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+#       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+#       displayName: "Ev2: generate image artifacts"
+#       inputs:
+#         BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
+#         DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
 
-    - task: PublishBuildArtifacts@1
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-      displayName: "Ev2: publish image artifacts"
-      inputs:
-        pathToPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: drop
+#     - task: PublishBuildArtifacts@1
+#       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+#       displayName: "Ev2: publish image artifacts"
+#       inputs:
+#         pathToPublish: '$(Build.ArtifactStagingDirectory)'
+#         artifactName: drop
 
 - job: Chart
   displayName: "Package 1P helm chart"
@@ -554,12 +554,12 @@ jobs:
   dependsOn:
   - Common
   - Linux
-  - WindowsMultiArch
+  # - WindowsMultiArch
   variables:
     HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
-    IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+    # IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
   steps:
   - task: HelmInstaller@1
@@ -617,7 +617,7 @@ jobs:
   variables:
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
-    IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+    # IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
     ARC_EXTENSION: true
   steps:
@@ -775,7 +775,7 @@ jobs:
       for i in 1 2 3 4 5 6 7 8 9 10
           do
             sleep 30
-            echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
+            # echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
 
             output1=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
