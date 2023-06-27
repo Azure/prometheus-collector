@@ -17,7 +17,6 @@ spec:
     metadata:
       labels:
         dsName: ama-metrics-node
-        kubernetes.azure.com/managedby: aks
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
@@ -291,7 +290,6 @@ spec:
     metadata:
       labels:
         dsName: ama-metrics-win-node
-        kubernetes.azure.com/managedby: aks
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"

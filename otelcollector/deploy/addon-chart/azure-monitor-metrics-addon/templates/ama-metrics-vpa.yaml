@@ -1,0 +1,108 @@
+---
+# Repliceset
+apiVersion: "autoscaling.k8s.io/v1"
+kind: VerticalPodAutoscaler
+metadata:
+  name: ama-metrics-vpa
+  namespace: kube-system
+  labels:
+    component: ama-metrics
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: ama-metrics
+  updatePolicy:
+    updateMode: "Auto" # "Recreate" -> this will recreate the pods 
+    minReplicas: 1
+  resourcePolicy:
+    containerPolicies:
+      - containerName: 'prometheus-collector'
+        minAllowed:
+          cpu: 150m
+          memory: 500Mi
+        maxAllowed:
+          cpu: 7
+          memory: 14Gi
+        controlledResources: ["cpu", "memory"]
+---
+# Linux DaemonSet
+apiVersion: "autoscaling.k8s.io/v1"
+kind: VerticalPodAutoscaler
+metadata:
+  name: ama-metrics-node-vpa
+  namespace: kube-system
+  labels:
+    component: ama-metrics-node
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: ama-metrics-node
+  updatePolicy:
+    updateMode: "Auto" # "Recreate" -> this will recreate the pods 
+  resourcePolicy:
+    containerPolicies:
+      - containerName: 'prometheus-collector'
+        minAllowed:
+          cpu: 75m
+          memory: 150Mi
+        maxAllowed:
+          cpu: 200m
+          memory: 1Gi
+        controlledResources: ["cpu", "memory"]
+# ---
+# # Windows DaemonSet
+# apiVersion: "autoscaling.k8s.io/v1"
+# kind: VerticalPodAutoscaler
+# metadata:
+#   name: ama-metrics-win-node-vpa
+#   namespace: kube-system
+#   labels:
+#     component: ama-metrics
+# spec:
+#   targetRef:
+#     apiVersion: "apps/v1"
+#     kind: DaemonSet
+#     name: ama-metrics-win-node
+#   updatePolicy:
+#     updateMode: "Auto" # "Recreate" -> this will recreate the pods 
+#   resourcePolicy:
+#     containerPolicies:
+#       - containerName: 'prometheus-collector'
+#         minAllowed:
+#           cpu: 75m
+#           memory: 500Mi
+#         maxAllowed:
+#           cpu: 500m
+#           memory: 1Gi
+#         controlledResources: ["cpu", "memory"]
+---
+# KSM Deployment
+apiVersion: "autoscaling.k8s.io/v1"
+kind: VerticalPodAutoscaler
+metadata:
+  name: ama-metrics-ksm-vpa
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/component: ama-metrics
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: ama-metrics-ksm
+  updatePolicy:
+    updateMode: "Auto" # "Recreate" -> this will recreate the pods 
+    minReplicas: 1
+  resourcePolicy:
+    containerPolicies:
+      - containerName: 'ama-metrics-ksm'
+        minAllowed:
+          cpu: 5m
+          memory: 50Mi
+        maxAllowed:
+          cpu: 1
+          memory: 5Gi
+        controlledResources: ["cpu", "memory"]
+---
+

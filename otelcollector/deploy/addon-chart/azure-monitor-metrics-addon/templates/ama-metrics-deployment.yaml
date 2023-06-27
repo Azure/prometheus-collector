@@ -18,7 +18,6 @@ spec:
     metadata:
       labels:
         rsName: ama-metrics
-        kubernetes.azure.com/managedby: aks
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
