@@ -68,6 +68,8 @@ Azure:
   Cluster:
     ResourceId: "${ARC_RESOURCE_ID}"
     Region: "${ARC_REGION}"
+    Cloud: "azurepubliccloud"
+    Distribution: ""
   proxySettings:
     isProxyEnabled: "false"
     httpProxy: ""
