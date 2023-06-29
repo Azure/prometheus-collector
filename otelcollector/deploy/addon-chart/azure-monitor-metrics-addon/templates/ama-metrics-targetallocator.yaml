@@ -73,3 +73,4 @@ spec:
             path: targetallocator.yaml
           name: ama-metrics-otelcollector-targetallocator
         name: ta-internal
+
