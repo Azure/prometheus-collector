@@ -79,9 +79,11 @@ def loadIntervalHash
 end
 
 def isConfigReaderSidecar
-  currentContainerType = ENV["CONTAINER_TYPE"].strip.downcase
-  if !currentContainerType.nil? && currentContainerType == @configReaderSidecarContainerType
-    return true
+  if !ENV["CONTAINER_TYPE"].nil? && !ENV["CONTAINER_TYPE"].empty?
+    currentContainerType = ENV["CONTAINER_TYPE"].strip.downcase
+    if !currentContainerType.nil? && currentContainerType == @configReaderSidecarContainerType
+      return true
+    end
   end
   return false
 end
@@ -168,21 +170,27 @@ end
 def populateDefaultPrometheusConfig
   begin
     # check if running in daemonset or replicaset
-    currentControllerType = ENV["CONTROLLER_TYPE"].strip.downcase
-
+    currentControllerType = ""
+    if !ENV["CONTROLLER_TYPE"].nil? && !ENV["CONTROLLER_TYPE"].empty?
+      currentControllerType = ENV["CONTROLLER_TYPE"].strip.downcase
+    end
     advancedMode = false #default is false
     windowsDaemonset = false #default is false
 
     # get current mode (advanced or not...)
-    currentMode = ENV["MODE"].strip.downcase
-    if currentMode == "advanced"
-      advancedMode = true
+    if !ENV["MODE"].nil? && !ENV["MODE"].empty?
+      currentMode = ENV["MODE"].strip.downcase
+      if currentMode == "advanced"
+        advancedMode = true
+      end
     end
 
     # get if windowsdaemonset is enabled or not (ie. WINMODE env = advanced or not...)
-    winMode = ENV["WINMODE"].strip.downcase
-    if winMode == "advanced"
-      windowsDaemonset = true
+    if !ENV["WINMODE"].nil? && !ENV["WINMODE"].empty?
+      winMode = ENV["WINMODE"].strip.downcase
+      if winMode == "advanced"
+        windowsDaemonset = true
+      end
     end
 
     defaultConfigs = []
