@@ -219,8 +219,8 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 
-      echo "running configuration reader"
-      /opt/configurationreader
+      # echo "running configuration reader"
+      # /opt/configurationreader
 else
       # This else block is needed, when there is no custom config mounted as config map or default configs enabled
       echo_error "prom-config-validator::No custom config or default scrape configs enabled. No scrape configs will be used"
@@ -395,7 +395,10 @@ GOLANG_VERSION=`cat /opt/goversion.txt`
 echo_var "GOLANG_VERSION" "$GOLANG_VERSION"
 
 # Start otelcollector
-if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
+if [ $controllerType = "replicaset" ]; then
+      echo_warning "Starting otelcollector in replicaset with Target allocator settings"
+      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-replicaset.yml &> /opt/microsoft/otelcollector/collector-log.txt &
+elif [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
       echo_warning "Starting otelcollector with only default scrape configs enabled"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml &> /opt/microsoft/otelcollector/collector-log.txt &
 else

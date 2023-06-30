@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"flag"
+
 	// "flag"
 	"io/ioutil"
 	"log"
@@ -54,7 +56,35 @@ type Config struct {
 	// ServiceMonitorSelector map[string]string  `yaml:"service_monitor_selector,omitempty"`
 }
 
-func updateConfigMap(clientset *kubernetes.Clientset) {
+type OtelConfig struct {
+	Exporters  interface{} `yaml:"exporters"`
+	Processors interface{} `yaml:"processors"`
+	Extensions interface{} `yaml:"extensions"`
+	Receivers  struct {
+		Prometheus struct {
+			Config          interface{} `yaml:"config"`
+			TargetAllocator interface{} `yaml:"target_allocator"`
+		} `yaml:"prometheus"`
+	} `yaml:"receivers"`
+	Service struct {
+		Extensions interface{} `yaml:"extensions"`
+		Pipelines  struct {
+			Metrics struct {
+				Exporters  interface{} `yaml:"exporters"`
+				Processors interface{} `yaml:"processors"`
+				Receivers  interface{} `yaml:"receivers"`
+			} `yaml:"metrics"`
+		} `yaml:"pipelines"`
+		Telemetry struct {
+			Logs struct {
+				Level    interface{} `yaml:"level"`
+				Encoding interface{} `yaml:"encoding"`
+			} `yaml:"logs"`
+		} `yaml:"telemetry"`
+	} `yaml:"service"`
+}
+
+func updateConfigMap(clientset *kubernetes.Clientset, configFilePath string) {
 	targetAllocatorConfigmap := "ama-metrics-otelcollector-targetallocator"
 	// configMaps, err := clientset.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), targetAllocatorConfigmap, metav1.GetOptions{})
 	// jobs := clientset.BatchV1().Jobs("default")
@@ -69,16 +99,18 @@ func updateConfigMap(clientset *kubernetes.Clientset) {
 	// log.Println("Got configmaps successfully - Name: ", configMaps.Name)
 	configMapClient := clientset.CoreV1().ConfigMaps("kube-system")
 
-	defaultsMergedConfigFileContents, err := ioutil.ReadFile("/opt/defaultsMergedConfig.yml")
+	defaultsMergedConfigFileContents, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		panic(err)
 	}
 	var promScrapeConfig *promconfig.Config
-	err = yaml.Unmarshal([]byte(defaultsMergedConfigFileContents), &promScrapeConfig)
+	var otelConfig OtelConfig
+	err = yaml.Unmarshal([]byte(defaultsMergedConfigFileContents), &otelConfig)
 	if err != nil {
 		panic(err)
 	}
 
+	promScrapeConfig = otelConfig.Receivers.Prometheus.Config
 	targetAllocatorConfig := Config{
 		AllocationStrategy: "consistent-hashing",
 		LabelSelector: map[string]string{
@@ -123,8 +155,10 @@ func main() {
 	// entryCommand := flag.String("command", "ls", "The command to run inside the container")
 
 	// flag.Parse()
-
+	configFilePtr := flag.String("config", "", "Config file to read")
+	flag.Parse()
+	otelConfigFilePath := *configFilePtr
 	clientset := connectToK8s()
-	updateConfigMap(clientset)
+	updateConfigMap(clientset, otelConfigFilePath)
 	//launchK8sJob(clientset, jobName, containerImage, entryCommand)
 }

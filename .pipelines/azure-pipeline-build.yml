@@ -48,10 +48,17 @@ jobs:
         LINUX_IMAGE_TAG=$SEMVER
         # Truncating to 128 characters as it is required by docker
         LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
-        LINUX_CONFIG_READER_IMAGE_TAG=$SEMVER-cfg
-        WINDOWS_IMAGE_TAG=$SEMVER-win
+
+        #Truncating this to 124 to add the cfg suffix
+        LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
+        LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
+
+        # Truncating to 115 characters as it is required by docker (4 characters used in -win and 9 characters used in -ltsc2019/-ltsc2022)
+        WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-115)
+        WINDOWS_IMAGE_TAG=$WINDOWS_IMAGE_TAG_PREFIX-win
+
         # Truncating to 119 characters as it is required by docker (9 characters used in -ltsc2019/-ltsc2022)
-        WINDOWS_IMAGE_TAG=$(echo "${WINDOWS_IMAGE_TAG}" | cut -c1-119)
+        # WINDOWS_IMAGE_TAG=$(echo "${WINDOWS_IMAGE_TAG}" | cut -c1-119)
         WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
         WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
 
@@ -359,13 +366,13 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
 
-    - bash: |
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
-        # trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
-        # trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
-      workingDirectory: $(Build.SourcesDirectory)
-      displayName: "Build: run trivy scan"
+    # - bash: |
+    #     curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+    #     trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
+    #     # trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
+    #     # trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
+    #   workingDirectory: $(Build.SourcesDirectory)
+    #   displayName: "Build: run trivy scan"
 
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'

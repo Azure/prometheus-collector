@@ -157,12 +157,12 @@ spec:
           securityContext:
             privileged: false
           volumeMounts:
-            - mountPath: /etc/config/settings
-              name: settings-vol-config
-              readOnly: true
-            - mountPath: /etc/config/settings/prometheus
-              name: prometheus-config-vol
-              readOnly: true
+            # - mountPath: /etc/config/settings
+            #   name: settings-vol-config
+            #   readOnly: true
+            # - mountPath: /etc/config/settings/prometheus
+            #   name: prometheus-config-vol
+            #   readOnly: true
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
@@ -281,14 +281,14 @@ spec:
           operator: Exists
           effect: NoSchedule
       volumes:
-        - name: settings-vol-config
-          configMap:
-            name: ama-metrics-settings-configmap
-            optional: true
-        - name: prometheus-config-vol
-          configMap:
-            name: ama-metrics-prometheus-config
-            optional: true
+        # - name: settings-vol-config
+        #   configMap:
+        #     name: ama-metrics-settings-configmap
+        #     optional: true
+        # - name: prometheus-config-vol
+        #   configMap:
+        #     name: ama-metrics-prometheus-config
+        #     optional: true
         - name: host-log-containers
           hostPath:
             path: /var/log/containers

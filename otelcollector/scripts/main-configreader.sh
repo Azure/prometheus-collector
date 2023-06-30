@@ -46,10 +46,10 @@ echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
 
 # If using a trusted CA for HTTP Proxy, copy this over from the node and install
-cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors 2>/dev/null
-cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors 2>/dev/null
-cp /anchors/proxy/* /etc/pki/ca-trust/source/anchors 2>/dev/null
-update-ca-trust
+# cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors 2>/dev/null
+# cp /anchors/mariner/* /etc/pki/ca-trust/source/anchors 2>/dev/null
+# cp /anchors/proxy/* /etc/pki/ca-trust/source/anchors 2>/dev/null
+# update-ca-trust
 
 # These env variables are populated by AKS in every kube-system pod
 # Remove ending '/' character since mdsd doesn't recognize this as a valid url
@@ -243,6 +243,16 @@ echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_
 #start cron daemon for logrotate
 /usr/sbin/crond -n -s &
 
+
+# Run configreader to update the configmap for TargetAllocator
+if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
+      echo_warning "Running config reader with only default scrape configs enabled"
+      /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config-default.yml
+else
+      echo_warning "Running config reader with merged default and custom scrape config"
+      /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config.yml
+fi
+
 #get controller kind in lowercase, trimmed
 # controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
 # if [ $controllerType = "replicaset" ]; then
@@ -289,12 +299,12 @@ echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_
 #       #end wait for addon-token-adapter to be healthy
 # fi
 
-export ME_CONFIG_FILE=$meConfigFile	
-export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile
-echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
-echo "export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile" >> ~/.bashrc
-source ~/.bashrc
-echo_var "ME_CONFIG_FILE" "$ME_CONFIG_FILE"
+# export ME_CONFIG_FILE=$meConfigFile	
+# export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile
+# echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
+# echo "export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile" >> ~/.bashrc
+# source ~/.bashrc
+# echo_var "ME_CONFIG_FILE" "$ME_CONFIG_FILE"
 
 # if [ "${MAC}" != "true" ]; then
 #       if [ -z $CLUSTER ]; then
