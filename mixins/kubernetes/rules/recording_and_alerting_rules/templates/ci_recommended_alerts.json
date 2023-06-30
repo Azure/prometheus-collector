@@ -47,44 +47,6 @@
                 "interval": "PT5M",
                 "rules": [
                     {
-                        "alert": "Average CPU usage per container is greater than 95%",
-                        "expression": "sum (rate(container_cpu_usage_seconds_total{image!=\"\", container!=\"POD\"}[5m])) by (pod,cluster,container,namespace) / sum(container_spec_cpu_quota{image!=\"\", container!=\"POD\"}/container_spec_cpu_period{image!=\"\", container!=\"POD\"}) by (pod,cluster,container,namespace) > .95",
-                        "for": "PT5M",
-                        "annotations": {
-                            "description": "Average CPU usage per container is greater than 95%"
-                        },
-                        "enabled": true,
-                        "severity": 4,
-                        "resolveConfiguration": {
-                            "autoResolved": true,
-                            "timeToResolve": "PT15M"
-                        },
-                        "actions": [
-                            {
-                                "actionGroupId": "[parameters('actionGroupResourceId')]"
-                            }
-                        ]
-                    },
-                    {
-                        "alert": "Average Memory usage per container is greater than 95%.",
-                        "expression": "(container_memory_working_set_bytes{container!=\"\", image!=\"\", container!=\"POD\"} / on(namespace,cluster,pod,container) group_left kube_pod_container_resource_limits{resource=\"memory\", node!=\"\"}) > .95 ",
-                        "for": "PT10M",
-                        "annotations": {
-                            "description": "Average Memory usage per container is greater than 95%"
-                        },
-                        "enabled": true,
-                        "severity": 4,
-                        "resolveConfiguration": {
-                            "autoResolved": true,
-                            "timeToResolve": "PT10M"
-                        },
-                        "actions": [
-                            {
-                                "actionGroupId": "[parameters('actionGroupResourceId')]"
-                            }
-                        ]
-                    },
-                    {
                         "alert": "Number of OOM killed containers is greater than 0",
                         "expression": "sum by (cluster,container,namespace)(kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"}) > 0",
                         "for": "PT5M",
