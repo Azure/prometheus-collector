@@ -223,7 +223,7 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
       /opt/configurationreader
 else
       # This else block is needed, when there is no custom config mounted as config map or default configs enabled
-      echo_error "prom-config-validator::No custom config or default scrape configs enabled. No scrape configs will be used"
+      echo_error "prom-config-validator::No custom config via configmap or default scrape configs enabled."
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi
@@ -245,12 +245,14 @@ echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_
 
 
 # Run configreader to update the configmap for TargetAllocator
-if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
+if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ] && [ -e "/opt/microsoft/otelcollector/collector-config-default.yml" ] ; then
       echo_warning "Running config reader with only default scrape configs enabled"
       /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config-default.yml
-else
-      echo_warning "Running config reader with merged default and custom scrape config"
+elif [ -e "/opt/microsoft/otelcollector/collector-config.yml" ]
+      echo_warning "Running config reader with merged default and custom scrape config via configmap"
       /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config.yml
+else
+      echo_warning "No configs found via configmap, not running config reader"
 fi
 
 #get controller kind in lowercase, trimmed
