@@ -23,13 +23,13 @@ type OtelConfig struct {
 	Extensions interface{} `yaml:"extensions"`
 	Receivers  struct {
 		Prometheus struct {
-			Config interface{} `yaml:"config"`
+			Config          interface{} `yaml:"config"`
 			TargetAllocator interface{} `yaml:"target_allocator"`
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
 	Service struct {
 		Extensions interface{} `yaml:"extensions"`
-		Pipelines struct {
+		Pipelines  struct {
 			Metrics struct {
 				Exporters  interface{} `yaml:"exporters"`
 				Processors interface{} `yaml:"processors"`
@@ -191,13 +191,13 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		otelConfig.Service.Pipelines.Metrics.Exporters = []interface{}{"otlp", "prometheus"}
 	}
 
-	if os.Getenv("CONTROLLER_TYPE") == "ReplicaSet"{
-		otelConfig.Receivers.Prometheus.TargetAllocator = map[string]string{
-			"endpoint": "http://ama-metrics-otelcollector-targetallocator.kube-system.svc.cluster.local",
-			"interval": "30s",
-			"collector_id": "$POD_NAME",
-		}
-	}
+	// if os.Getenv("CONTROLLER_TYPE") == "ReplicaSet"{
+	// 	otelConfig.Receivers.Prometheus.TargetAllocator = map[string]string{
+	// 		"endpoint": "http://ama-metrics-otelcollector-targetallocator.kube-system.svc.cluster.local",
+	// 		"interval": "30s",
+	// 		"collector_id": "$POD_NAME",
+	// 	}
+	// }
 
 	mergedConfig, err := yaml.Marshal(otelConfig)
 	if err != nil {
