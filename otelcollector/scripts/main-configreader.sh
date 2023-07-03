@@ -248,7 +248,7 @@ echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ] && [ -e "/opt/microsoft/otelcollector/collector-config-default.yml" ] ; then
       echo_warning "Running config reader with only default scrape configs enabled"
       /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config-default.yml
-elif [ -e "/opt/microsoft/otelcollector/collector-config.yml" ]
+elif [ -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
       echo_warning "Running config reader with merged default and custom scrape config via configmap"
       /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config.yml
 else
