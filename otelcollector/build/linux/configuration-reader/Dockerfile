@@ -46,8 +46,8 @@ COPY ./configuration-reader-builder/go.mod ./configuration-reader-builder/go.sum
 # WORKDIR /src/prometheusreceiver
 # RUN go version
 # RUN go mod download
-WORKDIR /src/configuration-reader-builder
 RUN go version > goversion.txt
+WORKDIR /src/configuration-reader-builder
 RUN go mod download
 COPY ./configuration-reader-builder /src/configuration-reader-builder
 # COPY ./prometheusreceiver /src/prometheusreceiver
