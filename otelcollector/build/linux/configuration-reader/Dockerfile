@@ -47,6 +47,7 @@ COPY ./configuration-reader-builder/go.mod ./configuration-reader-builder/go.sum
 # RUN go version
 # RUN go mod download
 WORKDIR /src/configuration-reader-builder
+RUN go version > goversion.txt
 RUN go mod download
 COPY ./configuration-reader-builder /src/configuration-reader-builder
 # COPY ./prometheusreceiver /src/prometheusreceiver
@@ -72,7 +73,7 @@ COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollecto
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
 # COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 # COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
-# COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
+COPY --from=configuration-reader-builder /src/goversion.txt $tmpdir/goversion.txt
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
 COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
 

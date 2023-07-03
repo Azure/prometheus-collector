@@ -60,20 +60,64 @@ spec:
           name: ta-internal
       - name: config-reader
         env:
+        - name: CLUSTER
+          {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+          value: "{{ .Values.Azure.Cluster.ResourceId }}"
+          {{- else }}
+          value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+          {{- end }}
+        - name: AKSREGION
+          {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+          value: "{{ .Values.Azure.Cluster.Region }}"
+          {{- else }}
+          value: "{{ .Values.global.commonGlobals.Region }}"
+          {{- end }}
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         - name: CONTAINER_TYPE
           value: "ConfigReaderSidecar"
         - name: MODE
           value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
         - name: MAC
           value: "true"
+        - name: AZMON_COLLECT_ENV
+          value: "false"
         - name: KUBE_STATE_NAME
           value: ama-metrics-ksm
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
         - name: NODE_EXPORTER_NAME
           value: "" # Replace this with the node exporter shipped out of box with AKS
+        - name: NODE_EXPORTER_TARGETPORT
+          {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+          value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
+          {{- else }}
+          value: "19100"
+          {{- end }}
+        - name: customEnvironment
+          {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+          value: "{{ lower .Values.Azure.Cluster.Cloud }}"
+          {{- else if .Values.AzureMonitorMetrics.isArcACluster }}
+          value: "arcautonomous"
+          {{- else }}
+          value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
+          {{- end }}
+        - name: WINMODE
+          value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+        - name: MINIMAL_INGESTION_PROFILE
+          value: "true" # only supported value is the string "true"
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfg }}"
         imagePullPolicy: IfNotPresent
         resources: {}
