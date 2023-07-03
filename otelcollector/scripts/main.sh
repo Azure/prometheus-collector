@@ -183,6 +183,9 @@ ruby /opt/microsoft/configmapparser/tomlparser-scrape-interval.rb
 # Merge default and custom prometheus config
 ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
 
+#get controller kind in lowercase, trimmed
+controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
+
 echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false" >> ~/.bashrc
 export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false
 echo "export CONFIG_VALIDATOR_RUNNING_IN_AGENT=true" >> ~/.bashrc
@@ -221,7 +224,7 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
 
       # echo "running configuration reader"
       # /opt/configurationreader
-else
+elif [ $controllerType != "replicaset" ]
       # This else block is needed, when there is no custom config mounted as config map or default configs enabled
       echo_error "prom-config-validator::No custom config via configmap or default scrape configs enabled"
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
@@ -243,8 +246,7 @@ echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_
 #start cron daemon for logrotate
 /usr/sbin/crond -n -s &
 
-#get controller kind in lowercase, trimmed
-controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
+
 if [ $controllerType = "replicaset" ]; then
    fluentBitConfigFile="/opt/fluent-bit/fluent-bit.conf"
    if [ "$CLUSTER_OVERRIDE" = "true" ]; then
