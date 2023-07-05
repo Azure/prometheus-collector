@@ -114,21 +114,19 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 				relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
 				for _, relabelConfig := range relabelConfigs {
 					relabelConfig := relabelConfig.(map[interface{}]interface{})
-					//replace $ with $$ for regex field
+					//replace $$ with $ for regex field for backwards compatibility
 					if relabelConfig["regex"] != nil {
 						// Adding this check here since regex can be boolean and the conversion will fail
 						if _, isString := relabelConfig["regex"].(string); isString {
 							regexString := relabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-							//modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
 							relabelConfig["regex"] = modifiedRegexString
 						}
 					}
-					//replace $ with $$ for replacement field
+					//replace $$ with $ for replacement field for backwards compatibility
 					if relabelConfig["replacement"] != nil {
 						replacement := relabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-						//modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
 						relabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
