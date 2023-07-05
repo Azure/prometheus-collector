@@ -136,22 +136,20 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 				metricRelabelConfigs := scrapeConfig["metric_relabel_configs"].([]interface{})
 				for _, metricRelabelConfig := range metricRelabelConfigs {
 					metricRelabelConfig := metricRelabelConfig.(map[interface{}]interface{})
-					//replace $ with $$ for regex field
+					//replace $$ with $ for regex field for backwards compatibility
 					if metricRelabelConfig["regex"] != nil {
 						// Adding this check here since regex can be boolean and the conversion will fail
 						if _, isString := metricRelabelConfig["regex"].(string); isString {
 							regexString := metricRelabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-							//modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
 							metricRelabelConfig["regex"] = modifiedRegexString
 						}
 					}
 
-					//replace $ with $$ for replacement field
+					//replace $$ with $ for replacement field for backwards compatibility
 					if metricRelabelConfig["replacement"] != nil {
 						replacement := metricRelabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-						//modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
