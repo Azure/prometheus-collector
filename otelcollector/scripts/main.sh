@@ -224,7 +224,7 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
 
       # echo "running configuration reader"
       # /opt/configurationreader
-elif [ $controllerType != "replicaset" ]
+elif [ $controllerType != "replicaset" ]; then
       # This else block is needed, when there is no custom config mounted as config map or default configs enabled
       echo_error "prom-config-validator::No custom config via configmap or default scrape configs enabled"
       echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
