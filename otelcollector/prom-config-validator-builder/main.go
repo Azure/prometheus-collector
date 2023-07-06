@@ -123,7 +123,6 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						if _, isString := relabelConfig["regex"].(string); isString {
 							regexString := relabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
 							relabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -131,7 +130,6 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					if relabelConfig["replacement"] != nil {
 						replacement := relabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
 						relabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
@@ -147,7 +145,6 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						if _, isString := metricRelabelConfig["regex"].(string); isString {
 							regexString := metricRelabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
 							metricRelabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -156,7 +153,6 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					if metricRelabelConfig["replacement"] != nil {
 						replacement := metricRelabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
