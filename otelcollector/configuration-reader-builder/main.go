@@ -15,7 +15,7 @@ import (
 	// batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	// v1 "k8s.io/api/core/v1"
-	promconfig "github.com/prometheus/prometheus/config"
+	// promconfig "github.com/prometheus/prometheus/config"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
@@ -39,9 +39,9 @@ func connectToK8s() *kubernetes.Clientset {
 }
 
 type Config struct {
-	LabelSelector      map[string]string  `yaml:"label_selector,omitempty"`
-	Config             *promconfig.Config `yaml:"config"`
-	AllocationStrategy string             `yaml:"allocation_strategy,omitempty"`
+	LabelSelector      map[string]string      `yaml:"label_selector,omitempty"`
+	Config             map[string]interface{} `yaml:"config"`
+	AllocationStrategy string                 `yaml:"allocation_strategy,omitempty"`
 }
 
 type OtelConfig struct {
@@ -50,8 +50,8 @@ type OtelConfig struct {
 	Extensions interface{} `yaml:"extensions"`
 	Receivers  struct {
 		Prometheus struct {
-			Config          *promconfig.Config `yaml:"config"`
-			TargetAllocator interface{}        `yaml:"target_allocator"`
+			Config          map[string]interface{} `yaml:"config"`
+			TargetAllocator interface{}            `yaml:"target_allocator"`
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
 	Service struct {
@@ -80,7 +80,8 @@ func updateConfigMap(clientset *kubernetes.Clientset, configFilePath string) {
 	if err != nil {
 		panic(err)
 	}
-	var promScrapeConfig *promconfig.Config
+	// var promScrapeConfig *promconfig.Config
+	var promScrapeConfig map[string]interface{}
 	var otelConfig OtelConfig
 	err = yaml.Unmarshal([]byte(defaultsMergedConfigFileContents), &otelConfig)
 	if err != nil {
