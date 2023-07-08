@@ -530,7 +530,7 @@ def setDefaultFileScrapeInterval(scrapeInterval)
     @corednsDefaultFile, @cadvisorDefaultFileRsSimple, @cadvisorDefaultFileRsAdvanced, @cadvisorDefaultFileDs, @kubeproxyDefaultFile,
     @apiserverDefaultFile, @kubestateDefaultFile, @nodeexporterDefaultFileRsSimple, @nodeexporterDefaultFileRsAdvanced, @nodeexporterDefaultFileDs,
     @prometheusCollectorHealthDefaultFile, @windowsexporterDefaultRsSimpleFile, @windowsexporterDefaultDsFile,
-    @windowskubeproxyDefaultFileRsSimpleFile, @windowskubeproxyDefaultDsFile
+    @windowskubeproxyDefaultFileRsSimpleFile, @windowskubeproxyDefaultDsFile, @podannotationsDefaultFile
   ]
 
   defaultFilesArray.each { |currentFile|
