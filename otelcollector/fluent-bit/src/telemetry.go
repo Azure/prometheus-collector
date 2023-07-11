@@ -399,6 +399,8 @@ func SendKsmCpuMemoryToAppInsightsMetrics() {
 		metricTelemetryItem.Properties["MemKsmRssBytesLinux"] = fmt.Sprintf("%d", memoryKsmRssBytesLinux)
 
 		TelemetryClient.Track(metricTelemetryItem)
+
+		Log(fmt.Sprintf("Sent ksm data %v\n", err))
 	}
 
 }

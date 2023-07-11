@@ -5,21 +5,21 @@ metadata:
   namespace: kube-system
   labels:
     app.kubernetes.io/component: ama-metrics
-    app.kubernetes.io/name: ama-metrics-ksm
+    app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/part-of: ama-metrics-ksm
     app.kubernetes.io/version: 2.8.1
     helm.sh/chart: azure-monitor-metrics-addon-0.1.0
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: ama-metrics-ksm
+      app.kubernetes.io/name: kube-state-metrics
   replicas: 1
   revisionHistoryLimit: 2
   template:
     metadata:
       labels:
         app.kubernetes.io/component: ama-metrics
-        app.kubernetes.io/name: ama-metrics-ksm
+        app.kubernetes.io/name: kube-state-metrics
         app.kubernetes.io/part-of: ama-metrics-ksm
         app.kubernetes.io/version: 2.8.1
         helm.sh/chart: azure-monitor-metrics-addon-0.1.0

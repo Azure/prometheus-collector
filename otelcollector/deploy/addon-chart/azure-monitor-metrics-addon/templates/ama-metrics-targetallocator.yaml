@@ -58,6 +58,12 @@ spec:
         volumeMounts:
         - mountPath: /conf
           name: ta-internal
+      livenessProbe:
+      httpGet:
+        path: /metrics
+        port: 8080
+      initialDelaySeconds: 60
+      periodSeconds: 3
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
