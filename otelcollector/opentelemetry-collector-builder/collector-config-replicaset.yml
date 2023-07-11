@@ -29,10 +29,10 @@ processors:
       action: insert
 receivers:
     prometheus:
-      config:
-        scrape_configs:
+      # config:
+        # scrape_configs:
         # scrape_configs must be non-null for collector to start
-        - job_name: empty_job
+        # - job_name: empty_job
       target_allocator:
         endpoint: http://ama-metrics-otelcollector-targetallocator.kube-system.svc.cluster.local
         interval: 30s
