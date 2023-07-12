@@ -314,6 +314,8 @@ jobs:
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
   steps:
+    - checkout: self
+      submodules: true
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
