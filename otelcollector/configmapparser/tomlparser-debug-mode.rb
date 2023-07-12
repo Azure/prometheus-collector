@@ -75,7 +75,7 @@ if @defaultEnabled == true
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Setting otlp in the exporter metrics for service pipeline since debug mode is enabled ...")
       config = YAML.load(File.read(@replicasetCollectorConfig))
       if !config.nil?
-        config["service"]["pipelines"]["metrics"]["receivers"] = ["otlp", "prometheus"]
+        config["service"]["pipelines"]["metrics"]["exporters"] = ["otlp", "prometheus"]
         cfgYamlWithDebugModeSettings = YAML::dump(config)
         File.open(@replicasetCollectorConfig, "w") { |file| file.puts cfgYamlWithDebugModeSettings }
       end
