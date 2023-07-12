@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - incpubsize
+    - incpubsizebytes
 
 pr:
   autoCancel: true
