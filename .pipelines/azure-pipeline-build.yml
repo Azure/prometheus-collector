@@ -304,7 +304,7 @@ jobs:
         GdnBreakGdnToolSemmle: true
         GdnBreakGdnToolSemmleSeverity: 'Warning'
 
-- job: Target Allocator
+- job: TargetAllocator
   displayName: Build target allocator image
   pool:
     name: Azure-Pipelines-CI-Test-EO
