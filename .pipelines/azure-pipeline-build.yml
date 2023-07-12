@@ -316,6 +316,7 @@ jobs:
   steps:
     - checkout: self
       submodules: true
+      persistCredentials: true
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
