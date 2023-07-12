@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"flag"
 
-	// "flag"
 	"io/ioutil"
 	"log"
 
@@ -13,30 +11,27 @@ import (
 	// "strings"
 
 	// batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
+
 	// v1 "k8s.io/api/core/v1"
 	// promconfig "github.com/prometheus/prometheus/config"
 	yaml "gopkg.in/yaml.v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	// clientcmd "k8s.io/client-go/tools/clientcmd"
 )
 
-func connectToK8s() *kubernetes.Clientset {
-	config, err := rest.InClusterConfig()
+// func connectToK8s() *kubernetes.Clientset {
+// 	config, err := rest.InClusterConfig()
 
-	if err != nil {
-		log.Fatalln("failed to create K8s config")
-	}
+// 	if err != nil {
+// 		log.Fatalln("failed to create K8s config")
+// 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		log.Fatalln("Failed to create K8s clientset")
-	}
+// 	clientset, err := kubernetes.NewForConfig(config)
+// 	if err != nil {
+// 		log.Fatalln("Failed to create K8s clientset")
+// 	}
 
-	return clientset
-}
+// 	return clientset
+// }
 
 type Config struct {
 	LabelSelector      map[string]string      `yaml:"label_selector,omitempty"`
@@ -72,9 +67,12 @@ type OtelConfig struct {
 	} `yaml:"service"`
 }
 
-func updateConfigMap(clientset *kubernetes.Clientset, configFilePath string) {
-	targetAllocatorConfigmap := "ama-metrics-otelcollector-targetallocator"
-	configMapClient := clientset.CoreV1().ConfigMaps("kube-system")
+var taConfigFilePath = "/ta-configuration/targetallocator.yaml"
+
+// func updateConfigMap(clientset *kubernetes.Clientset, configFilePath string) {
+func updateTAConfigFile(configFilePath string) {
+	// targetAllocatorConfigmap := "ama-metrics-otelcollector-targetallocator"
+	// configMapClient := clientset.CoreV1().ConfigMaps("kube-system")
 
 	defaultsMergedConfigFileContents, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
@@ -99,27 +97,31 @@ func updateConfigMap(clientset *kubernetes.Clientset, configFilePath string) {
 	}
 
 	targetAllocatorConfigYaml, _ := yaml.Marshal(targetAllocatorConfig)
-	newConfigMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: targetAllocatorConfigmap,
-		},
-		Data: map[string]string{
-			"targetallocator.yaml": string(targetAllocatorConfigYaml),
-		},
-	}
+	// newConfigMap := &corev1.ConfigMap{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name: targetAllocatorConfigmap,
+	// 	},
+	// 	Data: map[string]string{
+	// 		"targetallocator.yaml": string(targetAllocatorConfigYaml),
+	// 	},
+	// }
 
-	result, err := configMapClient.Update(context.TODO(), newConfigMap, metav1.UpdateOptions{})
-
-	if err != nil {
+	// result, err := configMapClient.Update(context.TODO(), newConfigMap, metav1.UpdateOptions{})
+	if err := ioutil.WriteFile(taConfigFilePath, targetAllocatorConfigYaml, 0644); err != nil {
 		panic(err)
 	}
-	log.Println("Updated configmap - ", result.GetObjectMeta().GetName())
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// log.Println("Updated configmap - ", result.GetObjectMeta().GetName())
+	log.Println("Updated file - targetallocator.yaml for the TargetAllocator to pick up new config changes")
 }
 
 func main() {
 	configFilePtr := flag.String("config", "", "Config file to read")
 	flag.Parse()
 	otelConfigFilePath := *configFilePtr
-	clientset := connectToK8s()
-	updateConfigMap(clientset, otelConfigFilePath)
+	// clientset := connectToK8s()
+	// updateConfigMap(clientset, otelConfigFilePath)
+	updateTAConfigFile(otelConfigFilePath)
 }
