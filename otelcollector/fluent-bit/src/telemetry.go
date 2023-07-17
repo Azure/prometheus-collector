@@ -376,9 +376,6 @@ func SendKsmCpuMemoryToAppInsightsMetrics() {
 
 	ksmTelemetryTicker := time.NewTicker(time.Second * time.Duration(ksmAttachedTelemetryIntervalSeconds))
 	for ; true; <-ksmTelemetryTicker.C {
-		cpuKsmUsageNanoCoresLinux := float64(0)
-		memoryKsmRssBytesLinux := float64(0)
-
 		for podId := 0; podId < len(p.Pods); podId++ {
 			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
 				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "" {
@@ -387,20 +384,38 @@ func SendKsmCpuMemoryToAppInsightsMetrics() {
 					continue
 				}
 				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "ama-metrics-ksm" {
-					cpuKsmUsageNanoCoresLinux += p.Pods[podId].Containers[containerId].Cpu.UsageNanoCores
-					memoryKsmRssBytesLinux += p.Pods[podId].Containers[containerId].Memory.RssBytes
+					cpuKsmUsageNanoCoresLinux := p.Pods[podId].Containers[containerId].Cpu.UsageNanoCores
+					memoryKsmRssBytesLinux := p.Pods[podId].Containers[containerId].Memory.RssBytes
+
+					// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
+		      metricTelemetryItem := appinsights.NewMetricTelemetry(ksmCpuMemoryTelemetryName, cpuKsmUsageNanoCoresLinux)
+
+		      // Abbreviated properties to save telemetry cost
+		      metricTelemetryItem.Properties["MemKsmRssBytesLinux"] = fmt.Sprintf("%d", int(memoryKsmRssBytesLinux))
+
+		      TelemetryClient.Track(metricTelemetryItem)
+
+		      Log(fmt.Sprintf("Sent ksm data"))
+				}
+				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "ta-container" {
+					cpuUsageNanoCoresLinux := p.Pods[podId].Containers[containerId].Cpu.UsageNanoCores
+					memoryRssBytesLinux := p.Pods[podId].Containers[containerId].Memory.RssBytes
+
+					// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
+		      metricTelemetryItem := appinsights.NewMetricTelemetry("taCPUUsage", cpuUsageNanoCoresLinux)
+					Log(fmt.Sprintf("TA CPU: %d", int(cpuUsageNanoCoresLinux)))
+
+		      // Abbreviated properties to save telemetry cost
+		      metricTelemetryItem.Properties["taMemRssBytes"] = fmt.Sprintf("%d", int(memoryRssBytesLinux))
+					Log(fmt.Sprintf("TA MEM: %d", int(memoryRssBytesLinux)))
+
+		      TelemetryClient.Track(metricTelemetryItem)
+
+		      Log(fmt.Sprintf("Sent target allocator data"))
 				}
 			}
 		}
-		// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
-		metricTelemetryItem := appinsights.NewMetricTelemetry(ksmCpuMemoryTelemetryName, cpuKsmUsageNanoCoresLinux)
-
-		// Abbreviated properties to save telemetry cost
-		metricTelemetryItem.Properties["MemKsmRssBytesLinux"] = fmt.Sprintf("%d", memoryKsmRssBytesLinux)
-
-		TelemetryClient.Track(metricTelemetryItem)
 	}
-
 }
 
 // Retrieve the JSON payload of Kube state metrics from Cadvisor endpoint

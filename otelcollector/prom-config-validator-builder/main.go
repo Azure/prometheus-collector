@@ -127,11 +127,11 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						}
 					}
 					//replace $ with $$ for replacement field
-					if relabelConfig["replacement"] != nil {
+					/*if relabelConfig["replacement"] != nil {
 						replacement := relabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
 						relabelConfig["replacement"] = modifiedReplacementString
-					}
+					}*/
 				}
 			}
 

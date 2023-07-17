@@ -122,6 +122,8 @@ image:
   tag: ${IMAGE_TAG}
   windows:
     tag: ${IMAGE_TAG_WINDOWS}
+  targetallocator:
+    tag: ${IMAGE_TAG_TARGETALLOCATOR}
   pullPolicy: IfNotPresent
 
 # -- Applies additional labels to all pods.

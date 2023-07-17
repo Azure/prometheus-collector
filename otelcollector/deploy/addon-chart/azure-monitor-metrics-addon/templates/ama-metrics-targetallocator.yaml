@@ -50,8 +50,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        # image: ghcr.io/open-telemetry/opentelemetry-operator/target-allocator:0.76.1
-        image: docker.io/rashmichandrashekarms/ta:hashfix-2
+        image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources: {}
         terminationMessagePath: /dev/termination-log
@@ -59,6 +58,12 @@ spec:
         volumeMounts:
         - mountPath: /conf
           name: ta-internal
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 3
         # - mountPath: /conf
         #   name: ta-config-shared
       - name: config-reader
