@@ -1,4 +1,4 @@
-module github.com/k8sjobs
+module github.com/configurationreader
 
 go 1.20
 

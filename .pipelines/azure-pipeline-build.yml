@@ -414,7 +414,7 @@ jobs:
           docker buildx build . --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build and push image to dev ACR"
+      displayName: "Build: build and push configuration reader image to dev ACR"
 
     # - bash: |
     #     curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
