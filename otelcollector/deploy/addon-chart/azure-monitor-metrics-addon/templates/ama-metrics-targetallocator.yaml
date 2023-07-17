@@ -50,7 +50,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        image: ghcr.io/open-telemetry/opentelemetry-operator/target-allocator:0.76.1
+        # image: ghcr.io/open-telemetry/opentelemetry-operator/target-allocator:0.76.1
+        image: docker.io/rashmichandrashekarms/ta:hashfix-2
         imagePullPolicy: IfNotPresent
         resources: {}
         terminationMessagePath: /dev/termination-log
@@ -58,6 +59,8 @@ spec:
         volumeMounts:
         - mountPath: /conf
           name: ta-internal
+        # - mountPath: /conf
+        #   name: ta-config-shared
       - name: config-reader
         env:
         - name: CLUSTER
@@ -128,6 +131,18 @@ spec:
           - mountPath: /etc/config/settings/prometheus
             name: prometheus-config-vol
             readOnly: true
+          # - mountPath: /ta-configuration
+          #   name: ta-config-shared
+        livenessProbe:
+          exec:
+            command:
+              - /bin/bash
+              - -c
+              - /opt/microsoft/liveness/livenessprobe-configreader.sh
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -151,3 +166,5 @@ spec:
         configMap:
           name: ama-metrics-prometheus-config
           optional: true
+      # - name: ta-config-shared
+      #   emptyDir: {}
