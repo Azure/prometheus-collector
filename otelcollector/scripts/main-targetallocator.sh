@@ -5,7 +5,7 @@ touch /opt/inotifyoutput.txt
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
 # Run Targetallocator
-/opt/main
+/opt/targetallocator
 if [ $? -ne 0 ] ; then
 # Write to inotify and configure restart
 fi
