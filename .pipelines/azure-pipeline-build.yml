@@ -315,17 +315,18 @@ jobs:
         docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         if [ "$(Build.Reason)" != "PullRequest" ]; then
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./opentelemetry-operator/cmd/otel-allocator/Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
           docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
         else
 
           # Build multiarch image to make sure there are no issues
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./opentelemetry-operator/cmd/otel-allocator/Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json
 
           # Load in amd64 image to run vulnerability scan
-          docker buildx build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json
+          docker buildx build . --file ./opentelemetry-operator/cmd/otel-allocator/Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json
         fi
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-operator/cmd/otel-allocator
+      # workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-operator/cmd/otel-allocator
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push target allocator image to dev ACR"
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
