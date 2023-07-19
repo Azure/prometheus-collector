@@ -1,5 +1,7 @@
 #!/bin/bash
 
+
+echo "starting container"
 #Run inotify as a daemon to track changes to the mounted configmap.
 touch /opt/inotifyoutput.txt
 inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
