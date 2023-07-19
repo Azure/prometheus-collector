@@ -7,7 +7,7 @@ fi
 
 # Making a call to the localhost to check for metrics and trigger restart for a non 200 response code
 RET=`curl --max-time 10 -s -o /dev/null -w "%{http_code}" http://localhost:8080/metrics`
-if [ $RET -ge 200 ]; then
+if [ $RET -ge 200 ] && [ $RET -lt 400 ]; then
     exit 0
 else
     echo "curl request to http://localhost:8080/metrics returned a non 200 reponse code" > /dev/termination-log
