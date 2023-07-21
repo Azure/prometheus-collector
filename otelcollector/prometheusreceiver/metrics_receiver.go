@@ -26,8 +26,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cnf/structhash"
 	"github.com/go-kit/log"
-	"github.com/mitchellh/hashstructure/v2"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
@@ -160,7 +160,9 @@ func (r *pReceiver) syncTargetAllocator(compareHash uint64, allocConf *targetAll
 		return 0, err
 	}
 
-	hash, err := hashstructure.Hash(scrapeConfigsResponse, hashstructure.FormatV2, nil)
+	// hash, err := hashstructure.Hash(scrapeConfigsResponse, hashstructure.FormatV2, nil)
+	hash, err := structhash.Hash(scrapeConfigsResponse, 1)
+
 	if err != nil {
 		r.settings.Logger.Error("Failed to hash job list", zap.Error(err))
 		return 0, err
