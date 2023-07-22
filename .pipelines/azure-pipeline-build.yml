@@ -4,6 +4,7 @@ trigger:
     - main
     - grace/operator
     - rashmi/operator-config
+    - rashmi/operator-config-new
 
 pr:
   autoCancel: true
