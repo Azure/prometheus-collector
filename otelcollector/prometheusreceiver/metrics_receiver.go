@@ -125,7 +125,7 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 func (r *pReceiver) startTargetAllocator(allocConf *targetAllocator, baseCfg *config.Config) error {
 	r.settings.Logger.Info("Starting target allocator discovery")
 	// immediately sync jobs, not waiting for the first tick
-	savedHash, err := r.syncTargetAllocator(uint64(0), allocConf, baseCfg)
+	savedHash, err := r.syncTargetAllocator("", allocConf, baseCfg)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (r *pReceiver) startTargetAllocator(allocConf *targetAllocator, baseCfg *co
 
 // syncTargetAllocator request jobs from targetAllocator and update underlying receiver, if the response does not match the provided compareHash.
 // baseDiscoveryCfg can be used to provide additional ScrapeConfigs which will be added to the retrieved jobs.
-func (r *pReceiver) syncTargetAllocator(compareHash uint64, allocConf *targetAllocator, baseCfg *config.Config) (uint64, error) {
+func (r *pReceiver) syncTargetAllocator(compareHash string, allocConf *targetAllocator, baseCfg *config.Config) (uint64, error) {
 	r.settings.Logger.Debug("Syncing target allocator jobs")
 	scrapeConfigsResponse, err := r.getScrapeConfigsResponse(allocConf.Endpoint)
 	if err != nil {
