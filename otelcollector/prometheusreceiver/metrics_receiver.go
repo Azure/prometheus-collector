@@ -152,7 +152,7 @@ func (r *pReceiver) startTargetAllocator(allocConf *targetAllocator, baseCfg *co
 
 // syncTargetAllocator request jobs from targetAllocator and update underlying receiver, if the response does not match the provided compareHash.
 // baseDiscoveryCfg can be used to provide additional ScrapeConfigs which will be added to the retrieved jobs.
-func (r *pReceiver) syncTargetAllocator(compareHash string, allocConf *targetAllocator, baseCfg *config.Config) (uint64, error) {
+func (r *pReceiver) syncTargetAllocator(compareHash string, allocConf *targetAllocator, baseCfg *config.Config) (string, error) {
 	r.settings.Logger.Debug("Syncing target allocator jobs")
 	scrapeConfigsResponse, err := r.getScrapeConfigsResponse(allocConf.Endpoint)
 	if err != nil {
