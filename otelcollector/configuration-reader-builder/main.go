@@ -3,10 +3,9 @@ package main
 import (
 	"flag"
 
-	"io/ioutil"
 	"log"
 
-	// "os"
+	"os"
 	// "path/filepath"
 	// "strings"
 
@@ -74,7 +73,7 @@ func updateTAConfigFile(configFilePath string) {
 	// targetAllocatorConfigmap := "ama-metrics-otelcollector-targetallocator"
 	// configMapClient := clientset.CoreV1().ConfigMaps("kube-system")
 
-	defaultsMergedConfigFileContents, err := ioutil.ReadFile(configFilePath)
+	defaultsMergedConfigFileContents, err := os.ReadFile(configFilePath)
 	if err != nil {
 		panic(err)
 	}
@@ -107,7 +106,7 @@ func updateTAConfigFile(configFilePath string) {
 	// }
 
 	// result, err := configMapClient.Update(context.TODO(), newConfigMap, metav1.UpdateOptions{})
-	if err := ioutil.WriteFile(taConfigFilePath, targetAllocatorConfigYaml, 0644); err != nil {
+	if err := os.WriteFile(taConfigFilePath, targetAllocatorConfigYaml, 0644); err != nil {
 		panic(err)
 	}
 	// if err != nil {
