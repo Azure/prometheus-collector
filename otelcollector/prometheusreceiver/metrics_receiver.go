@@ -157,7 +157,7 @@ func (r *pReceiver) syncTargetAllocator(compareHash string, allocConf *targetAll
 	scrapeConfigsResponse, err := r.getScrapeConfigsResponse(allocConf.Endpoint)
 	if err != nil {
 		r.settings.Logger.Error("Failed to retrieve job list", zap.Error(err))
-		return 0, err
+		return "", err
 	}
 
 	// hash, err := hashstructure.Hash(scrapeConfigsResponse, hashstructure.FormatV2, nil)
@@ -165,7 +165,7 @@ func (r *pReceiver) syncTargetAllocator(compareHash string, allocConf *targetAll
 
 	if err != nil {
 		r.settings.Logger.Error("Failed to hash job list", zap.Error(err))
-		return 0, err
+		return "", err
 	}
 	if hash == compareHash {
 		// no update needed
@@ -198,7 +198,7 @@ func (r *pReceiver) syncTargetAllocator(compareHash string, allocConf *targetAll
 	err = r.applyCfg(baseCfg)
 	if err != nil {
 		r.settings.Logger.Error("Failed to apply new scrape configuration", zap.Error(err))
-		return 0, err
+		return "", err
 	}
 
 	return hash, nil
