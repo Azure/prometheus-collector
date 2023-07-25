@@ -29,6 +29,6 @@ dependencies:
   repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
   condition: scrapeTargets.kubeState
 - name: prometheus-node-exporter
-  version: "5.10.1"
+  version: "4.21.0"
   repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
   condition: scrapeTargets.nodeExporter
