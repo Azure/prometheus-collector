@@ -44,7 +44,7 @@ resource recommendedAlerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2023
       }
       {
         alert: 'Average Memory usage per container is greater than 95%.'
-        expression: 'avg by (namespace, controller, container, cluster)(((container_memory_working_set_bytes{container!="", image!="", container!="POD"} / on(namespace,cluster,pod,container) group_left kube_pod_container_resource_limits{resource="memory", node!=""})*on(namespace, pod, cluster) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_name", "(.)")) > .95)'
+        expression: 'avg by (namespace, controller, container, cluster)(((container_memory_working_set_bytes{container!="", image!="", container!="POD"} / on(namespace,cluster,pod,container) group_left kube_pod_container_resource_limits{resource="memory", node!=""})*on(namespace, pod, cluster) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_kind", "(.*)")) > .95)'
         for: 'PT10M'
         annotations: {
           description: 'Average Memory usage per container is greater than 95%'
@@ -63,7 +63,7 @@ resource recommendedAlerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2023
       }
       {
         alert: 'Number of OOM killed containers is greater than 0'
-        expression: 'sum by (cluster,container,controller,namespace)(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} * on(cluster,namespace,pod) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_name", "(.)")) > 0'
+        expression: 'sum by (cluster,container,controller,namespace)(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} * on(cluster,namespace,pod) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_kind", "(.*)")) > 0'
         for: 'PT5M'
         annotations: {
           description: 'Number of OOM killed containers is greater than 0'
@@ -82,7 +82,7 @@ resource recommendedAlerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2023
       }
       {
         alert: 'Average PV usage is greater than 80%'
-        expression: 'avg by (namespace, controller, container, cluster)(((kubelet_volume_stats_used_bytes{job="kubelet"} / on(namespace,cluster,pod,container) group_left kubelet_volume_stats_capacity_bytes{job="kubelet"}) * on(namespace, pod, cluster) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_name", "(.)")) > .8)'
+        expression: 'avg by (namespace, controller, container, cluster)(((kubelet_volume_stats_used_bytes{job="kubelet"} / on(namespace,cluster,pod,container) group_left kubelet_volume_stats_capacity_bytes{job="kubelet"}) * on(namespace, pod, cluster) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_kind", "(.*)")) > .8)'
         for: 'PT5M'
         annotations: {
           description: 'Average PV usage is greater than 80%'
@@ -101,7 +101,7 @@ resource recommendedAlerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2023
       }
       {
         alert: 'Pod container restarted in last 1 hour'
-        expression: 'sum by (namespace, controller, container, cluster)(increase(kube_pod_container_status_restarts_total{job="kube-state-metrics"}[1h])* on(namespace, pod, cluster) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_name", "(.)"))  > 0 '
+        expression: 'sum by (namespace, controller, container, cluster)(increase(kube_pod_container_status_restarts_total{job="kube-state-metrics"}[1h])* on(namespace, pod, cluster) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_kind", "(.*)"))  > 0 '
         for: 'PT15M'
         annotations: {
           description: 'Pod container restarted in last 1 hour'
@@ -215,7 +215,7 @@ resource recommendedAlerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2023
       }
       {
         alert: 'Number of pods in failed state are greater than 0.'
-        expression: 'sum by (cluster, namespace, controller) (kube_pod_status_phase{phase="failed"} * on(namespace, pod, cluster) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_name", "(.)"))  > 0'
+        expression: 'sum by (cluster, namespace, controller) (kube_pod_status_phase{phase="failed"} * on(namespace, pod, cluster) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_kind", "(.*)"))  > 0'
         for: 'PT5M'
         annotations: {
           description: 'Number of pods in failed state are greater than 0'
@@ -268,8 +268,8 @@ resource communityALerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2023-0
         ]
       }
       {
-        alert: 'KubePodNotReadyPerController'
-        expression: 'sum by (namespace, controller, cluster) (max by(namespace, pod, cluster) (kube_pod_status_phase{job="kube-state-metrics", phase=~"Pending|Unknown"}  ) * on(namespace, pod, cluster) group_left(controller)label_replace(kube_pod_owner,"controller","$1","owner_name","(.)")) > 0'
+        alert: 'KubePodNotReadyByController'
+        expression: 'sum by (namespace, controller, cluster) (max by(namespace, pod, cluster) (kube_pod_status_phase{job="kube-state-metrics", phase=~"Pending|Unknown"}  ) * on(namespace, pod, cluster) group_left(controller)label_replace(kube_pod_owner,"controller","$1","owner_kind","(.*)")) > 0'
         for: 'PT15M'
         labels: {
           severity: 'warning'
