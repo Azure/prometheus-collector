@@ -138,159 +138,159 @@ jobs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
 
-# - job: Linux
-#   displayName: Build linux image
-#   pool:
-#     name: Azure-Pipelines-CI-Test-EO
-#   dependsOn: common
-#   variables:
-#     LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
-#   # This is necessary because of: https://github.com/moby/moby/issues/37965
-#     DOCKER_BUILDKIT: 1
-#   steps:
-#     - checkout: self
-#       submodules: true
+- job: Linux
+  displayName: Build linux image
+  pool:
+    name: Azure-Pipelines-CI-Test-EO
+  dependsOn: common
+  variables:
+    LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+  # This is necessary because of: https://github.com/moby/moby/issues/37965
+    DOCKER_BUILDKIT: 1
+  steps:
+    - checkout: self
+      submodules: true
 
-#     - task: CodeQL3000Init@0
-#       displayName: 'SDL: init codeql'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+    - task: CodeQL3000Init@0
+      displayName: 'SDL: init codeql'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
-#     - task: GoTool@0
-#       displayName: "Build: specify golang version"
-#       inputs:
-#         version: '1.19'
+    - task: GoTool@0
+      displayName: "Build: specify golang version"
+      inputs:
+        version: '1.19'
 
-#     - bash: |
-#         sudo apt-get install build-essential -y
-#         make
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-#       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-#       displayName: "SDL: build otelcollector, promconfigvalidator, and fluent-bit plugin for scanning"
+    - bash: |
+        sudo apt-get install build-essential -y
+        make
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+      displayName: "SDL: build otelcollector, promconfigvalidator, and fluent-bit plugin for scanning"
 
-#     - task: BinSkim@4
-#       displayName: 'SDL: run binskim'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-#       inputs:
-#         InputType: 'CommandLine'
-#         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+    - task: BinSkim@4
+      displayName: 'SDL: run binskim'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        InputType: 'CommandLine'
+        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
 
-#     - task: Gosec@1
-#       displayName: 'SDL: run gosec'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-#       inputs:
-#         targetPattern: 'gosecPattern'
-#         targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
+    - task: Gosec@1
+      displayName: 'SDL: run gosec'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        targetPattern: 'gosecPattern'
+        targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
 
-#     - bash: |
-#         wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
-#         unzip DevSkim_linux_0.6.9.zip
-#         chmod 775 DevSkim_linux_0.6.9/devskim
-#         ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
-#       displayName: 'SDL: run devskim'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-#       workingDirectory: $(Build.SourcesDirectory)
+    - bash: |
+        wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
+        unzip DevSkim_linux_0.6.9.zip
+        chmod 775 DevSkim_linux_0.6.9/devskim
+        ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
+      displayName: 'SDL: run devskim'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      workingDirectory: $(Build.SourcesDirectory)
 
-#     - bash: |
-#         ruby --version
-#         sudo apt-get install ruby-full
-#         ruby --version
-#         sudo gem install brakeman
-#         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
-#       displayName: 'SDL: run brakeman'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+    - bash: |
+        ruby --version
+        sudo apt-get install ruby-full
+        ruby --version
+        sudo gem install brakeman
+        brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
+      displayName: 'SDL: run brakeman'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
-#     - bash: |
-#         mkdir -p $(Build.ArtifactStagingDirectory)/linux
+    - bash: |
+        mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
-#         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
-#         sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-#         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+        # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+        sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-#         docker buildx create --name dockerbuilder
-#         docker buildx use dockerbuilder
-#         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-#         if [ "$(Build.Reason)" != "PullRequest" ]; then
-#           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
-#           docker pull $(LINUX_FULL_IMAGE_NAME)
-#         else
+        docker buildx create --name dockerbuilder
+        docker buildx use dockerbuilder
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        if [ "$(Build.Reason)" != "PullRequest" ]; then
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          docker pull $(LINUX_FULL_IMAGE_NAME)
+        else
 
-#           # Build multiarch image to make sure there are no issues
-#           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
+          # Build multiarch image to make sure there are no issues
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
 
-#           # Load in amd64 image to run vulnerability scan
-#           docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
-#         fi
-#       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-#       displayName: "Build: build and push image to dev ACR"
+          # Load in amd64 image to run vulnerability scan
+          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
+        fi
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+      displayName: "Build: build and push image to dev ACR"
 
-#     - bash: |
-#         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-#         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
-#         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
-#         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
-#       workingDirectory: $(Build.SourcesDirectory)
-#       displayName: "Build: run trivy scan"
+    - bash: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
+        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
+        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
+      workingDirectory: $(Build.SourcesDirectory)
+      displayName: "Build: run trivy scan"
 
-#     - task: CodeQL3000Finalize@0
-#       displayName: 'SDL: run codeql'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+    - task: CodeQL3000Finalize@0
+      displayName: 'SDL: run codeql'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
-#     - task: ComponentGovernanceComponentDetection@0
-#       displayName: "SDL: run component governance"
-#       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-#       inputs:
-#         scanType: 'Register'
-#         verbosity: 'Verbose'
-#         dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
-#         alertWarningLevel: 'High'
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
+        alertWarningLevel: 'High'
 
-#     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-#       displayName: "Ev2: Generate image artifacts"
-#       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-#       inputs:
-#         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
-#         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
+    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+      displayName: "Ev2: Generate image artifacts"
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
+        DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
 
-#     - task: SdtReport@2
-#       displayName: 'SDL: generate report'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-#       inputs:
-#         GdnExportAllTools: false
-#         GdnExportGdnToolBinSkim: true
-#         GdnExportGdnToolBinSkimSeverity: 'Note'
-#         GdnExportGdnToolGosec: true
-#         GdnExportGdnToolGosecSeverity: 'Note'
-#         GdnExportGdnToolSemmle: true
-#         GdnExportGdnToolSemmleSeverity: 'Note'
+    - task: SdtReport@2
+      displayName: 'SDL: generate report'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        GdnExportAllTools: false
+        GdnExportGdnToolBinSkim: true
+        GdnExportGdnToolBinSkimSeverity: 'Note'
+        GdnExportGdnToolGosec: true
+        GdnExportGdnToolGosecSeverity: 'Note'
+        GdnExportGdnToolSemmle: true
+        GdnExportGdnToolSemmleSeverity: 'Note'
 
-#     - task: PublishSecurityAnalysisLogs@3
-#       displayName: 'SDL: publish report'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-#       inputs:
-#         ArtifactName: 'CodeAnalysisLogs'
-#         ArtifactType: 'Container'
-#         PublishProcessedResults: true
-#         AllTools: true
-#         ToolLogsNotFoundAction: 'Standard'
+    - task: PublishSecurityAnalysisLogs@3
+      displayName: 'SDL: publish report'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        ArtifactName: 'CodeAnalysisLogs'
+        ArtifactType: 'Container'
+        PublishProcessedResults: true
+        AllTools: true
+        ToolLogsNotFoundAction: 'Standard'
 
-#     - task: PublishBuildArtifacts@1
-#       displayName: "Ev2: Publish image artifacts"
-#       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-#       inputs:
-#         pathToPublish: '$(Build.ArtifactStagingDirectory)'
-#         artifactName: drop
+    - task: PublishBuildArtifacts@1
+      displayName: "Ev2: Publish image artifacts"
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: drop
 
-#     - task: PostAnalysis@2
-#       displayName: 'SDL: Post-Build Analysis'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-#       inputs:
-#         GdnBreakAllTools: false
-#         GdnBreakGdnToolBinSkim: true
-#         GdnBreakGdnToolBinSkimSeverity: 'Warning'
-#         GdnBreakGdnToolGosec: true
-#         GdnBreakGdnToolGosecSeverity: 'Warning'
-#         GdnBreakGdnToolSemmle: true
-#         GdnBreakGdnToolSemmleSeverity: 'Warning'
+    - task: PostAnalysis@2
+      displayName: 'SDL: Post-Build Analysis'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        GdnBreakAllTools: false
+        GdnBreakGdnToolBinSkim: true
+        GdnBreakGdnToolBinSkimSeverity: 'Warning'
+        GdnBreakGdnToolGosec: true
+        GdnBreakGdnToolGosecSeverity: 'Warning'
+        GdnBreakGdnToolSemmle: true
+        GdnBreakGdnToolSemmleSeverity: 'Warning'
 
 # Rashmi's build changes for script wrapper
 # - job: TargetAllocator
@@ -378,157 +378,157 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
 
-# - job: Linux_ConfigReader
-#   displayName: Build linux image for config reader
-#   pool:
-#     name: Azure-Pipelines-CI-Test-EO
-#   dependsOn: common
-#   variables:
-#     LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
-#   # This is necessary because of: https://github.com/moby/moby/issues/37965
-#     DOCKER_BUILDKIT: 1
-#   steps:
+- job: Linux_ConfigReader
+  displayName: Build linux image for config reader
+  pool:
+    name: Azure-Pipelines-CI-Test-EO
+  dependsOn: common
+  variables:
+    LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
+  # This is necessary because of: https://github.com/moby/moby/issues/37965
+    DOCKER_BUILDKIT: 1
+  steps:
 
-#     - task: CodeQL3000Init@0
-#       displayName: 'SDL: init codeql'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+    - task: CodeQL3000Init@0
+      displayName: 'SDL: init codeql'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
-#     - task: GoTool@0
-#       displayName: "Build: specify golang version"
-#       inputs:
-#         version: '1.19'
+    - task: GoTool@0
+      displayName: "Build: specify golang version"
+      inputs:
+        version: '1.19'
 
-#     - bash: |
-#         sudo apt-get install build-essential -y
-#         make
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-#       workingDirectory: $(Build.SourcesDirectory)/otelcollector/configuration-reader-builder/
-#       displayName: "SDL: build configuration reader for scanning"
+    - bash: |
+        sudo apt-get install build-essential -y
+        make
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/configuration-reader-builder/
+      displayName: "SDL: build configuration reader for scanning"
 
-#     - task: BinSkim@4
-#       displayName: 'SDL: run binskim'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-#       inputs:
-#         InputType: 'CommandLine'
-#         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/configuration-reader-builder/configurationreader'
+    - task: BinSkim@4
+      displayName: 'SDL: run binskim'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        InputType: 'CommandLine'
+        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/configuration-reader-builder/configurationreader'
 
-#     # - task: Gosec@1
-#     #   displayName: 'SDL: run gosec'
-#     #   condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-#     #   inputs:
-#     #     targetPattern: 'gosecPattern'
-#     #     targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
-
-#     # - bash: |
-#     #     wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
-#     #     unzip DevSkim_linux_0.6.9.zip
-#     #     chmod 775 DevSkim_linux_0.6.9/devskim
-#     #     ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
-#     #   displayName: 'SDL: run devskim'
-#     #   condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-#     #   workingDirectory: $(Build.SourcesDirectory)
-
-#     - bash: |
-#         ruby --version
-#         sudo apt-get install ruby-full
-#         ruby --version
-#         sudo gem install brakeman
-#         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
-#       displayName: 'SDL: run brakeman'
-#       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-
-#     - bash: |
-#         mkdir -p $(Build.ArtifactStagingDirectory)/linux
-
-#         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
-#         sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-#         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
-#         docker buildx create --name dockerbuilder
-#         docker buildx use dockerbuilder
-#         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-#         if [ "$(Build.Reason)" != "PullRequest" ]; then
-#           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push
-#           docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
-#         else
-
-#           # Build multiarch image to make sure there are no issues
-#           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json
-
-#           # Load in amd64 image to run vulnerability scan
-#           docker buildx build . --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json
-#         fi
-#       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-#       displayName: "Build: build and push configuration reader image to dev ACR"
+    # - task: Gosec@1
+    #   displayName: 'SDL: run gosec'
+    #   condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+    #   inputs:
+    #     targetPattern: 'gosecPattern'
+    #     targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
 
     # - bash: |
-    #     curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-    #     trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
-    #     # trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
-    #     # trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
+    #     wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
+    #     unzip DevSkim_linux_0.6.9.zip
+    #     chmod 775 DevSkim_linux_0.6.9/devskim
+    #     ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
+    #   displayName: 'SDL: run devskim'
+    #   condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
     #   workingDirectory: $(Build.SourcesDirectory)
-    #   displayName: "Build: run trivy scan"
 
-    # - task: CodeQL3000Finalize@0
-    #   displayName: 'SDL: run codeql'
-    #   condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+    - bash: |
+        ruby --version
+        sudo apt-get install ruby-full
+        ruby --version
+        sudo gem install brakeman
+        brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
+      displayName: 'SDL: run brakeman'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
-    # - task: ComponentGovernanceComponentDetection@0
-    #   displayName: "SDL: run component governance"
-    #   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-    #   inputs:
-    #     scanType: 'Register'
-    #     verbosity: 'Verbose'
-    #     dockerImagesToScan: '$(LINUX_CONFIG_READER_FULL_IMAGE_NAME)'
-    #     alertWarningLevel: 'High'
+    - bash: |
+        mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
-    # - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-    #   displayName: "Ev2: Generate image artifacts"
-    #   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-    #   inputs:
-    #     BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
-    #     DockerImagesToScan: '$(LINUX_CONFIG_READER_FULL_IMAGE_NAME)'
+        # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+        sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-    # - task: SdtReport@2
-    #   displayName: 'SDL: generate report'
-    #   condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-    #   inputs:
-    #     GdnExportAllTools: false
-    #     GdnExportGdnToolBinSkim: true
-    #     GdnExportGdnToolBinSkimSeverity: 'Note'
-    #     GdnExportGdnToolGosec: true
-    #     GdnExportGdnToolGosecSeverity: 'Note'
-    #     GdnExportGdnToolSemmle: true
-    #     GdnExportGdnToolSemmleSeverity: 'Note'
+        docker buildx create --name dockerbuilder
+        docker buildx use dockerbuilder
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        if [ "$(Build.Reason)" != "PullRequest" ]; then
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push
+          docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
+        else
 
-    # - task: PublishSecurityAnalysisLogs@3
-    #   displayName: 'SDL: publish report'
-    #   condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-    #   inputs:
-    #     ArtifactName: 'CodeAnalysisLogs'
-    #     ArtifactType: 'Container'
-    #     PublishProcessedResults: true
-    #     AllTools: true
-    #     ToolLogsNotFoundAction: 'Standard'
+          # Build multiarch image to make sure there are no issues
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json
 
-    # - task: PublishBuildArtifacts@1
-    #   displayName: "Ev2: Publish image artifacts"
-    #   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-    #   inputs:
-    #     pathToPublish: '$(Build.ArtifactStagingDirectory)'
-    #     artifactName: drop
+          # Load in amd64 image to run vulnerability scan
+          docker buildx build . --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json
+        fi
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+      displayName: "Build: build and push configuration reader image to dev ACR"
 
-    # - task: PostAnalysis@2
-    #   displayName: 'SDL: Post-Build Analysis'
-    #   condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-    #   inputs:
-    #     GdnBreakAllTools: false
-    #     GdnBreakGdnToolBinSkim: true
-    #     GdnBreakGdnToolBinSkimSeverity: 'Warning'
-    #     GdnBreakGdnToolGosec: true
-    #     GdnBreakGdnToolGosecSeverity: 'Warning'
-    #     GdnBreakGdnToolSemmle: true
-    #     GdnBreakGdnToolSemmleSeverity: 'Warning'
+    - bash: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
+        # trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
+        # trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
+      workingDirectory: $(Build.SourcesDirectory)
+      displayName: "Build: run trivy scan"
+
+    - task: CodeQL3000Finalize@0
+      displayName: 'SDL: run codeql'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(LINUX_CONFIG_READER_FULL_IMAGE_NAME)'
+        alertWarningLevel: 'High'
+
+    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+      displayName: "Ev2: Generate image artifacts"
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
+        DockerImagesToScan: '$(LINUX_CONFIG_READER_FULL_IMAGE_NAME)'
+
+    - task: SdtReport@2
+      displayName: 'SDL: generate report'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        GdnExportAllTools: false
+        GdnExportGdnToolBinSkim: true
+        GdnExportGdnToolBinSkimSeverity: 'Note'
+        GdnExportGdnToolGosec: true
+        GdnExportGdnToolGosecSeverity: 'Note'
+        GdnExportGdnToolSemmle: true
+        GdnExportGdnToolSemmleSeverity: 'Note'
+
+    - task: PublishSecurityAnalysisLogs@3
+      displayName: 'SDL: publish report'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        ArtifactName: 'CodeAnalysisLogs'
+        ArtifactType: 'Container'
+        PublishProcessedResults: true
+        AllTools: true
+        ToolLogsNotFoundAction: 'Standard'
+
+    - task: PublishBuildArtifacts@1
+      displayName: "Ev2: Publish image artifacts"
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: drop
+
+    - task: PostAnalysis@2
+      displayName: 'SDL: Post-Build Analysis'
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      inputs:
+        GdnBreakAllTools: false
+        GdnBreakGdnToolBinSkim: true
+        GdnBreakGdnToolBinSkimSeverity: 'Warning'
+        GdnBreakGdnToolGosec: true
+        GdnBreakGdnToolGosecSeverity: 'Warning'
+        GdnBreakGdnToolSemmle: true
+        GdnBreakGdnToolSemmleSeverity: 'Warning'
 
 # - job: Windows2019
 #   displayName: "Build windows 2019 image"
