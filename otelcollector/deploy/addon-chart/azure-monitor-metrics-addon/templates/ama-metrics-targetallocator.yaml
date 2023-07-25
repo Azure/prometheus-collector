@@ -50,22 +50,34 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+        # image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+        image: "rashmichandrashekarms/ta:file-10"
         imagePullPolicy: IfNotPresent
         resources: {}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
+        # - mountPath: /conf
+        #   name: ta-internal
         - mountPath: /conf
-          name: ta-internal
+          # subPath: targetallocator.yaml
+          name: ta-config-shared
+        # - mountPath: /etc/config/settings
+        #   name: settings-vol-config
+        #   readOnly: true
+        # - mountPath: /etc/config/settings/prometheus
+        #   name: prometheus-config-vol
+        #   readOnly: true
         livenessProbe:
           httpGet:
             path: /metrics
             port: 8080
           initialDelaySeconds: 60
           periodSeconds: 3
-        # - mountPath: /conf
-        #   name: ta-config-shared
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 1 # change this to 3 later
       - name: config-reader
         env:
         - name: CLUSTER
@@ -137,7 +149,9 @@ spec:
             name: prometheus-config-vol
             readOnly: true
           # - mountPath: /ta-configuration
-          #   name: ta-config-shared
+          - mountPath: /ta-configuration
+            # subPath: targetallocator.yaml
+            name: ta-config-shared
         livenessProbe:
           exec:
             command:
@@ -145,9 +159,9 @@ spec:
               - -c
               - /opt/microsoft/liveness/livenessprobe-configreader.sh
           initialDelaySeconds: 60
-          periodSeconds: 15
+          periodSeconds: 5 # change this to 15 later
           timeoutSeconds: 5
-          failureThreshold: 3
+          failureThreshold: 1 # change this to 3 later
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -156,13 +170,13 @@ spec:
       serviceAccountName: ama-metrics-serviceaccount
       terminationGracePeriodSeconds: 30
       volumes:
-      - name: ta-internal
-        configMap:
-          defaultMode: 420
-          items:
-          - key: targetallocator.yaml
-            path: targetallocator.yaml
-          name: ama-metrics-otelcollector-targetallocator
+      # - name: ta-internal
+      #   configMap:
+      #     defaultMode: 420
+      #     items:
+      #     - key: targetallocator.yaml
+      #       path: targetallocator.yaml
+      #     name: ama-metrics-otelcollector-targetallocator
       - name: settings-vol-config
         configMap:
           name: ama-metrics-settings-configmap
@@ -171,5 +185,5 @@ spec:
         configMap:
           name: ama-metrics-prometheus-config
           optional: true
-      # - name: ta-config-shared
-      #   emptyDir: {}
+      - name: ta-config-shared
+        emptyDir: {}
