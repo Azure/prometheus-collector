@@ -70,6 +70,6 @@ spec:
           items:
           - key: targetallocator.yaml
             path: targetallocator.yaml
-          name: ama-metrics-otelcollector-targetallocator
+          name: ama-metrics-targetallocator
         name: ta-internal
 
