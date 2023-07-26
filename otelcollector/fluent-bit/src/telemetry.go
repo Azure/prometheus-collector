@@ -692,7 +692,8 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 				
 				// Add to the total that PublishTimeseriesVolume() uses
 				if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
-					TimeseriesVolumeMutex.Lock()			TimeseriesReceivedTotal += metricsReceivedCount
+					TimeseriesVolumeMutex.Lock()			
+					TimeseriesReceivedTotal += metricsReceivedCount
 					TimeseriesVolumeMutex.Unlock()
 		
 				}
