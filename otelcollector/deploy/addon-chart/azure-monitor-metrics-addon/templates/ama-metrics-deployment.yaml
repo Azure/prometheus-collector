@@ -125,11 +125,11 @@ spec:
               value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
             - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
-              value: {{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
+              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}"
                 {{-  end  }}
                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
             - name: KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST
-              value: {{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
+              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}"
                 {{-  end  }}
               {{-  end  }}
             {{-  end  }}
@@ -161,9 +161,11 @@ spec:
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
+            {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.Azure.Distribution "aks_edge_k3s") (ne .Values.Azure.Distribution "aks_edge_k8s")) }}
             - mountPath: /anchors/ubuntu
               name: anchors-ubuntu
               readOnly: true
+            {{- end }}
             {{- if .Values.AzureMonitorMetrics.ArcExtension }}
             - mountPath: /anchors/proxy
               name: ama-metrics-proxy-cert
@@ -288,10 +290,12 @@ spec:
           hostPath:
             path: /etc/pki/ca-trust/anchors/
             type: DirectoryOrCreate
+        {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.Azure.Distribution "aks_edge_k3s") (ne .Values.Azure.Distribution "aks_edge_k8s")) }}
         - name: anchors-ubuntu
           hostPath:
             path: /usr/local/share/ca-certificates/
             type: DirectoryOrCreate
+        {{- end }}
         {{- if .Values.AzureMonitorMetrics.ArcExtension }}
         - name: ama-metrics-proxy-cert
           secret:

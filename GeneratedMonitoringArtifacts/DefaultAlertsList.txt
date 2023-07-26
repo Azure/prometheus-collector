@@ -1,7 +1,7 @@
 KubeJobNotCompleted
 KubeJobFailed
 KubePodCrashLooping
-KubePodNotReady
+KubePodNotReadyByController
 KubeDeploymentReplicasMismatch
 KubeStatefulSetReplicasMismatch
 KubeHpaReplicasMismatch

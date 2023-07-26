@@ -111,7 +111,7 @@ jobs:
 
     - task: CredScan@3
       displayName: "SDL : Run credscan"
-    
+
     - task: CopyFiles@2
       displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
       inputs:
@@ -179,9 +179,7 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)
 
     - bash: |
-        sudo apt-get install ruby-full
-        ruby --version
-        sudo gem install brakeman
+        sudo gem install brakeman -v 5.4.1
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
@@ -602,7 +600,7 @@ jobs:
       else
         echo "-e error failed to login to az with managed identity credentials"
         exit 1
-      fi    
+      fi
 
       ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
       if [ $? -eq 0 ]; then
@@ -610,7 +608,7 @@ jobs:
       else
         echo "-e error get access token from resource:$RESOURCE_AUDIENCE failed."
         exit 1
-      fi   
+      fi
       ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '"' | tr -d '"\r\n')
 
       ARC_API_URL="https://eastus2euap.dp.kubernetesconfiguration.azure.com"
@@ -631,7 +629,7 @@ jobs:
     inputs:
       azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
       scriptType: 'bash'
-      scriptLocation: 'inlineScript' 
+      scriptLocation: 'inlineScript'
       inlineScript: |
         az config set extension.use_dynamic_install=yes_without_prompt
         az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline

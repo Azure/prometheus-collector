@@ -38,14 +38,14 @@ resource "azurerm_kubernetes_cluster" "k8s" {
 resource "azurerm_monitor_data_collection_endpoint" "dce" {
   name                          = "MSProm-${var.monitor_workspace_location}-${var.cluster_name}"
   resource_group_name           = azurerm_resource_group.rg.name
-  location                      = azurerm_resource_group.rg.location
+  location                      = var.monitor_workspace_location
   kind                          = "Linux"
 }
 
 resource "azurerm_monitor_data_collection_rule" "dcr" {
   name                = "MSProm-${var.monitor_workspace_location}-${var.cluster_name}"
   resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
+  location            = var.monitor_workspace_location
   data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dce.id
   kind                          = "Linux"
 
@@ -76,9 +76,13 @@ resource "azurerm_monitor_data_collection_rule" "dcr" {
 }
 
 resource "azurerm_monitor_data_collection_rule_association" "dcra" {
+  name                        = "MSProm-${var.monitor_workspace_location}-${var.cluster_name}"
   target_resource_id          = azurerm_kubernetes_cluster.k8s.id
-  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dce.id
+  data_collection_rule_id     = azurerm_monitor_data_collection_rule.dcr.id
   description                 = "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster."
+  depends_on = [
+    azurerm_monitor_data_collection_rule.dcr
+  ]
 }
 
 resource "azurerm_dashboard_grafana" "grafana" {
@@ -104,7 +108,7 @@ resource "azurerm_role_assignment" "datareaderrole" {
 resource "azapi_resource" "NodeRecordingRulesRuleGroup" {
   type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
   name = "NodeRecordingRulesRuleGroup-${var.cluster_name}"
-  location = "eastus"
+  location = var.monitor_workspace_location
   parent_id = azurerm_resource_group.rg.id
   body = jsonencode({
       "properties": {
@@ -169,7 +173,7 @@ resource "azapi_resource" "NodeRecordingRulesRuleGroup" {
 resource "azapi_resource" "KubernetesReccordingRulesRuleGroup" {
   type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
   name = "KubernetesReccordingRulesRuleGroup-${var.cluster_name}"
-  location = azurerm_resource_group.rg.location
+  location = var.monitor_workspace_location
   parent_id = azurerm_resource_group.rg.id
   body = jsonencode({
       "properties": {
@@ -278,7 +282,7 @@ resource "azapi_resource" "KubernetesReccordingRulesRuleGroup" {
 resource "azapi_resource" "NodeRecordingRulesRuleGroupWin" {
   type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
   name = "NodeRecordingRulesRuleGroup-Win-${var.cluster_name}"
-  location = azurerm_resource_group.rg.location
+  location = var.monitor_workspace_location
   parent_id = azurerm_resource_group.rg.id
   body = jsonencode({
       "properties": {
@@ -359,7 +363,7 @@ resource "azapi_resource" "NodeRecordingRulesRuleGroupWin" {
 resource "azapi_resource" "NodeAndKubernetesRecordingRulesRuleGroupWin" {
   type = "Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01"
   name = "NodeAndKubernetesRecordingRulesRuleGroup-Win-${var.cluster_name}"
-  location = azurerm_resource_group.rg.location
+  location = var.monitor_workspace_location
   parent_id = azurerm_resource_group.rg.id
   body = jsonencode({
       "properties": {
