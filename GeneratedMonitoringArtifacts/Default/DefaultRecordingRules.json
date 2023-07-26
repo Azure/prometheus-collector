@@ -11,7 +11,7 @@
         "azureMonitorWorkspaceResourceId": {
             "type": "string",
             "metadata": {
-                "description": "ResourceId of Monitoring Account (MAC) to associate to"
+                "description": "ResourceId of Azure Monitor Workspace (AMW) to associate to"
             }
         },
         "location": {
