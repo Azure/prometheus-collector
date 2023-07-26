@@ -28,8 +28,8 @@ This page collects this repositories alerts and begins the process of describing
 ##### Alert Name: KubePodCrashLooping
 + *Message*: `{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is restarting {{ printf \"%.2f\" $value }} / second`
 + *Severity*: warning
-##### Alert Name: "KubePodNotReady"
-+ *Message*: `{{ $labels.namespace }}/{{ $labels.pod }} is not ready.`
+##### Alert Name: "KubePodNotReadyByController"
++ *Message*: `{{ $labels.namespace }}/{{ $labels.pod }} by controller is not ready.`
 + *Severity*: warning
 ##### Alert Name: "KubeDeploymentGenerationMismatch"
 + *Message*: `Deployment {{ $labels.namespace }}/{{ $labels.deployment }} generation mismatch`
