@@ -161,44 +161,6 @@
                         ]
                     },
                     {
-                        "alert": "Average node CPU utilization is greater than 80%",
-                        "expression": "(  (1 - rate(node_cpu_seconds_total{job=\"node\", mode=\"idle\"}[5m]) ) / ignoring(cpu) group_left count without (cpu)( node_cpu_seconds_total{job=\"node\", mode=\"idle\"}) ) > .8 ",
-                        "for": "PT5M",
-                        "annotations": {
-                            "description": "Average node CPU utilization is greater than 80%"
-                        },
-                        "enabled": true,
-                        "severity": 4,
-                        "resolveConfiguration": {
-                            "autoResolved": true,
-                            "timeToResolve": "PT15M"
-                        },
-                        "actions": [
-                            {
-                                "actionGroupId": "[parameters('actionGroupResourceId')]"
-                            }
-                        ]
-                    },
-                    {
-                        "alert": "Working set memory for a node is greater than 80%.",
-                        "expression": "1 - avg by (namespace,cluster,job,instance)(node_memory_MemAvailable_bytes{job=\"node\"}) / avg by (namespace,cluster,job,instance)(node_memory_MemTotal_bytes{job=\"node\"}) > .8",
-                        "for": "PT5M",
-                        "annotations": {
-                            "description": "Working set memory for node {{ $labels.instance }} is greater than 80%."
-                        },
-                        "enabled": true,
-                        "severity": 4,
-                        "resolveConfiguration": {
-                            "autoResolved": true,
-                            "timeToResolve": "PT15M"
-                        },
-                        "actions": [
-                            {
-                                "actionGroupId": "[parameters('actionGroupResourceId')]"
-                            }
-                        ]
-                    },
-                    {
                         "alert": "Disk space usage for a node is greater than 85%.",
                         "expression": "1 - avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_avail_bytes{job=\"node\"}) / avg by (namespace,cluster,job,device,instance,mountpoint)(node_filesystem_size_bytes{job=\"node\"}) > .85",
                         "for": "PT5M",
