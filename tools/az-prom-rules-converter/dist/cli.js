@@ -18,7 +18,7 @@ const commander_1 = require("commander");
 const promises_1 = __importDefault(require("fs/promises"));
 const _1 = __importDefault(require("."));
 const program = new commander_1.Command();
-program.name('prom-rules-converter');
+program.name('az-prom-rules-converter');
 program.description('Azure Prometheus rule groups tool');
 // program.version(pack.version);
 function yaml2arm(inputPath, options, command) {

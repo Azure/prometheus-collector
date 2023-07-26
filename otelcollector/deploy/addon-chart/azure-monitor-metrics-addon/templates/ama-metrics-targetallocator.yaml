@@ -2,11 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.kubernetes.io/component: opentelemetry-targetallocator
-    app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
-    app.kubernetes.io/name: ama-metrics-otelcollector-targetallocator
-    app.kubernetes.io/part-of: opentelemetry
-  name: ama-metrics-otelcollector-targetallocator
+    component: ama-metrics-targetallocator
+    kubernetes.azure.com/managedby: aks
+  name: ama-metrics-targetallocator
   namespace: kube-system
 spec:
   progressDeadlineSeconds: 600
@@ -14,10 +12,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app.kubernetes.io/component: opentelemetry-targetallocator
-      app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
-      app.kubernetes.io/name: ama-metrics-otelcollector-targetallocator
-      app.kubernetes.io/part-of: opentelemetry
+      rsName: ama-metrics-targetallocator
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -27,10 +22,8 @@ spec:
     metadata:
       creationTimestamp: null
       labels:
-        app.kubernetes.io/component: opentelemetry-targetallocator
-        app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
-        app.kubernetes.io/name: ama-metrics-otelcollector-targetallocator
-        app.kubernetes.io/part-of: opentelemetry
+        rsName: ama-metrics-targetallocator
+        kubernetes.azure.com/managedby: aks
     spec:
       containers:
       - name: ta-container

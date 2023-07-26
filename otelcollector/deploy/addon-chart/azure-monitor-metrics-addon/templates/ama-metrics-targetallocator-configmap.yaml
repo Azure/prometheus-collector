@@ -5,15 +5,12 @@ data:
     config:
       scrape_configs:
     label_selector:
-      app.kubernetes.io/component: opentelemetry-collector
-      app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
+      rsName: ama-metrics-targetallocator
+      kubernetes.azure.com/managedby: aks
 kind: ConfigMap
 metadata:
   labels:
-    app.kubernetes.io/component: opentelemetry-targetallocator
-    app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
-    app.kubernetes.io/name: ama-metrics-otelcollector-targetallocator
-    app.kubernetes.io/part-of: opentelemetry
-    app.kubernetes.io/version: 6.7.0-grace-operator-05-24-2023-5950ffab
-  name: ama-metrics-otelcollector-targetallocator
+    component: ama-metrics-targetallocator
+    kubernetes.azure.com/managedby: aks
+  name: ama-metrics-targetallocator
   namespace: kube-system

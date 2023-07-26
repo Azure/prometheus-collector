@@ -121,7 +121,7 @@
           "type": "integer",
           "format": "int32",
           "description": "The severity of the alerts fired by the rule.",
-          "minimum": 1,
+          "minimum": 0,
           "maximum": 4
         },
         "for": {

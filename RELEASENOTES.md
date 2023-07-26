@@ -1,5 +1,33 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Pending
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
+* Change log -
+  * fix: Add unfair semaphore wait to windows container for better initial CPU performance
+  * fix:  Upgrades
+      Node exporter - image from: `v1.5.0` to:`v1.6.0`; chart from:`4.14.0` to:`4.21.0`
+      Kube state    - image from: `v2.8.1` to:`v2.9.2`; chart from:`4.32.0` to:`5.10.1`
+
+## Release 06-26-2023
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-06-26-2023-6ee07896`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-06-26-2023-6ee07896-win`
+* Change log -
+  * fix: Bicep template warnings
+  * fix: Adding kube_*_labels and kube_*_annotations to the default list of metrics
+  * fix: Bump github.com/prometheus/client_golang from 1.15.1 to 1.16.0 in /otelcollector/fluent-bit/src
+  * fix: Bump k8s.io/apimachinery from 0.27.2 to 0.27.3 in /otelcollector/fluent-bit/src
+  * fix: Bump k8s.io/client-go from 0.27.1 to 0.27.3 in /otelcollector/fluent-bit/src
+
+## Release 06-02-2023
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.1-main-06-02-2023-d384b035`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.1-main-06-02-2023-d384b035-win`
+* Change log -
+  * fix: Terraform template fixes for Azure Monitor Metrics addon
+  * fix: Reduce image tag length to docker limit of 128 characters
+  * fix: Various ARC release script fixes
+  * fix: Bicep template fix for adding role assingment for new grafana instance + allow different RGs for Grafana and AMW
+
 ## Release 05-04-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.0-main-05-04-2023-4450ad10`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.0-main-05-04-2023-4450ad10-win`

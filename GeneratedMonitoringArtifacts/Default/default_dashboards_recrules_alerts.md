@@ -42,7 +42,7 @@ Default dashboards & their keep lists
 |#|Alert name|Metrics||
 | :- | :- | :- | :- |
 ||KubePodCrashLooping|kube\_pod\_container\_status\_waiting\_reason||
-||KubePodNotReady|<p>kube\_pod\_status\_phase</p><p>kube\_pod\_owner</p>||
+||KubePodNotReadyByController|<p>kube\_pod\_status\_phase</p><p>kube\_pod\_owner</p>||
 ||KubeDeploymentReplicasMismatch|<p>kube\_deployment\_spec\_replicas</p><p>kube\_deployment\_status\_replicas\_available</p><p>kube\_deployment\_status\_replicas\_updated</p>||
 ||KubeStatefulSetReplicasMismatch|<p>kube\_statefulset\_status\_replicas\_ready</p><p>kube\_statefulset\_status\_replicas</p><p>kube\_statefulset\_status\_replicas\_updated</p>||
 ||KubeJobNotCompleted|<p>kube\_job\_status\_start\_time</p><p>kube\_job\_status\_active</p>||

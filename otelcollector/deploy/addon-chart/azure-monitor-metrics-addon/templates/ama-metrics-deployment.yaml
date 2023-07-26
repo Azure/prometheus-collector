@@ -5,12 +5,7 @@ metadata:
   namespace: kube-system
   labels:
     component: ama-metrics
-    app.kubernetes.io/component: opentelemetry-collector
-    app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
-    app.kubernetes.io/managed-by: opentelemetry-operator
-    app.kubernetes.io/name: ama-metrics-otelcollector-collector
-    app.kubernetes.io/part-of: opentelemetry
-    app.kubernetes.io/version: 6.7.0-grace-operator-06-07-2023-eedf2835
+    kubernetes.azure.com/managedby: aks
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -23,12 +18,6 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: opentelemetry-collector
-        app.kubernetes.io/instance: kube-system.ama-metrics-otelcollector
-        app.kubernetes.io/managed-by: opentelemetry-operator
-        app.kubernetes.io/name: ama-metrics-otelcollector-collector
-        app.kubernetes.io/part-of: opentelemetry
-        app.kubernetes.io/version: 6.7.0-grace-operator-06-07-2023-eedf2835
         rsName: ama-metrics
         kubernetes.azure.com/managedby: aks
       annotations:
@@ -136,16 +125,16 @@ spec:
               value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
             - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
-              value: {{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
+              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}"
                 {{-  end  }}
                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
             - name: KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST
-              value: {{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
+              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}"
                 {{-  end  }}
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
-              value: "v1.5.0" # Replace this with the version shipped by default
+              value: "v1.6.0" # Replace this with the version shipped by default
             - name: AGENT_VERSION
               value: {{ .Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE
@@ -172,9 +161,11 @@ spec:
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
+            {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.Azure.Distribution "aks_edge_k3s") (ne .Values.Azure.Distribution "aks_edge_k8s")) }}
             - mountPath: /anchors/ubuntu
               name: anchors-ubuntu
               readOnly: true
+            {{- end }}
             {{- if .Values.AzureMonitorMetrics.ArcExtension }}
             - mountPath: /anchors/proxy
               name: ama-metrics-proxy-cert
@@ -299,10 +290,12 @@ spec:
           hostPath:
             path: /etc/pki/ca-trust/anchors/
             type: DirectoryOrCreate
+        {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.Azure.Distribution "aks_edge_k3s") (ne .Values.Azure.Distribution "aks_edge_k8s")) }}
         - name: anchors-ubuntu
           hostPath:
             path: /usr/local/share/ca-certificates/
             type: DirectoryOrCreate
+        {{- end }}
         {{- if .Values.AzureMonitorMetrics.ArcExtension }}
         - name: ama-metrics-proxy-cert
           secret:
