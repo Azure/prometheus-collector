@@ -50,8 +50,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        # image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
-        image: "rashmichandrashekarms/ta:file-10"
+        image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+        #image: "rashmichandrashekarms/ta:file-11"
         imagePullPolicy: IfNotPresent
         resources: {}
         terminationMessagePath: /dev/termination-log
