@@ -93,7 +93,6 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 
 	// add scrape configs defined by the collector configs
 	baseCfg := r.cfg.PrometheusConfig
-	r.settings.Logger.Info(fmt.Sprintf("base config %v", baseCfg))
 
 	err := r.initPrometheusComponents(discoveryCtx, host, logger)
 	if err != nil {
@@ -189,7 +188,6 @@ func (r *pReceiver) syncTargetAllocator(compareHash uint64, allocConf *targetAll
 			&httpSD,
 		}
 
-		r.settings.Logger.Info(fmt.Sprintf("extra scrape config %v", scrapeConfig))
 		baseCfg.ScrapeConfigs = append(baseCfg.ScrapeConfigs, scrapeConfig)
 	}
 
