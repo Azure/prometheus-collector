@@ -481,12 +481,13 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 	for _, record := range records {
 		var logEntry = ""
 
-		// Logs have different parsed formats depending on if they're from otelcollector or metricsextension
+		// Logs have different parsed formats depending on if they're from otelcollector or container logs
 		if tag == fluentbitOtelCollectorLogsTag {
 			logEntry = fmt.Sprintf("%s %s", ToString(record["caller"]), ToString(record["msg"]))
-		} else if tag == fluentbitContainerLogsTag {
+		} else {
 			logEntry = ToString(record["log"])
 		}
+
 		logLines = append(logLines, logEntry)
 	}
 
@@ -691,9 +692,9 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 				
 				// Add to the total that PublishTimeseriesVolume() uses
 				if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
-					TimeseriesVolumeMutex.Lock()
-					TimeseriesReceivedTotal += metricsReceivedCount
+					TimeseriesVolumeMutex.Lock()			TimeseriesReceivedTotal += metricsReceivedCount
 					TimeseriesVolumeMutex.Unlock()
+		
 				}
 
 			}
