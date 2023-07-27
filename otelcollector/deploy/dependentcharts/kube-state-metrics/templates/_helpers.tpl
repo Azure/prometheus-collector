@@ -77,12 +77,8 @@ release: {{ .Release.Name }}
 Selector labels
 */}}
 {{- define "kube-state-metrics.selectorLabels" }}
-{{- if .Values.selectorOverride }}
-{{ toYaml .Values.selectorOverride }}
-{{- else }}
 app.kubernetes.io/name: {{ include "kube-state-metrics.name" . }}
 release: {{.Release.Name }}
-{{- end }}
 {{- end }}
 
 {{/* Sets default scrape limits for servicemonitor */}}
