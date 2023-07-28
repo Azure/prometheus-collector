@@ -189,7 +189,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 
 	if os.Getenv("CONTROLLER_TYPE") == "ReplicaSet"{
 		otelConfig.Receivers.Prometheus.TargetAllocator = map[string]string{
-			"endpoint": "http://ama-metrics-otelcollector-targetallocator.kube-system.svc.cluster.local",
+			"endpoint": "http://ama-metrics-targetallocator.kube-system.svc.cluster.local",
 			"interval": "30s",
 			"collector_id": "$POD_NAME",
 		}
