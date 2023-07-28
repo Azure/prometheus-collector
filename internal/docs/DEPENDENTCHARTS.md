@@ -27,3 +27,10 @@ prometheus-node-exporter : `mcr.microsoft.com/oss/kubernetes/kube-state-metrics`
 #### Step 3 : After PR is approved and merged, trigger chart build & push thru the action `build-and-push-dependent-helm-charts`. The parameter is 1 chart name. i.e `prometheus-node-exporter` or `kube-state-metrics` depending on what is being updated/refreshed. If you want to update both, you would trigger this action twice (one after another). Currently, these charts will be packaged and pushed to our cidev ACR repository, which will be reconciled with MCR.
 #### Step 4 : Update 'build-and-push-image-and-chart' workflow to scan for the updated images thru trivy
 #### Step 5 : Once dependent chart(s) is/are packaged and pushed to our mcr, update our Prometheus collector charts' Chart-template.yaml with the correct chart version(s) for the dependency(ies) updated, and creatre a PR.
+
+
+>Update the following variables in the [release pipeline](https://github-private.visualstudio.com/azure/_releaseDefinition?definitionId=79&_a=definition-variables)
+>   a. KSMChartTag - with the new version
+>   b. NEChartTag - with the new version
+>   c. PushNewKSMChart - to true for the said release (remember to set it back to false after the release is done!)
+>   d. PushNewNEChart - to true for the said release (remember to set it back to false after the release is done!)
