@@ -106,8 +106,8 @@ func updateConfigMap(clientset *kubernetes.Clientset, configFilePath string) {
 	targetAllocatorConfig := Config{
 		AllocationStrategy: "consistent-hashing",
 		LabelSelector: map[string]string{
-			"app.kubernetes.io/component": "opentelemetry-collector",
-			"app.kubernetes.io/instance":  "kube-system.ama-metrics-otelcollector",
+			"ama-metrics.component":          "ama-metrics-targetallocator",
+			"ama-metrics.component/instance": "ama-metrics-targetallocator-ta-container",
 		},
 		Config: promScrapeConfig,
 	}
