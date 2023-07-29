@@ -44,7 +44,7 @@ spec:
             fieldRef:
               fieldPath: spec.nodeName
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
-        #image: "rashmichandrashekarms/ta:file-11"
+        #image: "rashmichandrashekarms/ta:file-16"
         imagePullPolicy: IfNotPresent
         resources: {}
         terminationMessagePath: /dev/termination-log
@@ -53,14 +53,7 @@ spec:
         # - mountPath: /conf
         #   name: ta-internal
         - mountPath: /conf
-          # subPath: targetallocator.yaml
           name: ta-config-shared
-        # - mountPath: /etc/config/settings
-        #   name: settings-vol-config
-        #   readOnly: true
-        # - mountPath: /etc/config/settings/prometheus
-        #   name: prometheus-config-vol
-        #   readOnly: true
         livenessProbe:
           httpGet:
             path: /metrics
@@ -141,9 +134,7 @@ spec:
           - mountPath: /etc/config/settings/prometheus
             name: prometheus-config-vol
             readOnly: true
-          # - mountPath: /ta-configuration
           - mountPath: /ta-configuration
-            # subPath: targetallocator.yaml
             name: ta-config-shared
         livenessProbe:
           exec:
