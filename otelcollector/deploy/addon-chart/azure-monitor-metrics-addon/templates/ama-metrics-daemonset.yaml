@@ -149,11 +149,6 @@ spec:
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
-            {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.Azure.Distribution "aks_edge_k3s") (ne .Values.Azure.Distribution "aks_edge_k8s")) }}
-            - mountPath: /anchors/ubuntu
-              name: anchors-ubuntu
-              readOnly: true
-            {{- end }}
             {{- if eq .Values.AzureMonitorMetrics.ArcExtension true }}
             - mountPath: /anchors/proxy
               name: ama-metrics-proxy-cert
@@ -262,12 +257,6 @@ spec:
           hostPath:
             path: /etc/pki/ca-trust/anchors/
             type: DirectoryOrCreate
-        {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.Azure.Distribution "aks_edge_k3s") (ne .Values.Azure.Distribution "aks_edge_k8s")) }}
-        - name: anchors-ubuntu
-          hostPath:
-            path: /usr/local/share/ca-certificates/
-            type: DirectoryOrCreate
-        {{- end }}
         {{- if .Values.AzureMonitorMetrics.ArcExtension }}
         - name: ama-metrics-proxy-cert
           secret:

@@ -14,7 +14,7 @@ spec:
   paused: false
   selector:
     matchLabels:
-      rsName: ama-metrics-targetallocator
+      rsName: ama-metrics
       ama-metrics.component: ama-metrics-targetallocator
       ama-metrics.component/instance:  ama-metrics-targetallocator-ta-container
   strategy:
@@ -22,7 +22,7 @@ spec:
   template:
     metadata:
       labels:
-        rsName: ama-metrics-targetallocator
+        rsName: ama-metrics
         ama-metrics.component: ama-metrics-targetallocator
         ama-metrics.component/instance:  ama-metrics-targetallocator-ta-container
         kubernetes.azure.com/managedby: aks
@@ -167,6 +167,11 @@ spec:
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
+            {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.Azure.Distribution "aks_edge_k3s") (ne .Values.Azure.Distribution "aks_edge_k8s")) }}
+            - mountPath: /anchors/ubuntu
+              name: anchors-ubuntu
+              readOnly: true
+            {{- end }}
             {{- if .Values.AzureMonitorMetrics.ArcExtension }}
             - mountPath: /anchors/proxy
               name: ama-metrics-proxy-cert
@@ -291,6 +296,12 @@ spec:
           hostPath:
             path: /etc/pki/ca-trust/anchors/
             type: DirectoryOrCreate
+        {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.Azure.Distribution "aks_edge_k3s") (ne .Values.Azure.Distribution "aks_edge_k8s")) }}
+        - name: anchors-ubuntu
+          hostPath:
+            path: /usr/local/share/ca-certificates/
+            type: DirectoryOrCreate
+        {{- end }}
         {{- if .Values.AzureMonitorMetrics.ArcExtension }}
         - name: ama-metrics-proxy-cert
           secret:
