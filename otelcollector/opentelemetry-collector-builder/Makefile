@@ -1,4 +1,4 @@
-all: otelcollector fluentbitplugin promconfigvalidator targetallocator
+all: otelcollector fluentbitplugin promconfigvalidator targetallocator configurationreader
 
 .PHONY: otelcollector
 otelcollector:
@@ -14,3 +14,6 @@ promconfigvalidator:
 
 targetallocator:
 	make -C ../opentelemetry-operator/cmd/otel-allocator
+
+configurationreader:
+	make -C ../configuration-reader-builder

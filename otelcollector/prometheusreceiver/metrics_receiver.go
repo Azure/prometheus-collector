@@ -26,8 +26,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cnf/structhash"
 	"github.com/go-kit/log"
-	"github.com/mitchellh/hashstructure/v2"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
@@ -124,7 +124,7 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 func (r *pReceiver) startTargetAllocator(allocConf *targetAllocator, baseCfg *config.Config) error {
 	r.settings.Logger.Info("Starting target allocator discovery")
 	// immediately sync jobs, not waiting for the first tick
-	savedHash, err := r.syncTargetAllocator(uint64(0), allocConf, baseCfg)
+	savedHash, err := r.syncTargetAllocator("", allocConf, baseCfg)
 	if err != nil {
 		return err
 	}
@@ -151,18 +151,20 @@ func (r *pReceiver) startTargetAllocator(allocConf *targetAllocator, baseCfg *co
 
 // syncTargetAllocator request jobs from targetAllocator and update underlying receiver, if the response does not match the provided compareHash.
 // baseDiscoveryCfg can be used to provide additional ScrapeConfigs which will be added to the retrieved jobs.
-func (r *pReceiver) syncTargetAllocator(compareHash uint64, allocConf *targetAllocator, baseCfg *config.Config) (uint64, error) {
+func (r *pReceiver) syncTargetAllocator(compareHash string, allocConf *targetAllocator, baseCfg *config.Config) (string, error) {
 	r.settings.Logger.Debug("Syncing target allocator jobs")
 	scrapeConfigsResponse, err := r.getScrapeConfigsResponse(allocConf.Endpoint)
 	if err != nil {
 		r.settings.Logger.Error("Failed to retrieve job list", zap.Error(err))
-		return 0, err
+		return "", err
 	}
 
-	hash, err := hashstructure.Hash(scrapeConfigsResponse, hashstructure.FormatV2, nil)
+	// hash, err := hashstructure.Hash(scrapeConfigsResponse, hashstructure.FormatV2, nil)
+	hash, err := structhash.Hash(scrapeConfigsResponse, 1)
+
 	if err != nil {
 		r.settings.Logger.Error("Failed to hash job list", zap.Error(err))
-		return 0, err
+		return "", err
 	}
 	if hash == compareHash {
 		// no update needed
@@ -194,7 +196,7 @@ func (r *pReceiver) syncTargetAllocator(compareHash uint64, allocConf *targetAll
 	err = r.applyCfg(baseCfg)
 	if err != nil {
 		r.settings.Logger.Error("Failed to apply new scrape configuration", zap.Error(err))
-		return 0, err
+		return "", err
 	}
 
 	return hash, nil
