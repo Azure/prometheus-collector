@@ -21,9 +21,9 @@ version: ${IMAGE_TAG}
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: ${IMAGE_TAG}
+appVersion: "${IMAGE_TAG}"
 dependencies:
 - name: prometheus-node-exporter
-  version: "4.14.0"
+  version: "4.21.0"
   repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
   condition: AzureMonitorMetrics.ArcExtension

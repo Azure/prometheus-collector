@@ -605,12 +605,12 @@ jobs:
   dependsOn:
   - Common
   - Linux
-  # - WindowsMultiArch
+  - WindowsMultiArch
   variables:
     HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
-    # IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+    IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
   steps:
   - task: HelmInstaller@1
@@ -668,7 +668,7 @@ jobs:
   variables:
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
-    # IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+    IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
     ARC_EXTENSION: true
   steps:
