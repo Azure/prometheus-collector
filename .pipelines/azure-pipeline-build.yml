@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - sohamtestimagesign
 pr:
   autoCancel: true
   branches:
@@ -197,6 +198,33 @@ jobs:
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
+
+    - task: UseDotNet@2
+      displayName: 'Install .NET Core SDK'
+      inputs:
+        packageType: sdk
+        version: 2.2.207
+
+    - task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@1
+      displayName: "ESRP CodeSigning"
+      inputs:
+        ConnectedServiceName: "ESRP Signing service"
+        signConfigType: inlineSignParams
+        inlineOperation: |
+          [
+            {
+                "keyCode": "CP-467215",
+                "operationSetCode": "NotaryCoseSign",
+                "parameters": [
+                  {
+                    "parameterName": "CoseFlags",
+                    "parameterValue": "chainunprotected"
+                  }
+                ],
+                "toolName": "sign",
+                "toolVersion": "1.0"
+            }
+          ]
 
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
