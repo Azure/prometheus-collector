@@ -209,6 +209,8 @@ jobs:
       displayName: "ESRP CodeSigning for Prometheus"
       inputs:
         ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
+        FolderPath: $(Build.ArtifactStagingDirectory)/linux/
+        Pattern: "*.json"
         signConfigType: inlineSignParams
         inlineOperation: |
           [
