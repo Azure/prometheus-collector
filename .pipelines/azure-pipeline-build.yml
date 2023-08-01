@@ -227,6 +227,14 @@ jobs:
           ]
 
     - bash: |
+        set -euxo pipefail
+        azcu oras push signature \
+            --registry=$ACR_REGISTRY \
+            --repository=$ACR_REPOSITORY \
+      workingDirectory: $(Build.SourcesDirectory)
+      displayName: "ORAS Push Artifacts in ${{ $(Build.SourcesDirectory) }}"
+
+    - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
