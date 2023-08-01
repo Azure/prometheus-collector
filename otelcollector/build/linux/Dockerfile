@@ -59,7 +59,6 @@ COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcolle
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
-COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
 
 COPY ./scripts/setup.sh ./scripts/main.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
