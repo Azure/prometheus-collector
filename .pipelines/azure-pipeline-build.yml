@@ -205,7 +205,7 @@ jobs:
         packageType: sdk
         version: 2.2.207
 
-    - task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@1
+    - task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@3
       displayName: "ESRP CodeSigning for Prometheus"
       inputs:
         ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
