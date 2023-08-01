@@ -364,7 +364,7 @@ resource "azurerm_monitor_alert_prometheus_rule_group" "node_and_kubernetes_reco
   resource_group_name = azurerm_resource_group.rg.name
   cluster_name        = var.cluster_name
   description         = "Node and Kubernetes Recording Rules Rule Group for Windows Nodes"
-  rule_group_enabled  = false
+  rule_group_enabled  = true
   interval            = "PT1M"
   scopes              = [azurerm_monitor_workspace.amw.id]
 
@@ -495,7 +495,7 @@ resource "azurerm_monitor_alert_prometheus_rule_group" "node_recording_rules_rul
   resource_group_name = azurerm_resource_group.rg.name
   cluster_name        = var.cluster_name
   description         = "Node and Kubernetes Recording Rules Rule Group for Windows Nodes"
-  rule_group_enabled  = false
+  rule_group_enabled  = true
   interval            = "PT1M"
   scopes              = [azurerm_monitor_workspace.amw.id]
 
