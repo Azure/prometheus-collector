@@ -49,7 +49,11 @@ jobs:
         LINUX_IMAGE_TAG=$SEMVER
         # Truncating to 128 characters as it is required by docker
         LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
-        TARGET_ALLOCATOR_IMAGE_TAG=$SEMVER-targetallocator
+
+        #Truncating this to 112 characters to add the targetallocator suffix
+        TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
+        TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
+
         WINDOWS_IMAGE_TAG=$SEMVER-win
         # Truncating to 119 characters as it is required by docker (9 characters used in -ltsc2019/-ltsc2022)
         WINDOWS_IMAGE_TAG=$(echo "${WINDOWS_IMAGE_TAG}" | cut -c1-119)
@@ -153,14 +157,14 @@ jobs:
         make
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "SDL: build otelcollector, promconfigvalidator, and fluent-bit plugin for scanning"
+      displayName: "SDL: build otelcollector, promconfigvalidator, targetallocator, and fluent-bit plugin for scanning"
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         InputType: 'CommandLine'
-        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/opentelemetry-operator/cmd/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
 
     - task: Gosec@1
       displayName: 'SDL: run gosec'
