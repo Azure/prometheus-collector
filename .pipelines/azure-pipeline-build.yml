@@ -206,9 +206,9 @@ jobs:
         version: 2.2.207
 
     - task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@1
-      displayName: "ESRP CodeSigning"
+      displayName: "ESRP CodeSigning for Prometheus"
       inputs:
-        ConnectedServiceName: "ESRP Signing service"
+        ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
         signConfigType: inlineSignParams
         inlineOperation: |
           [
