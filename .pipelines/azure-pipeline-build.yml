@@ -233,8 +233,8 @@ jobs:
         azcu oras push signature \
             --registry=$ACR_REGISTRY \
             --repository=$ACR_REPOSITORY \
-      workingDirectory: $(Build.SourcesDirectory)
-      displayName: "ORAS Push Artifacts in ${{ $(Build.SourcesDirectory) }}"
+      workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
+      displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
 
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
