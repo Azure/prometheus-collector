@@ -42,6 +42,12 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: CLUSTER
+          {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+          value: "{{ .Values.Azure.Cluster.ResourceId }}"
+          {{- else }}
+          value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+          {{- end }}
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         name: targetallocator
