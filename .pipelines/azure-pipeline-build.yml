@@ -199,13 +199,6 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
 
-    - task: UseDotNet@2
-      displayName: 'Install .NET Core SDK'
-      inputs:
-        packageType: sdk
-        version: 6.x
-        includePreviewVersions: true
-
     - task: EsrpCodeSigning@3
       displayName: "ESRP CodeSigning for Prometheus"
       inputs:
