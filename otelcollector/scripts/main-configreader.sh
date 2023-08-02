@@ -50,7 +50,7 @@ echo_var "CLUSTER" "$CLUSTER"
 # Run configmap parser utility
 source /opt/configmap-parser.sh
 
-# #set agent config schema version
+# # #set agent config schema version
 # if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
 #       #trim
 #       config_schema_version="$(cat /etc/config/settings/schema-version | xargs)"
