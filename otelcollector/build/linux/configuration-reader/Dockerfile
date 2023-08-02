@@ -39,7 +39,7 @@ COPY --from=configuration-reader-builder /src/goversion.txt $tmpdir/goversion.tx
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
 COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
 
-COPY ./scripts/setup-configreader.sh ./scripts/main-configreader.sh ./scripts/logger.sh ./scripts/arc-eula.sh ./scripts/configmap-parser.sh $tmpdir/
+COPY ./scripts/*.sh $tmpdir/
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/

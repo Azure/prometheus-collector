@@ -60,7 +60,7 @@ COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcolle
 COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
 
-COPY ./scripts/setup.sh ./scripts/main.sh ./scripts/logger.sh ./scripts/arc-eula.sh ./scripts/configmap-parser.sh $tmpdir/
+COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
 COPY ./telegraf/telegraf-prometheus-collector.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit.conf ./fluent-bit/fluent-bit-daemonset.conf ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
