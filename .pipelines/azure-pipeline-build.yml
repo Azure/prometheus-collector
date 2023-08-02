@@ -203,7 +203,8 @@ jobs:
       displayName: 'Install .NET Core SDK'
       inputs:
         packageType: sdk
-        version: 2.2.207
+        version: 6.x
+        includePreviewVersions: true
 
     - task: EsrpCodeSigning@3
       displayName: "ESRP CodeSigning for Prometheus"
