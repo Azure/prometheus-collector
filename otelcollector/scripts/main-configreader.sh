@@ -22,7 +22,7 @@
 #   echo -e "${Cyan}$1${Color_Off}=$2"
 # }
 # Run logging utility
-source logger.sh
+source /opt/logger.sh
 
 #Run inotify as a daemon to track changes to the mounted configmap.
 touch /opt/inotifyoutput.txt
@@ -41,14 +41,14 @@ inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyout
 # fi
 
 # Run ARC EULA utility
-source arc-eula.sh
+source /opt/arc-eula.sh
 
 echo_var "MODE" "$MODE"
 echo_var "CONTAINER_TYPE" "$CONTAINER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
 
 # Run configmap parser utility
-source configmap-parser.sh
+source /opt/configmap-parser.sh
 
 # #set agent config schema version
 # if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
