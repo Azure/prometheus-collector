@@ -39,7 +39,7 @@ COPY --from=configuration-reader-builder /src/goversion.txt $tmpdir/goversion.tx
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
 COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
 
-COPY ./scripts/setup.sh ./scripts/main.sh ./scripts/logger.sh ./scripts/arc-eula.sh ./scripts/configmap-parser.sh $tmpdir/
+COPY ./scripts/setup-configreader.sh ./scripts/main-configreader.sh ./scripts/logger.sh ./scripts/arc-eula.sh ./scripts/configmap-parser.sh $tmpdir/
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
@@ -78,7 +78,6 @@ COPY --from=builder /usr/share/vim /usr/share/vim
 COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
 COPY --from=builder /usr/bin/gzip /usr/bin/
 COPY --from=builder /usr/bin/curl /usr/bin/
-COPY --from=builder /usr/bin/update-ca-trust /usr/bin
 COPY --from=builder /bin/sh /bin/sh
 
 # bash dependencies
