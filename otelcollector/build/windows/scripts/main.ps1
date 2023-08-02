@@ -2,6 +2,8 @@
 $me_config_file = '/opt/metricextension/me_ds.config'
 
 function Set-EnvironmentVariablesAndConfigParser {
+    # Set unfair semaphore wait for better initial CPU performance
+    Set-ProcessAndMachineEnvVariables "COMPlus_ThreadPool_UnfairSemaphoreSpinLimit" "0"
     # Set windows 2019 or 2022 version (Microsoft Windows Server 2019 Datacenter or Microsoft Windows Server 2022 Datacenter)
     $windowsVersion = (Get-WmiObject -class Win32_OperatingSystem).Caption
     [System.Environment]::SetEnvironmentVariable("windowsVersion", $windowsVersion, "Process")

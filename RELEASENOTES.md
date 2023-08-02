@@ -1,5 +1,15 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 07-28-2023
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-07-28-2023-0efd3e4e`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-07-28-2023-0efd3e4e-win`
+* Change log -
+  * fix: Add unfair semaphore wait to windows container for better initial CPU performance
+  * fix:  Upgrades
+      Node exporter - image from: `v1.5.0` to:`v1.6.0`; chart from:`4.14.0` to:`4.21.0`
+      Kube state    - image from: `v2.8.1` to:`v2.9.2`; chart from:`4.32.0` to:`5.10.1`
+  * Arc extension: do not mount ubuntu ca-certs if k8s distro is AKS Edge Essentials
+
 ## Release 06-26-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-06-26-2023-6ee07896`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-06-26-2023-6ee07896-win`
