@@ -3,7 +3,6 @@ trigger:
     include:
     - main
     - grace/operator
-    - rashmi/operator-config-new
 
 pr:
   autoCancel: true
