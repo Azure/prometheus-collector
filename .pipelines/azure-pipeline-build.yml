@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - sohamtestimagesign
+    - sohamtestimagessign
 pr:
   autoCancel: true
   branches:
