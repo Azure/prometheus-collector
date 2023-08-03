@@ -224,9 +224,12 @@ jobs:
 
     - bash: |
         set -euxo pipefail
-        azcu oras push signature \
-            --registry=$ACR_REGISTRY \
-            --repository=$ACR_REPOSITORY \
+        curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+        mkdir -p oras-install/
+        tar -zxf oras_${VERSION}_*.tar.gz -C oras-install/
+        sudo mv oras-install/oras /usr/local/bin/
+        rm -rf oras_1.0.0_*.tar.gz oras-install/
+        oras push signature --registry=$ACR_REGISTRY --repository=$ACR_REPOSITORY
       workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
 
