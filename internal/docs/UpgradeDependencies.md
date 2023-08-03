@@ -11,6 +11,11 @@ Updating KSM and NE charts
 6. If you renew the password, remember to update the following two secrets in the [GitHub Actions settings](https://github.com/Azure/prometheus-collector/settings/secrets/actions):
     a. MANAGED_PROM_SERVICE_PRINCIPAL_OBJECT_ID (This will likely remain the same unless you create a new service principal).
     b. MANAGED_PROM_SERVICE_PRINCIPAL_PASSWORD
+7. Update the following variables in the [release pipeline](https://github-private.visualstudio.com/azure/_releaseDefinition?definitionId=79&_a=definition-variables)
+    a. KSMChartTag - with the new version
+    b. NEChartTag - with the new version
+    c. PushNewKSMChart - to true for the said release (remember to set it back to false after the release is done!)
+    d. PushNewNEChart - to true for the said release (remember to set it back to false after the release is done!)
 
 For upgrading all other dependencies, update them in setup.sh (for linux) and setup.ps1(for win).
 

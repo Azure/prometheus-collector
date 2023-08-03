@@ -26,8 +26,7 @@ spec:
         kubernetes.azure.com/managedby: aks
     spec:
       containers:
-      - name: ta-container
-        args:
+      - args:
         - --enable-prometheus-cr-watcher
         env:
         - name: OTELCOL_NAMESPACE
@@ -43,9 +42,22 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: CLUSTER
+          {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+          value: "{{ .Values.Azure.Cluster.ResourceId }}"
+          {{- else }}
+          value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+          {{- end }}
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
-        resources: {}
+        name: targetallocator
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 10m
+            memory: 50Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
@@ -57,10 +69,6 @@ spec:
             port: 8080
           initialDelaySeconds: 60
           periodSeconds: 3
-          initialDelaySeconds: 60
-          periodSeconds: 15
-          timeoutSeconds: 5
-          failureThreshold: 3
       - name: config-reader
         env:
         - name: CLUSTER
