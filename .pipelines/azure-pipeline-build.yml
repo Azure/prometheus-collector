@@ -200,9 +200,9 @@ jobs:
       displayName: "Build: build and push image to dev ACR"
 
     - bash: |
-        MEDIA_TYPE=$(docker manifest inspect -v $ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG | jq '.Descriptor.mediaType')
-        DIGEST=$(docker manifest inspect -v $ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG | jq '.Descriptor.digest')
-        SIZE=$(docker manifest inspect -v $ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG | jq '.Descriptor.size')
+        MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+        DIGEST=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+        SIZE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.size')
         cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
         {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
         EOF
@@ -239,7 +239,7 @@ jobs:
         tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
         sudo mv oras-install/oras /usr/local/bin/
         rm -rf oras_1.0.0_*.tar.gz oras-install/
-        oras attach $ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG \
+        oras attach $(LINUX_FULL_IMAGE_NAME) \
           --artifact-type 'application/vnd.cncf.notary.signature' \
           ./payload.json:application/cose \
       workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
