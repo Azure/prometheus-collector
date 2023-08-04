@@ -70,7 +70,6 @@ func updateTAConfigFile(configFilePath string) {
 
 	promScrapeConfig = otelConfig.Receivers.Prometheus.Config
 	targetAllocatorConfig := Config{
-		AllocationStrategy: "consistent-hashing",
 		LabelSelector: map[string]string{
 			"rsName": "ama-metrics",
 		},
