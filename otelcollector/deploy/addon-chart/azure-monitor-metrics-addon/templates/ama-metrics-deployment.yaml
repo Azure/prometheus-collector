@@ -6,8 +6,6 @@ metadata:
   labels:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
-    ama-metrics.component: ama-metrics-targetallocator
-    ama-metrics.component/instance:  ama-metrics-targetallocator-ta-container
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -15,16 +13,12 @@ spec:
   selector:
     matchLabels:
       rsName: ama-metrics
-      ama-metrics.component: ama-metrics-targetallocator
-      ama-metrics.component/instance:  ama-metrics-targetallocator-ta-container
   strategy:
     type: RollingUpdate
   template:
     metadata:
       labels:
         rsName: ama-metrics
-        ama-metrics.component: ama-metrics-targetallocator
-        ama-metrics.component/instance:  ama-metrics-targetallocator-ta-container
         kubernetes.azure.com/managedby: aks
       annotations:
         agentVersion: "0.0.0.1"

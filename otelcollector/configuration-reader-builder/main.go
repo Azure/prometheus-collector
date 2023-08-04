@@ -72,8 +72,7 @@ func updateTAConfigFile(configFilePath string) {
 	targetAllocatorConfig := Config{
 		AllocationStrategy: "consistent-hashing",
 		LabelSelector: map[string]string{
-			"ama-metrics.component":          "ama-metrics-targetallocator",
-			"ama-metrics.component/instance": "ama-metrics-targetallocator-ta-container",
+			"rsName": "ama-metrics",
 		},
 		Config: promScrapeConfig,
 	}
