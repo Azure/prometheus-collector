@@ -60,6 +60,10 @@ global:
     Region: "${AKS_REGION}"
     Customer:
       AzureResourceID: ${AKS_RESOURCE_ID}
+      Namespace: ${AKS_NAMESPACE}
+      SubscriptionId: ${SUBSCRIPTION_ID} #msi-adapter
+      ResourceGroupName: ${RESOURCE_GROUP} #msi-adapter
+      ManagedClusterName: ${AKS_CLUSTER_NAME} #msi-adapter
 
 # For ARC backdoor testing
 Azure:

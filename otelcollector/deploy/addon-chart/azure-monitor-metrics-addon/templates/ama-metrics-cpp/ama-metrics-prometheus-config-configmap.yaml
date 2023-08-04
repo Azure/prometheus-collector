@@ -1,0 +1,168 @@
+kind: ConfigMap
+apiVersion: v1
+data:
+  prometheus-config: |-
+    scrape_configs:
+    - job_name: cluster-autoscaler
+      follow_redirects: false
+      sample_limit: 200
+      kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+          - {{ .Values.global.commonGlobals.Customer.Namespace }}
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app, __meta_kubernetes_pod_container_name]
+        action: keep
+        regex: cluster-autoscaler;cluster-autoscaler
+      - source_labels: [__meta_kubernetes_pod_annotation_aks_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_aks_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: ${1}:${2}
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_name]
+        regex: (.*)
+        target_label: pod
+        action: replace
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: rest_client_requests_total|cluster_autoscaler_((last_activity|cluster_safe_to_autoscale|failed_scale_ups_total|scale_down_in_cooldown|scaled_up_nodes_total|unneeded_nodes_count|unschedulable_pods_count|nodes_count))|cloudprovider_azure_api_request_(errors|duration_seconds_(bucket|count))
+        action: keep
+    - job_name: kube-controller-manager
+      sample_limit: 300
+      follow_redirects: false
+      scheme: https
+      kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+          - {{ .Values.global.commonGlobals.Customer.Namespace }}
+      tls_config:
+        ca_file: /etc/kubernetes/secrets/ca.pem
+        cert_file: /etc/kubernetes/secrets/client.pem
+        key_file: /etc/kubernetes/secrets/client-key.pem
+        insecure_skip_verify: true
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_k8s_app, __meta_kubernetes_pod_container_name]
+        action: keep
+        regex: kube-controller-manager;kube-controller-manager
+      - source_labels: [__meta_kubernetes_pod_annotation_aks_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_aks_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: ${1}:${2}
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_name]
+        regex: (.*)
+        target_label: pod
+        action: replace
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        action: keep
+        regex: rest_client_requests_duration_seconds_bucket|rest_client_requests_total|workqueue_depth|node_collector_evictions_total
+    - job_name: kube-scheduler
+      sample_limit: 5
+      follow_redirects: false
+      scheme: https
+      kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+          - {{ .Values.global.commonGlobals.Customer.Namespace }}
+      tls_config:
+        ca_file: /etc/kubernetes/secrets/ca.pem
+        cert_file: /etc/kubernetes/secrets/client.pem
+        key_file: /etc/kubernetes/secrets/client-key.pem
+        insecure_skip_verify: true
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_k8s_app, __meta_kubernetes_pod_container_name]
+        action: keep
+        regex: kube-scheduler;kube-scheduler
+      - source_labels: [__meta_kubernetes_pod_annotation_aks_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_aks_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: ${1}:${2}
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_name]
+        regex: (.*)
+        target_label: pod
+        action: replace
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        action: keep
+        regex: scheduler_pending_pods|scheduler_unschedulable_pods|scheduler_pod_scheduling_attempts|scheduler_queue_incoming_pods_total|scheduler_preemption_attempts_total|scheduler_preemption_victims|scheduler_scheduling_attempt_duration_seconds|Scheduler_schedule_attempts_total|scheduler_pod_scheduling_duration_seconds 
+    - job_name: etcd
+      sample_limit: 1000
+      follow_redirects: false
+      scheme: https
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - {{ .Values.global.commonGlobals.Customer.Namespace }}
+      tls_config:
+        ca_file: /etc/kubernetes/secrets/etcd-client-ca.crt
+        cert_file: /etc/kubernetes/secrets/etcd-client.crt
+        key_file: /etc/kubernetes/secrets/etcd-client.key
+        insecure_skip_verify: true
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_label_app, __meta_kubernetes_pod_container_port_number]
+        action: keep
+        regex: etcd;2379
+      - source_labels: [__meta_kubernetes_pod_name]
+        regex: (.*)
+        target_label: pod
+        action: replace
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        action: keep
+        regex: etcd_memory_in_bytes|etcd_cpu_in_cores|etcd_db_limit_in_bytes|etcd_db_max_size_in_bytes|etcd_db_fragmentation_rate|etcd_db_total_object_count|etcd_db_top_N_object_counts_by_type|etcd_db_top_N_object_size_by_type|etcd2_enabled
+    - job_name: kube-apiserver
+      scrape_interval: 30s
+      label_limit: 63
+      label_name_length_limit: 511
+      label_value_length_limit: 1023
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - {{ .Values.global.commonGlobals.Customer.Namespace }}
+      scheme: https
+      tls_config:
+        ca_file: /etc/kubernetes/secrets/ca.pem
+        insecure_skip_verify: true
+      bearer_token_file: /etc/kubernetes/secrets/token
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_pod_label_k8s_app
+        - __meta_kubernetes_pod_container_name
+        action: keep
+        regex: kube-apiserver;kube-apiserver
+      metric_relabel_configs:
+      - source_labels:
+        - __name__
+        action: keep
+        regex: "|apiserver_request_total|apiserver_cache_list_fetched_objects_total|apiserver_cache_list_returned_objects_total|apiserver_flowcontrol_demand_seats_average|apiserver_flowcontrol_current_limit_seats|apiserver_flowcontrol_rejected_requests_total|apiserver_request_sli_duration_seconds|process_start_time_seconds|apiserver_request_duration_seconds|apiserver_storage_fetched_objects_total|apiserver_storage_list_returned_objects_total|apiserver_current_inflight_requests"   
+metadata:
+  name: ama-metrics-prometheus-config
+  namespace: {{ .Values.global.commonGlobals.Customer.Namespace }}
