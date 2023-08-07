@@ -24,8 +24,7 @@ data:
         regex: (.+)
       - source_labels: [__address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port]
         action: replace
-        regex: ([^:]+)(?::\d+)?;(\d+)
-        replacement: ${1}:${2}
+        separator: ":"
         target_label: __address__
       - source_labels: [__meta_kubernetes_pod_name]
         regex: (.*)
@@ -62,8 +61,7 @@ data:
         regex: (.+)
       - source_labels: [__address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port]
         action: replace
-        regex: ([^:]+)(?::\d+)?;(\d+)
-        replacement: ${1}:${2}
+        separator: ":"
         target_label: __address__
       - source_labels: [__meta_kubernetes_pod_name]
         regex: (.*)
@@ -74,7 +72,7 @@ data:
         action: keep
         regex: rest_client_requests_duration_seconds_bucket|rest_client_requests_total|workqueue_depth|node_collector_evictions_total
     - job_name: kube-scheduler
-      sample_limit: 5
+      sample_limit: 100
       follow_redirects: false
       scheme: https
       kubernetes_sd_configs:
@@ -100,8 +98,7 @@ data:
         regex: (.+)
       - source_labels: [__address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port]
         action: replace
-        regex: ([^:]+)(?::\d+)?;(\d+)
-        replacement: ${1}:${2}
+        separator: ":"
         target_label: __address__
       - source_labels: [__meta_kubernetes_pod_name]
         regex: (.*)
