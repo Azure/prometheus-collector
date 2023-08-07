@@ -429,18 +429,20 @@ jobs:
         DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
 
     - powershell: |
-        $MEDIA_TYPE = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty mediaType
+        $MEDIA_TYPE = (docker manifest inspect -v $(WINDOWS_FULL_IMAGE_NAME)) | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty mediaType
         $DIGEST = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | ConvertFrom-Json | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty digest
         $SIZE = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | ConvertFrom-Json | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty size
-      displayName: "Fetch the Payload parameters"
+        $payload = @{
+            targetArtifact = @{
+                mediaType = $MEDIA_TYPE
+                digest = $DIGEST
+                size = $SIZE
+            }
+        } | ConvertTo-Json
 
-    - powershell: |
-      $jsonContent = @"
-      {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-      "@
-      $jsonContent | Out-File -FilePath $(Build.ArtifactStagingDirectory)/windows/payload.json -Encoding UTF8
-    workingDirectory: $(Build.ArtifactStagingDirectory)/windows/
-    displayName: "Build the payload json file"
+        $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/windows/payload.json"
+      workingDirectory: $(Build.ArtifactStagingDirectory)/windows
+      displayName: "Build the payload json file"
 
     - task: EsrpCodeSigning@3
       displayName: 'ESRP CodeSigning for Prometheus'
