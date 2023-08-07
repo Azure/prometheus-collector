@@ -5,7 +5,6 @@ metadata:
   namespace: kube-system
   labels:
     component: ama-metrics
-    kubernetes.azure.com/managedby: aks
 spec:
   replicas: 1
   revisionHistoryLimit: 2

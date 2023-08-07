@@ -17,10 +17,6 @@ rules:
         "ingress"
       ]
     verbs: ["list", "get", "watch"]
-  - apiGroups: [""]
-    resources:
-    - configmaps
-    verbs: ["get"]
   - apiGroups:
     - discovery.k8s.io
     resources:
