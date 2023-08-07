@@ -262,7 +262,7 @@ else
    fi
 fi
 
-if [ "${MAC}" == "true" and "${CCP_METRICS_ENABLED}" == "false" ]; then
+if [ "${MAC}" == "true" && "${CCP_METRICS_ENABLED}" == "false" ]; then
       #wait for addon-token-adapter to be healthy
       tokenAdapterWaitsecs=60
       waitedSecsSoFar=1
