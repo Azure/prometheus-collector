@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    component: ama-metrics-targetallocator
+    kubernetes.azure.com/managedby: aks
+  name: ama-metrics-targetallocator
+  namespace: kube-system
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: targetallocation
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    rsName: ama-metrics-targetallocator
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

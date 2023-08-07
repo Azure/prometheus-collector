@@ -54,12 +54,13 @@ COPY ./logrotate/crontab /etc/crontab
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
 COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
-COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
+COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/collector-config-replicaset.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
-COPY ./scripts/setup.sh ./scripts/main.sh $tmpdir/
+
+COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
 COPY ./telegraf/telegraf-prometheus-collector.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit.conf ./fluent-bit/fluent-bit-daemonset.conf ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
@@ -73,7 +74,7 @@ COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 ARG TARGETARCH
 RUN tdnf clean all
 RUN tdnf repolist --refresh
-RUN tdnf update
+RUN tdnf update -y
 RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
