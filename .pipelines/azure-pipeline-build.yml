@@ -202,7 +202,6 @@ jobs:
         cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
         {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
         EOF
-        echo "This is the content of the payload file." > $(Build.ArtifactStagingDirectory)/linux/payload.json
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
 
@@ -475,15 +474,24 @@ jobs:
             }
           ]
 
-    - task: PowerShell@2
-      displayName: 'Download and install Oras'
-      inputs:
-        targetType: 'inline'
-        script: |
-          $VERSION="1.0.0"
-          Invoke-WebRequest -Uri "https://github.com/oras-project/oras/releases/download/v$VERSION/oras_$VERSION_windows_amd64.zip" -OutFile "oras_$VERSION_windows_amd64.zip"
-          Expand-Archive -Path "oras_$VERSION_windows_amd64.zip" -DestinationPath "$Env:USERPROFILE\bin\"
-          $env:PATH += ";$Env:USERPROFILE\bin"
+    # - task: PowerShell@2
+    #   displayName: 'Download and install Oras'
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       $VERSION="1.0.0"
+    #       Invoke-WebRequest -Uri "https://github.com/oras-project/oras/releases/download/v$VERSION/oras_$VERSION_windows_amd64.zip" -OutFile "oras_$VERSION_windows_amd64.zip"
+    #       Expand-Archive -Path "oras_$VERSION_windows_amd64.zip" -DestinationPath "$Env:USERPROFILE\bin\"
+    #       $env:PATH += ";$Env:USERPROFILE\bin"
+
+    - powershell: |
+        curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
+        $currentDirectory = Get-Location
+        Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
+        New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
+        Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
+        $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
+      displayName: "Download and install Oras"
 
     - powershell: |
         $command = "oras attach $(WINDOWS_FULL_IMAGE_NAME) `
