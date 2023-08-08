@@ -5,18 +5,18 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: podmonitors.monitoring.coreos.com
+  name: podmonitors.monitoring.azure.apis.com
 spec:
-  group: monitoring.coreos.com
+  group: monitoring.azure.apis.com
   names:
-    categories:
-    - prometheus-operator
-    kind: PodMonitor
-    listKind: PodMonitorList
-    plural: podmonitors
+    # categories:
+    # - prometheus-operator
+    kind: AzPodMonitor
+    listKind: AzPodMonitorList
+    plural: azpodmonitors
     shortNames:
-    - pmon
-    singular: podmonitor
+    - azpmon
+    singular: azpodmonitor
   scope: Namespaced
   versions:
   - name: v1
