@@ -222,6 +222,18 @@ jobs:
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
         docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
+        $MEDIA_TYPE = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty mediaType
+        $DIGEST = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | ConvertFrom-Json | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty digest
+        $SIZE = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | ConvertFrom-Json | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty size
+        $payload = @{
+            targetArtifact = @{
+                mediaType = $MEDIA_TYPE
+                digest = $DIGEST
+                size = $SIZE
+            }
+        } | ConvertTo-Json
+
+        $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/windows/payload.json"
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: Triggering manigest for multi-arc docker image"
 
