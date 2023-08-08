@@ -246,6 +246,14 @@ try {
     Write-Host("Trying to get the current Az login context...")
     $account = Get-AzContext -ErrorAction Stop
     Write-Host("Successfully fetched current Az context...") -ForegroundColor Green
+    # Check if the context's token expiration time has passed
+    # if ($account.Account.ExpiresOn -lt (Get-Date)) {
+    #     Write-Host "Azure context has expired."
+    #     $account = $null
+    # }
+    # else {
+    #     Write-Host "Azure context is still valid."
+    # }
     Write-Host("")
 }
 catch {
@@ -280,6 +288,7 @@ if ($null -eq $account.Account) {
     }
 }
 else {
+    Write-Host $account.Subscription.Id
     if ($account.Subscription.Id -eq $ClusterSubscriptionId) {
         Write-Host("Subscription: $ClusterSubscriptionId is already selected. Account details: ")
         $account
@@ -379,349 +388,179 @@ catch {
 
 # Get all DCRAs
 $dcraList = Get-AzDataCollectionRuleAssociation -TargetResourceId $ClusterResourceId -ErrorAction Stop -WarningAction silentlyContinue
+$prometheusMetricsTuples = @()
 
 foreach ($dcra in $dcraList) {
-    Write-Output "DCRA ID: $($dcra.Id)"
-    Write-Output "DCRA Name: $($dcra.Name)"
-    Write-Output "Data Collection Rule ID: $($dcra.DataCollectionRuleId)"
-    Write-Output "Target Resource ID: $($dcra.TargetResourceId)"
-    Write-Output "Provisioning State: $($dcra.ProvisioningState)"
-    Write-Output "Additional Properties:"
+    # Write-Output "DCRA ID: $($dcra.Id)"
+    # Write-Output "DCRA Name: $($dcra.Name)"
+    # Write-Output "Data Collection Rule ID: $($dcra.DataCollectionRuleId)"
+    # Write-Output "Target Resource ID: $($dcra.TargetResourceId)"
+    # Write-Output "Provisioning State: $($dcra.ProvisioningState)"
+    # Write-Output "Additional Properties:"
     $dcra.Properties | Format-Table -AutoSize
 
     # Get the Data Collection Rule details based on its ID
-    $dataCollectionRule = Get-AzDataCollectionRule -RuleId $dcra.DataCollectionRuleId -ErrorAction silentlyContinue
+    $dataCollectionRule = Get-AzResource -ResourceId $dcra.DataCollectionRuleId -ErrorAction silentlyContinue
 
-    if ($dataCollectionRule) {
-        Write-Output "Data Collection Rule Properties:"
-        $dataCollectionRule.Properties | Format-Table -AutoSize
+    $dataflows = $dataCollectionRule.Properties.DataFlows
 
-        # Resource URI for the Azure Monitor REST API
-        $resourceUri = "https://management.azure.com/providers/Microsoft.OperationalInsights/dataCollectionRules/$dataCollectionRule/streams?api-version=2020-08-01-preview"
-
-        # Invoke the Azure Monitor REST API to get all streams for the Data Collection Rule
-        $streams = Invoke-AzRestMethod -Method GET -Uri $resourceUri -ErrorAction Stop
-
-
-        # Display the streams
-        if ($streams) {
-            Write-Output "Streams for Data Collection Rule ID: $dataCollectionRule"
-            $streams | Format-Table -AutoSize
+    foreach ($dataflow in $dataflows) {
+        $dataflowstream = $dataflow.streams
+        if ($dataflowstream -match "Microsoft-PrometheusMetrics") {
+            Write-Host "Microsoft-PrometheusMetrics is present in the Dataflow."
+            $prometheusMetricsTuples += [Tuple]::Create($dcra.Id, $dcra.DataCollectionRuleId, $dataCollectionRule.Properties.destinations.monitoringAccounts.accountResourceId)
         }
-        else {
-            Write-Output "No streams found for the Data Collection Rule ID: $dataCollectionRule"
-        }
-
-        # # Check if 'microsoft-prometheusmetrics' exists within the properties
-        # $prometheusMetricsFound = $dataCollectionRule.Properties.Keys -contains 'microsoft-prometheusmetrics'
-        # if ($prometheusMetricsFound) {
-        #     Write-Output "DCR contains 'microsoft-prometheusmetrics' in its properties."
-        # }
-        # else {
-        #     Write-Output "DCR does not contain 'microsoft-prometheusmetrics' in its properties."
-        # }
     }
-    else {
-        Write-Output "Data Collection Rule with ID $($dcra.DataCollectionRuleId) not found."
-    }
-
     Write-Output "--------------------------------------------------"
 }
 
-#     if ($true -eq $UseAADAuth) {
-#         #
-#         # Check existence of the ContainerInsightsExtension DCR-A on the cluster resource
-#         #
-
-#         #
-#         # Check existence of the ContainerInsightsExtension DCR
-#         #
-#         try {
-#             $dcrRuleName = "MSCI-" + $ClusterName + "-" + $ClusterRegion
-#             $dcrRule = Get-AzDataCollectionRule -ResourceGroupName $workspaceResourceGroupName -RuleName $dcrRuleName -ErrorAction Stop -WarningAction silentlyContinue
-#             Write-Host("Successfully fetched Data Collection Rule...") -ForegroundColor Green
-#             $extensionNameInDCR =  $dcrRule.DataSources.Extensions.ExtensionName
-#             if ($extensionNameInDCR -eq "ContainerInsights") {
-#                 $laDestinations = $dcrRule.Destinations.LogAnalytics
-#                 if (($null -ne $laDestinations) -and ($laDestinations.Length -gt 0) -and ($LogAnalyticsWorkspaceResourceID -eq $laDestinations[0].WorkspaceResourceId)) {
-#                     Write-Host("Successfully validated Data Collection Rule is valid...") -ForegroundColor Green
-#                 } else {
-#                     Write-Host("")
-#                     Write-Host("Data Collection Rule: '" + $dcrRuleName + "' found has Log Analytics(LA) workspace which different from the Log Analytics  workspace  in Monitoring addon.") -ForegroundColor Red
-#                     $laWorkspaceResIdInDCR = $laDestinations[0].WorkspaceResourceId
-#                     Write-Host("LA workspace found in Data Collection Rule: '" + $laWorkspaceResIdInDCR + "' but where as LA workspace in Monitoring Addon: '" + $LogAnalyticsWorkspaceResourceID + "'.") -ForegroundColor Red
-#                     Write-Host("")
-#                     Stop-Transcript
-#                     exit 1
-#                 }
-
-#             } else {
-#                 Write-Host("")
-#                 Write-Host("Data Collection Rule: '" + $dcrRuleName + "' found is not valid ContainerInsights extension DCR.") -ForegroundColor Red
-#                 Write-Host("")
-#                 Stop-Transcript
-#                 exit 1
-#             }
-#         }
-#         catch {
-#             Write-Host("")
-#             Write-Host("Failed to get the data collection Rule: '" + $dcrRuleName + "'. Data Collection Rule Association exists. Please make sure that it hasn't been deleted and you have access to it.") -ForegroundColor Red
-#             Write-Host("If  DataCollectionRule :'" + $dcrRuleName + "' has been deleted accidentally, disable and enable Monitoring addon back to get this fixed.") -ForegroundColor Red
-#             Write-Host("")
-#             Stop-Transcript
-#             exit 1
-#         }
-#     }
-#     else {
-
-#         try {
-#             $WorkspaceIPDetails = Get-AzOperationalInsightsIntelligencePacks -ResourceGroupName $workspaceResourceGroupName -WorkspaceName $workspaceName -ErrorAction Stop -WarningAction silentlyContinue
-#             Write-Host("Successfully fetched workspace IP details...") -ForegroundColor Green
-#             Write-Host("")
-#         }
-#         catch {
-#             Write-Host("")
-#             Write-Host("Failed to get the list of solutions onboarded to the workspace. Please make sure that it hasn't been deleted and you have access to it.") -ForegroundColor Red
-#             Write-Host("")
-#             Stop-Transcript
-#             exit 1
-#         }
-
-#         try {
-#             $ContainerInsightsIndex = $WorkspaceIPDetails.Name.IndexOf("ContainerInsights")
-#             Write-Host("Successfully located ContainerInsights solution") -ForegroundColor Green
-#             Write-Host("")
-#         }
-#         catch {
-#             Write-Host("Failed to get ContainerInsights solution details from the workspace") -ForegroundColor Red
-#             Write-Host("")
-#             Stop-Transcript
-#             exit 1
-#         }
+# Print the map
+Write-Output "Prometheus Metrics Tuple:"
+$prometheusMetricsTuples
 
 
-#         $isSolutionOnboarded = $WorkspaceIPDetails.Enabled[$ContainerInsightsIndex]
-#         if ($isSolutionOnboarded) {
-#             if ($WorkspacePricingTier -eq "Free") {
-#                 Write-Host("Pricing tier of the configured LogAnalytics workspace is Free so you may need to upgrade to pricing tier to non-Free") -ForegroundColor Yellow
-#             }
-#         }
-#         else {
-#             #
-#             # Check contributor access to WS
-#             #
-#             $message = "Detected that there is a workspace associated with this cluster, but workspace - '" + $workspaceName + "' in subscription '" + $workspaceSubscriptionId + "' IS NOT ONBOARDED with container health solution."
-#             Write-Host($message)
-#             $question = " Do you want to onboard container health to the workspace?"
-
-#             $choices = New-Object Collections.ObjectModel.Collection[Management.Automation.Host.ChoiceDescription]
-#             $choices.Add((New-Object Management.Automation.Host.ChoiceDescription -ArgumentList '&Yes'))
-#             $choices.Add((New-Object Management.Automation.Host.ChoiceDescription -ArgumentList '&No'))
-
-#             $decision = $Host.UI.PromptForChoice($message, $question, $choices, 0)
-
-#             if ($decision -eq 0) {
-#                 Write-Host("Deploying template to onboard container health : Please wait...")
-
-#                 $DeploymentName = "ContainerInsightsSolutionOnboarding-" + ((Get-Date).ToUniversalTime()).ToString('MMdd-HHmm')
-#                 $Parameters = @{ }
-#                 $Parameters.Add("workspaceResourceId", $LogAnalyticsWorkspaceResourceID)
-#                 $Parameters.Add("workspaceRegion", $WorkspaceLocation)
-#                 $Parameters
-#                 try {
-#                     New-AzResourceGroupDeployment -Name $DeploymentName `
-#                         -ResourceGroupName $workspaceResourceGroupName `
-#                         -TemplateUri  https://raw.githubusercontent.com/microsoft/Docker-Provider/ci_prod/scripts/onboarding/templates/azuremonitor-containerSolution.json `
-#                         -TemplateParameterObject $Parameters -ErrorAction Stop`
-
-#                     Write-Host("")
-#                     Write-Host("Successfully added Container Insights Solution") -ForegroundColor Green
-
-#                     Write-Host("")
-#                 }
-#                 catch {
-#                     Write-Host ("Template deployment failed with an error: '" + $Error[0] + "' ") -ForegroundColor Red
-#                     Write-Host("Please contact us by creating a support ticket in Azure for help. Use this link: https://azure.microsoft.com/en-us/support/create-ticket") -ForegroundColor Red
-#                 }
-#             }
-#             else {
-#                 Write-Host("The container health solution isn't onboarded to your cluster. This required for the monitoring to work. Please contact us by creating a support ticket in Azure if you need any help on this. Use this link: https://azure.microsoft.com/en-us/support/create-ticket") -ForegroundColor Red
-#             }
-#         }
-#     }
-# }
-
-# #
-# #    Check Workspace Usage
-# #
-# try {
-#     Write-Host("Checking workspace configured for capping on data ingestion limits...")
-#     $WorkspaceUsage = Get-AzOperationalInsightsWorkspaceUsage -ResourceGroupName $workspaceResourceGroupName -Name $workspaceName -ErrorAction Stop
-#     if ($WorkspaceUsage.Limit -gt -1) {
-#         Write-Host("Workspace has daily cap of bytes: ", $WorkspaceUsage.Limit) -ForegroundColor Green
-#         if ($WorkspaceUsage.CurrentValue -ge $WorkspaceUsage.Limit) {
-#             Write-Host("Workspace usage has reached or over the configured daily cap. Please increase the daily cap limits or wait for next reset interval") -ForegroundColor Red
-#             Stop-Transcript
-#             exit 1
-#         }
-#     }
-#     Write-Host("Workspace doesnt have daily cap configured") -ForegroundColor Green
-# }
-# catch {
-#     Write-Host("Failed to get  usage details of the workspace") -ForegroundColor Red
-#     Write-Host("")
-#     Stop-Transcript
-#     exit 1
-# }
+# Check if the map is empty
+if ($prometheusMetricsTuples.Count -eq 0) {
+    Write-Host "No entries with Microsoft-PrometheusMetrics found in the Data Collection Rule" -ForegroundColor Red
+}
 
 
-# if ("AKS" -eq $ClusterType ) {
-#     #
-#     #    Check Agent pods running as expected
-#     #
-#     try {
 
-#         if ($isClusterAndWorkspaceInDifferentSubs) {
-#           Write-Host("Changing to cluster's subscription back")
-#           Select-AzSubscription -SubscriptionId $ClusterSubscriptionId
-#         }
+#
+#    Check Agent pods running as expected
+#
+try {
 
-#         Write-Host("Getting Kubeconfig of the cluster...")
-#         Import-AzAksCredential -Id $ClusterResourceId -Force -ErrorAction Stop
-#         Write-Host("Successfully got the Kubeconfig of the cluster.")
+    if ($isClusterAndWorkspaceInDifferentSubs) {
+        Write-Host("Changing to cluster's subscription back")
+        Select-AzSubscription -SubscriptionId $ClusterSubscriptionId
+    }
+    Write-Host("Getting Kubeconfig of the cluster...")
+    Import-AzAksCredential -Id $ClusterResourceId -Force -ErrorAction Stop
+    Write-Host("Successfully got the Kubeconfig of the cluster.")
 
-#         Write-Host("Switch to cluster context to:", $ClusterName )
-#         kubectl config use-context $ClusterName
-#         Write-Host("Successfully switched current context of the k8s cluster to:", $ClusterName)
+    Write-Host("Switch to cluster context to:", $ClusterName )
+    kubectl config use-context $ClusterName
+    Write-Host("Successfully switched current context of the k8s cluster to:", $ClusterName)
 
-#         Write-Host("Check whether the ama-logs replicaset pod running correctly ...")
-#         $rsPod = kubectl get deployments ama-logs-rs -n kube-system -o json | ConvertFrom-Json
-#         if ($null -eq $rsPod) {
-#             Write-Host( "ama-logs replicaset pod not scheduled or failed to scheduled.") -ForegroundColor Red
-#             Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
-#             Write-Host($AksOptInLink) -ForegroundColor Red
-#             Write-Host($contactUSMessage)
-#             Stop-Transcript
-#             exit 1
-#         }
+    Write-Host("Check whether the ama-metrics replicaset pod running correctly ...")
+    $rsPod = kubectl get deployments ama-metrics -n kube-system -o json | ConvertFrom-Json
+    if ($null -eq $rsPod) {
+        Write-Host( "ama-metrics replicaset pod not scheduled or failed to scheduled.") -ForegroundColor Red
+        Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
+        Write-Host($AksOptInLink) -ForegroundColor Red
+        Write-Host($contactUSMessage)
+        Stop-Transcript
+        exit 1
+    }
 
-#         $rsPodStatus = $rsPod.status
-#         if ((($rsPodStatus.availableReplicas -eq 1) -and
-#                 ($rsPodStatus.readyReplicas -eq 1 ) -and
-#                 ($rsPodStatus.replicas -eq 1 )) -eq $false
-#         ) {
-#             Write-Host( "ama-logs replicaset pod not scheduled or failed to scheduled.") -ForegroundColor Red
-#             Write-Host("Available ama-logs replicas:", $rsPodStatus.availableReplicas)
-#             Write-Host("Ready ama-logs replicas:", $rsPodStatus.readyReplicas)
-#             Write-Host("Total ama-logs replicas:", $rsPodStatus.replicas)
-#             Write-Host($rsPod) -ForegroundColor Red
-#             Write-Host("get ama-logs rs pod details ...")
-#             $amaLogsRsPod = kubectl get pods -n kube-system -l rsName=ama-logs-rs -o json | ConvertFrom-Json
-#             Write-Host("status of the ama-logs rs pod is :", $amaLogsRsPod.Items[0].status.conditions) -ForegroundColor Red
-#             Write-Host("successfully got ama-logs rs pod details ...")
-#             Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
-#             Write-Host($AksOptInLink) -ForegroundColor Red
-#             Write-Host($contactUSMessage)
-#             Stop-Transcript
-#             exit 1
-#         }
+    $rsPodStatus = $rsPod.status
+    if ((($rsPodStatus.availableReplicas -eq 1) -and
+                ($rsPodStatus.readyReplicas -eq 1 ) -and
+                ($rsPodStatus.replicas -eq 1 )) -eq $false
+    ) {
+        Write-Host( "ama-metrics replicaset pod not scheduled or failed to scheduled.") -ForegroundColor Red
+        Write-Host("Available ama-metrics replicas:", $rsPodStatus.availableReplicas)
+        Write-Host("Ready ama-metrics replicas:", $rsPodStatus.readyReplicas)
+        Write-Host("Total ama-metrics replicas:", $rsPodStatus.replicas)
+        Write-Host($rsPod) -ForegroundColor Red
+        Write-Host("get ama-metrics rs pod details ...")
+        $amaMetricsRsPod = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
+        Write-Host("status of the ama-metrics rs pod is :", $amaMetricsRsPod.Items[0].status.conditions) -ForegroundColor Red
+        Write-Host("successfully got ama-metrics rs pod details ...")
+        Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
+        Write-Host($AksOptInLink) -ForegroundColor Red
+        Write-Host($contactUSMessage)
+        Stop-Transcript
+        exit 1
+    }
 
-#         Write-Host( "ama-logs replicaset pod running OK.") -ForegroundColor Green
-#     }
-#     catch {
-#         Write-Host ("Failed to get ama-logs replicatset pod info using kubectl get rs  : '" + $Error[0] + "' ") -ForegroundColor Red
-#         Stop-Transcript
-#         exit 1
-#     }
+    Write-Host( "ama-metrics replicaset pod running OK.") -ForegroundColor Green
+}
+catch {
+    Write-Host ("Failed to get ama-metrics replicatset pod info using kubectl get rs  : '" + $Error[0] + "' ") -ForegroundColor Red
+    Stop-Transcript
+    exit 1
+}
 
-#     Write-Host("Checking whether the ama-logs daemonset pod running correctly ...")
-#     try {
-#         $ds = kubectl get ds -n kube-system -o json --field-selector metadata.name=ama-logs | ConvertFrom-Json
-#         if (($null -eq $ds) -or ($null -eq $ds.Items) -or ($ds.Items.Length -ne 1)) {
-#             Write-Host( "ama-logs replicaset pod not scheduled or failed to schedule." + $contactUSMessage)
-#             Stop-Transcript
-#             exit 1
-#         }
+Write-Host("Checking whether the ama-metrics-node linux daemonset pod running correctly ...")
+try {
+    $ds = kubectl get ds -n kube-system -o json --field-selector metadata.name=ama-metrics-node | ConvertFrom-Json
+    if (($null -eq $ds) -or ($null -eq $ds.Items) -or ($ds.Items.Length -ne 1)) {
+        Write-Host( "ama-metrics daemonset pod not scheduled or failed to schedule." + $contactUSMessage)
+        Stop-Transcript
+        exit 1
+    }
 
-#         $dsStatus = $ds.Items[0].status
+    $dsStatus = $ds.Items[0].status
 
-#         if (
-#             (($dsStatus.currentNumberScheduled -eq $dsStatus.desiredNumberScheduled) -and
-#                 ($dsStatus.numberAvailable -eq $dsStatus.currentNumberScheduled) -and
-#                 ($dsStatus.numberAvailable -eq $dsStatus.numberReady)) -eq $false) {
+    if (
+            (($dsStatus.currentNumberScheduled -eq $dsStatus.desiredNumberScheduled) -and
+                ($dsStatus.numberAvailable -eq $dsStatus.currentNumberScheduled) -and
+                ($dsStatus.numberAvailable -eq $dsStatus.numberReady)) -eq $false) {
 
-#             Write-Host( "ama-logs daemonset pod not scheduled or failed to schedule.") -ForegroundColor Red
-#             Write-Host($dsStatus)
-#             Write-Host($contactUSMessage)
-#             Stop-Transcript
-#             exit 1
-#         }
+        Write-Host( "ama-metrics daemonset pod not scheduled or failed to schedule.") -ForegroundColor Red
+        Write-Host($dsStatus)
+        Write-Host($contactUSMessage)
+        Stop-Transcript
+        exit 1
+    }
 
-#         Write-Host( "ama-logs daemonset pod running OK.") -ForegroundColor Green
-#     }
-#     catch {
-#         Write-Host ("Failed to execute the script  : '" + $Error[0] + "' ") -ForegroundColor Red
-#         Stop-Transcript
-#         exit 1
-#     }
+    Write-Host( "ama-metrics daemonset pod running OK.") -ForegroundColor Green
+}
+catch {
+    Write-Host ("Failed to execute the script  : '" + $Error[0] + "' ") -ForegroundColor Red
+    Stop-Transcript
+    exit 1
+}
 
-#     if ($isClusterAndWorkspaceInDifferentSubs) {
-#        Write-Host("Changing to workspace's subscription")
-#        Select-AzSubscription -SubscriptionId $workspaceSubscriptionId
-#     }
-#     Write-Host("Retrieving WorkspaceGUID and WorkspacePrimaryKey of the workspace : " + $WorkspaceInformation.Name)
-#     try {
+try {
+    # Get AKS cluster information
+    $aksCluster = Get-AzAksCluster -ResourceGroupName $ClusterResourceGroupName -Name $ClusterName
 
-#         $WorkspaceSharedKeys = Get-AzOperationalInsightsWorkspaceSharedKeys -ResourceGroupName $WorkspaceInformation.ResourceGroupName -Name $WorkspaceInformation.Name -ErrorAction Stop -WarningAction SilentlyContinue
-#         $workspaceGUID = $WorkspaceInformation.CustomerId
-#         $workspacePrimarySharedKey = $WorkspaceSharedKeys.PrimarySharedKey
-#     }
-#     catch {
-#         Write-Host ("Failed to get workspace details. Please validate whether you have Log Analytics Contributor role on the workspace error: '" + $Error[0] + "' ") -ForegroundColor Red
-#         Stop-Transcript
-#         exit 1
-#     }
+    $hasWindowsNodePools = $false
 
-#     Write-Host("Checking whether the WorkspaceGuid and key matching with configured log analytics workspace ...")
-#     try {
-#         $amaLogsSecret = kubectl get secrets ama-logs-secret -n kube-system -o json | ConvertFrom-Json
-#         $workspaceGuidConfiguredOnAgent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($amaLogsSecret.data.WSID))
-#         $workspaceKeyConfiguredOnAgent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($amaLogsSecret.data.KEY))
-#         if ((($workspaceGuidConfiguredOnAgent -eq $workspaceGUID) -and ($workspaceKeyConfiguredOnAgent -eq $workspacePrimarySharedKey)) -eq $false) {
-#             Write-Host ("Error - Log Analytics Workspace Guid and key configured on the agent not matching with details of the Workspace. Please verify and fix with the correct workspace Guid and Key") -ForegroundColor Red
-#             Stop-Transcript
-#             exit 1
-#         }
+    # Loop through node pools and check for Windows nodes
+    foreach ($nodePool in $aksCluster.AgentPools) {
+        if ($nodePool.OsType -eq "Windows") {
+            $hasWindowsNodePools = $true
+            break
+        }
+    }
+    
+    if ($hasWindowsNodePools) {
+        Write-Host("Checking whether the ama-metrics-win-node windows daemonset pod running correctly ...")
+        $ds = kubectl get ds -n kube-system -o json --field-selector metadata.name=ama-metrics-win-node | ConvertFrom-Json
+        if (($null -eq $ds) -or ($null -eq $ds.Items) -or ($ds.Items.Length -ne 1)) {
+            Write-Host( "ama-metrics-win-node daemonset pod not scheduled or failed to schedule." + $contactUSMessage)
+            Stop-Transcript
+            exit 1
+        }
 
-#         Write-Host("Workspace Guid and Key on the agent matching with the Workspace") -ForegroundColor Green
-#     }
-#     catch {
-#         Write-Host ("Failed to execute the script  : '" + $Error[0] + "' ") -ForegroundColor Red
-#         Stop-Transcript
-#         exit 1
-#     }
+        $dsStatus = $ds.Items[0].status
 
-#     Write-Host("Checking agent version...")
-#     try {
+        if (
+            (($dsStatus.currentNumberScheduled -eq $dsStatus.desiredNumberScheduled) -and
+                ($dsStatus.numberAvailable -eq $dsStatus.currentNumberScheduled) -and
+                ($dsStatus.numberAvailable -eq $dsStatus.numberReady)) -eq $false) {
 
-#         $amaLogsInfo = kubectl get pods -n kube-system -o json -l  rsName=ama-logs-rs | ConvertFrom-Json
-#         for ($index = 0; $index -le $amaLogsInfo.items.spec.containers.Length; $index++)
-#         {
-#             $containerName = $amaLogsInfo.items.spec.containers[$index].Name
-#             if ($containerName -eq "ama-logs") {
-#                 $amaLogsImage = $amaLogsInfo.items.spec.containers[$index].image.split(":")[1]
-#                 break
-#             }
-#         }
-#         Write-Host('The version of the ama-logs running on your cluster is ' + $amaLogsImage)
-#         Write-Host('You can encounter problems with your cluster if your ama-logs version isnt on the latest version. Please go to https://docs.microsoft.com/en-us/azure/azure-monitor/insights/container-insights-manage-agent and validate that you have the latest ama-logs version running.') -ForegroundColor Yellow
-#     } catch {
-#         Write-Host ("Failed to execute the script  : '" + $Error[0] + "' ") -ForegroundColor Red
-#         Stop-Transcript
-#         exit 1
-#     }
-# }
+            Write-Host( "ama-metrics-win-node daemonset pod not scheduled or failed to schedule.") -ForegroundColor Red
+            Write-Host($dsStatus)
+            Write-Host($contactUSMessage)
+            Stop-Transcript
+            exit 1
+        }
 
-# Write-Host("Everything looks good according to this script. Please contact us by creating a support ticket in Azure for help. Use this link: https://azure.microsoft.com/en-us/support/create-ticket") -ForegroundColor Green
-# Write-Host("")
+        Write-Host( "ama-metrics-win-node daemonset pod running OK.") -ForegroundColor Green
+    }
+}
+catch {
+    Write-Host ("Failed to execute the script  : '" + $Error[0] + "' ") -ForegroundColor Red
+    Stop-Transcript
+    exit 1
+}
+
+
+Write-Host("Everything looks good according to this script. Please contact us by creating a support ticket in Azure for help. Use this link: https://azure.microsoft.com/en-us/support/create-ticket") -ForegroundColor Green
+Write-Host("")
 Stop-Transcript
