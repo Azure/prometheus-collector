@@ -427,15 +427,8 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: Triggering manigest for multi-arc docker image"
 
-    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-      displayName: "Ev2: generate image artifacts"
-      inputs:
-        BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
-        DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
-
     - powershell: |
-        $MEDIA_TYPE = (docker manifest inspect -v $(WINDOWS_FULL_IMAGE_NAME)) | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty mediaType
+        $MEDIA_TYPE = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty mediaType
         $DIGEST = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | ConvertFrom-Json | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty digest
         $SIZE = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | ConvertFrom-Json | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty size
         $payload = @{
@@ -449,6 +442,13 @@ jobs:
         $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/windows/payload.json"
       workingDirectory: $(Build.ArtifactStagingDirectory)/windows
       displayName: "Build the payload json file"
+
+    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      displayName: "Ev2: generate image artifacts"
+      inputs:
+        BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
+        DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
 
     - task: EsrpCodeSigning@3
       displayName: 'ESRP CodeSigning for Prometheus'
