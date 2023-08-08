@@ -205,16 +205,6 @@ jobs:
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
 
-    # - bash: |
-    #     MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-    #     DIGEST=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-    #     SIZE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-    #     cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
-    #     {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-    #     EOF
-    #   workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
-    #   displayName: "Build the payload json file"
-
     - task: EsrpCodeSigning@3
       displayName: "ESRP CodeSigning for Prometheus"
       inputs:
@@ -474,16 +464,6 @@ jobs:
             }
           ]
 
-    # - task: PowerShell@2
-    #   displayName: 'Download and install Oras'
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       $VERSION="1.0.0"
-    #       Invoke-WebRequest -Uri "https://github.com/oras-project/oras/releases/download/v$VERSION/oras_$VERSION_windows_amd64.zip" -OutFile "oras_$VERSION_windows_amd64.zip"
-    #       Expand-Archive -Path "oras_$VERSION_windows_amd64.zip" -DestinationPath "$Env:USERPROFILE\bin\"
-    #       $env:PATH += ";$Env:USERPROFILE\bin"
-
     - powershell: |
         curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
         $currentDirectory = Get-Location
@@ -494,11 +474,6 @@ jobs:
         oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""659AAA9C0E822B4B20A964AA0178BD9419A50530\""]
       workingDirectory: $(Build.ArtifactStagingDirectory)/windows
       displayName: "Download, install Oras and run oras attach"
-
-    # - powershell: |
-    #     oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""659AAA9C0E822B4B20A964AA0178BD9419A50530\""]
-    #   workingDirectory: $(Build.ArtifactStagingDirectory)/windows
-    #   displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/windows"
 
     - task: PublishBuildArtifacts@1
       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
@@ -555,7 +530,6 @@ jobs:
       releaseName: 'prom-dev'
       waitForExecution: false
       arguments: '--dry-run --dependency-update --set image.repository=$(MCR_REGISTRY)$(MCR_REPOSITORY) --set image.tag=$(IMAGE_TAG) --set scrapeTargets.windowsExporter=true --set scrapeTargets.windowsKubeProxy=true --set scrapeTargets.prometheusCollectorHealth=true --set azureKeyVault.name="ci-prometheus-kv" --set azureKeyVault.pfxCertNames="{containerinsightsdevclusteraccountcert}" --set azureKeyVault.tenantId="72f988bf-86f1-41af-91ab-2d7cd011db47" --set clusterName="ci-dev-aks-wcus" --set azureMetricAccount.defaultAccountName="containerinsightsdevclusteraccount" --set azureKeyVault.clientId=$(CI_PROMETHEUS_KV_CLIENTID) --set azureKeyVault.clientSecret=$(CI_PROMETHEUS_KV_CLIENTSECRET) --set mode.advanced=true --set windowsDaemonset=true --set internalSettings.intEnvironment=true --set resources.deployment.requests.cpu="300m" --set resources.deployment.requests.memory="1Gi" --set resources.daemonSet.requests.cpu="150m" --set resources.daemonSet.requests.memory="250Mi"'
-
 
   - bash: |
       helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
