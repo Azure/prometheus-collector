@@ -232,10 +232,9 @@ jobs:
                 size = $SIZE
             }
         } | ConvertTo-Json
-
         $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/windows/payload.json"
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: Triggering manigest for multi-arc docker image"
+      displayName: "Build: Triggering manifest for multi-arc docker image"
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
@@ -245,9 +244,11 @@ jobs:
         DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
 
     - powershell: |
-        $MEDIA_TYPE = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty mediaType
-        $DIGEST = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | ConvertFrom-Json | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty digest
-        $SIZE = docker manifest inspect -v $WINDOWS_FULL_IMAGE_NAME | ConvertFrom-Json | Select-Object -ExpandProperty Descriptor | Select-Object -ExpandProperty size
+        $output = docker manifest inspect -v $(WINDOWS_FULL_IMAGE_NAME) | ConvertFrom-Json
+        $firstManifest = $output[0]
+        $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
+        $DIGEST = $firstManifest.Descriptor.digest
+        $SIZE = $firstManifest.Descriptor.size
         $payload = @{
             targetArtifact = @{
                 mediaType = $MEDIA_TYPE
