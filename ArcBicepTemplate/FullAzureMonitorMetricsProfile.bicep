@@ -13,7 +13,7 @@ param azureMonitorWorkspaceResourceId string
   'eastasia',
   'eastus2',
   'northeurope',
-  'norwaryeast',
+  'norwayeast',
   'southafricanorth',
   'southcentralus',
   'southeastasia',
