@@ -22,7 +22,8 @@ param azureMonitorWorkspaceResourceId string
   'westcentralus',
   'westeurope',
   'westus',
-  'westus2'
+  'westus2',
+  'usgovvirginia'
 ])
 param azureMonitorWorkspaceLocation string
 param clusterResourceId string
