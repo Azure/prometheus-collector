@@ -30,7 +30,8 @@
         "westcentralus",
         "westeurope",
         "westus",
-        "westus2"
+        "westus2",
+        "usgovvirginia"
       ]
     },
     "clusterResourceId": {
