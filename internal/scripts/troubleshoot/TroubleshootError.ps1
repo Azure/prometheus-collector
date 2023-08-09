@@ -25,6 +25,12 @@ $contactUSMessage = "Please contact us by creating a support ticket in Azure if 
 # $MonitoringMetricsRoleDefinitionName = "Monitoring Metrics Publisher"
 $MonitoringReaderRoleDefintionId = "b0d8363b-8ddd-447d-831f-62ca05bff136"
 
+# Create debuglogs directory if not exists
+$debuglogsDir = "debuglogs"
+if (-not (Test-Path -Path $debuglogsDir -PathType Container)) {
+    New-Item -Path $debuglogsDir -ItemType Directory
+}
+
 Write-Host("ClusterResourceId: '" + $ClusterResourceId + "' ")
 
 if (($null -eq $ClusterResourceId) -or ($ClusterResourceId.Split("/").Length -ne 9) -or (($ClusterResourceId.ToLower().Contains("microsoft.containerservice/managedclusters") -ne $true))
@@ -459,7 +465,7 @@ try {
                 ($rsPodStatus.readyReplicas -eq 1 ) -and
                 ($rsPodStatus.replicas -eq 1 )) -eq $false
     ) {
-        Write-Host( "ama-metrics replicaset pod not scheduled or failed to scheduled.") -ForegroundColor Red
+        Write-Host("ama-metrics replicaset pod not scheduled or failed to scheduled.") -ForegroundColor Red
         Write-Host("Available ama-metrics replicas:", $rsPodStatus.availableReplicas)
         Write-Host("Ready ama-metrics replicas:", $rsPodStatus.readyReplicas)
         Write-Host("Total ama-metrics replicas:", $rsPodStatus.replicas)
@@ -474,6 +480,11 @@ try {
         Stop-Transcript
         exit 1
     }
+
+    $amaMetricsRsPod = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
+    # Copy MetricsExtensionConsoleDebugLog.log from container to current directory
+    kubectl cp kube-system/$($amaMetricsRsPod.Items[0].metadata.name):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog.log
+    Write-Host("MetricsExtensionConsoleDebugLog.log copied to current directory.") -ForegroundColor Green
 
     Write-Host( "ama-metrics replicaset pod running OK.") -ForegroundColor Green
 }
@@ -559,6 +570,11 @@ catch {
     Stop-Transcript
     exit 1
 }
+
+# Zip up the contents of the debuglogs directory
+$zipFileName = "debuglogs.zip"
+Compress-Archive -Path $debuglogsDir -DestinationPath $zipFileName -Force
+Write-Host("Contents of debuglogs directory zipped to $zipFileName.") -ForegroundColor Green
 
 
 Write-Host("Everything looks good according to this script. Please contact us by creating a support ticket in Azure for help. Use this link: https://azure.microsoft.com/en-us/support/create-ticket") -ForegroundColor Green
