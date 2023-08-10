@@ -486,13 +486,13 @@ try {
     kubectl cp kube-system/$($amaMetricsRsPod.Items[0].metadata.name):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog.log
     Write-Host("MetricsExtensionConsoleDebugLog.log copied to current directory.") -ForegroundColor Green
 
-     # Get logs from prometheus-collector container and store in a file
-     $promCollectorLogPath = "$debuglogsDir/$($amaMetricsRsPod.Items[0].metadata.name)_promcollector.log"
-     kubectl logs $($amaMetricsRsPod.Items[0].metadata.name) -n kube-system -c prometheus-collector > $promCollectorLogPath
+    # Get logs from prometheus-collector container and store in a file
+    $promCollectorLogPath = "$debuglogsDir/$($amaMetricsRsPod.Items[0].metadata.name)_promcollector.log"
+    kubectl logs $($amaMetricsRsPod.Items[0].metadata.name) -n kube-system -c prometheus-collector > $promCollectorLogPath
 
-     # Get logs from prometheus-collector container and store in a file
-     $promCollectorLogPath = "$debuglogsDir/$($amaMetricsRsPod.Items[0].metadata.name)_addontokenadapter.log"
-     kubectl logs $($amaMetricsRsPod.Items[0].metadata.name) -n kube-system -c addon-token-adapter > $promCollectorLogPath
+    # Get logs from prometheus-collector container and store in a file
+    $promCollectorLogPath = "$debuglogsDir/$($amaMetricsRsPod.Items[0].metadata.name)_addontokenadapter.log"
+    kubectl logs $($amaMetricsRsPod.Items[0].metadata.name) -n kube-system -c addon-token-adapter > $promCollectorLogPath
 
     Write-Host( "ama-metrics replicaset pod running OK.") -ForegroundColor Green
 }
@@ -526,6 +526,22 @@ try {
     }
 
     Write-Host( "ama-metrics daemonset pod running OK.") -ForegroundColor Green
+
+    # Get linux daemonset pod logs
+    $podNames = kubectl get pods -n kube-system -l dsName=ama-metrics-node -o jsonpath='{.items[*].metadata.name}'
+    foreach ($podName in $podNames) {
+        # Get the logs for each pod and store in a file
+        kubectl logs -n kube-system $podName > "$podName.log"
+        Write-Host ("Logs for $podName have been saved to $($podName)_promcollector.log and $($podName)_addontokenadapter.log")
+
+        # Get logs from prometheus-collector container and store in a file
+        $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
+        kubectl logs $($podName) -n kube-system -c prometheus-collector > $promCollectorLogPath
+
+        # Get logs from prometheus-collector container and store in a file
+        $addonTokenLogPath = "$debuglogsDir/$($podName)_addontokenadapter.log"
+        kubectl logs $($podName) -n kube-system -c addon-token-adapter > $addonTokenLogPath
+    }
 }
 catch {
     Write-Host ("Failed to execute the script  : '" + $Error[0] + "' ") -ForegroundColor Red
@@ -571,12 +587,36 @@ try {
         }
 
         Write-Host( "ama-metrics-win-node daemonset pod running OK.") -ForegroundColor Green
+
+        # Get windows daemonset pod logs
+        $podNames = kubectl get pods -n kube-system -l dsName=ama-metrics-win-node -o jsonpath='{.items[*].metadata.name}'
+        foreach ($podName in $podNames) {
+            # Get the logs for each pod and store in a file
+            kubectl logs -n kube-system $podName > "$podName.log"
+            Write-Host ("Logs for $podName have been saved to $($podName)_promcollector.log and $($podName)_addontokenadapter.log")
+
+            # Get logs from prometheus-collector container and store in a file
+            $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
+            kubectl logs $($podName) -n kube-system -c prometheus-collector > $promCollectorLogPath
+
+            # Get logs from prometheus-collector container and store in a file
+            $addonTokenLogPath = "$debuglogsDir/$($podName)_addontokenadapter.log"
+            kubectl logs $($podName) -n kube-system -c addon-token-adapter > $addonTokenLogPath
+        }
     }
 }
 catch {
     Write-Host ("Failed to execute the script  : '" + $Error[0] + "' ") -ForegroundColor Red
     Stop-Transcript
     exit 1
+}
+
+# Get linux daemonset pod logs
+$podNames = kubectl get pods -n kube-system -l dsName=ama-metrics-node -o jsonpath='{.items[*].metadata.name}'
+foreach ($podName in $podNames) {
+    # Get the logs for each pod and store in a file
+    kubectl logs -n kube-system $podName > "$podName.log"
+    Write-Host ("Logs for $podName have been saved to $podName.log")
 }
 
 # Zip up the contents of the debuglogs directory
