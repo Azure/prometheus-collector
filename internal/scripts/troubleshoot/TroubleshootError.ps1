@@ -1,5 +1,5 @@
 #
-# ClassifyError.ps1
+# TroubleshootError.ps1
 #
 <#
     .DESCRIPTION
