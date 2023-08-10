@@ -458,9 +458,9 @@ try {
     }
 
     $amaMetricsRsPod = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
-    # Copy MetricsExtensionConsoleDebugLog.log from container to current directory
-    kubectl cp kube-system/$($amaMetricsRsPod.Items[0].metadata.name):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog.log
-    Write-Host("MetricsExtensionConsoleDebugLog.log copied to current directory.") -ForegroundColor Green
+    # Copy MetricsExtensionConsoleDebugLog.log from container to debuglogs directory
+    kubectl cp kube-system/$($amaMetricsRsPod.Items[0].metadata.name):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($amaMetricsRsPod.Items[0].metadata.name).log
+    Write-Host("MetricsExtensionConsoleDebugLog$($amaMetricsRsPod.Items[0].metadata.name).log copied to debuglogs directory.") -ForegroundColor Green
 
     # Get logs from prometheus-collector container and store in a file
     $promCollectorLogPath = "$debuglogsDir/$($amaMetricsRsPod.Items[0].metadata.name)_promcollector.log"
@@ -503,12 +503,19 @@ try {
 
     Write-Host( "ama-metrics daemonset pod running OK.") -ForegroundColor Green
 
+    $iterationCount = 0
+    $maxIterations = 15
     # Get linux daemonset pod logs
-    $podNames = kubectl get pods -n kube-system -l dsName=ama-metrics-node -o jsonpath='{.items[*].metadata.name}'
+    $podNames = kubectl get pods -n kube-system -l dsName=ama-metrics-node -o jsonpath='{.items[*].metadata.name}' | ForEach-Object { $_.Trim() -split '\s+' }
     foreach ($podName in $podNames) {
-        # Get the logs for each pod and store in a file
-        kubectl logs -n kube-system $podName > "$podName.log"
-        Write-Host ("Logs for $podName have been saved to $($podName)_promcollector.log and $($podName)_addontokenadapter.log")
+        if ($iterationCount -ge $maxIterations) {
+            Write-Host "Maximum iteration count reached ($maxIterations) Exiting loop."
+            break
+        }
+
+        # Copy MetricsExtensionConsoleDebugLog.log from container to debuglogs directory
+        kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
+        Write-Host("MetricsExtensionConsoleDebugLog$($podName).log copied to debuglogs directory.") -ForegroundColor Green
 
         # Get logs from prometheus-collector container and store in a file
         $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
@@ -517,6 +524,9 @@ try {
         # Get logs from prometheus-collector container and store in a file
         $addonTokenLogPath = "$debuglogsDir/$($podName)_addontokenadapter.log"
         kubectl logs $($podName) -n kube-system -c addon-token-adapter > $addonTokenLogPath
+
+        Write-Host ("Logs for $podName have been saved to $($podName)_promcollector.log and $($podName)_addontokenadapter.log")
+        $iterationCount++
     }
 }
 catch {
@@ -564,12 +574,19 @@ try {
 
         Write-Host( "ama-metrics-win-node daemonset pod running OK.") -ForegroundColor Green
 
+        $iterationCount = 0
+        $maxIterations = 15
         # Get windows daemonset pod logs
-        $podNames = kubectl get pods -n kube-system -l dsName=ama-metrics-win-node -o jsonpath='{.items[*].metadata.name}'
+        $podNames = kubectl get pods -n kube-system -l dsName=ama-metrics-win-node -o jsonpath='{.items[*].metadata.name}' | ForEach-Object { $_.Trim() -split '\s+' }
         foreach ($podName in $podNames) {
-            # Get the logs for each pod and store in a file
-            kubectl logs -n kube-system $podName > "$podName.log"
-            Write-Host ("Logs for $podName have been saved to $($podName)_promcollector.log and $($podName)_addontokenadapter.log")
+            if ($iterationCount -ge $maxIterations) {
+                Write-Host "Maximum iteration count reached ($maxIterations) Exiting loop."
+                break
+            }
+
+            # Copy MetricsExtensionConsoleDebugLog.log from container to debuglogs directory
+            kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
+            Write-Host("MetricsExtensionConsoleDebugLog$($podName).log copied to debuglogs directory.") -ForegroundColor Green
 
             # Get logs from prometheus-collector container and store in a file
             $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
@@ -578,6 +595,9 @@ try {
             # Get logs from prometheus-collector container and store in a file
             $addonTokenLogPath = "$debuglogsDir/$($podName)_addontokenadapter.log"
             kubectl logs $($podName) -n kube-system -c addon-token-adapter > $addonTokenLogPath
+
+            Write-Host ("Logs for $podName have been saved to $($podName)_promcollector.log and $($podName)_addontokenadapter.log")
+            $iterationCount++
         }
     }
 }
