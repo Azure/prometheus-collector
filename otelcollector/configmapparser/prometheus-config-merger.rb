@@ -45,6 +45,8 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @kubeapiserverDefaultFile = @defaultPromConfigPathPrefix + "kubeapiserverDefault.yml"
 @kubeschedulerDefaultFile = @defaultPromConfigPathPrefix + "kubeschedulerDefault.yml"
 @kubecontrollermanagerDefaultFile = @defaultPromConfigPathPrefix + "kubecontrollermanagerDefault.yml"
+@clusterautoscalerDefaultFile = @defaultPromConfigPathPrefix + "clusterautoscalerDefault.yml"
+@etcdDefaultFile = @defaultPromConfigPathPrefix + "etcdDefault.yml"
 
 def parseConfigMap
   begin
@@ -380,6 +382,34 @@ def populateDefaultPrometheusConfig
       defaultConfigs.push(@kubeapiserverDefaultFile)
     end
 
+    if !ENV["AZMON_PROMETHEUS_CLUSTER_AUTOSCALER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_CLUSTER_AUTOSCALER_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+      clusterautoscalerMetricsKeepListRegex = @regexHash["CLUSTER_AUTOSCALER_METRICS_KEEP_LIST_REGEX"]
+      clusterautoscalerScrapeInterval = @intervalHash["CLUSTER_AUTOSCALER_SCRAPE_INTERVAL"]
+
+      UpdateScrapeIntervalConfig(@clusterautoscalerDefaultFile, clusterautoscalerScrapeInterval)
+      if !clusterautoscalerMetricsKeepListRegex.nil? && !clusterautoscalerMetricsKeepListRegex.empty?
+        AppendMetricRelabelConfig(@clusterautoscalerDefaultFile, clusterautoscalerMetricsKeepListRegex)
+      end
+      contents = File.read(@clusterautoscalerDefaultFile)
+      contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
+      File.open(@clusterautoscalerDefaultFile, "w") { |file| file.puts contents }
+      defaultConfigs.push(@clusterautoscalerDefaultFile)
+    end
+
+    if !ENV["AZMON_PROMETHEUS_ETCD_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_ETCD_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
+      etcdMetricsKeepListRegex = @regexHash["ETCD_METRICS_KEEP_LIST_REGEX"]
+      etcdScrapeInterval = @intervalHash["ETCD_SCRAPE_INTERVAL"]
+
+      UpdateScrapeIntervalConfig(@etcdDefaultFile, etcdScrapeInterval)
+      if !etcdMetricsKeepListRegex.nil? && !etcdMetricsKeepListRegex.empty?
+        AppendMetricRelabelConfig(@etcdDefaultFile, etcdMetricsKeepListRegex)
+      end
+      contents = File.read(@etcdDefaultFile)
+      contents = contents.gsub("$$POD_NAMESPACE$$", ENV["POD_NAMESPACE"])
+      File.open(@etcdDefaultFile, "w") { |file| file.puts contents }
+      defaultConfigs.push(@etcdDefaultFile)
+    end
+
     # Collector health config should be enabled or disabled for both replicaset and daemonset
     if !ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].downcase == "true"
       prometheusCollectorHealthInterval = @intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
@@ -576,7 +606,7 @@ def setDefaultFileScrapeInterval(scrapeInterval)
     @apiserverDefaultFile, @kubestateDefaultFile, @nodeexporterDefaultFileRsSimple, @nodeexporterDefaultFileRsAdvanced, @nodeexporterDefaultFileDs,
     @prometheusCollectorHealthDefaultFile, @windowsexporterDefaultRsSimpleFile, @windowsexporterDefaultDsFile,
     @windowskubeproxyDefaultFileRsSimpleFile, @windowskubeproxyDefaultDsFile, @podannotationsDefaultFile,
-    @kubecontrollermanagerDefaultFile, @kubeschedulerDefaultFile, @kubeapiserverDefaultFile
+    @kubecontrollermanagerDefaultFile, @kubeschedulerDefaultFile, @kubeapiserverDefaultFile, @clusterautoscalerDefaultFile, @etcdDefaultFile
   ]
 
   defaultFilesArray.each { |currentFile|

@@ -54,6 +54,8 @@ end
 @kubecontrollermanagerRegex_minimal = "rest_client_requests_duration_seconds_bucket|rest_client_requests_total|workqueue_depth|node_collector_evictions_total"
 @kubeschedulerRegex_minimal = "scheduler_pending_pods|scheduler_unschedulable_pods|scheduler_pod_scheduling_attempts|scheduler_queue_incoming_pods_total|scheduler_preemption_attempts_total|scheduler_preemption_victims|scheduler_scheduling_attempt_duration_seconds|Scheduler_schedule_attempts_total|scheduler_pod_scheduling_duration_seconds"
 @kubeapiserverRegex_minimal = "apiserver_request_total|apiserver_cache_list_fetched_objects_total|apiserver_cache_list_returned_objects_total|apiserver_flowcontrol_demand_seats_average|apiserver_flowcontrol_current_limit_seats|apiserver_flowcontrol_rejected_requests_total|apiserver_request_sli_duration_seconds|process_start_time_seconds|apiserver_request_duration_seconds|apiserver_storage_fetched_objects_total|apiserver_storage_list_returned_objects_total|apiserver_current_inflight_requests"
+@clusterautoscalerRegex_minimal = "rest_client_requests_total|cluster_autoscaler_((last_activity|cluster_safe_to_autoscale|failed_scale_ups_total|scale_down_in_cooldown|scaled_up_nodes_total|unneeded_nodes_count|unschedulable_pods_count|nodes_count))|cloudprovider_azure_api_request_(errors|duration_seconds_(bucket|count))"
+@etcdRegex_minimal = "etcd_memory_in_bytes|etcd_cpu_in_cores|etcd_db_limit_in_bytes|etcd_db_max_size_in_bytes|etcd_db_fragmentation_rate|etcd_db_total_object_count|etcd_db_top_N_object_counts_by_type|etcd_db_top_N_object_size_by_type|etcd2_enabled"
 
 # minimal profile when MAC mode is enabled. This list includes metrics used by default dashboards + rec rules + alerts, when MAC mode is enabled.
 @kubeletRegex_minimal_mac = "kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_node_name|kubelet_running_pods|kubelet_running_pod_count|kubelet_running_sum_containers|kubelet_running_containers|kubelet_running_container_count|volume_manager_total_volumes|kubelet_node_config_error|kubelet_runtime_operations_total|kubelet_runtime_operations_errors_total|kubelet_runtime_operations_duration_seconds_bucket|kubelet_runtime_operations_duration_seconds_sum|kubelet_runtime_operations_duration_seconds_count|kubelet_pod_start_duration_seconds_bucket|kubelet_pod_start_duration_seconds_sum|kubelet_pod_start_duration_seconds_count|kubelet_pod_worker_duration_seconds_bucket|kubelet_pod_worker_duration_seconds_sum|kubelet_pod_worker_duration_seconds_count|storage_operation_duration_seconds_bucket|storage_operation_duration_seconds_sum|storage_operation_duration_seconds_count|storage_operation_errors_total|kubelet_cgroup_manager_duration_seconds_bucket|kubelet_cgroup_manager_duration_seconds_sum|kubelet_cgroup_manager_duration_seconds_count|kubelet_pleg_relist_interval_seconds_bucket|kubelet_pleg_relist_interval_seconds_count|kubelet_pleg_relist_interval_seconds_sum|kubelet_pleg_relist_duration_seconds_bucket|kubelet_pleg_relist_duration_seconds_count|kubelet_pleg_relist_duration_seconds_sum|rest_client_requests_total|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info"
@@ -69,6 +71,8 @@ end
 @kubecontrollermanagerRegex_minimal_mac = "rest_client_requests_duration_seconds_bucket|rest_client_requests_total|workqueue_depth|node_collector_evictions_total"
 @kubeschedulerRegex_minimal_mac = "scheduler_pending_pods|scheduler_unschedulable_pods|scheduler_pod_scheduling_attempts|scheduler_queue_incoming_pods_total|scheduler_preemption_attempts_total|scheduler_preemption_victims|scheduler_scheduling_attempt_duration_seconds|Scheduler_schedule_attempts_total|scheduler_pod_scheduling_duration_seconds"
 @kubeapiserverRegex_minimal_mac = "apiserver_request_total|apiserver_cache_list_fetched_objects_total|apiserver_cache_list_returned_objects_total|apiserver_flowcontrol_demand_seats_average|apiserver_flowcontrol_current_limit_seats|apiserver_flowcontrol_rejected_requests_total|apiserver_request_sli_duration_seconds|process_start_time_seconds|apiserver_request_duration_seconds|apiserver_storage_fetched_objects_total|apiserver_storage_list_returned_objects_total|apiserver_current_inflight_requests"
+@clusterautoscalerRegex_minimal_mac = "rest_client_requests_total|cluster_autoscaler_((last_activity|cluster_safe_to_autoscale|failed_scale_ups_total|scale_down_in_cooldown|scaled_up_nodes_total|unneeded_nodes_count|unschedulable_pods_count|nodes_count))|cloudprovider_azure_api_request_(errors|duration_seconds_(bucket|count))"
+@etcdRegex_minimal_mac = "etcd_memory_in_bytes|etcd_cpu_in_cores|etcd_db_limit_in_bytes|etcd_db_max_size_in_bytes|etcd_db_fragmentation_rate|etcd_db_total_object_count|etcd_db_top_N_object_counts_by_type|etcd_db_top_N_object_size_by_type|etcd2_enabled"
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -289,6 +293,34 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubeapiserverRegex either not specified or not of type string")
   end
 
+  clusterautoscalerRegex = parsedConfig[:"cluster-autoscaler"]
+  if !clusterautoscalerRegex.nil? && clusterautoscalerRegex.kind_of?(String)
+    if !clusterautoscalerRegex.empty?
+      if isValidRegex(clusterautoscalerRegex) == true
+        @clusterautoscalerRegex = clusterautoscalerRegex
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for cluster-autoscaler")
+      else
+        ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for cluster-autoscaler")
+      end
+    end
+  else
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "clusterautoscalerRegex either not specified or not of type string")
+  end
+
+  etcdRegex = parsedConfig[:"etcd"]
+  if !etcdRegex.nil? && etcdRegex.kind_of?(String)
+    if !etcdRegex.empty?
+      if isValidRegex(etcdRegex) == true
+        @etcdRegex = etcdRegex
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for etcd")
+      else
+        ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for etcd")
+      end
+    end
+  else
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "etcdRegex either not specified or not of type string")
+  end
+
   # Provide for overwriting the chart setting for minimal ingestion profile using configmap for MAC mode
   if @isMacMode == true
     ConfigParseErrorLogger.log(LOGGING_PREFIX, "MAC mode set to true - Reading configmap setting for minimalingestionprofile")
@@ -322,6 +354,8 @@ def populateRegexValuesWithMinimalIngestionProfile
         @kubecontrollermanagerRegex = @kubecontrollermanagerRegex + "|" + @kubecontrollermanagerRegex_minimal_mac
         @kubeschedulerRegex = @kubeschedulerRegex + "|" + @kubeschedulerRegex_minimal_mac
         @kubeapiserverRegex = @kubeapiserverRegex + "|" + @kubeapiserverRegex_minimal_mac
+        @clusterautoscalerRegex = @clusterautoscalerRegex + "|" + @clusterautoscalerRegex_minimal_mac
+        @etcdRegex = @etcdRegex + "|" + @etcdRegex_minimal_mac
       else
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "minimalIngestionProfile=true, MAC is not enabled. Applying appropriate non-MAC Regexes")
         @kubeletRegex = @kubeletRegex + "|" + @kubeletRegex_minimal
@@ -337,6 +371,8 @@ def populateRegexValuesWithMinimalIngestionProfile
         @kubecontrollermanagerRegex = @kubecontrollermanagerRegex + "|" + @kubecontrollermanagerRegex_minimal
         @kubeschedulerRegex = @kubeschedulerRegex + "|" + @kubeschedulerRegex_minimal
         @kubeapiserverRegex = @kubeapiserverRegex + "|" + @kubeapiserverRegex_minimal
+        @clusterautoscalerRegex = @clusterautoscalerRegex + "|" + @clusterautoscalerRegex_minimal
+        @etcdRegex = @etcdRegex + "|" + @etcdRegex_minimal
       end
     end
   rescue => errorStr
@@ -380,6 +416,8 @@ regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"] = @kappiebasicRegex
 regexHash["KUBE_CONTROLLER_MANAGER_METRICS_KEEP_LIST_REGEX"] = @kubecontrollermanagerRegex
 regexHash["KUBE_SCHEDULER_METRICS_KEEP_LIST_REGEX"] = @kubeschedulerRegex
 regexHash["KUBE_APISERVER_METRICS_KEEP_LIST_REGEX"] = @kubeapiserverRegex
+regexHash["CLUSTER_AUTOSCALER_METRICS_KEEP_LIST_REGEX"] = @clusterautoscalerRegex
+regexHash["ETCD_METRICS_KEEP_LIST_REGEX"] = @etcdRegex
 
 if !file.nil?
   # Close file after writing regex keep list hash
