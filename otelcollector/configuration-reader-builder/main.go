@@ -71,7 +71,8 @@ func updateTAConfigFile(configFilePath string) {
 	promScrapeConfig = otelConfig.Receivers.Prometheus.Config
 	targetAllocatorConfig := Config{
 		LabelSelector: map[string]string{
-			"rsName": "ama-metrics",
+			"rsName":                         "ama-metrics",
+			"kubernetes.azure.com/managedby": "aks",
 		},
 		Config: promScrapeConfig,
 	}
