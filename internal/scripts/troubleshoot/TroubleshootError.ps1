@@ -22,9 +22,6 @@ $AksOptOutLink = "https://learn.microsoft.com/en-us/azure/azure-monitor/essentia
 $AksOptInLink = "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-metrics-enable?tabs=azure-portal#enable-prometheus-metric-collection"
 $contactUSMessage = "Please contact us by creating a support ticket in Azure if you need any help. Use this link: https://azure.microsoft.com/en-us/support/create-ticket"
 
-# $MonitoringMetricsRoleDefinitionName = "Monitoring Metrics Publisher"
-$MonitoringReaderRoleDefintionId = "b0d8363b-8ddd-447d-831f-62ca05bff136"
-
 # Create debuglogs directory if not exists
 $debuglogsDir = "debuglogs"
 if (-not (Test-Path -Path $debuglogsDir -PathType Container)) {
@@ -41,9 +38,7 @@ if (($null -eq $ClusterResourceId) -or ($ClusterResourceId.Split("/").Length -ne
     exit 1
 }
 
-$UseAADAuth = $false
 $ClusterRegion = ""
-$isClusterAndWorkspaceInDifferentSubs = $false
 $ClusterType = "AKS"
 
 #
@@ -253,13 +248,13 @@ try {
     $account = Get-AzContext -ErrorAction Stop
     Write-Host("Successfully fetched current Az context...") -ForegroundColor Green
     # Check if the context's token expiration time has passed
-    # if ($account.Account.ExpiresOn -lt (Get-Date)) {
-    #     Write-Host "Azure context has expired."
-    #     $account = $null
-    # }
-    # else {
-    #     Write-Host "Azure context is still valid."
-    # }
+    if ($account.Account.ExpiresOn -lt (Get-Date)) {
+        Write-Host "Azure context has expired."
+        $account = $null
+    }
+    else {
+        Write-Host "Azure context is still valid."
+    }
     Write-Host("")
 }
 catch {
@@ -345,7 +340,7 @@ try {
     else {
         Write-Host("Successfully checked '" + $ClusterType + "' Cluster details...") -ForegroundColor Green
         $ClusterRegion = $ResourceDetailsArray.Location
-        Write-Host("")
+        Write-Host("ClusterRegion: " + $ClusterRegion)
         foreach ($ResourceDetail in $ResourceDetailsArray) {
             if ($ResourceDetail.ResourceType -eq "Microsoft.ContainerService/managedClusters") {
                 $azureMonitorProfile = ($ResourceDetail.Properties.azureMonitorProfile | ConvertTo-Json).toLower() | ConvertFrom-Json
@@ -372,75 +367,56 @@ catch {
     exit 1
 }
 
-# try {
-#     $dcrAssociation = Get-AzDataCollectionRuleAssociation -TargetResourceId $ClusterResourceId -AssociationName "ContainerInsightsMetricsExtension-" -ErrorAction Stop -WarningAction silentlyContinue
-#     Write-Host("Successfully fetched ContainerInsightsMetricsExtension Data Collection Rule Association ...") -ForegroundColor Green
-#     if ($null -eq $dcrAssociation) {
-#         Write-Host("")
-#         Write-Host("ContainerInsightsExtension Data Collection Rule Association doenst exist.") -ForegroundColor Red
-#         Write-Host("")
-#         Stop-Transcript
-#         exit 1
-#     }
-# }
-# catch {
-#     Write-Host("")
-#     Write-Host("Failed to get the data collection Rule Association. Please make sure that it hasn't been deleted and you have access to it.") -ForegroundColor Red
-#     Write-Host("If ContainerInsightsExtension DataCollectionRule Association has been deleted accidentally, disable and enable Monitoring addon back to get this fixed.") -ForegroundColor Red
-#     Write-Host("")
-#     Stop-Transcript
-#     exit 1
-# }
-
 # Get all DCRAs
-$dcraList = Get-AzDataCollectionRuleAssociation -TargetResourceId $ClusterResourceId -ErrorAction Stop -WarningAction silentlyContinue
-$prometheusMetricsTuples = @()
+try {
+    $dcraList = Get-AzDataCollectionRuleAssociation -TargetResourceId $ClusterResourceId -ErrorAction Stop -WarningAction silentlyContinue
+    $prometheusMetricsTuples = @()
 
-foreach ($dcra in $dcraList) {
-    # Write-Output "DCRA ID: $($dcra.Id)"
-    # Write-Output "DCRA Name: $($dcra.Name)"
-    # Write-Output "Data Collection Rule ID: $($dcra.DataCollectionRuleId)"
-    # Write-Output "Target Resource ID: $($dcra.TargetResourceId)"
-    # Write-Output "Provisioning State: $($dcra.ProvisioningState)"
-    # Write-Output "Additional Properties:"
-    $dcra.Properties | Format-Table -AutoSize
-
-    # Get the Data Collection Rule details based on its ID
-    $dataCollectionRule = Get-AzResource -ResourceId $dcra.DataCollectionRuleId -ErrorAction silentlyContinue
-
-    $dataflows = $dataCollectionRule.Properties.DataFlows
-
-    foreach ($dataflow in $dataflows) {
-        $dataflowstream = $dataflow.streams
-        if ($dataflowstream -match "Microsoft-PrometheusMetrics") {
-            Write-Host "Microsoft-PrometheusMetrics is present in the Dataflow."
-            $prometheusMetricsTuples += [Tuple]::Create($dcra.Id, $dcra.DataCollectionRuleId, $dataCollectionRule.Properties.destinations.monitoringAccounts.accountResourceId)
+    foreach ($dcra in $dcraList) {
+        Write-Output "DCRA ID: $($dcra.Id)"
+        Write-Output "DCRA Name: $($dcra.Name)"
+        Write-Output "Data Collection Rule ID: $($dcra.DataCollectionRuleId)"
+        Write-Output "Target Resource ID: $($dcra.TargetResourceId)"
+        Write-Output "Provisioning State: $($dcra.ProvisioningState)"
+        Write-Output "Additional Properties:"
+        $dcra.Properties | Format-Table -AutoSize
+        # Get the Data Collection Rule details based on its ID
+        $dataCollectionRule = Get-AzResource -ResourceId $dcra.DataCollectionRuleId -ErrorAction silentlyContinue
+        $dataflows = $dataCollectionRule.Properties.DataFlows
+        foreach ($dataflow in $dataflows) {
+            $dataflowstream = $dataflow.streams
+            if ($dataflowstream -match "Microsoft-PrometheusMetrics") {
+                Write-Host "Microsoft-PrometheusMetrics is present in the Dataflow."
+                $prometheusMetricsTuples += [Tuple]::Create($dcra.Id, $dcra.DataCollectionRuleId, $dataCollectionRule.Properties.destinations.monitoringAccounts.accountResourceId)
+            }
         }
+        Write-Output "--------------------------------------------------"
     }
-    Write-Output "--------------------------------------------------"
+
+    # Print the map
+    Write-Output "Prometheus Metrics Tuple:"
+    $prometheusMetricsTuples
+
+    # Check if the map is empty
+    if ($prometheusMetricsTuples.Count -eq 0) {
+        Write-Host "No entries with Microsoft-PrometheusMetrics found in the Data Collection Rule" -ForegroundColor Red
+        Write-Host("");
+        Stop-Transcript
+        exit 1
+    }
 }
-
-# Print the map
-Write-Output "Prometheus Metrics Tuple:"
-$prometheusMetricsTuples
-
-
-# Check if the map is empty
-if ($prometheusMetricsTuples.Count -eq 0) {
-    Write-Host "No entries with Microsoft-PrometheusMetrics found in the Data Collection Rule" -ForegroundColor Red
+catch {
+    Write-Host("")
+    Write-Host("Could not fetch DC* details. Please make sure that the '" + $ClusterType + "' Cluster name: '" + $ClusterName + "' is correct and you have access to the cluster") -ForegroundColor Red
+    Write-Host("")
+    Stop-Transcript
+    exit 1
 }
-
-
 
 #
 #    Check Agent pods running as expected
 #
 try {
-
-    if ($isClusterAndWorkspaceInDifferentSubs) {
-        Write-Host("Changing to cluster's subscription back")
-        Select-AzSubscription -SubscriptionId $ClusterSubscriptionId
-    }
     Write-Host("Getting Kubeconfig of the cluster...")
     Import-AzAksCredential -Id $ClusterResourceId -Force -ErrorAction Stop
     Write-Host("Successfully got the Kubeconfig of the cluster.")
@@ -609,14 +585,6 @@ catch {
     Write-Host ("Failed to execute the script  : '" + $Error[0] + "' ") -ForegroundColor Red
     Stop-Transcript
     exit 1
-}
-
-# Get linux daemonset pod logs
-$podNames = kubectl get pods -n kube-system -l dsName=ama-metrics-node -o jsonpath='{.items[*].metadata.name}'
-foreach ($podName in $podNames) {
-    # Get the logs for each pod and store in a file
-    kubectl logs -n kube-system $podName > "$podName.log"
-    Write-Host ("Logs for $podName have been saved to $podName.log")
 }
 
 # Zip up the contents of the debuglogs directory
