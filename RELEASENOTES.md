@@ -2,7 +2,7 @@
 
 ## Release 08-11-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.4-main-08-11-2023-6de2ec55`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.4-main-08-11-2023-6de2ec55-win `
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.4-main-08-11-2023-6de2ec55-win`
 * Change log -
   * fix: revert commit `e7254187` to remove $$-->$ issue in config processing
   * fix: ARC extension : fixes for selectively not mounting for k3s & k8s edge distros (Edge distros)
