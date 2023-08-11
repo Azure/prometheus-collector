@@ -1,5 +1,12 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 08-11-2023
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.4-main-tbd`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.4-main-tbd`
+* Change log -
+  * fix: revert commit `e7254187` to remove $$-->$ issue in config processing
+  * fix: ARC extension : fixes for selectively not mounting for k3s & k8s edge distros (Edge distros)
+
 ## Release 07-28-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-07-28-2023-0efd3e4e`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.2-main-07-28-2023-0efd3e4e-win`
