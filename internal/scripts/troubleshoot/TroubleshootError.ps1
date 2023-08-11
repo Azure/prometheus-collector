@@ -367,7 +367,7 @@ catch {
     exit 1
 }
 
-# Get all DCRAs
+# Get all DC* objects
 try {
     $dcraList = Get-AzDataCollectionRuleAssociation -TargetResourceId $ClusterResourceId -ErrorAction Stop -WarningAction silentlyContinue
     $prometheusMetricsTuples = @()
@@ -393,7 +393,7 @@ try {
         Write-Output "--------------------------------------------------"
     }
 
-    # Print the map
+    # Print the Tuple
     Write-Output "Prometheus Metrics Tuple:"
     $prometheusMetricsTuples
 
@@ -458,17 +458,34 @@ try {
     }
 
     $amaMetricsRsPod = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
+    $podName = $amaMetricsRsPod.Items[0].metadata.name
     # Copy MetricsExtensionConsoleDebugLog.log from container to debuglogs directory
-    kubectl cp kube-system/$($amaMetricsRsPod.Items[0].metadata.name):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($amaMetricsRsPod.Items[0].metadata.name).log
-    Write-Host("MetricsExtensionConsoleDebugLog$($amaMetricsRsPod.Items[0].metadata.name).log copied to debuglogs directory.") -ForegroundColor Green
+    kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
+    Write-Host("MetricsExtensionConsoleDebugLog$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
+    # Copy MDSD log from container to debuglogs directory
+    kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.qos ./$debuglogsDir/mdsd_qos_$($podName).log
+    Write-Host("mdsd_qos_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
+    # Copy MDSD log from container to debuglogs directory
+    kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.info ./$debuglogsDir/mdsd_info_$($podName).log
+    Write-Host("mdsd_info_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
+    # Copy MDSD log from container to debuglogs directory
+    kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.warn ./$debuglogsDir/mdsd_warn_$($podName).log
+    Write-Host("mdsd_warn_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
+    # Copy MDSD log from container to debuglogs directory
+    kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.err ./$debuglogsDir/mdsd_err_$($podName).log
+    Write-Host("mdsd_err_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
 
     # Get logs from prometheus-collector container and store in a file
-    $promCollectorLogPath = "$debuglogsDir/$($amaMetricsRsPod.Items[0].metadata.name)_promcollector.log"
+    $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
     kubectl logs $($amaMetricsRsPod.Items[0].metadata.name) -n kube-system -c prometheus-collector > $promCollectorLogPath
 
     # Get logs from prometheus-collector container and store in a file
-    $promCollectorLogPath = "$debuglogsDir/$($amaMetricsRsPod.Items[0].metadata.name)_addontokenadapter.log"
-    kubectl logs $($amaMetricsRsPod.Items[0].metadata.name) -n kube-system -c addon-token-adapter > $promCollectorLogPath
+    $promCollectorLogPath = "$debuglogsDir/$($podName)_addontokenadapter.log"
+    kubectl logs $($podName) -n kube-system -c addon-token-adapter > $promCollectorLogPath
 
     Write-Host( "ama-metrics replicaset pod running OK.") -ForegroundColor Green
 }
@@ -517,6 +534,22 @@ try {
         kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
         Write-Host("MetricsExtensionConsoleDebugLog$($podName).log copied to debuglogs directory.") -ForegroundColor Green
 
+        # Copy MDSD log from container to debuglogs directory
+        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.qos ./$debuglogsDir/mdsd_qos_$($podName).log
+        Write-Host("mdsd_qos_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
+        # Copy MDSD log from container to debuglogs directory
+        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.info ./$debuglogsDir/mdsd_info_$($podName).log
+        Write-Host("mdsd_info_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
+        # Copy MDSD log from container to debuglogs directory
+        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.warn ./$debuglogsDir/mdsd_warn_$($podName).log
+        Write-Host("mdsd_warn_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
+        # Copy MDSD log from container to debuglogs directory
+        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.err ./$debuglogsDir/mdsd_err_$($podName).log
+        Write-Host("mdsd_err_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
         # Get logs from prometheus-collector container and store in a file
         $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
         kubectl logs $($podName) -n kube-system -c prometheus-collector > $promCollectorLogPath
@@ -542,7 +575,7 @@ try {
     $hasWindowsNodePools = $false
 
     # Loop through node pools and check for Windows nodes
-    foreach ($nodePool in $aksCluster.AgentPools) {
+    foreach ($nodePool in $aksCluster.AgentPoolProfiles) {
         if ($nodePool.OsType -eq "Windows") {
             $hasWindowsNodePools = $true
             break
@@ -588,15 +621,23 @@ try {
             kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
             Write-Host("MetricsExtensionConsoleDebugLog$($podName).log copied to debuglogs directory.") -ForegroundColor Green
 
+            # # Copy MA Host log from container to debuglogs directory
+            # kubectl cp kube-system/$($podName):/opt/genevamonitoringagent/datadirectory/Configuration/MonAgentHost.1.log ./$debuglogsDir/MonAgentHost_$($podName).log
+            # Write-Host("MonAgentHost_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
+            # # Copy MA Launcher log from container to debuglogs directory
+            # kubectl cp kube-system/$($podName):/opt/genevamonitoringagent/datadirectory/Configuration/MonAgentLauncher.1.log ./$debuglogsDir/MonAgentLauncher_$($podName).log
+            # Write-Host("MonAgentLauncher_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
             # Get logs from prometheus-collector container and store in a file
             $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
             kubectl logs $($podName) -n kube-system -c prometheus-collector > $promCollectorLogPath
 
             # Get logs from prometheus-collector container and store in a file
-            $addonTokenLogPath = "$debuglogsDir/$($podName)_addontokenadapter.log"
-            kubectl logs $($podName) -n kube-system -c addon-token-adapter > $addonTokenLogPath
+            $addonTokenLogPath = "$debuglogsDir/$($podName)_addontokenadapterwin.log"
+            kubectl logs $($podName) -n kube-system -c addon-token-adapter-win > $addonTokenLogPath
 
-            Write-Host ("Logs for $podName have been saved to $($podName)_promcollector.log and $($podName)_addontokenadapter.log")
+            Write-Host ("Logs for $podName have been saved to $($podName)_promcollector.log and $($podName)__addontokenadapterwin.log")
             $iterationCount++
         }
     }
