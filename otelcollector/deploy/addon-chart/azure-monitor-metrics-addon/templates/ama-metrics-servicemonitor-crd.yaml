@@ -4,18 +4,18 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: servicemonitors.monitoring.azure.apis.com
+  name: servicemonitors.azmonitoring.coreos.com
 spec:
-  group: monitoring.azure.apis.com
+  group: azmonitoring.coreos.com
   names:
-    # categories:
-    # - prometheus-operator
-    kind: AzServiceMonitor
-    listKind: AzServiceMonitorList
-    plural: azservicemonitors
+    categories:
+    - prometheus-operator
+    kind: ServiceMonitor
+    listKind: ServiceMonitorList
+    plural: servicemonitors
     shortNames:
-    - azsmon
-    singular: azservicemonitor
+    - smon
+    singular: servicemonitor
   scope: Namespaced
   versions:
   - name: v1
