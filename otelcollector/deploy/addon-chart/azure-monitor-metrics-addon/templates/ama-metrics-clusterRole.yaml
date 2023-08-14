@@ -40,7 +40,7 @@ rules:
     resources: ["azureclusteridentityrequests", "azureclusteridentityrequests/status"]
     verbs: ["get", "update", "list", "create"]
   - apiGroups:
-    - monitoring.coreos.com
+    - azmonitoring.coreos.com
     resources:
     - servicemonitors
     - podmonitors
