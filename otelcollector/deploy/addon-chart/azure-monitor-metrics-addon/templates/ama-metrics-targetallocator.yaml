@@ -50,8 +50,7 @@ spec:
           {{- end }}
         - name: PROMETHEUS_OPERATOR_V1_CUSTOM_GROUP
           value: "azmonitoring.coreos.com"
-        # image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
-        image: "docker.io/rashmichandrashekarms/ta:prom-op-33"
+        image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         name: targetallocator
         resources:
