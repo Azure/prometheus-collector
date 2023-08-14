@@ -1,18 +1,29 @@
 param azureMonitorWorkspaceResourceId string
 
 @allowed([
-  'eastus2euap'
-  'centraluseuap'
-  'centralus'
-  'eastus'
-  'eastus2'
-  'northeurope'
-  'southcentralus'
-  'southeastasia'
-  'uksouth'
-  'westeurope'
-  'westus'
-  'westus2'
+  'eastus2euap',
+  'northcentralus',
+  'eastus',
+  'australiacentral',
+  'australiasoutheast',
+  'brazilsouth',
+  'canadacentral',
+  'centralindia',
+  'centralus',
+  'eastasia',
+  'eastus2',
+  'northeurope',
+  'norwayeast',
+  'southafricanorth',
+  'southcentralus',
+  'southeastasia',
+  'uaenorth',
+  'uksouth',
+  'westcentralus',
+  'westeurope',
+  'westus',
+  'westus2',
+  'usgovvirginia'
 ])
 param azureMonitorWorkspaceLocation string
 
