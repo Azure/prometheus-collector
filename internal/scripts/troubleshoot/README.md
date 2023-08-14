@@ -4,7 +4,8 @@
 # Troubleshooting script
 
 Prequisites:
-- For AKS, Collect ResourceId of the cluster
+- For AKS, Collect ResourceId of the cluster\
+- Powershell and kubectl (if running locally)
 
 # AKS
 
