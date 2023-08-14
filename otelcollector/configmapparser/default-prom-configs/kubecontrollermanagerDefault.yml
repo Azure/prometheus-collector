@@ -25,11 +25,12 @@
         action: replace
         target_label: __metrics_path__
         regex: (.+)
-      - source_labels: [ __address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port ]
+      - source_labels:
+          - __address__
         action: replace
-        regex: ([^:]+)(?::\d+)?;(.*)
-        replacement: $1:10257
         target_label: __address__
+        regex: (.+?)(\:\d+)?
+        replacement: $$1:10257
       - source_labels: [__meta_kubernetes_pod_name]
         regex: (.*)
         target_label: pod

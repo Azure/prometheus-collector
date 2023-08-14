@@ -33,11 +33,11 @@ data:
     nodeexporter = ""
     windowsexporter = ""
     windowskubeproxy = ""
-    kube-apiserver = "*"
-    cluster-autoscaler = "*"
-    kube-scheduler = "*"
-    kube-controller-manager = "*"
-    etcd = "*"
+    kube-apiserver = "(.*)"
+    cluster-autoscaler = "(.*)"
+    kube-scheduler = "(.*)"
+    kube-controller-manager = "(.*)"
+    etcd = "(.*)"
   debug-mode: |-
     enabled = false
   default-targets-scrape-interval-settings: |-
