@@ -4,4 +4,4 @@
 
 [submodule "otelcollector/opentelemetry-operator/cmd/otel-allocator/prometheus-operator"]
 	path = otelcollector/opentelemetry-operator/cmd/otel-allocator/prometheus-operator
-	url = https://https://github.com/rashmichandrashekar/prometheus-operator
+	url = https://github.com/rashmichandrashekar/prometheus-operator
