@@ -4,17 +4,15 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"time"
 
 	"os"
 
 	yaml "gopkg.in/yaml.v2"
+	"github.com/prometheus/common/model"
+	promconfig "github.com/prometheus/prometheus/config"
+	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 )
-
-type Config struct {
-	LabelSelector      map[string]string      `yaml:"label_selector,omitempty"`
-	Config             map[string]interface{} `yaml:"config"`
-	AllocationStrategy string                 `yaml:"allocation_strategy,omitempty"`
-}
 
 type OtelConfig struct {
 	Exporters  interface{} `yaml:"exporters"`
@@ -22,7 +20,7 @@ type OtelConfig struct {
 	Extensions interface{} `yaml:"extensions"`
 	Receivers  struct {
 		Prometheus struct {
-			Config          map[string]interface{} `yaml:"config"`
+			Config          promconfig.Config      `yaml:"config"`
 			TargetAllocator interface{}            `yaml:"target_allocator"`
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
@@ -60,7 +58,7 @@ func updateTAConfigFile(configFilePath string) {
 		logFatalError(fmt.Sprintf("config-reader::Unable to read file contents from: %s - %v\n", configFilePath, err))
 		os.Exit(1)
 	}
-	var promScrapeConfig map[string]interface{}
+	var promScrapeConfig promconfig.Config
 	var otelConfig OtelConfig
 	err = yaml.Unmarshal([]byte(defaultsMergedConfigFileContents), &otelConfig)
 	if err != nil {
@@ -68,13 +66,16 @@ func updateTAConfigFile(configFilePath string) {
 		os.Exit(1)
 	}
 
-	promScrapeConfig = otelConfig.Receivers.Prometheus.Config
-	targetAllocatorConfig := Config{
+	promScrapeConfig = promconfig.Config(otelConfig.Receivers.Prometheus.Config)
+	targetAllocatorConfig := config.Config{
 		LabelSelector: map[string]string{
 			"rsName":                         "ama-metrics",
 			"kubernetes.azure.com/managedby": "aks",
 		},
-		Config: promScrapeConfig,
+		Config: &promScrapeConfig,
+		PrometheusCR: config.PrometheusCRConfig {
+			ScrapeInterval: model.Duration(time.Second * 60),
+		},
 	}
 
 	targetAllocatorConfigYaml, _ := yaml.Marshal(targetAllocatorConfig)

@@ -3,6 +3,7 @@ trigger:
     include:
     - main
     - operator-targetallocator
+    - grace/ta-fixes-0815
 
 pr:
   autoCancel: true
