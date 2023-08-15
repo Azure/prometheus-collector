@@ -22,7 +22,6 @@ source /opt/configmap-parser.sh
 
 
 # Run configreader to update the configmap for TargetAllocator
-# Add this error handling - if [ $? -ne 0 ] after running the configurationreader exe
 if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ] && [ -e "/opt/microsoft/otelcollector/collector-config-default.yml" ] ; then
       echo_warning "Running config reader with only default scrape configs enabled"
       /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config-default.yml

@@ -48,6 +48,8 @@ type OtelConfig struct {
 var RESET = "\033[0m"
 var RED = "\033[31m"
 
+const daemonSetControllerType = "DaemonSet"
+
 func logFatalError(message string) {
 	// Do not set env var if customer is running outside of agent to just validate config
 	if os.Getenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT") == "true" {
@@ -102,6 +104,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		return err
 	}
 
+	controllerType := os.Getenv("CONTROLLER_TYPE")
+
 	var prometheusConfig map[string]interface{}
 	err = yaml.Unmarshal([]byte(promConfigFileContents), &prometheusConfig)
 	if err != nil {
@@ -123,6 +127,9 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						if _, isString := relabelConfig["regex"].(string); isString {
 							regexString := relabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+							if strings.EqualFold(controllerType, daemonSetControllerType) {
+								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							}
 							relabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -130,6 +137,9 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					if relabelConfig["replacement"] != nil {
 						replacement := relabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+						if strings.EqualFold(controllerType, daemonSetControllerType) {
+							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						}
 						relabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
@@ -145,7 +155,9 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						if _, isString := metricRelabelConfig["regex"].(string); isString {
 							regexString := metricRelabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							if strings.EqualFold(controllerType, daemonSetControllerType) {
+								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							}
 							metricRelabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -154,7 +166,9 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					if metricRelabelConfig["replacement"] != nil {
 						replacement := metricRelabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						if strings.EqualFold(controllerType, daemonSetControllerType) {
+							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						}
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
