@@ -125,7 +125,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     end
 
     # ccp-metrics addon settings for api-server (old flag) and kube-apiserver (new flag)
-    if apiserverEnabled && kubeapiserverEnabled
+    if @apiserverEnabled && @kubeapiserverEnabled
       # honor the old flag, this is a very unlikely scenario
       kubeapiserverEnabled = false
     end
