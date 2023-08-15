@@ -22,6 +22,11 @@ LOGGING_PREFIX = "default-scrape-settings"
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
 @kappiebasicEnabled = true
+@kubecontrollermanagerEnabled = false
+@kubeschedulerEnabled = false
+@kubeapiserverEnabled = false
+@clusterautoscalerEnabled = false
+@etcdEnabled = false
 @noDefaultsEnabled = false
 @sendDSUpMetric = false
 
@@ -93,27 +98,54 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @kappiebasicEnabled = parsedConfig[:kappiebasic]
       puts "config::Using configmap scrape settings for kappiebasic: #{@kappiebasicEnabled}"
     end
+    if !parsedConfig[:"kube-controller-manager"].nil?
+      @kubecontrollermanagerEnabled = parsedConfig[:"kube-controller-manager"]
+      puts "config::Using configmap scrape settings for kube-controller-manager: #{@kubecontrollermanagerEnabled}"
+    end
+    if !parsedConfig[:"kube-scheduler"].nil?
+      @kubeschedulerEnabled = parsedConfig[:"kube-scheduler"]
+      puts "config::Using configmap scrape settings for kube-scheduler: #{@kubeschedulerEnabled}"
+    end
+    if !parsedConfig[:"kube-apiserver"].nil?
+      @kubeapiserverEnabled = parsedConfig[:"kube-apiserver"]
+      puts "config::Using configmap scrape settings for kube-apiserver: #{@kubeapiserverEnabled}"
+    end
+    if !parsedConfig[:"cluster-autoscaler"].nil?
+      @clusterautoscalerEnabled = parsedConfig[:"cluster-autoscaler"]
+      puts "config::Using configmap scrape settings for cluster-autoscaler: #{@clusterautoscalerEnabled}"
+    end
+    if !parsedConfig[:"etcd"].nil?
+      @etcdEnabled = parsedConfig[:"etcd"]
+      puts "config::Using configmap scrape settings for etcd: #{@etcdEnabled}"
+    end
 
     windowsDaemonset = false
     if ENV["WINMODE"].nil? && ENV["WINMODE"].strip.downcase == "advanced"
       windowsDaemonset = true
     end
 
+    # ccp-metrics addon settings for api-server (old flag) and kube-apiserver (new flag)
+    if apiserverEnabled && kubeapiserverEnabled
+      # honor the old flag, this is a very unlikely scenario
+      kubeapiserverEnabled = false
+    end
+
+    ccpmetricsEnabled = @kubecontrollermanagerEnabled || @kubeschedulerEnabled || @kubeapiserverEnabled || @clusterautoscalerEnabled || @etcdEnabled
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
       if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@kubeletEnabled && !@prometheusCollectorHealthEnabled && !@kappiebasicEnabled
         @noDefaultsEnabled = true
       elsif controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "linux" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled && !kappiebasicEnabled
         @noDefaultsEnabled = true
-      elsif controllerType == "ReplicaSet" && @sendDsUpMetric && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled
+      elsif controllerType == "ReplicaSet" && @sendDsUpMetric && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled && !ccpmetricsEnabled
         @noDefaultsEnabled = true
-      elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled
+      elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled && !ccpmetricsEnabled
         @noDefaultsEnabled = true
       # Windows daemonset is not enabled so Windows kube-proxy and node-exporter are scraped from replica
-      elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && !windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled
+      elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && !windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled && !ccpmetricsEnabled
         @noDefaultsEnabled = true
       end
-    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled
+    elsif !@kubeletEnabled && !@corednsEnabled && !@cadvisorEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@nodeexporterEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled && !ccpmetricsEnabled
       @noDefaultsEnabled = true
     end
     if @noDefaultsEnabled
@@ -169,6 +201,11 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED=#{@kappiebasicEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=#{@podannotationEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_KUBE_CONTROLLER_MANAGER_SCRAPING_ENABLED=#{@kubecontrollermanagerEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_KUBE_SCHEDULER_SCRAPING_ENABLED=#{@kubeschedulerEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_KUBE_APISERVER_SCRAPING_ENABLED=#{@kubeapiserverEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_CLUSTER_AUTOSCALER_SCRAPING_ENABLED=#{@clusterautoscalerEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_ETCD_SCRAPING_ENABLED=#{@etcdEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
 else

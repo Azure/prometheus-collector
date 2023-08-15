@@ -45,6 +45,7 @@ if [ -z $CCP_METRICS_ENABLED ]; then
   CCP_METRICS_ENABLED="false"
 fi
 echo_var "MODE" "$MODE"
+echo_var "CCP_METRICS_ENABLED" "$CCP_METRICS_ENABLED"
 echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
 
@@ -262,7 +263,7 @@ else
    fi
 fi
 
-if [ "${MAC}" == "true" && "${CCP_METRICS_ENABLED}" == "false" ]; then
+if [ "${MAC}" == "true" ] && [ "${CCP_METRICS_ENABLED}" == "false" ]; then
       #wait for addon-token-adapter to be healthy
       tokenAdapterWaitsecs=60
       waitedSecsSoFar=1

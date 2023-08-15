@@ -27,6 +27,11 @@ MATCHER = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]
 @prometheusCollectorHealthInterval = "30s"
 @podannotationScrapeInterval = "30s"
 @kappiebasicScrapeInterval = "30s"
+@kubecontrollermanagerScrapeInterval = "30s"
+@kubeschedulerScrapeInterval = "30s"
+@kubeapiserverScrapeInterval = "30s"
+@clusterautoscalerScrapeInterval = "30s"
+@etcdScrapeInterval = "30s"
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -208,6 +213,86 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "kappiebasicScrapeInterval override not specified in configmap")
     end
 
+    kubecontrollermanagerScrapeInterval = parsedConfig[:"kube-controller-manager"]
+    if !kubecontrollermanagerScrapeInterval.nil?
+      matched = MATCHER.match(kubecontrollermanagerScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        kubecontrollermanagerScrapeInterval = "30s"
+        @kubecontrollermanagerScrapeInterval = kubecontrollermanagerScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for kube-controller-manager")
+      else
+        @kubecontrollermanagerScrapeInterval = kubecontrollermanagerScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for kubecontrollermanagerScrapeInterval")
+      end
+    else
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "kubecontrollermanagerScrapeInterval override not specified in configmap")
+    end
+
+    kubeschedulerScrapeInterval = parsedConfig[:"kube-scheduler"]
+    if !kubeschedulerScrapeInterval.nil?
+      matched = MATCHER.match(kubeschedulerScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        kubeschedulerScrapeInterval = "30s"
+        @kubeschedulerScrapeInterval = kubeschedulerScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for kube-scheduler")
+      else
+        @kubeschedulerScrapeInterval = kubeschedulerScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for kubeschedulerScrapeInterval")
+      end
+    else
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "kubeschedulerScrapeInterval override not specified in configmap")
+    end
+
+    kubeapiserverScrapeInterval = parsedConfig[:"kube-apiserver"]
+    if !kubeapiserverScrapeInterval.nil?
+      matched = MATCHER.match(kubeapiserverScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        kubeapiserverScrapeInterval = "30s"
+        @kubeapiserverScrapeInterval = kubeapiserverScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for kube-apiserver")
+      else
+        @kubeapiserverScrapeInterval = kubeapiserverScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for kubeapiserverScrapeInterval")
+      end
+    else
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "kubeapiserverScrapeInterval override not specified in configmap")
+    end
+
+    clusterautoscalerScrapeInterval = parsedConfig[:"cluster-autoscaler"]
+    if !clusterautoscalerScrapeInterval.nil?
+      matched = MATCHER.match(clusterautoscalerScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        clusterautoscalerScrapeInterval = "30s"
+        @clusterautoscalerScrapeInterval = clusterautoscalerScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for cluster-autoscaler")
+      else
+        @clusterautoscalerScrapeInterval = clusterautoscalerScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for clusterautoscalerScrapeInterval")
+      end
+    else
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "clusterautoscalerScrapeInterval override not specified in configmap")
+    end
+
+    etcdScrapeInterval = parsedConfig[:"etcd"]
+    if !etcdScrapeInterval.nil?
+      matched = MATCHER.match(kubeapiserverScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        etcdScrapeInterval = "30s"
+        @etcdScrapeInterval = etcdScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for etcd")
+      else
+        @etcdScrapeInterval = etcdScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for etcdScrapeInterval")
+      end
+    else
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "etcdScrapeInterval override not specified in configmap")
+    end
+
     prometheusCollectorHealthInterval = parsedConfig[:prometheuscollectorhealth]
     if !prometheusCollectorHealthInterval.nil?
       matched = MATCHER.match(prometheusCollectorHealthInterval)
@@ -270,6 +355,11 @@ intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = @windowskubeproxyScrapeInterv
 intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = @prometheusCollectorHealthInterval
 intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = @podannotationScrapeInterval
 intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = @kappiebasicScrapeInterval
+intervalHash["KUBE_CONTROLLER_MANAGER_SCRAPE_INTERVAL"] = @kubecontrollermanagerScrapeInterval
+intervalHash["KUBE_SCHEDULER_SCRAPE_INTERVAL"] = @kubeschedulerScrapeInterval
+intervalHash["KUBE_APISERVER_SCRAPE_INTERVAL"] = @kubeapiserverScrapeInterval
+intervalHash["CLUSTER_AUTOSCALER_SCRAPE_INTERVAL"] = @clusterautoscalerScrapeInterval
+intervalHash["ETCD_SCRAPE_INTERVAL"] = @etcdScrapeInterval
 
 if !file.nil?
   # Close file after writing scrape interval list hash

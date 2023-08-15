@@ -19,6 +19,11 @@ data:
     prometheuscollectorhealth = false
     windowsexporter = false
     windowskubeproxy = false
+    kube-apiserver = false
+    cluster-autoscaler = false
+    kube-scheduler = false
+    kube-controller-manager = false
+    etcd = false
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""
@@ -28,6 +33,11 @@ data:
     nodeexporter = ""
     windowsexporter = ""
     windowskubeproxy = ""
+    kube-apiserver = "(.*)"
+    cluster-autoscaler = "(.*)"
+    kube-scheduler = "(.*)"
+    kube-controller-manager = "(.*)"
+    etcd = "(.*)"
   debug-mode: |-
     enabled = false
   default-targets-scrape-interval-settings: |-
@@ -40,6 +50,11 @@ data:
     prometheuscollectorhealth = "30s"
     windowsexporter = "30s"
     windowskubeproxy = "30s"
+    kube-apiserver = "30s"
+    cluster-autoscaler = "30s"
+    kube-scheduler = "30s"
+    kube-controller-manager = "30s"
+    etcd = "30s"
 metadata:
   name: ama-metrics-settings-configmap
   namespace: {{ .Values.global.commonGlobals.Customer.Namespace }}
