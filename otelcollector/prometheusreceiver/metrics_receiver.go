@@ -178,7 +178,7 @@ func (r *pReceiver) syncTargetAllocator(compareHash string, allocConf *targetAll
 		var httpSD promHTTP.SDConfig
 		if allocConf.HTTPSDConfig == nil {
 			httpSD = promHTTP.SDConfig{
-				RefreshInterval: model.Duration(30 * time.Second),
+				RefreshInterval: model.Duration(1 * time.Second),
 			}
 		} else {
 			httpSD = *allocConf.HTTPSDConfig
