@@ -73,9 +73,9 @@ func updateTAConfigFile(configFilePath string) {
 			"kubernetes.azure.com/managedby": "aks",
 		},
 		Config: &promScrapeConfig,
-		PrometheusCR: config.PrometheusCRConfig {
-			ScrapeInterval: model.Duration(time.Second * 60),
-		},
+		//PrometheusCR: config.PrometheusCRConfig {
+		//	ScrapeInterval: model.Duration(time.Second * 60),
+		//},
 	}
 
 	targetAllocatorConfigYaml, _ := yaml.Marshal(targetAllocatorConfig)
