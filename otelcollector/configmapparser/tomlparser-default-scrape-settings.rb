@@ -130,7 +130,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       kubeapiserverEnabled = false
     end
 
-    ccpmetricsEnabled = kubecontrollermanagerEnabled || kubeschedulerEnabled || kubeapiserverEnabled || clusterautoscalerEnabled || etcdEnabled
+    ccpmetricsEnabled = @kubecontrollermanagerEnabled || @kubeschedulerEnabled || @kubeapiserverEnabled || @clusterautoscalerEnabled || @etcdEnabled
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
       if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@kubeletEnabled && !@prometheusCollectorHealthEnabled && !@kappiebasicEnabled
