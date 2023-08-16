@@ -28,6 +28,7 @@
       - source_labels: [ __address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port ]
         action: replace
         separator: ":"
+        target_label: __address__
       - source_labels: [__meta_kubernetes_pod_name]
         regex: (.*)
         target_label: pod

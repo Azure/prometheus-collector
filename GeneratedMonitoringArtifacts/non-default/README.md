@@ -10,9 +10,9 @@ Azure Monitor metrics addon has pre-built configurations to discover & scrape mo
 
 `kube-api-server` job is turned OFF by default. To collect API-server metrics, do the following -
 
-1. Enable apiserver scraping by specifiying `apiserver = true` under `default-scrape-settings-enabled` in the [settings](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/configmaps/ama-metrics-settings-configmap.yaml) configmap. This will enable scraping apiserver every 30s.
+1. Enable apiserver scraping by specifiying `kube-apiserver = true` under `default-scrape-settings-enabled` in the [settings](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/configmaps/ama-metrics-settings-configmap.yaml) configmap. This will enable scraping apiserver every 30s.
 2. Add more metrics to be collected by the `apiserver` target by specifiying  below -
-   `apiserver = "apiserver_request_slo_duration_seconds_bucket|apiserver_request_slo_duration_seconds_sum|apiserver_request_slo_duration_seconds_count"` under `default-targets-metrics-keep-list` in the [settings](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/configmaps/ama-metrics-settings-configmap.yaml) configmap
+   `kube-apiserver = "apiserver_request_slo_duration_seconds_bucket|apiserver_request_slo_duration_seconds_sum|apiserver_request_slo_duration_seconds_count"` under `default-targets-metrics-keep-list` in the [settings](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/configmaps/ama-metrics-settings-configmap.yaml) configmap
 3. Import the pre-defined recording rules for apiserver from the template [here](https://github.com/Azure/prometheus-collector/tree/main/GeneratedMonitoringArtifacts/non-default/api-server)
 4. Import the apiserver Grafana dashboard from [here](https://github.com/Azure/prometheus-collector/tree/vishwa/1paddon/GeneratedMonitoringArtifacts/non-default/api-server) into your Grafana instance
 
@@ -41,6 +41,30 @@ By default Azure Managed Prometheus collects metrics used by Kubernetes mixins  
 
 By default Azure Managed Prometheus collects metrics used by node-exporter(Linux) mixins  and also auto configures few dashboards & recording rules from node-exporter(Linux) mixins. In addition to that you can utilize addiitonal dashboards provided by node-exporter mixin usig the steps below.
 1. Import all other Kubernetes mixin dashboards from [here](https://github.com/Azure/prometheus-collector/tree/main/GeneratedMonitoringArtifacts/non-default/node-exporter) into your Grafana instance
-   
+
+
+## Kube-scheduler
+
+`kube-scheduler` job is turned OFF by default. To collect kube-scheduler metrics, do the following -
+
+1. Enable kube-scheduler scraping by specifying `kube-scheduler = true` under `default-scrape-settings-enabled` in the [settings](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/configmaps/ama-metrics-settings-configmap.yaml) configmap. This will enable scraping kube-scheduler every 30s.
+
+## Kube-controller-manager
+
+`kube-controller-manager` job is turned OFF by default. To collect kube-controller-manager metrics, do the following -
+
+1. Enable kube-controller-manager scraping by specifying `kube-controller-manager = true` under `default-scrape-settings-enabled` in the [settings](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/configmaps/ama-metrics-settings-configmap.yaml) configmap. This will enable scraping kube-controller-manager every 30s.
+
+## Cluster Autoscaler
+
+`cluster-autoscaler` job is turned OFF by default. To collect cluster-autoscaler metrics, do the following -
+
+1. Enable cluster-autoscaler scraping by specifying `cluster-autoscaler = true` under `default-scrape-settings-enabled` in the [settings](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/configmaps/ama-metrics-settings-configmap.yaml) configmap. This will enable scraping cluster-autoscaler every 30s.
+
+## Etcd
+
+`etcd` job is turned OFF by default. To collect etcd metrics, do the following -
+
+1. Enable etcd scraping by specifying `etcd = true` under `default-scrape-settings-enabled` in the [settings](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/configmaps/ama-metrics-settings-configmap.yaml) configmap. This will enable scraping etcd every 30s.
 
 > NOTE: You can find settings config map with all the changes above [here](https://github.com/Azure/prometheus-collector/blob/main/GeneratedMonitoringArtifacts/non-default/ama-metrics-settings-configmap.yaml), in case if you just want to use it readily.
