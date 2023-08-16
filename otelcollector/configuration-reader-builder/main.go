@@ -4,12 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"time"
 
 	"os"
 
 	yaml "gopkg.in/yaml.v2"
-	"github.com/prometheus/common/model"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 )
