@@ -51,6 +51,7 @@ spec:
         - name: PROMETHEUS_OPERATOR_V1_CUSTOM_GROUP
           value: "azmonitoring.coreos.com"
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+        #image: "docker.io/rashmichandrashekarms/ta:prom-op-39"
         imagePullPolicy: IfNotPresent
         name: targetallocator
         resources:
@@ -160,6 +161,45 @@ spec:
       serviceAccount: ama-metrics-serviceaccount
       serviceAccountName: ama-metrics-serviceaccount
       terminationGracePeriodSeconds: 30
+      affinity:
+        nodeAffinity:
+          # affinity to schedule on to ephemeral os node if its available
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                - system
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+                  {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
+                  - key: kubernetes.azure.com/cluster
+                    operator: Exists
+                  {{- end }}
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - operator: "Exists"
+          effect: NoExecute
+        - operator: "Exists"
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
       volumes:
       - name: settings-vol-config
         configMap:
