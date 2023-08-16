@@ -42,11 +42,11 @@ data:
     windowskubeproxy = ""
     podannotations = ""
     kappiebasic = ""
-    kube-apiserver = "(.*)"
-    cluster-autoscaler = "(.*)"
-    kube-scheduler = "(.*)"
-    kube-controller-manager = "(.*)"
-    etcd = "(.*)"
+    kube-apiserver = ""
+    cluster-autoscaler = ""
+    kube-scheduler = ""
+    kube-controller-manager = ""
+    etcd = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"

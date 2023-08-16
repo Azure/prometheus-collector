@@ -20,3 +20,7 @@
           - __meta_kubernetes_pod_container_name
         action: keep
         regex: kube-apiserver;kube-apiserver
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        regex: (.*)
+        target_label: pod
+        action: replace
