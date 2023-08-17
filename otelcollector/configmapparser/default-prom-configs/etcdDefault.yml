@@ -1,7 +1,6 @@
   scrape_configs:
   - job_name: etcd
     scrape_interval: $$SCRAPE_INTERVAL$$
-    sample_limit: 1000
     follow_redirects: false
     scheme: https
     kubernetes_sd_configs:

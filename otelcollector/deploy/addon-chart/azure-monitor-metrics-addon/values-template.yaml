@@ -35,7 +35,7 @@ AzureMonitorMetrics:
       - storageclasses
       - validatingwebhookconfigurations
       - volumeattachments
-  ImageRepository: mcr.microsoft.com${MCR_REPOSITORY}
+  ImageRepository: ${MCR_REPOSITORY}
   ImageTag: ${IMAGE_TAG}
   ImageTagWin: ${IMAGE_TAG}-win
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
@@ -60,10 +60,6 @@ global:
     Region: "${AKS_REGION}"
     Customer:
       AzureResourceID: ${AKS_RESOURCE_ID}
-      Namespace: ${AKS_NAMESPACE}
-      SubscriptionId: ${SUBSCRIPTION_ID} #msi-adapter
-      ResourceGroupName: ${RESOURCE_GROUP} #msi-adapter
-      ManagedClusterName: ${AKS_CLUSTER_NAME} #msi-adapter
 
 # For ARC backdoor testing
 Azure:
