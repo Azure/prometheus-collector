@@ -65,12 +65,14 @@ func updateTAConfigFile(configFilePath string) {
 	}
 
 	promScrapeConfig = promconfig.Config(otelConfig.Receivers.Prometheus.Config)
+	filterStrategy := "relabel-config"
 	targetAllocatorConfig := config.Config{
 		LabelSelector: map[string]string{
 			"rsName":                         "ama-metrics",
 			"kubernetes.azure.com/managedby": "aks",
 		},
 		Config: &promScrapeConfig,
+		FilterStrategy : &filterStrategy,
 		//PrometheusCR: config.PrometheusCRConfig {
 		//	ScrapeInterval: model.Duration(time.Second * 60),
 		//},
