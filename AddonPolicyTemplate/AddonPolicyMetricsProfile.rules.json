@@ -55,10 +55,12 @@
 					]
 				},
 				"metricLabelsAllowlist": {
-				  "type": "string"
+				  "type": "string",
+				  "defaultValue": ""
 				},
 				"metricAnnotationsAllowList": {
-				  "type": "string"
+				  "type": "string",
+				  "defaultValue": ""
 				},
 				"enableWindowsRecordingRules": {
 					"type": "bool"
