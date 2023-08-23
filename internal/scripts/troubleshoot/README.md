@@ -9,7 +9,7 @@ Prequisites:
 
 # AKS
 
-You can use the troubleshooting script provided [here](https://raw.githubusercontent.com/Azure/prometheus-collector/kaveesh/troubleshoot/internal/scripts/troubleshoot/TroubleshootError.ps1) to diagnose the problem.
+You can use the troubleshooting script provided [here](https://raw.githubusercontent.com/Azure/prometheus-collector/main/internal/scripts/troubleshoot/TroubleshootError.ps1) to diagnose the problem.
 
 Steps:
 - Open powershell using the [cloudshell](https://docs.microsoft.com/en-us/azure/cloud-shell/overview) in the azure portal.
