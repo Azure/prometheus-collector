@@ -26,7 +26,8 @@ spec:
         kubernetes.azure.com/managedby: aks
     spec:
       containers:
-      - args:
+      - name: targetallocator
+        args:
         - --enable-prometheus-cr-watcher
         env:
         - name: OTELCOL_NAMESPACE
@@ -55,8 +56,8 @@ spec:
         name: targetallocator
         resources:
           limits:
-            cpu: 500m
-            memory: 1Gi
+            cpu: 5
+            memory: 8Gi
           requests:
             cpu: 10m
             memory: 50Mi
@@ -133,7 +134,13 @@ spec:
           value: "true" # only supported value is the string "true"
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfg }}"
         imagePullPolicy: IfNotPresent
-        resources: {}
+        resources:
+          limits:
+            cpu: 1
+            memory: 1Gi
+          requests:
+            cpu: 1m
+            memory: 10Mi
         volumeMounts:
           - mountPath: /etc/config/settings
             name: settings-vol-config
