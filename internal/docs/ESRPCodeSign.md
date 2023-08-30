@@ -3,6 +3,8 @@ I have followed this [doc](https://eng.ms/docs/more/containers-secure-supply-cha
 
 [This](https://github-private.visualstudio.com/azure/_settings/adminservices?resourceId=91213571-9b46-4675-91d5-fd997630bda6) is the service connection created for ESRP. All these steps are given [here](https://microsoft.sharepoint.com/teams/prss/Codesign/SitePages/ESRP%20ADO.aspx).
 
+[This](https://ms.portal.azure.com/#@MSAzureCloud.onmicrosoft.com/resource/subscriptions/30c56c3a-54da-46ea-b004-06eb33432687/resourceGroups/ESRPPrometheusKVProd/providers/Microsoft.KeyVault/vaults/ESRPPrometheusKVProd/overview) is the Key vault in which the prod AME certificate is stored through which the container image is signed.
+
 [This](https://portal.esrp.microsoft.com/Onboarding/AccountDetails?clientId=73f8d5f9-b507-497f-b698-4ed00fcba5a3) is the ESRP registration client created for signing Prometheus images. The approved ESRP sign key code CP-469451 is used for signing as mentioned in [doc](https://eng.ms/docs/more/containers-secure-supply-chain/signing).
 
 For verification of signing we can do through 2 ways.
