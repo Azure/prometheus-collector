@@ -18,7 +18,7 @@ LOGGING_PREFIX = "default-scrape-settings"
 @kubestateEnabled = true
 @nodeexporterEnabled = true
 @prometheusCollectorHealthEnabled = true
-@podannotationEnabled = false
+@podannotationEnabled = true
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
 @kappiebasicEnabled = true
@@ -85,7 +85,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @windowskubeproxyEnabled = parsedConfig[:windowskubeproxy]
       puts "config::Using configmap scrape settings for windowskubeproxy: #{@windowskubeproxyEnabled}"
     end
-    if !ENV['AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX'].nil? && !ENV['AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX'].empty?
+    if !ENV["AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"].nil? && !ENV["AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"].empty?
       @podannotationEnabled = "true"
       puts "config::Using configmap scrape settings for podannotations: #{@podannotationEnabled}"
     end
@@ -109,7 +109,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         @noDefaultsEnabled = true
       elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled
         @noDefaultsEnabled = true
-      # Windows daemonset is not enabled so Windows kube-proxy and node-exporter are scraped from replica
+        # Windows daemonset is not enabled so Windows kube-proxy and node-exporter are scraped from replica
       elsif controllerType == "ReplicaSet" && !@sendDsUpMetric && !windowsDaemonset && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled
         @noDefaultsEnabled = true
       end
@@ -127,14 +127,13 @@ end
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start default-scrape-settings Processing")
 # set default targets for MAC mode
-if !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true"
+if !ENV["MAC"].nil? && !ENV["MAC"].empty? && ENV["MAC"].strip.downcase == "true"
   ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "MAC mode is enabled. Only enabling targets kubestate,cadvisor,kubelet,kappiebasic & nodeexporter for linux before config map processing....")
-  
+
   @corednsEnabled = false
   @kubeproxyEnabled = false
   @apiserverEnabled = false
   @prometheusCollectorHealthEnabled = false
-  
 end
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
@@ -151,8 +150,8 @@ end
 file = File.open("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var", "w")
 
 $export = "export "
-if !ENV['OS_TYPE'].nil? && ENV['OS_TYPE'].downcase == "windows"
-  $export = "";
+if !ENV["OS_TYPE"].nil? && ENV["OS_TYPE"].downcase == "windows"
+  $export = ""
 end
 
 if !file.nil?

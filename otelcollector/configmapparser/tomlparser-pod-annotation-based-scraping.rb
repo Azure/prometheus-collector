@@ -31,6 +31,7 @@ end
 def populateSettingValuesFromConfigMap(parsedConfig)
   begin
     podannotationRegex = parsedConfig[:podannotationnamespaceregex]
+    podannotationRegex = ".*"
     # Make backwards compatible
     if podannotationRegex.nil? || podannotationRegex.empty?
       podannotationRegex = parsedConfig[:podannotationnamepsaceregex]
@@ -51,9 +52,9 @@ end
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Processing")
 configMapSettings = parseConfigMap
 if !configMapSettings.nil?
-    populateSettingValuesFromConfigMap(configMapSettings)
+  populateSettingValuesFromConfigMap(configMapSettings)
 elsif (File.file?(@configMapMountPath))
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Error loading configmap section - using defaults")
+  ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Error loading configmap section - using defaults")
 end
 
 # Write the settings to file, so that they can be set as environment variables
