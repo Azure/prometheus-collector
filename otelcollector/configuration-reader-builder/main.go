@@ -68,10 +68,9 @@ func updateTAConfigFile(configFilePath string) {
 		os.Exit(1)
 	}
 
-	allocationStrategy := "consistent-hashing"
 	promScrapeConfig = otelConfig.Receivers.Prometheus.Config
 	targetAllocatorConfig := Config{
-		AllocationStrategy: &allocationStrategy,
+		AllocationStrategy: "consistent-hashing",
 		LabelSelector: map[string]string{
 			"rsName":                         "ama-metrics",
 			"kubernetes.azure.com/managedby": "aks",
