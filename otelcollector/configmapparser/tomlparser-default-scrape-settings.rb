@@ -18,7 +18,7 @@ LOGGING_PREFIX = "default-scrape-settings"
 @kubestateEnabled = true
 @nodeexporterEnabled = true
 @prometheusCollectorHealthEnabled = true
-@podannotationEnabled = true
+@podannotationEnabled = false
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
 @kappiebasicEnabled = true
@@ -132,7 +132,7 @@ if !ENV["MAC"].nil? && !ENV["MAC"].empty? && ENV["MAC"].strip.downcase == "true"
 
   @corednsEnabled = false
   @kubeproxyEnabled = false
-  @apiserverEnabled = false
+  @apiserverEnabled = true
   @prometheusCollectorHealthEnabled = false
 end
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it

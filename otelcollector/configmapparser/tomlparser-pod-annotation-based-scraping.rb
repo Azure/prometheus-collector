@@ -31,7 +31,7 @@ end
 def populateSettingValuesFromConfigMap(parsedConfig)
   begin
     podannotationRegex = parsedConfig[:podannotationnamespaceregex]
-    podannotationRegex = ".*"
+    # podannotationRegex = ".*"
     # Make backwards compatible
     if podannotationRegex.nil? || podannotationRegex.empty?
       podannotationRegex = parsedConfig[:podannotationnamepsaceregex]
