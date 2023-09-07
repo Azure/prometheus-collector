@@ -6,7 +6,7 @@ require "deep_merge"
 require "yaml"
 require_relative "ConfigParseErrorLogger"
 
-LOGGING_PREFIX = "prometheus-config-merger"
+LOGGING_PREFIX = "prometheus-config-merger-with-operator"
 @configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
 @promMergedConfigPath = "/opt/promMergedConfig.yml"
 @mergedDefaultConfigPath = "/opt/defaultsMergedConfig.yml"

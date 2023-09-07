@@ -73,7 +73,11 @@ ruby /opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list
 ruby /opt/microsoft/configmapparser/tomlparser-scrape-interval.rb
 
 # Merge default and custom prometheus config
-ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
+if [ "${AZMON_OPERATOR_ENABLED}" == "true" ]; then
+      ruby /opt/microsoft/configmapparser/prometheus-config-merger-with-operator.rb.rb
+else
+      ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
+fi
 
 echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false" >> ~/.bashrc
 export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false
