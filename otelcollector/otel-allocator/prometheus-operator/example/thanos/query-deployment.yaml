@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: thanos-query
+  name: thanos-query
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: thanos-query
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: thanos-query
+    spec:
+      containers:
+      - args:
+        - query
+        - --log.level=debug
+        - --query.replica-label=prometheus_replica
+        - --query.replica-label=thanos_ruler_replica
+        - --store=dnssrv+_grpc._tcp.thanos-sidecar.default.svc.cluster.local
+        - --store=dnssrv+_grpc._tcp.thanos-ruler.default.svc.cluster.local
+        image: quay.io/thanos/thanos:v0.25.1
+        name: thanos-query
+        ports:
+        - containerPort: 10902
+          name: http
+        - containerPort: 10901
+          name: grpc

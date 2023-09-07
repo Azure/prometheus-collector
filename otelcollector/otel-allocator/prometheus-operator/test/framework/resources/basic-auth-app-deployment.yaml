@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: instrumented-sample-app
+  labels:
+    group: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      group: test
+  template:
+    metadata:
+      labels:
+        group: test
+    spec:
+      containers:
+      - name: example-app
+        image: quay.io/prometheus-operator/instrumented-sample-app:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: web
+          containerPort: 8080
+        - name: mtls
+          containerPort: 8081
