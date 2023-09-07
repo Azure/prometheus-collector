@@ -239,7 +239,7 @@ GOLANG_VERSION=`cat /opt/goversion.txt`
 echo_var "GOLANG_VERSION" "$GOLANG_VERSION"
 
 # Start otelcollector
-if [ $controllerType = "replicaset" ]; then
+if [ $controllerType = "replicaset" ] && [ "${AZMON_OPERATOR_ENABLED}" == "true" ]; then
       echo_warning "Starting otelcollector in replicaset with Target allocator settings"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-replicaset.yml &> /opt/microsoft/otelcollector/collector-log.txt &
 elif [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then

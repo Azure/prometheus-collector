@@ -1,8 +1,8 @@
 AzureMonitorMetrics:
   KubeStateMetrics:
 # Uncomment the below 2 settings if you want to pass in the labels and/or annotations
-    # MetricLabelsAllowlist: "*=[*]"
-    # MetricAnnotationsAllowList: "pods=[*],nodes=[*]"
+    #MetricLabelsAllowlist: "testlabel=[.*]"
+    #MetricAnnotationsAllowList: ""
     ImageRepository: "/oss/kubernetes/kube-state-metrics"
 # Kube-state-metrics ImageTag - 2.9.2, corresponds to chart version - 5.10.1
     ImageTag: "v2.9.2"
@@ -38,8 +38,6 @@ AzureMonitorMetrics:
   ImageRepository: ${MCR_REPOSITORY}
   ImageTag: ${IMAGE_TAG}
   ImageTagWin: ${IMAGE_TAG}-win
-  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator
-  ImageTagCfg: ${IMAGE_TAG}-cfg
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP -
   # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
