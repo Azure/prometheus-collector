@@ -1,41 +1,23 @@
 apiVersion: azmonitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: prom_pqs_prod
+  name: prometheus-reference-app-job
 spec:
+  labelLimit: 63
+  labelNameLengthLimit: 511
+  labelValueLengthLimit: 1023
   selector:
     matchLabels:
-      environment: (?i)prod
-    matchExpressions:
-      - key: app
-        operator: In
-        values: [promwebapi-queryworker, promwebapi-queryfrontend, promwebapi-queryservice, nginx-ingress]
-    namespaceSelector:
-      matchNames: [promwebapi-queryworker, promwebapi-queryfrontend, promwebapi-queryservice]
-  podTargetLabels: [app, region, environment, cluster, region]
+      app: prometheus-reference-app
   podMetricsEndpoints:
-    - relabelings:
-      - targetLabel: microsoft_metrics_account
-        action: replace
-        replacement: "pamw-cloudgbl-bl-p"
----
-apiVersion: azmonitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: obs-istiod-prod
-spec:
-  namespaceSelector:
-    matchNames:
-      - istio-system
-  endpoints:
-    - port: http-monitoring
-      relabelings:
-        - sourceLabels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
-          action: keep
-          regex: istiod
-      metricRelabelings:
-        - sourceLabels: [__name__]
-          regex: citadel_server_root_cert_expiry_timestamp|endpoint_no_pod|istio_build|pilot_endpoint_not_ready|pilot_services|sidecar_injection_requests_total|sidecar_injection_success_total
-          action: keep
+  - relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: "prometheus-reference-app"
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      action: replace
+      regex: ('$$NODE_NAME$$')
+      targetLabel: instance
 
----
+  
+
