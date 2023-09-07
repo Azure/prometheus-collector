@@ -3,6 +3,7 @@ trigger:
     include:
     - main
     - operator-targetallocator
+    - grace/remove-fork
 
 pr:
   autoCancel: true
@@ -345,7 +346,6 @@ jobs:
     DOCKER_BUILDKIT: 1
   steps:
     - checkout: self
-      submodules: recursive
       persistCredentials: true
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
@@ -368,7 +368,7 @@ jobs:
           # Load in amd64 image to run vulnerability scan
           docker buildx build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json
         fi
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-operator/cmd/otel-allocator
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
       displayName: "Build: build and push target allocator image to dev ACR"
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
