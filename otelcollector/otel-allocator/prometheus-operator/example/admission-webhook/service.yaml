@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: prometheus-operator-admission-webhook
+    app.kubernetes.io/version: 0.66.0
+  name: prometheus-operator-admission-webhook
+  namespace: default
+spec:
+  ports:
+  - name: https
+    port: 443
+    targetPort: https
+  selector:
+    app.kubernetes.io/name: prometheus-operator-admission-webhook
