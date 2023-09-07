@@ -56,6 +56,11 @@
           "RolloutParametersPath": "Parameters\\PrometheusCollector.TargetAllocator.Parameters.json"
         },
         {
+          "Name": "PushConfigReader",
+          "InstanceOf": "ShellExtension",
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.ConfigReader.Parameters.json"
+        },
+        {
           "Name": "Push1PHelmChart",
           "InstanceOf": "ShellExtension",
           "RolloutParametersPath": "Parameters\\PrometheusCollector.Chart.Parameters.json"

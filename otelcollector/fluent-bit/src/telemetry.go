@@ -389,7 +389,7 @@ func SendContainersCpuMemoryToAppInsightsMetrics() {
 					continue
 				case "ama-metrics-ksm":
 					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, ksmCpuMemoryTelemetryName, "MemKsmRssBytes")
-				case "ta-container":
+				case "targetallocator":
 					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "taCPUUsage", "taMemRssBytes")
 				case "config-reader":
 					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "cnfgRdrCPUUsage", "cnfgRdrMemRssBytes")

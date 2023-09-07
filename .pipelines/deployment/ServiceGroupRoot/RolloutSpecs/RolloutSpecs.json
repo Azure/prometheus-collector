@@ -40,6 +40,13 @@
       "dependsOn": [ ]
     },
     {
+      "name": "PushConfigReader",
+      "targetType": "ServiceResource",
+      "targetName": "PushConfigReader",
+      "actions": [ "Shell/PushAgentToACR" ],
+      "dependsOn": [ ]
+    },
+    {
       "name": "PushKSMChart",
       "targetType": "ServiceResource",
       "targetName": "PushKSMChart",
