@@ -3,7 +3,6 @@ trigger:
     include:
     - main
     - operator-targetallocator
-    - rashmi/ta-toggle
 
 pr:
   autoCancel: true
