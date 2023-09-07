@@ -35,11 +35,16 @@ AzureMonitorMetrics:
       - storageclasses
       - validatingwebhookconfigurations
       - volumeattachments
-  ImageRepository: ${MCR_REPOSITORY}
-  ImageTag: ${IMAGE_TAG}
-  ImageTagWin: ${IMAGE_TAG}-win
-  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator
-  ImageTagCfg: ${IMAGE_TAG}-cfg
+  ImageRepository: "/azuremonitor/containerinsights/cidev/prometheus-collector/images"
+  # ImageTag: "6.7.4-operator-targetallocator-08-15-2023-f0f7de32"
+  # ImageTag: "6.7.4-rashmi-ta-bug-fixes-08-30-2023-6562912f" # has pod annotation enabled to all ns by def
+  ImageTag: "6.7.4-operator-targetallocator-09-01-2023-da272c2a"
+  ImageTagWin: "6.7.4-operator-targetallocator-09-01-2023-da272c2a-win"
+  # ImageTagWin: "6.7.4-operator-targetallocator-08-15-2023-f0f7de32-win"
+  # ImageTagTargetAllocator: "6.7.4-operator-targetallocator-08-15-2023-f0f7de32-targetallocator"
+  ImageTagTargetAllocator: "6.7.4-operator-targetallocator-09-01-2023-da272c2a-targetallocator"
+  #ImageTagCfg: "6.7.4-operator-targetallocator-08-15-2023-f0f7de32-cfg"
+  ImageTagCfg: "6.7.4-operator-targetallocator-09-01-2023-da272c2a-cfg"
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP -
   # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
@@ -49,7 +54,7 @@ AzureMonitorMetrics:
     ImageTag: "master.221118.2"
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
     ImageTagWin: "20230120winbeta"
-  ArcExtension: ${ARC_EXTENSION}
+  ArcExtension: false
   # Do not change the below settings. They are reserved for Arc Autonomous
   isArcACluster: false
   arcAutonomousSettings:
@@ -59,9 +64,9 @@ AzureMonitorMetrics:
 global:
   commonGlobals:
     CloudEnvironment: "azurepubliccloud"
-    Region: "${AKS_REGION}"
+    Region: "westus2"
     Customer:
-      AzureResourceID: ${AKS_RESOURCE_ID}
+      AzureResourceID: "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourcegroups/rashmi-operator-cfg/providers/Microsoft.ContainerService/managedClusters/rashmi-operator-cfg"
 
 # For ARC backdoor testing
 Azure:
