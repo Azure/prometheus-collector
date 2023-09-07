@@ -13,7 +13,7 @@ promconfigvalidator:
 	make -C ../prom-config-validator-builder
 
 targetallocator:
-	make -C ../opentelemetry-operator/cmd/otel-allocator
+	make -C ../otel-allocator
 
 configurationreader:
 	make -C ../configuration-reader-builder
