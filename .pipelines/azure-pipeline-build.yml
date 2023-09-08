@@ -3,6 +3,7 @@ trigger:
     include:
     - main
     - operator-targetallocator
+    - grace/arc-toggle
 
 pr:
   autoCancel: true

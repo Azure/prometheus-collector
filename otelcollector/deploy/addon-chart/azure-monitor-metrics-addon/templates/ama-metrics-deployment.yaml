@@ -62,7 +62,11 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: AZMON_OPERATOR_ENABLED
+            {{- if or (eq .Values.AzureMonitorMetrics.ArcExtension false) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true) }}
+              value: "true"
+            {{- else }}
               value: "false"
+            {{- end }}
             - name: customEnvironment
               {{- if .Values.AzureMonitorMetrics.ArcExtension }}
               value: "{{ lower .Values.Azure.Cluster.Cloud }}"

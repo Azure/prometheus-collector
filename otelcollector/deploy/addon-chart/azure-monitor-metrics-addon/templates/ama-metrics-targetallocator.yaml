@@ -1,3 +1,4 @@
+{{- if or (eq .Values.AzureMonitorMetrics.ArcExtension false) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -217,3 +218,4 @@ spec:
           optional: true
       - name: ta-config-shared
         emptyDir: {}
+{{- end }}
