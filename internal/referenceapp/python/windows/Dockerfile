@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM docker pull mcr.microsoft.com/windows-cssc/python:3.11-server-ltsc2022
+FROM mcr.microsoft.com/windows-cssc/python:3.11-server-ltsc2022
 
 # Move to working directory /build
 WORKDIR /build

@@ -3,6 +3,7 @@ trigger:
     include:
     - main
     - kaveesh/windows_liveness_fix
+    - rashmi/secure-chain-fix
 pr:
   autoCancel: true
   branches:
