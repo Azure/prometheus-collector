@@ -194,7 +194,6 @@ jobs:
   variables:
     WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
-    DOCKER_BUILDKIT: 1
   steps:
     - powershell: |
         docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
