@@ -140,7 +140,7 @@ jobs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
 
-- job: ReferenceApp-Golang-Linux
+- job: Reference_App_Golang_Linux
   displayName: Build reference app image for golang linux
   pool:
     name: Azure-Pipelines-CI-Test-EO
