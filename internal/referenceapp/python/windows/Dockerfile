@@ -3,9 +3,9 @@
 FROM mcr.microsoft.com/windows-cssc/python:3.11-servercore-ltsc2022
 
 # Move to working directory /build
-#WORKDIR /build
+WORKDIR /build
 
-RUN py -m pip install prometheus-client
+RUN python -m pip install prometheus-client
 
 # Copy the code into the container
 COPY . .
