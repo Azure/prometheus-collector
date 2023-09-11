@@ -1,5 +1,14 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 9-11-2023
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.5-main-09-11-2023-TBD`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.5-main-09-11-2023-TBD-win`
+* Change log -
+  * Add container image signing
+  * fix: windows liveness probe bug fix
+  * fix: proxy liveness probe timing fix
+  * Add extra metrics for default alerting to minimimal ingestion profile
+
 ## Release 08-11-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.4-main-08-11-2023-6de2ec55`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.4-main-08-11-2023-6de2ec55-win`
