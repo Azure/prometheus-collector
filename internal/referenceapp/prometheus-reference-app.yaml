@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: prometheus-reference-app-new
+  name: prometheus-reference-app
 spec:
   selector:
     matchLabels:
-      app: prometheus-reference-app-new
+      app: prometheus-reference-app
   replicas: 1
   template:
     metadata:
       labels:
-        app: prometheus-reference-app-new
+        app: prometheus-reference-app
     spec:
       containers:
-        - name: prometheus-reference-app-golang-new
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.4-rashmi-secure-chain-fix-09-10-2023-450747f0-ref-app-golang
+        - name: prometheus-reference-app-golang
+          image: gracepromacr.azurecr.io/prometheus-reference-app:golang-082521
           env:
             - name: RUN_PERF_TEST
               value: "false"
@@ -27,8 +27,8 @@ spec:
               protocol: TCP
             - containerPort: 2113
               protocol: TCP
-        - name: prometheus-reference-app-python-new
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.4-rashmi-secure-chain-fix-09-10-2023-450747f0-ref-app-python
+        - name: prometheus-reference-app-python
+          image: gracepromacr.azurecr.io/prometheus-reference-app:python-082521
           ports:
           - containerPort: 2114
             protocol: TCP
@@ -38,10 +38,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: prometheus-reference-service-new
+  name: prometheus-reference-service
 spec:
   selector:
-    app: prometheus-reference-app-new
+    app: prometheus-reference-app
   ports:
     - name: "weather-app"
       protocol: TCP

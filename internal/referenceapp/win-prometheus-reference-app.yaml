@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: win-prometheus-reference-app-new
+  name: win-prometheus-reference-app
 spec:
   selector:
     matchLabels:
-      app: win-prometheus-reference-app-new
+      app: win-prometheus-reference-app
   replicas: 1
   template:
     metadata:
       labels:
-        app: win-prometheus-reference-app-new
+        app: win-prometheus-reference-app
     spec:
       containers:
-        - name: win-prometheus-reference-app-golang-new
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.4-rashmi-secure-chain-fix-09-10-2023-450747f0-win-ref-app-golang
+        - name: win-prometheus-reference-app-golang
+          image: docker.io/gracewehner/win-prometheus-reference-app:golang
           resources:
             limits:
               cpu: 2
@@ -31,8 +31,8 @@ spec:
               protocol: TCP
             - containerPort: 2113
               protocol: TCP
-        - name: win-prometheus-reference-app-python-new
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.4-rashmi-secure-chain-fix-09-10-2023-450747f0-win-ref-app-python
+        - name: win-prometheus-reference-app-python
+          image: docker.io/gracewehner/win-prometheus-reference-app:python
           resources:
             limits:
               cpu: 200m
@@ -46,10 +46,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: win-prometheus-reference-service-new
+  name: win-prometheus-reference-service
 spec:
   selector:
-    app: win-prometheus-reference-app-new
+    app: win-prometheus-reference-app
   ports:
     - name: "weather-app"
       protocol: TCP
