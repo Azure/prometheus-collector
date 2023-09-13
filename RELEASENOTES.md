@@ -1,13 +1,16 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 9-11-2023
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.5-main-09-11-2023-TBD`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.5-main-09-11-2023-TBD-win`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-win`
 * Change log -
-  * Add container image signing
-  * fix: windows liveness probe bug fix
-  * fix: proxy liveness probe timing fix
-  * Add extra metrics for default alerting to minimimal ingestion profile
+  * Add container image signing - https://github.com/Azure/prometheus-collector/pull/570
+  * fix: windows liveness probe bug fix - https://github.com/Azure/prometheus-collector/pull/568
+  * fix: proxy liveness probe timing fix - https://github.com/Azure/prometheus-collector/pull/591
+  * update : add trouble shooting script - https://github.com/Azure/prometheus-collector/pull/572
+  * Add following metrics from below targets to be collected by default when with ingestion profile - This is for future alerting improvements - https://github.com/Azure/prometheus-collector/pull/571
+    * `job=Kubelet` - kubelet_certificate_manager_client_ttl_seconds, kubelet_certificate_manager_client_expiration_renew_errors, kubelet_server_expiration_renew_errors, kubelet_certificate_manager_server_ttl_seconds, kubelet_volume_stats_inodes_free, kube_persistentvolumeclaim_access_mode, kube_persistentvolumeclaim_labels, kube_persistentvolume_status_phase
+    * `job=kube-state-metrics` - kube_daemonset_status_current_number_scheduled, kube_daemonset_status_number_misscheduled
 
 ## Release 08-11-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.4-main-08-11-2023-6de2ec55`
