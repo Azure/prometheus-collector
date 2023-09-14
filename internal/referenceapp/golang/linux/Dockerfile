@@ -1,4 +1,4 @@
-FROM golang:alpine
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.20
 
 # Set necessary environmet variables needed for our image
 ENV GO111MODULE=on \
