@@ -46,6 +46,12 @@ if [ "$HTTPS_PROXY" != "" ] && [ "${HTTPS_PROXY: -1}" == "/" ]; then
   export HTTPS_PROXY=${HTTPS_PROXY::-1}
 fi
 
+# Add our target-allocator service to the no_proxy env variable
+export NO_PROXY=$NO_PROXY,ama-metrics-targetallocator.kube-system.svc.cluster.local
+echo "export NO_PROXY=$NO_PROXY" >> ~/.bashrc	
+export no_proxy=$no_proxy,ama-metrics-targetallocator.kube-system.svc.cluster.local
+echo "export no_proxy=$no_proxy" >> ~/.bashrc
+
 # If HTTP Proxy is enabled, HTTP_PROXY will always have a value.
 # HTTPS_PROXY will be set to same value as HTTP_PROXY if not specified.
 export HTTP_PROXY_ENABLED="false"
@@ -111,14 +117,14 @@ if [ "${MAC}" == "true" ]; then
       waitedSecsSoFar=1
       while true; do
             if [ $waitedSecsSoFar -gt $tokenAdapterWaitsecs ]; then
-                  wget -T 2 -S http://localhost:9999/healthz 2>&1
+                  wget -T 2 -S http://localhost:9999/healthz -Y off 2>&1
                   echo "giving up waiting for token adapter to become healthy after $waitedSecsSoFar secs"
                   # log telemetry about failure after waiting for waitedSecsSoFar and break
                   echo "export tokenadapterUnhealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
                   break
             else
                   echo "checking health of token adapter after $waitedSecsSoFar secs"
-                  tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
+                  tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz -Y off 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
             fi
             if [ ! -z $tokenAdapterResult ]; then
                         echo "found token adapter to be healthy after $waitedSecsSoFar secs" 

@@ -53,6 +53,11 @@ jobs:
         #Truncating this to 124 to add the cfg suffix
         LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
         LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
+        
+        #Truncating this to 113 to add the ref app suffices
+        LINUX_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-113)
+        LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
+        LINUX_REF_APP_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-python
 
         # Truncating to 115 characters as it is required by docker (4 characters used in -win and 9 characters used in -ltsc2019/-ltsc2022)
         WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-115)
@@ -62,6 +67,11 @@ jobs:
         #Truncating this to 112 characters to add the targetallocator suffix
         TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
         TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
+
+        #Truncating this to 113 to add the ref app suffices
+        WIN_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-107)
+        WIN_REF_APP_GOLANG_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-golang
+        WIN_REF_APP_PYTHON_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-python
 
         # Truncating to 119 characters as it is required by docker (9 characters used in -ltsc2019/-ltsc2022)
         WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
@@ -73,6 +83,10 @@ jobs:
         WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
         HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
         ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$ARC_HELM_CHART_NAME:$SEMVER
+        LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
+        LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_PYTHON_IMAGE_TAG
+        WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
+        WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_PYTHON_IMAGE_TAG
 
         echo "##vso[build.updatebuildnumber]$SEMVER"
         echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
@@ -81,6 +95,10 @@ jobs:
         echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_FULL_IMAGE_NAME;isOutput=true]$LINUX_CONFIG_READER_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
+        echo "##vso[task.setvariable variable=LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME"
+        echo "##vso[task.setvariable variable=LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME"
+        echo "##vso[task.setvariable variable=WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME"
+        echo "##vso[task.setvariable variable=WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=WINDOWS_IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
         echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2019_BASE_IMAGE_VERSION"
         echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2022_BASE_IMAGE_VERSION"
@@ -138,6 +156,84 @@ jobs:
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
+
+- job: Reference_App_Golang_Linux
+  displayName: Build reference app image for golang linux
+  pool:
+    name: Azure-Pipelines-CI-Test-EO
+  dependsOn: common
+  variables:
+    LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
+  # This is necessary because of: https://github.com/moby/moby/issues/37965
+    DOCKER_BUILDKIT: 1
+  steps:
+    - checkout: self
+      persistCredentials: true
+    - bash: |
+        mkdir -p $(Build.ArtifactStagingDirectory)/refappgolanglinux
+
+        docker buildx create --name dockerbuilder
+        docker buildx use dockerbuilder
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
+        docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
+      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+      displayName: "Build: build and push reference app golang linux image to dev ACR"
+
+- job: Reference_App_Python_Linux
+  displayName: Build reference app image for python linux
+  pool:
+    name: Azure-Pipelines-CI-Test-EO
+  dependsOn: common
+  variables:
+    LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+  # This is necessary because of: https://github.com/moby/moby/issues/37965
+    DOCKER_BUILDKIT: 1
+  steps:
+    - checkout: self
+      persistCredentials: true
+    - bash: |
+        mkdir -p $(Build.ArtifactStagingDirectory)/refapppythonlinux
+
+        docker buildx create --name dockerbuilder
+        docker buildx use dockerbuilder
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
+        docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)
+      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+      displayName: "Build: build and push reference app python linux image to dev ACR"
+
+- job: Reference_App_Golang_Windows
+  displayName: Build reference app image for golang windows
+  pool:
+    name: Azure-Pipelines-Windows-CI-Test-EO
+  dependsOn: common
+  variables:
+    WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
+  steps:
+    - powershell: |
+        docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        docker push $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+      displayName: "Build: build and push reference app golang windows image to dev ACR"
+      condition: eq(variables.IS_PR, false)
+      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+
+- job: Reference_App_Python_Windows
+  displayName: Build reference app image for python windows
+  pool:
+    name: Azure-Pipelines-Windows-CI-Test-EO
+  dependsOn: common
+  variables:
+    WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+  steps:
+    - powershell: |
+        docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+      displayName: "Build: build and push reference app python windows image to dev ACR"
+      condition: eq(variables.IS_PR, false)
+      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
 
 - job: Linux
   displayName: Build linux image
@@ -374,6 +470,7 @@ jobs:
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
+      condition: eq(variables.IS_PR, false)
 
 - job: Linux_ConfigReader
   displayName: Build linux image for config reader
@@ -429,7 +526,7 @@ jobs:
         ruby --version
         sudo apt-get install ruby-full
         ruby --version
-        sudo gem install brakeman
+        sudo gem install brakeman -v 5.4.1
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
@@ -464,6 +561,7 @@ jobs:
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
+      condition: eq(variables.IS_PR, false)
 
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'
