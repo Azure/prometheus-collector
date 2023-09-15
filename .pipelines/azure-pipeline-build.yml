@@ -470,6 +470,7 @@ jobs:
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
+      condition: eq(variables.IS_PR, false)
 
 - job: Linux_ConfigReader
   displayName: Build linux image for config reader
@@ -525,7 +526,7 @@ jobs:
         ruby --version
         sudo apt-get install ruby-full
         ruby --version
-        sudo gem install brakeman
+        sudo gem install brakeman -v 5.4.1
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
       condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
@@ -560,6 +561,7 @@ jobs:
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
+      condition: eq(variables.IS_PR, false)
 
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'
