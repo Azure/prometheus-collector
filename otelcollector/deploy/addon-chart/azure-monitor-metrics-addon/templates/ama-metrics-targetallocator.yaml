@@ -3,9 +3,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    component: ama-metrics-targetallocator
+    component: ama-metrics-operator-targets
     kubernetes.azure.com/managedby: aks
-  name: ama-metrics-targetallocator
+  name: ama-metrics-operator-targets
   namespace: kube-system
 spec:
   progressDeadlineSeconds: 600
@@ -13,7 +13,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      rsName: ama-metrics-targetallocator
+      rsName: ama-metrics-operator-targets
       kubernetes.azure.com/managedby: aks
   strategy:
     rollingUpdate:
@@ -24,7 +24,7 @@ spec:
     metadata:
       creationTimestamp: null
       labels:
-        rsName: ama-metrics-targetallocator
+        rsName: ama-metrics-operator-targets
         kubernetes.azure.com/managedby: aks
     spec:
       containers:

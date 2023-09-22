@@ -3,9 +3,9 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    component: ama-metrics-targetallocator
+    component: ama-metrics-operator-targets
     kubernetes.azure.com/managedby: aks
-  name: ama-metrics-targetallocator
+  name: ama-metrics-operator-targets
   namespace: kube-system
 spec:
   internalTrafficPolicy: Cluster
@@ -18,7 +18,7 @@ spec:
     protocol: TCP
     targetPort: 8080
   selector:
-    rsName: ama-metrics-targetallocator
+    rsName: ama-metrics-operator-targets
   sessionAffinity: None
   type: ClusterIP
 status:
