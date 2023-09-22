@@ -32,6 +32,7 @@ MATCHER = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]
 @kubeapiserverScrapeInterval = "30s"
 @clusterautoscalerScrapeInterval = "30s"
 @etcdScrapeInterval = "30s"
+@prometheusCollectorHealthCcpInterval = "30s"
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -309,6 +310,22 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "prometheusCollectorHealthInterval override not specified in configmap")
     end
 
+    prometheusCollectorHealthCcpInterval = parsedConfig[:"prometheuscollectorhealth-controlplane"]
+    if !prometheusCollectorHealthCcpInterval.nil?
+      matched = MATCHER.match(prometheusCollectorHealthCcpInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        prometheusCollectorHealthCcpInterval = "30s"
+        @prometheusCollectorHealthCcpInterval = prometheusCollectorHealthCcpInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s")
+      else
+        @prometheusCollectorHealthCcpInterval = prometheusCollectorHealthCcpInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for prometheusCollectorHealthCcpInterval")
+      end
+    else
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "prometheusCollectorHealthCcpInterval override not specified in configmap")
+    end
+
     podannotationScrapeInterval = parsedConfig[:podannotations]
     if !podannotationScrapeInterval.nil?
       matched = MATCHER.match(podannotationScrapeInterval)
@@ -360,6 +377,7 @@ intervalHash["KUBE_SCHEDULER_SCRAPE_INTERVAL"] = @kubeschedulerScrapeInterval
 intervalHash["KUBE_APISERVER_SCRAPE_INTERVAL"] = @kubeapiserverScrapeInterval
 intervalHash["CLUSTER_AUTOSCALER_SCRAPE_INTERVAL"] = @clusterautoscalerScrapeInterval
 intervalHash["ETCD_SCRAPE_INTERVAL"] = @etcdScrapeInterval
+intervalHash["PROMETHEUS_COLLECTOR_HEALTH_CCP_SCRAPE_INTERVAL"] = @prometheusCollectorHealthCcpInterval
 
 if !file.nil?
   # Close file after writing scrape interval list hash

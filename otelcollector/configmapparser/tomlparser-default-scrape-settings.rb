@@ -18,6 +18,7 @@ LOGGING_PREFIX = "default-scrape-settings"
 @kubestateEnabled = true
 @nodeexporterEnabled = true
 @prometheusCollectorHealthEnabled = true
+@prometheusCollectorHealthCcpEnabled = true
 @podannotationEnabled = false
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
@@ -124,19 +125,17 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @etcdEnabled = parsedConfig[:"etcd"]
       puts "config::Using configmap scrape settings for etcd: #{@etcdEnabled}"
     end
+    if !parsedConfig[:"prometheuscollectorhealth-controlplane"].nil?
+      @prometheusCollectorHealthCcpEnabled = parsedConfig[:"prometheuscollectorhealth-controlplane"]
+      puts "config::Using configmap scrape settings for prometheuscollectorhealth-controlplane: #{@prometheusCollectorHealthCcpEnabled}"
+    end
 
     windowsDaemonset = false
     if ENV["WINMODE"].nil? && ENV["WINMODE"].strip.downcase == "advanced"
       windowsDaemonset = true
     end
 
-    # ccp-metrics addon settings for api-server (old flag) and kube-apiserver (new flag)
-    if @apiserverEnabled && @kubeapiserverEnabled
-      # honor the old flag, this is a very unlikely scenario
-      kubeapiserverEnabled = false
-    end
-
-    ccpmetricsEnabled = @isCcpMetricsDeploymentEnabled && (@kubecontrollermanagerEnabled || @kubeschedulerEnabled || @kubeapiserverEnabled || @clusterautoscalerEnabled || @etcdEnabled)
+    ccpmetricsEnabled = @isCcpMetricsDeploymentEnabled && (@kubecontrollermanagerEnabled || @kubeschedulerEnabled || @kubeapiserverEnabled || @clusterautoscalerEnabled || @etcdEnabled || @prometheusCollectorHealthCcpEnabled)
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
       if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@kubeletEnabled && !@prometheusCollectorHealthEnabled && !@kappiebasicEnabled
@@ -162,6 +161,32 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   end
 end
 
+# Use parser to parse the configmap toml file to a ruby structure
+def disableScrapeTargetsByDeployment
+  if @isCcpMetricsDeploymentEnabled
+    ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "CCP_METRICS mode is enabled. Disable targets from customer nodes after config map processing....")
+
+    @kubestateEnabled = false
+    @cadvisorEnabled = false
+    @kubeletEnabled = false
+    @kappiebasicEnabled = false
+    @nodeexporterEnabled = false
+    @corednsEnabled = false
+    @kubeproxyEnabled = false
+    @apiserverEnabled = false
+    @prometheusCollectorHealthEnabled = false
+  else
+    ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "CCP_METRICS mode is disabled. Disable targets from Customer Control Plane after config map processing....")
+
+    @clusterautoscalerEnabled = false
+    @kubecontrollermanagerEnabled = false
+    @kubeschedulerEnabled = false
+    @kubeapiserverEnabled = false
+    @etcdEnabled = false
+    @prometheusCollectorHealthCcpEnabled = false
+  end
+end
+
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start default-scrape-settings Processing")
 # set default targets for MAC mode
@@ -183,26 +208,9 @@ else
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Unsupported/missing config schema version - '#{@configSchemaVersion}' , using defaults, please use supported schema version")
   end
 end
-# set default targets for ccp metrics enabled
-if @isCcpMetricsDeploymentEnabled
-  ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "CCP_METRICS mode is enabled. Disable targets from customer nodes after config map processing....")
+# disable targets if ccp metrics enabled
+disableScrapeTargetsByDeployment
 
-  @kubestateEnabled = false
-  @cadvisorEnabled = false
-  @kubeletEnabled = false
-  @kappiebasicEnabled = false
-  @nodeexporterEnabled = false
-  @corednsEnabled = false
-  @kubeproxyEnabled = false
-else
-  ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "CCP_METRICS mode is disabled. Disable targets from Customer Control Plane after config map processing....")
-
-  @clusterautoscalerEnabled = false
-  @kubecontrollermanagerEnabled = false
-  @kubeschedulerEnabled = false
-  @kubeapiserverEnabled = false
-  @etcdEnabled = false
-end
 
 # Write the settings to file, so that they can be set as environment variables
 file = File.open("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var", "w")
@@ -231,6 +239,7 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_KUBE_APISERVER_SCRAPING_ENABLED=#{@kubeapiserverEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_CLUSTER_AUTOSCALER_SCRAPING_ENABLED=#{@clusterautoscalerEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_ETCD_SCRAPING_ENABLED=#{@etcdEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_COLLECTOR_HEALTH_CCP_SCRAPING_ENABLED=#{@prometheusCollectorHealthCcpEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
 else

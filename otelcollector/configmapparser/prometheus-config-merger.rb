@@ -47,6 +47,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @kubecontrollermanagerDefaultFile = @defaultPromConfigPathPrefix + "kubecontrollermanagerDefault.yml"
 @clusterautoscalerDefaultFile = @defaultPromConfigPathPrefix + "clusterautoscalerDefault.yml"
 @etcdDefaultFile = @defaultPromConfigPathPrefix + "etcdDefault.yml"
+@prometheusCollectorHealthCcpDefaultFile = @defaultPromConfigPathPrefix + "prometheusCollectorHealthCcp.yml"
 
 def parseConfigMap
   begin
@@ -417,6 +418,12 @@ def populateDefaultPrometheusConfig
       defaultConfigs.push(@prometheusCollectorHealthDefaultFile)
     end
 
+    if !ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_CCP_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_CCP_SCRAPING_ENABLED"].downcase == "true"
+      prometheusCollectorHealthCcpInterval = @intervalHash["PROMETHEUS_COLLECTOR_HEALTH_CCP_SCRAPE_INTERVAL"]
+      UpdateScrapeIntervalConfig(@prometheusCollectorHealthCcpDefaultFile, prometheusCollectorHealthCcpInterval)
+      defaultConfigs.push(@prometheusCollectorHealthCcpDefaultFile)
+    end
+
     if !ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"].downcase == "true"
       winexporterMetricsKeepListRegex = @regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
       windowsexporterScrapeInterval = @intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"]
@@ -606,7 +613,8 @@ def setDefaultFileScrapeInterval(scrapeInterval)
     @apiserverDefaultFile, @kubestateDefaultFile, @nodeexporterDefaultFileRsSimple, @nodeexporterDefaultFileRsAdvanced, @nodeexporterDefaultFileDs,
     @prometheusCollectorHealthDefaultFile, @windowsexporterDefaultRsSimpleFile, @windowsexporterDefaultDsFile,
     @windowskubeproxyDefaultFileRsSimpleFile, @windowskubeproxyDefaultDsFile, @podannotationsDefaultFile,
-    @kubecontrollermanagerDefaultFile, @kubeschedulerDefaultFile, @kubeapiserverDefaultFile, @clusterautoscalerDefaultFile, @etcdDefaultFile
+    @kubecontrollermanagerDefaultFile, @kubeschedulerDefaultFile, @kubeapiserverDefaultFile, @clusterautoscalerDefaultFile, @etcdDefaultFile,
+    @prometheusCollectorHealthCcpDefaultFile
   ]
 
   defaultFilesArray.each { |currentFile|

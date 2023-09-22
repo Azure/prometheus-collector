@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ama-metrics
+  name: ama-metrics-ccp
   namespace: {{ .Values.global.commonGlobals.Customer.Namespace }}
   labels:
     component: ama-metrics
@@ -11,13 +11,13 @@ spec:
   paused: false
   selector:
     matchLabels:
-      rsName: ama-metrics
+      rsName: ama-metrics-ccp
   strategy:
     type: RollingUpdate
   template:
     metadata:
       labels:
-        rsName: ama-metrics
+        rsName: ama-metrics-ccp
         kubernetes.azure.com/managedby: aks
         overlaymgr-ignore: "true"
       annotations:
@@ -26,7 +26,7 @@ spec:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
       priorityClassName: system-node-critical
-      serviceAccountName: ama-metrics-serviceaccount
+      serviceAccountName: ama-metrics-ccp-serviceaccount
       containers:
         - name: prometheus-collector
           image: "{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
@@ -96,7 +96,7 @@ spec:
             - name: WINMODE
               value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: MINIMAL_INGESTION_PROFILE
-              value: "true" # only supported value is the string "true"
+              value: "true" # false scrapes all metrics
           securityContext:
             privileged: false
           volumeMounts:
