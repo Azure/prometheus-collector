@@ -269,14 +269,14 @@ if [ "${MAC}" == "true" ] && [ "${CCP_METRICS_ENABLED}" == "false" ]; then
       waitedSecsSoFar=1
       while true; do
             if [ $waitedSecsSoFar -gt $tokenAdapterWaitsecs ]; then
-                  wget -T 2 -S http://localhost:9999/healthz 2>&1
+                  wget -T 2 -S http://localhost:9999/healthz -Y off 2>&1
                   echo "giving up waiting for token adapter to become healthy after $waitedSecsSoFar secs"
                   # log telemetry about failure after waiting for waitedSecsSoFar and break
                   echo "export tokenadapterUnhealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
                   break
             else
                   echo "checking health of token adapter after $waitedSecsSoFar secs"
-                  tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
+                  tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz -Y off 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
             fi
             if [ ! -z $tokenAdapterResult ]; then
                         echo "found token adapter to be healthy after $waitedSecsSoFar secs" 
