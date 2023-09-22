@@ -46,6 +46,12 @@ if [ "$HTTPS_PROXY" != "" ] && [ "${HTTPS_PROXY: -1}" == "/" ]; then
   export HTTPS_PROXY=${HTTPS_PROXY::-1}
 fi
 
+# Add our target-allocator service to the no_proxy env variable
+export NO_PROXY=$NO_PROXY,ama-metrics-operator-targets.kube-system.svc.cluster.local
+echo "export NO_PROXY=$NO_PROXY" >> ~/.bashrc	
+export no_proxy=$no_proxy,ama-metrics-operator-targets.kube-system.svc.cluster.local
+echo "export no_proxy=$no_proxy" >> ~/.bashrc
+
 # If HTTP Proxy is enabled, HTTP_PROXY will always have a value.
 # HTTPS_PROXY will be set to same value as HTTP_PROXY if not specified.
 export HTTP_PROXY_ENABLED="false"
