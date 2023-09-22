@@ -1,3 +1,4 @@
+{{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true) }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -22,3 +23,4 @@ spec:
   type: ClusterIP
 status:
   loadBalancer: {}
+{{- end }}
