@@ -10,21 +10,21 @@
             "apiVersion": "2023-03-01",
             "location": "eastus",
             "properties": {
-                "description": "rule group for cluster ci-dev-aks-mac-eus in MAC: ci-dev-aks-eus-mac",
+                "description": "rule group for cluster monitoring-metrics-prod-aks-eus2euap in MAC: monitoring-metrics-amw-eus2euap",
                 "scopes": [
-                    "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/microsoft.monitor/accounts/ci-dev-aks-eus-mac",
-                    "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
+                    "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-amw/providers/microsoft.monitor/accounts/monitoring-metrics-amw-eus2euap",
+                    "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-prod-aks/providers/Microsoft.ContainerService/managedClusters/monitoring-metrics-prod-aks-eus2euap"
                 ],
                 "rules": [
                     {
-                        "alert": "Amd64 metric missing in cluster ci-dev-aks-mac-eus",
-                        "expression": "absent(node_uname_info{cluster=\"ci-dev-aks-mac-eus\", machine=\"x86_64\"}) == 1 or node_uname_info{cluster=\"ci-dev-aks-mac-eus\", machine=\"x86_64\"} == 0",
+                        "alert": "Amd64 metric missing in cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "absent(node_uname_info{cluster=\"monitoring-metrics-prod-aks-eus2euap\", machine=\"x86_64\"}) == 1 or node_uname_info{cluster=\"monitoring-metrics-prod-aks-eus2euap\", machine=\"x86_64\"} == 0",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "Amd64 metric missing in cluster ci-dev-aks-mac-eus"
+                            "description": "Amd64 metric missing in cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -38,14 +38,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = node in cluster ci-dev-aks-mac-eus",
-                        "expression": "absent(up{cluster=\"ci-dev-aks-mac-eus\", job=\"node\"}) == 1 or  up{cluster=\"ci-dev-aks-mac-eus\", job=\"node\"} == 0",
+                        "alert": "up metric missing for target = node in cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "absent(up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"node\"}) == 1 or  up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"node\"} == 0",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = node in cluster ci-dev-aks-mac-eus"
+                            "description": "up metric is not flowing for target = node in cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -59,14 +59,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kubelet in cluster ci-dev-aks-mac-eus",
-                        "expression": "absent(up{cluster=\"ci-dev-aks-mac-eus\", job=\"kubelet\"}) == 1 or  up{cluster=\"ci-dev-aks-mac-eus\", job=\"kubelet\"} == 0",
+                        "alert": "up metric missing for target = kubelet in cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "absent(up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kubelet\"}) == 1 or  up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kubelet\"} == 0",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kubelet in cluster ci-dev-aks-mac-eus"
+                            "description": "up metric is not flowing for target = kubelet in cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -80,14 +80,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = windows-exporter in cluster ci-dev-aks-mac-eus",
-                        "expression": "absent(up{cluster=\"ci-dev-aks-mac-eus\", job=\"windows-exporter\"}) == 1 or  up{cluster=\"ci-dev-aks-mac-eus\", job=\"windows-exporter\"} == 0",
+                        "alert": "up metric missing for target = windows-exporter in cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "absent(up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"windows-exporter\"}) == 1 or  up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"windows-exporter\"} == 0",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = windows-exporter in cluster ci-dev-aks-mac-eus"
+                            "description": "up metric is not flowing for target = windows-exporter in cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -101,14 +101,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kube-proxy in cluster ci-dev-aks-mac-eus",
-                        "expression": "absent(up{cluster=\"ci-dev-aks-mac-eus\", job=\"kube-proxy\"}) == 1 or  up{cluster=\"ci-dev-aks-mac-eus\", job=\"kube-proxy\"} == 0",
+                        "alert": "up metric missing for target = kube-proxy in cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "absent(up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kube-proxy\"}) == 1 or  up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kube-proxy\"} == 0",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kube-proxy in cluster ci-dev-aks-mac-eus"
+                            "description": "up metric is not flowing for target = kube-proxy in cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -122,14 +122,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kube-apiserver in cluster ci-dev-aks-mac-eus",
-                        "expression": "absent(up{cluster=\"ci-dev-aks-mac-eus\", job=\"kube-apiserver\"}) == 1 or  up{cluster=\"ci-dev-aks-mac-eus\", job=\"kube-apiserver\"} == 0",
+                        "alert": "up metric missing for target = kube-apiserver in cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "absent(up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kube-apiserver\"}) == 1 or  up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kube-apiserver\"} == 0",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kube-apiserver in cluster ci-dev-aks-mac-eus"
+                            "description": "up metric is not flowing for target = kube-apiserver in cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -143,14 +143,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kube-proxy-windows in cluster ci-dev-aks-mac-eus",
-                        "expression": "absent(up{cluster=\"ci-dev-aks-mac-eus\", job=\"kube-proxy-windows\"}) == 1 or  up{cluster=\"ci-dev-aks-mac-eus\", job=\"kube-proxy-windows\"} == 0",
+                        "alert": "up metric missing for target = kube-proxy-windows in cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "absent(up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kube-proxy-windows\"}) == 1 or  up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kube-proxy-windows\"} == 0",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kube-proxy-windows in cluster ci-dev-aks-mac-eus"
+                            "description": "up metric is not flowing for target = kube-proxy-windows in cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -164,14 +164,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kube-state-metrics in cluster ci-dev-aks-mac-eus",
-                        "expression": "absent(up{cluster=\"ci-dev-aks-mac-eus\", job=\"kube-state-metrics\"}) == 1 or  up{cluster=\"ci-dev-aks-mac-eus\", job=\"kube-state-metrics\"} == 0",
+                        "alert": "up metric missing for target = kube-state-metrics in cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "absent(up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kube-state-metrics\"}) == 1 or  up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kube-state-metrics\"} == 0",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kube-state-metrics in cluster ci-dev-aks-mac-eus"
+                            "description": "up metric is not flowing for target = kube-state-metrics in cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -185,14 +185,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = cadvisor in cluster ci-dev-aks-mac-eus",
-                        "expression": "absent(up{cluster=\"ci-dev-aks-mac-eus\", job=\"cadvisor\"}) == 1 or  up{cluster=\"ci-dev-aks-mac-eus\", job=\"cadvisor\"} == 0",
+                        "alert": "up metric missing for target = cadvisor in cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "absent(up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"cadvisor\"}) == 1 or  up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"cadvisor\"} == 0",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = cadvisor in cluster ci-dev-aks-mac-eus"
+                            "description": "up metric is not flowing for target = cadvisor in cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -206,14 +206,14 @@
                         ]
                     },
                     {
-                        "alert": "up metric missing for target = kube-dns in cluster ci-dev-aks-mac-eus",
-                        "expression": "absent(up{cluster=\"ci-dev-aks-mac-eus\", job=\"kube-dns\"}) == 1 or  up{cluster=\"ci-dev-aks-mac-eus\", job=\"kube-dns\"} == 0",
+                        "alert": "up metric missing for target = kube-dns in cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "absent(up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kube-dns\"}) == 1 or  up{cluster=\"monitoring-metrics-prod-aks-eus2euap\", job=\"kube-dns\"} == 0",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "up metric is not flowing for target = kube-dns in cluster ci-dev-aks-mac-eus"
+                            "description": "up metric is not flowing for target = kube-dns in cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -227,14 +227,14 @@
                         ]
                     },
                     {
-                        "alert": "CPU usage % greater than 90 for prometheus-collector containers on cluster ci-dev-aks-mac-eus",
-                        "expression": "sum(sum by (cluster, namespace, pod, container) ( rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", namespace=\"kube-system\", cluster=\"ci-dev-aks-mac-eus\", container=\"prometheus-collector\"}[5m]) ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) ( 1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\", namespace=\"kube-system\", cluster=\"ci-dev-aks-mac-eus\"}) )) by (container, pod) > 0.9",
+                        "alert": "CPU usage % greater than 90 for prometheus-collector containers on cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "sum(sum by (cluster, namespace, pod, container) ( rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", namespace=\"kube-system\", cluster=\"monitoring-metrics-prod-aks-eus2euap\", container=\"prometheus-collector\"}[5m]) ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) ( 1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\", namespace=\"kube-system\", cluster=\"monitoring-metrics-prod-aks-eus2euap\"}) )) by (container, pod) > 0.9",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "CPU usage greater than 90% for prometheus-collector on cluster ci-dev-aks-mac-eus"
+                            "description": "CPU usage greater than 90% for prometheus-collector on cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -248,14 +248,14 @@
                         ]
                     },
                     {
-                        "alert": "CPU usage % greater than 50 for prometheus-collector containers on cluster ci-dev-aks-mac-eus",
-                        "expression": "sum(sum by (cluster, namespace, pod, container) ( rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", namespace=\"kube-system\", cluster=\"ci-dev-aks-mac-eus\", container=\"prometheus-collector\"}[5m]) ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) ( 1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\", namespace=\"kube-system\", cluster=\"ci-dev-aks-mac-eus\"}) )) by (container, pod) > 0.5",
+                        "alert": "CPU usage % greater than 50 for prometheus-collector containers on cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "sum(sum by (cluster, namespace, pod, container) ( rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", namespace=\"kube-system\", cluster=\"monitoring-metrics-prod-aks-eus2euap\", container=\"prometheus-collector\"}[5m]) ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) ( 1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\", namespace=\"kube-system\", cluster=\"monitoring-metrics-prod-aks-eus2euap\"}) )) by (container, pod) > 0.5",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "CPU usage greater than 5% for prometheus-collector on cluster ci-dev-aks-mac-eus"
+                            "description": "CPU usage greater than 5% for prometheus-collector on cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
@@ -269,14 +269,14 @@
                         ]
                     },
                     {
-                        "alert": "Memory usage is high for prometheus-collector containers on cluster ci-dev-aks-mac-eus",
-                        "expression": "(sum(container_memory_working_set_bytes{cluster=\"ci-dev-aks-mac-eus\", namespace=\"kube-system\", container=\"prometheus-collector\", image!=\"\"}) by (container, pod) / sum(kube_pod_container_resource_requests{cluster=\"ci-dev-aks-mac-eus\", namespace=\"kube-system\", container=\"prometheus-collector\", resource=\"memory\"}) by (container, pod)) > 1.9",
+                        "alert": "Memory usage is high for prometheus-collector containers on cluster monitoring-metrics-prod-aks-eus2euap",
+                        "expression": "(sum(container_memory_working_set_bytes{cluster=\"monitoring-metrics-prod-aks-eus2euap\", namespace=\"kube-system\", container=\"prometheus-collector\", image!=\"\"}) by (container, pod) / sum(kube_pod_container_resource_requests{cluster=\"monitoring-metrics-prod-aks-eus2euap\", namespace=\"kube-system\", container=\"prometheus-collector\", resource=\"memory\"}) by (container, pod)) > 1.9",
                         "for": "PT3M",
                         "labels": {
-                            "cluster": "ci-dev-aks-mac-eus"
+                            "cluster": "monitoring-metrics-prod-aks-eus2euap"
                         },
                         "annotations": {
-                            "description": "Memory usage is high for prometheus-collector containers on cluster ci-dev-aks-mac-eus"
+                            "description": "Memory usage is high for prometheus-collector containers on cluster monitoring-metrics-prod-aks-eus2euap"
                         },
                         "severity": 4,
                         "resolveConfiguration": {
