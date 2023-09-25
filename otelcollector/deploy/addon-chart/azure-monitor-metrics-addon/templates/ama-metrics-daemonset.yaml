@@ -149,7 +149,7 @@ spec:
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
-            {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s")) }}
+            {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.ClusterDistribution "aks_edge") (and ((ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s")))) }}
             - mountPath: /anchors/ubuntu
               name: anchors-ubuntu
               readOnly: true
@@ -262,7 +262,7 @@ spec:
           hostPath:
             path: /etc/pki/ca-trust/anchors/
             type: DirectoryOrCreate
-        {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s")) }}
+        {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (ne .Values.ClusterDistribution "aks_edge") (and ((ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s")))) }}
         - name: anchors-ubuntu
           hostPath:
             path: /usr/local/share/ca-certificates/
