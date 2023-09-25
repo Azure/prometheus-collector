@@ -42,10 +42,7 @@ spec:
             memory: 50Mi
         env:
         - name: OTELCOL_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: kube-system
+          value: "kube-system"
         - name: NODE_IP
           valueFrom:
             fieldRef:
@@ -111,9 +108,7 @@ spec:
             fieldRef:
               fieldPath: metadata.name
         - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: kube-system
+          value: "kube-system"
         - name: CONTAINER_TYPE
           value: "ConfigReaderSidecar"
         - name: MODE
