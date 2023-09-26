@@ -33,10 +33,7 @@ receivers:
         endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
         interval: 30s
         collector_id: "$POD_NAME"
-extensions:
-    health_check:
 service:
-  extensions: [health_check]
   pipelines:
     metrics:
       receivers: [prometheus]
@@ -44,7 +41,7 @@ service:
       processors: [batch,resource]
   telemetry:
     logs:
-      level: debug
+      level: warn
       encoding: json
     metrics:
       level: detailed
