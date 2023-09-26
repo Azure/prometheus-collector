@@ -640,6 +640,50 @@ try {
             Write-Host ("Logs for $podName have been saved to $($podName)_promcollector.log and $($podName)__addontokenadapterwin.log")
             $iterationCount++
         }
+
+        # Collect windows exporter pod logs if it exits
+
+        Write-Host("Checking whether the winndows exporter pods are running correctly in the monitoring namespace...")
+        $ds = kubectl get ds -n monitoring -o json --field-selector metadata.name=windows-exporter | ConvertFrom-Json
+        if (($null -eq $ds) -or ($null -eq $ds.Items) -or ($ds.Items.Length -ne 1)) {
+            Write-Host( "windows exporter daemonset pod not scheduled or failed to schedule." + $contactUSMessage)
+        }
+        else {
+            $dsStatus = $ds.Items[0].status
+
+            if (
+            (($dsStatus.currentNumberScheduled -eq $dsStatus.desiredNumberScheduled) -and
+                ($dsStatus.numberAvailable -eq $dsStatus.currentNumberScheduled) -and
+                ($dsStatus.numberAvailable -eq $dsStatus.numberReady)) -eq $false) {
+
+                Write-Host( "windows exporter daemonset pod not scheduled or failed to schedule.") -ForegroundColor Red
+                Write-Host($dsStatus)
+            }
+            else {
+
+                Write-Host( "windows exporter daemonset pod(s) running OK.") -ForegroundColor Green
+
+                $iterationCount = 0
+                $maxIterations = 15
+                # Get windows exporter daemonset pod logs
+                $podNames = kubectl get pods -n monitoring -l app=windows-exporter -o jsonpath='{.items[*].metadata.name}' | ForEach-Object { $_.Trim() -split '\s+' }
+                foreach ($podName in $podNames) {
+                    if ($iterationCount -ge $maxIterations) {
+                        Write-Host "Maximum iteration count reached ($maxIterations) Exiting loop."
+                        break
+                    }
+                   
+                    # Get logs from prometheus-collector container and store in a file
+                    $windowsExporterLogPath = "$debuglogsDir/$($podName).log"
+                    kubectl logs $($podName) -n monitoring > $windowsExporterLogPath
+
+                    Write-Host ("Logs for $podName have been saved to $($podName).log")
+                    $iterationCount++
+                }
+
+
+            }
+        }
     }
 }
 catch {
