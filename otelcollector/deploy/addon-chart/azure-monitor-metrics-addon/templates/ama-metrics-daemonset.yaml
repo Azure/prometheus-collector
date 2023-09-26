@@ -33,7 +33,7 @@ spec:
               cpu: 200m
               memory: 1Gi
             requests:
-              cpu: 75m
+              cpu: 50m
               memory: 150Mi
           {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
           envFrom:
@@ -311,7 +311,7 @@ spec:
               cpu: 500m
               memory: 1Gi
             requests:
-              cpu: 500m
+              cpu: 150m
               memory: 500Mi
           env:
             - name: CLUSTER
