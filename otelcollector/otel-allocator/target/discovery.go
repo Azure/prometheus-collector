@@ -82,7 +82,6 @@ func (m *Discoverer) ApplyConfig(source allocatorWatcher.EventSource, cfg *confi
 		}
 	}
 
-	// hash, err := hashstructure.Hash(jobToScrapeConfig, nil)
 	hash, err := structhash.Hash(jobToScrapeConfig, 1)
 	if err != nil {
 		return err

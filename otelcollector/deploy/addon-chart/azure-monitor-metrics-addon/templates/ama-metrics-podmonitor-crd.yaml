@@ -1,4 +1,3 @@
-{{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true) }}
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -422,4 +421,3 @@ spec:
         type: object
     served: true
     storage: true
-{{- end }}

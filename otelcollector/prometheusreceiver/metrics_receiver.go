@@ -159,7 +159,6 @@ func (r *pReceiver) syncTargetAllocator(compareHash string, allocConf *targetAll
 		return "", err
 	}
 
-	// hash, err := hashstructure.Hash(scrapeConfigsResponse, hashstructure.FormatV2, nil)
 	hash, err := structhash.Hash(scrapeConfigsResponse, 1)
 
 	if err != nil {
