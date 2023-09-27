@@ -31,6 +31,13 @@
         "westeurope",
         "westus",
         "westus2",
+        "francesouth",
+        "germanywestcentral",
+        "israelcentral",
+        "italynorth",
+        "japanwest",
+        "koreacentral",
+        "switzerlandnorth",
         "usgovvirginia"
       ]
     },

@@ -23,6 +23,13 @@ param azureMonitorWorkspaceResourceId string
   'westeurope',
   'westus',
   'westus2',
+  'francesouth',
+  'germanywestcentral',
+  'israelcentral',
+  'italynorth',
+  'japanwest',
+  'koreacentral',
+  'switzerlandnorth',
   'usgovvirginia'
 ])
 param azureMonitorWorkspaceLocation string
