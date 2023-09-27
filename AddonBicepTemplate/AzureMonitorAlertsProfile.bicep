@@ -16,9 +16,7 @@ resource recommendedAlerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2023
   location: location
   properties: {
     description: 'Kubernetes Alert RuleGroup-RecommendedCIAlerts - 0.1'
-    scopes: [
-      monitorWorkspace.id
-    ]
+    scopes: [monitorWorkspace.id,aksResourceId]
     clusterName: split(aksResourceId, '/')[8]
     enabled: true
     interval: 'PT5M'
@@ -241,9 +239,7 @@ resource communityALerts 'Microsoft.AlertsManagement/prometheusRuleGroups@2023-0
   location: location
   properties: {
     description: 'Kubernetes Alert RuleGroup-communityCIAlerts - 0.1'
-    scopes: [
-      monitorWorkspace.id
-    ]
+    scopes: [monitorWorkspace.id,aksResourceId]
     clusterName: split(aksResourceId, '/')[8]
     enabled: true
     interval: 'PT1M'
