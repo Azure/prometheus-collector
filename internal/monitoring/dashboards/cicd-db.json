@@ -700,7 +700,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -873,7 +874,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -1045,7 +1047,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -1697,8 +1700,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -1788,8 +1790,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -1879,8 +1880,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -1968,8 +1968,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -2085,8 +2084,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -2177,8 +2175,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -2899,7 +2896,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -3072,7 +3070,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -3244,7 +3243,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -3896,8 +3896,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -3987,8 +3986,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -4078,8 +4076,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -4167,8 +4164,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -4284,8 +4280,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -4376,8 +4371,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -5099,7 +5093,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -5272,7 +5267,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -5444,7 +5440,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -5709,8 +5706,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -5823,8 +5819,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -5914,8 +5909,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -6005,8 +5999,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -6096,8 +6089,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -6187,8 +6179,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -6278,8 +6269,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -6367,8 +6357,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -6484,8 +6473,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -6576,8 +6564,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
-                      "value": null
+                      "color": "green"
                     },
                     {
                       "color": "red",
@@ -7299,7 +7286,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -7472,7 +7460,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -7644,7 +7633,8 @@
                       "value": null
                     }
                   ]
-                }
+                },
+                "unit": "decbytes"
               },
               "overrides": []
             },
@@ -8843,6 +8833,6 @@
     "timezone": "",
     "title": "CPU and Memory utilization k-s-m, replicaset and daemonset",
     "uid": "gp9556IVy",
-    "version": 33,
+    "version": 38,
     "weekStart": ""
   }
