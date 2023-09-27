@@ -16,6 +16,7 @@ LOGGING_PREFIX = "config"
 @clusterAlias = ""  # user provided alias (thru config map or chart param)
 @clusterLabel = ""  # value of the 'cluster' label in every time series scraped
 @isOperatorEnabled = ""
+@isOperatorEnabledChartSetting = ""
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -61,6 +62,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   # Safeguard to fall back to non operator model, enable to set to true or false only when toggle is enabled
   if !ENV["AZMON_OPERATOR_ENABLED"].nil? && ENV["AZMON_OPERATOR_ENABLED"].downcase == "true"
     begin
+      @isOperatorEnabledChartSetting = "true"
       if !parsedConfig.nil? && !parsedConfig[:operator_enabled].nil?
         @isOperatorEnabled = parsedConfig[:operator_enabled]
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Configmap setting enabling operator: #{@isOperatorEnabled}")
@@ -68,6 +70,8 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     rescue => errorStr
       ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for prometheus collector settings- #{errorStr}, using defaults, please check config map for errors")
     end
+  else
+    @isOperatorEnabledChartSetting = "false"
   end
 end
 
@@ -115,6 +119,7 @@ if !file.nil?
     file.write("export AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
     file.write("export AZMON_CLUSTER_LABEL=#{@clusterLabel}\n") #used for cluster label value when scraping
     file.write("export AZMON_CLUSTER_ALIAS=#{@clusterAlias}\n") #used only for telemetry
+    file.write("export AZMON_OPERATOR_ENABLED_CHART_SETTING=#{@isOperatorEnabledChartSetting}\n")
     if !@isOperatorEnabled.nil? && !@isOperatorEnabled.empty? && @isOperatorEnabled.length > 0
       file.write("export AZMON_OPERATOR_ENABLED=#{@isOperatorEnabled}\n")
       file.write("export AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=#{@isOperatorEnabled}\n")
