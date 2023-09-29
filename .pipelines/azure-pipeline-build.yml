@@ -643,7 +643,7 @@ jobs:
   - task: HelmInstaller@1
     displayName: 'Build: install Helm version'
     inputs:
-      helmVersionToInstall: latest
+      helmVersionToInstall: 3.12.3
 
   - bash: |
       export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
@@ -789,7 +789,7 @@ jobs:
   - task: HelmInstaller@1
     displayName: Install Helm version
     inputs:
-      helmVersionToInstall: latest
+      helmVersionToInstall: 3.12.3
   - bash: |
       for i in 1 2 3 4 5 6 7 8 9 10
           do
