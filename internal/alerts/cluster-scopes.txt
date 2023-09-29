@@ -1,6 +1,6 @@
 Here are the cluster  parameters which need to be updated in example-alert-template.json before deploying the alerts templates for each cluster. Please
 update the "scopes" field in the alerts template with the cluster id and AMW id from the list below depending on the cluster.
-Update the labels field with the cluster name below. Update the location according to the cluster. Update the alert name accordingly.
+Update the clusterName field with the cluster name below. Update the location according to the cluster. Update the alert name accordingly.
 
 Cluster name                               Cluster id
 
