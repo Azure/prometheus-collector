@@ -476,7 +476,7 @@ jobs:
       displayName: "ESRP CodeSigning for TargetAllocator"
       inputs:
         ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
-        FolderPath: $(Build.ArtifactStagingDirectory)/linux/
+        FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
         Pattern: "*.json"
         signConfigType: inlineSignParams
         inlineOperation: |
@@ -505,8 +505,8 @@ jobs:
           --artifact-type 'application/vnd.cncf.notary.signature' \
           ./payload.json:application/cose \
           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"659AAA9C0E822B4B20A964AA0178BD9419A50530\"]"
-      workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
-      displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
+      workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
+      displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
       #condition: eq(variables.IS_MAIN_BRANCH, true)
 
 - job: Linux_ConfigReader
@@ -604,7 +604,7 @@ jobs:
       displayName: "ESRP CodeSigning for Config Reader"
       inputs:
         ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
-        FolderPath: $(Build.ArtifactStagingDirectory)/linux/
+        FolderPath: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
         Pattern: "*.json"
         signConfigType: inlineSignParams
         inlineOperation: |
@@ -634,8 +634,8 @@ jobs:
           --artifact-type 'application/vnd.cncf.notary.signature' \
           ./payload.json:application/cose \
           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"659AAA9C0E822B4B20A964AA0178BD9419A50530\"]"
-      workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
-      displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
+      workingDirectory: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
+      displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxcfgreader/"
       #condition: eq(variables.IS_MAIN_BRANCH, true)
 
     - task: CodeQL3000Finalize@0
