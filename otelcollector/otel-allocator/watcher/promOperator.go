@@ -17,9 +17,11 @@ package watcher
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/go-kit/log"
 	"github.com/go-logr/logr"
+	"github.com/go-kit/log/level"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	promv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
