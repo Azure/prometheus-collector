@@ -73,7 +73,7 @@ spec:
           initialDelaySeconds: 60
           periodSeconds: 3
       - name: config-reader
-        image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
+        image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfg }}"
         imagePullPolicy: IfNotPresent
         resources:
           limits:
