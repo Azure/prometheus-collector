@@ -600,7 +600,7 @@ jobs:
   - task: HelmInstaller@1
     displayName: 'Build: install Helm version'
     inputs:
-      helmVersionToInstall: 3.12.3
+      helmVersionToInstall: latest
 
   - bash: |
       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
@@ -789,7 +789,7 @@ jobs:
   - task: HelmInstaller@1
     displayName: Install Helm version
     inputs:
-      helmVersionToInstall: 3.12.3
+      helmVersionToInstall: latest
   - bash: |
       for i in 1 2 3 4 5 6 7 8 9 10
           do
