@@ -25,10 +25,10 @@ import (
 	"testing"
 
 	"github.com/blang/semver/v4"
-	operatorFramework "github.com/prometheus-operator/prometheus-operator/test/framework"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+
+	operatorFramework "github.com/prometheus-operator/prometheus-operator/test/framework"
 )
 
 var (
@@ -68,6 +68,9 @@ func skipOperatorUpgradeTests(t *testing.T) {
 }
 
 // feature gated tests need to be explicitly included
+// not currently in use
+//
+// nolint:all
 func runFeatureGatedTests(t *testing.T) {
 	if os.Getenv("FEATURE_GATED_TESTS") != "include" {
 		t.Skip("Skipping Feature Gated tests")
@@ -234,6 +237,7 @@ func testAllNSAlertmanager(t *testing.T) {
 		"AMRollbackManualChanges":                 testAMRollbackManualChanges,
 		"AMMinReadySeconds":                       testAlertManagerMinReadySeconds,
 		"AMWeb":                                   testAMWeb,
+		"AMTemplateReloadConfig":                  testAMTmplateReloadConfig,
 	}
 
 	for name, f := range testFuncs {
@@ -292,6 +296,7 @@ func testAllNSPrometheus(t *testing.T) {
 		"ScrapeConfigCreation":                      testScrapeConfigCreation,
 		"CreatePrometheusAgent":                     testCreatePrometheusAgent,
 		"PrometheusAgentAndServerNameColision":      testAgentAndServerNameColision,
+		"ScrapeConfigKubeNode":                      testScrapeConfigKubernetesNodeRole,
 	}
 
 	for name, f := range testFuncs {

@@ -29,17 +29,17 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/pkg/errors"
-	"github.com/prometheus-operator/prometheus-operator/pkg/alertmanager/validation"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
-	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
 	"github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/alertmanager/timeinterval"
 	"github.com/prometheus/common/model"
 	"gopkg.in/yaml.v2"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/prometheus-operator/prometheus-operator/pkg/alertmanager/validation"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
 )
 
 const inhibitRuleNamespaceKey = "namespace"
@@ -368,6 +368,13 @@ func (cb *configBuilder) convertGlobalConfig(ctx context.Context, in *monitoring
 	}
 
 	out := &globalConfig{}
+
+	if in.SMTPConfig != nil {
+		if err := cb.convertSMTPConfig(ctx, out, *in.SMTPConfig, crKey); err != nil {
+			return nil, errors.Wrap(err, "invalid global smtpConfig")
+		}
+	}
+
 	if in.HTTPConfig != nil {
 		httpConfig, err := cb.convertHTTPConfigForV1(ctx, *in.HTTPConfig, crKey)
 		if err != nil {
@@ -501,7 +508,6 @@ func (cb *configBuilder) convertRoute(in *monitoringv1alpha1.Route, crKey types.
 // convertReceiver converts a monitoringv1alpha1.Receiver to an alertmanager.receiver
 func (cb *configBuilder) convertReceiver(ctx context.Context, in *monitoringv1alpha1.Receiver, crKey types.NamespacedName) (*receiver, error) {
 	var pagerdutyConfigs []*pagerdutyConfig
-
 	if l := len(in.PagerDutyConfigs); l > 0 {
 		pagerdutyConfigs = make([]*pagerdutyConfig, l)
 		for i := range in.PagerDutyConfigs {
@@ -510,6 +516,18 @@ func (cb *configBuilder) convertReceiver(ctx context.Context, in *monitoringv1al
 				return nil, errors.Wrapf(err, "PagerDutyConfig[%d]", i)
 			}
 			pagerdutyConfigs[i] = receiver
+		}
+	}
+
+	var discordConfigs []*discordConfig
+	if l := len(in.DiscordConfigs); l > 0 {
+		discordConfigs = make([]*discordConfig, l)
+		for i := range in.DiscordConfigs {
+			receiver, err := cb.convertDiscordConfig(ctx, in.DiscordConfigs[i], crKey)
+			if err != nil {
+				return nil, errors.Wrapf(err, "DiscordConfig[%d]", i)
+			}
+			discordConfigs[i] = receiver
 		}
 	}
 
@@ -625,6 +643,7 @@ func (cb *configBuilder) convertReceiver(ctx context.Context, in *monitoringv1al
 		Name:             makeNamespacedString(in.Name, crKey),
 		OpsgenieConfigs:  opsgenieConfigs,
 		PagerdutyConfigs: pagerdutyConfigs,
+		DiscordConfigs:   discordConfigs,
 		SlackConfigs:     slackConfigs,
 		WebhookConfigs:   webhookConfigs,
 		WeChatConfigs:    weChatConfigs,
@@ -665,6 +684,36 @@ func (cb *configBuilder) convertWebhookConfig(ctx context.Context, in monitoring
 
 	if in.MaxAlerts > 0 {
 		out.MaxAlerts = in.MaxAlerts
+	}
+
+	return out, nil
+}
+
+func (cb *configBuilder) convertDiscordConfig(ctx context.Context, in monitoringv1alpha1.DiscordConfig, crKey types.NamespacedName) (*discordConfig, error) {
+	out := &discordConfig{
+		VSendResolved: in.SendResolved,
+	}
+
+	if in.Title != nil && *in.Title != "" {
+		out.Title = *in.Title
+	}
+
+	if in.Message != nil && *in.Message != "" {
+		out.Message = *in.Message
+	}
+
+	url, err := cb.getValidURLFromSecret(ctx, crKey.Namespace, in.APIURL)
+	if err != nil {
+		return nil, err
+	}
+	out.WebhookURL = url
+
+	if in.HTTPConfig != nil {
+		httpConfig, err := cb.convertHTTPConfig(ctx, *in.HTTPConfig, crKey)
+		if err != nil {
+			return nil, err
+		}
+		out.HTTPConfig = httpConfig
 	}
 
 	return out, nil
@@ -1297,6 +1346,45 @@ func makeNamespacedString(in string, crKey types.NamespacedName) string {
 		return ""
 	}
 	return crKey.Namespace + "/" + crKey.Name + "/" + in
+}
+
+func (cb *configBuilder) convertSMTPConfig(ctx context.Context, out *globalConfig, in monitoringv1.GlobalSMTPConfig, crKey types.NamespacedName) error {
+	if in.From != nil {
+		out.SMTPFrom = *in.From
+	}
+	if in.Hello != nil {
+		out.SMTPHello = *in.Hello
+	}
+	if in.AuthUsername != nil {
+		out.SMTPAuthUsername = *in.AuthUsername
+	}
+	if in.AuthIdentity != nil {
+		out.SMTPAuthIdentity = *in.AuthIdentity
+	}
+	out.SMTPRequireTLS = in.RequireTLS
+
+	if in.SmartHost != nil {
+		out.SMTPSmarthost.Host = in.SmartHost.Host
+		out.SMTPSmarthost.Port = in.SmartHost.Port
+	}
+
+	if in.AuthPassword != nil {
+		authPassword, err := cb.store.GetSecretKey(ctx, crKey.Namespace, *in.AuthPassword)
+		if err != nil {
+			return err
+		}
+		out.SMTPAuthPassword = authPassword
+	}
+
+	if in.AuthSecret != nil {
+		authSecret, err := cb.store.GetSecretKey(ctx, crKey.Namespace, *in.AuthSecret)
+		if err != nil {
+			return err
+		}
+		out.SMTPAuthSecret = authSecret
+	}
+
+	return nil
 }
 
 func (cb *configBuilder) convertHTTPConfigForV1(ctx context.Context, in monitoringv1.HTTPConfig, crKey types.NamespacedName) (*httpClientConfig, error) {
