@@ -14,8 +14,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
@@ -27,24 +27,22 @@ import (
 )
 
 type meMetricsProcessedCount struct {
-	DimBytesProcessedCount	float64
-	DimBytesSentToPubCount float64
-	DimMetricsSentToPubCount	float64
-	Value	float64
+	DimBytesProcessedCount   float64
+	DimBytesSentToPubCount   float64
+	DimMetricsSentToPubCount float64
+	Value                    float64
 }
 
 type meMetricsReceivedCount struct {
-	Value	float64
+	Value float64
 }
-
-
 
 var (
 	// CommonProperties indicates the dimensions that are sent with every event/metric
 	CommonProperties map[string]string
 	// TelemetryClient is the client used to send the telemetry
 	TelemetryClient appinsights.TelemetryClient
-	// Invalid Prometheus config validation environemnt variable used for telemetry
+	// Invalid Prometheus config validation environment variable used for telemetry
 	InvalidCustomPrometheusConfig string
 	// Default Collector config
 	DefaultPrometheusConfig string
@@ -66,6 +64,34 @@ var (
 	WinExporterKeepListRegex string
 	// Windows KubeProxy metrics keep list regex
 	WinKubeProxyKeepListRegex string
+	// Pod Annotation metrics keep list regex
+	PodannotationKeepListRegex string
+	// Kappie Basic metrics keep list regex
+	KappieBasicKeepListRegex string
+	// Kubelet scrape interval
+	KubeletScrapeInterval string
+	// CoreDNS scrape interval
+	CoreDNSScrapeInterval string
+	// CAdvisor scrape interval
+	CAdvisorScrapeInterval string
+	// KubeProxy scrape interval
+	KubeProxyScrapeInterval string
+	// API Server scrape interval
+	ApiServerScrapeInterval string
+	// KubeState scrape interval
+	KubeStateScrapeInterval string
+	// Node Exporter scrape interval
+	NodeExporterScrapeInterval string
+	// Windows Exporter scrape interval
+	WinExporterScrapeInterval string
+	// Windows KubeProxy scrape interval
+	WinKubeProxyScrapeInterval string
+	// PrometheusCollector Health scrape interval
+	PromHealthScrapeInterval string
+	// Pod Annotation scrape interval
+	PodAnnotationScrapeInterval string
+	// Kappie Basic scrape interval
+	KappieBasicScrapeInterval string
 	// meMetricsProcessedCount map, which holds references to metrics per metric account
 	meMetricsProcessedCountMap = make(map[string]*meMetricsProcessedCount)
 	// meMetricsProcessedCountMapMutex -- used for reading & writing locks on meMetricsProcessedCountMap
@@ -79,7 +105,7 @@ var (
 const (
 	coresAttachedTelemetryIntervalSeconds = 600
 	ksmAttachedTelemetryIntervalSeconds   = 600
-	meMetricsTelemetryIntervalSeconds	  = 300
+	meMetricsTelemetryIntervalSeconds     = 300
 	coresAttachedTelemetryName            = "ClusterCoreCapacity"
 	linuxCpuCapacityTelemetryName         = "LiCapacity"
 	linuxNodeCountTelemetryName           = "LiNodeCnt"
@@ -118,6 +144,7 @@ const (
 	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
+	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
 	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 )
 
@@ -261,6 +288,34 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			NodeExporterKeepListRegex = regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
 			WinExporterKeepListRegex = regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
 			WinKubeProxyKeepListRegex = regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
+			PodannotationKeepListRegex = regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
+			KappieBasicKeepListRegex = regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
+		}
+	}
+
+	// Reading scrape interval hash file for telemetry
+	intervalFileContents, err := ioutil.ReadFile(intervalHashFilePath)
+	if err != nil {
+		Log("Error while opening interval hash file - %v\n", err)
+	} else {
+		Log("Successfully read interval hash file contents for telemetry\n")
+		var intervalHash map[string]string
+		err = yaml.Unmarshal([]byte(intervalFileContents), &intervalHash)
+		if err != nil {
+			Log("Error while unmarshalling interval hash file - %v\n", err)
+		} else {
+			KubeletScrapeInterval = intervalHash["KUBELET_SCRAPE_INTERVAL"]
+			CoreDNSScrapeInterval = intervalHash["COREDNS_SCRAPE_INTERVAL"]
+			CAdvisorScrapeInterval = intervalHash["CADVISOR_SCRAPE_INTERVAL"]
+			KubeProxyScrapeInterval = intervalHash["KUBEPROXY_SCRAPE_INTERVAL"]
+			ApiServerScrapeInterval = intervalHash["APISERVER_SCRAPE_INTERVAL"]
+			KubeStateScrapeInterval = intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
+			NodeExporterScrapeInterval = intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"]
+			WinExporterScrapeInterval = intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"]
+			WinKubeProxyScrapeInterval = intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"]
+			PromHealthScrapeInterval = intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
+			PodAnnotationScrapeInterval = intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
+			KappieBasicScrapeInterval = intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
 		}
 	}
 
@@ -280,12 +335,12 @@ func SendCoreCountToAppInsightsMetrics() {
 
 	coreCountTelemetryTicker := time.NewTicker(time.Second * time.Duration(coresAttachedTelemetryIntervalSeconds))
 	for ; true; <-coreCountTelemetryTicker.C {
-		telemetryProperties := map[string]int64 {
+		telemetryProperties := map[string]int64{
 			windowsCpuCapacityTelemetryName: 0,
-			windowsNodeCountTelemetryName: 0,
-			virtualNodeCountTelemetryName: 0,
-			arm64CpuCapacityTelemetryName: 0,
-			arm64NodeCountTelemetryName: 0,
+			windowsNodeCountTelemetryName:   0,
+			virtualNodeCountTelemetryName:   0,
+			arm64CpuCapacityTelemetryName:   0,
+			arm64NodeCountTelemetryName:     0,
 		}
 
 		nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
@@ -302,10 +357,10 @@ func SendCoreCountToAppInsightsMetrics() {
 			if node.Labels == nil {
 				SendException(fmt.Sprintf("Labels are missing for the node: %s when getting core capacity", node.Name))
 			} else if node.Labels["type"] == "virtual-kubelet" {
-					// Do not add core capacity total for virtual nodes as this could be extremely large
-					// Just count how many virtual nodes exist
-					telemetryProperties[virtualNodeCountTelemetryName] += 1
-					continue
+				// Do not add core capacity total for virtual nodes as this could be extremely large
+				// Just count how many virtual nodes exist
+				telemetryProperties[virtualNodeCountTelemetryName] += 1
+				continue
 			} else {
 				osLabel = node.Labels["kubernetes.io/os"]
 				archLabel = node.Labels["kubernetes.io/arch"]
@@ -493,21 +548,21 @@ func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 			if err == nil {
 
 				metricsAccountName := groupMatches[3]
-				
+
 				bytesProcessedCount, e := strconv.ParseFloat(groupMatches[5], 64)
-				if e != nil{
+				if e != nil {
 					bytesProcessedCount = 0.0
 				}
-			
-				metricsSentToPubCount,e := strconv.ParseFloat(groupMatches[6], 64)
+
+				metricsSentToPubCount, e := strconv.ParseFloat(groupMatches[6], 64)
 				if e != nil {
 					metricsSentToPubCount = 0.0
 				}
-				bytesSentToPubCount,e := strconv.ParseFloat(groupMatches[7], 64)
+				bytesSentToPubCount, e := strconv.ParseFloat(groupMatches[7], 64)
 				if e != nil {
 					bytesSentToPubCount = 0.0
 				}
-				
+
 				//update map
 				meMetricsProcessedCountMapMutex.Lock()
 
@@ -520,12 +575,12 @@ func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 					ref.Value += metricsProcessedCount
 
 				} else {
-					m := &meMetricsProcessedCount { 
-													DimBytesProcessedCount: bytesProcessedCount,
-													DimBytesSentToPubCount: bytesSentToPubCount,
-													DimMetricsSentToPubCount: metricsSentToPubCount,
-													Value: metricsProcessedCount, 
-												  }
+					m := &meMetricsProcessedCount{
+						DimBytesProcessedCount:   bytesProcessedCount,
+						DimBytesSentToPubCount:   bytesSentToPubCount,
+						DimMetricsSentToPubCount: metricsSentToPubCount,
+						Value:                    metricsProcessedCount,
+					}
 					meMetricsProcessedCountMap[metricsAccountName] = m
 				}
 				meMetricsProcessedCountMapMutex.Unlock()
@@ -562,12 +617,12 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 	for ; true; <-ticker.C {
 
 		meMetricsProcessedCountMapMutex.Lock()
-		for k,v := range meMetricsProcessedCountMap {
+		for k, v := range meMetricsProcessedCountMap {
 			metric := appinsights.NewMetricTelemetry("meMetricsProcessedCount", v.Value)
 			metric.Properties["metricsAccountName"] = k
-			metric.Properties["bytesProcessedCount"] = fmt.Sprintf("%.2f",v.DimBytesProcessedCount)
-			metric.Properties["metricsSentToPubCount"] = fmt.Sprintf("%.2f",v.DimMetricsSentToPubCount)
-			metric.Properties["bytesSentToPubCount"] = fmt.Sprintf("%.2f",v.DimBytesSentToPubCount)
+			metric.Properties["bytesProcessedCount"] = fmt.Sprintf("%.2f", v.DimBytesProcessedCount)
+			metric.Properties["metricsSentToPubCount"] = fmt.Sprintf("%.2f", v.DimMetricsSentToPubCount)
+			metric.Properties["bytesSentToPubCount"] = fmt.Sprintf("%.2f", v.DimBytesSentToPubCount)
 
 			if InvalidCustomPrometheusConfig != "" {
 				metric.Properties["InvalidCustomPrometheusConfig"] = InvalidCustomPrometheusConfig
@@ -602,7 +657,49 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 			if WinKubeProxyKeepListRegex != "" {
 				metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
 			}
-			
+			if PodannotationKeepListRegex != "" {
+				metric.Properties["PodannotationKeepListRegex"] = PodannotationKeepListRegex
+			}
+			if KappieBasicKeepListRegex != "" {
+				metric.Properties["KappieBasicKeepListRegex"] = KappieBasicKeepListRegex
+			}
+			if KubeletScrapeInterval != "" {
+				metric.Properties["KubeletScrapeInterval"] = KubeletScrapeInterval
+			}
+			if CoreDNSScrapeInterval != "" {
+				metric.Properties["CoreDNSScrapeInterval"] = CoreDNSScrapeInterval
+			}
+			if CAdvisorScrapeInterval != "" {
+				metric.Properties["CAdvisorScrapeInterval"] = CAdvisorScrapeInterval
+			}
+			if KubeProxyScrapeInterval != "" {
+				metric.Properties["KubeProxyScrapeInterval"] = KubeProxyScrapeInterval
+			}
+			if ApiServerScrapeInterval != "" {
+				metric.Properties["ApiServerScrapeInterval"] = ApiServerScrapeInterval
+			}
+			if KubeStateScrapeInterval != "" {
+				metric.Properties["KubeStateScrapeInterval"] = KubeStateScrapeInterval
+			}
+			if NodeExporterScrapeInterval != "" {
+				metric.Properties["NodeExporterScrapeInterval"] = NodeExporterScrapeInterval
+			}
+			if WinExporterScrapeInterval != "" {
+				metric.Properties["WinExporterScrapeInterval"] = WinExporterScrapeInterval
+			}
+			if WinKubeProxyScrapeInterval != "" {
+				metric.Properties["WinKubeProxyScrapeInterval"] = WinKubeProxyScrapeInterval
+			}
+			if PromHealthScrapeInterval != "" {
+				metric.Properties["PromHealthScrapeInterval"] = PromHealthScrapeInterval
+			}
+			if PodAnnotationScrapeInterval != "" {
+				metric.Properties["PodAnnotationScrapeInterval"] = PodAnnotationScrapeInterval
+			}
+			if KappieBasicScrapeInterval != "" {
+				metric.Properties["KappieBasicScrapeInterval"] = KappieBasicScrapeInterval
+			}
+
 			TelemetryClient.Track(metric)
 
 		}
@@ -667,13 +764,13 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 					ref.Value += metricsReceivedCount
 
 				} else {
-					m := &meMetricsReceivedCount { 
-													Value: metricsReceivedCount, 
-												  }
+					m := &meMetricsReceivedCount{
+						Value: metricsReceivedCount,
+					}
 					meMetricsReceivedCountMap["na"] = m
 				}
 				meMetricsReceivedCountMapMutex.Unlock()
-				
+
 				// Add to the total that PublishTimeseriesVolume() uses
 				if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
 					TimeseriesVolumeMutex.Lock()
