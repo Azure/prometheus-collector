@@ -46,7 +46,8 @@ AzureMonitorMetrics:
   #ImageTag: "6.7.5-rashmi-telegraf-09-27-2023-421ac2ad" # telegraf with debugging and 1min
   #ImageTag: "6.7.5-operator-targetallocator-09-27-2023-380389d0" # Adding chart setting telemetry
   #ImageTag: "6.7.5-rashmi-telegraf-09-28-2023-2cd14345" #Just adding debug and logs and not changing intervals
-  ImageTag: "6.7.5-rashmi-telegraf-09-29-2023-ca7ee0bc" #Upgrade tgf with debug logs
+  #ImageTag: "6.7.5-rashmi-telegraf-09-29-2023-ca7ee0bc" #Upgrade tgf with debug logs - wasn't working friday morning, but worked friday evening
+  ImageTag: "6.7.5-operator-targetallocator-09-29-2023-e2be19ca" # fixing space and writing to fie, wasnt working until 4 40PM 09/29, installed around 2PM 
   ImageTagWin: "6.7.5-operator-targetallocator-09-27-2023-380389d0-win"
   # ImageTagWin: "6.7.4-operator-targetallocator-08-15-2023-f0f7de32-win"
   # ImageTagTargetAllocator: "6.7.4-operator-targetallocator-08-15-2023-f0f7de32-targetallocator"
