@@ -11,7 +11,6 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.86.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.86.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.86.0
-	go.opentelemetry.io/collector v0.86.0
 	go.opentelemetry.io/collector/confmap v0.86.0
 	go.opentelemetry.io/collector/connector v0.86.0
 	go.opentelemetry.io/collector/connector/forwardconnector v0.86.0
@@ -53,6 +52,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20230607035331-e9ce68804cb4 // indirect
+	github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dennwc/varint v1.0.0 // indirect
@@ -182,6 +182,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.mongodb.org/mongo-driver v1.12.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
+	go.opentelemetry.io/collector v0.86.0 // indirect
 	go.opentelemetry.io/collector/component v0.86.0 // indirect
 	go.opentelemetry.io/collector/config/configauth v0.86.0 // indirect
 	go.opentelemetry.io/collector/config/configcompression v0.86.0 // indirect
