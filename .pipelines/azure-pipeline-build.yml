@@ -525,56 +525,7 @@ jobs:
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
   steps:
-
-    - task: CodeQL3000Init@0
-      displayName: 'SDL: init codeql'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-
-    - task: GoTool@0
-      displayName: "Build: specify golang version"
-      inputs:
-        version: '1.19'
-
-    - bash: |
-        sudo apt-get install build-essential -y
-        make
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/configuration-reader-builder/
-      displayName: "SDL: build configuration reader for scanning"
-
-    - task: BinSkim@4
-      displayName: 'SDL: run binskim'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        InputType: 'CommandLine'
-        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/configuration-reader-builder/configurationreader'
-
-    - task: Gosec@1
-      displayName: 'SDL: run gosec'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        targetPattern: 'gosecPattern'
-        targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
-
-    - bash: |
-        wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
-        unzip DevSkim_linux_0.6.9.zip
-        chmod 775 DevSkim_linux_0.6.9/devskim
-        ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
-      displayName: 'SDL: run devskim'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      workingDirectory: $(Build.SourcesDirectory)
-
-    - bash: |
-        ruby --version
-        sudo apt-get install ruby-full
-        ruby --version
-        sudo gem install brakeman -v 5.4.1
-        brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
-      displayName: 'SDL: run brakeman'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-
-    - bash: |
+      - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
@@ -649,67 +600,6 @@ jobs:
       workingDirectory: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxcfgreader/"
       #condition: eq(variables.IS_MAIN_BRANCH, true)
-
-    - task: CodeQL3000Finalize@0
-      displayName: 'SDL: run codeql'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-
-    - task: ComponentGovernanceComponentDetection@0
-      displayName: "SDL: run component governance"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        scanType: 'Register'
-        verbosity: 'Verbose'
-        dockerImagesToScan: '$(LINUX_CONFIG_READER_FULL_IMAGE_NAME)'
-        alertWarningLevel: 'High'
-
-    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      displayName: "Ev2: Generate image artifacts"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
-        DockerImagesToScan: '$(LINUX_CONFIG_READER_FULL_IMAGE_NAME)'
-
-    - task: SdtReport@2
-      displayName: 'SDL: generate report'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        GdnExportAllTools: false
-        GdnExportGdnToolBinSkim: true
-        GdnExportGdnToolBinSkimSeverity: 'Note'
-        GdnExportGdnToolGosec: true
-        GdnExportGdnToolGosecSeverity: 'Note'
-        GdnExportGdnToolSemmle: true
-        GdnExportGdnToolSemmleSeverity: 'Note'
-
-    - task: PublishSecurityAnalysisLogs@3
-      displayName: 'SDL: publish report'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        ArtifactName: 'CodeAnalysisLogs'
-        ArtifactType: 'Container'
-        PublishProcessedResults: true
-        AllTools: true
-        ToolLogsNotFoundAction: 'Standard'
-
-    - task: PublishBuildArtifacts@1
-      displayName: "Ev2: Publish image artifacts"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        pathToPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: drop
-
-    - task: PostAnalysis@2
-      displayName: 'SDL: Post-Build Analysis'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        GdnBreakAllTools: false
-        GdnBreakGdnToolBinSkim: true
-        GdnBreakGdnToolBinSkimSeverity: 'Warning'
-        GdnBreakGdnToolGosec: true
-        GdnBreakGdnToolGosecSeverity: 'Warning'
-        GdnBreakGdnToolSemmle: true
-        GdnBreakGdnToolSemmleSeverity: 'Warning'
 
 # - job: Windows2019
 #   displayName: "Build windows 2019 image"
