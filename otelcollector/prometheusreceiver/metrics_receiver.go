@@ -17,7 +17,6 @@ import (
 
 	"github.com/cnf/structhash"
 	"github.com/go-kit/log"
-	"github.com/mitchellh/hashstructure/v2"
 	commonconfig "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/config"
@@ -242,9 +241,7 @@ func (r *pReceiver) applyCfg(cfg *config.Config) error {
 		return err
 	}
 
-	if err:= r.webHandler.ApplyConfig(cfg) {
-		return err
-	}
+	r.webHandler.ApplyConfig(cfg)
 
 	return nil
 }
