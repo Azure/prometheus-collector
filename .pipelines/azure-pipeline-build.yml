@@ -236,7 +236,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.21'
+        version: '1.20'
 
     - bash: |
         sudo apt-get install build-essential -y
