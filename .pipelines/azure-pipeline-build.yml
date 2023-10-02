@@ -464,6 +464,12 @@ jobs:
           # Load in amd64 image to run vulnerability scan
           docker buildx build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json
         fi
+        MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+        DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+        SIZE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+        cat <<EOF >>$(Build.ArtifactStagingDirectory)/targetallocator/payload.json
+        {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+        EOF
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
       displayName: "Build: build and push target allocator image to dev ACR"
     - bash: |
@@ -589,6 +595,12 @@ jobs:
           # Load in amd64 image to run vulnerability scan
           docker buildx build . --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json
         fi
+        MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+        DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+        SIZE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+        cat <<EOF >>$(Build.ArtifactStagingDirectory)/linuxcfgreader/payload.json
+        {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+        EOF
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push configuration reader image to dev ACR"
 
