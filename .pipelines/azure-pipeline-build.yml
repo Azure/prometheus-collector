@@ -526,7 +526,7 @@ jobs:
     DOCKER_BUILDKIT: 1
   steps:
       - bash: |
-        mkdir -p $(Build.ArtifactStagingDirectory)/linux
+        mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
 
         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
         sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
