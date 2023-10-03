@@ -44,7 +44,7 @@ AzureMonitorMetrics:
   # ImageTag: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/kube-control-plane/templates/_images.tpl&version=GBrashmi/prom-addon-arm64&line=530&lineEnd=530&lineStartColumn=28&lineEndColumn=53&lineStyle=plain&_a=contents
   AddonTokenAdapter:
     ImageRepository: "/aks/msi/addon-token-adapter"
-    ImageTag: "master.221118.2"
+    ImageTag: "master.230804.1"
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
     ImageTagWin: "20230120winbeta"
   ArcExtension: ${ARC_EXTENSION}
