@@ -525,7 +525,7 @@ jobs:
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
   steps:
-      - bash: |
+    - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
 
         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
