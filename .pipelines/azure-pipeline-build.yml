@@ -510,7 +510,7 @@ jobs:
         oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
           --artifact-type 'application/vnd.cncf.notary.signature' \
           ./payload.json:application/cose \
-          -a "io.cncf.notary.x509chain.thumbprint#S256=[\"659AAA9C0E822B4B20A964AA0178BD9419A50530\"]"
+          -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
       workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
       #condition: eq(variables.IS_MAIN_BRANCH, true)
@@ -596,7 +596,7 @@ jobs:
         oras attach $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) \
           --artifact-type 'application/vnd.cncf.notary.signature' \
           ./payload.json:application/cose \
-          -a "io.cncf.notary.x509chain.thumbprint#S256=[\"659AAA9C0E822B4B20A964AA0178BD9419A50530\"]"
+          -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
       workingDirectory: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxcfgreader/"
       #condition: eq(variables.IS_MAIN_BRANCH, true)
