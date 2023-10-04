@@ -70,6 +70,7 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
+COPY ./prometheuscollector/prometheuscollector.exe $tmpdir/
 
 ARG TARGETARCH
 RUN tdnf clean all
@@ -167,5 +168,10 @@ RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
-ENTRYPOINT [ "/bin/bash" ]
-CMD [ "/opt/main.sh" ]
+# Remove bash
+RUN tdnf erase -y bash
+# Expose the port on which the application listens
+EXPOSE 8080
+
+# Run the Go executable
+CMD ["./opt/prometheuscollector.exe"]
