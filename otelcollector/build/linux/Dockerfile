@@ -168,8 +168,8 @@ RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
-# Remove bash
-RUN tdnf erase -y bash
+# Remove bash that was copied earlier
+RUN rm -f /usr/bin/bash
 # Expose the port on which the application listens
 EXPOSE 8080
 
