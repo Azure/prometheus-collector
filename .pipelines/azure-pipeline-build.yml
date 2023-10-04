@@ -344,8 +344,17 @@ jobs:
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
+        if [ $? -ne 0 ]; then
+          exit 1
+        fi
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
+        if [ $? -ne 0 ]; then
+          exit 1
+        fi
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
+        if [ $? -ne 0 ]; then
+          exit 1
+        fi
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
 
