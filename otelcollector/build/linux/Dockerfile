@@ -70,7 +70,7 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
-COPY ./prometheuscollector/prometheuscollector.exe $tmpdir/
+COPY ./prometheuscollector/* $tmpdir/
 
 ARG TARGETARCH
 RUN tdnf clean all
