@@ -357,6 +357,7 @@ jobs:
         fi
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
+      condition: eq(variables.IS_PR, false)
 
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'
