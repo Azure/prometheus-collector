@@ -255,7 +255,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.19'
+        version: '1.20'
 
     - bash: |
         sudo apt-get install build-essential -y
@@ -364,8 +364,17 @@ jobs:
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
+        if [ $? -ne 0 ]; then
+          exit 1
+        fi
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
+        if [ $? -ne 0 ]; then
+          exit 1
+        fi
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
+        if [ $? -ne 0 ]; then
+          exit 1
+        fi
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
 
@@ -613,7 +622,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.19'
+        version: '1.20'
 
     - powershell: |
         ./makefile_windows.ps1
@@ -651,7 +660,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.19'
+        version: '1.20'
 
     - powershell: |
         ./makefile_windows.ps1
@@ -694,7 +703,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.19'
+        version: '1.20'
 
     - powershell: |
         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
@@ -790,7 +799,7 @@ jobs:
   - task: HelmInstaller@1
     displayName: 'Build: install Helm version'
     inputs:
-      helmVersionToInstall: latest
+      helmVersionToInstall: 3.12.3
 
   - bash: |
       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
@@ -833,7 +842,7 @@ jobs:
   - task: HelmInstaller@1
     displayName: 'Build: install Helm version'
     inputs:
-      helmVersionToInstall: latest
+      helmVersionToInstall: 3.12.3
 
   - bash: |
       export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
