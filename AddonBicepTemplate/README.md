@@ -5,7 +5,7 @@ You can deploy the templates using a command like :
 
 In order to deploy community alerts and ci recommended alerts through template, deploy using command like:
 
-```az deployment group create -g <resource_group> -n <deployment_name> --template-file .\AzureMonitorAlertsProfileParameters.json --parameters .\AzureMonitorAlertsProfileParameters.json```
+```az deployment group create -g <resource_group> -n <deployment_name> --template-file .\AzureMonitorAlertsProfile.bicep --parameters .\AzureMonitorAlertsProfileParameters.json```
 
 **NOTE**
 

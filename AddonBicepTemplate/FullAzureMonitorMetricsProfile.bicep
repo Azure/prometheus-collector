@@ -141,9 +141,7 @@ resource nodeRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRuleGroups
   location: azureMonitorWorkspaceLocation
   properties: {
     description: '${nodeRecordingRuleGroupDescription}${version}'
-    scopes: [
-      azureMonitorWorkspaceResourceId
-    ]
+    scopes: [azureMonitorWorkspaceResourceId,clusterResourceId]
     enabled: true
     clusterName: clusterName
     interval: 'PT1M'
@@ -201,9 +199,7 @@ resource kubernetesRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRule
   location: azureMonitorWorkspaceLocation
   properties: {
     description: '${kubernetesRecordingRuleGroupDescription}${version}'
-    scopes: [
-      azureMonitorWorkspaceResourceId
-    ]
+    scopes: [azureMonitorWorkspaceResourceId,clusterResourceId]
     enabled: true
     clusterName: clusterName
     interval: 'PT1M'
@@ -305,9 +301,7 @@ resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRul
   location: azureMonitorWorkspaceLocation
   properties: {
     description: '${RecordingRuleGroupDescriptionWin}${version}'
-    scopes: [
-      azureMonitorWorkspaceResourceId
-    ]
+    scopes: [azureMonitorWorkspaceResourceId,clusterResourceId]
     enabled: enableWindowsRecordingRules
     clusterName: clusterName
     interval: 'PT1M'
@@ -381,9 +375,7 @@ resource nodeAndKubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/
   location: azureMonitorWorkspaceLocation
   properties: {
     description: '${RecordingRuleGroupDescriptionWin}${version}'
-    scopes: [
-      azureMonitorWorkspaceResourceId
-    ]
+    scopes: [azureMonitorWorkspaceResourceId,clusterResourceId]
     enabled: enableWindowsRecordingRules
     clusterName: clusterName
     interval: 'PT1M'

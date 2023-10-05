@@ -790,7 +790,7 @@ jobs:
   - task: HelmInstaller@1
     displayName: 'Build: install Helm version'
     inputs:
-      helmVersionToInstall: latest
+      helmVersionToInstall: 3.12.3
 
   - bash: |
       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
@@ -833,7 +833,7 @@ jobs:
   - task: HelmInstaller@1
     displayName: 'Build: install Helm version'
     inputs:
-      helmVersionToInstall: latest
+      helmVersionToInstall: 3.12.3
 
   - bash: |
       export HELM_CHART_NAME=$ARC_HELM_CHART_NAME

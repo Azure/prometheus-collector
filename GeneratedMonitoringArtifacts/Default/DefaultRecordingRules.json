@@ -8,6 +8,12 @@
                 "description": "Cluster name"
             }
         },
+        "clusterResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "Cluster Resource Id"
+            }
+        },
         "azureMonitorWorkspaceResourceId": {
             "type": "string",
             "metadata": {
@@ -41,7 +47,10 @@
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
-                "scopes": [ "[parameters('azureMonitorWorkspaceResourceId')]" ],
+                "scopes": [
+                    "[parameters('azureMonitorWorkspaceResourceId')]",
+                    "[parameters('clusterResourceId')]"
+                ],
                 "enabled": true,
                 "clusterName": "[parameters('clusterName')]",
                 "interval": "PT1M",

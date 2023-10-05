@@ -115,7 +115,12 @@ Azure:
           requests:
             cpu: 20m
             memory: 50Mi
+ClusterDistribution: ""
 prometheus-node-exporter:
   service:
     port: 9110
     targetPort: 9110
+  image:
+    registry: mcr.microsoft.com
+    repository: oss/prometheus/node-exporter
+
