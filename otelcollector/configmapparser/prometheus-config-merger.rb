@@ -365,6 +365,7 @@ def populateDefaultPrometheusConfig
         contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
         File.open(@windowsexporterDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowsexporterDefaultDsFile)
+      end
     end
 
     if !ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"].downcase == "true"
@@ -390,6 +391,7 @@ def populateDefaultPrometheusConfig
         contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
         File.open(@windowskubeproxyDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeproxyDefaultDsFile)
+      end
     end
 
     if !ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].downcase == "true"  && currentControllerType == @replicasetControllerType
