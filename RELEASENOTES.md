@@ -1,8 +1,8 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 10-05-2023
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.7-main-<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.7-main-<tbd>`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.7-main-10-06-2023-b75a076c`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.7-main-10-06-2023-b75a076c-win`
 * Change log -
   * Update k8s.io/clientgo in fluentbit plugin from `0.28.0` to `0.28.2` - https://github.com/Azure/prometheus-collector/pull/595
   * fix: ARC fixes (already released to ARC as hotfix) - https://github.com/Azure/prometheus-collector/pull/605
