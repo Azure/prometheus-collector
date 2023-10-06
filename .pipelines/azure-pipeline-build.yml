@@ -3,7 +3,6 @@ trigger:
     include:
     - main
     - operator-targetallocator
-    - grace/upgrade-collector
 
 pr:
   autoCancel: true
