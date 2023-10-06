@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
+	"github.com/gracewehner/prometheusreceiver/internal/metadata"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -41,7 +41,6 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, time.Duration(r1.PrometheusConfig.ScrapeConfigs[0].ScrapeInterval), 5*time.Second)
 	assert.Equal(t, r1.UseStartTimeMetric, true)
 	assert.Equal(t, r1.TrimMetricSuffixes, true)
-	assert.Equal(t, r1.EnableProtobufNegotiation, true)
 	assert.Equal(t, r1.StartTimeMetricRegex, "^(.+_)*process_start_time_seconds$")
 	assert.True(t, r1.ReportExtraScrapeMetrics)
 

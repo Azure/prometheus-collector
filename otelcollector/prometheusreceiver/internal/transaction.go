@@ -19,10 +19,10 @@ import (
 	"github.com/prometheus/prometheus/storage"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/obsreport"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/receiver"
-	"go.opentelemetry.io/collector/receiver/receiverhelper"
 	"go.uber.org/zap"
 )
 
@@ -47,7 +47,7 @@ type transaction struct {
 	logger          *zap.Logger
 	buildInfo       component.BuildInfo
 	metricAdjuster  MetricsAdjuster
-	obsrecv         *receiverhelper.ObsReport
+	obsrecv         *obsreport.Receiver
 	// Used as buffer to calculate series ref hash.
 	bufBytes []byte
 }
@@ -65,7 +65,7 @@ func newTransaction(
 	sink consumer.Metrics,
 	externalLabels labels.Labels,
 	settings receiver.CreateSettings,
-	obsrecv *receiverhelper.ObsReport,
+	obsrecv *obsreport.Receiver,
 	trimSuffixes bool) *transaction {
 	return &transaction{
 		ctx:             ctx,

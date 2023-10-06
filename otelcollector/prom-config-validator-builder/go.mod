@@ -6,22 +6,22 @@ replace github.com/gracewehner/prometheusreceiver => ../prometheusreceiver
 
 require (
 	github.com/gracewehner/prometheusreceiver v0.0.0-00010101000000-000000000000
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.86.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.86.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.86.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.86.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.86.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.85.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.85.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.85.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.85.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.85.0
 	go.opentelemetry.io/collector/confmap v0.86.0
 	go.opentelemetry.io/collector/connector v0.86.0
-	go.opentelemetry.io/collector/connector/forwardconnector v0.86.0
+	go.opentelemetry.io/collector/connector/forwardconnector v0.85.0
 	go.opentelemetry.io/collector/exporter v0.86.0
-	go.opentelemetry.io/collector/exporter/loggingexporter v0.86.0
-	go.opentelemetry.io/collector/exporter/otlpexporter v0.86.0
+	go.opentelemetry.io/collector/exporter/loggingexporter v0.85.0
+	go.opentelemetry.io/collector/exporter/otlpexporter v0.85.0
 	go.opentelemetry.io/collector/extension v0.86.0
 	go.opentelemetry.io/collector/extension/zpagesextension v0.86.0
 	go.opentelemetry.io/collector/otelcol v0.86.0
 	go.opentelemetry.io/collector/processor v0.86.0
-	go.opentelemetry.io/collector/processor/batchprocessor v0.86.0
+	go.opentelemetry.io/collector/processor/batchprocessor v0.85.0
 	go.opentelemetry.io/collector/receiver v0.86.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -137,7 +137,6 @@ require (
 	github.com/miekg/dns v1.1.55 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/mitchellh/mapstructure v1.5.1-0.20220423185008-bf980b35cac4 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

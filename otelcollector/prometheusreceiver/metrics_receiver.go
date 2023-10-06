@@ -281,9 +281,8 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 	}
 
 	r.scrapeManager = scrape.NewManager(&scrape.Options{
-		PassMetadataInContext:     true,
-		EnableProtobufNegotiation: r.cfg.EnableProtobufNegotiation,
-		ExtraMetrics:              r.cfg.ReportExtraScrapeMetrics,
+		PassMetadataInContext: true,
+		ExtraMetrics:          r.cfg.ReportExtraScrapeMetrics,
 		HTTPClientOptions: []commonconfig.HTTPClientOption{
 			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
 		},
