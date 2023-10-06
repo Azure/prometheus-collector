@@ -173,5 +173,5 @@ RUN rm -f /usr/bin/bash
 # Expose the port on which the application listens
 EXPOSE 8080
 
-# Run the Go executable
+# Run the Go executable, entrypoint
 CMD ["./opt/prometheuscollector.exe"]
