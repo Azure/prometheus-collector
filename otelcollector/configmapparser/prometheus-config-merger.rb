@@ -42,6 +42,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @podannotationsDefaultFile = @defaultPromConfigPathPrefix + "podannotationsDefault.yml"
 @windowskubeproxyDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
 @kappiebasicDefaultFileDs = @defaultPromConfigPathPrefix + "kappieBasicDefaultDs.yml"
+@hubbleDefaultFileDs = @defaultPromConfigPathPrefix + "hubbleDefaultDs.yml"
 
 def parseConfigMap
   begin
@@ -331,6 +332,26 @@ def populateDefaultPrometheusConfig
           contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
           File.open(@kappiebasicDefaultFileDs, "w") { |file| file.puts contents }
           defaultConfigs.push(@kappiebasicDefaultFileDs)
+        end
+      end
+    end
+
+    if !ENV["AZMON_PROMETHEUS_HUBBLE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_HUBBLE_SCRAPING_ENABLED"].downcase == "true"
+      hubbleMetricsKeepListRegex = @regexHash["HUBBLE_METRICS_KEEP_LIST_REGEX"]
+      hubblebasicScrapeInterval = @intervalHash["HUBBLE_SCRAPE_INTERVAL"]
+      if currentControllerType == @replicasetControllerType
+        #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
+      else #hubble scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
+        if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" #&& ENV["OS_TYPE"].downcase == "linux"
+          UpdateScrapeIntervalConfig(@hubbleDefaultFileDs, hubblebasicScrapeInterval)
+          if !hubbleMetricsKeepListRegex.nil? && !hubbleMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@hubbleDefaultFileDs, hubbleMetricsKeepListRegex)
+          end
+          contents = File.read(@hubbleDefaultFileDs)
+          contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+          File.open(@hubbleDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@hubbleDefaultFileDs)
         end
       end
     end
