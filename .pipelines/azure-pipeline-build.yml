@@ -337,7 +337,7 @@ jobs:
         oras attach $(LINUX_FULL_IMAGE_NAME) \
           --artifact-type 'application/vnd.cncf.notary.signature' \
           ./payload.json:application/cose \
-          -a "io.cncf.notary.x509chain.thumbprint#S256=[\"659AAA9C0E822B4B20A964AA0178BD9419A50530\"]"
+          -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
       workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
       condition: eq(variables.IS_MAIN_BRANCH, true)
@@ -581,7 +581,7 @@ jobs:
         New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
         Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
         $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
-        oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""659AAA9C0E822B4B20A964AA0178BD9419A50530\""]
+        oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
       workingDirectory: $(Build.ArtifactStagingDirectory)/windows
       displayName: "Download, install Oras and run oras attach"
       condition: eq(variables.IS_MAIN_BRANCH, true)
