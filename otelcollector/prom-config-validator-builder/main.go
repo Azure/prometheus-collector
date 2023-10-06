@@ -181,6 +181,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						}
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
+				}
 			}
 		}
 	}
