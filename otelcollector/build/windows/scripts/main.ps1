@@ -1,5 +1,5 @@
 #setting it to replicaset by default
-$me_config_file = '/opt/metricextension/me_ds.config'
+$me_config_file = '/opt/metricextension/me_ds_win.config'
 
 function Set-EnvironmentVariablesAndConfigParser {
     # Set unfair semaphore wait for better initial CPU performance
@@ -275,10 +275,10 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
     else {
         if ($cluster_override -eq "true") {
-            $meConfigFile = "/opt/metricextension/me_ds_internal.config"
+            $meConfigFile = "/opt/metricextension/me_ds_internal_win.config"
         }
         else {
-            $meConfigFile = "/opt/metricextension/me_ds.config"
+            $meConfigFile = "/opt/metricextension/me_ds_win.config"
         }
     }
     [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $meConfigFile, "Process")
@@ -406,7 +406,7 @@ function Start-ME {
             }
             else {
                 Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Debug", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", $me_config_file) > $null
-                # /opt/metricextension/MetricsExtension/MetricsExtension.Native.exe -Logger Console -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\ -Input otlp_grpc_prom -ConfigOverridesFilePath '/opt/metricextension/me_ds.config'
+                # /opt/metricextension/MetricsExtension/MetricsExtension.Native.exe -Logger Console -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\ -Input otlp_grpc_prom -ConfigOverridesFilePath '/opt/metricextension/me_ds_win.config'
             }
         }
         else {
