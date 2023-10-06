@@ -21,14 +21,15 @@ import (
 	"testing"
 
 	"github.com/kylelemons/godebug/pretty"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slices"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
 )
 
 var (
@@ -388,6 +389,7 @@ func TestListenTLS(t *testing.T) {
 		"--reload-url=https://localhost:9093/-/reload",
 		"--config-file=/etc/alertmanager/config/alertmanager.yaml.gz",
 		"--config-envsubst-file=/etc/alertmanager/config_out/alertmanager.env.yaml",
+		"--watched-dir=/etc/alertmanager/config",
 	}
 
 	for _, c := range sset.Spec.Template.Spec.Containers {
@@ -1140,6 +1142,7 @@ func TestConfigReloader(t *testing.T) {
 		"--reload-url=http://localhost:9093/-/reload",
 		"--config-file=/etc/alertmanager/config/alertmanager.yaml.gz",
 		"--config-envsubst-file=/etc/alertmanager/config_out/alertmanager.env.yaml",
+		"--watched-dir=/etc/alertmanager/config",
 	}
 
 	for _, c := range baseSet.Spec.Template.Spec.Containers {

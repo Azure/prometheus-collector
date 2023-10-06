@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//       http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package prometheusreceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 
@@ -28,6 +17,7 @@ import (
 
 	"github.com/cnf/structhash"
 	"github.com/go-kit/log"
+	commonconfig "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
@@ -35,7 +25,6 @@ import (
 	"github.com/prometheus/prometheus/scrape"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
@@ -64,21 +53,19 @@ type pReceiver struct {
 	loadConfigOnce      sync.Once
 
 	settings         receiver.CreateSettings
-	registry         *featuregate.Registry
 	scrapeManager    *scrape.Manager
 	discoveryManager *discovery.Manager
 	webHandler       *web.Handler
 }
 
 // New creates a new prometheus.Receiver reference.
-func newPrometheusReceiver(set receiver.CreateSettings, cfg *Config, next consumer.Metrics, registry *featuregate.Registry) *pReceiver {
+func newPrometheusReceiver(set receiver.CreateSettings, cfg *Config, next consumer.Metrics) *pReceiver {
 	pr := &pReceiver{
 		cfg:                 cfg,
 		consumer:            next,
 		settings:            set,
 		configLoaded:        make(chan struct{}),
 		targetAllocatorStop: make(chan struct{}),
-		registry:            registry,
 	}
 	return pr
 }
@@ -287,12 +274,19 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 		startTimeMetricRegex,
 		useCreatedMetricGate.IsEnabled(),
 		r.cfg.PrometheusConfig.GlobalConfig.ExternalLabels,
-		r.registry,
+		r.cfg.TrimMetricSuffixes,
 	)
 	if err != nil {
 		return err
 	}
-	r.scrapeManager = scrape.NewManager(&scrape.Options{PassMetadataInContext: true}, logger, store)
+
+	r.scrapeManager = scrape.NewManager(&scrape.Options{
+		PassMetadataInContext: true,
+		ExtraMetrics:          r.cfg.ReportExtraScrapeMetrics,
+		HTTPClientOptions: []commonconfig.HTTPClientOption{
+			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
+		},
+	}, logger, store)
 
 	go func() {
 		// The scrape manager needs to wait for the configuration to be loaded before beginning
