@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - vishwa/10022023-upgrade
 pr:
   autoCancel: true
   branches:
@@ -235,7 +236,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.19'
+        version: '1.20'
 
     - bash: |
         sudo apt-get install build-essential -y
@@ -344,10 +345,20 @@ jobs:
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
+        if [ $? -ne 0 ]; then
+          exit 1
+        fi
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
+        if [ $? -ne 0 ]; then
+          exit 1
+        fi
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
+        if [ $? -ne 0 ]; then
+          exit 1
+        fi
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
+      condition: eq(variables.IS_PR, false)
 
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'
@@ -423,7 +434,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.19'
+        version: '1.20'
 
     - powershell: |
         ./makefile_windows.ps1
@@ -461,7 +472,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.19'
+        version: '1.20'
 
     - powershell: |
         ./makefile_windows.ps1
@@ -504,7 +515,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.19'
+        version: '1.20'
 
     - powershell: |
         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
