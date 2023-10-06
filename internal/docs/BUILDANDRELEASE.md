@@ -76,7 +76,15 @@ Each merge into `main` will push the image to the public mcr and deploy to the d
 - **PR 2**: Get the chart semver or container image tag from the commit used for **Build 1** and update the release notes with the changelog. Link to a similar PR [here](https://github.com/Azure/prometheus-collector/pull/298)
 - **PR 3**: Make a PR to update the [Geneva docs](https://msazure.visualstudio.com/One/_git/EngSys-MDA-GenevaDocs?path=%2Fdocumentation%2Fmetrics%2FPrometheus&version=GBmaster&_a=contents) with any changes made in `/otelcollector/deploy/eng.ms/docs/Prometheus`
 - **PR 4**: Make changes in AgentBaker for this new image version. Link to similar PR [here](https://github.com/Azure/AgentBaker/pull/2285/files)
-- **PR 5**: Update prometheus-addon image in AKS-RP. Link to similar PR [here](https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp/pullrequest/6876332?_a=files)
+- **PR 5**: Update prometheus-addon image in AKS-RP. 
+First update the files here - https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp?path=/toolkit/versioning/manifests/addon/azure-monitor-metrics/azure-monitor-metrics-linux.yaml
+https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp?path=/toolkit/versioning/manifests/addon/azure-monitor-metrics/azure-monitor-metrics-windows.yaml
+https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp?path=/toolkit/versioning/manifests/addon/azure-monitor-metrics/azure-monitor-metrics-ksm.yaml 
+
+  And then generate the _images.tpl file as described here - 
+https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/toolkit/versioning/README.md&version=GBmaster&line=51&lineEnd=52&lineStartColumn=1&lineEndColumn=1&lineStyle=plain&_a=contents
+
+  Link to similar PR [here](https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp/pullrequest/8675121)
     - To generate snapshots(required when you update the image and/or chart) –
         - [Re-Render Test Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-adapter-charts&version=GBmaster&_a=contents&anchor=re-render-test-snapshots)
         - [Re-Render Addon Chart Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-charts/README.md&version=GBmaster&_a=contents)
