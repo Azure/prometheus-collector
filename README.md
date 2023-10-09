@@ -14,7 +14,7 @@
 | Publish | [![Build Status](https://github-private.vsrm.visualstudio.com/_apis/public/Release/badge/2d36c31d-2f89-409f-9a3e-32e4e9699840/79/127)](https://github-private.visualstudio.com/azure/_release?definitionId=79&view=mine&_a=releases) |
 | Deploy | [![Build Status](https://github-private.vsrm.visualstudio.com/_apis/public/Release/badge/2d36c31d-2f89-409f-9a3e-32e4e9699840/79/128)](https://github-private.visualstudio.com/azure/_release?definitionId=79&view=mine&_a=releases) |
 
-# Project
+# Project  
 
 This project is Azure Monitor managed service for Prometheus, which is the agent based solution to collect Prometheus metrics to be sent to managed Azure Monitor store.
 

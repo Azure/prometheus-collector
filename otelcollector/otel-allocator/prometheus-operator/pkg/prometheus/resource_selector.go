@@ -653,6 +653,11 @@ func (rs *ResourceSelector) SelectScrapeConfigs(ctx context.Context, listFn List
 			continue
 		}
 
+		if err = rs.store.AddSafeTLSConfig(ctx, sc.GetNamespace(), sc.Spec.TLSConfig); err != nil {
+			rejectFn(sc, err)
+			continue
+		}
+
 		for i, config := range sc.Spec.HTTPSDConfigs {
 			configKey := fmt.Sprintf("scrapeconfig/%s/%s/httpsdconfig/%d", sc.GetNamespace(), sc.GetName(), i)
 			if err = rs.store.AddBasicAuth(ctx, sc.GetNamespace(), config.BasicAuth, configKey); err != nil {
@@ -664,6 +669,58 @@ func (rs *ResourceSelector) SelectScrapeConfigs(ctx context.Context, listFn List
 			if err = rs.store.AddSafeAuthorizationCredentials(ctx, sc.GetNamespace(), config.Authorization, configAuthKey); err != nil {
 				rejectFn(sc, err)
 				continue
+			}
+
+			if err = rs.store.AddSafeTLSConfig(ctx, sc.GetNamespace(), config.TLSConfig); err != nil {
+				rejectFn(sc, err)
+				continue
+			}
+		}
+
+		var scrapeInterval, scrapeTimeout monitoringv1.Duration = "", ""
+		if sc.Spec.ScrapeInterval != nil {
+			scrapeInterval = *sc.Spec.ScrapeInterval
+		}
+
+		if sc.Spec.ScrapeTimeout != nil {
+			scrapeTimeout = *sc.Spec.ScrapeTimeout
+		}
+
+		if err = validateScrapeIntervalAndTimeout(rs.p, scrapeInterval, scrapeTimeout); err != nil {
+			rejectFn(sc, err)
+			continue
+		}
+
+		for i, config := range sc.Spec.ConsulSDConfigs {
+			configKey := fmt.Sprintf("scrapeconfig/%s/%s/consulsdconfig/%d", sc.GetNamespace(), sc.GetName(), i)
+			if err = rs.store.AddBasicAuth(ctx, sc.GetNamespace(), config.BasicAuth, configKey); err != nil {
+				rejectFn(sc, err)
+				continue
+			}
+
+			configAuthKey := fmt.Sprintf("scrapeconfig/auth/%s/%s/consulsdconfig/%d", sc.GetNamespace(), sc.GetName(), i)
+			if err = rs.store.AddSafeAuthorizationCredentials(ctx, sc.GetNamespace(), config.Authorization, configAuthKey); err != nil {
+				rejectFn(sc, err)
+				continue
+			}
+
+			if err = rs.store.AddSafeTLSConfig(ctx, sc.GetNamespace(), config.TLSConfig); err != nil {
+				rejectFn(sc, err)
+				continue
+			}
+
+			if _, err = rs.store.GetSecretKey(ctx, sc.GetNamespace(), *config.TokenRef); err != nil {
+				rejectFn(sc, err)
+				continue
+			}
+
+			for _, v := range config.ProxyConnectHeader {
+				_, err := rs.store.GetSecretKey(context.Background(), sc.GetNamespace(), v)
+
+				if err != nil {
+					rejectFn(sc, err)
+					continue
+				}
 			}
 		}
 
