@@ -79,6 +79,7 @@ COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 COPY --from=prometheuscollector-builder /prometheuscollector/prometheuscollector $tmpdir/prometheuscollector/
+COPY --from=prometheuscollector-builder /prometheuscollector/prometheuscollector.go $tmpdir/prometheuscollector/
 
 ARG TARGETARCH
 RUN tdnf clean all
