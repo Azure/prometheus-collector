@@ -24,18 +24,6 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
-	"github.com/prometheus-operator/prometheus-operator/pkg/alertmanager/validation"
-	validationv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/alertmanager/validation/v1alpha1"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
-	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
-	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
-	"github.com/prometheus-operator/prometheus-operator/pkg/informers"
-	"github.com/prometheus-operator/prometheus-operator/pkg/k8sutil"
-	"github.com/prometheus-operator/prometheus-operator/pkg/listwatch"
-	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
-	"github.com/prometheus-operator/prometheus-operator/pkg/webconfig"
-
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/mitchellh/hashstructure"
@@ -50,6 +38,18 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/prometheus-operator/prometheus-operator/pkg/alertmanager/validation"
+	validationv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/alertmanager/validation/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
+	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
+	"github.com/prometheus-operator/prometheus-operator/pkg/informers"
+	"github.com/prometheus-operator/prometheus-operator/pkg/k8sutil"
+	"github.com/prometheus-operator/prometheus-operator/pkg/listwatch"
+	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
+	"github.com/prometheus-operator/prometheus-operator/pkg/webconfig"
 )
 
 const (
@@ -95,8 +95,8 @@ type Config struct {
 	ReloaderConfig               operator.ContainerConfig
 	AlertmanagerDefaultBaseImage string
 	Namespaces                   operator.Namespaces
-	Annotations                  operator.Annotations
-	Labels                       operator.Labels
+	Annotations                  operator.Map
+	Labels                       operator.Map
 	AlertManagerSelector         string
 	SecretListWatchSelector      string
 }
@@ -995,7 +995,7 @@ func (c *Operator) createOrUpdateGeneratedConfigSecret(ctx context.Context, am *
 	generatedConfigSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        generatedConfigSecretName(am.Name),
-			Annotations: c.config.Annotations.AnnotationsMap,
+			Annotations: c.config.Annotations,
 			Labels:      c.config.Labels.Merge(managedByOperatorLabels),
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -1189,6 +1189,12 @@ func checkReceivers(ctx context.Context, amc *monitoringv1alpha1.AlertmanagerCon
 		if err != nil {
 			return err
 		}
+
+		err = checkDiscordConfigs(ctx, receiver.DiscordConfigs, amc.GetNamespace(), amcKey, store, amVersion)
+		if err != nil {
+			return err
+		}
+
 		err = checkSlackConfigs(ctx, receiver.SlackConfigs, amc.GetNamespace(), amcKey, store, amVersion)
 		if err != nil {
 			return err
@@ -1306,6 +1312,39 @@ func checkOpsGenieResponder(opsgenieResponder []monitoringv1alpha1.OpsGenieConfi
 			return fmt.Errorf("'teams' set in 'opsgenieResponder' but supported in AlertManager >= 0.24.0 only")
 		}
 	}
+	return nil
+}
+
+func checkDiscordConfigs(
+	ctx context.Context,
+	configs []monitoringv1alpha1.DiscordConfig,
+	namespace string,
+	key string,
+	store *assets.Store,
+	amVersion semver.Version,
+) error {
+	if len(configs) == 0 {
+		return nil
+	}
+	if amVersion.LT(semver.MustParse("0.25.0")) {
+		return fmt.Errorf(`discordConfigs' is available in Alertmanager >= 0.25.0 only - current %s`, amVersion)
+	}
+
+	for i, config := range configs {
+		if err := checkHTTPConfig(config.HTTPConfig, amVersion); err != nil {
+			return err
+		}
+
+		discordConfigKey := fmt.Sprintf("%s/discord/%d", key, i)
+		if err := configureHTTPConfigInStore(ctx, config.HTTPConfig, namespace, discordConfigKey, store); err != nil {
+			return err
+		}
+
+		if _, err := store.GetSecretKey(ctx, namespace, config.APIURL); err != nil {
+			return fmt.Errorf("failed to retrieve API URL: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -1522,7 +1561,6 @@ func checkTelegramConfigs(
 	if len(configs) == 0 {
 		return nil
 	}
-
 	if amVersion.LT(semver.MustParse("0.24.0")) {
 		return fmt.Errorf(`telegramConfigs' is available in Alertmanager >= 0.24.0 only - current %s`, amVersion)
 	}
@@ -1674,7 +1712,7 @@ func (c *Operator) createOrUpdateWebConfigSecret(ctx context.Context, a *monitor
 		Name:               a.Name,
 		UID:                a.UID,
 	}
-	secretAnnotations := c.config.Annotations.AnnotationsMap
+	secretAnnotations := c.config.Annotations
 	secretLabels := c.config.Labels.Merge(managedByOperatorLabels)
 
 	if err := webConfig.CreateOrUpdateWebConfigSecret(ctx, secretClient, secretAnnotations, secretLabels, ownerReference); err != nil {
