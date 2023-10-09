@@ -38,6 +38,14 @@ COPY ./prometheusreceiver /src/prometheusreceiver
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as prometheuscollector-builder
+WORKDIR /prometheuscollector
+COPY ./prometheuscollector/go.mod ./prometheuscollector/prometheuscollector.go .
+RUN go version
+RUN go mod download
+RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
+RUN go build -o prometheuscollector
+
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
@@ -70,7 +78,7 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
-COPY ./prometheuscollector/* $tmpdir/
+COPY --from=prometheuscollector-builder /prometheuscollector/prometheuscollector $tmpdir/prometheuscollector/
 
 ARG TARGETARCH
 RUN tdnf clean all
@@ -168,11 +176,11 @@ RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
-RUN [ "/bin/bash", "-c", "chmod 777 ./opt/prometheuscollector.exe" ]
+RUN [ "/bin/bash", "-c", "chmod 777 ./opt/prometheuscollector/prometheuscollector" ]
 # Remove bash that was copied earlier
 RUN rm -f /usr/bin/bash
 # Expose the port on which the application listens
 EXPOSE 8080
 
 # Run the Go executable, entrypoint
-CMD ["./opt/prometheuscollector.exe"]
+ENTRYPOINT ["./opt/prometheuscollector/prometheuscollector"]
