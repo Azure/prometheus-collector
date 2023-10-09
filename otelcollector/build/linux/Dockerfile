@@ -62,7 +62,7 @@ COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/pro
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
-COPY ./telegraf/telegraf-prometheus-collector.conf $tmpdir/telegraf/
+COPY ./telegraf/ $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit.conf ./fluent-bit/fluent-bit-daemonset.conf ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY ./react /static/react
