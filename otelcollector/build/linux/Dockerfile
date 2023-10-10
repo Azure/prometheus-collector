@@ -45,7 +45,6 @@ RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 RUN go build -o prometheuscollector .
-COPY ./prometheuscollector/prometheuscollector .
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
