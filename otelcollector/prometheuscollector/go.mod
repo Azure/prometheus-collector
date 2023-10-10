@@ -1,3 +1,3 @@
-module prometheuscollector
+module main
 
 go 1.19

@@ -40,11 +40,12 @@ RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as prometheuscollector-builder
 WORKDIR /prometheuscollector
-COPY ./prometheuscollector/go.mod ./prometheuscollector/prometheuscollector.go .
+COPY ./prometheuscollector/go.mod ./prometheuscollector/main.go .
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
-RUN go build -o prometheuscollector
+RUN go build -o prometheuscollector .
+COPY ./prometheuscollector/prometheuscollector .
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"

@@ -1,4 +1,4 @@
-package prometheuscollector
+package main
 
 import (
     "fmt"
