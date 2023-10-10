@@ -25,14 +25,14 @@ func runShellCommand(command string, args ...string) {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-    prometheuscollectorRunning := isProcessRunning("prometheuscollector.exe")
+    prometheuscollectorRunning := isProcessRunning("prometheuscollector")
 
     if prometheuscollectorRunning {
         w.WriteHeader(http.StatusOK)
-        fmt.Fprintln(w, "prometheuscollector.exe is running.")
+        fmt.Fprintln(w, "prometheuscollector is running.")
     } else {
         w.WriteHeader(http.StatusServiceUnavailable)
-        fmt.Fprintln(w, "prometheuscollector.exe is not running.")
+        fmt.Fprintln(w, "prometheuscollector is not running.")
     }
 }
 

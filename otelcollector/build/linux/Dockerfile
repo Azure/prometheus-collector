@@ -183,7 +183,7 @@ RUN [ "/bin/bash", "-c", "chmod 777 ./opt/prometheuscollector/prometheuscollecto
 EXPOSE 8080
 
 # Run the Go executable, entrypoint
-# ENTRYPOINT ["./opt/prometheuscollector/prometheuscollector"]
+ENTRYPOINT ["./opt/prometheuscollector/prometheuscollector"]
 
-ENTRYPOINT [ "/bin/bash" ]
-CMD [ "/opt/main.sh" ]
+# ENTRYPOINT [ "/bin/bash" ]
+# CMD [ "/opt/main.sh" ]
