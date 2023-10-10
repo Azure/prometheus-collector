@@ -8,6 +8,7 @@ import (
     "time"
     "io/ioutil"
     "strings"
+	"log"
 )
 
 func main() {
@@ -66,7 +67,6 @@ func main() {
 		}
     }
 
-    meConfigFile := os.Getenv("meConfigFile")
 	fluentBitConfigFile := os.Getenv("fluentBitConfigFile")
 	mac := os.Getenv("MAC")
 	cluster := os.Getenv("CLUSTER")
@@ -77,12 +77,12 @@ func main() {
 	os.Setenv("ME_CONFIG_FILE", meConfigFile)
 	os.Setenv("FLUENT_BIT_CONFIG_FILE", fluentBitConfigFile)
 
-	// Append environment variable assignments to ~/.bashrc
-	appendEnvVarToBashrc("ME_CONFIG_FILE", meConfigFile)
-	appendEnvVarToBashrc("FLUENT_BIT_CONFIG_FILE", fluentBitConfigFile)
+	// // Append environment variable assignments to ~/.bashrc
+	// appendEnvVarToBashrc("ME_CONFIG_FILE", meConfigFile)
+	// appendEnvVarToBashrc("FLUENT_BIT_CONFIG_FILE", fluentBitConfigFile)
 
-	// Source ~/.bashrc
-	sourceBashrc()
+	// // Source ~/.bashrc
+	// sourceBashrc()
 
 	if mac != "true" {
 		if cluster == "" {
@@ -93,7 +93,7 @@ func main() {
 		}
 
 		// Append customResourceId to ~/.bashrc
-		appendEnvVarToBashrc("customResourceId", os.Getenv("customResourceId"))
+		// appendEnvVarToBashrc("customResourceId", os.Getenv("customResourceId"))
 
 		// Make a copy of the mounted akv directory
 		copyAkvDirectory("/etc/config/settings/akv", "/opt/akv-copy")
@@ -105,7 +105,7 @@ func main() {
 		decodeAndSetEnvVars(decodeLocation, ENCODEDFILES)
 
 		// Append AZMON_METRIC_ACCOUNTS_AKV_FILES to ~/.bashrc
-		appendEnvVarToBashrc("AZMON_METRIC_ACCOUNTS_AKV_FILES", os.Getenv("AZMON_METRIC_ACCOUNTS_AKV_FILES"))
+		// appendEnvVarToBashrc("AZMON_METRIC_ACCOUNTS_AKV_FILES", os.Getenv("AZMON_METRIC_ACCOUNTS_AKV_FILES"))
 
 		fmt.Println("Starting metricsextension")
 
@@ -114,12 +114,12 @@ func main() {
 
 	} else {
 		os.Setenv("customResourceId", cluster)
-		appendEnvVarToBashrc("customResourceId", os.Getenv("customResourceId"))
+		// appendEnvVarToBashrc("customResourceId", os.Getenv("customResourceId"))
 
 		trimmedRegion := strings.ReplaceAll(aksRegion, " ", "")
 		trimmedRegion = strings.ToLower(trimmedRegion)
 		os.Setenv("customRegion", trimmedRegion)
-		appendEnvVarToBashrc("customRegion", os.Getenv("customRegion"))
+		// appendEnvVarToBashrc("customRegion", os.Getenv("customRegion"))
 
 		fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 		time.Sleep(10 * time.Second)
@@ -168,7 +168,6 @@ func main() {
 	}
 
 	// Start otelcollector
-	controllerType := os.Getenv("controllerType")
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 	azmonUseDefaultPrometheusConfig := os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG")
 
@@ -271,22 +270,22 @@ func isProcessRunning(processName string) bool {
     return err == nil
 }
 
-func appendEnvVarToBashrc(name, value string) {
-	bashrcFile := "/root/.bashrc"
-	envVarAssignment := fmt.Sprintf("export %s=%s\n", name, value)
-	err := ioutil.WriteFile(bashrcFile, []byte(envVarAssignment), os.ModeAppend)
-	if err != nil {
-		fmt.Printf("Error appending environment variable to ~/.bashrc: %v\n", err)
-	}
-}
+// func appendEnvVarToBashrc(name, value string) {
+// 	bashrcFile := "/root/.bashrc"
+// 	envVarAssignment := fmt.Sprintf("export %s=%s\n", name, value)
+// 	err := ioutil.WriteFile(bashrcFile, []byte(envVarAssignment), os.ModeAppend)
+// 	if err != nil {
+// 		fmt.Printf("Error appending environment variable to ~/.bashrc: %v\n", err)
+// 	}
+// }
 
-func sourceBashrc() {
-	cmd := exec.Command("bash", "-c", "source /root/.bashrc")
-	err := cmd.Run()
-	if err != nil {
-		fmt.Printf("Error sourcing ~/.bashrc: %v\n", err)
-	}
-}
+// func sourceBashrc() {
+// 	cmd := exec.Command("bash", "-c", "source /root/.bashrc")
+// 	err := cmd.Run()
+// 	if err != nil {
+// 		fmt.Printf("Error sourcing ~/.bashrc: %v\n", err)
+// 	}
+// }
 
 func copyAkvDirectory(sourceDir, destDir string) {
 	cmd := exec.Command("cp", "-r", sourceDir, destDir)
@@ -315,13 +314,19 @@ func decodeAndSetEnvVars(decodeLocation string, encodedFiles []string) {
 	var decodedFiles []string
 
 	for _, encodedFile := range encodedFiles {
-		fileName := decodeLocation + "/" + filepath.Base(encodedFile)
+		baseName := encodedFile[strings.LastIndex(encodedFile, "/")+1:]
+		fileName := decodeLocation + "/" + baseName
 		decodedFiles = append(decodedFiles, fileName)
 
-		cmd := exec.Command("base64", "-d", encodedFile, ">", fileName)
-		err := cmd.Run()
+		cmd := exec.Command("base64", "-d", encodedFile)
+		decodedOutput, err := cmd.Output()
 		if err != nil {
 			fmt.Printf("Error decoding file: %v\n", err)
+		}
+
+		err = ioutil.WriteFile(fileName, decodedOutput, os.ModePerm)
+		if err != nil {
+			fmt.Printf("Error writing decoded file: %v\n", err)
 		}
 	}
 
@@ -330,6 +335,7 @@ func decodeAndSetEnvVars(decodeLocation string, encodedFiles []string) {
 
 	os.Setenv("AZMON_METRIC_ACCOUNTS_AKV_FILES", decodedFilesStr)
 }
+
 
 func startMetricsExtension() {
 	cmd := exec.Command(
@@ -349,19 +355,27 @@ func startMetricsExtension() {
 }
 
 func setEnvVarsFromEnvMdsdFile(envMdsdFile string) {
-	file, err := os.Open(envMdsdFile)
+	content, err := ioutil.ReadFile(envMdsdFile)
 	if err != nil {
-		fmt.Printf("Error opening envmdsd file: %v\n", err)
+		fmt.Printf("Error reading envmdsd file: %v\n", err)
 		return
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		err := os.Setenv(line, "1")
-		if err != nil {
-			fmt.Printf("Error setting environment variable from envmdsd file: %v\n", err)
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		// Trim any leading/trailing spaces and ignore empty lines
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			name, value := parts[0], parts[1]
+			err := os.Setenv(name, value)
+			if err != nil {
+				fmt.Printf("Error setting environment variable from envmdsd file: %v\n", err)
+			}
 		}
 	}
 }
