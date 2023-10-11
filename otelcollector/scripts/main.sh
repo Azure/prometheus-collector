@@ -263,7 +263,9 @@ echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
 echo "starting telegraf"
 if [ "$TELEMETRY_DISABLED" != "true" ]; then
-  if [ "$CONTROLLER_TYPE" == "ReplicaSet" ]; then
+  if [ "$CONTROLLER_TYPE" == "ReplicaSet" ]  && [ "${AZMON_OPERATOR_ENABLED}" == "true" ]; then
+    /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector-ta-enabled.conf &
+  elif [ "$CONTROLLER_TYPE" == "ReplicaSet" ]; then
     /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
   else
     /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector-ds.conf &
