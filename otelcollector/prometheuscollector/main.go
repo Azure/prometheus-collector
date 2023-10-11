@@ -77,23 +77,21 @@ func main() {
 	os.Setenv("ME_CONFIG_FILE", meConfigFile)
 	os.Setenv("FLUENT_BIT_CONFIG_FILE", fluentBitConfigFile)
 
-	// // Append environment variable assignments to ~/.bashrc
-	// appendEnvVarToBashrc("ME_CONFIG_FILE", meConfigFile)
-	// appendEnvVarToBashrc("FLUENT_BIT_CONFIG_FILE", fluentBitConfigFile)
-
-	// // Source ~/.bashrc
-	// sourceBashrc()
+	// Append environment variable assignments 
+	appendToEtcEnvironment("ME_CONFIG_FILE", meConfigFile)
+	appendToEtcEnvironment("FLUENT_BIT_CONFIG_FILE", fluentBitConfigFile)
 
 	if mac != "true" {
 		if cluster == "" {
 			fmt.Printf("CLUSTER is empty or not set. Using %s as CLUSTER\n", os.Getenv("NODE_NAME"))
 			os.Setenv("customResourceId", os.Getenv("NODE_NAME"))
 		} else {
+			fmt.Printf("CLUSTER is set.\n")
 			os.Setenv("customResourceId", cluster)
 		}
 
-		// Append customResourceId to ~/.bashrc
-		// appendEnvVarToBashrc("customResourceId", os.Getenv("customResourceId"))
+		// Append customResourceId 
+		appendToEtcEnvironment("customResourceId", os.Getenv("customResourceId"))
 
 		// Make a copy of the mounted akv directory
 		copyAkvDirectory("/etc/config/settings/akv", "/opt/akv-copy")
@@ -104,8 +102,8 @@ func main() {
 		// Decode and set environment variables
 		decodeAndSetEnvVars(decodeLocation, ENCODEDFILES)
 
-		// Append AZMON_METRIC_ACCOUNTS_AKV_FILES to ~/.bashrc
-		// appendEnvVarToBashrc("AZMON_METRIC_ACCOUNTS_AKV_FILES", os.Getenv("AZMON_METRIC_ACCOUNTS_AKV_FILES"))
+		// Append AZMON_METRIC_ACCOUNTS_AKV_FILES
+		appendToEtcEnvironment("AZMON_METRIC_ACCOUNTS_AKV_FILES", os.Getenv("AZMON_METRIC_ACCOUNTS_AKV_FILES"))
 
 		fmt.Println("Starting metricsextension")
 
@@ -114,12 +112,12 @@ func main() {
 
 	} else {
 		os.Setenv("customResourceId", cluster)
-		// appendEnvVarToBashrc("customResourceId", os.Getenv("customResourceId"))
+		appendToEtcEnvironment("customResourceId", os.Getenv("customResourceId"))
 
 		trimmedRegion := strings.ReplaceAll(aksRegion, " ", "")
 		trimmedRegion = strings.ToLower(trimmedRegion)
 		os.Setenv("customRegion", trimmedRegion)
-		// appendEnvVarToBashrc("customRegion", os.Getenv("customRegion"))
+		appendToEtcEnvironment("customRegion", os.Getenv("customRegion"))
 
 		fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 		time.Sleep(10 * time.Second)
@@ -139,7 +137,7 @@ func main() {
 		fmt.Println("Reading me config file as a string for configOverrides parameter")
 		meConfigString := readMeConfigFileAsString(meConfigFile)
 
-		fmt.Println("Starting metricsextension")
+		fmt.Println("Starting metricsextension with config overrides")
 		startMetricsExtensionWithConfigOverrides(meConfigString)
 	}
 
@@ -270,22 +268,23 @@ func isProcessRunning(processName string) bool {
     return err == nil
 }
 
-// func appendEnvVarToBashrc(name, value string) {
-// 	bashrcFile := "/root/.bashrc"
-// 	envVarAssignment := fmt.Sprintf("export %s=%s\n", name, value)
-// 	err := ioutil.WriteFile(bashrcFile, []byte(envVarAssignment), os.ModeAppend)
-// 	if err != nil {
-// 		fmt.Printf("Error appending environment variable to ~/.bashrc: %v\n", err)
-// 	}
-// }
+func appendToEtcEnvironment(variableName, variableValue string) error {
+    // Check if the variable already exists in /etc/environment
+    cmd := exec.Command("grep", variableName, "/etc/environment")
+    cmd.Stderr = os.Stderr
+    err := cmd.Run()
+    if err == nil {
+        // Variable already exists, so update its value
+        updateCmd := exec.Command("sed", "-i", fmt.Sprintf("/^%s=/s/=.*/=%s/", variableName, variableValue), "/etc/environment")
+        updateCmd.Stderr = os.Stderr
+        return updateCmd.Run()
+    }
 
-// func sourceBashrc() {
-// 	cmd := exec.Command("bash", "-c", "source /root/.bashrc")
-// 	err := cmd.Run()
-// 	if err != nil {
-// 		fmt.Printf("Error sourcing ~/.bashrc: %v\n", err)
-// 	}
-// }
+    // Variable doesn't exist, so append it to /etc/environment
+    appendCmd := exec.Command("echo", fmt.Sprintf("%s=%s | tee -a /etc/environment", variableName, variableValue))
+    appendCmd.Stderr = os.Stderr
+    return appendCmd.Run()
+}
 
 func copyAkvDirectory(sourceDir, destDir string) {
 	cmd := exec.Command("cp", "-r", sourceDir, destDir)
