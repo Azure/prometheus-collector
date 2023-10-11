@@ -18,14 +18,6 @@ rules:
       ]
     verbs: ["list", "get", "watch"]
   - apiGroups:
-    - discovery.k8s.io
-    resources:
-    - endpointslices
-    verbs:
-    - list
-    - watch
-    - get
-  - apiGroups:
     - networking.k8s.io
     resources:
     - ingresses
@@ -39,6 +31,7 @@ rules:
   - apiGroups: ["clusterconfig.azure.com"]
     resources: ["azureclusteridentityrequests", "azureclusteridentityrequests/status"]
     verbs: ["get", "update", "list", "create"]
+{{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
   - apiGroups:
     - azmonitoring.coreos.com
     resources:
@@ -46,3 +39,12 @@ rules:
     - podmonitors
     verbs:
     - '*'
+  - apiGroups:
+    - discovery.k8s.io
+    resources:
+    - endpointslices
+    verbs:
+    - list
+    - watch
+    - get
+{{- end }}
