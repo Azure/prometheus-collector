@@ -85,11 +85,11 @@ func main() {
 	fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
 	time.Sleep(30 * time.Second)
 	
-	fmt.Println("Reading me config file as a string for configOverrides parameter")
-	meConfigString := readMeConfigFileAsString(meConfigFile)
+	// fmt.Println("Reading me config file as a string for configOverrides parameter")
+	// meConfigString := readMeConfigFileAsString(meConfigFile)
 	
 	fmt.Println("Starting metricsextension with config overrides")
-	startMetricsExtensionWithConfigOverrides(meConfigString)
+	startMetricsExtensionWithConfigOverrides(meConfigFile)
 
     // Get ME version
 	meVersion, err := readVersionFile("/opt/metricsextversion.txt")
@@ -244,16 +244,12 @@ func startMdsd() {
 		return
 	}
 
-	cmd := exec.Command(
-		"mdsd",
-		"-a", "-A",
-		"-e", "/opt/microsoft/linuxmonagent/mdsd.err",
-		"-w", "/opt/microsoft/linuxmonagent/mdsd.warn",
-		"-o", "/opt/microsoft/linuxmonagent/mdsd.info",
-		"-q", "/opt/microsoft/linuxmonagent/mdsd.qos",
-	)
+	cmd := exec.Command("mdsd -a -A -e '/opt/microsoft/linuxmonagent/mdsd.err' -w '/opt/microsoft/linuxmonagent/mdsd.warn' -o '/opt/microsoft/linuxmonagent/mdsd.info' -q '/opt/microsoft/linuxmonagent/mdsd.qos'")
 	// Set the environment variables in cmd.Env
+	cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
+	cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
 	cmd.Env = append(os.Environ(), envVarsFromEnvMdsd...)
+	// cmd.Env = cmd.Env.ExpandEnv()
 
 	fmt.Println("cmd.Env for MDSD")
 	fmt.Println(cmd.Env)
@@ -283,16 +279,7 @@ func readMeConfigFileAsString(meConfigFile string) string {
 }
 
 func startMetricsExtensionWithConfigOverrides(configOverrides string) {
-	cmd := exec.Command(
-		"/usr/sbin/MetricsExtension",
-		"-Logger", "File",
-		"-LogLevel", "Info",
-		"-LocalControlChannel",
-		"-TokenSource", "AMCS",
-		"-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension",
-		"-Input", "otlp_grpc_prom",
-		"-ConfigOverrides", configOverrides,
-	)
+	cmd := exec.Command("/usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc_prom -ConfigOverridesFilePath /usr/sbin/me.config")
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
 	cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
