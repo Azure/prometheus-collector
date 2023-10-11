@@ -17,7 +17,6 @@ func main() {
 	clusterOverride := os.Getenv("CLUSTER_OVERRIDE")
 	cluster := os.Getenv("CLUSTER")
 	aksRegion := os.Getenv("AKSREGION")
-	mdsdLog := os.Getenv("MDSD_LOG")
 
 	var meConfigFile string
 
@@ -78,7 +77,7 @@ func main() {
 	time.Sleep(10 * time.Second)
 	
 	fmt.Println("Starting MDSD")
-	startMdsd(mdsdLog)
+	startMdsd()
 	
 	fmt.Print("MDSD_VERSION=")
 	printMdsdVersion()
@@ -236,7 +235,7 @@ func readEnvVarsFromEnvMdsdFile(envMdsdFile string) ([]string, error) {
 
 	return envVars, nil
 }
-func startMdsd(mdsdLog string) {
+func startMdsd() {
 	fmt.Println("Setting env variables from envmdsd file for MDSD")
 	// Read environment variables from the envmdsd file
 	envVarsFromEnvMdsd, err := readEnvVarsFromEnvMdsdFile("/etc/mdsd.d/envmdsd")
@@ -248,10 +247,10 @@ func startMdsd(mdsdLog string) {
 	cmd := exec.Command(
 		"mdsd",
 		"-a", "-A",
-		"-e", mdsdLog+"/mdsd.err",
-		"-w", mdsdLog+"/mdsd.warn",
-		"-o", mdsdLog+"/mdsd.info",
-		"-q", mdsdLog+"/mdsd.qos",
+		"-e", "/opt/microsoft/linuxmonagent/mdsd.err",
+		"-w", "/opt/microsoft/linuxmonagent/mdsd.warn",
+		"-o", "/opt/microsoft/linuxmonagent/mdsd.info",
+		"-q", "/opt/microsoft/linuxmonagent/mdsd.qos",
 	)
 	// Set the environment variables in cmd.Env
 	cmd.Env = append(os.Environ(), envVarsFromEnvMdsd...)
