@@ -244,7 +244,7 @@ func startMdsd() {
 		return
 	}
 
-	cmd := exec.Command("mdsd -a -A -e '/opt/microsoft/linuxmonagent/mdsd.err' -w '/opt/microsoft/linuxmonagent/mdsd.warn' -o '/opt/microsoft/linuxmonagent/mdsd.info' -q '/opt/microsoft/linuxmonagent/mdsd.qos'")
+	cmd := exec.Command("/usr/sbin/mdsd", "-a -A -e /opt/microsoft/linuxmonagent/mdsd.err -w /opt/microsoft/linuxmonagent/mdsd.warn -o /opt/microsoft/linuxmonagent/mdsd.info -q /opt/microsoft/linuxmonagent/mdsd.qos")
 	// Set the environment variables in cmd.Env
 	cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
 	cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
@@ -279,7 +279,7 @@ func readMeConfigFileAsString(meConfigFile string) string {
 }
 
 func startMetricsExtensionWithConfigOverrides(configOverrides string) {
-	cmd := exec.Command("/usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc_prom -ConfigOverridesFilePath /usr/sbin/me.config")
+	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc_prom -ConfigOverridesFilePath /usr/sbin/me.config")
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
 	cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
