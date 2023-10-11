@@ -248,7 +248,7 @@ func startMdsd() {
 	// Set the environment variables in cmd.Env
 	cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
 	cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
-	cmd.Env = append(os.Environ(), envVarsFromEnvMdsd...)
+	cmd.Env = append(cmd.Env, envVarsFromEnvMdsd...)
 	// cmd.Env = cmd.Env.ExpandEnv()
 
 	fmt.Println("cmd.Env for MDSD")
