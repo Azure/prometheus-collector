@@ -347,6 +347,11 @@ func startMetricsExtension() {
 		"-MonitoringAccount", os.Getenv("AZMON_DEFAULT_METRIC_ACCOUNT_NAME"),
 		"-ConfigOverridesFilePath", os.Getenv("ME_CONFIG_FILE"),
 	)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
+	cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
+	fmt.Println("cmd.Env for MetricsExtension")
+	fmt.Println(cmd.Env)
 	err := cmd.Start()
 	if err != nil {
 		fmt.Printf("Error starting MetricsExtension: %v\n", err)
@@ -387,8 +392,13 @@ func startMdsd(mdsdLog string) {
 		"-w", mdsdLog+"/mdsd.warn",
 		"-o", mdsdLog+"/mdsd.info",
 		"-q", mdsdLog+"/mdsd.qos",
-		"2>>", "/dev/null",
+		// "2>>", "/dev/null",
 	)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
+	cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
+	fmt.Println("cmd.Env for MDSD")
+	fmt.Println(cmd.Env)
 	err := cmd.Start()
 	if err != nil {
 		fmt.Printf("Error starting MDSD: %v\n", err)
@@ -425,6 +435,11 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 		"-Input", "otlp_grpc_prom",
 		"-ConfigOverrides", configOverrides,
 	)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
+	cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
+	fmt.Println("cmd.Env for MetricsExtension")
+	fmt.Println(cmd.Env)
 	err := cmd.Start()
 	if err != nil {
 		fmt.Printf("Error starting MetricsExtension with configOverrides: %v\n", err)
