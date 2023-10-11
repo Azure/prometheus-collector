@@ -3,7 +3,6 @@ trigger:
     include:
     - main
     - operator-targetallocator
-    - grace/telegraf-ta-file
 
 pr:
   autoCancel: true
