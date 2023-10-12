@@ -238,22 +238,22 @@ func readEnvVarsFromEnvMdsdFile(envMdsdFile string) ([]string, error) {
 func startMdsd() {
 	fmt.Println("Setting env variables from envmdsd file for MDSD")
 	// Read environment variables from the envmdsd file
-	envVarsFromEnvMdsd, err := readEnvVarsFromEnvMdsdFile("/etc/mdsd.d/envmdsd")
-	if err != nil {
-		fmt.Printf("Error reading envmdsd file: %v\n", err)
-		return
-	}
+	// envVarsFromEnvMdsd, err := readEnvVarsFromEnvMdsdFile("/etc/mdsd.d/envmdsd")
+	// if err != nil {
+	// 	fmt.Printf("Error reading envmdsd file: %v\n", err)
+	// 	return
+	// }
 
 	cmd := exec.Command("/usr/sbin/mdsd", "-a -A -e /opt/microsoft/linuxmonagent/mdsd.err -w /opt/microsoft/linuxmonagent/mdsd.warn -o /opt/microsoft/linuxmonagent/mdsd.info -q /opt/microsoft/linuxmonagent/mdsd.qos")
 	// Set the environment variables in cmd.Env
-	cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
-	cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
-	cmd.Env = append(cmd.Env, envVarsFromEnvMdsd...)
+	// cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
+	// cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
+	// cmd.Env = append(cmd.Env, envVarsFromEnvMdsd...)
 	// cmd.Env = cmd.Env.ExpandEnv()
 
-	fmt.Println("cmd.Env for MDSD")
-	fmt.Println(cmd.Env)
-	err = cmd.Start()
+	// fmt.Println("cmd.Env for MDSD")
+	// fmt.Println(cmd.Env)
+	err := cmd.Start()
 	if err != nil {
 		fmt.Printf("Error starting MDSD: %v\n", err)
 	}
