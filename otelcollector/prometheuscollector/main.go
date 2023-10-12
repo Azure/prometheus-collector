@@ -236,31 +236,43 @@ func readEnvVarsFromEnvMdsdFile(envMdsdFile string) ([]string, error) {
 	return envVars, nil
 }
 func startMdsd() {
-	fmt.Println("Setting env variables from envmdsd file for MDSD")
-	// Read environment variables from the envmdsd file
-	// envVarsFromEnvMdsd, err := readEnvVarsFromEnvMdsdFile("/etc/mdsd.d/envmdsd")
-	// if err != nil {
-	// 	fmt.Printf("Error reading envmdsd file: %v\n", err)
-	// 	return
-	// }
+	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-e", "/opt/microsoft/linuxmonagent/mdsd.err", "-w", "/opt/microsoft/linuxmonagent/mdsd.warn", "-o", "/opt/microsoft/linuxmonagent/mdsd.info", "-q", "/opt/microsoft/linuxmonagent/mdsd.qos")
+	// Create pipes to capture stdout and stderr
+    stdout, err := cmd.StdoutPipe()
+    if err != nil {
+        fmt.Printf("Error creating stdout pipe: %v\n", err)
+        return
+    }
 
-	cmd := exec.Command("/usr/sbin/mdsd", "-a -A -e /opt/microsoft/linuxmonagent/mdsd.err -w /opt/microsoft/linuxmonagent/mdsd.warn -o /opt/microsoft/linuxmonagent/mdsd.info -q /opt/microsoft/linuxmonagent/mdsd.qos")
-	// Set the environment variables in cmd.Env
-	// cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
-	// cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
-	// cmd.Env = append(cmd.Env, envVarsFromEnvMdsd...)
-	// cmd.Env = cmd.Env.ExpandEnv()
+    stderr, err := cmd.StderrPipe()
+    if err != nil {
+        fmt.Printf("Error creating stderr pipe: %v\n", err)
+        return
+    }
 
-	// fmt.Println("cmd.Env for MDSD")
-	// fmt.Println(cmd.Env)
-	err := cmd.Start()
-	if err != nil {
-		fmt.Printf("Error starting MDSD: %v\n", err)
-	}
+    // Start the command
+    err = cmd.Start()
+    if err != nil {
+        fmt.Printf("Error starting MDSD: %v\n", err)
+        return
+    }
+
+    // Create goroutines to capture and print stdout and stderr
+    go func() {
+        stdoutBytes, _ := ioutil.ReadAll(stdout)
+        fmt.Print(string(stdoutBytes))
+    }()
+
+    go func() {
+        stderrBytes, _ := ioutil.ReadAll(stderr)
+        fmt.Print(string(stderrBytes))
+    }()
+
 }
 
 func printMdsdVersion() {
 	cmd := exec.Command("mdsd", "--version")
+	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
 	if err != nil {
 		fmt.Printf("Error getting MDSD version: %v\n", err)
