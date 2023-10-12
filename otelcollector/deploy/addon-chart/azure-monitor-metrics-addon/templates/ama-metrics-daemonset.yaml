@@ -57,6 +57,10 @@ spec:
               value: "true"
             - name: AZMON_COLLECT_ENV
               value: "false"
+            - name: customResourceId
+              value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+            - name: customRegion
+              value: "{{ .Values.global.commonGlobals.Region }}"            
             - name: customEnvironment
               {{- if eq .Values.AzureMonitorMetrics.ArcExtension true }}
               value: "{{ lower .Values.Azure.Cluster.Cloud }}"

@@ -67,6 +67,10 @@ spec:
             {{- else }}
               value: "false"
             {{- end }}
+            - name: customResourceId
+              value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+            - name: customRegion
+              value: "{{ .Values.global.commonGlobals.Region }}"
             - name: customEnvironment
               {{- if .Values.AzureMonitorMetrics.ArcExtension }}
               value: "{{ lower .Values.Azure.Cluster.Cloud }}"

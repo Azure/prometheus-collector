@@ -101,6 +101,14 @@ ENV TELEMETRY_DISABLED false
 ENV MALLOC_ARENA_MAX=2
 ENV PATH="/busybin:${PATH}"
 ENV OS_TYPE "linux"
+ENV MDSD_LOG="/opt/microsoft/linuxmonagent"
+ENV SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
+ENV MDSD_FLUENT_SOCKET_PORT="28230"
+ENV ENABLE_MCS="true"
+ENV MONITORING_USE_GENEVA_CONFIG_SERVICE="false"
+ENV MDSD_USE_LOCAL_PERSISTENCY="false"
+ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
+
 
 # files
 COPY --from=builder /opt /opt
