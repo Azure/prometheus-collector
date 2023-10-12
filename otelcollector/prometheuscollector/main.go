@@ -290,7 +290,7 @@ func readMeConfigFileAsString(meConfigFile string) string {
 }
 
 func startMetricsExtensionWithConfigOverrides(configOverrides string) {
-	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc_prom -ConfigOverridesFilePath /usr/sbin/me.config")
+	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 	// Create pipes to capture stdout and stderr
     stdout, err := cmd.StdoutPipe()
     if err != nil {
