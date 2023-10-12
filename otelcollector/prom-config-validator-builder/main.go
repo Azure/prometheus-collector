@@ -106,6 +106,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 
 	controllerType := os.Getenv("CONTROLLER_TYPE")
 	isOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
+	nodeName := os.Getenv("NODE_NAME")
+	nodeIp := os.Getenv("NODE_IP")
 
 	var prometheusConfig map[string]interface{}
 	err = yaml.Unmarshal([]byte(promConfigFileContents), &prometheusConfig)
@@ -134,6 +136,11 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
 								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
 							}
+							// Doing this here since TA doesnt dupport env variable substitution
+							if strings.EqualFold(isOperatorEnabled, "true") {
+								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$NODE_NAME", nodeName)
+								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$NODE_IP", nodeIp
+							}
 							relabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -145,6 +152,11 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
 							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
 							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
+						}
+						// Doing this here since TA doesnt dupport env variable substitution
+						if strings.EqualFold(isOperatorEnabled, "true") {
+							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$NODE_NAME", nodeName)
+							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$NODE_IP", nodeIp
 						}
 						relabelConfig["replacement"] = modifiedReplacementString
 					}
@@ -166,6 +178,11 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
 								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
 							}
+							// Doing this here since TA doesnt dupport env variable substitution
+							if strings.EqualFold(isOperatorEnabled, "true") {
+								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$NODE_NAME", nodeName)
+								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$NODE_IP", nodeIp
+							}
 							metricRelabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -178,6 +195,11 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
 							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
 							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
+						}
+						// Doing this here since TA doesnt dupport env variable substitution
+						if strings.EqualFold(isOperatorEnabled, "true") {
+							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$NODE_NAME", nodeName)
+							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$NODE_IP", nodeIp
 						}
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
