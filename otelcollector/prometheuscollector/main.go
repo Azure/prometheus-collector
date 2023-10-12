@@ -73,8 +73,8 @@ func main() {
 	trimmedRegion = strings.ToLower(trimmedRegion)
 	os.Setenv("customRegion", trimmedRegion)
 
-	fmt.Println("Waiting for 120s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
-	time.Sleep(120 * time.Second)
+	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
+	time.Sleep(10 * time.Second)
 	
 	fmt.Println("Starting MDSD")
 	startMdsd()
@@ -267,7 +267,6 @@ func startMdsd() {
         stderrBytes, _ := ioutil.ReadAll(stderr)
         fmt.Print(string(stderrBytes))
     }()
-
 }
 
 func printMdsdVersion() {
@@ -292,15 +291,36 @@ func readMeConfigFileAsString(meConfigFile string) string {
 
 func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc_prom -ConfigOverridesFilePath /usr/sbin/me.config")
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "customResourceId=" + os.Getenv("CLUSTER"))
-	cmd.Env = append(cmd.Env, "customRegion=" + os.Getenv("AKSREGION"))
-	fmt.Println("cmd.Env for MetricsExtension")
-	fmt.Println(cmd.Env)
-	err := cmd.Start()
-	if err != nil {
-		fmt.Printf("Error starting MetricsExtension with configOverrides: %v\n", err)
-	}
+	// Create pipes to capture stdout and stderr
+    stdout, err := cmd.StdoutPipe()
+    if err != nil {
+        fmt.Printf("Error creating stdout pipe: %v\n", err)
+        return
+    }
+
+    stderr, err := cmd.StderrPipe()
+    if err != nil {
+        fmt.Printf("Error creating stderr pipe: %v\n", err)
+        return
+    }
+
+    // Start the command
+    err = cmd.Start()
+    if err != nil {
+        fmt.Printf("Error starting MetricsExtension: %v\n", err)
+        return
+    }
+
+    // Create goroutines to capture and print stdout and stderr
+    go func() {
+        stdoutBytes, _ := ioutil.ReadAll(stdout)
+        fmt.Print(string(stdoutBytes))
+    }()
+
+    go func() {
+        stderrBytes, _ := ioutil.ReadAll(stderr)
+        fmt.Print(string(stderrBytes))
+    }()
 }
 
 func readVersionFile(filePath string) (string, error) {
