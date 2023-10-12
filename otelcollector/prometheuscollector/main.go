@@ -11,12 +11,14 @@ import (
 	"log"
 )
 
-func main() {
+func main(){
 	mac := os.Getenv("MAC")
-    controllerType := os.Getenv("controllerType")
+    controllerType := os.Getenv("CONTROLLER_TYPE")
 	clusterOverride := os.Getenv("CLUSTER_OVERRIDE")
 	cluster := os.Getenv("CLUSTER")
 	aksRegion := os.Getenv("AKSREGION")
+
+	configmapparser()
 
 	var meConfigFile string
 
@@ -77,7 +79,7 @@ func main() {
 	time.Sleep(10 * time.Second)
 	
 	fmt.Println("Starting MDSD")
-	startMdsd()
+	startCommand("/usr/sbin/mdsd", "-a", "-A", "-e", "/opt/microsoft/linuxmonagent/mdsd.err", "-w", "/opt/microsoft/linuxmonagent/mdsd.warn", "-o", "/opt/microsoft/linuxmonagent/mdsd.info", "-q", "/opt/microsoft/linuxmonagent/mdsd.qos")
 	
 	fmt.Print("MDSD_VERSION=")
 	printMdsdVersion()
@@ -133,11 +135,13 @@ func main() {
 		collectorConfig = "/opt/microsoft/otelcollector/collector-config.yml"
 	}
 
-	cmd := exec.Command("/opt/microsoft/otelcollector/otelcollector", "--config", collectorConfig)
-	err = cmd.Start()
-	if err != nil {
-		fmt.Printf("Error starting otelcollector: %v\n", err)
-	}
+	// cmd := exec.Command("/opt/microsoft/otelcollector/otelcollector", "--config", collectorConfig)
+	// err = cmd.Start()
+	// if err != nil {
+	// 	fmt.Printf("Error starting otelcollector: %v\n", err)
+	// }
+	fmt.Println("startCommand otelcollector")
+	startCommand("/opt/microsoft/otelcollector/otelcollector", "--config", collectorConfig)
 
 	otelCollectorVersion, err := exec.Command("/opt/microsoft/otelcollector/otelcollector", "--version").Output()
 	if err != nil {
@@ -235,39 +239,45 @@ func readEnvVarsFromEnvMdsdFile(envMdsdFile string) ([]string, error) {
 
 	return envVars, nil
 }
-func startMdsd() {
-	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-e", "/opt/microsoft/linuxmonagent/mdsd.err", "-w", "/opt/microsoft/linuxmonagent/mdsd.warn", "-o", "/opt/microsoft/linuxmonagent/mdsd.info", "-q", "/opt/microsoft/linuxmonagent/mdsd.qos")
+
+func startCommand(command string, args ...string) {
+	cmd := exec.Command(command, args...)
+
 	// Create pipes to capture stdout and stderr
-    stdout, err := cmd.StdoutPipe()
-    if err != nil {
-        fmt.Printf("Error creating stdout pipe: %v\n", err)
-        return
-    }
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Printf("Error creating stdout pipe: %v\n", err)
+		return
+	}
 
-    stderr, err := cmd.StderrPipe()
-    if err != nil {
-        fmt.Printf("Error creating stderr pipe: %v\n", err)
-        return
-    }
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		fmt.Printf("Error creating stderr pipe: %v\n", err)
+		return
+	}
 
-    // Start the command
-    err = cmd.Start()
-    if err != nil {
-        fmt.Printf("Error starting MDSD: %v\n", err)
-        return
-    }
+	// Start the command
+	err = cmd.Start()
+	if err != nil {
+		fmt.Printf("Error starting command: %v\n", err)
+		return
+	}
 
-    // Create goroutines to capture and print stdout and stderr
-    go func() {
-        stdoutBytes, _ := ioutil.ReadAll(stdout)
-        fmt.Print(string(stdoutBytes))
-    }()
+	// Create goroutines to capture and print stdout and stderr
+	go func() {
+		stdoutBytes, _ := ioutil.ReadAll(stdout)
+		fmt.Print(string(stdoutBytes))
+	}()
 
-    go func() {
-        stderrBytes, _ := ioutil.ReadAll(stderr)
-        fmt.Print(string(stderrBytes))
-    }()
+	go func() {
+		stderrBytes, _ := ioutil.ReadAll(stderr)
+		fmt.Print(string(stderrBytes))
+	}()
+
+	// Wait for the command to complete
+	cmd.Wait()
 }
+
 
 func printMdsdVersion() {
 	cmd := exec.Command("mdsd", "--version")
@@ -333,4 +343,51 @@ func readVersionFile(filePath string) (string, error) {
 
 func fmtVar(name, value string) {
 	fmt.Printf("%s=\"%s\"\n", name, value)
+}
+
+// existsAndNotEmpty checks if a file exists and is not empty.
+func existsAndNotEmpty(filename string) bool {
+    info, err := os.Stat(filename)
+    if os.IsNotExist(err) {
+        return false
+    }
+    if err != nil {
+        // Handle the error, e.g., log it or return false
+        return false
+    }
+    if info.Size() == 0 {
+        return false
+    }
+    return true
+}
+
+// readAndTrim reads the content of a file and trims leading and trailing spaces.
+func readAndTrim(filename string) (string, error) {
+    content, err := ioutil.ReadFile(filename)
+    if err != nil {
+        return "", err
+    }
+    trimmedContent := strings.TrimSpace(string(content))
+    return trimmedContent, nil
+}
+
+
+func configmapparser(){
+	fmt.Printf("in confgimapparser")
+	// Set agent config schema version
+    if existsAndNotEmpty("/etc/config/settings/schema-version") {
+        configSchemaVersion, _ := readAndTrim("/etc/config/settings/schema-version")
+        configSchemaVersion = strings.ReplaceAll(configSchemaVersion, " ", "")
+        configSchemaVersion = configSchemaVersion[:10]
+        os.Setenv("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion)
+    }
+
+    // Set agent config file version
+    if existsAndNotEmpty("/etc/config/settings/config-version") {
+        configFileVersion, _ := readAndTrim("/etc/config/settings/config-version")
+        configFileVersion = strings.ReplaceAll(configFileVersion, " ", "")
+        configFileVersion = configFileVersion[:10]
+        os.Setenv("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion)
+    }
+	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb")
 }
