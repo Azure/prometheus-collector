@@ -139,7 +139,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 							// Doing this here since TA doesnt dupport env variable substitution
 							if strings.EqualFold(isOperatorEnabled, "true") {
 								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$NODE_NAME", nodeName)
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$NODE_IP", nodeIp
+								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$NODE_IP", nodeIp)
 							}
 							relabelConfig["regex"] = modifiedRegexString
 						}
@@ -156,7 +156,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						// Doing this here since TA doesnt dupport env variable substitution
 						if strings.EqualFold(isOperatorEnabled, "true") {
 							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$NODE_NAME", nodeName)
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$NODE_IP", nodeIp
+							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$NODE_IP", nodeIp)
 						}
 						relabelConfig["replacement"] = modifiedReplacementString
 					}
@@ -181,7 +181,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 							// Doing this here since TA doesnt dupport env variable substitution
 							if strings.EqualFold(isOperatorEnabled, "true") {
 								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$NODE_NAME", nodeName)
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$NODE_IP", nodeIp
+								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$NODE_IP", nodeIp)
 							}
 							metricRelabelConfig["regex"] = modifiedRegexString
 						}
@@ -199,7 +199,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						// Doing this here since TA doesnt dupport env variable substitution
 						if strings.EqualFold(isOperatorEnabled, "true") {
 							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$NODE_NAME", nodeName)
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$NODE_IP", nodeIp
+							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$NODE_IP", nodeIp)
 						}
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
