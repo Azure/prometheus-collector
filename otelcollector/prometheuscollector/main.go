@@ -73,8 +73,8 @@ func main() {
 	trimmedRegion = strings.ToLower(trimmedRegion)
 	os.Setenv("customRegion", trimmedRegion)
 
-	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
-	time.Sleep(10 * time.Second)
+	fmt.Println("Waiting for 120s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
+	time.Sleep(120 * time.Second)
 	
 	fmt.Println("Starting MDSD")
 	startMdsd()
