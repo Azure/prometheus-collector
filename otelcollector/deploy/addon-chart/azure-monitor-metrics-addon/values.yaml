@@ -36,10 +36,10 @@ AzureMonitorMetrics:
       - validatingwebhookconfigurations
       - volumeattachments
   ImageRepository: "/azuremonitor/containerinsights/cidev/prometheus-collector/images"
-  ImageTag: "6.7.7-kaveesh-shell-removal-from-ta-branch-10-12-2023-c4fc16ca"
-  ImageTagWin: "6.7.7-kaveesh-shell-removal-from-ta-branch-10-12-2023-c4fc16ca-win"
-  ImageTagTargetAllocator: "6.7.7-kaveesh-shell-removal-from-ta-branch-10-12-2023-c4fc16ca-targetallocator"
-  ImageTagCfgReader: "6.7.7-kaveesh-shell-removal-from-ta-branch-10-12-2023-c4fc16cac-cfg"
+  ImageTag: "6.7.7-kaveesh-shell-removal-from-ta-branch-10-12-2023-e127798b"
+  ImageTagWin: "6.7.7-kaveesh-shell-removal-from-ta-branch-10-12-2023-e127798b-win"
+  ImageTagTargetAllocator: "6.7.7-kaveesh-shell-removal-from-ta-branch-10-12-2023-e127798b-targetallocator"
+  ImageTagCfgReader: "6.7.7-kaveesh-shell-removal-from-ta-branch-10-12-2023-e127798bc-cfg"
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP -
   # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents

@@ -273,9 +273,6 @@ func startCommand(command string, args ...string) {
 		stderrBytes, _ := ioutil.ReadAll(stderr)
 		fmt.Print(string(stderrBytes))
 	}()
-
-	// Wait for the command to complete
-	cmd.Wait()
 }
 
 
