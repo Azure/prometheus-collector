@@ -264,6 +264,7 @@ def populateDefaultPrometheusConfig
       end
       defaultConfigs.push(@apiserverDefaultFile)
     end
+    puts "**************************AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED -> " + ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"]
     if !ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
       kubestateMetricsKeepListRegex = @regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
       kubestateScrapeInterval = @intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
@@ -277,6 +278,7 @@ def populateDefaultPrometheusConfig
       File.open(@kubestateDefaultFile, "w") { |file| file.puts contents }
       defaultConfigs.push(@kubestateDefaultFile)
     end
+    puts "**************************AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED -> " + ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"]
     if !ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].downcase == "true"
       nodeexporterMetricsKeepListRegex = @regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
       nodeexporterScrapeInterval = @intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"]
@@ -492,6 +494,8 @@ end
 # and we need to fall back to defaults
 def writeDefaultScrapeTargetsFile()
   ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Merging Default and Custom Prometheus Config")
+  puts "Do I reach here?"
+  puts "value of AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED is #{ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"]}"
   if !ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].downcase == "false"
     begin
       loadRegexHash
