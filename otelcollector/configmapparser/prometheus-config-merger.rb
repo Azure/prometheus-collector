@@ -494,8 +494,8 @@ end
 # and we need to fall back to defaults
 def writeDefaultScrapeTargetsFile()
   ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Merging Default and Custom Prometheus Config")
-  puts "Do I reach here?"
-  puts "value of AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED is #{ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"]}"
+  ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Do I reach here?")
+  ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "value of AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED is #{ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"]}")
   if !ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].downcase == "false"
     begin
       loadRegexHash
