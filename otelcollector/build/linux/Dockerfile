@@ -186,10 +186,10 @@ RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
 RUN [ "/bin/bash", "-c", "chmod 777 ./opt/prometheuscollector/prometheuscollector" ]
 # # Remove bash that was copied earlier
-# RUN rm -f /usr/bin/bash
-# RUN rm -f /bin/sh
-# RUN rm -f /usr/bin/sh
-# RUN rm -f /bin/sh
+RUN rm -f /usr/bin/bash
+RUN rm -f /bin/sh
+RUN rm -f /usr/bin/sh
+RUN rm -f /bin/sh
 # Expose the port on which the application listens
 EXPOSE 8080
 
