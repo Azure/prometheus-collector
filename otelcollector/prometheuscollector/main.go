@@ -247,6 +247,8 @@ func startCommand(command string, args ...string) {
 
 	// Set environment variables from os.Environ()
 	cmd.Env = append(os.Environ())
+	fmt.Printf("start command list of env variables :")
+	fmt.Printf(cmd.Env)
 
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
