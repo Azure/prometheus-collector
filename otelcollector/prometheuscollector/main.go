@@ -409,6 +409,11 @@ func copyFile(sourcePath, destinationPath string) error {
 }
 
 func setEnvVarsFromFile(filename string) error {
+	// Check if the file exists
+	_, e := os.Stat(filename)
+	if os.IsNotExist(e) {
+		return fmt.Errorf("File does not exist: %s", filename)
+	}
 	// Open the file for reading
 	file, err := os.Open(filename)
 	if err != nil {
@@ -469,7 +474,6 @@ func configmapparser(){
 	err := setEnvVarsFromFile(filename)
 	if err != nil {
 		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping: %v\n", err)
-		return
 	}
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings
@@ -479,7 +483,6 @@ func configmapparser(){
 	err = setEnvVarsFromFile(filename)
 	if err != nil {
 		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var: %v\n", err)
-		return
 	}
 
 	// Parse the settings for default scrape configs
@@ -489,7 +492,6 @@ func configmapparser(){
 	err = setEnvVarsFromFile(filename)
 	if err != nil {
 		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_default_scrape_settings_env_var: %v\n", err)
-		return
 	}
 
 	// Parse the settings for debug mode
@@ -499,7 +501,6 @@ func configmapparser(){
 	err = setEnvVarsFromFile(filename)
 	if err != nil {
 		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_debug_mode_env_var: %v\n", err)
-		return
 	}
 
 	// Parse the settings for default targets metrics keep list config
