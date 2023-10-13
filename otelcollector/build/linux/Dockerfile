@@ -139,7 +139,7 @@ COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
 COPY --from=builder /usr/bin/gzip /usr/bin/
 COPY --from=builder /usr/bin/curl /usr/bin/
 COPY --from=builder /usr/bin/update-ca-trust /usr/bin
-COPY --from=builder /bin/sh /bin/sh
+# COPY --from=builder /bin/sh /bin/sh
 COPY --from=builder /usr/bin/p11-kit /usr/bin
 COPY --from=builder /usr/bin/trust /usr/bin
 
@@ -188,6 +188,8 @@ RUN [ "/bin/bash", "-c", "chmod 777 ./opt/prometheuscollector/prometheuscollecto
 # # Remove bash that was copied earlier
 RUN rm -f /usr/bin/bash
 RUN rm -f /bin/bash
+# RUN rm -f /usr/bin/sh
+# RUN rm -f /bin/sh
 SHELL [""]
 # Expose the port on which the application listens
 EXPOSE 8080
