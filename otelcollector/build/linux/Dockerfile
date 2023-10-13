@@ -127,7 +127,7 @@ COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 COPY --from=builder /usr/bin/ruby /usr/bin/ruby
 COPY --from=builder /usr/lib/ruby /usr/lib/ruby
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
-COPY --from=builder /usr/bin/bash /usr/bin/mybash
+# COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
 COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
 COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
@@ -144,8 +144,8 @@ COPY --from=builder /usr/bin/p11-kit /usr/bin
 COPY --from=builder /usr/bin/trust /usr/bin
 
 # bash dependencies
-COPY --from=builder /lib/libreadline.so.8 /lib/
-COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
+# COPY --from=builder /lib/libreadline.so.8 /lib/
+# COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
 # inotifywait dependencies
 COPY --from=builder /lib/libinotifytools.so.0 /lib/
 # crond dependencies
@@ -180,16 +180,22 @@ COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/
 COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
 COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
 
-RUN [ "/bin/mybash", "-c", "chmod 644 /etc/crontab" ]
-RUN [ "/bin/mybash", "-c", "chown root.root /etc/crontab" ]
-RUN [ "/bin/mybash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
-RUN [ "/bin/mybash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
-RUN [ "/bin/mybash", "-c", "chmod 777 ./opt/prometheuscollector/prometheuscollector" ]
+# RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
+# RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
+# RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
+# RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
+# RUN [ "/bin/bash", "-c", "chmod 777 ./opt/prometheuscollector/prometheuscollector" ]
+RUN chmod 644 /etc/crontab
+RUN chown root.root /etc/crontab
+RUN chmod 755 /etc/cron.daily/logrotate
+RUN chmod 644 /etc/logrotate.d/prometheus-collector
+RUN chmod 777 /opt/prometheuscollector/prometheuscollector
 # # Remove bash that was copied earlier
-RUN rm /usr/bin/mybash
+# RUN rm -f /usr/bin/bash
+# RUN rm -f /bin/bash
 # RUN rm -f /usr/bin/sh
 # RUN rm -f /bin/sh
-SHELL [""]
+# SHELL [""]
 # Expose the port on which the application listens
 EXPOSE 8080
 
