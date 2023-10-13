@@ -1,132 +1,132 @@
-// package main
+package main
 
-// import (
-//     "os"
-//     "os/exec"
-//     "strings"
-// )
+import (
+    "os"
+    "os/exec"
+    "strings"
+)
 
-// func main() {
-//     // Set agent config schema version
-//     if existsAndNotEmpty("/etc/config/settings/schema-version") {
-//         configSchemaVersion, _ := readAndTrim("/etc/config/settings/schema-version")
-//         configSchemaVersion = strings.ReplaceAll(configSchemaVersion, " ", "")
-//         configSchemaVersion = configSchemaVersion[:10]
-//         os.Setenv("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion)
-//     }
+func main() {
+    // Set agent config schema version
+    if existsAndNotEmpty("/etc/config/settings/schema-version") {
+        configSchemaVersion, _ := readAndTrim("/etc/config/settings/schema-version")
+        configSchemaVersion = strings.ReplaceAll(configSchemaVersion, " ", "")
+        configSchemaVersion = configSchemaVersion[:10]
+        os.Setenv("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion)
+    }
 
-//     // Set agent config file version
-//     if existsAndNotEmpty("/etc/config/settings/config-version") {
-//         configFileVersion, _ := readAndTrim("/etc/config/settings/config-version")
-//         configFileVersion = strings.ReplaceAll(configFileVersion, " ", "")
-//         configFileVersion = configFileVersion[:10]
+    // Set agent config file version
+    if existsAndNotEmpty("/etc/config/settings/config-version") {
+        configFileVersion, _ := readAndTrim("/etc/config/settings/config-version")
+        configFileVersion = strings.ReplaceAll(configFileVersion, " ", "")
+        configFileVersion = configFileVersion[:10]
 
-//         os.Setenv("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion)
-//     }
+        os.Setenv("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion)
+    }
 
-//     // Parse the settings for pod annotations
-//     exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb").Run()
-//     if exists("/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping") {
-//         // Read and execute lines from the file
-//     }
+    // Parse the settings for pod annotations
+    exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb").Run()
+    if exists("/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping") {
+        // Read and execute lines from the file
+    }
 
-//     // Parse the configmap to set the right environment variables for prometheus collector settings
-//     exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb").Run()
+    // Parse the configmap to set the right environment variables for prometheus collector settings
+    exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb").Run()
 
-//     // Parse the settings for default scrape configs
-//     exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-default-scrape-settings.rb").Run()
-//     if exists("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var") {
-//         appendFileToBashrc("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var")
-//     }
+    // Parse the settings for default scrape configs
+    exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-default-scrape-settings.rb").Run()
+    if exists("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var") {
+        appendFileToBashrc("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var")
+    }
 
-//     // Parse the settings for debug mode
-//     exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-debug-mode.rb").Run()
-//     if exists("/opt/microsoft/configmapparser/config_debug_mode_env_var") {
-//         appendFileToBashrc("/opt/microsoft/configmapparser/config_debug_mode_env_var")
-//     }
+    // Parse the settings for debug mode
+    exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-debug-mode.rb").Run()
+    if exists("/opt/microsoft/configmapparser/config_debug_mode_env_var") {
+        appendFileToBashrc("/opt/microsoft/configmapparser/config_debug_mode_env_var")
+    }
 
-//     // Parse the settings for default targets metrics keep list config
-//     exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb").Run()
+    // Parse the settings for default targets metrics keep list config
+    exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb").Run()
 
-//     // Parse the settings for default-targets-scrape-interval-settings config
-//     exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-scrape-interval.rb").Run()
+    // Parse the settings for default-targets-scrape-interval-settings config
+    exec.Command("ruby", "/opt/microsoft/configmapparser/tomlparser-scrape-interval.rb").Run()
 
-//     // Merge default and custom prometheus config
-//     if os.Getenv("AZMON_OPERATOR_ENABLED") == "true" || os.Getenv("CONTAINER_TYPE") == "ConfigReaderSidecar" {
-//         exec.Command("ruby", "/opt/microsoft/configmapparser/prometheus-config-merger-with-operator.rb").Run()
-//     } else {
-//         exec.Command("ruby", "/opt/microsoft/configmapparser/prometheus-config-merger.rb").Run()
-//     }
+    // Merge default and custom prometheus config
+    if os.Getenv("AZMON_OPERATOR_ENABLED") == "true" || os.Getenv("CONTAINER_TYPE") == "ConfigReaderSidecar" {
+        exec.Command("ruby", "/opt/microsoft/configmapparser/prometheus-config-merger-with-operator.rb").Run()
+    } else {
+        exec.Command("ruby", "/opt/microsoft/configmapparser/prometheus-config-merger.rb").Run()
+    }
 
-//     os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
-//     appendToBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
+    os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
+    appendToBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
 
-//     os.Setenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")
-//     appendToBashrc("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")
+    os.Setenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")
+    appendToBashrc("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")
 
-//     if exists("/opt/promMergedConfig.yml") {
-//         cmd := exec.Command("/opt/promconfigvalidator", "--config", "/opt/promMergedConfig.yml", "--output", "/opt/microsoft/otelcollector/collector-config.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
-//         cmd.Run()
-//         if cmd.ProcessState.ExitCode() != 0 || !exists("/opt/microsoft/otelcollector/collector-config.yml") {
-//             // Handle validation failure
-//             appendToBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
-//             os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
+    if exists("/opt/promMergedConfig.yml") {
+        cmd := exec.Command("/opt/promconfigvalidator", "--config", "/opt/promMergedConfig.yml", "--output", "/opt/microsoft/otelcollector/collector-config.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+        cmd.Run()
+        if cmd.ProcessState.ExitCode() != 0 || !exists("/opt/microsoft/otelcollector/collector-config.yml") {
+            // Handle validation failure
+            appendToBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
+            os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
 
-//             if exists("/opt/defaultsMergedConfig.yml") {
-//                 cmd := exec.Command("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
-//                 cmd.Run()
-//                 if cmd.ProcessState.ExitCode() != 0 || !exists("/opt/collector-config-with-defaults.yml") {
-//                     // Handle default scrape config validation failure
-//                 } else {
-//                     // Copy the validated default config
-//                     // Handle success
-//                 }
-//             }
+            if exists("/opt/defaultsMergedConfig.yml") {
+                cmd := exec.Command("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+                cmd.Run()
+                if cmd.ProcessState.ExitCode() != 0 || !exists("/opt/collector-config-with-defaults.yml") {
+                    // Handle default scrape config validation failure
+                } else {
+                    // Copy the validated default config
+                    // Handle success
+                }
+            }
 
-//             appendToBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
-//             os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
-//         }
-//     } else if exists("/opt/defaultsMergedConfig.yml") {
-//         // Handle case where no custom config is found
-//         // Handle default scrape config validation
-//         // Copy the validated default config
-//         appendToBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
-//         os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
-//     } else {
-//         // Handle case where no custom config or default configs are enabled
-//     }
+            appendToBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
+            os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
+        }
+    } else if exists("/opt/defaultsMergedConfig.yml") {
+        // Handle case where no custom config is found
+        // Handle default scrape config validation
+        // Copy the validated default config
+        appendToBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
+        os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
+    } else {
+        // Handle case where no custom config or default configs are enabled
+    }
 
-//     // Set the environment variables from the prom-config-validator
-//     if exists("/opt/microsoft/prom_config_validator_env_var") {
-//         appendFileToBashrc("/opt/microsoft/prom_config_validator_env_var")
-//     }
+    // Set the environment variables from the prom-config-validator
+    if exists("/opt/microsoft/prom_config_validator_env_var") {
+        appendFileToBashrc("/opt/microsoft/prom_config_validator_env_var")
+    }
 
-//     appendToBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
-// }
+    appendToBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
+}
 
 
-// // existsAndNotEmpty checks if a file exists and is not empty.
-// func existsAndNotEmpty(filename string) bool {
-//     info, err := os.Stat(filename)
-//     if os.IsNotExist(err) {
-//         return false
-//     }
-//     if err != nil {
-//         // Handle the error, e.g., log it or return false
-//         return false
-//     }
-//     if info.Size() == 0 {
-//         return false
-//     }
-//     return true
-// }
+// existsAndNotEmpty checks if a file exists and is not empty.
+func existsAndNotEmpty(filename string) bool {
+    info, err := os.Stat(filename)
+    if os.IsNotExist(err) {
+        return false
+    }
+    if err != nil {
+        // Handle the error, e.g., log it or return false
+        return false
+    }
+    if info.Size() == 0 {
+        return false
+    }
+    return true
+}
 
-// // readAndTrim reads the content of a file and trims leading and trailing spaces.
-// func readAndTrim(filename string) (string, error) {
-//     content, err := ioutil.ReadFile(filename)
-//     if err != nil {
-//         return "", err
-//     }
-//     trimmedContent := strings.TrimSpace(string(content))
-//     return trimmedContent, nil
-// }
+// readAndTrim reads the content of a file and trims leading and trailing spaces.
+func readAndTrim(filename string) (string, error) {
+    content, err := ioutil.ReadFile(filename)
+    if err != nil {
+        return "", err
+    }
+    trimmedContent := strings.TrimSpace(string(content))
+    return trimmedContent, nil
+}

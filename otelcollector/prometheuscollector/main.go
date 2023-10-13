@@ -368,6 +368,36 @@ func readAndTrim(filename string) (string, error) {
     return trimmedContent, nil
 }
 
+func exists(path string) bool {
+    _, err := os.Stat(path)
+    if err != nil {
+        if os.IsNotExist(err) {
+            return false
+        }
+    }
+    return true
+}
+
+func copyFile(sourcePath, destinationPath string) error {
+	sourceFile, err := os.Open(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destinationFile, err := os.Create(destinationPath)
+	if err != nil {
+		return err
+	}
+	defer destinationFile.Close()
+
+	_, err = io.Copy(destinationFile, sourceFile)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func configmapparser(){
 	fmt.Printf("in confgimapparser")
@@ -386,5 +416,76 @@ func configmapparser(){
         configFileVersion = configFileVersion[:10]
         os.Setenv("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion)
     }
+
+	// Parse the settings for pod annotations
 	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb")
+	// sets env : AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX in /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping
+
+	// Parse the configmap to set the right environment variables for prometheus collector settings
+	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb")
+	// sets env : AZMON_DEFAULT_METRIC_ACCOUNT_NAME, AZMON_CLUSTER_LABEL, AZMON_CLUSTER_ALIAS, AZMON_OPERATOR_ENABLED_CHART_SETTING in /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var
+
+	// Parse the settings for default scrape configs
+	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-default-scrape-settings.rb")
+	// sets env: AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED...AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED in /opt/microsoft/configmapparser/config_default_scrape_settings_env_var
+
+	// Parse the settings for debug mode
+	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-debug-mode.rb")
+	// sets env: DEBUG_MODE_ENABLED in /opt/microsoft/configmapparser/config_debug_mode_env_var
+
+	// Parse the settings for default targets metrics keep list config
+    startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb")
+	// sets regexhas file /opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash
+
+	// Parse the settings for default-targets-scrape-interval-settings config
+    startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-scrape-interval.rb")
+
+    // Merge default and custom prometheus config
+    if os.Getenv("AZMON_OPERATOR_ENABLED") == "true" || os.Getenv("CONTAINER_TYPE") == "ConfigReaderSidecar" {
+        startCommand("ruby", "/opt/microsoft/configmapparser/prometheus-config-merger-with-operator.rb")
+    } else {
+        startCommand("ruby", "/opt/microsoft/configmapparser/prometheus-config-merger.rb")
+    }
+
+	os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
+	os.Setenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")
+
+	if exists("/opt/promMergedConfig.yml") {
+        startCommand("/opt/promconfigvalidator", "--config", "/opt/promMergedConfig.yml", "--output", "/opt/microsoft/otelcollector/collector-config.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+        if !exists("/opt/microsoft/otelcollector/collector-config.yml") {
+			// if cmd.ProcessState.ExitCode() != 0 || !exists("/opt/microsoft/otelcollector/collector-config.yml") {
+            // Handle validation failure
+            os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
+
+            if exists("/opt/defaultsMergedConfig.yml") {
+                startCommand("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+                if !exists("/opt/collector-config-with-defaults.yml") {
+					// if cmd.ProcessState.ExitCode() != 0 || !exists("/opt/collector-config-with-defaults.yml") {
+                    // Handle default scrape config validation failure
+                } else {
+                    // Copy the validated default config
+                    // Handle success
+					sourcePath := "/opt/collector-config-with-defaults.yml"
+					destinationPath := "/opt/microsoft/otelcollector/collector-config-default.yml"
+
+					err := copyFile(sourcePath, destinationPath)
+					if err != nil {
+						fmt.Printf("Error copying file: %v\n", err)
+					} else {
+						fmt.Println("File copied successfully.")
+					}
+                }
+            }
+
+            os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
+        }
+    } else if exists("/opt/defaultsMergedConfig.yml") {
+        // Handle case where no custom config is found
+        // Handle default scrape config validation
+        // Copy the validated default config
+        os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
+    } else {
+        // Handle case where no custom config or default configs are enabled
+    }
+
 }
