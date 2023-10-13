@@ -10,6 +10,7 @@ import (
     "strings"
 	"log"
 	"io"
+	"bufio"
 )
 
 func main(){
@@ -244,6 +245,9 @@ func readEnvVarsFromEnvMdsdFile(envMdsdFile string) ([]string, error) {
 func startCommand(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
+	// Set environment variables from os.Environ()
+	cmd.Env = append(os.Environ())
+
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -400,6 +404,41 @@ func copyFile(sourcePath, destinationPath string) error {
 	return nil
 }
 
+func setEnvVarsFromFile(filename string) error {
+	// Open the file for reading
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Split(line, "=")
+		if len(parts) != 2 {
+			fmt.Printf("Skipping invalid line: %s\n", line)
+			continue
+		}
+
+		key := parts[0]
+		value := parts[1]
+
+		// Set the environment variable
+		err := os.Setenv(key, value)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func configmapparser(){
 	fmt.Printf("in confgimapparser")
 	// Set agent config schema version
@@ -421,18 +460,43 @@ func configmapparser(){
 	// Parse the settings for pod annotations
 	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb")
 	// sets env : AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX in /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping
+	
+	filename := "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
+	err := setEnvVarsFromFile(filename)
+	if err != nil {
+		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping: %v\n", err)
+		return
+	}
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings
 	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb")
 	// sets env : AZMON_DEFAULT_METRIC_ACCOUNT_NAME, AZMON_CLUSTER_LABEL, AZMON_CLUSTER_ALIAS, AZMON_OPERATOR_ENABLED_CHART_SETTING in /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var
+	filename = "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
+	err = setEnvVarsFromFile(filename)
+	if err != nil {
+		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var: %v\n", err)
+		return
+	}
 
 	// Parse the settings for default scrape configs
 	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-default-scrape-settings.rb")
 	// sets env: AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED...AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED in /opt/microsoft/configmapparser/config_default_scrape_settings_env_var
+	filename = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
+	err = setEnvVarsFromFile(filename)
+	if err != nil {
+		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_default_scrape_settings_env_var: %v\n", err)
+		return
+	}
 
 	// Parse the settings for debug mode
 	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-debug-mode.rb")
 	// sets env: DEBUG_MODE_ENABLED in /opt/microsoft/configmapparser/config_debug_mode_env_var
+	filename = "/opt/microsoft/configmapparser/config_debug_mode_env_var"
+	err = setEnvVarsFromFile(filename)
+	if err != nil {
+		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_debug_mode_env_var: %v\n", err)
+		return
+	}
 
 	// Parse the settings for default targets metrics keep list config
     startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb")
