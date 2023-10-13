@@ -62,11 +62,11 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: AZMON_OPERATOR_ENABLED
-            {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true) }}
-              value: "true"
-            {{- else }}
+            # {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true) }}
+            #   value: "true"
+            # {{- else }}
               value: "false"
-            {{- end }}
+            # {{- end }}
             - name: customResourceId
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
             - name: customRegion
