@@ -116,13 +116,13 @@ file = File.open("/opt/microsoft/configmapparser/config_prometheus_collector_set
 
 if !file.nil?
   if !ENV["OS_TYPE"].nil? && ENV["OS_TYPE"].downcase == "linux"
-    file.write("export AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
-    file.write("export AZMON_CLUSTER_LABEL=#{@clusterLabel}\n") #used for cluster label value when scraping
-    file.write("export AZMON_CLUSTER_ALIAS=#{@clusterAlias}\n") #used only for telemetry
-    file.write("export AZMON_OPERATOR_ENABLED_CHART_SETTING=#{@isOperatorEnabledChartSetting}\n")
+    file.write("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
+    file.write("AZMON_CLUSTER_LABEL=#{@clusterLabel}\n") #used for cluster label value when scraping
+    file.write("AZMON_CLUSTER_ALIAS=#{@clusterAlias}\n") #used only for telemetry
+    file.write("AZMON_OPERATOR_ENABLED_CHART_SETTING=#{@isOperatorEnabledChartSetting}\n")
     if !@isOperatorEnabled.nil? && !@isOperatorEnabled.empty? && @isOperatorEnabled.length > 0
-      file.write("export AZMON_OPERATOR_ENABLED=#{@isOperatorEnabled}\n")
-      file.write("export AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=#{@isOperatorEnabled}\n")
+      file.write("AZMON_OPERATOR_ENABLED=#{@isOperatorEnabled}\n")
+      file.write("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=#{@isOperatorEnabled}\n")
     end
   else
     file.write("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")

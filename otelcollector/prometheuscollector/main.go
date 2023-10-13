@@ -284,6 +284,54 @@ func startCommand(command string, args ...string) {
 	}()
 }
 
+func startCommandAndWait(command string, args ...string) {
+	cmd := exec.Command(command, args...)
+
+	// Set environment variables from os.Environ()
+	cmd.Env = append(os.Environ())
+	// Print the environment variables being passed into the cmd
+	fmt.Println("Environment variables being passed into the command:")
+	for _, v := range cmd.Env {
+		fmt.Println(v)
+	}
+	// Create pipes to capture stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Printf("Error creating stdout pipe: %v\n", err)
+		return
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		fmt.Printf("Error creating stderr pipe: %v\n", err)
+		return
+	}
+
+	// Start the command
+	err = cmd.Start()
+	if err != nil {
+		fmt.Printf("Error starting command: %v\n", err)
+		return
+	}
+
+	// Create goroutines to capture and print stdout and stderr
+	go func() {
+		stdoutBytes, _ := ioutil.ReadAll(stdout)
+		fmt.Print(string(stdoutBytes))
+	}()
+
+	go func() {
+		stderrBytes, _ := ioutil.ReadAll(stderr)
+		fmt.Print(string(stderrBytes))
+	}()
+
+	// Wait for the command to finish
+	err = cmd.Wait()
+	if err != nil {
+		fmt.Printf("Error waiting for command: %v\n", err)
+	}
+}
+
 
 func printMdsdVersion() {
 	cmd := exec.Command("mdsd", "--version")
@@ -467,7 +515,7 @@ func configmapparser(){
     }
 
 	// Parse the settings for pod annotations
-	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb")
+	startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb")
 	// sets env : AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX in /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping
 	
 	filename := "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
@@ -477,7 +525,7 @@ func configmapparser(){
 	}
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings
-	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb")
+	startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb")
 	// sets env : AZMON_DEFAULT_METRIC_ACCOUNT_NAME, AZMON_CLUSTER_LABEL, AZMON_CLUSTER_ALIAS, AZMON_OPERATOR_ENABLED_CHART_SETTING in /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var
 	filename = "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
 	err = setEnvVarsFromFile(filename)
@@ -486,7 +534,7 @@ func configmapparser(){
 	}
 
 	// Parse the settings for default scrape configs
-	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-default-scrape-settings.rb")
+	startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-default-scrape-settings.rb")
 	// sets env: AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED...AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED in /opt/microsoft/configmapparser/config_default_scrape_settings_env_var
 	filename = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
 	err = setEnvVarsFromFile(filename)
@@ -495,7 +543,7 @@ func configmapparser(){
 	}
 
 	// Parse the settings for debug mode
-	startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-debug-mode.rb")
+	startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-debug-mode.rb")
 	// sets env: DEBUG_MODE_ENABLED in /opt/microsoft/configmapparser/config_debug_mode_env_var
 	filename = "/opt/microsoft/configmapparser/config_debug_mode_env_var"
 	err = setEnvVarsFromFile(filename)
@@ -504,31 +552,31 @@ func configmapparser(){
 	}
 
 	// Parse the settings for default targets metrics keep list config
-    startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb")
+    startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb")
 	// sets regexhas file /opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash
 
 	// Parse the settings for default-targets-scrape-interval-settings config
-    startCommand("ruby", "/opt/microsoft/configmapparser/tomlparser-scrape-interval.rb")
+    startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-scrape-interval.rb")
 
     // Merge default and custom prometheus config
     if os.Getenv("AZMON_OPERATOR_ENABLED") == "true" || os.Getenv("CONTAINER_TYPE") == "ConfigReaderSidecar" {
-        startCommand("ruby", "/opt/microsoft/configmapparser/prometheus-config-merger-with-operator.rb")
+        startCommandAndWait("ruby", "/opt/microsoft/configmapparser/prometheus-config-merger-with-operator.rb")
     } else {
-        startCommand("ruby", "/opt/microsoft/configmapparser/prometheus-config-merger.rb")
+        startCommandAndWait("ruby", "/opt/microsoft/configmapparser/prometheus-config-merger.rb")
     }
 
 	os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
 	os.Setenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")
 
 	if exists("/opt/promMergedConfig.yml") {
-        startCommand("/opt/promconfigvalidator", "--config", "/opt/promMergedConfig.yml", "--output", "/opt/microsoft/otelcollector/collector-config.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+        startCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/promMergedConfig.yml", "--output", "/opt/microsoft/otelcollector/collector-config.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
         if !exists("/opt/microsoft/otelcollector/collector-config.yml") {
 			// if cmd.ProcessState.ExitCode() != 0 || !exists("/opt/microsoft/otelcollector/collector-config.yml") {
             // Handle validation failure
             os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
 
             if exists("/opt/defaultsMergedConfig.yml") {
-                startCommand("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+                startCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
                 if !exists("/opt/collector-config-with-defaults.yml") {
 					// if cmd.ProcessState.ExitCode() != 0 || !exists("/opt/collector-config-with-defaults.yml") {
                     // Handle default scrape config validation failure

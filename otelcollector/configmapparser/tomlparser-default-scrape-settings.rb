@@ -150,10 +150,11 @@ end
 # Write the settings to file, so that they can be set as environment variables
 file = File.open("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var", "w")
 
-$export = "export "
-if !ENV['OS_TYPE'].nil? && ENV['OS_TYPE'].downcase == "windows"
-  $export = "";
-end
+$export = ""
+# $export = "export "
+# if !ENV['OS_TYPE'].nil? && ENV['OS_TYPE'].downcase == "windows"
+#   $export = "";
+# end
 
 if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED=#{@kubeletEnabled}\n")
