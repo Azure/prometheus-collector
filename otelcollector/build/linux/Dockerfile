@@ -78,7 +78,7 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
-COPY --from=prometheuscollector-builder /prometheuscollector/prometheuscollector $tmpdir/prometheuscollector/
+COPY --from=prometheuscollector-builder --chmod=777 /prometheuscollector/prometheuscollector $tmpdir/prometheuscollector/
 
 ARG TARGETARCH
 RUN tdnf clean all
@@ -185,11 +185,6 @@ COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
 # RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
 # RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
 # RUN [ "/bin/bash", "-c", "chmod 777 ./opt/prometheuscollector/prometheuscollector" ]
-RUN chmod 644 /etc/crontab
-RUN chown root.root /etc/crontab
-RUN chmod 755 /etc/cron.daily/logrotate
-RUN chmod 644 /etc/logrotate.d/prometheus-collector
-RUN chmod 777 /opt/prometheuscollector/prometheuscollector
 # # Remove bash that was copied earlier
 # RUN rm -f /usr/bin/bash
 # RUN rm -f /bin/bash
