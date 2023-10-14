@@ -27,13 +27,9 @@ spec:
               protocol: TCP
             - containerPort: 2113
               protocol: TCP
-        - name: prometheus-reference-app-python
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-python
-          ports:
-          - containerPort: 2114
-            protocol: TCP
       nodeSelector:
           kubernetes.io/os: linux
+          architecture: amd64
 ---
 apiVersion: v1
 kind: Service
