@@ -127,7 +127,8 @@ COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 COPY --from=builder /usr/bin/ruby /usr/bin/ruby
 COPY --from=builder /usr/lib/ruby /usr/lib/ruby
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
-# COPY --from=builder /usr/bin/bash /usr/bin/bash
+# Remove copying from bash when not debugging/sharing an image
+COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
 COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
 COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf

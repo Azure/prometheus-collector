@@ -691,7 +691,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Check if ME is not running
-		if !isProcessRunning("MetricsExt") {
+		if !isProcessRunning("MetricsExtension") {
 			w.WriteHeader(http.StatusServiceUnavailable)
         	fmt.Fprintln(w, "Metrics Extension is not running.")
 		}
