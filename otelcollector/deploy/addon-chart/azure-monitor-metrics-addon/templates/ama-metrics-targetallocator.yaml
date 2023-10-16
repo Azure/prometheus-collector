@@ -178,6 +178,13 @@ spec:
                 operator: In
                 values:
                 - system
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: azuremonitor/metrics.replica.preferred
+                operator: In
+                values:
+                - "true"
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
