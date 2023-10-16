@@ -9,14 +9,21 @@ else
     ARCH=$1
 fi
 
-sudo tdnf install ca-certificates-microsoft -y
-sudo update-ca-trust
+if [ -z $CCP_METRICS_ENABLED ]; then
+  CCP_METRICS_ENABLED="false"
+fi
+echo_var "CCP_METRICS_ENABLED" "$CCP_METRICS_ENABLED"
+
+if [ "${CCP_METRICS_ENABLED}" != "true" ]; then
+    sudo tdnf install ca-certificates-microsoft -y
+    sudo update-ca-trust
 
 #Need this for newer scripts
 chmod 544 $TMPDIR/*.sh
 chmod 544 $TMPDIR/microsoft/liveness/*.sh
-chmod 544 $TMPDIR/microsoft/configmapparser/*.rb
+fi
 
+chmod 544 $TMPDIR/microsoft/configmapparser/*.rb
 chmod 744 /usr/sbin/
 
 #download inotify tools for watching configmap changes
@@ -50,17 +57,19 @@ cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
 mkdir /opt/microsoft/linuxmonagent
 
-# Install telegraf
-echo "Installing telegraf..."
-sudo tdnf install telegraf-1.27.3 -y
-sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.txt
-
-# Install fluent-bit
-echo "Installing fluent-bit..."
-sudo tdnf install fluent-bit-2.0.9 -y
-
-# Setup hourly cron for logrotate
-cp /etc/cron.daily/logrotate /etc/cron.hourly/
+if [ "${CCP_METRICS_ENABLED}" != "true" ]; then
+    # Install telegraf
+    echo "Installing telegraf..."
+    sudo tdnf install telegraf-1.27.3 -y
+    sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.txt
+    
+    # Install fluent-bit
+    echo "Installing fluent-bit..."
+    sudo tdnf install fluent-bit-2.0.9 -y
+    
+    # Setup hourly cron for logrotate
+    cp /etc/cron.daily/logrotate /etc/cron.hourly/
+fi
 
 # Install ME
 echo "Installing Metrics Extension..."

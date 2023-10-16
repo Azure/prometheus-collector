@@ -11,6 +11,7 @@ import (
 	"log"
 	"io"
 	"bufio"
+	"strconv"
 )
 
 func main(){
@@ -194,21 +195,31 @@ func main(){
 		}
 	}
 
+	// Setting time at which the container started running
+    epochTimeNow := time.Now().Unix()
+    epochTimeNowReadable := time.Unix(epochTimeNow, 0).Format(time.RFC3339)
+
+    // Writing the epoch time to a file
+    file, err := os.Create("/opt/microsoft/liveness/azmon-container-start-time")
+    if err != nil {
+        fmt.Println("Error creating file:", err)
+        return
+    }
+    defer file.Close()
+
+    _, err = file.WriteString(fmt.Sprintf("%d", epochTimeNow))
+    if err != nil {
+        fmt.Println("Error writing to file:", err)
+        return
+    }
+
+    // Printing the environment variable and the readable time
+    fmt.Printf("AZMON_CONTAINER_START_TIME=%d\n", epochTimeNow)
+    fmt.Printf("AZMON_CONTAINER_START_TIME_READABLE=%s\n", epochTimeNowReadable)
+
     // Expose a health endpoint for liveness probe
     http.HandleFunc("/health", healthHandler)
     http.ListenAndServe(":8080", nil)
-}
-
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-    prometheuscollectorRunning := isProcessRunning("prometheuscollector")
-
-    if prometheuscollectorRunning {
-        w.WriteHeader(http.StatusOK)
-        fmt.Fprintln(w, "prometheuscollector is running.")
-    } else {
-        w.WriteHeader(http.StatusServiceUnavailable)
-        fmt.Fprintln(w, "prometheuscollector is not running.")
-    }
 }
 
 func isProcessRunning(processName string) bool {
@@ -620,4 +631,83 @@ func configmapparser(){
 		os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
     }
 
+}
+
+func hasConfigChanged(filePath string) bool {
+	if _, err := os.Stat(filePath); err == nil {
+		fileInfo, err := os.Stat(filePath)
+		if err != nil {
+			fmt.Println("Error getting file info:", err)
+			os.Exit(1)
+		}
+
+		return fileInfo.Size() > 0
+	}
+	return false
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+    prometheuscollectorRunning := isProcessRunning("prometheuscollector")
+
+    if prometheuscollectorRunning {
+        w.WriteHeader(http.StatusOK)
+        fmt.Fprintln(w, "prometheuscollector is running.")
+    } else {
+        w.WriteHeader(http.StatusServiceUnavailable)
+        fmt.Fprintln(w, "prometheuscollector is not running.")
+    }
+
+	macMode := os.Getenv("MAC") == "true"
+
+	// Check for the absence of TokenConfig.json file in MAC mode
+	if macMode {
+		if _, err := os.Stat("/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"); os.IsNotExist(err) {
+			if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
+		azmonContainerStartTimeStr, err := ioutil.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
+		if err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+        	fmt.Fprintln(w, "Error reading azmon-container-start-time:", err)
+		}
+
+		azmonContainerStartTime, err := strconv.Atoi(strings.TrimSpace(string(azmonContainerStartTimeStr)))
+		if err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+        	fmt.Fprintln(w, "Error converting azmon-container-start-time to integer:", err)
+		}
+
+		epochTimeNow := int(time.Now().Unix())
+		duration := epochTimeNow - azmonContainerStartTime
+		durationInMinutes := duration / 60
+
+		if durationInMinutes%5 == 0 {
+			fmt.Printf("%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
+		}
+
+		if durationInMinutes > 15 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+        	fmt.Fprintln(w, "No configuration present for the AKS resource")
+		}
+	}
+		}
+	} else {
+		// Check if ME is not running
+		if !isProcessRunning("MetricsExt") {
+			w.WriteHeader(http.StatusServiceUnavailable)
+        	fmt.Fprintln(w, "Metrics Extension is not running.")
+		}
+		// Check if the certificates have changed
+		// checkCertificateChange()
+	}
+
+	// Check if otelcollector is not running
+	if !isProcessRunning("otelcollector") {
+		w.WriteHeader(http.StatusServiceUnavailable)
+        fmt.Fprintln(w, "OpenTelemetryCollector is not running.")
+	}
+
+	// Check for config changes
+	if hasConfigChanged("/opt/inotifyoutput.txt") {
+		w.WriteHeader(http.StatusServiceUnavailable)
+        fmt.Fprintln(w, "inotifyoutput.txt has been updated - config changed")
+	}
 }
