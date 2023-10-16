@@ -121,6 +121,9 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 							regexString := relabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
 							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							// Doing the below since we dont want to substitute $ with $$ for env variables NODE_NAME and NODE_IP.
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
 							relabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -129,6 +132,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						replacement := relabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
 						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
 						relabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
@@ -145,6 +150,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 							regexString := metricRelabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
 							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
 							metricRelabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -154,6 +161,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						replacement := metricRelabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
 						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
