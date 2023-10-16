@@ -647,67 +647,68 @@ func hasConfigChanged(filePath string) bool {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-    prometheuscollectorRunning := isProcessRunning("prometheuscollector")
+	prometheuscollectorRunning := isProcessRunning("prometheuscollector")
 
-    if prometheuscollectorRunning {
-        w.WriteHeader(http.StatusOK)
-        fmt.Fprintln(w, "prometheuscollector is running.")
-    } else {
-        w.WriteHeader(http.StatusServiceUnavailable)
-        fmt.Fprintln(w, "prometheuscollector is not running.")
-    }
+	var status int
+	var message string
+
+	if prometheuscollectorRunning {
+		status = http.StatusOK
+		message = "prometheuscollector is running."
+	} else {
+		status = http.StatusServiceUnavailable
+		message = "prometheuscollector is not running."
+	}
 
 	macMode := os.Getenv("MAC") == "true"
 
-	// Check for the absence of TokenConfig.json file in MAC mode
 	if macMode {
 		if _, err := os.Stat("/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"); os.IsNotExist(err) {
 			if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
-		azmonContainerStartTimeStr, err := ioutil.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
-		if err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-        	fmt.Fprintln(w, "Error reading azmon-container-start-time:", err)
-		}
+				azmonContainerStartTimeStr, err := ioutil.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
+				if err != nil {
+					status = http.StatusServiceUnavailable
+					message += "\nError reading azmon-container-start-time: " + err.Error()
+				}
 
-		azmonContainerStartTime, err := strconv.Atoi(strings.TrimSpace(string(azmonContainerStartTimeStr)))
-		if err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-        	fmt.Fprintln(w, "Error converting azmon-container-start-time to integer:", err)
-		}
+				azmonContainerStartTime, err := strconv.Atoi(strings.TrimSpace(string(azmonContainerStartTimeStr)))
+				if err != nil {
+					status = http.StatusServiceUnavailable
+					message += "\nError converting azmon-container-start-time to integer: " + err.Error()
+				}
 
-		epochTimeNow := int(time.Now().Unix())
-		duration := epochTimeNow - azmonContainerStartTime
-		durationInMinutes := duration / 60
+				epochTimeNow := int(time.Now().Unix())
+				duration := epochTimeNow - azmonContainerStartTime
+				durationInMinutes := duration / 60
 
-		if durationInMinutes%5 == 0 {
-			fmt.Printf("%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
-		}
+				if durationInMinutes%5 == 0 {
+					message += fmt.Sprintf("\n%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
+				}
 
-		if durationInMinutes > 15 {
-			w.WriteHeader(http.StatusServiceUnavailable)
-        	fmt.Fprintln(w, "No configuration present for the AKS resource")
-		}
-	}
+				if durationInMinutes > 15 {
+					status = http.StatusServiceUnavailable
+					message += "\nNo configuration present for the AKS resource"
+				}
+			}
 		}
 	} else {
-		// Check if ME is not running
 		if !isProcessRunning("MetricsExtension") {
-			w.WriteHeader(http.StatusServiceUnavailable)
-        	fmt.Fprintln(w, "Metrics Extension is not running.")
+			status = http.StatusServiceUnavailable
+			message += "\nMetrics Extension is not running."
 		}
-		// Check if the certificates have changed
-		// checkCertificateChange()
 	}
 
-	// Check if otelcollector is not running
 	if !isProcessRunning("otelcollector") {
-		w.WriteHeader(http.StatusServiceUnavailable)
-        fmt.Fprintln(w, "OpenTelemetryCollector is not running.")
+		status = http.StatusServiceUnavailable
+		message += "\nOpenTelemetryCollector is not running."
 	}
 
-	// Check for config changes
 	if hasConfigChanged("/opt/inotifyoutput.txt") {
-		w.WriteHeader(http.StatusServiceUnavailable)
-        fmt.Fprintln(w, "inotifyoutput.txt has been updated - config changed")
+		status = http.StatusServiceUnavailable
+		message += "\ninotifyoutput.txt has been updated - config changed"
 	}
+
+	w.WriteHeader(status)
+	fmt.Fprintln(w, message)
 }
+
