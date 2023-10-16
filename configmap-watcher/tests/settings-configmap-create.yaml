@@ -1,0 +1,75 @@
+kind: ConfigMap
+apiVersion: v1
+data:
+  schema-version:
+    #string.used by agent to parse config. supported versions are {v1}. Configs with other schema versions will be rejected by the agent.
+    v1
+  config-version:
+    #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
+    ver1
+  prometheus-collector-settings: |-
+    cluster_alias = ""
+  default-scrape-settings-enabled: |-
+    kubelet = false
+    coredns = false
+    cadvisor = false
+    kubeproxy = false
+    apiserver = false
+    kubestate = false
+    nodeexporter = false
+    windowsexporter = false
+    windowskubeproxy = false
+    kappiebasic = false
+    prometheuscollectorhealth = false
+    kube-apiserver = true
+    cluster-autoscaler = false
+    kube-scheduler = true
+    kube-controller-manager = true
+    etcd = true
+    prometheuscollectorhealth-controlplane = false
+  # Regex for which namespaces to scrape through pod annotation based scraping.
+  # This is none by default. Use '.*' to scrape all namespaces of annotated pods.
+  pod-annotation-based-scraping: |-
+    podannotationnamespaceregex = ""
+  default-targets-metrics-keep-list: |-
+    kubelet = ""
+    coredns = ""
+    cadvisor = ""
+    kubeproxy = ""
+    apiserver = ""
+    kubestate = ""
+    nodeexporter = ""
+    windowsexporter = ""
+    windowskubeproxy = ""
+    podannotations = ""
+    kappiebasic = ""
+    kube-apiserver = ""
+    cluster-autoscaler = ""
+    kube-scheduler = ""
+    kube-controller-manager = ""
+    etcd = ""
+    minimalingestionprofile = false
+  default-targets-scrape-interval-settings: |-
+    kubelet = "30s"
+    coredns = "30s"
+    cadvisor = "30s"
+    kubeproxy = "30s"
+    apiserver = "30s"
+    kubestate = "30s"
+    nodeexporter = "30s"
+    windowsexporter = "30s"
+    windowskubeproxy = "30s"
+    kappiebasic = "30s"
+    prometheuscollectorhealth = "30s"
+    podannotations = "30s"
+    kube-apiserver = "30s"
+    cluster-autoscaler = "30s"
+    kube-scheduler = "30s"
+    kube-controller-manager = "30s"
+    etcd = "30s"
+    prometheuscollectorhealth-controlplane = "30s"
+  debug-mode: |-
+    enabled = false
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system

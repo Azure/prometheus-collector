@@ -17,3 +17,8 @@ promconfigvalidator
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Temporary build directories and files
+dist/
+bin/
+*tmp

@@ -4,7 +4,7 @@ metadata:
   name: ama-metrics-ccp
   namespace: {{ .Values.global.commonGlobals.Customer.Namespace }}
   labels:
-    component: ama-metrics
+    component: ama-metrics-ccp
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -102,7 +102,6 @@ spec:
           volumeMounts:
             - mountPath: /etc/config/settings
               name: settings-vol-config
-              readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
@@ -131,6 +130,28 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
+        - name: configmap-watcher
+          image: ninaaksoperatore2e.azurecr.io/configmap-watcher:latest
+          command:
+            - /configmap-watcher
+          args:
+            - --configmap-namespace=kube-system
+            - --configmap-name=ama-metrics-settings-configmap
+            - --kubeconfig-file=/etc/kubernetes/kubeconfig/kubeconfig.yaml
+            - --settings-volume=/etc/config/settings
+          resources:
+            limits:
+              cpu: 20m
+              memory: 40Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+          volumeMounts:
+            - name: kubeconfig
+              readOnly: true
+              mountPath: /etc/kubernetes/kubeconfig
+            - name: settings-vol-config
+              mountPath: /etc/config/settings
         - name: msi-adapter
           image: "mcr.microsoft.com/aks/ccp/msi-adapter:master.230208.1"
           imagePullPolicy: IfNotPresent
@@ -182,9 +203,10 @@ spec:
                     operator: Exists
       volumes:
         - name: settings-vol-config
-          configMap:
-            name: ama-metrics-settings-configmap
-            optional: true
+          emptyDir: { }
+        - name: kubeconfig
+          secret:
+            secretName: kubeconfig-file
         - name: prometheus-config-vol
           configMap:
             name: ama-metrics-prometheus-config

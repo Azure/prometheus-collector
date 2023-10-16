@@ -22,10 +22,6 @@ echo_var () {
   echo -e "${Cyan}$1${Color_Off}=$2"
 }
 
-#Run inotify as a daemon to track changes to the mounted configmap.
-touch /opt/inotifyoutput.txt
-inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
-
 export IS_ARC_CLUSTER="false"
 CLUSTER_nocase=$(echo $CLUSTER | tr "[:upper:]" "[:lower:]")
 if [[ $CLUSTER_nocase =~ "connectedclusters" ]]; then
@@ -48,6 +44,23 @@ echo_var "MODE" "$MODE"
 echo_var "CCP_METRICS_ENABLED" "$CCP_METRICS_ENABLED"
 echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
+
+# wait for configmap sync container to finish initialization
+settingsChangedFile="/etc/config/settings/inotifysettingscreated"
+if [ "${CCP_METRICS_ENABLED}" == "true" ] && [ ! -f $settingsChangedFile ]; then
+  echo "Waiting for ama-metrics-config-sync container to finish initialization..."
+  while true; do
+    event=$(inotifywait -q -e create --format '%f' $(dirname "$settingsChangedFile"))
+    if [[ "$event" == "$(basename "$settingsChangedFile")" ]]; then
+      break
+    fi
+  done
+fi
+
+#Run inotify as a daemon to track changes to the mounted configmap.
+touch /opt/inotifyoutput.txt
+inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
+
 
 # If using a trusted CA for HTTP Proxy, copy this over from the node and install
 cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors 2>/dev/null
