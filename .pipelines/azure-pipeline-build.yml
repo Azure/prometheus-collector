@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - vishwa/telemetry
 pr:
   autoCancel: true
   branches:
@@ -235,7 +236,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.21'
+        version: '1.21.3'
 
     - bash: |
         sudo apt-get install build-essential -y
@@ -433,7 +434,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.21'
+        version: '1.21.3'
 
     - powershell: |
         ./makefile_windows.ps1
@@ -471,7 +472,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.21'
+        version: '1.21.3'
 
     - powershell: |
         ./makefile_windows.ps1
@@ -514,7 +515,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.21'
+        version: '1.21.3'
 
     - powershell: |
         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
