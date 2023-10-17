@@ -538,20 +538,38 @@ func setEnvVarsFromFile(filename string) error {
 
 func configmapparser(){
 	fmt.Printf("in confgimapparser")
+	configVersionPath := "/etc/config/settings/config-version"
+	configSchemaPath := "/etc/config/settings/schema-version"
 	// Set agent config schema version
     if existsAndNotEmpty("/etc/config/settings/schema-version") {
-        configSchemaVersion, _ := readAndTrim("/etc/config/settings/schema-version")
-        configSchemaVersion = strings.ReplaceAll(configSchemaVersion, " ", "")
-        configSchemaVersion = configSchemaVersion[:10]
-        os.Setenv("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion)
+        configVersion, err := readAndTrim(configVersionPath)
+		if err != nil {
+			fmt.Println("Error reading config version file:", err)
+			return
+		}
+		// Remove all spaces and take the first 10 characters
+		configVersion = strings.ReplaceAll(configVersion, " ", "")
+		if len(configVersion) >= 10 {
+			configVersion = configVersion[:10]
+		}
+		// Set the environment variable
+		os.Setenv("AZMON_AGENT_CFG_FILE_VERSION", configVersion)
     }
 
     // Set agent config file version
     if existsAndNotEmpty("/etc/config/settings/config-version") {
-        configFileVersion, _ := readAndTrim("/etc/config/settings/config-version")
-        configFileVersion = strings.ReplaceAll(configFileVersion, " ", "")
-        configFileVersion = configFileVersion[:10]
-        os.Setenv("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion)
+        configSchemaVersion, err := readAndTrim(configSchemaPath)
+		if err != nil {
+			fmt.Println("Error reading config schema version file:", err)
+			return
+		}
+		// Remove all spaces and take the first 10 characters
+		configSchemaVersion = strings.ReplaceAll(configSchemaVersion, " ", "")
+		if len(configSchemaVersion) >= 10 {
+			configSchemaVersion = configSchemaVersion[:10]
+		}
+		// Set the environment variable
+		os.Setenv("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion)
     }
 
 	// Parse the settings for pod annotations
