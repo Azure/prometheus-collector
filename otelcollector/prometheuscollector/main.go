@@ -676,7 +676,8 @@ func hasConfigChanged(filePath string) bool {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	status, message := http.StatusOK, "prometheuscollector is running."
+	status := http.StatusOK
+	message := "prometheuscollector is running."
 	macMode := os.Getenv("MAC") == "true"
 
 	if macMode {
@@ -730,7 +731,12 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		message += "\ninotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
 	}
 
-	w.WriteHeader(status)
+	if status == http.StatusServiceUnavailable {
+		http.Error(w, message, status)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 	fmt.Fprintln(w, message)
 }
 
