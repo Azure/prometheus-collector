@@ -742,28 +742,30 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 
 func monitorInotify(outputFile string) error {
+	// Start inotify to watch for changes
+	fmt.Println("Starting inotify for watching config map update")
+
+	_, err := os.Create(outputFile)
+	if err != nil {
+		log.Fatalf("Error creating output file: %v\n", err)
+	}
+
 	// Define the command to start inotify
 	inotifyCommand := exec.Command(
 		"inotifywait",
-		"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
+		"/etc/config/settings",
 		"--daemon",
+		"--recursive",
 		"--outfile", outputFile,
-		"--event", "ATTRIB",
+		"--event", "create,delete",
 		"--format", "%e : %T",
 		"--timefmt", "+%s",
 	)
 
-	// Redirect command output to a file
-	output, err := os.Create(outputFile)
+	// Start the inotify process
+	err = inotifyCommand.Start()
 	if err != nil {
-		return err
-	}
-	defer output.Close()
-	inotifyCommand.Stdout = output
-
-	// Start the inotify command
-	if err := inotifyCommand.Start(); err != nil {
-		return err
+		log.Fatalf("Error starting inotify process: %v\n", err)
 	}
 
 	return nil
