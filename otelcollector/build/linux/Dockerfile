@@ -145,8 +145,8 @@ COPY --from=builder /usr/bin/p11-kit /usr/bin
 COPY --from=builder /usr/bin/trust /usr/bin
 
 # bash dependencies
-# COPY --from=builder /lib/libreadline.so.8 /lib/
-# COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
+COPY --from=builder /lib/libreadline.so.8 /lib/
+COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
 # inotifywait dependencies
 COPY --from=builder /lib/libinotifytools.so.0 /lib/
 # crond dependencies
