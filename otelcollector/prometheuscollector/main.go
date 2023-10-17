@@ -84,7 +84,6 @@ func main(){
 	fmt.Println("Starting MDSD")
 	startCommand("/usr/sbin/mdsd", "-a", "-A", "-e", "/opt/microsoft/linuxmonagent/mdsd.err", "-w", "/opt/microsoft/linuxmonagent/mdsd.warn", "-o", "/opt/microsoft/linuxmonagent/mdsd.info", "-q", "/opt/microsoft/linuxmonagent/mdsd.qos")
 	
-	fmt.Print("MDSD_VERSION=")
 	printMdsdVersion()
 	
 	fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
@@ -223,9 +222,33 @@ func main(){
 }
 
 func isProcessRunning(processName string) bool {
-    cmd := exec.Command("pgrep", processName)
-    err := cmd.Run()
-    return err == nil
+    // List all processes in the current process group
+    pid := os.Getpid()
+    processes, err := os.ReadDir("/proc")
+    if err != nil {
+        fmt.Println("Error:", err)
+        return false
+    }
+
+    for _, processDir := range processes {
+        if processDir.IsDir() {
+            processID := processDir.Name()
+            _, err := os.Stat("/proc/" + processID + "/cmdline")
+            if err == nil {
+                cmdline, err := os.ReadFile("/proc/" + processID + "/cmdline")
+                if err == nil {
+                    if string(cmdline) == processName {
+                        // Skip the current process (this program)
+                        if processID != fmt.Sprintf("%d", pid) {
+                            return true
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return false
 }
 
 func readEnvVarsFromEnvMdsdFile(envMdsdFile string) ([]string, error) {
@@ -352,7 +375,7 @@ func printMdsdVersion() {
 		fmt.Printf("Error getting MDSD version: %v\n", err)
 		return
 	}
-	fmt.Print(string(output))
+	fmt.Print("MDSD_VERSION=" + string(output))
 }
 
 func readMeConfigFileAsString(meConfigFile string) string {
@@ -647,19 +670,7 @@ func hasConfigChanged(filePath string) bool {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	prometheuscollectorRunning := isProcessRunning("prometheuscollector")
-
-	var status int
-	var message string
-
-	if prometheuscollectorRunning {
-		status = http.StatusOK
-		message = "prometheuscollector is running."
-	} else {
-		status = http.StatusServiceUnavailable
-		message = "prometheuscollector is not running."
-	}
-
+	status, message := http.StatusOK, "prometheuscollector is running."
 	macMode := os.Getenv("MAC") == "true"
 
 	if macMode {
