@@ -237,7 +237,7 @@ func isProcessRunning(processName string) bool {
             if err == nil {
                 cmdline, err := os.ReadFile("/proc/" + processID + "/cmdline")
                 if err == nil {
-                    if string(cmdline) == processName {
+                    if strings.Contains(string(cmdline), processName) {
                         // Skip the current process (this program)
                         if processID != fmt.Sprintf("%d", pid) {
                             return true
