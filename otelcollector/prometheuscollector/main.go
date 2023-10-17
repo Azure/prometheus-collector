@@ -21,6 +21,12 @@ func main(){
 	cluster := os.Getenv("CLUSTER")
 	aksRegion := os.Getenv("AKSREGION")
 
+	outputFile := "/opt/inotifyoutput.txt"
+	err := monitorInotify(outputFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	configmapparser()
 
 	var meConfigFile string
@@ -187,11 +193,11 @@ func main(){
 			log.Fatalf("Error starting inotify process: %v\n", err)
 		}
 
-		// Wait for the inotify process to finish (which won't happen as it's running as a daemon)
-		err = inotifyCommand.Wait()
-		if err != nil {
-			log.Fatalf("Error waiting for inotify process: %v\n", err)
-		}
+		// // Wait for the inotify process to finish (which won't happen as it's running as a daemon)
+		// err = inotifyCommand.Wait()
+		// if err != nil {
+		// 	log.Fatalf("Error waiting for inotify process: %v\n", err)
+		// }
 	}
 
 	// Setting time at which the container started running
@@ -719,7 +725,40 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		message += "\ninotifyoutput.txt has been updated - config changed"
 	}
 
+	if hasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
+		status = http.StatusServiceUnavailable
+		message += "\ninotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
+	}
+
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
 }
 
+
+func monitorInotify(outputFile string) error {
+	// Define the command to start inotify
+	inotifyCommand := exec.Command(
+		"inotifywait",
+		"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
+		"--daemon",
+		"--outfile", outputFile,
+		"--event", "ATTRIB",
+		"--format", "%e : %T",
+		"--timefmt", "+%s",
+	)
+
+	// Redirect command output to a file
+	output, err := os.Create(outputFile)
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+	inotifyCommand.Stdout = output
+
+	// Start the inotify command
+	if err := inotifyCommand.Start(); err != nil {
+		return err
+	}
+
+	return nil
+}
