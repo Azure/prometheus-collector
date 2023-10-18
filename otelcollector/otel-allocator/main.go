@@ -180,7 +180,7 @@ func main() {
 		func() error {
 			// Initial loading of the config file's scrape config
 			cliConf.RootLogger.Info("Checking to see if config file exists for initial loading")
-			if _, err := os.Stat(fileWatcher.configFilePath); err == nil {
+			if _, err := os.Stat(cliConf.configFilePath); err == nil {
 				cliConf.RootLogger.Info("File Exists. Loading and applying config...\n")
 				loadConfig, err := fileWatcher.LoadConfig(ctx)
 				if err != nil {
