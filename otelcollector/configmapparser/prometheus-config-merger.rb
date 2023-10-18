@@ -8,6 +8,7 @@ require_relative "ConfigParseErrorLogger"
 
 LOGGING_PREFIX = "prometheus-config-merger"
 @configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
+@ccpconfigMapMountPath = "/etc/config/settings/ccp/prometheus-config"
 @promMergedConfigPath = "/opt/promMergedConfig.yml"
 @mergedDefaultConfigPath = "/opt/defaultsMergedConfig.yml"
 @replicasetControllerType = "replicaset"
@@ -57,6 +58,24 @@ def parseConfigMap
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing configmap for prometheus config: #{errorStr}. Custom prometheus config will not be used. Please check configmap for errors")
+    return ""
+  end
+end
+
+def parseCCPConfigMap
+  begin
+    # Check to see if config map is created
+    if (File.file?(@ccpconfigMapMountPath))
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Custom prometheus config exists for CCP")
+      config = File.read(@configMapMountPath)
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Successfully parsed configmap for CCP")
+      return config
+    else
+      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "Custom CCP config does not exist")
+      return ""
+    end
+  rescue => errorStr
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing configmap for CCP config: #{errorStr}. Custom CCP config will not be used. Please check configmap for errors")
     return ""
   end
 end
@@ -438,13 +457,21 @@ def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
   return mergedDefaultConfigs
 end
 
-def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
+def mergeDefaultAndCustomAndCCPScrapeConfigs(customPromConfig)
+  ccpConfigString = parseCCPConfigMap
   mergedConfigYaml = ""
   begin
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Merging default and custom scrape configs")
       customPrometheusConfig = YAML.load(customPromConfig)
-      mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
+      # Check if the CCP_METRICS_ENABLED environment variable is set to true
+      if ENV["CCP_METRICS_ENABLED"] == "true"
+        ccpConfig = YAML.load(ccpConfigString)
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Trying to merge default scrape config(s) with custom prometheus config and CCP config")
+        mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig).deep_merge!(ccpConfig)
+      else
+        mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
+      end
       mergedConfigYaml = YAML::dump(mergedConfigs)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging default scrape config(s) with custom prometheus config, writing them to file")
     else
@@ -453,7 +480,30 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
     end
     File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigYaml }
   rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and custom scrape configs- #{errorStr}")
+    if ENV["CCP_METRICS_ENABLED"] == "true"
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and custom scrape configs and CCP config - #{errorStr}")
+    else
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and custom scrape configs- #{errorStr}")
+    end
+  end
+end
+
+def mergeDefaultAndCCPConfigs(ccpConfig)
+  mergedConfigYaml = ""
+  begin
+    if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Merging default and ccp config")
+      customPrometheusConfig = YAML.load(ccpConfig)
+      mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
+      mergedConfigYaml = YAML::dump(mergedConfigs)
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging default scrape config(s) with ccp config, writing them to file")
+    else
+      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "The merged default scrape config is nil or empty, using only custom scrape config")
+      mergedConfigYaml = ccpConfig
+    end
+    File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigYaml }
+  rescue => errorStr
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and ccp configs- #{errorStr}")
   end
 end
 
@@ -553,9 +603,14 @@ if !prometheusConfigString.nil? && !prometheusConfigString.empty?
   writeDefaultScrapeTargetsFile()
   #set label limits for every custom scrape job, before merging the default & custom config
   labellimitedconfigString = setLabelLimitsPerScrape(modifiedPrometheusConfigString)
-  mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString)
+  mergeDefaultAndCustomAndCCPScrapeConfigs(labellimitedconfigString)
 else
   setDefaultFileScrapeInterval("30s")
   writeDefaultScrapeTargetsFile()
+  if ENV["CCP_METRICS_ENABLED"] == true
+    ccpConfigString = parseCCPConfigMap
+    mergeDefaultAndCCPConfigs(ccpConfigString)
+  end
 end
+
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Done Merging Default and Custom Prometheus Config")

@@ -164,9 +164,9 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
-            # - mountPath: /etc/config/settings/ccp
-            #   name: ccp-config-vol
-            #   readOnly: true
+            - mountPath: /etc/config/settings/ccp
+              name: ccp-config-vol
+              readOnly: true
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
@@ -292,6 +292,10 @@ spec:
         - name: prometheus-config-vol
           configMap:
             name: ama-metrics-prometheus-config
+            optional: true
+        - name: ccp-config-vol
+          configMap:
+            name: ama-metrics-cpp-config
             optional: true
         - name: host-log-containers
           hostPath:

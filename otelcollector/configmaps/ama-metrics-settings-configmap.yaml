@@ -11,7 +11,7 @@ data:
     cluster_alias = ""
   default-scrape-settings-enabled: |-
     kubelet = true
-    coredns = false
+    coredns = true
     cadvisor = true
     kubeproxy = false
     apiserver = false

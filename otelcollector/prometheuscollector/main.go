@@ -287,11 +287,11 @@ func startCommand(command string, args ...string) {
 
 	// Set environment variables from os.Environ()
 	cmd.Env = append(os.Environ())
-	// Print the environment variables being passed into the cmd
-	fmt.Println("Environment variables being passed into the command:")
-	for _, v := range cmd.Env {
-		fmt.Println(v)
-	}
+	// // Print the environment variables being passed into the cmd
+	// fmt.Println("Environment variables being passed into the command:")
+	// for _, v := range cmd.Env {
+	// 	fmt.Println(v)
+	// }
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -328,12 +328,12 @@ func startCommandAndWait(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
 	// Set environment variables from os.Environ()
-	cmd.Env = append(os.Environ())
-	// Print the environment variables being passed into the cmd
-	fmt.Println("Environment variables being passed into the command:")
-	for _, v := range cmd.Env {
-		fmt.Println(v)
-	}
+	// cmd.Env = append(os.Environ())
+	// // Print the environment variables being passed into the cmd
+	// fmt.Println("Environment variables being passed into the command:")
+	// for _, v := range cmd.Env {
+	// 	fmt.Println(v)
+	// }
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

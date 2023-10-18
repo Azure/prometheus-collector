@@ -24,6 +24,8 @@ if [  -e "/etc/config/settings/config-version" ] && [  -s "/etc/config/settings/
       config_file_version="$(echo $config_file_version| cut -c1-10)"
 
       export AZMON_AGENT_CFG_FILE_VERSION=$config_file_version
+      echo "export AZMON_AGENT_CFG_FILE_VERSION=$config_file_version" >> ~/.bashrc
+      source ~/.bashrc
 fi
 
 # Parse the settings for pod annotations
