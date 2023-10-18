@@ -66,8 +66,8 @@ var (
 	WinKubeProxyKeepListRegex string
 	// Pod Annotation metrics keep list regex
 	PodannotationKeepListRegex string
-	// Kappie Basic metrics keep list regex
-	KappieBasicKeepListRegex string
+	// retina Basic metrics keep list regex
+	retinaBasicKeepListRegex string
 	// Kubelet scrape interval
 	KubeletScrapeInterval string
 	// CoreDNS scrape interval
@@ -90,8 +90,8 @@ var (
 	PromHealthScrapeInterval string
 	// Pod Annotation scrape interval
 	PodAnnotationScrapeInterval string
-	// Kappie Basic scrape interval
-	KappieBasicScrapeInterval string
+	// retina Basic scrape interval
+	retinaBasicScrapeInterval string
 	// meMetricsProcessedCount map, which holds references to metrics per metric account
 	meMetricsProcessedCountMap = make(map[string]*meMetricsProcessedCount)
 	// meMetricsProcessedCountMapMutex -- used for reading & writing locks on meMetricsProcessedCountMap
@@ -289,7 +289,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			WinExporterKeepListRegex = regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
 			WinKubeProxyKeepListRegex = regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
 			PodannotationKeepListRegex = regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
-			KappieBasicKeepListRegex = regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
+			retinaBasicKeepListRegex = regexHash["retinaBASIC_METRICS_KEEP_LIST_REGEX"]
 		}
 	}
 
@@ -315,7 +315,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			WinKubeProxyScrapeInterval = intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"]
 			PromHealthScrapeInterval = intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
 			PodAnnotationScrapeInterval = intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
-			KappieBasicScrapeInterval = intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
+			retinaBasicScrapeInterval = intervalHash["retinaBASIC_SCRAPE_INTERVAL"]
 		}
 	}
 
@@ -660,8 +660,8 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 			if PodannotationKeepListRegex != "" {
 				metric.Properties["PodannotationKeepListRegex"] = PodannotationKeepListRegex
 			}
-			if KappieBasicKeepListRegex != "" {
-				metric.Properties["KappieBasicKeepListRegex"] = KappieBasicKeepListRegex
+			if retinaBasicKeepListRegex != "" {
+				metric.Properties["retinaBasicKeepListRegex"] = retinaBasicKeepListRegex
 			}
 			if KubeletScrapeInterval != "" {
 				metric.Properties["KubeletScrapeInterval"] = KubeletScrapeInterval
@@ -696,8 +696,8 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 			if PodAnnotationScrapeInterval != "" {
 				metric.Properties["PodAnnotationScrapeInterval"] = PodAnnotationScrapeInterval
 			}
-			if KappieBasicScrapeInterval != "" {
-				metric.Properties["KappieBasicScrapeInterval"] = KappieBasicScrapeInterval
+			if retinaBasicScrapeInterval != "" {
+				metric.Properties["retinaBasicScrapeInterval"] = retinaBasicScrapeInterval
 			}
 
 			TelemetryClient.Track(metric)

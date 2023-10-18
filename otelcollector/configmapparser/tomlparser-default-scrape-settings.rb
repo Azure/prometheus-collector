@@ -21,7 +21,7 @@ LOGGING_PREFIX = "default-scrape-settings"
 @podannotationEnabled = false
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
-@kappiebasicEnabled = true
+@retinabasicEnabled = true
 @noDefaultsEnabled = false
 @sendDSUpMetric = false
 
@@ -89,9 +89,9 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @podannotationEnabled = "true"
       puts "config::Using configmap scrape settings for podannotations: #{@podannotationEnabled}"
     end
-    if !parsedConfig[:kappiebasic].nil?
-      @kappiebasicEnabled = parsedConfig[:kappiebasic]
-      puts "config::Using configmap scrape settings for kappiebasic: #{@kappiebasicEnabled}"
+    if !parsedConfig[:retinabasic].nil?
+      @retinabasicEnabled = parsedConfig[:retinabasic]
+      puts "config::Using configmap scrape settings for retinabasic: #{@retinabasicEnabled}"
     end
 
     windowsDaemonset = false
@@ -101,9 +101,9 @@ def populateSettingValuesFromConfigMap(parsedConfig)
 
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
-      if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@kubeletEnabled && !@prometheusCollectorHealthEnabled && !@kappiebasicEnabled
+      if controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "windows" && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@kubeletEnabled && !@prometheusCollectorHealthEnabled && !@retinabasicEnabled
         @noDefaultsEnabled = true
-      elsif controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "linux" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled && !kappiebasicEnabled
+      elsif controllerType == "DaemonSet" && ENV["OS_TYPE"].downcase == "linux" && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@prometheusCollectorHealthEnabled && !retinabasicEnabled
         @noDefaultsEnabled = true
       elsif controllerType == "ReplicaSet" && @sendDsUpMetric && !@kubeletEnabled && !@cadvisorEnabled && !@nodeexporterEnabled && !@corednsEnabled && !@kubeproxyEnabled && !@apiserverEnabled && !@kubestateEnabled && !@windowsexporterEnabled && !@windowskubeproxyEnabled && !@prometheusCollectorHealthEnabled && !@podannotationEnabled
         @noDefaultsEnabled = true
@@ -128,7 +128,7 @@ end
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start default-scrape-settings Processing")
 # set default targets for MAC mode
 if !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true"
-  ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "MAC mode is enabled. Only enabling targets kubestate,cadvisor,kubelet,kappiebasic & nodeexporter for linux before config map processing....")
+  ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "MAC mode is enabled. Only enabling targets kubestate,cadvisor,kubelet,retinabasic & nodeexporter for linux before config map processing....")
   
   @corednsEnabled = false
   @kubeproxyEnabled = false
@@ -167,7 +167,7 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED=#{@prometheusCollectorHealthEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=#{@windowsexporterEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED=#{@kappiebasicEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_retinaBASIC_SCRAPING_ENABLED=#{@retinabasicEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=#{@podannotationEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close

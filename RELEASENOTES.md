@@ -133,7 +133,7 @@
   * feat: HTTP Proxy for distroless and ARC
   * fix:  Wait for token adapter to be healthy before starting dependencies
   * feat: Add azure policy templates for metrics addon
-  * feat: enable network monitoring metrics (kappie)
+  * feat: enable network monitoring metrics (retina)
   * feat: AKS addon HTTP Proxy Support
   * fix:  certificate import for windows ME startup
 

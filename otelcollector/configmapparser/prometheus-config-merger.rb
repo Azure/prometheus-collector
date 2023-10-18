@@ -41,7 +41,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @windowskubeproxyDefaultDsFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultDs.yml"
 @podannotationsDefaultFile = @defaultPromConfigPathPrefix + "podannotationsDefault.yml"
 @windowskubeproxyDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
-@kappiebasicDefaultFileDs = @defaultPromConfigPathPrefix + "kappieBasicDefaultDs.yml"
+@retinabasicDefaultFileDs = @defaultPromConfigPathPrefix + "retinaBasicDefaultDs.yml"
 
 def parseConfigMap
   begin
@@ -315,22 +315,22 @@ def populateDefaultPrometheusConfig
       end
     end
 
-    if !ENV["AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED"].downcase == "true"
-      kappiebasicMetricsKeepListRegex = @regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
-      kappiebasicScrapeInterval = @intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
+    if !ENV["AZMON_PROMETHEUS_retinaBASIC_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_retinaBASIC_SCRAPING_ENABLED"].downcase == "true"
+      retinabasicMetricsKeepListRegex = @regexHash["retinaBASIC_METRICS_KEEP_LIST_REGEX"]
+      retinabasicScrapeInterval = @intervalHash["retinaBASIC_SCRAPE_INTERVAL"]
       if currentControllerType == @replicasetControllerType
-        #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
-      else #kappie scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
+        #do nothing -- retina is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
+      else #retina scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
         if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" #&& ENV["OS_TYPE"].downcase == "linux"
-          UpdateScrapeIntervalConfig(@kappiebasicDefaultFileDs, kappiebasicScrapeInterval)
-          if !kappiebasicMetricsKeepListRegex.nil? && !kappiebasicMetricsKeepListRegex.empty?
-            AppendMetricRelabelConfig(@kappiebasicDefaultFileDs, kappiebasicMetricsKeepListRegex)
+          UpdateScrapeIntervalConfig(@retinabasicDefaultFileDs, retinabasicScrapeInterval)
+          if !retinabasicMetricsKeepListRegex.nil? && !retinabasicMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@retinabasicDefaultFileDs, retinabasicMetricsKeepListRegex)
           end
-          contents = File.read(@kappiebasicDefaultFileDs)
+          contents = File.read(@retinabasicDefaultFileDs)
           contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
           contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
-          File.open(@kappiebasicDefaultFileDs, "w") { |file| file.puts contents }
-          defaultConfigs.push(@kappiebasicDefaultFileDs)
+          File.open(@retinabasicDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@retinabasicDefaultFileDs)
         end
       end
     end
