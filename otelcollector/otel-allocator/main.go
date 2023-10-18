@@ -55,7 +55,7 @@ func main() {
 	}
 	cliConf.RootLogger.Info("Starting sleep")
 	// Calling Sleep method
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	// Printed after sleep is over
 	cliConf.RootLogger.Info("Done sleeping")
