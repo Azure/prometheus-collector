@@ -8,7 +8,6 @@ require_relative "ConfigParseErrorLogger"
 
 LOGGING_PREFIX = "prometheus-config-merger"
 @configMapMountPath = "/etc/config/settings/prometheus/prometheus-config"
-@ccpconfigMapMountPath = "/etc/config/settings/ccp/prometheus-config"
 @promMergedConfigPath = "/opt/promMergedConfig.yml"
 @mergedDefaultConfigPath = "/opt/defaultsMergedConfig.yml"
 @replicasetControllerType = "replicaset"
@@ -58,24 +57,6 @@ def parseConfigMap
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing configmap for prometheus config: #{errorStr}. Custom prometheus config will not be used. Please check configmap for errors")
-    return ""
-  end
-end
-
-def parseCCPConfigMap
-  begin
-    # Check to see if config map is created
-    if (File.file?(@ccpconfigMapMountPath))
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Custom prometheus config exists for CCP")
-      config = File.read(@ccpconfigMapMountPath)
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Successfully parsed configmap for CCP")
-      return config
-    else
-      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "Custom CCP config does not exist")
-      return ""
-    end
-  rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing configmap for CCP config: #{errorStr}. Custom CCP config will not be used. Please check configmap for errors")
     return ""
   end
 end
@@ -283,7 +264,6 @@ def populateDefaultPrometheusConfig
       end
       defaultConfigs.push(@apiserverDefaultFile)
     end
-    puts "**************************AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED -> " + ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"]
     if !ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].downcase == "true" && currentControllerType == @replicasetControllerType
       kubestateMetricsKeepListRegex = @regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
       kubestateScrapeInterval = @intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
@@ -297,7 +277,6 @@ def populateDefaultPrometheusConfig
       File.open(@kubestateDefaultFile, "w") { |file| file.puts contents }
       defaultConfigs.push(@kubestateDefaultFile)
     end
-    puts "**************************AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED -> " + ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"]
     if !ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].downcase == "true"
       nodeexporterMetricsKeepListRegex = @regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
       nodeexporterScrapeInterval = @intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"]
@@ -457,35 +436,14 @@ def mergeDefaultScrapeConfigs(defaultScrapeConfigs)
   return mergedDefaultConfigs
 end
 
-def mergeDefaultAndCustomAndCCPScrapeConfigs(customPromConfig)
-  ccpConfigString = parseCCPConfigMap
+def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
   mergedConfigYaml = ""
   begin
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Merging default and custom scrape configs")
       customPrometheusConfig = YAML.load(customPromConfig)
       # Check if the CCP_METRICS_ENABLED environment variable is set to true
-      if ENV["CCP_METRICS_ENABLED"] == "true"
-        ccpConfig = YAML.load(ccpConfigString)
-        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Trying to merge default scrape config(s) with custom prometheus config and CCP config")
-        mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig).deep_merge!(ccpConfig)
-        # Print customPrometheusConfig
-        puts "Custom Prometheus Config:"
-        puts customPrometheusConfig.to_yaml
-
-        # Print ccpConfig
-        puts "CCP Config:"
-        puts ccpConfig.to_yaml if defined?(ccpConfig)
-
-        # Print the value of mergedConfigs
-        puts "Merged Configs when CCP is enabled"
-        puts mergedConfigs.to_yaml
-      else
-        mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
-        # Print the value of mergedConfigs
-        puts "Merged Configs when CCP is not enabled:"
-        puts mergedConfigs.to_yaml
-      end
+      mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
       mergedConfigYaml = YAML::dump(mergedConfigs)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging default scrape config(s) with custom prometheus config, writing them to file")
     else
@@ -494,30 +452,7 @@ def mergeDefaultAndCustomAndCCPScrapeConfigs(customPromConfig)
     end
     File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigYaml }
   rescue => errorStr
-    if ENV["CCP_METRICS_ENABLED"] == "true"
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and custom scrape configs and CCP config - #{errorStr}")
-    else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and custom scrape configs- #{errorStr}")
-    end
-  end
-end
-
-def mergeDefaultAndCCPConfigs(ccpConfig)
-  mergedConfigYaml = ""
-  begin
-    if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Merging default and ccp config")
-      customPrometheusConfig = YAML.load(ccpConfig)
-      mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
-      mergedConfigYaml = YAML::dump(mergedConfigs)
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging default scrape config(s) with ccp config, writing them to file")
-    else
-      ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "The merged default scrape config is nil or empty, using only custom scrape config")
-      mergedConfigYaml = ccpConfig
-    end
-    File.open(@promMergedConfigPath, "w") { |file| file.puts mergedConfigYaml }
-  rescue => errorStr
-    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and ccp configs- #{errorStr}")
+    ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default and custom scrape configs- #{errorStr}")
   end
 end
 
@@ -558,8 +493,6 @@ end
 # and we need to fall back to defaults
 def writeDefaultScrapeTargetsFile()
   ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start Merging Default and Custom Prometheus Config")
-  ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Do I reach here?")
-  ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "value of AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED is #{ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"]}")
   if !ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].downcase == "false"
     begin
       loadRegexHash
@@ -617,14 +550,10 @@ if !prometheusConfigString.nil? && !prometheusConfigString.empty?
   writeDefaultScrapeTargetsFile()
   #set label limits for every custom scrape job, before merging the default & custom config
   labellimitedconfigString = setLabelLimitsPerScrape(modifiedPrometheusConfigString)
-  mergeDefaultAndCustomAndCCPScrapeConfigs(labellimitedconfigString)
+  mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString)
 else
   setDefaultFileScrapeInterval("30s")
   writeDefaultScrapeTargetsFile()
-  if ENV["CCP_METRICS_ENABLED"] == true
-    ccpConfigString = parseCCPConfigMap
-    mergeDefaultAndCCPConfigs(ccpConfigString)
-  end
 end
 
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Done Merging Default and Custom Prometheus Config")
