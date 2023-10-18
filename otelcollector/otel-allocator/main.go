@@ -20,7 +20,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	gokitlog "github.com/go-kit/log"
 	"github.com/oklog/run"
@@ -48,17 +47,17 @@ var (
 )
 
 func main() {
-	cliConf, err := config.ParseCLI()
-	if err != nil {
-		setupLog.Error(err, "Failed to parse parameters")
-		os.Exit(1)
-	}
-	cliConf.RootLogger.Info("Starting sleep")
-	// Calling Sleep method
-	time.Sleep(30 * time.Second)
+	// cliConf, err := config.ParseCLI()
+	// if err != nil {
+	// 	setupLog.Error(err, "Failed to parse parameters")
+	// 	os.Exit(1)
+	// }
+	// cliConf.RootLogger.Info("Starting sleep")
+	// // Calling Sleep method
+	// time.Sleep(30 * time.Second)
 
-	// Printed after sleep is over
-	cliConf.RootLogger.Info("Done sleeping")
+	// // Printed after sleep is over
+	// cliConf.RootLogger.Info("Done sleeping")
 	var (
 		// allocatorPrehook will be nil if filterStrategy is not set or
 		// unrecognized. No filtering will be used in this case.
@@ -84,11 +83,11 @@ func main() {
 		setupLog.Info("MICROSOFT SOFTWARE LICENSE TERMS\n\nMICROSOFT Azure Arc-enabled Kubernetes\n\nThis software is licensed to you as part of your or your company's subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/")
 	}
 
-	// cliConf, err := config.ParseCLI()
-	// if err != nil {
-	// 	setupLog.Error(err, "Failed to parse parameters")
-	// 	os.Exit(1)
-	// }
+	cliConf, err := config.ParseCLI()
+	if err != nil {
+		setupLog.Error(err, "Failed to parse parameters")
+		os.Exit(1)
+	}
 
 	// Defaulting to consistent hashing
 	allocationStrategy := "consistent-hashing"
