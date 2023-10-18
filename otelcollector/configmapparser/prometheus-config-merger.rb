@@ -469,8 +469,22 @@ def mergeDefaultAndCustomAndCCPScrapeConfigs(customPromConfig)
         ccpConfig = YAML.load(ccpConfigString)
         ConfigParseErrorLogger.log(LOGGING_PREFIX, "Trying to merge default scrape config(s) with custom prometheus config and CCP config")
         mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig).deep_merge!(ccpConfig)
+        # Print customPrometheusConfig
+        puts "Custom Prometheus Config:"
+        puts customPrometheusConfig.to_yaml
+
+        # Print ccpConfig
+        puts "CCP Config:"
+        puts ccpConfig.to_yaml if defined?(ccpConfig)
+        
+        # Print the value of mergedConfigs
+        puts "Merged Configs when CCP is enabled"
+        puts mergedConfigs.to_yaml
       else
         mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
+        # Print the value of mergedConfigs
+        puts "Merged Configs when CCP is not enabled:"
+        puts mergedConfigs.to_yaml
       end
       mergedConfigYaml = YAML::dump(mergedConfigs)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging default scrape config(s) with custom prometheus config, writing them to file")

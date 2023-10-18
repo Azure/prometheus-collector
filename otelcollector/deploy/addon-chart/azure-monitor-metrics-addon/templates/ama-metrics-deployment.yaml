@@ -295,7 +295,7 @@ spec:
             optional: true
         - name: ccp-config-vol
           configMap:
-            name: ama-metrics-cpp-config
+            name: ama-metrics-ccp-config
             optional: true
         - name: host-log-containers
           hostPath:
