@@ -114,7 +114,7 @@ ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
 COPY --from=builder /opt /opt
 COPY --from=builder /etc /etc
 # Remove busybin as it installs sh
-# COPY --from=builder /busybin /busybin
+COPY --from=builder /busybin /busybin
 COPY --from=builder /static/react /static/react
 COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_internal.config /usr/sbin/
 COPY --from=builder /var/opt/microsoft /var/opt/microsoft
@@ -129,7 +129,7 @@ COPY --from=builder /usr/bin/ruby /usr/bin/ruby
 COPY --from=builder /usr/lib/ruby /usr/lib/ruby
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 # Remove copying from bash when not debugging/sharing an image
-# COPY --from=builder /usr/bin/bash /usr/bin/bash
+COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
 COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
 COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
@@ -141,13 +141,13 @@ COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
 COPY --from=builder /usr/bin/gzip /usr/bin/
 COPY --from=builder /usr/bin/curl /usr/bin/
 COPY --from=builder /usr/bin/update-ca-trust /usr/bin
-# COPY --from=builder /bin/sh /bin/sh
+COPY --from=builder /bin/sh /bin/sh
 # COPY --from=builder /usr/bin/p11-kit /usr/bin
 # COPY --from=builder /usr/bin/trust /usr/bin
 
 # bash dependencies
-# COPY --from=builder /lib/libreadline.so.8 /lib/
-# COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
+COPY --from=builder /lib/libreadline.so.8 /lib/
+COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
 # inotifywait dependencies
 COPY --from=builder /lib/libinotifytools.so.0 /lib/
 # crond dependencies

@@ -749,12 +749,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		message += "\ninotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
 	}
 
-	if status == http.StatusServiceUnavailable {
-		http.Error(w, message, status)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
 }
 
