@@ -197,7 +197,7 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"].downcase == "true"
       kubeletMetricsKeepListRegex = @regexHash["KUBELET_METRICS_KEEP_LIST_REGEX"]
       kubeletScrapeInterval = @intervalHash["KUBELET_SCRAPE_INTERVAL"]
-      if isConfigReaderSidecar
+      if (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
         if advancedMode == false
           UpdateScrapeIntervalConfig(@kubeletDefaultFileRsSimple, kubeletScrapeInterval)
           if !kubeletMetricsKeepListRegex.nil? && !kubeletMetricsKeepListRegex.empty?
@@ -226,7 +226,7 @@ def populateDefaultPrometheusConfig
         end
       end
     end
-    if !ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].downcase == "true" && isConfigReaderSidecar
+    if !ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"].downcase == "true" && (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
       corednsMetricsKeepListRegex = @regexHash["COREDNS_METRICS_KEEP_LIST_REGEX"]
       corednsScrapeInterval = @intervalHash["COREDNS_SCRAPE_INTERVAL"]
       UpdateScrapeIntervalConfig(@corednsDefaultFile, corednsScrapeInterval)
@@ -238,7 +238,7 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED"].downcase == "true"
       cadvisorMetricsKeepListRegex = @regexHash["CADVISOR_METRICS_KEEP_LIST_REGEX"]
       cadvisorScrapeInterval = @intervalHash["CADVISOR_SCRAPE_INTERVAL"]
-      if isConfigReaderSidecar
+      if (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
         if advancedMode == false
           UpdateScrapeIntervalConfig(@cadvisorDefaultFileRsSimple, cadvisorScrapeInterval)
           if !cadvisorMetricsKeepListRegex.nil? && !cadvisorMetricsKeepListRegex.empty?
@@ -263,7 +263,7 @@ def populateDefaultPrometheusConfig
         end
       end
     end
-    if !ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].downcase == "true" && isConfigReaderSidecar
+    if !ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"].downcase == "true" && (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
       kubeproxyMetricsKeepListRegex = @regexHash["KUBEPROXY_METRICS_KEEP_LIST_REGEX"]
       kubeproxyScrapeInterval = @intervalHash["KUBEPROXY_SCRAPE_INTERVAL"]
       UpdateScrapeIntervalConfig(@kubeproxyDefaultFile, kubeproxyScrapeInterval)
@@ -272,7 +272,7 @@ def populateDefaultPrometheusConfig
       end
       defaultConfigs.push(@kubeproxyDefaultFile)
     end
-    if !ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].downcase == "true" && isConfigReaderSidecar
+    if !ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"].downcase == "true" && (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
       apiserverMetricsKeepListRegex = @regexHash["APISERVER_METRICS_KEEP_LIST_REGEX"]
       apiserverScrapeInterval = @intervalHash["APISERVER_SCRAPE_INTERVAL"]
       UpdateScrapeIntervalConfig(@apiserverDefaultFile, apiserverScrapeInterval)
@@ -281,7 +281,7 @@ def populateDefaultPrometheusConfig
       end
       defaultConfigs.push(@apiserverDefaultFile)
     end
-    if !ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].downcase == "true" && isConfigReaderSidecar
+    if !ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"].downcase == "true" && (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
       kubestateMetricsKeepListRegex = @regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
       kubestateScrapeInterval = @intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
       UpdateScrapeIntervalConfig(@kubestateDefaultFile, kubestateScrapeInterval)
@@ -297,7 +297,7 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"].downcase == "true"
       nodeexporterMetricsKeepListRegex = @regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
       nodeexporterScrapeInterval = @intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"]
-      if isConfigReaderSidecar
+      if (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
         if advancedMode == true && @sendDSUpMetric == true
           UpdateScrapeIntervalConfig(@nodeexporterDefaultFileRsAdvanced, nodeexporterScrapeInterval)
           contents = File.read(@nodeexporterDefaultFileRsAdvanced)
@@ -335,7 +335,7 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED"].downcase == "true"
       kappiebasicMetricsKeepListRegex = @regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
       kappiebasicScrapeInterval = @intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
-      if isConfigReaderSidecar
+      if (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
         #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
       elsif currentControllerType == @daemonsetControllerType #kappie scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
         if advancedMode == true && !ENV["MAC"].nil? && !ENV["MAC"].empty? && ENV["MAC"].strip.downcase == "true" #&& ENV["OS_TYPE"].downcase == "linux"
@@ -413,7 +413,7 @@ def populateDefaultPrometheusConfig
       end
     end
 
-    if !ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].downcase == "true" && isConfigReaderSidecar
+    if !ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"].downcase == "true" && (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
       podannotationNamespacesRegex = ENV["AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"]
       podannotationMetricsKeepListRegex = @regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
       podannotationScrapeInterval = @intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
