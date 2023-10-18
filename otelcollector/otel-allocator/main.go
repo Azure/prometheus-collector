@@ -179,10 +179,25 @@ func main() {
 	runGroup.Add(
 		func() error {
 			// Initial loading of the config file's scrape config
-			err = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, cfg.Config)
-			if err != nil {
-				setupLog.Error(err, "Unable to apply initial configuration")
-				return err
+			cliConf.RootLogger.Info("Checking to see if config file exists for initial loading")
+			if _, err := os.Stat(fileWatcher.configFilePath); err == nil {
+				cliConf.RootLogger.Info("File Exists. Loading and applying config...\n")
+				loadConfig, err := fileWatcher.LoadConfig(ctx)
+				if err != nil {
+					setupLog.Error(err, "Unable to load configuration")
+				}
+				err = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, loadConfig)
+				if err != nil {
+					setupLog.Error(err, "Unable to apply initial configuration")
+					return err
+				}
+			} else {
+				cliConf.RootLogger.Info("Config file doesn't yet exist for initial loading, using empty config to begin with")
+				err = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, cfg.Config)
+				if err != nil {
+					setupLog.Error(err, "Unable to apply initial configuration")
+					return err
+				}
 			}
 			err := targetDiscoverer.Watch(allocator.SetTargets)
 			setupLog.Info("Target discoverer exited")
