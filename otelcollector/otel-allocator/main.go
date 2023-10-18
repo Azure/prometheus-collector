@@ -47,17 +47,6 @@ var (
 )
 
 func main() {
-	// cliConf, err := config.ParseCLI()
-	// if err != nil {
-	// 	setupLog.Error(err, "Failed to parse parameters")
-	// 	os.Exit(1)
-	// }
-	// cliConf.RootLogger.Info("Starting sleep")
-	// // Calling Sleep method
-	// time.Sleep(30 * time.Second)
-
-	// // Printed after sleep is over
-	// cliConf.RootLogger.Info("Done sleeping")
 	var (
 		// allocatorPrehook will be nil if filterStrategy is not set or
 		// unrecognized. No filtering will be used in this case.
