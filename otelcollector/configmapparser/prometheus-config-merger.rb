@@ -67,7 +67,7 @@ def parseCCPConfigMap
     # Check to see if config map is created
     if (File.file?(@ccpconfigMapMountPath))
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Custom prometheus config exists for CCP")
-      config = File.read(@configMapMountPath)
+      config = File.read(@ccpconfigMapMountPath)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Successfully parsed configmap for CCP")
       return config
     else
@@ -476,7 +476,7 @@ def mergeDefaultAndCustomAndCCPScrapeConfigs(customPromConfig)
         # Print ccpConfig
         puts "CCP Config:"
         puts ccpConfig.to_yaml if defined?(ccpConfig)
-        
+
         # Print the value of mergedConfigs
         puts "Merged Configs when CCP is enabled"
         puts mergedConfigs.to_yaml
