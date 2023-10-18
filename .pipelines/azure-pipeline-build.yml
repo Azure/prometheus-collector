@@ -294,6 +294,10 @@ jobs:
           # Load in amd64 image to run vulnerability scan
           docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
         fi
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+      displayName: "Build: build and push image to dev ACR"
+
+    - bash: |
         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
         DIGEST=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
         SIZE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.size')
@@ -301,7 +305,8 @@ jobs:
         {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
         EOF
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build and push image to dev ACR"
+      displayName: "Build: Set values in payload.json for signing"
+      condition: eq(variables.IS_MAIN_BRANCH, true)
 
     - task: EsrpCodeSigning@3
       displayName: "ESRP CodeSigning for Prometheus"
