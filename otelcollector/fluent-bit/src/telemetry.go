@@ -135,6 +135,7 @@ const (
 	envNamespace                          = "POD_NAMESPACE"
 	envHelmReleaseName                    = "HELM_RELEASE_NAME"
 	envPrometheusCollectorHealth          = "AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"
+	envPrometheusCollectorHealthCcp       = "AZMON_PROMETHEUS_COLLECTOR_HEALTH_CCP_SCRAPING_ENABLED"
 	fluentbitOtelCollectorLogsTag         = "prometheus.log.otelcollector"
 	fluentbitProcessedCountTag            = "prometheus.log.processedcount"
 	fluentbitDiagnosticHeartbeatTag       = "prometheus.log.diagnosticheartbeat"
@@ -586,7 +587,8 @@ func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 				meMetricsProcessedCountMapMutex.Unlock()
 			}
 
-			if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
+			if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" ||
+				strings.ToLower(os.Getenv(envPrometheusCollectorHealthCcp)) == "true" {
 				// Add to the total that PublishTimeseriesVolume() uses
 				metricsSentToPubCount, err := strconv.ParseFloat(groupMatches[6], 64)
 				if err == nil {

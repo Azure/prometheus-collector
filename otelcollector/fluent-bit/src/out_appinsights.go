@@ -16,9 +16,10 @@ func FLBPluginRegister(ctx unsafe.Pointer) int {
 	return output.FLBPluginRegister(ctx, "appinsights", "AppInsights GO!")
 }
 
-//export FLBPluginInit
 // (fluentbit will call this)
 // ctx (context) pointer to fluentbit context (state/ c code)
+//
+//export FLBPluginInit
 func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	// This will not load the plugin instance. FLBPluginFlush won't be called.
@@ -36,9 +37,11 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 	// Run a go routine that hosts Prometheus metrics for the health of the agent
 	// Volume numbers are picked up from the ME logs in the fluent-bit pipeline
 	// Other metrics are from environment variables and otelcollector logs
-	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
+	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" ||
+		strings.ToLower(os.Getenv(envPrometheusCollectorHealthCcp)) == "true" {
 		go ExposePrometheusCollectorHealthMetrics()
 	}
+
 	if strings.ToLower(os.Getenv(envControllerType)) == "replicaset" {
 		go SendCoreCountToAppInsightsMetrics()
 	}
