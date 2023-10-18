@@ -406,20 +406,21 @@ func SendCoreCountToAppInsightsMetrics() {
 // Struct for getting relevant fields from JSON object obtained from cadvisor endpoint
 type CadvisorJson struct {
 	Pods []struct {
-		Containers []struct {
-			Name string `json:"name"`
-			Cpu  struct {
-				UsageNanoCores float64 `json:"usageNanoCores"`
-			} `json:"cpu"`
-			Memory struct {
-				RssBytes float64 `json:"rssBytes"`
-			} `json:"memory"`
-		} `json:"containers"`
+		Containers []Container `json:"containers"`
 	} `json:"pods"`
 }
+type Container struct {
+	Name string `json:"name"`
+	Cpu  struct {
+		UsageNanoCores float64 `json:"usageNanoCores"`
+	} `json:"cpu"`
+	Memory struct {
+		RssBytes float64 `json:"rssBytes"`
+	} `json:"memory"`
+}
 
-// Send Cpu and Memory Usage for Kube state metrics to Application Insights periodically
-func SendKsmCpuMemoryToAppInsightsMetrics() {
+// Send Cpu and Memory Usage for our containers to Application Insights periodically
+func SendContainersCpuMemoryToAppInsightsMetrics() {
 
 	var p CadvisorJson
 	err := json.Unmarshal(retrieveKsmData(), &p)
@@ -431,31 +432,41 @@ func SendKsmCpuMemoryToAppInsightsMetrics() {
 
 	ksmTelemetryTicker := time.NewTicker(time.Second * time.Duration(ksmAttachedTelemetryIntervalSeconds))
 	for ; true; <-ksmTelemetryTicker.C {
-		cpuKsmUsageNanoCoresLinux := float64(0)
-		memoryKsmRssBytesLinux := float64(0)
-
 		for podId := 0; podId < len(p.Pods); podId++ {
 			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
-				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "" {
+				container := p.Pods[podId].Containers[containerId]
+				containerName := strings.TrimSpace(container.Name)
+
+				switch containerName {
+				case "":
 					message := fmt.Sprintf("Container name is missing")
 					Log(message)
 					continue
-				}
-				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "ama-metrics-ksm" {
-					cpuKsmUsageNanoCoresLinux += p.Pods[podId].Containers[containerId].Cpu.UsageNanoCores
-					memoryKsmRssBytesLinux += p.Pods[podId].Containers[containerId].Memory.RssBytes
+				case "ama-metrics-ksm":
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, ksmCpuMemoryTelemetryName, "MemKsmRssBytes")
+				case "targetallocator":
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "taCPUUsage", "taMemRssBytes")
+				case "config-reader":
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "cnfgRdrCPUUsage", "cnfgRdrMemRssBytes")
 				}
 			}
 		}
-		// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
-		metricTelemetryItem := appinsights.NewMetricTelemetry(ksmCpuMemoryTelemetryName, cpuKsmUsageNanoCoresLinux)
-
-		// Abbreviated properties to save telemetry cost
-		metricTelemetryItem.Properties["MemKsmRssBytesLinux"] = fmt.Sprintf("%d", memoryKsmRssBytesLinux)
-
-		TelemetryClient.Track(metricTelemetryItem)
 	}
+}
 
+func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMetricName string, memMetricName string) {
+	cpuUsageNanoCoresLinux := container.Cpu.UsageNanoCores
+	memoryRssBytesLinux := container.Memory.RssBytes
+
+	// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
+	metricTelemetryItem := appinsights.NewMetricTelemetry(cpuMetricName, cpuUsageNanoCoresLinux)
+
+	// Abbreviated properties to save telemetry cost
+	metricTelemetryItem.Properties[memMetricName] = fmt.Sprintf("%d", int(memoryRssBytesLinux))
+
+	TelemetryClient.Track(metricTelemetryItem)
+
+	Log(fmt.Sprintf("Sent container CPU and Mem data for %s", cpuMetricName))
 }
 
 // Retrieve the JSON payload of Kube state metrics from Cadvisor endpoint
@@ -521,12 +532,13 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 	for _, record := range records {
 		var logEntry = ""
 
-		// Logs have different parsed formats depending on if they're from otelcollector or metricsextension
+		// Logs have different parsed formats depending on if they're from otelcollector or container logs
 		if tag == fluentbitOtelCollectorLogsTag {
 			logEntry = fmt.Sprintf("%s %s", ToString(record["caller"]), ToString(record["msg"]))
-		} else if tag == fluentbitContainerLogsTag {
+		} else {
 			logEntry = ToString(record["log"])
 		}
+
 		logLines = append(logLines, logEntry)
 	}
 
@@ -773,9 +785,10 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 
 				// Add to the total that PublishTimeseriesVolume() uses
 				if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
-					TimeseriesVolumeMutex.Lock()
+					TimeseriesVolumeMutex.Lock()			
 					TimeseriesReceivedTotal += metricsReceivedCount
 					TimeseriesVolumeMutex.Unlock()
+		
 				}
 
 			}

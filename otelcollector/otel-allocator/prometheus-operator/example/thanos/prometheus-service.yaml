@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: prometheus
+    prometheus: self
+  name: prometheus-self
+  namespace: default
+spec:
+  ports:
+  - name: web
+    port: 9090
+    targetPort: web
+  selector:
+    prometheus: self
