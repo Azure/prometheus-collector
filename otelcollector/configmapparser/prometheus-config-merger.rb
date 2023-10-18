@@ -315,7 +315,7 @@ def populateDefaultPrometheusConfig
       end
     end
 
-    if !ENV["AZMON_PROMETHEUS_retinaBASIC_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_retinaBASIC_SCRAPING_ENABLED"].downcase == "true"
+    if !ENV["AZMON_PROMETHEUS_RETINABASIC_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_RETINABASIC_SCRAPING_ENABLED"].downcase == "true"
       retinabasicMetricsKeepListRegex = @regexHash["retinaBASIC_METRICS_KEEP_LIST_REGEX"]
       retinabasicScrapeInterval = @intervalHash["retinaBASIC_SCRAPE_INTERVAL"]
       if currentControllerType == @replicasetControllerType

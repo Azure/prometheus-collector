@@ -167,7 +167,7 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED=#{@prometheusCollectorHealthEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=#{@windowsexporterEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_retinaBASIC_SCRAPING_ENABLED=#{@retinabasicEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_RETINABASIC_SCRAPING_ENABLED=#{@retinabasicEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=#{@podannotationEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
