@@ -5,12 +5,6 @@
 # none
 
 # =========== HIGH ================
-# HIGH - otelcollector
-CVE-2023-2253
-CVE-2023-28840
-# HIGH - promconfigvalidator
-CVE-2023-2253
-CVE-2023-28840
 # HIGH - telegraf
 GHSA-fr2g-9hjm-wr23
 
