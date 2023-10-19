@@ -134,7 +134,6 @@ def populateRegexValues
     @controlplane_apiserver_regex = @controlplane_apiserver_regex + "|" + @controlplane_apiserver_minimal_mac
     @controlplane_cluster_autoscaler_regex = @controlplane_cluster_autoscaler_regex + "|" + @controlplane_cluster_autoscaler_minimal_mac
     @controlplane_etcd_regex = @controlplane_etcd_regex + "|" + @controlplane_etcd_minimal_mac
-    end
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while populating regex values with minimal ingestion profile - #{errorStr}, skipping applying minimal ingestion profile regexes")
   end
