@@ -42,7 +42,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @podannotationsDefaultFile = @defaultPromConfigPathPrefix + "podannotationsDefault.yml"
 @windowskubeproxyDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
 @kappiebasicDefaultFileDs = @defaultPromConfigPathPrefix + "kappieBasicDefaultDs.yml"
-@hubbleDefaultFileDs = @defaultPromConfigPathPrefix + "hubbleDefaultDs.yml"
+@retinaDefaultFileDs = @defaultPromConfigPathPrefix + "retinaDefaultDs.yml"
 
 def parseConfigMap
   begin
@@ -336,22 +336,22 @@ def populateDefaultPrometheusConfig
       end
     end
 
-    if !ENV["AZMON_PROMETHEUS_HUBBLE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_HUBBLE_SCRAPING_ENABLED"].downcase == "true"
-      hubbleMetricsKeepListRegex = @regexHash["HUBBLE_METRICS_KEEP_LIST_REGEX"]
-      hubblebasicScrapeInterval = @intervalHash["HUBBLE_SCRAPE_INTERVAL"]
+    if !ENV["AZMON_PROMETHEUS_RETINA_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_RETINA_SCRAPING_ENABLED"].downcase == "true"
+      retinaMetricsKeepListRegex = @regexHash["RETINA_METRICS_KEEP_LIST_REGEX"]
+      retinabasicScrapeInterval = @intervalHash["RETINA_SCRAPE_INTERVAL"]
       if currentControllerType == @replicasetControllerType
         #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
-      else #hubble scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
+      else #retina scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
         if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" #&& ENV["OS_TYPE"].downcase == "linux"
-          UpdateScrapeIntervalConfig(@hubbleDefaultFileDs, hubblebasicScrapeInterval)
-          if !hubbleMetricsKeepListRegex.nil? && !hubbleMetricsKeepListRegex.empty?
-            AppendMetricRelabelConfig(@hubbleDefaultFileDs, hubbleMetricsKeepListRegex)
+          UpdateScrapeIntervalConfig(@retinaDefaultFileDs, retinabasicScrapeInterval)
+          if !retinaMetricsKeepListRegex.nil? && !retinaMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@retinaDefaultFileDs, retinaMetricsKeepListRegex)
           end
-          contents = File.read(@hubbleDefaultFileDs)
+          contents = File.read(@retinaDefaultFileDs)
           contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
           contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
-          File.open(@hubbleDefaultFileDs, "w") { |file| file.puts contents }
-          defaultConfigs.push(@hubbleDefaultFileDs)
+          File.open(@retinaDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@retinaDefaultFileDs)
         end
       end
     end

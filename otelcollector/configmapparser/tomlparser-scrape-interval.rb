@@ -27,7 +27,7 @@ MATCHER = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]
 @prometheusCollectorHealthInterval = "30s"
 @podannotationScrapeInterval = "30s"
 @kappiebasicScrapeInterval = "30s"
-@hubbleScrapeInterval = "30s"
+@retinaScrapeInterval = "30s"
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -209,20 +209,20 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "kappiebasicScrapeInterval override not specified in configmap")
     end
 
-    hubbleScrapeInterval = parsedConfig[:hubble]
-    if !hubbleScrapeInterval.nil?
-      matched = MATCHER.match(hubbleScrapeInterval)
+    retinaScrapeInterval = parsedConfig[:retina]
+    if !retinaScrapeInterval.nil?
+      matched = MATCHER.match(retinaScrapeInterval)
       if !matched
         # set default scrape interval to 30s if its not in the proper format
-        hubbleScrapeInterval = "30s"
-        @hubbleScrapeInterval = hubbleScrapeInterval
-        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for hubble")
+        retinaScrapeInterval = "30s"
+        @retinaScrapeInterval = retinaScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for retina")
       else
-        @hubbleScrapeInterval = hubbleScrapeInterval
-        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for hubbleScrapeInterval")
+        @retinaScrapeInterval = retinaScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for retinaScrapeInterval")
       end
     else
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "hubbleScrapeInterval override not specified in configmap")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "retinaScrapeInterval override not specified in configmap")
     end
 
     prometheusCollectorHealthInterval = parsedConfig[:prometheuscollectorhealth]
