@@ -33,6 +33,20 @@
       "dependsOn": [ ]
     },
     {
+      "name": "PushTargetAllocator",
+      "targetType": "ServiceResource",
+      "targetName": "PushTargetAllocator",
+      "actions": [ "Shell/PushAgentToACR" ],
+      "dependsOn": [ ]
+    },
+    {
+      "name": "PushConfigReader",
+      "targetType": "ServiceResource",
+      "targetName": "PushConfigReader",
+      "actions": [ "Shell/PushAgentToACR" ],
+      "dependsOn": [ ]
+    },
+    {
       "name": "PushKSMChart",
       "targetType": "ServiceResource",
       "targetName": "PushKSMChart",

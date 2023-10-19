@@ -1,7 +1,7 @@
 # Check for HIGH/CRITICAL & MEDIUM CVEs. HIGH/CRITICAL to be fixed asap, MEDIUM is best effort
 # ignore these CVEs, but continue scanning to catch other vulns. Note : this will ignore these cves globally
 
-# CRITICAL
+# =========== CRITICAL ================
 # none
 
 # =========== HIGH ================
@@ -16,10 +16,10 @@ GHSA-fr2g-9hjm-wr23
 
 # =========== MEDIUM ================
 # MEDIUM - otelcollector
-CVE-2023-28841
-CVE-2023-28842
 CVE-2023-40577
 # MEDIUM - promconfigvalidator
-CVE-2023-28841
-CVE-2023-28842
 CVE-2023-40577
+# MEDIUM - go vulnerabilities
+CVE-2023-39325
+CVE-2023-3978
+CVE-2023-44487

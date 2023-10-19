@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 //go:build !race
 
@@ -23,6 +12,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -33,9 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
-	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/receiver/receivertest"
-	"go.uber.org/atomic"
 )
 
 type MockTargetAllocator struct {
@@ -124,7 +112,7 @@ func transformTAResponseMap(rawResponses map[string][]mockTargetAllocatorRespons
 		}
 		responsesMap[path] = responses
 
-		v := atomic.NewInt32(0)
+		v := &atomic.Int32{}
 		responsesIndexMap[path] = v
 	}
 	return responsesMap, responsesIndexMap, nil
@@ -149,10 +137,10 @@ func setupMockTargetAllocator(responses Responses) (*MockTargetAllocator, error)
 }
 
 func labelSetTargetsToList(sets []model.LabelSet) []string {
-	var result []string
-	for _, set := range sets {
+	result := make([]string, len(sets))
+	for i, set := range sets {
 		address := set["__address__"]
-		result = append(result, string(address))
+		result[i] = string(address)
 	}
 	return result
 }
@@ -505,7 +493,7 @@ func TestTargetAllocatorJobRetrieval(t *testing.T) {
 			defer allocator.Stop()
 
 			tc.cfg.TargetAllocator.Endpoint = allocator.srv.URL // set service URL with the automatic generated one
-			receiver := newPrometheusReceiver(receivertest.NewNopCreateSettings(), tc.cfg, cms, featuregate.GlobalRegistry())
+			receiver := newPrometheusReceiver(receivertest.NewNopCreateSettings(), tc.cfg, cms)
 
 			require.NoError(t, receiver.Start(ctx, componenttest.NewNopHost()))
 

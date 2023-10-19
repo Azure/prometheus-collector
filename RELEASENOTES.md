@@ -7,6 +7,7 @@
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
 * Change log -
   * Update telegraf jitter & disable exemplar for rs - https://github.com/Azure/prometheus-collector/pull/634
+  * Add Operator support for prometheus-collector - https://github.com/Azure/prometheus-collector/pull/554
 
 ## Release 10-05-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.7-main-10-06-2023-b75a076c`
