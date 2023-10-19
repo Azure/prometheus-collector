@@ -5,7 +5,8 @@
 # none
 
 # =========== HIGH ================
-# none
+# HIGH - telegraf
+GHSA-fr2g-9hjm-wr23
 
 # =========== MEDIUM ================
 # MEDIUM - otelcollector
