@@ -62,9 +62,9 @@ AzureMonitorMetrics:
 global:
   commonGlobals:
     CloudEnvironment: "azurepubliccloud"
-    Region: "westus2"
+    Region: "${AKS_REGION}"
     Customer:
-      AzureResourceID: "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourcegroups/rashmi-operator-cfg/providers/Microsoft.ContainerService/managedClusters/rashmi-operator-cfg"
+      AzureResourceID: ${AKS_RESOURCE_ID}
 
 # For ARC backdoor testing
 Azure:
