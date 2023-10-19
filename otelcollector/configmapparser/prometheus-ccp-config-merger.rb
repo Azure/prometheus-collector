@@ -25,7 +25,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @controlplane_kube_controller_manager_default_file = @defaultPromConfigPathPrefix + "controlplane_kube_controller_manager.yml"
 @controlplane_cluster_autoscaler_default_file = @defaultPromConfigPathPrefix + "controlplane_cluster_autoscaler.yml"
 @controlplane_etcd_default_file = @defaultPromConfigPathPrefix + "controlplane_etcd.yml"
-@controlplane_prometheuscollectorhealth_default_file = @defaultPromConfigPathPrefix + "controlplane_prometheuscollectorhealth_default_file.yml"
+@controlplane_prometheuscollectorhealth_default_file = @defaultPromConfigPathPrefix + "controlplane_prometheuscollectorhealth.yml"
 
 def loadRegexHash
   begin
