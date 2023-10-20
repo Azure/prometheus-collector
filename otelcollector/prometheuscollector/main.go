@@ -47,11 +47,14 @@ func main(){
 			meConfigFile = "/usr/sbin/me.config"
 		}
 	} else {
-		if clusterOverride == "true" {
-			meConfigFile = "/usr/sbin/me_ds_internal.config"
-		} else {
-			meConfigFile = "/usr/sbin/me_ds.config"
-		}
+		// If controllerType is not "replicaset," exit the program with a status code of 1 and a failure message.
+		println("Failed: controllerType is not 'replicaset'")
+		os.Exit(1)
+		// if clusterOverride == "true" {
+		// 	meConfigFile = "/usr/sbin/me_ds_internal.config"
+		// } else {
+		// 	meConfigFile = "/usr/sbin/me_ds.config"
+		// }
 	}
 	fmt.Println("meConfigFile:", meConfigFile)
 
