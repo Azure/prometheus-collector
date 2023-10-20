@@ -114,7 +114,7 @@ ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
 COPY --from=builder /opt /opt
 COPY --from=builder /etc /etc
 # Remove busybin as it installs sh
-COPY --from=builder /busybin /busybin
+# COPY --from=builder /busybin /busybin
 COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_internal.config /usr/sbin/
 COPY --from=builder /var/opt/microsoft /var/opt/microsoft
 
@@ -124,16 +124,16 @@ COPY --from=builder /usr/bin/ruby /usr/bin/ruby
 COPY --from=builder /usr/lib/ruby /usr/lib/ruby
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 # Remove copying from bash when not debugging/sharing an image
-COPY --from=builder /usr/bin/bash /usr/bin/bash
-COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
+# COPY --from=builder /usr/bin/bash /usr/bin/bash
+# COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
 COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
 COPY --from=builder /usr/bin/curl /usr/bin/
 # Remove sh (only enable for debugging)
-COPY --from=builder /bin/sh /bin/sh
+# COPY --from=builder /bin/sh /bin/sh
 
 # bash dependencies
-COPY --from=builder /lib/libreadline.so.8 /lib/
-COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
+# COPY --from=builder /lib/libreadline.so.8 /lib/
+# COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
 # inotifywait dependencies
 COPY --from=builder /lib/libinotifytools.so.0 /lib/
 # ruby dependencies
@@ -145,11 +145,11 @@ COPY --from=builder /lib/libprotobuf.so.28 /lib/libgrpc++.so.1.42 /lib/libabsl_s
 # mdsd dependencies
 COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
 COPY --from=builder /usr/local/lib/libtcmalloc_minimal.so.4 /usr/local/lib/
-# logrotate dependencies
-COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
-# curl dependencies
-COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libssl.so.1.1   /lib/libcrypto.so.1.1  /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
-COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
+# # logrotate dependencies
+# COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
+# # curl dependencies
+# COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libssl.so.1.1   /lib/libcrypto.so.1.1  /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
+# COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
 
 # Expose the port on which the application listens
 EXPOSE 8080
