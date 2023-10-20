@@ -58,7 +58,7 @@
                 "replaceWith": "$(TargetAllocatorTag)"
               },
               {
-                "find": "__TARGETALLOCATOR_TAG__",
+                "find": "__CONFIGREADER_TAG__",
                 "replaceWith": "$(ConfigReaderTag)"
               },
               {
