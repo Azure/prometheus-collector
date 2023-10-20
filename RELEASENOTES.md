@@ -1,10 +1,10 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Release 10-19-2023
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-10-19-2023-32467cc8`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-10-19-2023-32467cc8-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-10-19-2023-32467cc8-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:7.0.0-main-10-19-2023-32467cc8-cfg`
+## Release 10-20-2023
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4-cfg`
 * Change log -
   * Update telegraf jitter & disable exemplar for rs - https://github.com/Azure/prometheus-collector/pull/634
   * Add Operator support for prometheus-collector - https://github.com/Azure/prometheus-collector/pull/554
