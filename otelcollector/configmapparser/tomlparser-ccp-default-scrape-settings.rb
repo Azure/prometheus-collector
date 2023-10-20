@@ -97,13 +97,6 @@ end
 # Write the settings to file, so that they can be set as environment variables
 file = File.open("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var", "w")
 
-@controlplane_kube_controller_manager_enabled = false
-@controlplane_kube_scheduler_enabled = false
-@controlplane_apiserver_enabled = true
-@controlplane_cluster_autoscaler_enabled = false
-@controlplane_etcd_enabled = true
-
-
 if !file.nil?
   file.write("AZMON_PROMETHEUS_CONTROLPLANE_KUBE_CONTROLLER_MANAGER_ENABLED=#{@controlplane_kube_controller_manager_enabled}\n")
   file.write("AZMON_PROMETHEUS_CONTROLPLANE_KUBE_SCHEDULER_ENABLED=#{@controlplane_kube_scheduler_enabled}\n")

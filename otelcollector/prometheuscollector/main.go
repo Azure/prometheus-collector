@@ -12,6 +12,7 @@ import (
 	"io"
 	"bufio"
 	"strconv"
+	"path/filepath"
 )
 
 func main(){
@@ -21,7 +22,9 @@ func main(){
 	cluster := os.Getenv("CLUSTER")
 	aksRegion := os.Getenv("AKSREGION")
 	ccpMetricsEnabled := os.Getenv("CCP_METRICS_ENABLED")
-	
+
+	// wait for configmap sync container to finish initialization
+	// waitForConfigmapSyncContainer()
 
 	outputFile := "/opt/inotifyoutput.txt"
 	err := monitorInotify(outputFile)
@@ -377,7 +380,6 @@ func startCommandAndWait(command string, args ...string) {
 		fmt.Printf("Error waiting for command: %v\n", err)
 	}
 }
-
 
 func printMdsdVersion() {
 	cmd := exec.Command("mdsd", "--version")
@@ -867,4 +869,55 @@ func monitorInotify(outputFile string) error {
 	}
 
 	return nil
+}
+
+func waitForFileCreation(directory, targetFile string) (string, error) {
+	for {
+		dir, err := os.Open(directory)
+		if err != nil {
+			return "", err
+		}
+		defer dir.Close()
+
+		files, err := dir.Readdir(0)
+		if err != nil {
+			return "", err
+		}
+
+		for _, file := range files {
+			if file.Name() == targetFile {
+				return file.Name(), nil
+			}
+		}
+
+		time.Sleep(time.Second) // Sleep for a second before checking again
+	}
+}
+
+func waitForConfigmapSyncContainer() {
+	settingsChangedFile := "/etc/config/settings/inotifysettingscreated"
+	ccpMetricsEnabled := os.Getenv("CCP_METRICS_ENABLED")
+	if ccpMetricsEnabled == "true" {
+		_, err := os.Stat(settingsChangedFile)
+		if os.IsNotExist(err) {
+			// Disable appinsights telemetry for ccp metrics
+			os.Setenv("DISABLE_TELEMETRY", "true")
+
+			_, err := os.Stat(settingsChangedFile)
+			if os.IsNotExist(err) {
+				fmt.Println("Waiting for ama-metrics-config-sync container to finish initialization...")
+
+				for {
+					event, err := waitForFileCreation(filepath.Dir(settingsChangedFile), filepath.Base(settingsChangedFile))
+					if err != nil {
+						fmt.Println(err)
+						break
+					}
+					if event == filepath.Base(settingsChangedFile) {
+						break
+					}
+				}
+			}
+		}
+	}
 }
