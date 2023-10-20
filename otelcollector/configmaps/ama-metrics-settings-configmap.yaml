@@ -22,9 +22,9 @@ data:
     kappiebasic = true
     prometheuscollectorhealth = false
     controlplane-apiserver = true
-    controlplane-cluster-autoscaler = false
-    controlplane-kube-scheduler = false
-    controlplane-kube-controller-manager = false
+    controlplane-cluster-autoscaler = true
+    controlplane-kube-scheduler = true
+    controlplane-kube-controller-manager = true
     controlplane-etcd = true
     controlplane-prometheuscollectorhealth = true
   # Regex for which namespaces to scrape through pod annotation based scraping.
