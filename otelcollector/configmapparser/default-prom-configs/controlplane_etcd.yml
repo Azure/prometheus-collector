@@ -1,33 +1,33 @@
-# scrape_configs:
-#   - job_name: prometheus_ref_app_etcd
-#     scheme: http
-#     scrape_interval: 60s
-#     kubernetes_sd_configs:
-#     - role: pod
-#     relabel_configs:
-#     - source_labels: [__meta_kubernetes_pod_label_app]
-#       action: keep
-#       regex: "prometheus-reference-app"
-  scrape_configs:
-  - job_name: controlplane_etcd
-    scrape_interval: $$SCRAPE_INTERVAL$$
-    follow_redirects: false
-    scheme: https
+scrape_configs:
+  - job_name: prometheus_ref_app_etcd
+    scheme: http
+    scrape_interval: 60s
     kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names:
-            - $$POD_NAMESPACE$$
-    tls_config:
-      ca_file: /etc/kubernetes/secrets/etcd-client-ca.crt
-      cert_file: /etc/kubernetes/secrets/etcd-client.crt
-      key_file: /etc/kubernetes/secrets/etcd-client.key
-      insecure_skip_verify: true
+    - role: pod
     relabel_configs:
-      - source_labels: [ __meta_kubernetes_service_label_app, __meta_kubernetes_pod_container_port_number ]
-        action: keep
-        regex: etcd;2379
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        regex: (.*)
-        target_label: pod
-        action: replace
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: "prometheus-reference-app"
+  # scrape_configs:
+  # - job_name: controlplane_etcd
+  #   scrape_interval: $$SCRAPE_INTERVAL$$
+  #   follow_redirects: false
+  #   scheme: https
+  #   kubernetes_sd_configs:
+  #     - role: endpoints
+  #       namespaces:
+  #         names:
+  #           - $$POD_NAMESPACE$$
+  #   tls_config:
+  #     ca_file: /etc/kubernetes/secrets/etcd-client-ca.crt
+  #     cert_file: /etc/kubernetes/secrets/etcd-client.crt
+  #     key_file: /etc/kubernetes/secrets/etcd-client.key
+  #     insecure_skip_verify: true
+  #   relabel_configs:
+  #     - source_labels: [ __meta_kubernetes_service_label_app, __meta_kubernetes_pod_container_port_number ]
+  #       action: keep
+  #       regex: etcd;2379
+  #     - source_labels: [ __meta_kubernetes_pod_name ]
+  #       regex: (.*)
+  #       target_label: pod
+  #       action: replace

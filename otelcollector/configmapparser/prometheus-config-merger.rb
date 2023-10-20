@@ -442,7 +442,6 @@ def mergeDefaultAndCustomScrapeConfigs(customPromConfig)
     if !@mergedDefaultConfigs.nil? && !@mergedDefaultConfigs.empty?
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Merging default and custom scrape configs")
       customPrometheusConfig = YAML.load(customPromConfig)
-      # Check if the CCP_METRICS_ENABLED environment variable is set to true
       mergedConfigs = @mergedDefaultConfigs.deep_merge!(customPrometheusConfig)
       mergedConfigYaml = YAML::dump(mergedConfigs)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Done merging default scrape config(s) with custom prometheus config, writing them to file")
@@ -555,5 +554,4 @@ else
   setDefaultFileScrapeInterval("30s")
   writeDefaultScrapeTargetsFile()
 end
-
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Done Merging Default and Custom Prometheus Config")

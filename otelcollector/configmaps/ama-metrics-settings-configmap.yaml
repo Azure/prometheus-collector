@@ -11,7 +11,7 @@ data:
     cluster_alias = ""
   default-scrape-settings-enabled: |-
     kubelet = true
-    coredns = true
+    coredns = false
     cadvisor = true
     kubeproxy = false
     apiserver = false
@@ -22,9 +22,9 @@ data:
     kappiebasic = true
     prometheuscollectorhealth = false
     controlplane_apiserver = true
-    controlplane_cluster_autoscaler = true
-    controlplane_kube_scheduler = true
-    controlplane_kube_controller_manager = true
+    controlplane_cluster_autoscaler = false
+    controlplane_kube_scheduler = false
+    controlplane_kube_controller_manager = false
     controlplane_etcd = true
     controlplane_prometheuscollectorhealth = true
   # Regex for which namespaces to scrape through pod annotation based scraping.

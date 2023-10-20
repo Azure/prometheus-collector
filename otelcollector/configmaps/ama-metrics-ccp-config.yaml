@@ -1,0 +1,32 @@
+kind: ConfigMap
+apiVersion: v1
+data:
+  schema-version:
+    #string.used by agent to parse config. supported versions are {v1}. Configs with other schema versions will be rejected by the agent.
+    v1
+  config-version:
+    #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
+    ver1
+  default-scrape-settings-enabled: |-
+    controlplane-apiserver = false
+    controlplane-cluster-autoscaler = false
+    controlplane-kube-scheduler = false
+    controlplane-kube-controller-manager = false
+    controlplane-etcd = false
+    controlplane-prometheuscollectorhealth = false
+  default-targets-metrics-keep-list: |-
+    kubelet = ""
+    coredns = ""
+    cadvisor = ""
+    kubeproxy = ""
+    apiserver = ""
+    kubestate = ""
+    nodeexporter = ""
+    windowsexporter = ""
+    windowskubeproxy = ""
+    podannotations = ""
+    kappiebasic = ""
+    minimalingestionprofile = true
+metadata:
+  name: ama-metrics-ccp-settings-configmap
+  namespace: kube-system

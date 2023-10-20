@@ -1,38 +1,38 @@
-# scrape_configs:
-#   - job_name: prometheus_ref_app_cluster_autoscaler
-#     scheme: http
-#     scrape_interval: 60s
-#     kubernetes_sd_configs:
-#     - role: pod
-#     relabel_configs:
-#     - source_labels: [__meta_kubernetes_pod_label_app]
-#       action: keep
-#       regex: "prometheus-reference-app"
-  scrape_configs:
-  - job_name: controlplane_cluster_autoscaler
-    scrape_interval: $$SCRAPE_INTERVAL$$
-    follow_redirects: false
+scrape_configs:
+  - job_name: prometheus_ref_app_cluster_autoscaler
+    scheme: http
+    scrape_interval: 60s
     kubernetes_sd_configs:
-      - role: pod
-        namespaces:
-          names:
-            - $$POD_NAMESPACE$$
+    - role: pod
     relabel_configs:
-      - source_labels: [ __meta_kubernetes_pod_label_app, __meta_kubernetes_pod_container_name ]
-        action: keep
-        regex: cluster-autoscaler;cluster-autoscaler
-      - source_labels: [ __meta_kubernetes_pod_annotation_aks_prometheus_io_scrape ]
-        action: keep
-        regex: true
-      - source_labels: [ __meta_kubernetes_pod_annotation_aks_prometheus_io_path ]
-        action: replace
-        target_label: __metrics_path__
-        regex: (.+)
-      - source_labels: [ __address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port ]
-        action: replace
-        separator: ":"
-        target_label: __address__
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        regex: (.*)
-        target_label: pod
-        action: replace
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: "prometheus-reference-app"
+  # scrape_configs:
+  # - job_name: controlplane_cluster_autoscaler
+  #   scrape_interval: $$SCRAPE_INTERVAL$$
+  #   follow_redirects: false
+  #   kubernetes_sd_configs:
+  #     - role: pod
+  #       namespaces:
+  #         names:
+  #           - $$POD_NAMESPACE$$
+  #   relabel_configs:
+  #     - source_labels: [ __meta_kubernetes_pod_label_app, __meta_kubernetes_pod_container_name ]
+  #       action: keep
+  #       regex: cluster-autoscaler;cluster-autoscaler
+  #     - source_labels: [ __meta_kubernetes_pod_annotation_aks_prometheus_io_scrape ]
+  #       action: keep
+  #       regex: true
+  #     - source_labels: [ __meta_kubernetes_pod_annotation_aks_prometheus_io_path ]
+  #       action: replace
+  #       target_label: __metrics_path__
+  #       regex: (.+)
+  #     - source_labels: [ __address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port ]
+  #       action: replace
+  #       separator: ":"
+  #       target_label: __address__
+  #     - source_labels: [ __meta_kubernetes_pod_name ]
+  #       regex: (.*)
+  #       target_label: pod
+  #       action: replace
