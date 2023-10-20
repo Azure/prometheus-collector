@@ -1,8 +1,17 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 10-20-2023
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4-cfg`
+* Change log -
+  * Update telegraf jitter & disable exemplar for rs - https://github.com/Azure/prometheus-collector/pull/634
+  * Add Operator support for prometheus-collector - https://github.com/Azure/prometheus-collector/pull/554
+
 ## Release 10-05-2023
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.7-main-<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.7-main-<tbd>`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.7-main-10-06-2023-b75a076c`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.7-main-10-06-2023-b75a076c-win`
 * Change log -
   * Update k8s.io/clientgo in fluentbit plugin from `0.28.0` to `0.28.2` - https://github.com/Azure/prometheus-collector/pull/595
   * fix: ARC fixes (already released to ARC as hotfix) - https://github.com/Azure/prometheus-collector/pull/605

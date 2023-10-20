@@ -1,4 +1,4 @@
-{{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true) }}
+{{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -178,6 +178,13 @@ spec:
                 operator: In
                 values:
                 - system
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: azuremonitor/metrics.replica.preferred
+                operator: In
+                values:
+                - "true"
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:

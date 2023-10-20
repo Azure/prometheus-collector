@@ -7,7 +7,11 @@ metadata:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
 spec:
+  {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+  replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
+  {{- else}}
   replicas: 1
+  {{- end }}
   revisionHistoryLimit: 2
   paused: false
   selector:
@@ -64,7 +68,7 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: AZMON_OPERATOR_ENABLED
-            # {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true) }}
+            # {{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
             #   value: "true"
             # {{- else }}
               value: "false"

@@ -57,8 +57,7 @@ file = File.open("/opt/microsoft/configmapparser/config_debug_mode_env_var", "w"
 
 if !file.nil?
   if !ENV["OS_TYPE"].nil? && ENV["OS_TYPE"].downcase == "linux"
-    # file.write("export DEBUG_MODE_ENABLED=#{@defaultEnabled}\n")
-    file.write("DEBUG_MODE_ENABLED=#{@defaultEnabled}\n")
+    file.write("export DEBUG_MODE_ENABLED=#{@defaultEnabled}\n")
   else
     file.write("DEBUG_MODE_ENABLED=#{@defaultEnabled}\n")
   end
