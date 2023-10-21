@@ -5,7 +5,7 @@
     "variables": {},
     "resources": [
         {
-            "name": "containerinsights_prod_eus_alerts",
+            "name": "containerinsights_prod_eus_alertss",
             "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
             "apiVersion": "2023-03-01",
             "location": "eastus",
