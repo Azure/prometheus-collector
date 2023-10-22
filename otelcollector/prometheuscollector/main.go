@@ -40,7 +40,7 @@ func main(){
 
 	var meConfigFile string
 
-	if controllerType == "replicaset" {
+	if strings.ToLower(controllerType) == "replicaset" {
 		if clusterOverride == "true" {
 			meConfigFile = "/usr/sbin/me_internal.config"
 		} else {
