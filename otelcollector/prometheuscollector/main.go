@@ -24,7 +24,7 @@ func main(){
 	ccpMetricsEnabled := os.Getenv("CCP_METRICS_ENABLED")
 
 	// wait for configmap sync container to finish initialization
-	waitForConfigmapSyncContainer()
+	// waitForConfigmapSyncContainer()
 
 	outputFile := "/opt/inotifyoutput.txt"
 	err := monitorInotify(outputFile)
