@@ -15,6 +15,8 @@ LOGGING_PREFIX = "config"
 
 @clusterAlias = ""  # user provided alias (thru config map or chart param)
 @clusterLabel = ""  # value of the 'cluster' label in every time series scraped
+@isOperatorEnabled = ""
+@isOperatorEnabledChartSetting = ""
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -49,7 +51,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !parsedConfig.nil? && !parsedConfig[:cluster_alias].nil?
       @clusterAlias = parsedConfig[:cluster_alias].strip
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "Got configmap setting for cluster_alias:#{@clusterAlias}")
-      @clusterAlias = @clusterAlias.gsub(/[^0-9a-z]/i, '_') #replace all non alpha-numeric characters with "_"  -- this is to ensure that all down stream places where this is used (like collector, telegraf config etc are keeping up with sanity)
+      @clusterAlias = @clusterAlias.gsub(/[^0-9a-z]/i, "_") #replace all non alpha-numeric characters with "_"  -- this is to ensure that all down stream places where this is used (like collector, telegraf config etc are keeping up with sanity)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "After g-subing configmap setting for cluster_alias:#{@clusterAlias}")
     end
   rescue => errorStr
@@ -57,6 +59,20 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for cluster_alias in prometheus collector settings- #{errorStr}, using defaults, please check config map for errors")
   end
 
+  # Safeguard to fall back to non operator model, enable to set to true or false only when toggle is enabled
+  if !ENV["AZMON_OPERATOR_ENABLED"].nil? && ENV["AZMON_OPERATOR_ENABLED"].downcase == "true"
+    begin
+      @isOperatorEnabledChartSetting = "true"
+      if !parsedConfig.nil? && !parsedConfig[:operator_enabled].nil?
+        @isOperatorEnabled = parsedConfig[:operator_enabled]
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Configmap setting enabling operator: #{@isOperatorEnabled}")
+      end
+    rescue => errorStr
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for prometheus collector settings- #{errorStr}, using defaults, please check config map for errors")
+    end
+  else
+    @isOperatorEnabledChartSetting = "false"
+  end
 end
 
 @configSchemaVersion = ENV["AZMON_AGENT_CFG_SCHEMA_VERSION"]
@@ -74,14 +90,14 @@ end
 
 # get clustername from cluster's full ARM resourceid (to be used for mac mode as 'cluster' label)
 begin
-  if !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true"
-    resourceArray=ENV['CLUSTER'].strip.split("/")
-    @clusterLabel=resourceArray[resourceArray.length - 1]
+  if !ENV["MAC"].nil? && !ENV["MAC"].empty? && ENV["MAC"].strip.downcase == "true"
+    resourceArray = ENV["CLUSTER"].strip.split("/")
+    @clusterLabel = resourceArray[resourceArray.length - 1]
   else
-    @clusterLabel=ENV['CLUSTER']
+    @clusterLabel = ENV["CLUSTER"]
   end
 rescue => errorStr
-  @clusterLabel=ENV['CLUSTER']
+  @clusterLabel = ENV["CLUSTER"]
   ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while parsing to determine cluster label from full cluster resource id in prometheus collector settings- #{errorStr}, using default as full CLUSTER passed-in '#{@clusterLabel}'")
 end
 
@@ -99,16 +115,21 @@ ConfigParseErrorLogger.log(LOGGING_PREFIX, "AZMON_CLUSTER_LABEL:#{@clusterLabel}
 file = File.open("/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var", "w")
 
 if !file.nil?
-  if !ENV['OS_TYPE'].nil? && ENV['OS_TYPE'].downcase == "linux"
+  if !ENV["OS_TYPE"].nil? && ENV["OS_TYPE"].downcase == "linux"
     file.write("export AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
-    file.write("export AZMON_CLUSTER_LABEL=#{@clusterLabel}\n") #used for cluster label value when scraping 
+    file.write("export AZMON_CLUSTER_LABEL=#{@clusterLabel}\n") #used for cluster label value when scraping
     file.write("export AZMON_CLUSTER_ALIAS=#{@clusterAlias}\n") #used only for telemetry
+    file.write("export AZMON_OPERATOR_ENABLED_CHART_SETTING=#{@isOperatorEnabledChartSetting}\n")
+    if !@isOperatorEnabled.nil? && !@isOperatorEnabled.empty? && @isOperatorEnabled.length > 0
+      file.write("export AZMON_OPERATOR_ENABLED=#{@isOperatorEnabled}\n")
+      file.write("export AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=#{@isOperatorEnabled}\n")
+    end
   else
     file.write("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=#{@defaultMetricAccountName}\n")
-    file.write("AZMON_CLUSTER_LABEL=#{@clusterLabel}\n") #used for cluster label value when scraping 
+    file.write("AZMON_CLUSTER_LABEL=#{@clusterLabel}\n") #used for cluster label value when scraping
     file.write("AZMON_CLUSTER_ALIAS=#{@clusterAlias}\n") #used only for telemetry
   end
-  
+
   file.close
 else
   ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while opening file for writing prometheus-collector config environment variables")

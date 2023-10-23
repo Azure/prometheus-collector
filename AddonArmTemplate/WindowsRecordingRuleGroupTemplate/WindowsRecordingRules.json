@@ -63,7 +63,8 @@
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          "[parameters('azureMonitorWorkspaceResourceId')]",
+          "[parameters('clusterResourceId')]"
         ],
         "enabled": true,
         "clusterName": "[variables('clusterName')]",
@@ -140,7 +141,8 @@
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          "[parameters('azureMonitorWorkspaceResourceId')]",
+          "[parameters('clusterResourceId')]"
         ],
         "enabled": true,
         "clusterName": "[variables('clusterName')]",

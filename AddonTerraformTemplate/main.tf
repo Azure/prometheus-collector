@@ -119,7 +119,7 @@ resource "azurerm_monitor_alert_prometheus_rule_group" "node_recording_rules_rul
   description         = "Node Recording Rules Rule Group"
   rule_group_enabled  = true
   interval            = "PT1M"
-  scopes              = [azurerm_monitor_workspace.amw.id]
+  scopes              = [azurerm_monitor_workspace.amw.id,azurerm_kubernetes_cluster.k8s.id]
 
   rule {
     enabled    = true
@@ -209,7 +209,7 @@ resource "azurerm_monitor_alert_prometheus_rule_group" "kubernetes_recording_rul
   description         = "Kubernetes Recording Rules Rule Group"
   rule_group_enabled  = true
   interval            = "PT1M"
-  scopes              = [azurerm_monitor_workspace.amw.id]
+  scopes              = [azurerm_monitor_workspace.amw.id,azurerm_kubernetes_cluster.k8s.id]
 
   rule {
     enabled    = true
@@ -366,7 +366,7 @@ resource "azurerm_monitor_alert_prometheus_rule_group" "node_and_kubernetes_reco
   description         = "Node and Kubernetes Recording Rules Rule Group for Windows Nodes"
   rule_group_enabled  = true
   interval            = "PT1M"
-  scopes              = [azurerm_monitor_workspace.amw.id]
+  scopes              = [azurerm_monitor_workspace.amw.id,azurerm_kubernetes_cluster.k8s.id]
 
   rule {
     enabled    = true
@@ -497,7 +497,7 @@ resource "azurerm_monitor_alert_prometheus_rule_group" "node_recording_rules_rul
   description         = "Node and Kubernetes Recording Rules Rule Group for Windows Nodes"
   rule_group_enabled  = true
   interval            = "PT1M"
-  scopes              = [azurerm_monitor_workspace.amw.id]
+  scopes              = [azurerm_monitor_workspace.amw.id,azurerm_kubernetes_cluster.k8s.id]
 
   rule {
     enabled    = true

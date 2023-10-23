@@ -1,5 +1,38 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 10-20-2023
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4-cfg`
+* Change log -
+  * Update telegraf jitter & disable exemplar for rs - https://github.com/Azure/prometheus-collector/pull/634
+  * Add Operator support for prometheus-collector - https://github.com/Azure/prometheus-collector/pull/554
+
+## Release 10-05-2023
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.7-main-10-06-2023-b75a076c`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.7-main-10-06-2023-b75a076c-win`
+* Change log -
+  * Update k8s.io/clientgo in fluentbit plugin from `0.28.0` to `0.28.2` - https://github.com/Azure/prometheus-collector/pull/595
+  * fix: ARC fixes (already released to ARC as hotfix) - https://github.com/Azure/prometheus-collector/pull/605
+    * Update ARC regions (add Sweden South)
+    * Fix registry for node exporter
+    * Add `clusterDistribution` override parameter for AKS EE
+  * Update CPU requests for Daemonset (linux & windows) - https://github.com/Azure/prometheus-collector/pull/606
+  * Add telemetry for per target scrape interval - https://github.com/Azure/prometheus-collector/pull/614
+  * Update dependencies, Disable exemplars on ME (Linux only), Update CVE exemptions, Stop windows ingestion from replicaset, Fix try scans to fail on CVEs - https://github.com/Azure/prometheus-collector/pull/616
+    * Linux
+      * mdsd = azure-mdsd-1.23.5 --> 1.27.4
+      * ME = 2.2023.224.2214 --> 2.2023.928.2134
+      * telegraf = 1.25.2 --> 1.27.3
+      * golang = 1.18 --> 1.20
+    * Windows
+      * golang = 1.18 --> 1.20
+    * Upgrade addon token adapter for back door deployments (Linux only)
+      * master.221118.2 --> master.230804.1
+  * Fix $ substitution issue in relabel and metric relabel config - https://github.com/Azure/prometheus-collector/pull/618
+  * update github.com/prometheus/client_golang from `1.16.0` to `1.17.0` in fluentbit plugin - https://github.com/Azure/prometheus-collector/pull/608
+
 ## Release 9-11-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-win`
