@@ -1,5 +1,9 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Pending
+* Change log -
+  * Add new regions for Azure Monitor Workspace - https://github.com/Azure/prometheus-collector/pull/609
+
 ## Release 10-20-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4-win`
