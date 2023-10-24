@@ -732,6 +732,13 @@ func PushInfiniteMetricLogToAppInsightsEvents(records []map[interface{}]interfac
 	return output.FLB_OK
 }
 
+func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		Log(ToString(record))
+	}
+	return output.FLB_OK
+}
+
 func RecordExportingFailed(records []map[interface{}]interface{}) int {
 	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
 		ExportingFailedMutex.Lock()
