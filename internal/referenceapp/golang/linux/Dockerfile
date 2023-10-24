@@ -14,6 +14,11 @@ COPY go.mod .
 COPY go.sum .
 RUN go mod download
 
+
+COPY client-cert.pem .
+COPY client-key.pem .
+COPY ca-cert.pem .
+
 # Copy the code into the container
 COPY . .
 

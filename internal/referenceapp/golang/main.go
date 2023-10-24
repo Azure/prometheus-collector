@@ -457,6 +457,9 @@ func untypedHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
+	certFile := "./client-cert.pem"
+	keyFile := "./client-key.pem"
 	if os.Getenv("RUN_PERF_TEST") == "true" {
 		if os.Getenv("SCRAPE_INTERVAL") != "" {
 			scrapeIntervalSec, _ = strconv.Atoi(os.Getenv("SCRAPE_INTERVAL"))
@@ -477,11 +480,11 @@ func main() {
 
 	// Run server for metrics without a type
 	go func() {
-		http.ListenAndServe(":2113", untypedServer)
+		http.ListenAndServeTLS(":2113", certFile, keyFile, untypedServer)
 	}()
 
 	// Run main server for weather app metrics
-	http.ListenAndServe(":2112", weatherServer)
+	http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
 
 	fmt.Printf("ending main function")
 }
