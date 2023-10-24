@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -21,9 +20,6 @@ import (
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
 	yaml "gopkg.in/yaml.v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 type meMetricsProcessedCount struct {
@@ -320,87 +316,6 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	}
 
 	return 0, nil
-}
-
-// Send count of cores/nodes attached to Application Insights periodically
-func SendCoreCountToAppInsightsMetrics() {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		SendException(fmt.Sprintf("Error while getting the credentials for the golang client for cores attached telemetry: %v\n", err))
-	}
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		SendException(fmt.Sprintf("Error while creating the golang client for cores attached telemetry: %v\n", err))
-	}
-
-	coreCountTelemetryTicker := time.NewTicker(time.Second * time.Duration(coresAttachedTelemetryIntervalSeconds))
-	for ; true; <-coreCountTelemetryTicker.C {
-		telemetryProperties := map[string]int64{
-			windowsCpuCapacityTelemetryName: 0,
-			windowsNodeCountTelemetryName:   0,
-			virtualNodeCountTelemetryName:   0,
-			arm64CpuCapacityTelemetryName:   0,
-			arm64NodeCountTelemetryName:     0,
-		}
-
-		nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			SendException(fmt.Sprintf("Error while getting the nodes list for cores attached telemetry: %v\n", err))
-			continue
-		}
-
-		// Get core and node count by OS/arch
-		for _, node := range nodeList.Items {
-			osLabel := ""
-			archLabel := ""
-			distroLabel := ""
-			if node.Labels == nil {
-				SendException(fmt.Sprintf("Labels are missing for the node: %s when getting core capacity", node.Name))
-			} else if node.Labels["type"] == "virtual-kubelet" {
-				// Do not add core capacity total for virtual nodes as this could be extremely large
-				// Just count how many virtual nodes exist
-				telemetryProperties[virtualNodeCountTelemetryName] += 1
-				continue
-			} else {
-				osLabel = node.Labels["kubernetes.io/os"]
-				archLabel = node.Labels["kubernetes.io/arch"]
-				distroLabel = node.Labels["kubernetes.azure.com/os-sku"]
-			}
-
-			if node.Status.Capacity == nil {
-				SendException(fmt.Sprintf("Capacity is missing for the node: %s when getting core capacity", node.Name))
-				continue
-			}
-			cpu := node.Status.Capacity["cpu"]
-
-			if osLabel == "windows" {
-				telemetryProperties[windowsCpuCapacityTelemetryName] += cpu.Value()
-				telemetryProperties[windowsNodeCountTelemetryName] += 1
-			} else {
-				telemetryProperties[linuxCpuCapacityTelemetryName] += cpu.Value()
-				telemetryProperties[linuxNodeCountTelemetryName] += 1
-				if archLabel == "arm64" {
-					telemetryProperties[arm64NodeCountTelemetryName] += 1
-					telemetryProperties[arm64CpuCapacityTelemetryName] += cpu.Value()
-				}
-				if strings.ToLower(distroLabel) == "mariner" {
-					telemetryProperties[marinerNodeCountTelemetryName] += 1
-					telemetryProperties[marinerCpuCapacityTelemetryName] += cpu.Value()
-				}
-			}
-		}
-		// Send metric to app insights for node and core capacity
-		cpuCapacityTotal := float64(telemetryProperties[linuxCpuCapacityTelemetryName] + telemetryProperties[windowsCpuCapacityTelemetryName])
-		metricTelemetryItem := appinsights.NewMetricTelemetry(coresAttachedTelemetryName, cpuCapacityTotal)
-
-		for propertyName, propertyValue := range telemetryProperties {
-			if propertyValue != 0 {
-				metricTelemetryItem.Properties[propertyName] = fmt.Sprintf("%d", propertyValue)
-			}
-		}
-
-		TelemetryClient.Track(metricTelemetryItem)
-	}
 }
 
 // Struct for getting relevant fields from JSON object obtained from cadvisor endpoint

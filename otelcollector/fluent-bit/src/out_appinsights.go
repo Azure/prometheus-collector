@@ -39,9 +39,6 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 	if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
 		go ExposePrometheusCollectorHealthMetrics()
 	}
-	if strings.ToLower(os.Getenv(envControllerType)) == "replicaset" {
-		go SendCoreCountToAppInsightsMetrics()
-	}
 
 	if strings.ToLower(os.Getenv(envControllerType)) == "daemonset" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
 		go SendContainersCpuMemoryToAppInsightsMetrics()
