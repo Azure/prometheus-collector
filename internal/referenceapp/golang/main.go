@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -480,11 +481,22 @@ func main() {
 
 	// Run server for metrics without a type
 	go func() {
-		http.ListenAndServeTLS(":2113", certFile, keyFile, untypedServer)
+		http.ListenAndServe(":2113", untypedServer)
 	}()
 
-	// Run main server for weather app metrics
-	http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("HTTP server failed to start: %v", r)
+		}
+	}()
+
+	err := http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
+	if err != nil {
+		log.Printf("HTTP server failed to start: %v", err)
+	}
+
+	// // Run main server for weather app metrics
+	// http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
 
 	fmt.Printf("ending main function")
 }
