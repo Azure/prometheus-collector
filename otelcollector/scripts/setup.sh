@@ -17,10 +17,9 @@ echo_var "CCP_METRICS_ENABLED" "$CCP_METRICS_ENABLED"
 if [ "${CCP_METRICS_ENABLED}" != "true" ]; then
     sudo tdnf install ca-certificates-microsoft -y
     sudo update-ca-trust
-
-#Need this for newer scripts
-chmod 544 $TMPDIR/*.sh
-chmod 544 $TMPDIR/microsoft/liveness/*.sh
+    #Need this for newer scripts
+    chmod 544 $TMPDIR/*.sh
+    chmod 544 $TMPDIR/microsoft/liveness/*.sh
 fi
 
 chmod 544 $TMPDIR/microsoft/configmapparser/*.rb
