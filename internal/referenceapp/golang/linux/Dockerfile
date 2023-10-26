@@ -18,6 +18,7 @@ RUN go mod download
 COPY client-cert.pem /build
 COPY client-key.pem /build
 COPY ca-cert.pem /build
+COPY ca-key.pem /build
 
 # Copy the code into the container
 COPY . .

@@ -490,13 +490,11 @@ func main() {
 		}
 	}()
 
+	// Run main server for weather app metrics
 	err := http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
 	if err != nil {
 		log.Printf("HTTP server failed to start: %v", err)
 	}
-
-	// // Run main server for weather app metrics
-	// http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
 
 	fmt.Printf("ending main function")
 }
