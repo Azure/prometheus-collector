@@ -159,13 +159,13 @@ spec:
             - mountPath: /etc/config/settings
               name: settings-vol-config
               readOnly: true
-            - mountPath: /opt
+            - mountPath: /var/tmp
               name: ama-metrics-tls-secret-volume
               readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
-            - name: host-log-containers
+            - name: host-log-containerscd var
               readOnly: true
               mountPath: /var/log/containers
             - name: host-log-pods
