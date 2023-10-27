@@ -27,6 +27,8 @@ LOGGING_PREFIX = "default-scrape-keep-lists"
 @controlplane_kube_controller_manager_minimal_mac = "rest_client_requests_duration_seconds_bucket|rest_client_requests_total|workqueue_depth|node_collector_evictions_total"
 @controlplane_etcd_minimal_mac = "etcd_memory_in_bytes|etcd_cpu_in_cores|etcd_db_limit_in_bytes|etcd_db_max_size_in_bytes|etcd_db_fragmentation_rate|etcd_db_total_object_count|etcd_db_top_N_object_counts_by_type|etcd_db_top_N_object_size_by_type|etcd2_enabled"
 
+@minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"]
+
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
   begin
@@ -119,6 +121,14 @@ def populateSettingValuesFromConfigMap(parsedConfig)
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for default targets metrics keep list - #{errorStr}, using defaults, please check config map for errors")
   end
+
+  
+  ConfigParseErrorLogger.log(LOGGING_PREFIX, "Reading configmap setting for minimalingestionprofile")
+  minimalIngestionProfileSetting = parsedConfig[:minimalingestionprofile]
+  if !minimalIngestionProfileSetting.nil?
+    @minimalIngestionProfile = minimalIngestionProfileSetting.to_s.downcase
+    ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap setting for minimalIngestionProfile -> #{@minimalIngestionProfile}")
+  end
 end
 
 # -------Apply profile for ingestion--------
@@ -126,14 +136,16 @@ end
 # so the theory here is --
 # if customer provided regex is valid, our regex validation for that will pass, a OR of customer provided regex with our minimal profile regex would be a valid regex as well, so we dont check again for the wholistic validation of merged regex
 # if customer provided regex is invalid, our regex validation for customer provided regex will fail, and if minimal ingestion profile is enabled, we will use that and ignore customer provided one
-def populateRegexValues
+def populateRegexValuesWithMinimalIngestionProfile
   begin
-    ConfigParseErrorLogger.log(LOGGING_PREFIX, "Populating regex with customer  + default values for minimal ingestion profile")
-    @controlplane_kube_controller_manager_regex = @controlplane_kube_controller_manager_regex + "|" + @controlplane_kube_controller_manager_minimal_mac
-    @controlplane_kube_scheduler_regex = @controlplane_kube_scheduler_regex + "|" + @controlplane_kube_scheduler_minimal_mac
-    @controlplane_apiserver_regex = @controlplane_apiserver_regex + "|" + @controlplane_apiserver_minimal_mac
-    @controlplane_cluster_autoscaler_regex = @controlplane_cluster_autoscaler_regex + "|" + @controlplane_cluster_autoscaler_minimal_mac
-    @controlplane_etcd_regex = @controlplane_etcd_regex + "|" + @controlplane_etcd_minimal_mac
+    if @minimalIngestionProfile == "true"
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "Populating regex with customer  + default values for minimal ingestion profile")
+      @controlplane_kube_controller_manager_regex = @controlplane_kube_controller_manager_regex + "|" + @controlplane_kube_controller_manager_minimal_mac
+      @controlplane_kube_scheduler_regex = @controlplane_kube_scheduler_regex + "|" + @controlplane_kube_scheduler_minimal_mac
+      @controlplane_apiserver_regex = @controlplane_apiserver_regex + "|" + @controlplane_apiserver_minimal_mac
+      @controlplane_cluster_autoscaler_regex = @controlplane_cluster_autoscaler_regex + "|" + @controlplane_cluster_autoscaler_minimal_mac
+      @controlplane_etcd_regex = @controlplane_etcd_regex + "|" + @controlplane_etcd_minimal_mac
+    end
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while populating regex values with minimal ingestion profile - #{errorStr}, skipping applying minimal ingestion profile regexes")
   end
@@ -155,7 +167,7 @@ else
 end
 
 # Populate the regex values after reading the configmap settings
-populateRegexValues
+populateRegexValuesWithMinimalIngestionProfile
 
 # Write the settings to file, so that they can be set as environment variables
 file = File.open("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash", "w")

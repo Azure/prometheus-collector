@@ -128,7 +128,7 @@ def populateDefaultPrometheusConfig
       defaultConfigs.push(@controlplane_etcd_default_file)
     end
 
-    if !ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED"].downcase == "true"
+    if !ENV["AZMON_PROMETHEUS_CONTROLPLANE_COLLECTOR_HEALTH_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_CONTROLPLANE_COLLECTOR_HEALTH_SCRAPING_ENABLED"].downcase == "true"
       defaultConfigs.push(@controlplane_prometheuscollectorhealth_default_file)
     end
 
@@ -171,6 +171,7 @@ def writeDefaultScrapeTargetsFile()
         File.open(@mergedDefaultConfigPath, "w") { |file| file.puts mergedDefaultConfigYaml }
       end
     rescue => errorStr
+      File.open(@mergedDefaultConfigPath, "w") { |file| file.puts "" }
       ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Error while populating default scrape targets and writing them to the default scrape targets file")
     end
   end

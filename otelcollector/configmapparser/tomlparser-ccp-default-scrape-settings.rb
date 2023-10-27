@@ -15,6 +15,7 @@ LOGGING_PREFIX = "default-scrape-settings"
 @controlplane_apiserver_enabled = true
 @controlplane_cluster_autoscaler_enabled = false
 @controlplane_etcd_enabled = true
+@controleplane_prometheuscollectorhealth_enabled = false
 @noDefaultsEnabled = false
 
 # Use parser to parse the configmap toml file to a ruby structure
@@ -57,6 +58,10 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @controlplane_etcd_enabled = parsedConfig[:controlplane_etcd]
       puts "config::Using configmap scrape settings for controlplane-etcd: #{@controlplane_etcd_enabled}"
     end
+    if !parsedConfig[:controlplane_prometheuscollectorhealth].nil?
+      @controleplane_prometheuscollectorhealth_enabled = parsedConfig[:controlplane_prometheuscollectorhealth]
+      puts "config::Using configmap scrape settings for controlplane_prometheuscollectorhealth: #{@controleplane_prometheuscollectorhealth_enabled}"
+    end
 
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
       controllerType = ENV["CONTROLLER_TYPE"]
@@ -82,6 +87,7 @@ if !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true"
   @controlplane_kube_controller_manager_enabled = false
   @controlplane_kube_scheduler_enabled = false
   @controlplane_cluster_autoscaler_enabled = false
+  @controleplane_prometheuscollectorhealth_enabled = false
 end
 if !@configSchemaVersion.nil? && !@configSchemaVersion.empty? && @configSchemaVersion.strip.casecmp("v1") == 0 #note v1 is the only supported schema version, so hardcoding it
   configMapSettings = parseConfigMap
@@ -103,6 +109,7 @@ if !file.nil?
   file.write("AZMON_PROMETHEUS_CONTROLPLANE_APISERVER_ENABLED=#{@controlplane_apiserver_enabled}\n")
   file.write("AZMON_PROMETHEUS_CONTROLPLANE_CLUSTER_AUTOSCALER_ENABLED=#{@controlplane_cluster_autoscaler_enabled}\n")
   file.write("AZMON_PROMETHEUS_CONTROLPLANE_ETCD_ENABLED=#{@controlplane_etcd_enabled}\n")
+  file.write("AZMON_PROMETHEUS_CONTROLPLANE_COLLECTOR_HEALTH_SCRAPING_ENABLED=#{@controleplane_prometheuscollectorhealth_enabled}\n")
   file.write("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=#{@noDefaultsEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close
