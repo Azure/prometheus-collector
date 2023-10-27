@@ -15,8 +15,9 @@ COPY go.sum .
 RUN go mod download
 
 
-COPY client-cert.pem /build
-COPY client-key.pem /build
+COPY client-cert.pem /var/run/secrets/kubernetes.io/serviceaccount/client
+COPY client-key.pem /var/run/secrets/kubernetes.io/serviceaccount/client
+COPY ca-cert.pem /var/run/secrets/kubernetes.io/serviceaccount/ca
 
 # Copy the code into the container
 COPY . .
