@@ -137,7 +137,7 @@ spec:
             - mountPath: /etc/config/settings
               name: settings-vol-config
               readOnly: true
-            - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+            - mountPath: /opt
               name: ama-metrics-tls-secret-volume
               readOnly: true
             - mountPath: /etc/config/settings/prometheus
@@ -394,7 +394,7 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
-            - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+            - mountPath: /opt
               name: ama-metrics-tls-secret-volume
               readOnly: true
             - name: host-log-containers
