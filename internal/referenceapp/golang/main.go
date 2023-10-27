@@ -459,8 +459,8 @@ func untypedHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	certFile := "/build/var/run/secrets/kubernetes.io/serviceaccount/client/client-cert.pem"
-	keyFile := "/build/var/run/secrets/kubernetes.io/serviceaccount/client/client-key.pem"
+	certFile := "/build/client-cert.pem"
+	keyFile := "/build/client-key.pem"
 	if os.Getenv("RUN_PERF_TEST") == "true" {
 		if os.Getenv("SCRAPE_INTERVAL") != "" {
 			scrapeIntervalSec, _ = strconv.Atoi(os.Getenv("SCRAPE_INTERVAL"))

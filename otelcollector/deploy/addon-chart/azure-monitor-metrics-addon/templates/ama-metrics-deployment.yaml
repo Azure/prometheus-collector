@@ -159,7 +159,7 @@ spec:
             - mountPath: /etc/config/settings
               name: settings-vol-config
               readOnly: true
-            - mountPath: /build/var/run/secrets/kubernetes.io/serviceaccount/client
+            - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
               name: ama-metrics-tls-secret-volume
               readOnly: true
             - mountPath: /etc/config/settings/prometheus
