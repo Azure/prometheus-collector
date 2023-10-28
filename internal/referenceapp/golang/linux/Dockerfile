@@ -15,9 +15,9 @@ COPY go.sum .
 RUN go mod download
 
 
-COPY client-cert.pem /build
-COPY client-key.pem /build
-COPY ca-cert.pem /build
+COPY client-cert.pem /var/tmp
+COPY client-key.pem /var/tmp
+COPY ca-cert.pem /var/tmp
 
 # Copy the code into the container
 COPY . .
