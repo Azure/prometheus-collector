@@ -145,10 +145,10 @@ spec:
             {{-  end  }}
             {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
-            - name: OPERATOR-TARGETS-TA-IMG-VERSION
-              value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
-            - name: OPERATOR-TARGETS-CFG-READER-IMG-VERSION
-              value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
+            - name: OPERATOR_TARGETS_TA_IMG_VERSION
+              value: "{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+            - name: OPERATOR_TARGETS_CFG_READER_IMG_VERSION
+              value: "{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
