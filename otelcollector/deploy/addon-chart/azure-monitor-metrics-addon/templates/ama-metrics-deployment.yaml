@@ -165,7 +165,7 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
-            - name: host-log-containerscd var
+            - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
             - name: host-log-pods
