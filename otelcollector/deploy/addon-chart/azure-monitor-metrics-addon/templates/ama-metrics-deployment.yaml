@@ -305,7 +305,7 @@ spec:
             type: DirectoryOrCreate
         - name: ama-metrics-tls-secret-volume
           secret:
-            secretName: ama-metrics-tls-secret
+            secretName: ref-app-mtls-secret
             optional: true
         {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
         - name: anchors-ubuntu
