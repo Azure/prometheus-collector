@@ -143,6 +143,14 @@ spec:
                 {{-  end  }}
               {{-  end  }}
             {{-  end  }}
+            {{- if .Values.AzureMonitorMetrics }}
+              {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+            - name: OPERATOR_TARGETS_TA_IMG_VERSION
+              value: "{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+            - name: OPERATOR_TARGETS_CFG_READER_IMG_VERSION
+              value: "{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
+              {{-  end  }}
+            {{-  end  }}
             - name: NODE_EXPORTER_VERSION
               value: "v1.6.0" # Replace this with the version shipped by default
             - name: AGENT_VERSION
