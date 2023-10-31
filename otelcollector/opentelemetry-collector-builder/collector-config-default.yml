@@ -11,8 +11,6 @@ exporters:
     retry_on_failure:
       enabled: false
     timeout: 12s
-  file:
-    path: "/opt/microsoft/otelcollector/collector-log.json"
 processors:
   batch:
     send_batch_size: 7000
@@ -39,8 +37,8 @@ service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      exporters: [otlp, file] # Include the "file" exporter in the list
-      processors: [batch, resource]
+      exporters: [otlp]
+      processors: [batch,resource]
   telemetry:
     logs:
       level: warn

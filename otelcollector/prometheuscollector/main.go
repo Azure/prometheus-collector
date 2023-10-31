@@ -160,9 +160,9 @@ func main(){
 	// 	fmt.Printf("Error starting otelcollector: %v\n", err)
 	// }
 	fmt.Println("startCommand otelcollector")
-	startCommand("/opt/microsoft/otelcollector/otelcollector", "--config", collectorConfig)
+	startCommand("/opt/microsoft/otelcollector/otelcollector", "--config", collectorConfig, "&>", "/opt/microsoft/otelcollector/collector-log.txt")
 
-	otelCollectorVersion, err := exec.Command("/opt/microsoft/otelcollector/otelcollector", "--version").Output()
+	otelCollectorVersion, err := exec.Command("/opt/microsoft/otelcollector/otelcollector", "--version", "").Output()
 	if err != nil {
 		fmt.Printf("Error getting otelcollector version: %v\n", err)
 	} else {
