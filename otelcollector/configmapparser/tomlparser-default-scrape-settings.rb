@@ -22,7 +22,7 @@ LOGGING_PREFIX = "default-scrape-settings"
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
 @kappiebasicEnabled = true
-@networkobservabilityEnabled = false
+@networkobservabilityEnabled = true
 @noDefaultsEnabled = false
 @sendDSUpMetric = false
 

@@ -57,7 +57,7 @@ scrape_configs:
         replacement: "$NODE_NAME"
         target_label: instance
 
-  - job_name: "network-observability-networkobservability"
+  - job_name: "network-observability-retina"
     kubernetes_sd_configs:
       - role: service
     scheme: http
@@ -69,7 +69,7 @@ scrape_configs:
             __meta_kubernetes_service_port_name,
           ]
         action: keep
-        regex: kube-system;network-observability;networkobservability
+        regex: kube-system;network-observability;retina
 
       - source_labels: [__address__]
         target_label: __address__
