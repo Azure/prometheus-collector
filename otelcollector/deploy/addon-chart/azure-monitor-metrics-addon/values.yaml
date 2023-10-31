@@ -36,10 +36,10 @@ AzureMonitorMetrics:
       - validatingwebhookconfigurations
       - volumeattachments
   ImageRepository: "/azuremonitor/containerinsights/cidev/prometheus-collector/images"
-  ImageTag: "6.8.0-ccp-shell-removal-branch-10-26-2023-1ac81793"
-  ImageTagWin: "6.8.0-ccp-shell-removal-branch-10-26-2023-1ac81793-win"
-  ImageTagTargetAllocator: "6.8.0-ccp-shell-removal-branch-10-26-2023-1ac81793-targetallocator"
-  ImageTagCfgReader: "6.8.0-ccp-shell-removal-branch-10-26-2023-1ac81793-cfg"
+  ImageTag: "6.8.0-ccp-shell-removal-branch-10-27-2023-aff5591d"
+  ImageTagWin: "6.8.0-ccp-shell-removal-branch-10-27-2023-aff5591d-win"
+  ImageTagTargetAllocator: "6.8.0-ccp-shell-removal-branch-10-27-2023-aff5591d-targetallocator"
+  ImageTagCfgReader: "6.8.0-ccp-shell-removal-branch-10-27-2023-aff5591d-cfg"
   TargetAllocatorEnabled: false
   DeploymentReplicas: 1
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
