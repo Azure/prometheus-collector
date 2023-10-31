@@ -22,7 +22,7 @@ LOGGING_PREFIX = "default-scrape-settings"
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
 @kappiebasicEnabled = true
-@retinaEnabled = false
+@networkobservabilityEnabled = false
 @noDefaultsEnabled = false
 @sendDSUpMetric = false
 
@@ -94,9 +94,9 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @kappiebasicEnabled = parsedConfig[:kappiebasic]
       puts "config::Using configmap scrape settings for kappiebasic: #{@kappiebasicEnabled}"
     end
-    if !parsedConfig[:retina].nil?
-      @retinaEnabled = parsedConfig[:retina]
-      puts "config::Using configmap scrape settings for retina: #{@retinaEnabled}"
+    if !parsedConfig[:networkobservability].nil?
+      @networkobservabilityEnabled = parsedConfig[:networkobservability]
+      puts "config::Using configmap scrape settings for networkobservability: #{@networkobservabilityEnabled}"
     end
 
     windowsDaemonset = false
@@ -133,7 +133,7 @@ end
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start default-scrape-settings Processing")
 # set default targets for MAC mode
 if !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true"
-  ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "MAC mode is enabled. Only enabling targets kubestate,cadvisor,kubelet,kappiebasic,retina & nodeexporter for linux before config map processing....")
+  ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "MAC mode is enabled. Only enabling targets kubestate,cadvisor,kubelet,kappiebasic,networkobservability & nodeexporter for linux before config map processing....")
   
   @corednsEnabled = false
   @kubeproxyEnabled = false
@@ -173,7 +173,7 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=#{@windowsexporterEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED=#{@kappiebasicEnabled}\n")
-  file.write($export + "AZMON_PROMETHEUS_RETINA_SCRAPING_ENABLED=#{@retinaEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_NETWORKOBSERVABILITY_SCRAPING_ENABLED=#{@networkobservabilityEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=#{@podannotationEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close

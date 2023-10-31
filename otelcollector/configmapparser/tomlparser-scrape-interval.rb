@@ -27,7 +27,7 @@ MATCHER = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]
 @prometheusCollectorHealthInterval = "30s"
 @podannotationScrapeInterval = "30s"
 @kappiebasicScrapeInterval = "30s"
-@retinaScrapeInterval = "30s"
+@networkobservabilityScrapeInterval = "30s"
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -209,20 +209,20 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "kappiebasicScrapeInterval override not specified in configmap")
     end
 
-    retinaScrapeInterval = parsedConfig[:retina]
-    if !retinaScrapeInterval.nil?
-      matched = MATCHER.match(retinaScrapeInterval)
+    networkobservabilityScrapeInterval = parsedConfig[:networkobservability]
+    if !networkobservabilityScrapeInterval.nil?
+      matched = MATCHER.match(networkobservabilityScrapeInterval)
       if !matched
         # set default scrape interval to 30s if its not in the proper format
-        retinaScrapeInterval = "30s"
-        @retinaScrapeInterval = retinaScrapeInterval
-        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for retina")
+        networkobservabilityScrapeInterval = "30s"
+        @networkobservabilityScrapeInterval = networkobservabilityScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for networkobservability")
       else
-        @retinaScrapeInterval = retinaScrapeInterval
-        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for retinaScrapeInterval")
+        @networkobservabilityScrapeInterval = networkobservabilityScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for networkobservabilityScrapeInterval")
       end
     else
-      ConfigParseErrorLogger.log(LOGGING_PREFIX, "retinaScrapeInterval override not specified in configmap")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "networkobservabilityScrapeInterval override not specified in configmap")
     end
 
     prometheusCollectorHealthInterval = parsedConfig[:prometheuscollectorhealth]

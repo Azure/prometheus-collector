@@ -1,5 +1,5 @@
 scrape_configs:
-  - job_name: "retina-metrics"
+  - job_name: "networkobservability-basic"
     scrape_interval: $$SCRAPE_INTERVAL$$
     label_limit: 63
     label_name_length_limit: 511
@@ -11,10 +11,10 @@ scrape_configs:
       - source_labels:
           [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
         action: keep
-        regex: kube-system;network-observability-svc
+        regex: kube-system;networkobservability-svc
       - source_labels: [__address__]
         target_label: __address__
-        replacement: "$$NODE_IP$$:9965"
+        replacement: "$$NODE_IP$$:10093"
         action: replace
       - source_labels: [__address__]
         replacement: "$$NODE_NAME$$"
