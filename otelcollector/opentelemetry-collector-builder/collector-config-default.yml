@@ -12,7 +12,7 @@ exporters:
       enabled: false
     timeout: 12s
   file:
-    path: "/opt/microsoft/otelcollector/collector-log.json" # Set the desired output file path
+    path: "/opt/microsoft/otelcollector/collector-log.json"
 processors:
   batch:
     send_batch_size: 7000
