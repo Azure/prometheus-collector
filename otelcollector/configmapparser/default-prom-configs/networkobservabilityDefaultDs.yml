@@ -15,7 +15,7 @@ scrape_configs:
 
       - source_labels: [__address__]
         target_label: __address__
-        replacement: $NODE_IP
+        replacement: $$NODE_IP$$
         action: replace
 
       - source_labels: [__address__, __meta_kubernetes_service_port_number]
@@ -25,7 +25,7 @@ scrape_configs:
         target_label: __address__
 
       - source_labels: [__address__]
-        replacement: "$NODE_NAME"
+        replacement: "$$NODE_NAME$$"
         target_label: instance
 
   - job_name: "network-observability-hubble"
@@ -44,7 +44,7 @@ scrape_configs:
 
       - source_labels: [__address__]
         target_label: __address__
-        replacement: $NODE_IP
+        replacement: $$NODE_IP$$
         action: replace
 
       - source_labels: [__address__, __meta_kubernetes_service_port_number]
@@ -54,7 +54,7 @@ scrape_configs:
         target_label: __address__
 
       - source_labels: [__address__]
-        replacement: "$NODE_NAME"
+        replacement: "$$NODE_NAME$$"
         target_label: instance
 
   - job_name: "network-observability-retina"
@@ -73,7 +73,7 @@ scrape_configs:
 
       - source_labels: [__address__]
         target_label: __address__
-        replacement: $NODE_IP
+        replacement: $$NODE_IP$$
         action: replace
 
       - source_labels: [__address__, __meta_kubernetes_service_port_number]
@@ -83,5 +83,5 @@ scrape_configs:
         target_label: __address__
 
       - source_labels: [__address__]
-        replacement: "$NODE_NAME"
+        replacement: "$$NODE_NAME$$"
         target_label: instance

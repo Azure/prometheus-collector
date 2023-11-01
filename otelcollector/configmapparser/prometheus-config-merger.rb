@@ -42,7 +42,7 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @podannotationsDefaultFile = @defaultPromConfigPathPrefix + "podannotationsDefault.yml"
 @windowskubeproxyDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
 @kappiebasicDefaultFileDs = @defaultPromConfigPathPrefix + "kappieBasicDefaultDs.yml"
-@networkobservabilityDefaultFileDs = @defaultPromConfigPathPrefix + "networkobservabilityDefaultDs.yml"
+@networkobservabilityRetinaDefaultFileDs = @defaultPromConfigPathPrefix + "networkobservabilityRetinaDefaultDs.yml"
 
 def parseConfigMap
   begin
@@ -336,22 +336,22 @@ def populateDefaultPrometheusConfig
       end
     end
 
-    if !ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITY_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITY_SCRAPING_ENABLED"].downcase == "true"
-      networkobservabilityMetricsKeepListRegex = @regexHash["NETWORKOBSERVABILITY_METRICS_KEEP_LIST_REGEX"]
-      networkobservabilitybasicScrapeInterval = @intervalHash["NETWORKOBSERVABILITY_SCRAPE_INTERVAL"]
+    if !ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED"].downcase == "true"
+      networkobservabilityRetinaMetricsKeepListRegex = @regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"]
+      networkobservabilityRetinabasicScrapeInterval = @intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"]
       if currentControllerType == @replicasetControllerType
         #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
-      else #networkobservability scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
+      else #networkobservabilityRetina scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
         if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" #&& ENV["OS_TYPE"].downcase == "linux"
-          UpdateScrapeIntervalConfig(@networkobservabilityDefaultFileDs, networkobservabilitybasicScrapeInterval)
-          if !networkobservabilityMetricsKeepListRegex.nil? && !networkobservabilityMetricsKeepListRegex.empty?
-            AppendMetricRelabelConfig(@networkobservabilityDefaultFileDs, networkobservabilityMetricsKeepListRegex)
+          UpdateScrapeIntervalConfig(@networkobservabilityRetinaDefaultFileDs, networkobservabilityRetinabasicScrapeInterval)
+          if !networkobservabilityRetinaMetricsKeepListRegex.nil? && !networkobservabilityRetinaMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@networkobservabilityRetinaDefaultFileDs, networkobservabilityRetinaMetricsKeepListRegex)
           end
-          contents = File.read(@networkobservabilityDefaultFileDs)
+          contents = File.read(@networkobservabilityRetinaDefaultFileDs)
           contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
           contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
-          File.open(@networkobservabilityDefaultFileDs, "w") { |file| file.puts contents }
-          defaultConfigs.push(@networkobservabilityDefaultFileDs)
+          File.open(@networkobservabilityRetinaDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@networkobservabilityRetinaDefaultFileDs)
         end
       end
     end
