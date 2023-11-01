@@ -38,28 +38,28 @@ end
 # Use the ruby structure created after config parsing to set the right values to be used for otel collector settings
 def populateSettingValuesFromConfigMap(parsedConfig)
   begin
-    if !parsedConfig[:controlplane_kube_controller_manager].nil?
-      @controlplane_kube_controller_manager_enabled = parsedConfig[:controlplane_kube_controller_manager]
+    if !parsedConfig[:controlplane-kube-controller-manager].nil?
+      @controlplane_kube_controller_manager_enabled = parsedConfig[:controlplane-kube-controller-manager]
       puts "config::Using configmap scrape settings for controlplane-kube-controller-manager: #{@controlplane_kube_controller_manager_enabled}"
     end
-    if !parsedConfig[:controlplane_kube_scheduler].nil?
-      @controlplane_kube_scheduler_enabled = parsedConfig[:controlplane_kube_scheduler]
+    if !parsedConfig[:controlplane-kube_scheduler].nil?
+      @controlplane_kube_scheduler_enabled = parsedConfig[:controlplane-kube_scheduler]
       puts "config::Using configmap scrape settings for controlplane-kube-scheduler: #{@controlplane_kube_scheduler_enabled}"
     end
-    if !parsedConfig[:controlplane_apiserver].nil?
-      @controlplane_apiserver_enabled = parsedConfig[:controlplane_apiserver]
+    if !parsedConfig[:controlplane-apiserver].nil?
+      @controlplane_apiserver_enabled = parsedConfig[:controlplane-apiserver]
       puts "config::Using configmap scrape settings for controlplane-apiserver: #{@controlplane_apiserver_enabled}"
     end
-    if !parsedConfig[:controlplane_cluster_autoscaler].nil?
-      @controlplane_cluster_autoscaler_enabled = parsedConfig[:controlplane_cluster_autoscaler]
+    if !parsedConfig[:controlplane-cluster-autoscaler].nil?
+      @controlplane_cluster_autoscaler_enabled = parsedConfig[:controlplane-cluster-autoscaler]
       puts "config::Using configmap scrape settings for controlplane-cluster-autoscaler: #{@controlplane_cluster_autoscaler_enabled}"
     end
-    if !parsedConfig[:controlplane_etcd].nil?
-      @controlplane_etcd_enabled = parsedConfig[:controlplane_etcd]
+    if !parsedConfig[:controlplane-etcd].nil?
+      @controlplane_etcd_enabled = parsedConfig[:controlplane-etcd]
       puts "config::Using configmap scrape settings for controlplane-etcd: #{@controlplane_etcd_enabled}"
     end
-    if !parsedConfig[:controlplane_prometheuscollectorhealth].nil?
-      @controleplane_prometheuscollectorhealth_enabled = parsedConfig[:controlplane_prometheuscollectorhealth]
+    if !parsedConfig[:controlplane-prometheuscollectorhealth].nil?
+      @controleplane_prometheuscollectorhealth_enabled = parsedConfig[:controlplane-prometheuscollectorhealth]
       puts "config::Using configmap scrape settings for controlplane_prometheuscollectorhealth: #{@controleplane_prometheuscollectorhealth_enabled}"
     end
 

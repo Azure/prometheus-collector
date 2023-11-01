@@ -49,7 +49,7 @@ end
 # Use the ruby structure created after config parsing to set the right values to be used for otel collector settings
 def populateSettingValuesFromConfigMap(parsedConfig)
   begin
-    controlplane_kube_controller_manager_regex = parsedConfig[:"controlplane_kube_controller_manager"]
+    controlplane_kube_controller_manager_regex = parsedConfig[:"controlplane-kube-controller-manager"]
     if !controlplane_kube_controller_manager_regex.nil? && controlplane_kube_controller_manager_regex.kind_of?(String)
       if !controlplane_kube_controller_manager_regex.empty?
         if isValidRegex(controlplane_kube_controller_manager_regex) == true
@@ -63,7 +63,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.logError(LOGGING_PREFIX, "controlplane_kube_controller_manager either not specified or not of type string")
     end
   
-    controlplane_kube_scheduler_regex = parsedConfig[:"controlplane_kube_scheduler"]
+    controlplane_kube_scheduler_regex = parsedConfig[:"controlplane-kube-scheduler"]
     if !controlplane_kube_scheduler_regex.nil? && controlplane_kube_scheduler_regex.kind_of?(String)
       if !controlplane_kube_scheduler_regex.empty?
         if isValidRegex(controlplane_kube_scheduler_regex) == true
@@ -77,7 +77,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.logError(LOGGING_PREFIX, "controlplane_kube_scheduler either not specified or not of type string")
     end
   
-    controlplane_apiserver_regex = parsedConfig[:"controlplane_apiserver"]
+    controlplane_apiserver_regex = parsedConfig[:"controlplane-apiserver"]
     if !controlplane_apiserver_regex.nil? && controlplane_apiserver_regex.kind_of?(String)
       if !controlplane_apiserver_regex.empty?
         if isValidRegex(controlplane_apiserver_regex) == true
@@ -91,7 +91,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.logError(LOGGING_PREFIX, "controlplane_apiserver either not specified or not of type string")
     end
   
-    controlplane_cluster_autoscaler_regex = parsedConfig[:"controlplane_cluster_autoscaler"]
+    controlplane_cluster_autoscaler_regex = parsedConfig[:"controlplane-cluster-autoscaler"]
     if !controlplane_cluster_autoscaler_regex.nil? && controlplane_cluster_autoscaler_regex.kind_of?(String)
       if !controlplane_cluster_autoscaler_regex.empty?
         if isValidRegex(controlplane_cluster_autoscaler_regex) == true
@@ -105,7 +105,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.logError(LOGGING_PREFIX, "controlplane_cluster_autoscaler_regex either not specified or not of type string")
     end
   
-    controlplane_etcd_regex = parsedConfig[:"controlplane_etcd"]
+    controlplane_etcd_regex = parsedConfig[:"controlplane-etcd"]
     if !controlplane_etcd_regex.nil? && controlplane_etcd_regex.kind_of?(String)
       if !controlplane_etcd_regex.empty?
         if isValidRegex(controlplane_etcd_regex) == true

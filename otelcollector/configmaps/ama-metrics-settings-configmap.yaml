@@ -21,12 +21,12 @@ data:
     windowskubeproxy = false
     kappiebasic = true
     prometheuscollectorhealth = false
-    controlplane_apiserver = true
-    controlplane_cluster_autoscaler = false
-    controlplane_kube_scheduler = false
-    controlplane_kube_controller_manager = false
-    controlplane_etcd = true
-    controlplane_prometheuscollectorhealth = true
+    controlplane-apiserver = true
+    controlplane-cluster-autoscaler = false
+    controlplane-kube-scheduler = false
+    controlplane-kube-controller-manager = false
+    controlplane-etcd = true
+    controlplane-prometheuscollectorhealth = true
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default. Use '.*' to scrape all namespaces of annotated pods.
   pod-annotation-based-scraping: |-
@@ -43,12 +43,12 @@ data:
     windowskubeproxy = ""
     podannotations = ""
     kappiebasic = ""
-    controlplane_apiserver = ""
-    controlplane_cluster_autoscaler = ""
-    controlplane_kube_scheduler = ""
-    controlplane_kube_controller_manager = ""
-    controlplane_etcd = ""
-    controlplane_prometheuscollectorhealth = ""
+    controlplane-apiserver = ""
+    controlplane-cluster-autoscaler = ""
+    controlplane-kube-scheduler = ""
+    controlplane-kube-controller-manager = ""
+    controlplane-etcd = ""
+    controlplane-prometheuscollectorhealth = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
