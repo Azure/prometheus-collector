@@ -14,6 +14,17 @@
 
 package monitoring
 
-const (
-	GroupName = "monitoring.coreos.com"
-)
+import "os"
+
+// const (
+// 	GroupName = "monitoring.coreos.com"
+// )
+
+const GroupName = func() string {
+	group := "monitoring.coreos.com"
+	customGroupV1 := os.Getenv("PROMETHEUS_OPERATOR_V1_CUSTOM_GROUP")
+	if customGroupV1 != "" {
+		group = customGroupV1
+	}
+	return group
+}()
