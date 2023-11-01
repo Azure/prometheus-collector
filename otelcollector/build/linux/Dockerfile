@@ -40,7 +40,7 @@ RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as prometheuscollector-builder
 WORKDIR /prometheuscollector
-COPY ./prometheuscollector/go.mod ./prometheuscollector/main.go .
+COPY ./prometheuscollector/go.mod ./prometheuscollector/*.go .
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
@@ -132,7 +132,7 @@ COPY --from=builder /lib/libprotobuf.so.28 /lib/libgrpc++.so.1.42 /lib/libabsl_s
 COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
 COPY --from=builder /usr/local/lib/libtcmalloc_minimal.so.4 /usr/local/lib/
 
-# to delete
+# debug image
 # COPY --from=builder /busybin /busybin
 # COPY --from=builder /static/react /static/react
 # COPY --from=builder /var/lib/logrotate /var/lib/logrotate
