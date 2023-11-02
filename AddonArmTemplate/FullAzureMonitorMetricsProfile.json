@@ -31,6 +31,13 @@
         "westeurope",
         "westus",
         "westus2",
+        "francesouth",
+        "germanywestcentral",
+        "israelcentral",
+        "italynorth",
+        "japanwest",
+        "koreacentral",
+        "switzerlandnorth",
         "usgovvirginia"
       ]
     },
@@ -48,7 +55,7 @@
       "type": "string",
       "defaultValue": ""
     },
-    "enableWindowsRecordingRules" : {
+    "enableWindowsRecordingRules": {
       "type": "bool",
       "defaultValue": false
     },
@@ -112,15 +119,21 @@
         "dataCollectionEndpointId": "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
         "dataFlows": [
           {
-            "destinations": [ "MonitoringAccount1" ],
-            "streams": [ "Microsoft-PrometheusMetrics" ]
+            "destinations": [
+              "MonitoringAccount1"
+            ],
+            "streams": [
+              "Microsoft-PrometheusMetrics"
+            ]
           }
         ],
         "dataSources": {
           "prometheusForwarder": [
             {
               "name": "PrometheusDataSource",
-              "streams": [ "Microsoft-PrometheusMetrics" ],
+              "streams": [
+                "Microsoft-PrometheusMetrics"
+              ],
               "labelIncludeFilter": {}
             }
           ]
@@ -549,8 +562,8 @@
       "name": "[parameters('roleNameGuid')]",
       "scope": "[parameters('azureMonitorWorkspaceResourceId')]",
       "properties": {
-          "roleDefinitionId": "[concat('/subscriptions/', variables('azureMonitorWorkspaceSubscriptionId'), '/providers/Microsoft.Authorization/roleDefinitions/', 'b0d8363b-8ddd-447d-831f-62ca05bff136')]",
-          "principalId": "[reference(resourceId('Microsoft.Dashboard/grafana', split(parameters('grafanaResourceId'),'/')[8]), '2022-08-01', 'Full').identity.principalId]"
+        "roleDefinitionId": "[concat('/subscriptions/', variables('azureMonitorWorkspaceSubscriptionId'), '/providers/Microsoft.Authorization/roleDefinitions/', 'b0d8363b-8ddd-447d-831f-62ca05bff136')]",
+        "principalId": "[reference(resourceId('Microsoft.Dashboard/grafana', split(parameters('grafanaResourceId'),'/')[8]), '2022-08-01', 'Full').identity.principalId]"
       }
     },
     {

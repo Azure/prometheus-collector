@@ -1,0 +1,12 @@
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: <service monitor name>
+spec:
+  # The following limits - labelLimit, labelNameLengthLimit and labelValueLengthLimit should exist in the service monitor CR
+  # These ensure that the metrics don't get dropped because labels/labelnames/labelvalues exceed the limits supported by the processing pipeline
+  labelLimit: 63
+  labelNameLengthLimit: 511
+  labelValueLengthLimit: 1023
+  # rest of the service monitor
+

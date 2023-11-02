@@ -5,8 +5,13 @@ metadata:
   namespace: kube-system
   labels:
     component: ama-metrics
+    kubernetes.azure.com/managedby: aks
 spec:
+  {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+  replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
+  {{- else}}
   replicas: 1
+  {{- end }}
   revisionHistoryLimit: 2
   paused: false
   selector:
@@ -60,6 +65,12 @@ spec:
               value: "true"
             - name: AZMON_COLLECT_ENV
               value: "false"
+            - name: AZMON_OPERATOR_ENABLED
+            {{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
+              value: "true"
+            {{- else }}
+              value: "false"
+            {{- end }}
             - name: customEnvironment
               {{- if .Values.AzureMonitorMetrics.ArcExtension }}
               value: "{{ lower .Values.Azure.Cluster.Cloud }}"
@@ -130,6 +141,14 @@ spec:
             - name: KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST
               value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}"
                 {{-  end  }}
+              {{-  end  }}
+            {{-  end  }}
+            {{- if .Values.AzureMonitorMetrics }}
+              {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+            - name: OPERATOR_TARGETS_TA_IMG_VERSION
+              value: "{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+            - name: OPERATOR_TARGETS_CFG_READER_IMG_VERSION
+              value: "{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION

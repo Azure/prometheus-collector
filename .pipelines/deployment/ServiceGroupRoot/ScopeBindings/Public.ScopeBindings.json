@@ -54,6 +54,14 @@
                   "replaceWith": "$(WindowsTag)"
               },
               {
+                "find": "__TARGETALLOCATOR_TAG__",
+                "replaceWith": "$(TargetAllocatorTag)"
+              },
+              {
+                "find": "__CONFIGREADER_TAG__",
+                "replaceWith": "$(ConfigReaderTag)"
+              },
+              {
                 "find": "__PROD_MCR_AGENT_REPOSITORY__",
                 "replaceWith": "$(ProdMCRAgentRepository)"
               },
