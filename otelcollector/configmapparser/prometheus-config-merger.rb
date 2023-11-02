@@ -364,7 +364,7 @@ def populateDefaultPrometheusConfig
       if currentControllerType == @replicasetControllerType
         #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
       else #networkobservabilityHubble scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
-        if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" #&& ENV["OS_TYPE"].downcase == "linux"
+        if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" && ENV["OS_TYPE"].downcase == "linux"
           UpdateScrapeIntervalConfig(@networkobservabilityHubbleDefaultFileDs, networkobservabilityHubbleScrapeInterval)
           if !networkobservabilityHubbleMetricsKeepListRegex.nil? && !networkobservabilityHubbleMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@networkobservabilityHubbleDefaultFileDs, networkobservabilityHubbleMetricsKeepListRegex)
@@ -384,7 +384,7 @@ def populateDefaultPrometheusConfig
       if currentControllerType == @replicasetControllerType
         #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
       else #networkobservabilityCilium scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
-        if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" #&& ENV["OS_TYPE"].downcase == "linux"
+        if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" && ENV["OS_TYPE"].downcase == "linux"
           UpdateScrapeIntervalConfig(@networkobservabilityCiliumDefaultFileDs, networkobservabilityCiliumScrapeInterval)
           if !networkobservabilityCiliumMetricsKeepListRegex.nil? && !networkobservabilityCiliumMetricsKeepListRegex.empty?
             AppendMetricRelabelConfig(@networkobservabilityCiliumDefaultFileDs, networkobservabilityCiliumMetricsKeepListRegex)
