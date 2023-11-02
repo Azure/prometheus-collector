@@ -9,7 +9,6 @@ pr:
   branches:
     include:
     - main
-    - vishwa/10022023-upgrade
     - netobsmetrics
     
 variables:
