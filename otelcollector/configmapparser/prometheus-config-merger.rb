@@ -42,9 +42,9 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @podannotationsDefaultFile = @defaultPromConfigPathPrefix + "podannotationsDefault.yml"
 @windowskubeproxyDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
 @kappiebasicDefaultFileDs = @defaultPromConfigPathPrefix + "kappieBasicDefaultDs.yml"
-@networkobservabilityRetinaDefaultFileDs = @defaultPromConfigPathPrefix + "networkobservabilityDefaultDs.yml"
-@networkobservabilityHubbleDefaultFileDs = @defaultPromConfigPathPrefix + "networkobservabilityDefaultDs.yml"
-@networkobservabilityCiliumDefaultFileDs = @defaultPromConfigPathPrefix + "networkobservabilityDefaultDs.yml"
+@networkobservabilityRetinaDefaultFileDs = @defaultPromConfigPathPrefix + "networkobservabilityRetinaDefaultDs.yml"
+@networkobservabilityHubbleDefaultFileDs = @defaultPromConfigPathPrefix + "networkobservabilityHubbleDefaultDs.yml"
+@networkobservabilityCiliumDefaultFileDs = @defaultPromConfigPathPrefix + "networkobservabilityCiliumDefaultDs.yml"
 
 def parseConfigMap
   begin
