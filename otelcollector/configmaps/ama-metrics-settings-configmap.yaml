@@ -21,6 +21,8 @@ data:
     windowskubeproxy = false
     kappiebasic = true
     networkobservabilityRetina = true
+    networkobservabilityHubble = true
+    networkobservabilityCilium = true
     prometheuscollectorhealth = false
   # Regex for which namespaces to scrape through pod annotation based scraping.
   # This is none by default. Use '.*' to scrape all namespaces of annotated pods.
@@ -39,6 +41,8 @@ data:
     podannotations = ""
     kappiebasic = ""
     networkobservabilityRetina = ""
+    networkobservabilityHubble = ""
+    networkobservabilityCilium = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
@@ -52,6 +56,8 @@ data:
     windowskubeproxy = "30s"
     kappiebasic = "30s"
     networkobservabilityRetina = "30s"
+    networkobservabilityHubble = "30s"
+    networkobservabilityCilium = "30s"
     prometheuscollectorhealth = "30s"
     podannotations = "30s"
   debug-mode: |-
