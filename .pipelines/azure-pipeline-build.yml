@@ -7,7 +7,9 @@ pr:
   branches:
     include:
     - main
-
+    - vishwa/10022023-upgrade
+    - netobsmetrics
+    
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
   ARC_HELM_CHART_NAME: 'ama-metrics-arc'
