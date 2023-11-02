@@ -331,6 +331,7 @@ def populateRegexValuesWithMinimalIngestionProfile
         @apiserverRegex = @apiserverRegex + "|" + @apiserverRegex_minimal
         @kubestateRegex = @kubestateRegex + "|" + @kubestateRegex_minimal
         @nodeexporterRegex = @nodeexporterRegex + "|" + @nodeexporterRegex_minimal
+        @kappiebasicRegex = @kappiebasicRegex + "|" + @kappiebasicRegex_minimal
         @networkobservabilityRetinaRegex = @networkobservabilityRetinaRegex + "|" + @networkobservabilityRetinaRegex_minimal
         @networkobservabilityHubbleRegex = @networkobservabilityHubbleRegex + "|" + @networkobservabilityHubbleRegex_minimal
         @networkobservabilityCiliumRegex = @networkobservabilityCiliumRegex + "|" + @networkobservabilityCiliumRegex_minimal
