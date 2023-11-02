@@ -4,7 +4,7 @@
 * Change log -
   * Add new regions for Azure Monitor Workspace - https://github.com/Azure/prometheus-collector/pull/609
   * Add telemetry for target allocator & config side-car image tags - https://github.com/Azure/prometheus-collector/pull/661
-  * Add more metrics as default metrics (to enable Insights Portal Ux)
+  * Add more metrics as default metrics (to enable Insights Portal Ux) - https://github.com/Azure/prometheus-collector/pull/667
     * kube-state-metrics
       * kube_service_info
       * kube_pod_container_status_running
