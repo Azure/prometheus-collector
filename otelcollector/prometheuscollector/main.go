@@ -236,7 +236,7 @@ func main(){
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
-	message := "prometheuscollector is running."
+	message := "\nprometheuscollector is running."
 	macMode := os.Getenv("MAC") == "true"
 
 	if macMode {
@@ -292,5 +292,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
-	fmt.Printf(message)
+	if (status != http.StatusOK) {
+		fmt.Printf(message)
+	}
 }
