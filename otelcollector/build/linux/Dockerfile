@@ -139,14 +139,14 @@ COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnght
 COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
 
 # debug image
-COPY --from=builder /busybin /busybin
+# # COPY --from=builder /busybin /busybin
 # COPY --from=builder /static/react /static/react
 # COPY --from=builder /var/lib/logrotate /var/lib/logrotate
 # COPY --from=builder /var/spool/cron /var/spool/cron
 # COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
 # COPY --from=builder /usr/share/pki/ /usr/share/pki
-COPY --from=builder /usr/bin/bash /usr/bin/bash
-COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
+# # COPY --from=builder /usr/bin/bash /usr/bin/bash
+# # COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
 # COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
 # COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
 # COPY --from=builder /usr/sbin/crond /usr/sbin/crond
