@@ -1,6 +1,12 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Pending
+
+## Release 11-03-2023
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-<tbd>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-<tbd>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-<tbd>-cfg`
 * Change log -
   * Add new regions for Azure Monitor Workspace - https://github.com/Azure/prometheus-collector/pull/609
   * Add telemetry for target allocator & config side-car image tags - https://github.com/Azure/prometheus-collector/pull/661
@@ -23,6 +29,7 @@
       * kube_pod_init_container_status_restarts_total
     * node-exporter (Linux)
       * node_boot_time_seconds
+  * Adding telemetry for ta and cfg reader img versions - https://github.com/Azure/prometheus-collector/pull/661
 
 ## Release 10-20-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4`
