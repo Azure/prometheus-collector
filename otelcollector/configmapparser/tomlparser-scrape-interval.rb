@@ -321,6 +321,10 @@ intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = @windowskubeproxyScrapeInterv
 intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = @prometheusCollectorHealthInterval
 intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = @podannotationScrapeInterval
 intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = @kappiebasicScrapeInterval
+intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = @networkobservabilityRetinaScrapeInterval
+intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = @networkobservabilityHubbleScrapeInterval
+intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = @networkobservabilityCiliumScrapeInterval
+
 
 if !file.nil?
   # Close file after writing scrape interval list hash
