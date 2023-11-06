@@ -129,7 +129,7 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
         - name: configmap-watcher
-          image: ninaaksoperatore2e.azurecr.io/configmap-watcher:latest
+          image: mcr.microsoft.com/aks/hcp/configmap-watcher:master.20231031-bdfc08a4
           command:
             - /configmap-watcher
           args:
