@@ -42,5 +42,6 @@ service:
     logs:
       level: warn
       encoding: json
+      output_paths: ["collector.log.json"]
     metrics:
       level: detailed
