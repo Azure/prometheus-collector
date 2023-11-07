@@ -1,8 +1,35 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Pending
+
+## Release 11-03-2023
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-11-03-2023-c061beb4`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-11-03-2023-c061beb4-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-11-03-2023-c061beb4-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-11-03-2023-c061beb4-cfg`
 * Change log -
   * Add new regions for Azure Monitor Workspace - https://github.com/Azure/prometheus-collector/pull/609
+  * Add telemetry for target allocator & config side-car image tags - https://github.com/Azure/prometheus-collector/pull/661
+  * Add more metrics as default metrics (to enable Insights Portal Ux) - https://github.com/Azure/prometheus-collector/pull/667
+    * kube-state-metrics
+      * kube_service_info
+      * kube_pod_container_status_running
+      * kube_pod_container_status_waiting
+      * kube_pod_container_status_terminated
+      * kube_pod_container_state_started
+      * kube_pod_created
+      * kube_pod_start_time
+      * kube_pod_init_container_info
+      * kube_pod_init_container_status_terminated
+      * kube_pod_init_container_status_terminated_reason
+      * kube_pod_init_container_status_ready
+      * kube_pod_init_container_resource_limits
+      * kube_pod_init_container_status_running
+      * kube_pod_init_container_status_waiting
+      * kube_pod_init_container_status_restarts_total
+    * node-exporter (Linux)
+      * node_boot_time_seconds
+  * Adding telemetry for ta and cfg reader img versions - https://github.com/Azure/prometheus-collector/pull/661
 
 ## Release 10-20-2023
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.0-main-10-20-2023-182f67d4`
