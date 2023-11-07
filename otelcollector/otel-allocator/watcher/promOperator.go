@@ -23,12 +23,14 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/go-logr/logr"
+
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	promv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/prometheus-operator/prometheus-operator/pkg/informers"
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
+	"github.com/prometheus/common/model"
 	promconfig "github.com/prometheus/prometheus/config"
 	kubeDiscovery "github.com/prometheus/prometheus/discovery/kubernetes"
 	"github.com/prometheus/prometheus/model/relabel"
@@ -391,7 +393,7 @@ func validateRelabelConfig(rc monitoringv1.RelabelConfig) error {
 	// }
 
 	if _, err := relabel.NewRegexp(rc.Regex); err != nil {
-		return fmt.Errorf(err, "invalid regex %s for relabel configuration", rc.Regex)
+		return fmt.Errorf("invalid regex %s for relabel configuration", rc.Regex)
 	}
 
 	if rc.Modulus == 0 && rc.Action == string(relabel.HashMod) {
