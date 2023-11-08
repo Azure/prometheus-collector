@@ -38,8 +38,9 @@ type OtelConfig struct {
 		} `yaml:"pipelines"`
 		Telemetry struct {
 			Logs struct {
-				Level    interface{} `yaml:"level"`
-				Encoding interface{} `yaml:"encoding"`
+				Level    	 interface{} `yaml:"level"`
+				Encoding 	 interface{} `yaml:"encoding"`
+				output_paths interface{} `yaml:"output_paths"`
 			} `yaml:"logs"`
 		} `yaml:"telemetry"`
 	} `yaml:"service"`
