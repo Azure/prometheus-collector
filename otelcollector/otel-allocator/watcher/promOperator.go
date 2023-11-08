@@ -177,7 +177,7 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 		key, _ := cache.DeletionHandlingMetaNamespaceKeyFunc(monitor)
 		validateError := w.addStoreAssetsForServiceMonitor(ctx, monitor.Name, monitor.Namespace, monitor.Spec.Endpoints, store)
 		if validateError != nil {
-			w.logger.Error(validateError, "Failed validating ServiceMonitor, skipping:", monitor.Name, "in namespace", monitor.Namespace)
+			w.logger.Error(validateError, "Failed validating ServiceMonitor, skipping", "ServiceMonitor:", monitor.Name, "in namespace", monitor.Namespace)
 		} else {
 			serviceMonitorInstances[key] = monitor
 		}
@@ -192,7 +192,7 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 		key, _ := cache.DeletionHandlingMetaNamespaceKeyFunc(monitor)
 		validateError := w.addStoreAssetsForPodMonitor(ctx, monitor.Name, monitor.Namespace, monitor.Spec.PodMetricsEndpoints, store)
 		if validateError != nil {
-			w.logger.Error(validateError, "Failed validating PodMonitor, skipping:", monitor.Name, "in namespace", monitor.Namespace)
+			w.logger.Error(validateError, "Failed validating PodMonitor, skipping", "PodMonitor:", monitor.Name, "in namespace", monitor.Namespace)
 		} else {
 			podMonitorInstances[key] = monitor
 		}
