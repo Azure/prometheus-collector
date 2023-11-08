@@ -9,7 +9,7 @@
 #       action: keep
 #       regex: "prometheus-reference-app"
 scrape_configs:
-- job_name: controlplane-kube-controller_manager
+- job_name: controlplane-kube-controller-manager
   scrape_interval: $$SCRAPE_INTERVAL$$
   follow_redirects: false
   scheme: https
