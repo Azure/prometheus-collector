@@ -19,12 +19,11 @@ spec:
       regex: ('$$NODE_NAME$$')
       targetLabel: instance
   - tlsConfig:
-      ca:
-        secret:
-          key: "client-cert.pem"
-          name: "ref-app-mtls-secret"
       cert:
         secret:
-          key: "client-cert.pem"
+          key: "client-key.pem"
+          name: "ref-app-mtls-secret"
+      keySecret:
+          key: "client-key.pem"
           name: "ref-app-mtls-secret"
       insecureSkipVerify: false
