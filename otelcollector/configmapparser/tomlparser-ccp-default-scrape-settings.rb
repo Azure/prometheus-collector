@@ -15,7 +15,6 @@ LOGGING_PREFIX = "default-scrape-settings"
 @controlplane_apiserver_enabled = true
 @controlplane_cluster_autoscaler_enabled = false
 @controlplane_etcd_enabled = true
-@controleplane_prometheuscollectorhealth_enabled = false
 @noDefaultsEnabled = false
 
 # Use parser to parse the configmap toml file to a ruby structure
@@ -57,10 +56,6 @@ def populateSettingValuesFromConfigMap(parsedConfig)
     if !parsedConfig[:"controlplane-etcd"].nil?
       @controlplane_etcd_enabled = parsedConfig[:"controlplane-etcd"]
       puts "config::Using configmap scrape settings for controlplane-etcd: #{@controlplane_etcd_enabled}"
-    end
-    if !parsedConfig[:"controlplane-prometheuscollectorhealth"].nil?
-      @controleplane_prometheuscollectorhealth_enabled = parsedConfig[:"controlplane-prometheuscollectorhealth"]
-      puts "config::Using configmap scrape settings for controlplane_prometheuscollectorhealth: #{@controleplane_prometheuscollectorhealth_enabled}"
     end
 
     if ENV["MODE"].nil? && ENV["MODE"].strip.downcase == "advanced"
@@ -109,7 +104,6 @@ if !file.nil?
   file.write("AZMON_PROMETHEUS_CONTROLPLANE_APISERVER_ENABLED=#{@controlplane_apiserver_enabled}\n")
   file.write("AZMON_PROMETHEUS_CONTROLPLANE_CLUSTER_AUTOSCALER_ENABLED=#{@controlplane_cluster_autoscaler_enabled}\n")
   file.write("AZMON_PROMETHEUS_CONTROLPLANE_ETCD_ENABLED=#{@controlplane_etcd_enabled}\n")
-  file.write("AZMON_PROMETHEUS_CONTROLPLANE_COLLECTOR_HEALTH_SCRAPING_ENABLED=#{@controleplane_prometheuscollectorhealth_enabled}\n")
   file.write("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=#{@noDefaultsEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close

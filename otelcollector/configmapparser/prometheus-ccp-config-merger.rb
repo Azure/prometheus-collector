@@ -25,7 +25,6 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @controlplane_kube_controller_manager_default_file = @defaultPromConfigPathPrefix + "controlplane_kube_controller_manager.yml"
 @controlplane_cluster_autoscaler_default_file = @defaultPromConfigPathPrefix + "controlplane_cluster_autoscaler.yml"
 @controlplane_etcd_default_file = @defaultPromConfigPathPrefix + "controlplane_etcd.yml"
-@controlplane_prometheuscollectorhealth_default_file = @defaultPromConfigPathPrefix + "controlplane_prometheuscollectorhealth.yml"
 
 def loadRegexHash
   begin
@@ -128,10 +127,6 @@ def populateDefaultPrometheusConfig
       defaultConfigs.push(@controlplane_etcd_default_file)
     end
 
-    if !ENV["AZMON_PROMETHEUS_CONTROLPLANE_COLLECTOR_HEALTH_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_CONTROLPLANE_COLLECTOR_HEALTH_SCRAPING_ENABLED"].downcase == "true"
-      defaultConfigs.push(@controlplane_prometheuscollectorhealth_default_file)
-    end
-
     @mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while merging default scrape targets - #{errorStr}. No default scrape targets will be included")
@@ -180,7 +175,7 @@ end
 def setDefaultFileScrapeInterval(scrapeInterval)
   defaultFilesArray = [
     @controlplane_apiserver_default_file, @controlplane_kube_scheduler_default_file, @controlplane_kube_controller_manager_default_file,
-    @controlplane_cluster_autoscaler_default_file, @controlplane_etcd_default_file, @controlplane_prometheuscollectorhealth_default_file
+    @controlplane_cluster_autoscaler_default_file, @controlplane_etcd_default_file
   ]
 
   defaultFilesArray.each { |currentFile|
