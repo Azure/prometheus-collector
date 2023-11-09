@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - ccp_metrics_updates
 
 pr:
   autoCancel: true
