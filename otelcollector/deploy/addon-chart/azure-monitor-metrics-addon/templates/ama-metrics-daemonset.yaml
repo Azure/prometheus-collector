@@ -137,7 +137,7 @@ spec:
             - mountPath: /etc/config/settings
               name: settings-vol-config
               readOnly: true
-            - mountPath: /var/tmp
+            - mountPath: /etc/prometheus/certs
               name: ama-metrics-tls-secret-volume
               readOnly: true
             - mountPath: /etc/config/settings/prometheus
@@ -253,7 +253,7 @@ spec:
             optional: true
         - name: ama-metrics-tls-secret-volume
           secret:
-            secretName: ref-app-mtls-secret
+            secretName: ama-metrics-mtls-secret
             optional: true
         - name: prometheus-config-vol
           configMap:
@@ -394,7 +394,7 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
-            - mountPath: /var/tmp
+            - mountPath: /etc/prometheus/certs
               name: ama-metrics-tls-secret-volume
               readOnly: true
             - name: host-log-containers
@@ -474,7 +474,7 @@ spec:
             path: /var/log/containers
         - name: ama-metrics-tls-secret-volume
           secret:
-            secretName: ref-app-mtls-secret
+            secretName: ama-metrics-mtls-secret
             optional: true
         - name: host-log-pods
           hostPath:
