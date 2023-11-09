@@ -117,7 +117,7 @@ def AppendMetricRelabelConfig(yamlConfigFile, keepListRegex)
           if metricRelabelCfgs.nil?
             scfg["metric_relabel_configs"] = keepListMetricRelabelConfig
           else
-            scfg["metric_relabel_configs"] = keepListMetricRelabelConfig.concat(metricRelabelCfgs)
+            scfg["metric_relabel_configs"] = metricRelabelCfgs.concat(keepListMetricRelabelConfig)
           end
         }
         cfgYamlWithMetricRelabelConfig = YAML::dump(config)

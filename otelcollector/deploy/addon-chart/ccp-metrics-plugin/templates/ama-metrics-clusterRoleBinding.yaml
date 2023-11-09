@@ -8,5 +8,5 @@ subjects:
     namespace: {{ .Values.global.commonGlobals.Customer.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: ama-metrics-reader
+  name: ama-metrics-ccp-reader
   apiGroup: rbac.authorization.k8s.io
