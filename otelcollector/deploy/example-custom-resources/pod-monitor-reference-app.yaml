@@ -21,7 +21,7 @@ spec:
   - tlsConfig:
       cert:
         secret:
-          key: "client-key.pem"
+          key: "client-cert.pem"
           name: "ref-app-mtls-secret"
       keySecret:
           key: "client-key.pem"
