@@ -18,14 +18,11 @@ spec:
     metadata:
       labels:
         rsName: ama-metrics-ccp
-        kubernetes.azure.com/managedby: aks
-        overlaymgr-ignore: "true"
       annotations:
         agentVersion: "0.0.0.1"
         schema-versions: "v1"
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
-      priorityClassName: system-node-critical
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
@@ -202,19 +199,10 @@ spec:
       volumes:
         - name: settings-vol-config
           emptyDir: { }
-        - name: kubeconfig
-          secret:
-            secretName: kubeconfig-file
         - name: prometheus-config-vol
           configMap:
             name: ama-metrics-prometheus-config
             optional: true
-        - name: host-log-containers
-          hostPath:
-            path: /var/log/containers
-        - name: host-log-pods
-          hostPath:
-            path: /var/log/pods
         - name: anchors-mariner
           hostPath:
             path: /etc/pki/ca-trust/anchors/
@@ -223,6 +211,9 @@ spec:
           hostPath:
             path: /usr/local/share/ca-certificates/
             type: DirectoryOrCreate
+        - name: kubeconfig
+          secret:
+            secretName: kubeconfig-file
         - name: kubernetes-secrets
           projected:
             defaultMode: 420
