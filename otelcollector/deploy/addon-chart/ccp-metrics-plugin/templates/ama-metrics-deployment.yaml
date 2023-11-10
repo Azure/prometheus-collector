@@ -102,12 +102,6 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
-            - name: host-log-containers
-              readOnly: true
-              mountPath: /var/log/containers
-            - name: host-log-pods
-              readOnly: true
-              mountPath: /var/log/pods
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
@@ -147,24 +141,39 @@ spec:
               mountPath: /etc/kubernetes/kubeconfig
             - name: settings-vol-config
               mountPath: /etc/config/settings
-        - name: msi-adapter
-          image: "mcr.microsoft.com/aks/ccp/msi-adapter:master.230208.1"
+        - name: addon-token-adapter
+          command:
+            - /addon-token-adapter
+          args:
+            - --secret-namespace=kube-system
+            - --secret-name=aad-msi-auth-token
+            - --token-server-listening-port=7777
+            - --health-server-listening-port=9999
+          image: "mcr.microsoft.com/aks/msi/addon-token-adapter:master.230804.1"
           imagePullPolicy: IfNotPresent
           env:
-          - name: SUBSCRIPTION_ID
-            value: "{{ .Values.global.commonGlobals.Customer.SubscriptionId }}"
-          - name: RESOURCE_GROUP_NAME
-            value: "{{ .Values.global.commonGlobals.Customer.ResourceGroupName }}"
-          - name: MANAGED_CLUSTER_NAME
-            value: "{{ .Values.global.commonGlobals.Customer.ManagedClusterName }}"
-          - name: CONTROL_PLANE_ID
-            value: "{{ .Values.global.commonGlobals.Customer.Namespace }}"
-          - name: CLIENT_NAME
-            value: ama-metrics
+            - name: AZMON_COLLECT_ENV
+              value: "false"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9999
+            initialDelaySeconds: 10
+            periodSeconds: 60
+          resources:
+            limits:
+              cpu: 500m
+              memory: 500Mi
+            requests:
+              cpu: 20m
+              memory: 30Mi
           securityContext:
-           capabilities:
-             add:
-               - NET_ADMIN
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
+                - NET_RAW
       affinity:
         nodeAffinity:
           # affinity to schedule on to ephemeral os node if its available
