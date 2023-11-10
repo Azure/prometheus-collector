@@ -459,8 +459,8 @@ func untypedHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	certFile := "/etc/prometheus/certs/client-cert.pem"
-	keyFile := "/etc/prometheus/certs/client-key.pem"
+	certFile := "/var/tmp/client-cert.pem"
+	keyFile := "/var/tmp/client-key.pem"
 	if os.Getenv("RUN_PERF_TEST") == "true" {
 		if os.Getenv("SCRAPE_INTERVAL") != "" {
 			scrapeIntervalSec, _ = strconv.Atoi(os.Getenv("SCRAPE_INTERVAL"))
