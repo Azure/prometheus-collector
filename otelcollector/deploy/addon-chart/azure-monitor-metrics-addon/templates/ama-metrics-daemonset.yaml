@@ -254,13 +254,9 @@ spec:
           configMap:
             name: ama-metrics-settings-configmap
             optional: true
-        - name: ama-metrics-tls-secret-volume-crd
+        - name: ama-metrics-tls-secret-volume
           secret:
-            secretName: ama-metrics-mtls-secret-crd
-            optional: true
-        - name: ama-metrics-tls-secret-volume-cm
-          secret:
-            secretName: ama-metrics-mtls-secret-cm
+            secretName: ama-metrics-mtls-secret
             optional: true
         - name: prometheus-config-vol
           configMap:
@@ -482,13 +478,9 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
-        - name: ama-metrics-tls-secret-volume-crd
+        - name: ama-metrics-tls-secret-volume
           secret:
-            secretName: ama-metrics-mtls-secret-crd
-            optional: true
-        - name: ama-metrics-tls-secret-volume-cm
-          secret:
-            secretName: ama-metrics-mtls-secret-cm
+            secretName: ama-metrics-mtls-secret
             optional: true
         - name: host-log-pods
           hostPath:

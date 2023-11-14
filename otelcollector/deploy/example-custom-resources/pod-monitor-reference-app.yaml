@@ -15,14 +15,14 @@ spec:
       ca:
         secret:
           key: "client-cert.pem"
-          name: "ama-metrics-mtls-secret-crd"
+          name: "ama-metrics-mtls-secret"
       cert:
         secret:
           key: "client-cert.pem"
-          name: "ama-metrics-mtls-secret-crd"
+          name: "ama-metrics-mtls-secret"
       keySecret:
           key: "client-key.pem"
-          name: "ama-metrics-mtls-secret-crd"
+          name: "ama-metrics-mtls-secret"
       insecureSkipVerify: false
     relabelings:
     - sourceLabels: [__meta_kubernetes_pod_label_app]
