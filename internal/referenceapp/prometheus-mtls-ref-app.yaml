@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: prometheus-reference-app-golang
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-golang
+          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.8.1-testTLS-11-10-2023-afd40f4c-ref-app-golang
           env:
             - name: RUN_PERF_TEST
               value: "false"
