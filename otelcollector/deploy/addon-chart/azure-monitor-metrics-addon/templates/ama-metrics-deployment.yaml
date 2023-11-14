@@ -168,7 +168,10 @@ spec:
               name: settings-vol-config
               readOnly: true
             - mountPath: /etc/prometheus/certs
-              name: ama-metrics-tls-secret-volume
+              name: ama-metrics-tls-secret-volume-crd
+              readOnly: true
+            - mountPath: /var/tmp
+              name: ama-metrics-tls-secret-volume-cm
               readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
@@ -311,9 +314,13 @@ spec:
           hostPath:
             path: /etc/pki/ca-trust/anchors/
             type: DirectoryOrCreate
-        - name: ama-metrics-tls-secret-volume
+        - name: ama-metrics-tls-secret-volume-crd
           secret:
-            secretName: ama-metrics-mtls-secret
+            secretName: ama-metrics-mtls-secret-crd
+            optional: true
+        - name: ama-metrics-tls-secret-volume-cm
+          secret:
+            secretName: ama-metrics-mtls-secret-cm
             optional: true
         {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
         - name: anchors-ubuntu

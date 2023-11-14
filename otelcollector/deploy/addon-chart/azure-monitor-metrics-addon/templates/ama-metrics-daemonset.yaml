@@ -138,7 +138,10 @@ spec:
               name: settings-vol-config
               readOnly: true
             - mountPath: /etc/prometheus/certs
-              name: ama-metrics-tls-secret-volume
+              name: ama-metrics-tls-secret-volume-crd
+              readOnly: true
+            - mountPath: /var/tmp
+              name: ama-metrics-tls-secret-volume-cm
               readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
@@ -251,9 +254,13 @@ spec:
           configMap:
             name: ama-metrics-settings-configmap
             optional: true
-        - name: ama-metrics-tls-secret-volume
+        - name: ama-metrics-tls-secret-volume-crd
           secret:
-            secretName: ama-metrics-mtls-secret
+            secretName: ama-metrics-mtls-secret-crd
+            optional: true
+        - name: ama-metrics-tls-secret-volume-cm
+          secret:
+            secretName: ama-metrics-mtls-secret-cm
             optional: true
         - name: prometheus-config-vol
           configMap:
@@ -395,7 +402,10 @@ spec:
               name: prometheus-config-vol
               readOnly: true
             - mountPath: /etc/prometheus/certs
-              name: ama-metrics-tls-secret-volume
+              name: ama-metrics-tls-secret-volume-crd
+              readOnly: true
+            - mountPath: /var/tmp
+              name: ama-metrics-tls-secret-volume-cm
               readOnly: true
             - name: host-log-containers
               readOnly: true
@@ -472,9 +482,13 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
-        - name: ama-metrics-tls-secret-volume
+        - name: ama-metrics-tls-secret-volume-crd
           secret:
-            secretName: ama-metrics-mtls-secret
+            secretName: ama-metrics-mtls-secret-crd
+            optional: true
+        - name: ama-metrics-tls-secret-volume-cm
+          secret:
+            secretName: ama-metrics-mtls-secret-cm
             optional: true
         - name: host-log-pods
           hostPath:
