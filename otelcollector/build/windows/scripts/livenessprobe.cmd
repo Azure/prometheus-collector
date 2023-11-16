@@ -12,9 +12,9 @@ set /a durationInMinutes = -1
 if "%MAC%" == "" (
     rem Non-MAC mode
     tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
-    if errorlevel 1 (
+    if %ERRORLEVEL% NEQ 0 (
         echo "Metrics Extension is not running (Non-MAC mode)"
-        exit /b 1
+        exit /B 1
     )
 ) else (
     if "%MAC%" == "true" (
@@ -38,14 +38,14 @@ if "%MAC%" == "" (
             )
         ) else (
             tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
-            if errorlevel 1 (
+            if %ERRORLEVEL% NEQ 0 (
                 echo "Metrics Extension is not running (configuration exists)"
-                exit /b 1
+                exit /B 1
             )
             tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
-            if errorlevel 1 (
+            if %ERRORLEVEL% NEQ 0 (
                 echo "MonAgentLauncher is not running (configuration exists)"
-                exit /b 1
+                exit /B 1
             )
         )
     )
@@ -53,29 +53,29 @@ if "%MAC%" == "" (
 
 @REM "Checking if fluent-bit is running"
 tasklist /fi "imagename eq fluent-bit.exe" /fo "table"  | findstr fluent-bit
-if errorlevel 1 (
+if %ERRORLEVEL% NEQ 0 (
     echo "Fluent-Bit is not running"
-    exit /b 1
+    exit /B 1
 )
 
 @REM "Checking if config map has been updated since agent start"
 if exist "C:\opt\microsoft\scripts\filesystemwatcher.txt" (
     echo "Config Map Updated or DCR/DCE updated since agent started"
-    exit /b  1
+    exit /b 1
 )
 
 @REM REM "Checking if Telegraf is running"
 tasklist /fi "imagename eq telegraf.exe" /fo "table"  | findstr telegraf
-if errorlevel 1 (
+if %ERRORLEVEL% NEQ 0 (
     echo "Telegraf is not running"
-    exit /b 1
+    exit /B 1
 )
 
 @REM REM "Checking if otelcollector is running"
 tasklist /fi "imagename eq otelcollector.exe" /fo "table"  | findstr otelcollector
-if errorlevel 1 (
+if %ERRORLEVEL% NEQ 0 (
     echo "otelcollector is not running"
-    exit /b 1
+    exit /B 1
 )
 
 endlocal
