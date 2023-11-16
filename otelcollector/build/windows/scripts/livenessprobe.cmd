@@ -33,7 +33,7 @@ if "%MAC%" == "" (
                 )
                 if !durationInMinutes! GTR 15 (
                     echo "Greater than 15 mins, No configuration present for the AKS resource"
-                    exit /b 1
+                    exit /B 1
                 )
             )
         ) else (
@@ -61,7 +61,7 @@ if %ERRORLEVEL% NEQ 0 (
 @REM "Checking if config map has been updated since agent start"
 if exist "C:\opt\microsoft\scripts\filesystemwatcher.txt" (
     echo "Config Map Updated or DCR/DCE updated since agent started"
-    exit /b  1
+    exit /B  1
 )
 
 @REM REM "Checking if Telegraf is running"
@@ -80,4 +80,4 @@ if %ERRORLEVEL% NEQ 0 (
 
 endlocal
 
-exit /b 0
+exit /B 0
