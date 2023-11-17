@@ -7,10 +7,12 @@
 # =========== HIGH ================
 # HIGH - otelcollector
 GHSA-m425-mq94-257g
+CVE-2023-47108
 # HIGH - telegraf
 GHSA-fr2g-9hjm-wr23
 # HIGH - promconfigvalidator
 GHSA-m425-mq94-257g
+CVE-2023-47108
 # HIGH - telegraf
 GHSA-m425-mq94-257g
 CVE-2023-47090
