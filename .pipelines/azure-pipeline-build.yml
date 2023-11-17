@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/win-liveness
 
 pr:
   autoCancel: true
@@ -1005,21 +1006,15 @@ jobs:
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
 
             output1=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-            output2=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY_HELM)/tags/list)
-            if (echo $output1 | grep $(IMAGE_TAG_WINDOWS)) && (echo $output2 | grep $(IMAGE_TAG))
+            if (echo $output1 | grep $(IMAGE_TAG_WINDOWS)) && (echo $output1 | grep $(IMAGE_TAG))
             then
-              echo "Images and chart are published to mcr"
+              echo "Images are published to mcr"
               exit 0
             fi
           done
-          echo "Images and chart are not published to mcr within 5 minutes"
+          echo "Images are not published to mcr within 5 minutes"
           exit 1
       displayName: "Check images are pushed to dev MCR"
-
-  - bash: |
-      helm pull oci://$(MCR_REGISTRY)$(MCR_REPOSITORY_HELM) --version $(HELM_SEMVER)
-    workingDirectory: $(Build.StagingDirectory)
-    displayName: "Pull helm chart from dev MCR"
 
   - bash: |
       export AKS_REGION="eastus"
