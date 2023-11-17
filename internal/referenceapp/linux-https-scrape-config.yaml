@@ -3,9 +3,9 @@ scrape_configs:
     scheme: https
     scrape_interval: 60s
     tls_config:
-      ca_file: /var/tmp/client-cert.pem
-      cert_file: /var/tmp/client-cert.pem
-      key_file: /var/tmp/client-key.pem
+      ca_file: /etc/prometheus/certs/client-cert.pem
+      cert_file: /etc/prometheus/certs/client-cert.pem
+      key_file: /etc/prometheus/certs/client-key.pem
       insecure_skip_verify: false
     kubernetes_sd_configs:
     - role: pod
