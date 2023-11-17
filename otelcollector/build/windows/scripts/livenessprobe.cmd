@@ -12,7 +12,7 @@ set /a durationInMinutes = -1
 if "%MAC%" == "" (
     rem Non-MAC mode
     tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
-    if %ERRORLEVEL% NEQ 0 (
+    if !ERRORLEVEL! NEQ 0 (
         echo "Metrics Extension is not running (Non-MAC mode)"
         exit /B 1
     )
@@ -38,12 +38,12 @@ if "%MAC%" == "" (
             )
         ) else (
             tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
-            if %ERRORLEVEL% NEQ 0 (
+            if !ERRORLEVEL! NEQ 0 (
                 echo "Metrics Extension is not running (configuration exists)"
                 exit /B 1
             )
             tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
-            if %ERRORLEVEL% NEQ 0 (
+            if !ERRORLEVEL! NEQ 0 (
                 echo "MonAgentLauncher is not running (configuration exists)"
                 exit /B 1
             )
