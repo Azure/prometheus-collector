@@ -37,12 +37,12 @@ if "%MAC%" == "" (
                 )
             )
         ) else (
-            tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
+            tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension
             if %ERRORLEVEL% NEQ 0 (
                 echo "Metrics Extension is not running (configuration exists)"
                 Goto :eof
             )
-            tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
+            tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher
             if %ERRORLEVEL% NEQ 0 (
                 echo "MonAgentLauncher is not running (configuration exists)"
                 Goto :eof
