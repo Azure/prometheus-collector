@@ -33,19 +33,19 @@ if "%MAC%" == "" (
                 )
                 if !durationInMinutes! GTR 15 (
                     echo "Greater than 15 mins, No configuration present for the AKS resource"
-                    exit /B 1
+                    goto eof
                 )
             )
         ) else (
             tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
             if !ERRORLEVEL! NEQ 0 (
                 echo "Metrics Extension is not running (configuration exists)"
-                exit /B 1
+                goto eof
             )
             tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
             if !ERRORLEVEL! NEQ 0 (
                 echo "MonAgentLauncher is not running (configuration exists)"
-                exit /B 1
+                goto eof
             )
         )
     )
@@ -81,3 +81,6 @@ if %ERRORLEVEL% NEQ 0 (
 endlocal
 
 exit /B 0
+
+:eof
+exit /B 1
