@@ -14,7 +14,7 @@ if "%MAC%" == "" (
     tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
     if !ERRORLEVEL! NEQ 0 (
         echo "Metrics Extension is not running (Non-MAC mode)"
-        exit /B 1
+        goto eof
     )
 ) else (
     if "%MAC%" == "true" (
