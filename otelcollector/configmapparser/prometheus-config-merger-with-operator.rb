@@ -360,7 +360,7 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED"].downcase == "true"
       networkobservabilityRetinaMetricsKeepListRegex = @regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"]
       networkobservabilityRetinaScrapeInterval = @intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"]
-      if currentControllerType == @replicasetControllerType
+      if (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
         #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
       else #networkobservabilityRetina scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
         if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" #&& ENV["OS_TYPE"].downcase == "linux"
@@ -380,7 +380,7 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED"].downcase == "true"
       networkobservabilityHubbleMetricsKeepListRegex = @regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"]
       networkobservabilityHubbleScrapeInterval = @intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"]
-      if currentControllerType == @replicasetControllerType
+      if (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
         #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
       else #networkobservabilityHubble scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
         if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" && ENV["OS_TYPE"].downcase == "linux"
@@ -400,7 +400,7 @@ def populateDefaultPrometheusConfig
     if !ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED"].downcase == "true"
       networkobservabilityCiliumMetricsKeepListRegex = @regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"]
       networkobservabilityCiliumScrapeInterval = @intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"]
-      if currentControllerType == @replicasetControllerType
+      if (isConfigReaderSidecar || currentControllerType == @replicasetControllerType)
         #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
       else #networkobservabilityCilium scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
         if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" && ENV["OS_TYPE"].downcase == "linux"
