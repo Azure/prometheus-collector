@@ -1,6 +1,6 @@
 module github.com/vishiy/opentelemetry-collector-builder
 
-go 1.20
+go 1.17
 
 replace github.com/gracewehner/prometheusreceiver => ../prometheusreceiver
 
@@ -19,7 +19,7 @@ require (
 	go.opentelemetry.io/collector/exporter/otlpexporter v0.89.0
 	go.opentelemetry.io/collector/extension v0.89.0
 	go.opentelemetry.io/collector/extension/zpagesextension v0.89.0
-	go.opentelemetry.io/collector/otelcol v0.86.0
+	go.opentelemetry.io/collector/otelcol v0.89.0
 	go.opentelemetry.io/collector/processor v0.89.0
 	go.opentelemetry.io/collector/processor/batchprocessor v0.85.0
 	go.opentelemetry.io/collector/receiver v0.89.0
@@ -172,7 +172,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.23.10 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/shurcooL/httpfs v0.0.0-20230704072500-f1e31cf0ba5c // indirect
-	github.com/spf13/cobra v1.7.0 // indirect
+	github.com/spf13/cobra v1.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
