@@ -21,7 +21,7 @@ require (
 	go.opentelemetry.io/collector/extension/zpagesextension v0.89.0
 	go.opentelemetry.io/collector/otelcol v0.89.0
 	go.opentelemetry.io/collector/processor v0.89.0
-	go.opentelemetry.io/collector/processor/batchprocessor v0.85.0
+	go.opentelemetry.io/collector/processor/batchprocessor v0.89.0
 	go.opentelemetry.io/collector/receiver v0.89.0
 	gopkg.in/yaml.v2 v2.4.0
 )
