@@ -3,6 +3,7 @@ trigger:
     include:
     - main
     - ccp_shell_removal_branch
+    - component-governance
 
 pr:
   autoCancel: true
@@ -390,7 +391,7 @@ jobs:
 
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
