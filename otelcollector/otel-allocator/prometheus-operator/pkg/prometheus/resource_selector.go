@@ -77,6 +77,7 @@ func (rs *ResourceSelector) SelectServiceMonitors(ctx context.Context, listFn Li
 
 	// If 'ServiceMonitorNamespaceSelector' is nil only check own namespace.
 	if cpf.ServiceMonitorNamespaceSelector == nil {
+		level.Debug(rs.l).Log("msg", "ServiceMonitorNamespaceSelector is nil")
 		namespaces = append(namespaces, objMeta.GetNamespace())
 	} else {
 		servMonNSSelector, err := metav1.LabelSelectorAsSelector(cpf.ServiceMonitorNamespaceSelector)
