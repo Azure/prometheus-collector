@@ -18,7 +18,10 @@ func main() {
 		Version:     "0.85.0",
 	}
 
-	app := otelcol.NewCommand(otelcol.CollectorSettings{BuildInfo: info, Factories: factories})
+	app := otelcol.NewCommand(otelcol.CollectorSettings{
+		BuildInfo: info,
+		Factories: func() (otelcol.Factories, error) { return factories, nil },
+	})
 	err = app.Execute()
 	if err != nil {
 		log.Fatal("collector server run finished with error: %w", err)
