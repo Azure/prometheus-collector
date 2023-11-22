@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"time"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -29,6 +30,7 @@ import (
 	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/prometheus-operator/prometheus-operator/pkg/informers"
+	"github.com/prometheus-operator/prometheus-operator/pkg/listwatch"
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
 	"github.com/prometheus/common/model"
 	promconfig "github.com/prometheus/prometheus/config"
@@ -41,6 +43,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
+)
+
+const (
+	resyncPeriod = 5 * time.Minute
 )
 
 func NewPrometheusCRWatcher(logger logr.Logger, cfg allocatorconfig.Config, cliConfig allocatorconfig.CLIConfig) (*PrometheusCRWatcher, error) {
@@ -65,7 +71,11 @@ func NewPrometheusCRWatcher(logger logr.Logger, cfg allocatorconfig.Config, cliC
 	prom := &monitoringv1.Prometheus{
 		Spec: monitoringv1.PrometheusSpec{
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
-				ScrapeInterval: monitoringv1.Duration(cfg.PrometheusCR.ScrapeInterval.String()),
+				ScrapeInterval:                  monitoringv1.Duration(cfg.PrometheusCR.ScrapeInterval.String()),
+				ServiceMonitorSelector:          monitoringv1.ServiceMonitorSelector(cfg.ServiceMonitorSelector),
+				PodMonitorSelector:              monitoringv1.PodMonitorSelector(cfg.PodMonitorSelector),
+				ServiceMonitorNamespaceSelector: monitoringv1.ServiceMonitorNamespaceSelector(cfg.ServiceMonitorNamespaceSelector),
+				PodMonitorNamespaceSelector:     monitoringv1.PodMonitorNamespaceSelector(cfg.PodMonitorNamespaceSelector),
 			},
 		},
 	}
@@ -75,6 +85,29 @@ func NewPrometheusCRWatcher(logger logr.Logger, cfg allocatorconfig.Config, cliC
 	if err != nil {
 		return nil, err
 	}
+	store := assets.NewStore(clientset.CoreV1(), clientset.CoreV1())
+	newNamespaceInformer := func(allowList map[string]struct{}) cache.SharedIndexInformer {
+		// nsResyncPeriod is used to control how often the namespace informer
+		// should resync. If the unprivileged ListerWatcher is used, then the
+		// informer must resync more often because it cannot watch for
+		// namespace changes.
+		nsResyncPeriod := 15 * time.Second
+		// If the only namespace is v1.NamespaceAll, then the client must be
+		// privileged and a regular cache.ListWatch will be used. In this case
+		// watching works and we do not need to resync so frequently.
+		if listwatch.IsAllNamespaces(allowList) {
+			nsResyncPeriod = resyncPeriod
+		}
+		nsInf := cache.NewSharedIndexInformer(
+			listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
+			&v1.Namespace{}, nsResyncPeriod, cache.Indexers{},
+		)
+
+		return nsInf
+	}
+	nsMonInf := newNamespaceInformer(monitoringv1.NamespaceAll)
+
+	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf)
 
 	servMonSelector := getSelector(cfg.ServiceMonitorSelector)
 
@@ -90,6 +123,7 @@ func NewPrometheusCRWatcher(logger logr.Logger, cfg allocatorconfig.Config, cliC
 		kubeConfigPath:         cliConfig.KubeConfigFilePath,
 		serviceMonitorSelector: servMonSelector,
 		podMonitorSelector:     podMonSelector,
+		resourceSelector:       resourceSelector,
 	}, nil
 }
 
@@ -104,6 +138,7 @@ type PrometheusCRWatcher struct {
 
 	serviceMonitorSelector labels.Selector
 	podMonitorSelector     labels.Selector
+	resourceSelector       *prometheus.ResourceSelector
 }
 
 func getSelector(s map[string]string) labels.Selector {
@@ -170,8 +205,18 @@ func (w *PrometheusCRWatcher) Close() error {
 }
 
 func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Config, error) {
+	serviceMonitorInstances, err := w.resourceSelector.SelectServiceMonitors(ctx, w.informers[monitoringv1.ServiceMonitorName].ListAllByNamespace)
+	if err != nil {
+		return w.logger.Error(err, "selecting ServiceMonitors failed")
+	}
+
+	podMonitorInstances, err := w.resourceSelector.SelectPodMonitors(ctx, w.informers[monitoringv1.PodMonitorName].ListAllByNamespace)
+	if err != nil {
+		return w.logger.Error(err, "selecting PodMonitors failed")
+	}
+
 	store := assets.NewStore(w.k8sClient.CoreV1(), w.k8sClient.CoreV1())
-	serviceMonitorInstances := make(map[string]*monitoringv1.ServiceMonitor)
+	//serviceMonitorInstances := make(map[string]*monitoringv1.ServiceMonitor)
 	smRetrieveErr := w.informers[monitoringv1.ServiceMonitorName].ListAll(w.serviceMonitorSelector, func(sm interface{}) {
 		monitor := sm.(*monitoringv1.ServiceMonitor)
 		key, _ := cache.DeletionHandlingMetaNamespaceKeyFunc(monitor)
@@ -186,7 +231,7 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 		return nil, smRetrieveErr
 	}
 
-	podMonitorInstances := make(map[string]*monitoringv1.PodMonitor)
+	//podMonitorInstances := make(map[string]*monitoringv1.PodMonitor)
 	pmRetrieveErr := w.informers[monitoringv1.PodMonitorName].ListAll(w.podMonitorSelector, func(pm interface{}) {
 		monitor := pm.(*monitoringv1.PodMonitor)
 		key, _ := cache.DeletionHandlingMetaNamespaceKeyFunc(monitor)

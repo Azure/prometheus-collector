@@ -42,13 +42,15 @@ const DefaultConfigFilePath string = "/conf/targetallocator.yaml"
 const DefaultCRScrapeInterval model.Duration = model.Duration(time.Second * 30)
 
 type Config struct {
-	LabelSelector          map[string]string  `yaml:"label_selector,omitempty"`
-	Config                 *promconfig.Config `yaml:"config"`
-	AllocationStrategy     *string            `yaml:"allocation_strategy,omitempty"`
-	FilterStrategy         *string            `yaml:"filter_strategy,omitempty"`
-	PrometheusCR           PrometheusCRConfig `yaml:"prometheus_cr,omitempty"`
-	PodMonitorSelector     map[string]string  `yaml:"pod_monitor_selector,omitempty"`
-	ServiceMonitorSelector map[string]string  `yaml:"service_monitor_selector,omitempty"`
+	LabelSelector                   map[string]string  `yaml:"label_selector,omitempty"`
+	Config                          *promconfig.Config `yaml:"config"`
+	AllocationStrategy              *string            `yaml:"allocation_strategy,omitempty"`
+	FilterStrategy                  *string            `yaml:"filter_strategy,omitempty"`
+	PrometheusCR                    PrometheusCRConfig `yaml:"prometheus_cr,omitempty"`
+	PodMonitorSelector              map[string]string  `yaml:"pod_monitor_selector,omitempty"`
+	ServiceMonitorSelector          map[string]string  `yaml:"service_monitor_selector,omitempty"`
+	ServiceMonitorNamespaceSelector map[string]string  `yaml:"service_monitor_namespace_selector,omitempty"`
+	PodMonitorNamespaceSelector     map[string]string  `yaml:"pod_monitor_namespace_selector,omitempty"`
 }
 
 type PrometheusCRConfig struct {
