@@ -39,7 +39,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
@@ -123,21 +122,22 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 
 	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
 
-	servMonSelector := getSelector(cfg.ServiceMonitorSelector)
+	// servMonSelector := getSelector(cfg.ServiceMonitorSelector)
 
-	podMonSelector := getSelector(cfg.PodMonitorSelector)
+	// podMonSelector := getSelector(cfg.PodMonitorSelector)
 
 	return &PrometheusCRWatcher{
-		logger:                 logger,
-		kubeMonitoringClient:   mClient,
-		k8sClient:              clientset,
-		informers:              monitoringInformers,
-		stopChannel:            make(chan struct{}),
-		configGenerator:        generator,
-		kubeConfigPath:         cliConfig.KubeConfigFilePath,
-		serviceMonitorSelector: servMonSelector,
-		podMonitorSelector:     podMonSelector,
-		resourceSelector:       resourceSelector,
+		logger:               logger,
+		kubeMonitoringClient: mClient,
+		k8sClient:            clientset,
+		informers:            monitoringInformers,
+		stopChannel:          make(chan struct{}),
+		configGenerator:      generator,
+		kubeConfigPath:       cliConfig.KubeConfigFilePath,
+		// serviceMonitorSelector: servMonSelector,
+		// podMonitorSelector:     podMonSelector,
+		resourceSelector: resourceSelector,
+		store:            store,
 	}, nil
 }
 
@@ -150,17 +150,18 @@ type PrometheusCRWatcher struct {
 	configGenerator      *prometheus.ConfigGenerator
 	kubeConfigPath       string
 
-	serviceMonitorSelector labels.Selector
-	podMonitorSelector     labels.Selector
-	resourceSelector       *prometheus.ResourceSelector
+	// serviceMonitorSelector labels.Selector
+	// podMonitorSelector     labels.Selector
+	resourceSelector *prometheus.ResourceSelector
+	store            *assets.Store
 }
 
-func getSelector(s map[string]string) labels.Selector {
-	if s == nil {
-		return labels.NewSelector()
-	}
-	return labels.SelectorFromSet(s)
-}
+// func getSelector(s map[string]string) labels.Selector {
+// 	if s == nil {
+// 		return labels.NewSelector()
+// 	}
+// 	return labels.SelectorFromSet(s)
+// }
 
 // getInformers returns a map of informers for the given resources.
 func getInformers(factory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
@@ -229,7 +230,7 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 		return nil, err
 	}
 
-	// store := assets.NewStore(w.k8sClient.CoreV1(), w.k8sClient.CoreV1())
+	//store := assets.NewStore(w.k8sClient.CoreV1(), w.k8sClient.CoreV1())
 	// //serviceMonitorInstances := make(map[string]*monitoringv1.ServiceMonitor)
 	// smRetrieveErr := w.informers[monitoringv1.ServiceMonitorName].ListAll(w.serviceMonitorSelector, func(sm interface{}) {
 	// 	monitor := sm.(*monitoringv1.ServiceMonitor)
@@ -273,7 +274,7 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 		podMonitorInstances,
 		map[string]*monitoringv1.Probe{},
 		map[string]*promv1alpha1.ScrapeConfig{},
-		store,
+		w.store,
 		nil,
 		nil,
 		nil,
