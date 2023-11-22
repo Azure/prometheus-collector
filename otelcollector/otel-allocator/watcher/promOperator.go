@@ -31,6 +31,7 @@ import (
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/prometheus-operator/prometheus-operator/pkg/informers"
 	"github.com/prometheus-operator/prometheus-operator/pkg/listwatch"
+	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
 	"github.com/prometheus/common/model"
 	promconfig "github.com/prometheus/prometheus/config"
@@ -38,6 +39,7 @@ import (
 	"github.com/prometheus/prometheus/model/relabel"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -49,7 +51,7 @@ const (
 	resyncPeriod = 5 * time.Minute
 )
 
-func NewPrometheusCRWatcher(logger logr.Logger, cfg allocatorconfig.Config, cliConfig allocatorconfig.CLIConfig) (*PrometheusCRWatcher, error) {
+func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocatorconfig.Config, cliConfig allocatorconfig.CLIConfig) (*PrometheusCRWatcher, error) {
 	mClient, err := monitoringclient.NewForConfig(cliConfig.ClusterConfig)
 	if err != nil {
 		return nil, err
@@ -86,6 +88,9 @@ func NewPrometheusCRWatcher(logger logr.Logger, cfg allocatorconfig.Config, cliC
 		return nil, err
 	}
 	store := assets.NewStore(clientset.CoreV1(), clientset.CoreV1())
+	promRegisterer := prometheus.NewRegistry()
+	promRegisterer = prometheus.WrapRegistererWith(prometheus.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
+	operatorMetrics := operator.NewMetrics(promRegisterer)
 	newNamespaceInformer := func(allowList map[string]struct{}) cache.SharedIndexInformer {
 		// nsResyncPeriod is used to control how often the namespace informer
 		// should resync. If the unprivileged ListerWatcher is used, then the
@@ -99,7 +104,9 @@ func NewPrometheusCRWatcher(logger logr.Logger, cfg allocatorconfig.Config, cliC
 			nsResyncPeriod = resyncPeriod
 		}
 		nsInf := cache.NewSharedIndexInformer(
-			listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
+			operatorMetrics.NewInstrumentedListerWatcher(
+				listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
+			),
 			&v1.Namespace{}, nsResyncPeriod, cache.Indexers{},
 		)
 
@@ -107,7 +114,7 @@ func NewPrometheusCRWatcher(logger logr.Logger, cfg allocatorconfig.Config, cliC
 	}
 	nsMonInf := newNamespaceInformer(monitoringv1.NamespaceAll)
 
-	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf)
+	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
 
 	servMonSelector := getSelector(cfg.ServiceMonitorSelector)
 

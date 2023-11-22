@@ -122,7 +122,7 @@ func main() {
 	defer close(interrupts)
 
 	if *cliConf.PromCRWatcherConf.Enabled {
-		promWatcher, err = allocatorWatcher.NewPrometheusCRWatcher(setupLog.WithName("prometheus-cr-watcher"), cfg, cliConf)
+		promWatcher, err = allocatorWatcher.NewPrometheusCRWatcher(ctx, setupLog.WithName("prometheus-cr-watcher"), cfg, cliConf)
 		if err != nil {
 			setupLog.Error(err, "Can't start the prometheus watcher")
 			os.Exit(1)
