@@ -65,6 +65,7 @@ func NewUnprivilegedNamespaceListWatchFromClient(
 	// cache.ListWatch tweaked with denylist fieldselector
 	// filtering the given denied namespaces.
 	if IsAllNamespaces(allowedNamespaces) {
+		level.Info(l).Log("msg", "in isall namespaces", "namespace", allowedNamespaces)
 		tweak := func(options *metav1.ListOptions) {
 			optionsModifier(options)
 
