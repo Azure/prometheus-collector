@@ -87,7 +87,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 			},
 		},
 	}
-	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowWarn())
+	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowDebug())
 
 	generator, err := prometheus.NewConfigGenerator(promOperatorLogger, prom, true)
 	if err != nil {
@@ -222,12 +222,18 @@ func (w *PrometheusCRWatcher) Close() error {
 func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Config, error) {
 	serviceMonitorInstances, err := w.resourceSelector.SelectServiceMonitors(ctx, w.informers[monitoringv1.ServiceMonitorName].ListAllByNamespace)
 	if err != nil {
+		w.logger.Error(err, "Failed getting SvcMonitor, skipping")
 		return nil, err
+	} else {
+		w.logger.Info("Got svc monitors")
 	}
 
 	podMonitorInstances, err := w.resourceSelector.SelectPodMonitors(ctx, w.informers[monitoringv1.PodMonitorName].ListAllByNamespace)
 	if err != nil {
+		w.logger.Error(err, "Failed getting PodMonitor, skipping")
 		return nil, err
+	} else {
+		w.logger.Info("Got pod monitors")
 	}
 
 	//store := assets.NewStore(w.k8sClient.CoreV1(), w.k8sClient.CoreV1())
