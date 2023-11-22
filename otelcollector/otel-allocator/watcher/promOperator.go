@@ -79,7 +79,10 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 					MatchLabels: cfg.PodMonitorSelector,
 				},
 				ServiceMonitorNamespaceSelector: &metav1.LabelSelector{
-					MatchLabels: cfg.ServiceMonitorNamespaceSelector,
+					//MatchLabels: cfg.ServiceMonitorNamespaceSelector,
+					MatchLabels: map[string]string{
+						"test": "test",
+					},
 				},
 				PodMonitorNamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: cfg.PodMonitorNamespaceSelector,

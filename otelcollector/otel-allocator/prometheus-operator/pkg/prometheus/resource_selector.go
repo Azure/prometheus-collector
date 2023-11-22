@@ -85,6 +85,7 @@ func (rs *ResourceSelector) SelectServiceMonitors(ctx context.Context, listFn Li
 			return nil, err
 		}
 		level.Debug(rs.l).Log("msg", "ServiceMonitorNamespaceSelector", "seelctor", servMonNSSelector)
+		// level.Debug(rs.l).Log("msg", "namespaceInformers", "namespaceInformers", rs.namespaceInformers)
 
 		namespaces, err = operator.ListMatchingNamespaces(servMonNSSelector, rs.namespaceInformers)
 		if err != nil {
