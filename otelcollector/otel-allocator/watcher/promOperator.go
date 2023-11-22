@@ -75,10 +75,10 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		Spec: monitoringv1.PrometheusSpec{
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval:                  monitoringv1.Duration(cfg.PrometheusCR.ScrapeInterval.String()),
-				ServiceMonitorSelector:          monitoringv1.PrometheusSpec.CommonPrometheusFields.ServiceMonitorSelector(cfg.ServiceMonitorSelector),
-				PodMonitorSelector:              monitoringv1.PrometheusSpec.CommonPrometheusFields.PodMonitorSelector(cfg.PodMonitorSelector),
-				ServiceMonitorNamespaceSelector: monitoringv1.PrometheusSpec.CommonPrometheusFields.ServiceMonitorNamespaceSelector(cfg.ServiceMonitorNamespaceSelector),
-				PodMonitorNamespaceSelector:     monitoringv1.PrometheusSpec.CommonPrometheusFields.PodMonitorNamespaceSelector(cfg.PodMonitorNamespaceSelector),
+				ServiceMonitorSelector:          cfg.ServiceMonitorSelector,
+				PodMonitorSelector:              cfg.PodMonitorSelector,
+				ServiceMonitorNamespaceSelector: cfg.ServiceMonitorNamespaceSelector,
+				PodMonitorNamespaceSelector:     cfg.PodMonitorNamespaceSelector,
 			},
 		},
 	}
