@@ -75,10 +75,10 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		Spec: monitoringv1.PrometheusSpec{
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval:                  monitoringv1.Duration(cfg.PrometheusCR.ScrapeInterval.String()),
-				ServiceMonitorSelector:          monitoringv1.CommonPrometheusFields.ServiceMonitorSelector(cfg.ServiceMonitorSelector),
-				PodMonitorSelector:              monitoringv1.CommonPrometheusFields.PodMonitorSelector(cfg.PodMonitorSelector),
-				ServiceMonitorNamespaceSelector: monitoringv1.CommonPrometheusFields.ServiceMonitorNamespaceSelector(cfg.ServiceMonitorNamespaceSelector),
-				PodMonitorNamespaceSelector:     monitoringv1.CommonPrometheusFields.PodMonitorNamespaceSelector(cfg.PodMonitorNamespaceSelector),
+				ServiceMonitorSelector:          monitoringv1.PrometheusSpec.CommonPrometheusFields.ServiceMonitorSelector(cfg.ServiceMonitorSelector),
+				PodMonitorSelector:              monitoringv1.PrometheusSpec.CommonPrometheusFields.PodMonitorSelector(cfg.PodMonitorSelector),
+				ServiceMonitorNamespaceSelector: monitoringv1.PrometheusSpec.CommonPrometheusFields.ServiceMonitorNamespaceSelector(cfg.ServiceMonitorNamespaceSelector),
+				PodMonitorNamespaceSelector:     monitoringv1.PrometheusSpec.CommonPrometheusFields.PodMonitorNamespaceSelector(cfg.PodMonitorNamespaceSelector),
 			},
 		},
 	}
@@ -90,7 +90,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 	}
 	store := assets.NewStore(clientset.CoreV1(), clientset.CoreV1())
 	promRegisterer := prometheusgoclient.NewRegistry()
-	promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
+	//promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
 	operatorMetrics := operator.NewMetrics(promRegisterer)
 	newNamespaceInformer := func(allowList map[string]struct{}) cache.SharedIndexInformer {
 		// nsResyncPeriod is used to control how often the namespace informer
@@ -113,7 +113,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 
 		return nsInf
 	}
-	nsMonInf := newNamespaceInformer(v1.NamespaceAll)
+	nsMonInf := newNamespaceInformer(map[string]struct{}{v1.NamespaceAll: {}})
 
 	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
 
