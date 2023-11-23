@@ -100,7 +100,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 	}
 	store := assets.NewStore(clientset.CoreV1(), clientset.CoreV1())
 	promRegisterer := prometheusgoclient.NewRegistry()
-	promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
+	// promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
 	operatorMetrics := operator.NewMetrics(promRegisterer)
 
 	nsMonInf := getNamespaceInformer(ctx, map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, clientset, operatorMetrics)
