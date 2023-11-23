@@ -113,16 +113,15 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 			nsResyncPeriod = resyncPeriod
 		}
 		nsInf := cache.NewSharedIndexInformer(
-			// operatorMetrics.NewInstrumentedListerWatcher(
-			listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
-			// ),
+			operatorMetrics.NewInstrumentedListerWatcher(
+				listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
+			),
 			&v1.Namespace{}, nsResyncPeriod, cache.Indexers{},
 		)
 
 		return nsInf
 	}
 	nsMonInf := newNamespaceInformer(map[string]struct{}{v1.NamespaceAll: {}})
-	// nsMonInf := newNamespaceInformer(map[string]struct{}{"default": {}})
 
 	go nsMonInf.Run(ctx.Done())
 
@@ -228,18 +227,12 @@ func (w *PrometheusCRWatcher) Close() error {
 func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Config, error) {
 	serviceMonitorInstances, err := w.resourceSelector.SelectServiceMonitors(ctx, w.informers[monitoringv1.ServiceMonitorName].ListAllByNamespace)
 	if err != nil {
-		w.logger.Error(err, "Failed getting SvcMonitor, skipping")
 		return nil, err
-	} else {
-		w.logger.Info("Got svc monitors")
 	}
 
 	podMonitorInstances, err := w.resourceSelector.SelectPodMonitors(ctx, w.informers[monitoringv1.PodMonitorName].ListAllByNamespace)
 	if err != nil {
-		w.logger.Error(err, "Failed getting PodMonitor, skipping")
 		return nil, err
-	} else {
-		w.logger.Info("Got pod monitors")
 	}
 
 	//store := assets.NewStore(w.k8sClient.CoreV1(), w.k8sClient.CoreV1())
