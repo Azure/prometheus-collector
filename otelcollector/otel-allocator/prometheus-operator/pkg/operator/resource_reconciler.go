@@ -435,7 +435,6 @@ func (rr *ResourceReconciler) processNextStatusItem(ctx context.Context) bool {
 func ListMatchingNamespaces(selector labels.Selector, nsInf cache.SharedIndexInformer) ([]string, error) {
 	var ns []string
 	err := cache.ListAll(nsInf.GetStore(), selector, func(obj interface{}) {
-		fmt.Printf("appending namespace %v", obj.(*v1.Namespace).Name)
 		ns = append(ns, obj.(*v1.Namespace).Name)
 	})
 	if err != nil {
