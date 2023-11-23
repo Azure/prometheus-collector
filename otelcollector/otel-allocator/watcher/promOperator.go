@@ -100,32 +100,10 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 	}
 	store := assets.NewStore(clientset.CoreV1(), clientset.CoreV1())
 	promRegisterer := prometheusgoclient.NewRegistry()
-	// //promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
+	promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
 	operatorMetrics := operator.NewMetrics(promRegisterer)
-	// newNamespaceInformer := func(allowList map[string]struct{}) cache.SharedIndexInformer {
-	// 	// nsResyncPeriod is used to control how often the namespace informer
-	// 	// should resync. If the unprivileged ListerWatcher is used, then the
-	// 	// informer must resync more often because it cannot watch for
-	// 	// namespace changes.
-	// 	nsResyncPeriod := 15 * time.Second
-	// 	// If the only namespace is v1.NamespaceAll, then the client must be
-	// 	// privileged and a regular cache.ListWatch will be used. In this case
-	// 	// watching works and we do not need to resync so frequently.
-	// 	if listwatch.IsAllNamespaces(allowList) {
-	// 		nsResyncPeriod = resyncPeriod
-	// 	}
-	// 	nsInf := cache.NewSharedIndexInformer(
-	// 		operatorMetrics.NewInstrumentedListerWatcher(
-	// 			listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
-	// 		),
-	// 		&v1.Namespace{}, nsResyncPeriod, cache.Indexers{},
-	// 	)
 
-	// 	return nsInf
-	// }
 	nsMonInf := getNamespaceInformer(ctx, map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, clientset, operatorMetrics)
-
-	// go nsMonInf.Run(ctx.Done())
 
 	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
 
@@ -173,10 +151,6 @@ type PrometheusCRWatcher struct {
 // }
 
 func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, promOperatorLogger log.Logger, clientset *kubernetes.Clientset, operatorMetrics *operator.Metrics) cache.SharedIndexInformer {
-	// promRegisterer := prometheusgoclient.NewRegistry()
-	//promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
-	// operatorMetrics := operator.NewMetrics(promRegisterer)
-
 	nsInf := cache.NewSharedIndexInformer(
 		operatorMetrics.NewInstrumentedListerWatcher(
 			listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
@@ -255,37 +229,6 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 	if err != nil {
 		return nil, err
 	}
-
-	//store := assets.NewStore(w.k8sClient.CoreV1(), w.k8sClient.CoreV1())
-	// //serviceMonitorInstances := make(map[string]*monitoringv1.ServiceMonitor)
-	// smRetrieveErr := w.informers[monitoringv1.ServiceMonitorName].ListAll(w.serviceMonitorSelector, func(sm interface{}) {
-	// 	monitor := sm.(*monitoringv1.ServiceMonitor)
-	// 	key, _ := cache.DeletionHandlingMetaNamespaceKeyFunc(monitor)
-	// 	validateError := w.addStoreAssetsForServiceMonitor(ctx, monitor.Name, monitor.Namespace, monitor.Spec.Endpoints, store)
-	// 	if validateError != nil {
-	// 		w.logger.Error(validateError, "Failed validating ServiceMonitor, skipping", "ServiceMonitor:", monitor.Name, "in namespace", monitor.Namespace)
-	// 	} else {
-	// 		serviceMonitorInstances[key] = monitor
-	// 	}
-	// })
-	// if smRetrieveErr != nil {
-	// 	return nil, smRetrieveErr
-	// }
-
-	//podMonitorInstances := make(map[string]*monitoringv1.PodMonitor)
-	// pmRetrieveErr := w.informers[monitoringv1.PodMonitorName].ListAll(w.podMonitorSelector, func(pm interface{}) {
-	// 	monitor := pm.(*monitoringv1.PodMonitor)
-	// 	key, _ := cache.DeletionHandlingMetaNamespaceKeyFunc(monitor)
-	// 	validateError := w.addStoreAssetsForPodMonitor(ctx, monitor.Name, monitor.Namespace, monitor.Spec.PodMetricsEndpoints, store)
-	// 	if validateError != nil {
-	// 		w.logger.Error(validateError, "Failed validating PodMonitor, skipping", "PodMonitor:", monitor.Name, "in namespace", monitor.Namespace)
-	// 	} else {
-	// 		podMonitorInstances[key] = monitor
-	// 	}
-	// })
-	// if pmRetrieveErr != nil {
-	// 	return nil, pmRetrieveErr
-	// }
 
 	generatedConfig, err := w.configGenerator.GenerateServerConfiguration(
 		ctx,
