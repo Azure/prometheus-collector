@@ -24,6 +24,7 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/go-logr/logr"
 
+	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	promv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
@@ -32,6 +33,7 @@ import (
 	"github.com/prometheus-operator/prometheus-operator/pkg/listwatch"
 	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
+	prometheusgoclient "github.com/prometheus/client_golang/prometheus"
 	promconfig "github.com/prometheus/prometheus/config"
 	kubeDiscovery "github.com/prometheus/prometheus/discovery/kubernetes"
 	"gopkg.in/yaml.v2"
@@ -40,8 +42,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-
-	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 )
 
 const (
@@ -169,7 +169,7 @@ type PrometheusCRWatcher struct {
 // 	return labels.SelectorFromSet(s)
 // }
 
-func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, promOperatorLogger log.Logger, clientset monitoringclient.Interface, operatorMetrics *operator.Metrics) cache.SharedIndexInformer {
+func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, promOperatorLogger log.Logger, clientset *kubernetes.Clientset, operatorMetrics *operator.Metrics) cache.SharedIndexInformer {
 	// promRegisterer := prometheusgoclient.NewRegistry()
 	//promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
 	// operatorMetrics := operator.NewMetrics(promRegisterer)
