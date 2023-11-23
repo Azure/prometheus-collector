@@ -79,6 +79,7 @@ func NewUnprivilegedNamespaceListWatchFromClient(
 		optionsModifier(&options)
 		list := &v1.NamespaceList{}
 		for name := range allowedNamespaces {
+			level.Info(l).Log("msg", "Getting namespace", "namespace", name)
 			result := &v1.Namespace{}
 			err := c.Get().
 				Resource("namespaces").
@@ -95,6 +96,7 @@ func NewUnprivilegedNamespaceListWatchFromClient(
 			}
 			list.Items = append(list.Items, *result)
 		}
+		level.Info(l).Log("msg", "namespace list", "namespacelist", list)
 		return list, nil
 	}
 	watchFunc := func(_ metav1.ListOptions) (watch.Interface, error) {
