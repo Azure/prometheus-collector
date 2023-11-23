@@ -113,9 +113,9 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 			nsResyncPeriod = resyncPeriod
 		}
 		nsInf := cache.NewSharedIndexInformer(
-			operatorMetrics.NewInstrumentedListerWatcher(
-				listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
-			),
+			// operatorMetrics.NewInstrumentedListerWatcher(
+			listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
+			// ),
 			&v1.Namespace{}, nsResyncPeriod, cache.Indexers{},
 		)
 
