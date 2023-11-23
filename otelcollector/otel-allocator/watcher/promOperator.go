@@ -121,7 +121,8 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 
 		return nsInf
 	}
-	nsMonInf := newNamespaceInformer(map[string]struct{}{v1.NamespaceAll: {}})
+	// nsMonInf := newNamespaceInformer(map[string]struct{}{v1.NamespaceAll: {}})
+	nsMonInf := newNamespaceInformer(map[string]struct{}{"test": {}})
 
 	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
 
