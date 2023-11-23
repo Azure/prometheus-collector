@@ -72,16 +72,19 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval: monitoringv1.Duration(cfg.PrometheusCR.ScrapeInterval.String()),
 				ServiceMonitorSelector: &metav1.LabelSelector{
-					MatchLabels: cfg.ServiceMonitorSelector,
+					// MatchLabels: cfg.ServiceMonitorSelector,
+					MatchLabels: map[string]string{
+						"testsvc": "testsvc",
+					},
 				},
 				PodMonitorSelector: &metav1.LabelSelector{
-					MatchLabels: cfg.PodMonitorSelector,
+					// MatchLabels: cfg.PodMonitorSelector,
+					MatchLabels: map[string]string{
+						"testpod": "testpod",
+					},
 				},
 				ServiceMonitorNamespaceSelector: &metav1.LabelSelector{
-					//MatchLabels: cfg.ServiceMonitorNamespaceSelector,
-					MatchLabels: map[string]string{
-						"test": "test",
-					},
+					MatchLabels: cfg.ServiceMonitorNamespaceSelector,
 				},
 				PodMonitorNamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: cfg.PodMonitorNamespaceSelector,
@@ -89,7 +92,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 			},
 		},
 	}
-	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowWarn())
+	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowDebug())
 
 	generator, err := prometheus.NewConfigGenerator(promOperatorLogger, prom, true)
 	if err != nil {
