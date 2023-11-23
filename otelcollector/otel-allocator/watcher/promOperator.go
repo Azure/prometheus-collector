@@ -32,7 +32,6 @@ import (
 	"github.com/prometheus-operator/prometheus-operator/pkg/listwatch"
 	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
-	prometheusgoclient "github.com/prometheus/client_golang/prometheus"
 	promconfig "github.com/prometheus/prometheus/config"
 	kubeDiscovery "github.com/prometheus/prometheus/discovery/kubernetes"
 	"gopkg.in/yaml.v2"
@@ -97,9 +96,9 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		return nil, err
 	}
 	store := assets.NewStore(clientset.CoreV1(), clientset.CoreV1())
-	// promRegisterer := prometheusgoclient.NewRegistry()
+	promRegisterer := prometheusgoclient.NewRegistry()
 	// //promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
-	// operatorMetrics := operator.NewMetrics(promRegisterer)
+	operatorMetrics := operator.NewMetrics(promRegisterer)
 	// newNamespaceInformer := func(allowList map[string]struct{}) cache.SharedIndexInformer {
 	// 	// nsResyncPeriod is used to control how often the namespace informer
 	// 	// should resync. If the unprivileged ListerWatcher is used, then the
@@ -121,7 +120,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 
 	// 	return nsInf
 	// }
-	nsMonInf := getNamespaceInformer(ctx, map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, clientset)
+	nsMonInf := getNamespaceInformer(ctx, map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, clientset, operatorMetrics)
 
 	// go nsMonInf.Run(ctx.Done())
 
@@ -170,10 +169,10 @@ type PrometheusCRWatcher struct {
 // 	return labels.SelectorFromSet(s)
 // }
 
-func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, promOperatorLogger log.Logger, clientset monitoring.Interface) cache.SharedIndexInformer {
-	promRegisterer := prometheusgoclient.NewRegistry()
+func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, promOperatorLogger log.Logger, clientset monitoringclient.Interface, operatorMetrics *operator.Metrics) cache.SharedIndexInformer {
+	// promRegisterer := prometheusgoclient.NewRegistry()
 	//promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
-	operatorMetrics := operator.NewMetrics(promRegisterer)
+	// operatorMetrics := operator.NewMetrics(promRegisterer)
 
 	nsInf := cache.NewSharedIndexInformer(
 		operatorMetrics.NewInstrumentedListerWatcher(
@@ -211,7 +210,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 	}
 	success := true
 
-	go w.nsInformer.Run(ctx.Done())
+	go w.nsInformer.Run(w.stopChannel)
 
 	for name, resource := range w.informers {
 		resource.Start(w.stopChannel)
