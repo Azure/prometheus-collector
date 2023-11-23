@@ -72,16 +72,13 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval: monitoringv1.Duration(cfg.PrometheusCR.ScrapeInterval.String()),
 				ServiceMonitorSelector: &metav1.LabelSelector{
-					// MatchLabels: cfg.ServiceMonitorSelector,
-					MatchLabels: map[string]string{
-						"testsvc": "testsvc",
-					},
+					MatchLabels: cfg.ServiceMonitorSelector,
 				},
 				PodMonitorSelector: &metav1.LabelSelector{
-					// MatchLabels: cfg.PodMonitorSelector,
-					MatchLabels: map[string]string{
-						"testpod": "testpod",
-					},
+					MatchLabels: cfg.PodMonitorSelector,
+					// MatchLabels: map[string]string{
+					// 	"testpod": "testpod",
+					// },
 				},
 				ServiceMonitorNamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: cfg.ServiceMonitorNamespaceSelector,
