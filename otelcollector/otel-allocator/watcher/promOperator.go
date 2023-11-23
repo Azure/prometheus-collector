@@ -90,40 +90,40 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 			},
 		},
 	}
-	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowDebug())
+	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowWarn())
 
 	generator, err := prometheus.NewConfigGenerator(promOperatorLogger, prom, true)
 	if err != nil {
 		return nil, err
 	}
 	store := assets.NewStore(clientset.CoreV1(), clientset.CoreV1())
-	promRegisterer := prometheusgoclient.NewRegistry()
-	//promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
-	operatorMetrics := operator.NewMetrics(promRegisterer)
-	newNamespaceInformer := func(allowList map[string]struct{}) cache.SharedIndexInformer {
-		// nsResyncPeriod is used to control how often the namespace informer
-		// should resync. If the unprivileged ListerWatcher is used, then the
-		// informer must resync more often because it cannot watch for
-		// namespace changes.
-		nsResyncPeriod := 15 * time.Second
-		// If the only namespace is v1.NamespaceAll, then the client must be
-		// privileged and a regular cache.ListWatch will be used. In this case
-		// watching works and we do not need to resync so frequently.
-		if listwatch.IsAllNamespaces(allowList) {
-			nsResyncPeriod = resyncPeriod
-		}
-		nsInf := cache.NewSharedIndexInformer(
-			operatorMetrics.NewInstrumentedListerWatcher(
-				listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
-			),
-			&v1.Namespace{}, nsResyncPeriod, cache.Indexers{},
-		)
+	// promRegisterer := prometheusgoclient.NewRegistry()
+	// //promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
+	// operatorMetrics := operator.NewMetrics(promRegisterer)
+	// newNamespaceInformer := func(allowList map[string]struct{}) cache.SharedIndexInformer {
+	// 	// nsResyncPeriod is used to control how often the namespace informer
+	// 	// should resync. If the unprivileged ListerWatcher is used, then the
+	// 	// informer must resync more often because it cannot watch for
+	// 	// namespace changes.
+	// 	nsResyncPeriod := 15 * time.Second
+	// 	// If the only namespace is v1.NamespaceAll, then the client must be
+	// 	// privileged and a regular cache.ListWatch will be used. In this case
+	// 	// watching works and we do not need to resync so frequently.
+	// 	if listwatch.IsAllNamespaces(allowList) {
+	// 		nsResyncPeriod = resyncPeriod
+	// 	}
+	// 	nsInf := cache.NewSharedIndexInformer(
+	// 		operatorMetrics.NewInstrumentedListerWatcher(
+	// 			listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
+	// 		),
+	// 		&v1.Namespace{}, nsResyncPeriod, cache.Indexers{},
+	// 	)
 
-		return nsInf
-	}
-	nsMonInf := newNamespaceInformer(map[string]struct{}{v1.NamespaceAll: {}})
+	// 	return nsInf
+	// }
+	nsMonInf := getNamespaceInformer(ctx, map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, clientset)
 
-	go nsMonInf.Run(ctx.Done())
+	// go nsMonInf.Run(ctx.Done())
 
 	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
 
@@ -136,6 +136,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		kubeMonitoringClient: mClient,
 		k8sClient:            clientset,
 		informers:            monitoringInformers,
+		nsInformer:           nsMonInf,
 		stopChannel:          make(chan struct{}),
 		configGenerator:      generator,
 		kubeConfigPath:       cliConfig.KubeConfigFilePath,
@@ -151,6 +152,7 @@ type PrometheusCRWatcher struct {
 	kubeMonitoringClient monitoringclient.Interface
 	k8sClient            kubernetes.Interface
 	informers            map[string]*informers.ForResource
+	nsInformer           cache.SharedIndexInformer
 	stopChannel          chan struct{}
 	configGenerator      *prometheus.ConfigGenerator
 	kubeConfigPath       string
@@ -167,6 +169,21 @@ type PrometheusCRWatcher struct {
 // 	}
 // 	return labels.SelectorFromSet(s)
 // }
+
+func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, promOperatorLogger log.Logger, clientset monitoring.Interface) cache.SharedIndexInformer {
+	promRegisterer := prometheusgoclient.NewRegistry()
+	//promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
+	operatorMetrics := operator.NewMetrics(promRegisterer)
+
+	nsInf := cache.NewSharedIndexInformer(
+		operatorMetrics.NewInstrumentedListerWatcher(
+			listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
+		),
+		&v1.Namespace{}, resyncPeriod, cache.Indexers{},
+	)
+
+	return nsInf
+}
 
 // getInformers returns a map of informers for the given resources.
 func getInformers(factory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
@@ -193,6 +210,8 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 		Watcher: Watcher(w),
 	}
 	success := true
+
+	go w.nsInformer.Run(ctx.Done())
 
 	for name, resource := range w.informers {
 		resource.Start(w.stopChannel)
