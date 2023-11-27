@@ -401,7 +401,7 @@ jobs:
         dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
         alertWarningLevel: 'High'
         failOnAlert: true
-        ignoreDirectories: '/mixins,/tools'
+        ignoreDirectories: '/s/mixins,/s/tools,/s/otelcollector/react'
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Ev2: Generate image artifacts"
