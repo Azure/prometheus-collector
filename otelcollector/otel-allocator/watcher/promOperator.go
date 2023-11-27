@@ -147,7 +147,7 @@ type PrometheusCRWatcher struct {
 // 	return labels.SelectorFromSet(s)
 // }
 
-func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, promOperatorLogger log.Logger, clientset *kubernetes.Interface, operatorMetrics *operator.Metrics) cache.SharedIndexInformer {
+func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, promOperatorLogger log.Logger, clientset kubernetes.Interface, operatorMetrics *operator.Metrics) cache.SharedIndexInformer {
 	nsInf := cache.NewSharedIndexInformer(
 		operatorMetrics.NewInstrumentedListerWatcher(
 			listwatch.NewUnprivilegedNamespaceListWatchFromClient(ctx, promOperatorLogger, clientset.CoreV1().RESTClient(), allowList, map[string]struct{}{}, fields.Everything()),
