@@ -16,14 +16,19 @@ package watcher
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
 	fakemonitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/fake"
 	"github.com/prometheus-operator/prometheus-operator/pkg/informers"
+	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
+	prometheusgoclient "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	promconfig "github.com/prometheus/prometheus/config"
@@ -311,28 +316,80 @@ func getTestPrometheuCRWatcher(t *testing.T, sm *monitoringv1.ServiceMonitor, pm
 		t.Fatal(t, err)
 	}
 
+	cfg := config.Config{}
+	// 	// AllocationStrategy: &allocationStrategy,
+	// 	LabelSelector: map[string]string{
+	// 		"rsName":                         "ama-metrics",
+	// 		"kubernetes.azure.com/managedby": "aks",
+	// 	},
+	// }
+
 	prom := &monitoringv1.Prometheus{
 		Spec: monitoringv1.PrometheusSpec{
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval: monitoringv1.Duration("30s"),
+				ServiceMonitorSelector: &metav1.LabelSelector{
+					MatchLabels: cfg.ServiceMonitorSelector,
+				},
+				PodMonitorSelector: &metav1.LabelSelector{
+					MatchLabels: cfg.PodMonitorSelector,
+				},
+				ServiceMonitorNamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: cfg.ServiceMonitorNamespaceSelector,
+				},
+				PodMonitorNamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: cfg.PodMonitorNamespaceSelector,
+				},
 			},
 		},
 	}
 
-	generator, err := prometheus.NewConfigGenerator(log.NewNopLogger(), prom, true)
+	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowDebug())
+
+	generator, err := prometheus.NewConfigGenerator(promOperatorLogger, prom, true)
 	if err != nil {
 		t.Fatal(t, err)
 	}
+	store := assets.NewStore(k8sClient.CoreV1(), k8sClient.CoreV1())
+	promRegisterer := prometheusgoclient.NewRegistry()
+	// promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
+	operatorMetrics := operator.NewMetrics(promRegisterer)
+
+	nsMonInf := getNamespaceInformer(context.Background(), map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, k8sClient, operatorMetrics)
+
+	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
+
+	// servMonSelector := getSelector(cfg.ServiceMonitorSelector)
+
+	// podMonSelector := getSelector(cfg.PodMonitorSelector)
 
 	return &PrometheusCRWatcher{
 		kubeMonitoringClient: mClient,
 		k8sClient:            k8sClient,
 		informers:            informers,
+		nsInformer:           nsMonInf,
+		stopChannel:          make(chan struct{}),
 		configGenerator:      generator,
-		// serviceMonitorSelector: getSelector(nil),
-		// podMonitorSelector:     getSelector(nil),
-		stopChannel: make(chan struct{}),
+		// serviceMonitorSelector: servMonSelector,
+		// podMonitorSelector:     podMonSelector,
+		resourceSelector: resourceSelector,
+		// store:            store,
 	}
+
+	// generator, err := prometheus.NewConfigGenerator(log.NewNopLogger(), prom, true)
+	// if err != nil {
+	// 	t.Fatal(t, err)
+	// }
+
+	// return &PrometheusCRWatcher{
+	// 	kubeMonitoringClient: mClient,
+	// 	k8sClient:            k8sClient,
+	// 	informers:            informers,
+	// 	configGenerator:      generator,
+	// 	// serviceMonitorSelector: getSelector(nil),
+	// 	// podMonitorSelector:     getSelector(nil),
+	// 	stopChannel: make(chan struct{}),
+	// }
 }
 
 // Remove relable configs fields from scrape configs for testing,
