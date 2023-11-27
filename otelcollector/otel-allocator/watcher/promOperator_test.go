@@ -325,13 +325,13 @@ func getTestPrometheuCRWatcher(t *testing.T, sm *monitoringv1.ServiceMonitor, pm
 	}
 
 	return &PrometheusCRWatcher{
-		kubeMonitoringClient:   mClient,
-		k8sClient:              k8sClient,
-		informers:              informers,
-		configGenerator:        generator,
-		serviceMonitorSelector: getSelector(nil),
-		podMonitorSelector:     getSelector(nil),
-		stopChannel:            make(chan struct{}),
+		kubeMonitoringClient: mClient,
+		k8sClient:            k8sClient,
+		informers:            informers,
+		configGenerator:      generator,
+		// serviceMonitorSelector: getSelector(nil),
+		// podMonitorSelector:     getSelector(nil),
+		stopChannel: make(chan struct{}),
 	}
 }
 
