@@ -168,6 +168,7 @@ jobs:
     LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
+    skipComponentGovernanceDetection: true
   steps:
     - checkout: self
       persistCredentials: true
@@ -212,6 +213,7 @@ jobs:
   dependsOn: common
   variables:
     WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
+    skipComponentGovernanceDetection: true
   steps:
     - powershell: |
         docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
@@ -228,6 +230,7 @@ jobs:
   dependsOn: common
   variables:
     WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+    skipComponentGovernanceDetection: true
   steps:
     - powershell: |
         docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
@@ -457,6 +460,7 @@ jobs:
     TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
+    skipComponentGovernanceDetection: true
   steps:
     - checkout: self
       persistCredentials: true
@@ -541,6 +545,7 @@ jobs:
     LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
+    skipComponentGovernanceDetection: true
   steps:
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
@@ -708,6 +713,7 @@ jobs:
     WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
     WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
     WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+    skipComponentGovernanceDetection: true
   steps:
     - task: GoTool@0
       displayName: "Build: specify golang version"
@@ -804,6 +810,7 @@ jobs:
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+    skipComponentGovernanceDetection: true
   steps:
   - task: HelmInstaller@1
     displayName: 'Build: install Helm version'
@@ -847,6 +854,7 @@ jobs:
     IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
     ARC_EXTENSION: true
+    skipComponentGovernanceDetection: true
   steps:
   - task: HelmInstaller@1
     displayName: 'Build: install Helm version'
@@ -895,6 +903,7 @@ jobs:
   - ARC_Chart
   variables:
     HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
+    skipComponentGovernanceDetection: true
   steps:
   - bash: |
       # Create JSON request body
@@ -986,6 +995,7 @@ jobs:
     IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
     IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+    skipComponentGovernanceDetection: true
   steps:
   - checkout: self
     submodules: true
