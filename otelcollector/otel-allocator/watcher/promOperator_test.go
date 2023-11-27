@@ -369,7 +369,7 @@ func getTestPrometheuCRWatcher(t *testing.T, sm *monitoringv1.ServiceMonitor, pm
 	// promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
 	operatorMetrics := operator.NewMetrics(promRegisterer)
 
-	nsMonInf := getNamespaceInformer(context.Background(), map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, nil, operatorMetrics)
+	nsMonInf := getNamespaceInformer(context.Background(), map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, k8sClient, operatorMetrics)
 
 	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
 
