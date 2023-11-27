@@ -389,12 +389,13 @@ jobs:
 
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
         dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
         alertWarningLevel: 'High'
+        failOnAlert: true
+        ignoreDirectories: '/mixins,/tools'
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Ev2: Generate image artifacts"
