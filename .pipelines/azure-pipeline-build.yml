@@ -387,7 +387,7 @@ jobs:
         fi
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
-      condition: eq(variables.IS_PR, false)
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'
@@ -498,7 +498,7 @@ jobs:
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
-      condition: eq(variables.IS_PR, false)
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
     - task: EsrpCodeSigning@3
       displayName: "ESRP CodeSigning for TargetAllocator"
       inputs:
@@ -583,7 +583,7 @@ jobs:
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
-      condition: eq(variables.IS_PR, false)
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
     - task: EsrpCodeSigning@3
       displayName: "ESRP CodeSigning for Config Reader"
