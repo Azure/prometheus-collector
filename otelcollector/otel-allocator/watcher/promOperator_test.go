@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
 	fakemonitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/fake"
@@ -316,7 +317,7 @@ func getTestPrometheuCRWatcher(t *testing.T, sm *monitoringv1.ServiceMonitor, pm
 		t.Fatal(t, err)
 	}
 
-	cfg := config.Config{}
+	cfg := allocatorconfig.Config{}
 	// 	// AllocationStrategy: &allocationStrategy,
 	// 	LabelSelector: map[string]string{
 	// 		"rsName":                         "ama-metrics",
@@ -350,12 +351,25 @@ func getTestPrometheuCRWatcher(t *testing.T, sm *monitoringv1.ServiceMonitor, pm
 	if err != nil {
 		t.Fatal(t, err)
 	}
+
+	// c := fake.NewSimpleClientset(
+	// 	&v1.Secret{
+	// 		ObjectMeta: metav1.ObjectMeta{
+	// 			Name:      "secret",
+	// 			Namespace: "ns1",
+	// 		},
+	// 		Data: map[string][]byte{
+	// 			"key1": []byte("val1"),
+	// 		},
+	// 	},
+	// )
+
 	store := assets.NewStore(k8sClient.CoreV1(), k8sClient.CoreV1())
 	promRegisterer := prometheusgoclient.NewRegistry()
 	// promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
 	operatorMetrics := operator.NewMetrics(promRegisterer)
 
-	nsMonInf := getNamespaceInformer(context.Background(), map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, k8sClient, operatorMetrics)
+	nsMonInf := getNamespaceInformer(context.Background(), map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, nil, operatorMetrics)
 
 	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
 
