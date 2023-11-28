@@ -192,6 +192,7 @@ jobs:
     LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
+    skipComponentGovernanceDetection: true
   steps:
     - checkout: self
       persistCredentials: true
