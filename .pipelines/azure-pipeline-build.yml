@@ -30,7 +30,6 @@ jobs:
   displayName: Set image tags and publish Ev2 artifacts
   pool:
     name: Azure-Pipelines-CI-Test-EO
-  variables:
   steps:
     - checkout: self
       submodules: true
