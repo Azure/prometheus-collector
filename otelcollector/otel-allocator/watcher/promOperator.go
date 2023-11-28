@@ -194,7 +194,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 	}
 	success := true
 
-	w.nsInformer.Run(w.stopChannel)
+	go w.nsInformer.Run(w.stopChannel)
 	if ok := cache.WaitForNamedCacheSync("namespace", w.stopChannel, w.nsInformer.HasSynced); !ok {
 		success = false
 	}
