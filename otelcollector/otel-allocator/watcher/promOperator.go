@@ -207,14 +207,14 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 				return
 			}
 
-			for __, selector := range map[string]*metav1.LabelSelector{
-				"PodMonitors":     w.podMonitorNamespaceSelector,
-				"ServiceMonitors": w.serviceMonitorNamespaceSelector,
+			for name, selector := range [string]*metav1.LabelSelector{
+				"PodMonitorNamespaceSelector":     w.podMonitorNamespaceSelector,
+				"ServiceMonitorNamespaceSelector": w.serviceMonitorNamespaceSelector,
 			} {
 
 				sync, err := k8sutil.LabelSelectionHasChanged(old.Labels, cur.Labels, selector)
 				if err != nil {
-					w.logger.Error(err, "Failed to check label selection between namespaces while handling namespace updates")
+					w.logger.Error(err, "Failed to check label selection between namespaces while handling namespace updates", "selector", name)
 					return
 				}
 
