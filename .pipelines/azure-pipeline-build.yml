@@ -919,15 +919,15 @@ jobs:
     condition: eq(variables.IS_PR, false)
   
   - task: ComponentGovernanceComponentDetection@0
-      displayName: "SDL: run component governance"
-      inputs:
-        scanType: 'Register'
-        verbosity: 'Verbose'
-        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
-        alertWarningLevel: 'High'
-        failOnAlert: true
-        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
-        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
+    displayName: "SDL: run component governance"
+    inputs:
+      scanType: 'Register'
+      verbosity: 'Verbose'
+      dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
+      alertWarningLevel: 'High'
+      failOnAlert: true
+      sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+      ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: ARC_Chart
   displayName: "Package Arc helm chart"
@@ -982,15 +982,15 @@ jobs:
       artifactName: drop
   
   - task: ComponentGovernanceComponentDetection@0
-      displayName: "SDL: run component governance"
-      inputs:
-        scanType: 'Register'
-        verbosity: 'Verbose'
-        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
-        alertWarningLevel: 'High'
-        failOnAlert: true
-        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
-        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
+    displayName: "SDL: run component governance"
+    inputs:
+      scanType: 'Register'
+      verbosity: 'Verbose'
+      dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
+      alertWarningLevel: 'High'
+      failOnAlert: true
+      sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+      ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: DeployARC
   displayName: "Deploy to ARC dev cluster"
