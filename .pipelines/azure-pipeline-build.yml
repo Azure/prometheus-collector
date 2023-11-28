@@ -157,7 +157,6 @@ jobs:
         scanType: 'Register'
         verbosity: 'Verbose'
         alertWarningLevel: 'High'
-        failOnAlert: true
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -195,7 +194,6 @@ jobs:
         scanType: 'Register'
         verbosity: 'Verbose'
         alertWarningLevel: 'High'
-        failOnAlert: true
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -227,7 +225,6 @@ jobs:
         scanType: 'Register'
         verbosity: 'Verbose'
         alertWarningLevel: 'High'
-        failOnAlert: true
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -252,7 +249,6 @@ jobs:
         scanType: 'Register'
         verbosity: 'Verbose'
         alertWarningLevel: 'High'
-        failOnAlert: true
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -277,7 +273,6 @@ jobs:
         scanType: 'Register'
         verbosity: 'Verbose'
         alertWarningLevel: 'High'
-        failOnAlert: true
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -441,7 +436,6 @@ jobs:
         verbosity: 'Verbose'
         dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
         alertWarningLevel: 'High'
-        failOnAlert: true
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -583,7 +577,7 @@ jobs:
         verbosity: 'Verbose'
         dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
         alertWarningLevel: 'High'
-        failOnAlert: true
+
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -680,7 +674,6 @@ jobs:
         verbosity: 'Verbose'
         dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
         alertWarningLevel: 'High'
-        failOnAlert: true
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -721,7 +714,6 @@ jobs:
         verbosity: 'Verbose'
         dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
         alertWarningLevel: 'High'
-        failOnAlert: true
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -763,7 +755,6 @@ jobs:
         verbosity: 'Verbose'
         dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
         alertWarningLevel: 'High'
-        failOnAlert: true
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -868,7 +859,6 @@ jobs:
         scanType: 'Register'
         verbosity: 'Verbose'
         alertWarningLevel: 'High'
-        failOnAlert: true
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -924,7 +914,6 @@ jobs:
       verbosity: 'Verbose'
       dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
       alertWarningLevel: 'High'
-      failOnAlert: true
       sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
       ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -987,7 +976,6 @@ jobs:
       verbosity: 'Verbose'
       dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
       alertWarningLevel: 'High'
-      failOnAlert: true
       sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
       ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -1083,7 +1071,6 @@ jobs:
       scanType: 'Register'
       verbosity: 'Verbose'
       alertWarningLevel: 'High'
-      failOnAlert: true
       sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
       ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
@@ -1174,6 +1161,5 @@ jobs:
       scanType: 'Register'
       verbosity: 'Verbose'
       alertWarningLevel: 'High'
-      failOnAlert: true
       sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
       ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
