@@ -207,7 +207,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 				return
 			}
 
-			for name, selector := range [string]*metav1.LabelSelector{
+			for name, selector := range map[string]*metav1.LabelSelector{
 				"PodMonitorNamespaceSelector":     w.podMonitorNamespaceSelector,
 				"ServiceMonitorNamespaceSelector": w.serviceMonitorNamespaceSelector,
 			} {
