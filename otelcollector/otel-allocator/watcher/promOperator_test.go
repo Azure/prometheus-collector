@@ -253,7 +253,7 @@ func TestLoadConfig(t *testing.T) {
 			w := getTestPrometheuCRWatcher(t, tt.serviceMonitor, tt.podMonitor)
 
 			// Start namespace informers in order to populate cache.
-			// w.nsInformer.Run(w.stopChannel)
+			w.nsInformer.Run(w.stopChannel)
 			// for !w.nsInformer.HasSynced() {
 			// 	time.Sleep(50 * time.Millisecond)
 			// }
