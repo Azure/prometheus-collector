@@ -318,7 +318,7 @@ func getTestPrometheuCRWatcher(t *testing.T, sm *monitoringv1.ServiceMonitor, pm
 		t.Fatal(t, err)
 	}
 
-	_, err = k8sClient.KubeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
+	_, err = k8sClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-namespace",
 		},
