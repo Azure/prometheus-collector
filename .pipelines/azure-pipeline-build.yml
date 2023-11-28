@@ -50,7 +50,9 @@ jobs:
       kubectl cluster-info
       kubectl testkube version
       kubectl testkube run test container-logs --verbose
-      kubectl testkube get executions --test container-logs --verbose
+      execution_name=$(kubectl testkube get executions --test container-logs --limit 1 | grep container-logs | awk '{print $1}')
+      kubectl testkube watch execution $execution_name
+      kubectl testkube get execution $execution_name --logs-only
     workingDirectory: $(Build.SourcesDirectory)
     displayName: "Display output"
 
