@@ -41,6 +41,7 @@ jobs:
     workingDirectory: $(Build.SourcesDirectory)
     displayName: "Install testkube CLI"
   - task: Kubernetes@1
+    name: kubectlcmds
     inputs:
       connectionType: 'Azure Resource Manager'
       azureSubscriptionEndpoint: 'ContainerInsights_Dev_Grace(b9842c7c-1a38-4385-8f39-a51314758bcf)'
@@ -56,6 +57,10 @@ jobs:
         kubectl testkube version
         kubectl testkube run test container-logs --verbose
         kubectl testkube get executions --test container-logs --verbose
+  - bash: |
+      echo $(kubectlcmds.KubectlOutput)
+    workingDirectory: $(Build.SourcesDirectory)
+    displayName: "Display output"
 
 - job: Common
   displayName: Set image tags and publish Ev2 artifacts
