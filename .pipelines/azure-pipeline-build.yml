@@ -402,7 +402,8 @@ jobs:
         dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
         alertWarningLevel: 'High'
         failOnAlert: true
-        ignoreDirectories: '/s/mixins,/s/tools,/s/otelcollector/react'
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Ev2: Generate image artifacts"
@@ -1013,7 +1014,7 @@ jobs:
     inputs:
       helmVersionToInstall: 3.12.3
   - bash: |
-      for i in 1 2 3 4 5 6 7 8 9 10
+      for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
           do
             sleep 30
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
