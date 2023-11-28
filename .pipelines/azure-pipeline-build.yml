@@ -38,6 +38,7 @@ jobs:
       echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
       sudo apt-get update
       sudo apt-get install -y testkube
+      testkube version
     workingDirectory: $(Build.SourcesDirectory)
     displayName: "Install testkube CLI"
   - task: Kubernetes@1
@@ -48,11 +49,13 @@ jobs:
       kubernetesCluster: 'grace-addon'
       useClusterAdmin: true
       namespace: 'testkube'
+      command: 
       useConfigurationFile: true
       configurationType: 'inline'
-      inline: 'kubectl testkube run test container-logs'
-      secretType: 'dockerRegistry'
-      containerRegistryType: 'Azure Container Registry'
+      inline: |
+        kubectl cluster-info
+        kubectl testkube run test container-logs --verbose
+        kubectl testkube get executions --test container-logs --verbose
 
 - job: Common
   displayName: Set image tags and publish Ev2 artifacts
