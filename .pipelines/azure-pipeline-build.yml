@@ -40,23 +40,17 @@ jobs:
       sudo apt-get install -y testkube
     workingDirectory: $(Build.SourcesDirectory)
     displayName: "Install testkube CLI"
-  - task: Kubernetes@1
-    name: KubectlCmds
+  - task: AzureCLI@1
+    displayName: Get access credentials for the managed cluster
     inputs:
-      connectionType: 'Azure Resource Manager'
-      azureSubscriptionEndpoint: 'ContainerInsights_Dev_Grace(b9842c7c-1a38-4385-8f39-a51314758bcf)'
-      azureResourceGroup: 'grace-addon'
-      kubernetesCluster: 'grace-addon'
-      useClusterAdmin: true
-      useConfigurationFile: true
-      configurationType: 'inline'
-      inline: |
-        kubectl cluster-info
-        kubectl testkube version
-        kubectl testkube run test container-logs --verbose
-        kubectl testkube get executions --test container-logs --verbose
+      azureSubscription: 'ContainerInsights_Dev_Grace(b9842c7c-1a38-4385-8f39-a51314758bcf)'
+      scriptLocation: 'inlineScript'
+      inlineScript: 'az aks get-credentials -g grace-addon -n grace-addon'
   - bash: |
-      echo "$(KubectlCmds.KubectlOutput)"
+      kubectl cluster-info
+      kubectl testkube version
+      kubectl testkube run test container-logs --verbose
+      kubectl testkube get executions --test container-logs --verbose
     workingDirectory: $(Build.SourcesDirectory)
     displayName: "Display output"
 
