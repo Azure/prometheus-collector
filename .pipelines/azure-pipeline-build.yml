@@ -41,7 +41,7 @@ jobs:
     workingDirectory: $(Build.SourcesDirectory)
     displayName: "Install testkube CLI"
   - task: Kubernetes@1
-    name: kubectlcmds
+    name: KubectlCmds
     inputs:
       connectionType: 'Azure Resource Manager'
       azureSubscriptionEndpoint: 'ContainerInsights_Dev_Grace(b9842c7c-1a38-4385-8f39-a51314758bcf)'
@@ -58,7 +58,7 @@ jobs:
         kubectl testkube run test container-logs --verbose
         kubectl testkube get executions --test container-logs --verbose
   - bash: |
-      echo $(kubectlcmds.KubectlOutput)
+      echo "$(KubectlCmds.KubectlOutput)"
     workingDirectory: $(Build.SourcesDirectory)
     displayName: "Display output"
 
