@@ -251,6 +251,13 @@ func TestLoadConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := getTestPrometheuCRWatcher(t, tt.serviceMonitor, tt.podMonitor)
+
+			// Start namespace informers in order to populate cache.
+			w.nsInformer.Run(w.stopChannel)
+			for !w.nsInformer.HasSynced() {
+				time.Sleep(50 * time.Millisecond)
+			}
+
 			for _, informer := range w.informers {
 				// Start informers in order to populate cache.
 				informer.Start(w.stopChannel)
