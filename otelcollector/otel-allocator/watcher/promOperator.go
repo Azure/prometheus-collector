@@ -31,7 +31,7 @@ import (
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/prometheus-operator/prometheus-operator/pkg/informers"
 
-	// "github.com/prometheus-operator/prometheus-operator/pkg/k8sutil"
+	"github.com/prometheus-operator/prometheus-operator/pkg/k8sutil"
 	"github.com/prometheus-operator/prometheus-operator/pkg/listwatch"
 	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
@@ -197,35 +197,35 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 	if ok := cache.WaitForNamedCacheSync("namespace", w.stopChannel, w.nsInformer.HasSynced); !ok {
 		success = false
 	}
-	// w.nsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-	// 	UpdateFunc: func(oldObj, newObj interface{}) {
-	// 		old := oldObj.(*v1.Namespace)
-	// 		cur := newObj.(*v1.Namespace)
+	w.nsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			old := oldObj.(*v1.Namespace)
+			cur := newObj.(*v1.Namespace)
 
-	// 		// Periodic resync may resend the Namespace without changes
-	// 		// in-between.
-	// 		if old.ResourceVersion == cur.ResourceVersion {
-	// 			return
-	// 		}
+			// Periodic resync may resend the Namespace without changes
+			// in-between.
+			if old.ResourceVersion == cur.ResourceVersion {
+				return
+			}
 
-	// 		for name, selector := range map[string]*metav1.LabelSelector{
-	// 			"PodMonitorNamespaceSelector":     w.podMonitorNamespaceSelector,
-	// 			"ServiceMonitorNamespaceSelector": w.serviceMonitorNamespaceSelector,
-	// 		} {
+			for name, selector := range map[string]*metav1.LabelSelector{
+				"PodMonitorNamespaceSelector":     w.podMonitorNamespaceSelector,
+				"ServiceMonitorNamespaceSelector": w.serviceMonitorNamespaceSelector,
+			} {
 
-	// 			sync, err := k8sutil.LabelSelectionHasChanged(old.Labels, cur.Labels, selector)
-	// 			if err != nil {
-	// 				w.logger.Error(err, "Failed to check label selection between namespaces while handling namespace updates", "selector", name)
-	// 				return
-	// 			}
+				sync, err := k8sutil.LabelSelectionHasChanged(old.Labels, cur.Labels, selector)
+				if err != nil {
+					w.logger.Error(err, "Failed to check label selection between namespaces while handling namespace updates", "selector", name)
+					return
+				}
 
-	// 			if sync {
-	// 				upstreamEvents <- event
-	// 				return
-	// 			}
-	// 		}
-	// 	},
-	// })
+				if sync {
+					upstreamEvents <- event
+					return
+				}
+			}
+		},
+	})
 
 	for name, resource := range w.informers {
 		resource.Start(w.stopChannel)
