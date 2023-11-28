@@ -33,7 +33,10 @@ func SetupKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
-		return nil, nil, err
+		cfg, err = rest.InClusterConfig()
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	
 	client, err := kubernetes.NewForConfig(cfg)
