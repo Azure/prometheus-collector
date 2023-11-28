@@ -31,7 +31,6 @@ jobs:
   pool:
     name: Azure-Pipelines-CI-Test-EO
   variables:
-    skipComponentGovernanceDetection: true
   steps:
     - checkout: self
       submodules: true
@@ -152,6 +151,16 @@ jobs:
         Contents: |
           **/*
         TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
+    
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: publish Ev2 deployment artifacts"
@@ -168,7 +177,6 @@ jobs:
     LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
-    skipComponentGovernanceDetection: true
   steps:
     - checkout: self
       persistCredentials: true
@@ -182,6 +190,15 @@ jobs:
         docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
       displayName: "Build: build and push reference app golang linux image to dev ACR"
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: Reference_App_Python_Linux
   displayName: Build reference app image for python linux
@@ -192,7 +209,6 @@ jobs:
     LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
-    skipComponentGovernanceDetection: true
   steps:
     - checkout: self
       persistCredentials: true
@@ -206,6 +222,15 @@ jobs:
         docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
       displayName: "Build: build and push reference app python linux image to dev ACR"
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: Reference_App_Golang_Windows
   displayName: Build reference app image for golang windows
@@ -214,7 +239,6 @@ jobs:
   dependsOn: common
   variables:
     WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
-    skipComponentGovernanceDetection: true
   steps:
     - powershell: |
         docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
@@ -223,6 +247,15 @@ jobs:
       displayName: "Build: build and push reference app golang windows image to dev ACR"
       condition: eq(variables.IS_PR, false)
       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: Reference_App_Python_Windows
   displayName: Build reference app image for python windows
@@ -231,7 +264,6 @@ jobs:
   dependsOn: common
   variables:
     WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
-    skipComponentGovernanceDetection: true
   steps:
     - powershell: |
         docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
@@ -240,6 +272,15 @@ jobs:
       displayName: "Build: build and push reference app python windows image to dev ACR"
       condition: eq(variables.IS_PR, false)
       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: Linux
   displayName: Build linux image
@@ -462,7 +503,6 @@ jobs:
     TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
-    skipComponentGovernanceDetection: true
   steps:
     - checkout: self
       persistCredentials: true
@@ -537,6 +577,16 @@ jobs:
       workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
       condition: eq(variables.IS_MAIN_BRANCH, true)
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
+        alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: Linux_ConfigReader
   displayName: Build linux image for config reader
@@ -547,7 +597,6 @@ jobs:
     LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
-    skipComponentGovernanceDetection: true
   steps:
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
@@ -625,6 +674,17 @@ jobs:
       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxcfgreader/"
       condition: eq(variables.IS_MAIN_BRANCH, true)
 
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
+        alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
+
 - job: Windows2019
   displayName: "Build windows 2019 image"
   pool:
@@ -657,11 +717,14 @@ jobs:
 
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
         dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
+        alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: Windows2022
   displayName: "Build windows 2022 image"
@@ -696,12 +759,14 @@ jobs:
 
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
-        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)'
+        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
         alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: WindowsMultiArch
   displayName: "Build windows multi-arch image"
@@ -797,6 +862,16 @@ jobs:
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
+    
+    - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: Chart
   displayName: "Package 1P helm chart"
@@ -842,6 +917,17 @@ jobs:
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
     displayName: "Build: push helm chart to dev ACR"
     condition: eq(variables.IS_PR, false)
+  
+  - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
+        alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: ARC_Chart
   displayName: "Package Arc helm chart"
@@ -894,6 +980,17 @@ jobs:
     inputs:
       pathToPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: drop
+  
+  - task: ComponentGovernanceComponentDetection@0
+      displayName: "SDL: run component governance"
+      inputs:
+        scanType: 'Register'
+        verbosity: 'Verbose'
+        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
+        alertWarningLevel: 'High'
+        failOnAlert: true
+        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
 - job: DeployARC
   displayName: "Deploy to ARC dev cluster"
@@ -981,6 +1078,16 @@ jobs:
         az config set extension.use_dynamic_install=yes_without_prompt
         az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
 
+  - task: ComponentGovernanceComponentDetection@0
+    displayName: "SDL: run component governance"
+    inputs:
+      scanType: 'Register'
+      verbosity: 'Verbose'
+      alertWarningLevel: 'High'
+      failOnAlert: true
+      sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+      ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
+
 - job: Deploy
   displayName: "Deploy to dev clusters"
   pool:
@@ -1061,3 +1168,13 @@ jobs:
       releaseName: 'ama-metrics'
       waitForExecution: false
       arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+  
+  - task: ComponentGovernanceComponentDetection@0
+    displayName: "SDL: run component governance"
+    inputs:
+      scanType: 'Register'
+      verbosity: 'Verbose'
+      alertWarningLevel: 'High'
+      failOnAlert: true
+      sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+      ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
