@@ -30,6 +30,7 @@ import (
 	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/prometheus-operator/prometheus-operator/pkg/informers"
+	"github.com/prometheus-operator/prometheus-operator/pkg/k8sutil"
 	"github.com/prometheus-operator/prometheus-operator/pkg/listwatch"
 	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
@@ -117,6 +118,12 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		stopChannel:          make(chan struct{}),
 		configGenerator:      generator,
 		kubeConfigPath:       cliConfig.KubeConfigFilePath,
+		podMonitorNamespaceSelector: &metav1.LabelSelector{
+			MatchLabels: cfg.PodMonitorNamespaceSelector,
+		},
+		serviceMonitorNamespaceSelector: &metav1.LabelSelector{
+			MatchLabels: cfg.ServiceMonitorNamespaceSelector,
+		},
 		// serviceMonitorSelector: servMonSelector,
 		// podMonitorSelector:     podMonSelector,
 		resourceSelector: resourceSelector,
@@ -125,15 +132,16 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 }
 
 type PrometheusCRWatcher struct {
-	logger               logr.Logger
-	kubeMonitoringClient monitoringclient.Interface
-	k8sClient            kubernetes.Interface
-	informers            map[string]*informers.ForResource
-	nsInformer           cache.SharedIndexInformer
-	stopChannel          chan struct{}
-	configGenerator      *prometheus.ConfigGenerator
-	kubeConfigPath       string
-
+	logger                          logr.Logger
+	kubeMonitoringClient            monitoringclient.Interface
+	k8sClient                       kubernetes.Interface
+	informers                       map[string]*informers.ForResource
+	nsInformer                      cache.SharedIndexInformer
+	stopChannel                     chan struct{}
+	configGenerator                 *prometheus.ConfigGenerator
+	kubeConfigPath                  string
+	podMonitorNamespaceSelector     *metav1.LabelSelector
+	serviceMonitorNamespaceSelector *metav1.LabelSelector
 	// serviceMonitorSelector labels.Selector
 	// podMonitorSelector     labels.Selector
 	resourceSelector *prometheus.ResourceSelector
@@ -184,7 +192,39 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 	}
 	success := true
 
-	go w.nsInformer.Run(w.stopChannel)
+	w.nsInformer.Run(w.stopChannel)
+	if ok := cache.WaitForNamedCacheSync("namespace", w.stopChannel, w.nsInformer.HasSynced); !ok {
+		success = false
+	}
+	w.nsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			old := oldObj.(*v1.Namespace)
+			cur := newObj.(*v1.Namespace)
+
+			// Periodic resync may resend the Namespace without changes
+			// in-between.
+			if old.ResourceVersion == cur.ResourceVersion {
+				return
+			}
+
+			for __, selector := range map[string]*metav1.LabelSelector{
+				"PodMonitors":     w.podMonitorNamespaceSelector,
+				"ServiceMonitors": w.serviceMonitorNamespaceSelector,
+			} {
+
+				sync, err := k8sutil.LabelSelectionHasChanged(old.Labels, cur.Labels, selector)
+				if err != nil {
+					w.logger.Error(err, "Failed to check label selection between namespaces while handling namespace updates")
+					return
+				}
+
+				if sync {
+					upstreamEvents <- event
+					return
+				}
+			}
+		},
+	})
 
 	for name, resource := range w.informers {
 		resource.Start(w.stopChannel)
@@ -205,7 +245,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 		})
 	}
 	if !success {
-		return fmt.Errorf("failed to sync cache")
+		return fmt.Errorf("failed to sync one of the caches")
 	}
 	<-w.stopChannel
 	return nil
