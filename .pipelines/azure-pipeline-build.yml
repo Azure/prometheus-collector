@@ -48,8 +48,6 @@ jobs:
       azureResourceGroup: 'grace-addon'
       kubernetesCluster: 'grace-addon'
       useClusterAdmin: true
-      namespace: 'testkube'
-      command: 
       useConfigurationFile: true
       configurationType: 'inline'
       inline: |
