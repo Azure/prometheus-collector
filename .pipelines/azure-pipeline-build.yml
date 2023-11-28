@@ -38,7 +38,6 @@ jobs:
       echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
       sudo apt-get update
       sudo apt-get install -y testkube
-      testkube version
     workingDirectory: $(Build.SourcesDirectory)
     displayName: "Install testkube CLI"
   - task: Kubernetes@1
@@ -54,6 +53,7 @@ jobs:
       configurationType: 'inline'
       inline: |
         kubectl cluster-info
+        kubectl testkube version
         kubectl testkube run test container-logs --verbose
         kubectl testkube get executions --test container-logs --verbose
 
