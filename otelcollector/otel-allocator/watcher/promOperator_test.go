@@ -318,6 +318,15 @@ func getTestPrometheuCRWatcher(t *testing.T, sm *monitoringv1.ServiceMonitor, pm
 		t.Fatal(t, err)
 	}
 
+	_, err = k8sClient.KubeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-namespace",
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatal(t, err)
+	}
+
 	factory := informers.NewMonitoringInformerFactories(map[string]struct{}{v1.NamespaceAll: {}}, map[string]struct{}{}, mClient, 0, nil)
 	informers, err := getInformers(factory)
 	if err != nil {
