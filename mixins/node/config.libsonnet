@@ -63,11 +63,11 @@
 
     // Grafana dashboard IDs are necessary for stable links for dashboards
     grafanaDashboardIDs: {
-      'nodes.json': 'D4pVs6738',
-      'node-rsrc-use.json': 't5aja6738',
+      'nodes.json': 'D3pVs6738',
+      'node-rsrc-use.json': 't6aja6738',
       //non-default
-      'node-cluster-rsrc-use.json': 'Vdeba6738',
-      'node-multicluster-rsrc-use.json': 'abcjOM6738',
+      'node-cluster-rsrc-use.json': 'Vdera6738',
+      'node-multicluster-rsrc-use.json': 'abdjOM6738',
     },
   },
 }
