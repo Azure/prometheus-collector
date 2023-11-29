@@ -18,10 +18,10 @@ import (
 var K8sClient 	*kubernetes.Clientset
 var Cfg       	*rest.Config
 
-func TestE2E(t *testing.T) {
+func TestLivenessProbe(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "E2E Test Suite")
+	RunSpecs(t, "Liveness Probe Test Suite")
 }
 
 var _ = BeforeSuite(func() {

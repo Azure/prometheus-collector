@@ -1,4 +1,4 @@
-module prometheus-collector/otelcollector/test/containerlogs
+module prometheus-collector/otelcollector/test/containerstatus
 
 go 1.20
 

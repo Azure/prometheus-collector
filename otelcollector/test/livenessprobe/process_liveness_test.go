@@ -11,7 +11,7 @@ import (
 
 var _ = DescribeTable("The liveness probe should restart the replica pod", Ordered,
  	func(namespace, labelName, labelValue, containerName, terminatedMessage, processName string, timeout int64) {
- 		err := utils.CheckContainerStatus(K8sClient, Cfg, labelName, labelValue, namespace, containerName, terminatedMessage, processName, timeout)
+ 		err := utils.CheckLivenessProbeRestartForProcess(K8sClient, Cfg, labelName, labelValue, namespace, containerName, terminatedMessage, processName, timeout)
  		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for all processes in pod to start up before running any other tests
@@ -24,7 +24,7 @@ var _ = DescribeTable("The liveness probe should restart the replica pod", Order
 
 var _ = DescribeTable("The liveness probe should restart the daemonset pod", Ordered,
  	func(namespace, labelName, labelValue, containerName, terminatedMessage, processName string, timeout int64) {
- 		err := utils.CheckContainerStatus(K8sClient, Cfg, labelName, labelValue, namespace, containerName, terminatedMessage, processName, timeout)
+ 		err := utils.CheckLivenessProbeRestartForProcess(K8sClient, Cfg, labelName, labelValue, namespace, containerName, terminatedMessage, processName, timeout)
  		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for all processes in pod to start up before running any other tests

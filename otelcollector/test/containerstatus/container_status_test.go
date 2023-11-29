@@ -1,4 +1,4 @@
-package containerlogs
+package containerstatus
 
 import (
 	"prometheus-collector/otelcollector/test/utils"
@@ -25,17 +25,17 @@ var _ = DescribeTable("All processes are running",
 		},
 	),
 	Entry("when checking the ama-metrics-node daemonset pods", "kube-system", "dsName", "ama-metrics", "prometheus-collector",
-	[]string {
-		"fluent-bit",
-		"telegraf",
-		"otelcollector",
-		"mdsd -a -A -e",
-		"MetricsExtension",
-		"inotifywait /etc/config/settings",
-		"inotifywait /etc/mdsd.d",
-		"crond",
-	},
-),
+	  []string {
+			"fluent-bit",
+			"telegraf",
+			"otelcollector",
+			"mdsd -a -A -e",
+			"MetricsExtension",
+			"inotifywait /etc/config/settings",
+			"inotifywait /etc/mdsd.d",
+			"crond",
+	  },
+  ),
 )
 
 var _ = DescribeTable("The container logs should not contain errors",

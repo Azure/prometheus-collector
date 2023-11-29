@@ -107,102 +107,17 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	controllerType := os.Getenv("CONTROLLER_TYPE")
 	isOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 
-	var prometheusConfig map[string]interface{}
-	err = yaml.Unmarshal([]byte(promConfigFileContents), &prometheusConfig)
+	prometheusConfig, err := parsePrometheusConfig(promConfigFileContents)
 	if err != nil {
 		return err
 	}
 
-	scrapeConfigs := prometheusConfig["scrape_configs"]
-	if scrapeConfigs != nil {
-		var sc = scrapeConfigs.([]interface{})
-		for _, scrapeConfig := range sc {
-			scrapeConfig := scrapeConfig.(map[interface{}]interface{})
-			if scrapeConfig["relabel_configs"] != nil {
-				relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
-				for _, relabelConfig := range relabelConfigs {
-					relabelConfig := relabelConfig.(map[interface{}]interface{})
-					//replace $ with $$ for regex field
-					if relabelConfig["regex"] != nil {
-						// Adding this check here since regex can be boolean and the conversion will fail
-						if _, isString := relabelConfig["regex"].(string); isString {
-							regexString := relabelConfig["regex"].(string)
-							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-							if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-								// Doing the below since we dont want to substitute $ with $$ for env variables NODE_NAME and NODE_IP.
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
-							}
-							relabelConfig["regex"] = modifiedRegexString
-						}
-					}
-					//replace $ with $$ for replacement field
-					if relabelConfig["replacement"] != nil {
-						replacement := relabelConfig["replacement"].(string)
-						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-						if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
-						}
-						relabelConfig["replacement"] = modifiedReplacementString
-					}
-				}
-			}
-
-			if scrapeConfig["metric_relabel_configs"] != nil {
-				metricRelabelConfigs := scrapeConfig["metric_relabel_configs"].([]interface{})
-				for _, metricRelabelConfig := range metricRelabelConfigs {
-					metricRelabelConfig := metricRelabelConfig.(map[interface{}]interface{})
-					//replace $ with $$ for regex field
-					if metricRelabelConfig["regex"] != nil {
-						// Adding this check here since regex can be boolean and the conversion will fail
-						if _, isString := metricRelabelConfig["regex"].(string); isString {
-							regexString := metricRelabelConfig["regex"].(string)
-							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-							if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
-							}
-							metricRelabelConfig["regex"] = modifiedRegexString
-						}
-					}
-
-					//replace $ with $$ for replacement field
-					if metricRelabelConfig["replacement"] != nil {
-						replacement := metricRelabelConfig["replacement"].(string)
-						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-						if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
-						}
-						metricRelabelConfig["replacement"] = modifiedReplacementString
-					}
-				}
-			}
-		}
+	err = modifyRelabelConfigs(prometheusConfig, controllerType, isOperatorEnabled)
+	if err != nil {
+		return err
 	}
 
-	// Need this here even though it is present in the receiver's config validate method since we only do the $ manipulation for regex and replacement fields
-	// in scrape configs sections and the load method which is called before the validate method fails to unmarshal due to single $.
-	// Either approach will fail but the receiver's config load wont return the right error message
-	unsupportedFeatures := make([]string, 0, 4)
-
-	if prometheusConfig["remote_write"] != nil {
-		unsupportedFeatures = append(unsupportedFeatures, "remote_write")
-	}
-	if prometheusConfig["remote_read"] != nil {
-		unsupportedFeatures = append(unsupportedFeatures, "remote_read")
-	}
-	if prometheusConfig["rule_files"] != nil {
-		unsupportedFeatures = append(unsupportedFeatures, "rule_files")
-	}
-	if prometheusConfig["alerting"] != nil {
-		unsupportedFeatures = append(unsupportedFeatures, "alerting")
-	}
+	unsupportedFeatures := getUnsupportedFeatures(prometheusConfig)
 	if len(unsupportedFeatures) != 0 {
 		return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
 	}
@@ -223,6 +138,84 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	}
 	fmt.Printf("prom-config-validator::Successfully generated otel config\n")
 	return nil
+}
+
+func parsePrometheusConfig(promConfigFileContents []byte) (map[string]interface{}, error) {
+	var prometheusConfig map[string]interface{}
+	err := yaml.Unmarshal(promConfigFileContents, &prometheusConfig)
+	if err != nil {
+		return nil, err
+	}
+	return prometheusConfig, nil
+}
+
+func modifyRelabelConfigs(prometheusConfig map[string]interface{}, controllerType string, isOperatorEnabled string) error {
+	scrapeConfigs := prometheusConfig["scrape_configs"]
+	if scrapeConfigs != nil {
+		var sc = scrapeConfigs.([]interface{})
+		for _, scrapeConfig := range sc {
+			scrapeConfig := scrapeConfig.(map[interface{}]interface{})
+			if scrapeConfig["relabel_configs"] != nil {
+				relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
+				for _, relabelConfig := range relabelConfigs {
+					relabelConfig := relabelConfig.(map[interface{}]interface{})
+					modifyRelabelConfigFields(relabelConfig, controllerType, isOperatorEnabled)
+				}
+			}
+
+			if scrapeConfig["metric_relabel_configs"] != nil {
+				metricRelabelConfigs := scrapeConfig["metric_relabel_configs"].([]interface{})
+				for _, metricRelabelConfig := range metricRelabelConfigs {
+					metricRelabelConfig := metricRelabelConfig.(map[interface{}]interface{})
+					modifyRelabelConfigFields(metricRelabelConfig, controllerType, isOperatorEnabled)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func modifyRelabelConfigFields(relabelConfig map[interface{}]interface{}, controllerType string, isOperatorEnabled string) {
+	if relabelConfig["regex"] != nil {
+		if regexString, isString := relabelConfig["regex"].(string); isString {
+			modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+			if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
+				modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+				modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
+				modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
+			}
+			relabelConfig["regex"] = modifiedRegexString
+		}
+	}
+
+	if relabelConfig["replacement"] != nil {
+		if replacement, isString := relabelConfig["replacement"].(string); isString {
+			modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+			if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
+				modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+				modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
+				modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
+			}
+			relabelConfig["replacement"] = modifiedReplacementString
+		}
+	}
+}
+
+func getUnsupportedFeatures(prometheusConfig map[string]interface{}) []string {
+	unsupportedFeatures := make([]string, 0, 4)
+	if prometheusConfig["remote_write"] != nil {
+		unsupportedFeatures = append(unsupportedFeatures, "remote_write")
+	}
+	if prometheusConfig["remote_read"] != nil {
+		unsupportedFeatures = append(unsupportedFeatures, "remote_read")
+	}
+	if prometheusConfig["rule_files"] != nil {
+		unsupportedFeatures = append(unsupportedFeatures, "rule_files")
+	}
+	if prometheusConfig["alerting"] != nil {
+		unsupportedFeatures = append(unsupportedFeatures, "alerting")
+	}
+	return unsupportedFeatures
 }
 
 type stringArrayValue struct {

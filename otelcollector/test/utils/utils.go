@@ -47,21 +47,6 @@ func SetupKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
 	return client, cfg, nil
 }
 
-// CheckContainerLogsForErrors checks the logs of containers in pods with a specific label for any errors.
-// It takes a Kubernetes clientset, namespace, label name, and label value as input parameters.
-// The function retrieves all pods with the given label and then checks the logs of each container in each pod.
-// If any error is found in the logs, the function returns an error message indicating the container and pod name.
-// If no errors are found, the function returns nil.
-
-// Example usage:
-// clientset, _ := kubernetes.NewForConfig(config)
-// namespace := "default"
-// labelName := "app"
-// labelValue := "myapp"
-// err := CheckContainerLogsForErrors(clientset, namespace, labelName, labelValue)
-// if err != nil {
-//     fmt.Println("Error:", err)
-// }
 func CheckContainerLogsForErrors(clientset *kubernetes.Clientset, namespace, labelName, labelValue string) error {
 	// Get all pods with the given label
 	pods, err := GetPodsWithLabel(clientset, namespace, labelName, labelValue)
@@ -91,7 +76,6 @@ func CheckContainerLogsForErrors(clientset *kubernetes.Clientset, namespace, lab
 	}
 	return nil
 }
-
 
 func GetPodsWithLabel(clientset *kubernetes.Clientset, namespace string, labelKey string, labelValue string) ([]corev1.Pod, error) {
 	podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
@@ -131,7 +115,6 @@ func getContainerLogs(clientset *kubernetes.Clientset, namespace string, podName
 	return buf.String(), nil
 }
 
-// ExecCmd exec command on specific pod and wait the command's output.
 func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, containerName string, namespace string, command []string) (stdout string, stderr string, err error) {
 	req := client.CoreV1().RESTClient().Post().
 		Resource("pods").
@@ -169,7 +152,7 @@ func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, 
 	return stdoutB.String(), stderrB.String(), nil
 }
 
-func CheckContainerStatus(K8sClient *kubernetes.Clientset, Cfg *rest.Config, labelName, labelValue, namespace, containerName, terminatedMessage, processName string, timeout int64) error {
+func CheckLivenessProbeRestartForProcess(K8sClient *kubernetes.Clientset, Cfg *rest.Config, labelName, labelValue, namespace, containerName, terminatedMessage, processName string, timeout int64) error {
 	pods, err := GetPodsWithLabel(K8sClient, namespace, labelName, labelValue)
 	if err != nil {
 		return err
@@ -201,7 +184,7 @@ func CheckContainerStatus(K8sClient *kubernetes.Clientset, Cfg *rest.Config, lab
 			select {
 			case event, ok := <-watcher.ResultChan():
 				if !ok {
-					return fmt.Errorf("watcher.ResultChan() closed unexpectedly")
+					return fmt.Errorf(" %s pod did not restart before timeout", pod.Name)
 				}
 				if event.Type != "MODIFIED" {
 					continue
@@ -212,7 +195,6 @@ func CheckContainerStatus(K8sClient *kubernetes.Clientset, Cfg *rest.Config, lab
 					return fmt.Errorf("event.Object is not of type *corev1.Pod")
 				}
 
-				// Check ContainerStateTerminated for prometheus-collector container
 				for _, containerStatus := range p.Status.ContainerStatuses {
 					if containerStatus.Name == containerName && containerStatus.LastTerminationState.Terminated != nil {
 						if containerStatus.LastTerminationState.Terminated.Reason == "Error" && strings.Contains(containerStatus.LastTerminationState.Terminated.Message, terminatedMessage) {
