@@ -91,7 +91,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 			},
 		},
 	}
-	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowDebug())
+	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowWarn())
 
 	generator, err := prometheus.NewConfigGenerator(promOperatorLogger, prom, true)
 	if err != nil {
@@ -99,16 +99,11 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 	}
 	store := assets.NewStore(clientset.CoreV1(), clientset.CoreV1())
 	promRegisterer := prometheusgoclient.NewRegistry()
-	// promRegisterer = prometheusgoclient.WrapRegistererWith(prometheusgoclient.Labels{"controller": "targetallocator-prometheus"}, promRegisterer)
 	operatorMetrics := operator.NewMetrics(promRegisterer)
 
 	nsMonInf := getNamespaceInformer(ctx, map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, clientset, operatorMetrics)
 
 	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
-
-	// servMonSelector := getSelector(cfg.ServiceMonitorSelector)
-
-	// podMonSelector := getSelector(cfg.PodMonitorSelector)
 
 	return &PrometheusCRWatcher{
 		logger:               logger,
@@ -125,8 +120,6 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		serviceMonitorNamespaceSelector: &metav1.LabelSelector{
 			MatchLabels: cfg.ServiceMonitorNamespaceSelector,
 		},
-		// serviceMonitorSelector: servMonSelector,
-		// podMonitorSelector:     podMonSelector,
 		resourceSelector: resourceSelector,
 		store:            store,
 	}, nil
@@ -143,20 +136,10 @@ type PrometheusCRWatcher struct {
 	kubeConfigPath                  string
 	podMonitorNamespaceSelector     *metav1.LabelSelector
 	serviceMonitorNamespaceSelector *metav1.LabelSelector
-	// serviceMonitorSelector labels.Selector
-	// podMonitorSelector     labels.Selector
-	resourceSelector *prometheus.ResourceSelector
-	store            *assets.Store
+	resourceSelector                *prometheus.ResourceSelector
+	store                           *assets.Store
 }
 
-// func getSelector(s map[string]string) labels.Selector {
-// 	if s == nil {
-// 		return labels.NewSelector()
-// 	}
-// 	return labels.SelectorFromSet(s)
-// }
-//kubernetes.Interface
-//*kubernetes.Clientset
 func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, promOperatorLogger log.Logger, clientset kubernetes.Interface, operatorMetrics *operator.Metrics) cache.SharedIndexInformer {
 	nsInf := cache.NewSharedIndexInformer(
 		operatorMetrics.NewInstrumentedListerWatcher(
@@ -309,211 +292,3 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 	}
 	return promCfg, nil
 }
-
-// addStoreAssetsForServiceMonitor adds authentication / authorization related information to the assets store,
-// based on the service monitor and endpoints specs.
-// This code borrows from
-// https://github.com/prometheus-operator/prometheus-operator/blob/06b5c4189f3f72737766d86103d049115c3aff48/pkg/prometheus/resource_selector.go#L73.
-// func (w *PrometheusCRWatcher) addStoreAssetsForServiceMonitor(
-// 	ctx context.Context,
-// 	smName, smNamespace string,
-// 	endps []monitoringv1.Endpoint,
-// 	store *assets.Store,
-// ) error {
-// 	var err error
-// 	var validateErr error
-// 	for i, endp := range endps {
-// 		objKey := fmt.Sprintf("serviceMonitor/%s/%s/%d", smNamespace, smName, i)
-
-// 		if err = store.AddBearerToken(ctx, smNamespace, endp.BearerTokenSecret, objKey); err != nil {
-// 			break
-// 		}
-
-// 		if err = store.AddBasicAuth(ctx, smNamespace, endp.BasicAuth, objKey); err != nil {
-// 			break
-// 		}
-
-// 		if endp.TLSConfig != nil {
-// 			if err = store.AddTLSConfig(ctx, smNamespace, endp.TLSConfig); err != nil {
-// 				break
-// 			}
-// 		}
-
-// 		if err = store.AddOAuth2(ctx, smNamespace, endp.OAuth2, objKey); err != nil {
-// 			break
-// 		}
-
-// 		smAuthKey := fmt.Sprintf("serviceMonitor/auth/%s/%s/%d", smNamespace, smName, i)
-// 		if err = store.AddSafeAuthorizationCredentials(ctx, smNamespace, endp.Authorization, smAuthKey); err != nil {
-// 			break
-// 		}
-
-// 		for _, rl := range endp.RelabelConfigs {
-// 			if rl.Action != "" {
-// 				if validateErr = validateRelabelConfig(*rl); validateErr != nil {
-// 					break
-// 				}
-// 			}
-// 		}
-
-// 		for _, rl := range endp.MetricRelabelConfigs {
-// 			if rl.Action != "" {
-// 				if validateErr = validateRelabelConfig(*rl); validateErr != nil {
-// 					break
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	if err != nil {
-// 		w.logger.Error(err, "Failed to obtain credentials for a ServiceMonitor", "serviceMonitor", smName)
-// 	}
-
-// 	if validateErr != nil {
-// 		return validateErr
-// 	}
-
-// 	return nil
-// }
-
-// // addStoreAssetsForServiceMonitor adds authentication / authorization related information to the assets store,
-// // based on the service monitor and pod metrics endpoints specs.
-// // This code borrows from
-// // https://github.com/prometheus-operator/prometheus-operator/blob/06b5c4189f3f72737766d86103d049115c3aff48/pkg/prometheus/resource_selector.go#L314.
-// func (w *PrometheusCRWatcher) addStoreAssetsForPodMonitor(
-// 	ctx context.Context,
-// 	pmName, pmNamespace string,
-// 	podMetricsEndps []monitoringv1.PodMetricsEndpoint,
-// 	store *assets.Store,
-// ) error {
-// 	var err error
-// 	var validateErr error
-// 	for i, endp := range podMetricsEndps {
-// 		objKey := fmt.Sprintf("podMonitor/%s/%s/%d", pmNamespace, pmName, i)
-
-// 		if err = store.AddBearerToken(ctx, pmNamespace, endp.BearerTokenSecret, objKey); err != nil {
-// 			break
-// 		}
-
-// 		if err = store.AddBasicAuth(ctx, pmNamespace, endp.BasicAuth, objKey); err != nil {
-// 			break
-// 		}
-
-// 		if endp.TLSConfig != nil {
-// 			if err = store.AddSafeTLSConfig(ctx, pmNamespace, &endp.TLSConfig.SafeTLSConfig); err != nil {
-// 				break
-// 			}
-// 		}
-
-// 		if err = store.AddOAuth2(ctx, pmNamespace, endp.OAuth2, objKey); err != nil {
-// 			break
-// 		}
-
-// 		smAuthKey := fmt.Sprintf("podMonitor/auth/%s/%s/%d", pmNamespace, pmName, i)
-// 		if err = store.AddSafeAuthorizationCredentials(ctx, pmNamespace, endp.Authorization, smAuthKey); err != nil {
-// 			break
-// 		}
-
-// 		for _, rl := range endp.RelabelConfigs {
-// 			if rl.Action != "" {
-// 				if validateErr = validateRelabelConfig(*rl); validateErr != nil {
-// 					break
-// 				}
-// 			}
-// 		}
-
-// 		for _, rl := range endp.MetricRelabelConfigs {
-// 			if rl.Action != "" {
-// 				if validateErr = validateRelabelConfig(*rl); validateErr != nil {
-// 					break
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	if err != nil {
-// 		w.logger.Error(err, "Failed to obtain credentials for a PodMonitor", "podMonitor", pmName)
-// 	}
-
-// 	if validateErr != nil {
-// 		return validateErr
-// 	}
-
-// 	return nil
-// }
-
-// func validateRelabelConfig(rc monitoringv1.RelabelConfig) error {
-// 	relabelTarget := regexp.MustCompile(`^(?:(?:[a-zA-Z_]|\$(?:\{\w+\}|\w+))+\w*)+$`)
-// 	// promVersion := operator.StringValOrDefault(p.GetCommonPrometheusFields().Version, operator.DefaultPrometheusVersion)
-// 	// version, err := semver.ParseTolerant(promVersion)
-// 	// if err != nil {
-// 	// 	return errors.Wrap(err, "failed to parse Prometheus version")
-// 	// }
-// 	// minimumVersionCaseActions := version.GTE(semver.MustParse("2.36.0"))
-// 	// minimumVersionEqualActions := version.GTE(semver.MustParse("2.41.0"))
-
-// 	// if (rc.Action == string(relabel.Lowercase) || rc.Action == string(relabel.Uppercase)) && !minimumVersionCaseActions {
-// 	// 	return errors.Errorf("%s relabel action is only supported from Prometheus version 2.36.0", rc.Action)
-// 	// }
-
-// 	// if (rc.Action == string(relabel.KeepEqual) || rc.Action == string(relabel.DropEqual)) && !minimumVersionEqualActions {
-// 	// 	return errors.Errorf("%s relabel action is only supported from Prometheus version 2.41.0", rc.Action)
-// 	// }
-
-// 	if _, err := relabel.NewRegexp(rc.Regex); err != nil {
-// 		return fmt.Errorf("invalid regex %s for relabel configuration", rc.Regex)
-// 	}
-
-// 	if rc.Modulus == 0 && rc.Action == string(relabel.HashMod) {
-// 		return fmt.Errorf("relabel configuration for hashmod requires non-zero modulus")
-// 	}
-
-// 	if (rc.Action == string(relabel.Replace) || rc.Action == string(relabel.HashMod) || rc.Action == string(relabel.Lowercase) || rc.Action == string(relabel.Uppercase) || rc.Action == string(relabel.KeepEqual) || rc.Action == string(relabel.DropEqual)) && rc.TargetLabel == "" {
-// 		return fmt.Errorf("relabel configuration for %s action needs targetLabel value", rc.Action)
-// 	}
-
-// 	if (rc.Action == string(relabel.Replace) || rc.Action == string(relabel.Lowercase) || rc.Action == string(relabel.Uppercase) || rc.Action == string(relabel.KeepEqual) || rc.Action == string(relabel.DropEqual)) && !relabelTarget.MatchString(rc.TargetLabel) {
-// 		return fmt.Errorf("%q is invalid 'target_label' for %s action", rc.TargetLabel, rc.Action)
-// 	}
-
-// 	if (rc.Action == string(relabel.Lowercase) || rc.Action == string(relabel.Uppercase) || rc.Action == string(relabel.KeepEqual) || rc.Action == string(relabel.DropEqual)) && !(rc.Replacement == relabel.DefaultRelabelConfig.Replacement || rc.Replacement == "") {
-// 		return fmt.Errorf("'replacement' can not be set for %s action", rc.Action)
-// 	}
-
-// 	if rc.Action == string(relabel.LabelMap) {
-// 		if rc.Replacement != "" && !relabelTarget.MatchString(rc.Replacement) {
-// 			return fmt.Errorf("%q is invalid 'replacement' for %s action", rc.Replacement, rc.Action)
-// 		}
-// 	}
-
-// 	if rc.Action == string(relabel.HashMod) && !model.LabelName(rc.TargetLabel).IsValid() {
-// 		return fmt.Errorf("%q is invalid 'target_label' for %s action", rc.TargetLabel, rc.Action)
-// 	}
-
-// 	if rc.Action == string(relabel.KeepEqual) || rc.Action == string(relabel.DropEqual) {
-// 		if !(rc.Regex == "" || rc.Regex == relabel.DefaultRelabelConfig.Regex.String()) ||
-// 			!(rc.Modulus == uint64(0) ||
-// 				rc.Modulus == relabel.DefaultRelabelConfig.Modulus) ||
-// 			!(rc.Separator == "" ||
-// 				rc.Separator == relabel.DefaultRelabelConfig.Separator) ||
-// 			!(rc.Replacement == relabel.DefaultRelabelConfig.Replacement ||
-// 				rc.Replacement == "") {
-// 			return fmt.Errorf("%s action requires only 'source_labels' and `target_label`, and no other fields", rc.Action)
-// 		}
-// 	}
-
-// 	if rc.Action == string(relabel.LabelDrop) || rc.Action == string(relabel.LabelKeep) {
-// 		if len(rc.SourceLabels) != 0 ||
-// 			!(rc.TargetLabel == "" ||
-// 				rc.TargetLabel == relabel.DefaultRelabelConfig.TargetLabel) ||
-// 			!(rc.Modulus == uint64(0) ||
-// 				rc.Modulus == relabel.DefaultRelabelConfig.Modulus) ||
-// 			!(rc.Separator == "" ||
-// 				rc.Separator == relabel.DefaultRelabelConfig.Separator) ||
-// 			!(rc.Replacement == relabel.DefaultRelabelConfig.Replacement ||
-// 				rc.Replacement == "") {
-// 			return fmt.Errorf("%s action requires only 'regex', and no other fields", rc.Action)
-// 		}
-// 	}
-// 	return nil
-// }
