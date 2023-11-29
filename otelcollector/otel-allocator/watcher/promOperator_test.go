@@ -596,6 +596,130 @@ func TestLoadConfig(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "service monitor namespace selector test",
+			serviceMonitors: []*monitoringv1.ServiceMonitor{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "sm-1",
+						Namespace: "labellednamespace",
+					},
+					Spec: monitoringv1.ServiceMonitorSpec{
+						JobLabel: "test",
+						Endpoints: []monitoringv1.Endpoint{
+							{
+								Port: "web",
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "sm-2",
+						Namespace: "test",
+					},
+					Spec: monitoringv1.ServiceMonitorSpec{
+						JobLabel: "test",
+						Endpoints: []monitoringv1.Endpoint{
+							{
+								Port: "web",
+							},
+						},
+					},
+				},
+			},
+			cfg: allocatorconfig.Config{
+				ServiceMonitorNamespaceSelector: map[string]string{
+					"label1": "label1",
+				},
+			},
+			want: &promconfig.Config{
+				ScrapeConfigs: []*promconfig.ScrapeConfig{
+					{
+						JobName:         "serviceMonitor/labellednamespace/sm-1/0",
+						ScrapeInterval:  model.Duration(30 * time.Second),
+						ScrapeTimeout:   model.Duration(10 * time.Second),
+						HonorTimestamps: true,
+						HonorLabels:     false,
+						Scheme:          "http",
+						MetricsPath:     "/metrics",
+						ServiceDiscoveryConfigs: []discovery.Config{
+							&kubeDiscovery.SDConfig{
+								Role: "endpointslice",
+								NamespaceDiscovery: kubeDiscovery.NamespaceDiscovery{
+									Names:               []string{"labellednamespace"},
+									IncludeOwnNamespace: false,
+								},
+								HTTPClientConfig: config.DefaultHTTPClientConfig,
+							},
+						},
+						HTTPClientConfig: config.DefaultHTTPClientConfig,
+					},
+				},
+			},
+		},
+		{
+			name: "pod monitor namespace selector test",
+			podMonitors: []*monitoringv1.PodMonitor{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pm-1",
+						Namespace: "labellednamespace",
+					},
+					Spec: monitoringv1.PodMonitorSpec{
+						JobLabel: "test",
+						PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
+							{
+								Port: "web",
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pm-2",
+						Namespace: "test",
+					},
+					Spec: monitoringv1.PodMonitorSpec{
+						JobLabel: "test",
+						PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
+							{
+								Port: "web",
+							},
+						},
+					},
+				},
+			},
+			cfg: allocatorconfig.Config{
+				PodMonitorNamespaceSelector: map[string]string{
+					"label1": "label1",
+				},
+			},
+			want: &promconfig.Config{
+				ScrapeConfigs: []*promconfig.ScrapeConfig{
+					{
+						JobName:         "podMonitor/labellednamespace/pm-1/0",
+						ScrapeInterval:  model.Duration(30 * time.Second),
+						ScrapeTimeout:   model.Duration(10 * time.Second),
+						HonorTimestamps: true,
+						HonorLabels:     false,
+						Scheme:          "http",
+						MetricsPath:     "/metrics",
+						ServiceDiscoveryConfigs: []discovery.Config{
+							&kubeDiscovery.SDConfig{
+								Role: "pod",
+								NamespaceDiscovery: kubeDiscovery.NamespaceDiscovery{
+									Names:               []string{"labellednamespace"},
+									IncludeOwnNamespace: false,
+								},
+								HTTPClientConfig: config.DefaultHTTPClientConfig,
+							},
+						},
+						HTTPClientConfig: config.DefaultHTTPClientConfig,
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -635,7 +759,7 @@ func getTestPrometheuCRWatcher(t *testing.T, svcMonitors []*monitoringv1.Service
 	mClient := fakemonitoringclient.NewSimpleClientset()
 	for _, sm := range svcMonitors {
 		if sm != nil {
-			_, err := mClient.MonitoringV1().ServiceMonitors("test").Create(context.Background(), sm, metav1.CreateOptions{})
+			_, err := mClient.MonitoringV1().ServiceMonitors(sm.Namespace).Create(context.Background(), sm, metav1.CreateOptions{})
 			if err != nil {
 				t.Fatal(t, err)
 			}
@@ -643,7 +767,7 @@ func getTestPrometheuCRWatcher(t *testing.T, svcMonitors []*monitoringv1.Service
 	}
 	for _, pm := range podMonitors {
 		if pm != nil {
-			_, err := mClient.MonitoringV1().PodMonitors("test").Create(context.Background(), pm, metav1.CreateOptions{})
+			_, err := mClient.MonitoringV1().PodMonitors(pm.Namespace).Create(context.Background(), pm, metav1.CreateOptions{})
 			if err != nil {
 				t.Fatal(t, err)
 			}
@@ -672,28 +796,11 @@ func getTestPrometheuCRWatcher(t *testing.T, svcMonitors []*monitoringv1.Service
 		t.Fatal(t, err)
 	}
 
-	// _, err = k8sClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
-	// 	ObjectMeta: metav1.ObjectMeta{
-	// 		Name: "test-namespace",
-	// 	},
-	// }, metav1.CreateOptions{})
-	// if err != nil {
-	// 	t.Fatal(t, err)
-	// }
-
 	factory := informers.NewMonitoringInformerFactories(map[string]struct{}{v1.NamespaceAll: {}}, map[string]struct{}{}, mClient, 0, nil)
 	informers, err := getInformers(factory)
 	if err != nil {
 		t.Fatal(t, err)
 	}
-
-	//cfg := allocatorconfig.Config{}
-	// 	// AllocationStrategy: &allocationStrategy,
-	// 	LabelSelector: map[string]string{
-	// 		"rsName":                         "ama-metrics",
-	// 		"kubernetes.azure.com/managedby": "aks",
-	// 	},
-	// }
 
 	prom := &monitoringv1.Prometheus{
 		Spec: monitoringv1.PrometheusSpec{
@@ -728,15 +835,16 @@ func getTestPrometheuCRWatcher(t *testing.T, svcMonitors []*monitoringv1.Service
 
 	source := fcache.NewFakeControllerSource()
 	source.Add(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test"}})
+	source.Add(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "labellednamespace",
+		Labels: map[string]string{
+			"label1": "label1",
+		}}})
 
 	// create the shared informer and resync every 1s
 	nsMonInf := cache.NewSharedInformer(source, &v1.Pod{}, 1*time.Second).(cache.SharedIndexInformer)
 
 	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
-
-	// servMonSelector := getSelector(cfg.ServiceMonitorSelector)
-
-	// podMonSelector := getSelector(cfg.PodMonitorSelector)
 
 	return &PrometheusCRWatcher{
 		kubeMonitoringClient: mClient,
