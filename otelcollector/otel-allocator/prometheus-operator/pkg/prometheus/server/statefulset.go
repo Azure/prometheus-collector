@@ -16,16 +16,15 @@ package prometheus
 
 import (
 	"fmt"
-	"net/url"
 	"path"
 	"strings"
 
 	"github.com/blang/semver/v4"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus-operator/prometheus-operator/pkg/k8sutil"
@@ -42,7 +41,7 @@ const (
 )
 
 // TODO(ArthurSens): generalize it enough to be used by both server and agent.
-func makeStatefulSetService(p *monitoringv1.Prometheus, config operator.Config) *v1.Service {
+func makeStatefulSetService(p *monitoringv1.Prometheus, config prompkg.Config) *v1.Service {
 	p = p.DeepCopy()
 
 	if p.Spec.PortName == "" {
@@ -104,7 +103,7 @@ func makeStatefulSet(
 	queryLogFile string,
 	thanos *monitoringv1.ThanosSpec,
 	disableCompaction bool,
-	config *operator.Config,
+	config *prompkg.Config,
 	cg *prompkg.ConfigGenerator,
 	ruleConfigMapNames []string,
 	inputHash string,
@@ -126,7 +125,7 @@ func makeStatefulSet(
 	p.SetCommonPrometheusFields(cpf)
 	spec, err := makeStatefulSetSpec(baseImage, tag, sha, retention, retentionSize, rules, query, allowOverlappingBlocks, enableAdminAPI, queryLogFile, thanos, disableCompaction, p, config, cg, shard, ruleConfigMapNames, tlsAssetSecrets)
 	if err != nil {
-		return nil, errors.Wrap(err, "make StatefulSet spec")
+		return nil, fmt.Errorf("make StatefulSet spec: %w", err)
 	}
 
 	boolTrue := true
@@ -217,6 +216,10 @@ func makeStatefulSet(
 
 	statefulset.Spec.Template.Spec.Volumes = append(statefulset.Spec.Template.Spec.Volumes, cpf.Volumes...)
 
+	if cpf.PersistentVolumeClaimRetentionPolicy != nil {
+		statefulset.Spec.PersistentVolumeClaimRetentionPolicy = cpf.PersistentVolumeClaimRetentionPolicy
+	}
+
 	if cpf.HostNetwork {
 		statefulset.Spec.Template.Spec.DNSPolicy = v1.DNSClusterFirstWithHostNet
 	}
@@ -236,7 +239,7 @@ func makeStatefulSetSpec(
 	thanos *monitoringv1.ThanosSpec,
 	disableCompaction bool,
 	p monitoringv1.PrometheusInterface,
-	c *operator.Config,
+	c *prompkg.Config,
 	cg *prompkg.ConfigGenerator,
 	shard int32,
 	ruleConfigMapNames []string,
@@ -259,11 +262,7 @@ func makeStatefulSetSpec(
 		return nil, err
 	}
 
-	webRoutePrefix := "/"
-	if cpf.RoutePrefix != "" {
-		webRoutePrefix = cpf.RoutePrefix
-	}
-	promArgs := prompkg.BuildCommonPrometheusArgs(cpf, cg, webRoutePrefix)
+	promArgs := prompkg.BuildCommonPrometheusArgs(cpf, cg)
 	promArgs = appendServerArgs(promArgs, cg, retention, retentionSize, rules, query, allowOverlappingBlocks, enableAdminAPI, cpf.WALCompression)
 
 	var ports []v1.ContainerPort
@@ -317,7 +316,7 @@ func makeStatefulSetSpec(
 	// Prometheus is effectively ready.
 	// We don't want to use the /-/healthy handler here because it returns OK as
 	// soon as the web server is started (irrespective of the WAL replay).
-	readyProbeHandler := prompkg.ProbeHandler("/-/ready", cpf, webConfigGenerator, webRoutePrefix)
+	readyProbeHandler := prompkg.ProbeHandler("/-/ready", cpf, webConfigGenerator)
 	startupProbe := &v1.Probe{
 		ProbeHandler:     readyProbeHandler,
 		TimeoutSeconds:   prompkg.ProbeTimeoutSeconds,
@@ -333,7 +332,7 @@ func makeStatefulSetSpec(
 	}
 
 	livenessProbe := &v1.Probe{
-		ProbeHandler:     prompkg.ProbeHandler("/-/healthy", cpf, webConfigGenerator, webRoutePrefix),
+		ProbeHandler:     prompkg.ProbeHandler("/-/healthy", cpf, webConfigGenerator),
 		TimeoutSeconds:   prompkg.ProbeTimeoutSeconds,
 		PeriodSeconds:    5,
 		FailureThreshold: 6,
@@ -362,12 +361,7 @@ func makeStatefulSetSpec(
 
 	var additionalContainers, operatorInitContainers []v1.Container
 
-	prometheusURIScheme := "http"
-	if cpf.Web != nil && cpf.Web.TLSConfig != nil {
-		prometheusURIScheme = "https"
-	}
-
-	thanosContainer, err := createThanosContainer(&disableCompaction, p, thanos, c, prometheusURIScheme, webRoutePrefix)
+	thanosContainer, err := createThanosContainer(&disableCompaction, p, thanos, c)
 	if err != nil {
 		return nil, err
 	}
@@ -413,34 +407,26 @@ func makeStatefulSetSpec(
 	}
 
 	operatorInitContainers = append(operatorInitContainers,
-		operator.CreateConfigReloader(
-			"init-config-reloader",
-			operator.ReloaderConfig(c.ReloaderConfig),
-			operator.ReloaderRunOnce(),
-			operator.LogFormat(cpf.LogFormat),
-			operator.LogLevel(cpf.LogLevel),
-			operator.VolumeMounts(configReloaderVolumeMounts),
-			operator.ConfigFile(path.Join(prompkg.ConfDir, prompkg.ConfigFilename)),
-			operator.ConfigEnvsubstFile(path.Join(prompkg.ConfOutDir, prompkg.ConfigEnvsubstFilename)),
-			operator.WatchedDirectories(watchedDirectories),
+		prompkg.BuildConfigReloader(
+			p,
+			c,
+			true,
+			configReloaderVolumeMounts,
+			watchedDirectories,
 			operator.Shard(shard),
-			operator.ImagePullPolicy(cpf.ImagePullPolicy),
 		),
 	)
 
 	initContainers, err := k8sutil.MergePatchContainers(operatorInitContainers, cpf.InitContainers)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to merge init containers spec")
+		return nil, fmt.Errorf("failed to merge init containers spec: %w", err)
 	}
 
 	containerArgs, err := operator.BuildArgs(promArgs, cpf.AdditionalArgs)
-
 	if err != nil {
 		return nil, err
 	}
 
-	boolFalse := false
-	boolTrue := true
 	operatorContainers := append([]v1.Container{
 		{
 			Name:                     "prometheus",
@@ -455,36 +441,26 @@ func makeStatefulSetSpec(
 			Resources:                cpf.Resources,
 			TerminationMessagePolicy: v1.TerminationMessageFallbackToLogsOnError,
 			SecurityContext: &v1.SecurityContext{
-				ReadOnlyRootFilesystem:   &boolTrue,
-				AllowPrivilegeEscalation: &boolFalse,
+				ReadOnlyRootFilesystem:   ptr.To(true),
+				AllowPrivilegeEscalation: ptr.To(false),
 				Capabilities: &v1.Capabilities{
 					Drop: []v1.Capability{"ALL"},
 				},
 			},
 		},
-		operator.CreateConfigReloader(
-			"config-reloader",
-			operator.ReloaderConfig(c.ReloaderConfig),
-			operator.ReloaderURL(url.URL{
-				Scheme: prometheusURIScheme,
-				Host:   c.LocalHost + ":9090",
-				Path:   path.Clean(webRoutePrefix + "/-/reload"),
-			}),
-			operator.ListenLocal(cpf.ListenLocal),
-			operator.LocalHost(c.LocalHost),
-			operator.LogFormat(cpf.LogFormat),
-			operator.LogLevel(cpf.LogLevel),
-			operator.ConfigFile(path.Join(prompkg.ConfDir, prompkg.ConfigFilename)),
-			operator.ConfigEnvsubstFile(path.Join(prompkg.ConfOutDir, prompkg.ConfigEnvsubstFilename)),
-			operator.WatchedDirectories(watchedDirectories), operator.VolumeMounts(configReloaderVolumeMounts),
+		prompkg.BuildConfigReloader(
+			p,
+			c,
+			false,
+			configReloaderVolumeMounts,
+			watchedDirectories,
 			operator.Shard(shard),
-			operator.ImagePullPolicy(cpf.ImagePullPolicy),
 		),
 	}, additionalContainers...)
 
 	containers, err := k8sutil.MergePatchContainers(operatorContainers, cpf.Containers)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to merge containers spec")
+		return nil, fmt.Errorf("failed to merge containers spec: %w", err)
 	}
 
 	// PodManagementPolicy is set to Parallel to mitigate issues in kubernetes: https://github.com/kubernetes/kubernetes/issues/60164
@@ -506,11 +482,12 @@ func makeStatefulSetSpec(
 				Annotations: podAnnotations,
 			},
 			Spec: v1.PodSpec{
+				ShareProcessNamespace:         prompkg.ShareProcessNamespace(p),
 				Containers:                    containers,
 				InitContainers:                initContainers,
 				SecurityContext:               cpf.SecurityContext,
 				ServiceAccountName:            cpf.ServiceAccountName,
-				AutomountServiceAccountToken:  &boolTrue,
+				AutomountServiceAccountToken:  ptr.To(true),
 				NodeSelector:                  cpf.NodeSelector,
 				PriorityClassName:             cpf.PriorityClassName,
 				TerminationGracePeriodSeconds: &terminationGracePeriod,
@@ -644,8 +621,7 @@ func createThanosContainer(
 	disableCompaction *bool,
 	p monitoringv1.PrometheusInterface,
 	thanos *monitoringv1.ThanosSpec,
-	c *operator.Config,
-	prometheusURIScheme, webRoutePrefix string) (*v1.Container, error) {
+	c *prompkg.Config) (*v1.Container, error) {
 
 	var container *v1.Container
 	cpf := p.GetCommonPrometheusFields()
@@ -659,7 +635,7 @@ func createThanosContainer(
 			operator.StringPtrValOrDefault(thanos.SHA, ""),
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to build image path")
+			return nil, fmt.Errorf("failed to build image path: %w", err)
 		}
 
 		var grpcBindAddress, httpBindAddress string
@@ -672,7 +648,7 @@ func createThanosContainer(
 		}
 
 		thanosArgs := []monitoringv1.Argument{
-			{Name: "prometheus.url", Value: fmt.Sprintf("%s://%s:9090%s", prometheusURIScheme, c.LocalHost, path.Clean(webRoutePrefix))},
+			{Name: "prometheus.url", Value: fmt.Sprintf("%s://%s:9090%s", cpf.PrometheusURIScheme(), c.LocalHost, path.Clean(cpf.WebRoutePrefix()))},
 			{Name: "prometheus.http-client", Value: `{"tls_config": {"insecure_skip_verify":true}}`},
 			{Name: "grpc-address", Value: fmt.Sprintf("%s:10901", grpcBindAddress)},
 			{Name: "http-address", Value: fmt.Sprintf("%s:10902", httpBindAddress)},
@@ -789,7 +765,7 @@ func createThanosContainer(
 
 		thanosVersion, err := semver.ParseTolerant(operator.StringPtrValOrDefault(thanos.Version, operator.DefaultThanosVersion))
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse Thanos version")
+			return nil, fmt.Errorf("failed to parse Thanos version: %w", err)
 		}
 
 		if thanos.GetConfigTimeout != "" && thanosVersion.GTE(semver.MustParse("0.29.0")) {

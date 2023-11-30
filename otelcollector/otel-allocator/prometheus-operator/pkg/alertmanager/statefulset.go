@@ -21,12 +21,14 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
-	"github.com/pkg/errors"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus-operator/prometheus-operator/pkg/k8sutil"
@@ -65,7 +67,7 @@ var (
 	probeTimeoutSeconds int32 = 3
 )
 
-func makeStatefulSet(am *monitoringv1.Alertmanager, config Config, inputHash string, tlsAssetSecrets []string) (*appsv1.StatefulSet, error) {
+func makeStatefulSet(logger log.Logger, am *monitoringv1.Alertmanager, config Config, inputHash string, tlsAssetSecrets []string) (*appsv1.StatefulSet, error) {
 	// TODO(fabxc): is this the right point to inject defaults?
 	// Ideally we would do it before storing but that's currently not possible.
 	// Potentially an update handler on first insertion.
@@ -91,7 +93,7 @@ func makeStatefulSet(am *monitoringv1.Alertmanager, config Config, inputHash str
 		am.Spec.Resources.Requests[v1.ResourceMemory] = resource.MustParse("200Mi")
 	}
 
-	spec, err := makeStatefulSetSpec(am, config, tlsAssetSecrets)
+	spec, err := makeStatefulSetSpec(logger, am, config, tlsAssetSecrets)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +227,7 @@ func makeStatefulSetService(p *monitoringv1.Alertmanager, config Config) *v1.Ser
 	return svc
 }
 
-func makeStatefulSetSpec(a *monitoringv1.Alertmanager, config Config, tlsAssetSecrets []string) (*appsv1.StatefulSetSpec, error) {
+func makeStatefulSetSpec(logger log.Logger, a *monitoringv1.Alertmanager, config Config, tlsAssetSecrets []string) (*appsv1.StatefulSetSpec, error) {
 	amVersion := operator.StringValOrDefault(a.Spec.Version, operator.DefaultAlertmanagerVersion)
 	amImagePath, err := operator.BuildImagePath(
 		operator.StringPtrValOrDefault(a.Spec.Image, ""),
@@ -235,12 +237,12 @@ func makeStatefulSetSpec(a *monitoringv1.Alertmanager, config Config, tlsAssetSe
 		operator.StringValOrDefault(a.Spec.SHA, ""),
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to build image path")
+		return nil, fmt.Errorf("failed to build image path: %w", err)
 	}
 
 	version, err := semver.ParseTolerant(amVersion)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse alertmanager version")
+		return nil, fmt.Errorf("failed to parse alertmanager version: %w", err)
 	}
 
 	amArgs := []string{
@@ -306,6 +308,17 @@ func makeStatefulSetSpec(a *monitoringv1.Alertmanager, config Config, tlsAssetSe
 		amArgs = append(amArgs, fmt.Sprintf("--cluster.peer-timeout=%s", a.Spec.ClusterPeerTimeout))
 	}
 
+	// If multiple Alertmanager clusters are deployed on the same cluster, it can happen
+	// that because pod IP addresses are recycled, an Alertmanager instance from cluster B
+	// connects with cluster A.
+	// --cluster.label flag was introduced in alertmanager v0.26, this helps to block
+	// any traffic that is not meant for the cluster.
+	// The value is hardcoded and the value is guaranteed to be unique in a given cluster but
+	// if there's a use case, we can consider a new field in the CRD.
+	if version.GTE(semver.MustParse("0.26.0")) {
+		amArgs = append(amArgs, fmt.Sprintf("--cluster.label=%s/%s", a.Namespace, a.Name))
+	}
+
 	isHTTPS := a.Spec.Web != nil && a.Spec.Web.TLSConfig != nil && version.GTE(semver.MustParse("0.22.0"))
 
 	livenessProbeHandler := v1.ProbeHandler{
@@ -360,15 +373,11 @@ func makeStatefulSetSpec(a *monitoringv1.Alertmanager, config Config, tlsAssetSe
 		"alertmanager":                 a.Name,
 	}
 	if a.Spec.PodMetadata != nil {
-		if a.Spec.PodMetadata.Labels != nil {
-			for k, v := range a.Spec.PodMetadata.Labels {
-				podLabels[k] = v
-			}
+		for k, v := range a.Spec.PodMetadata.Labels {
+			podLabels[k] = v
 		}
-		if a.Spec.PodMetadata.Annotations != nil {
-			for k, v := range a.Spec.PodMetadata.Annotations {
-				podAnnotations[k] = v
-			}
+		for k, v := range a.Spec.PodMetadata.Annotations {
+			podAnnotations[k] = v
 		}
 	}
 	for k, v := range podSelectorLabels {
@@ -452,7 +461,7 @@ func makeStatefulSetSpec(a *monitoringv1.Alertmanager, config Config, tlsAssetSe
 			})
 		}
 	default:
-		return nil, errors.Errorf("unsupported Alertmanager major version %s", version)
+		return nil, fmt.Errorf("unsupported Alertmanager major version %s", version)
 	}
 
 	assetsVolume := v1.Volume{
@@ -525,8 +534,13 @@ func makeStatefulSetSpec(a *monitoringv1.Alertmanager, config Config, tlsAssetSe
 	amCfg := a.Spec.AlertmanagerConfiguration
 	if amCfg != nil && len(amCfg.Templates) > 0 {
 		sources := []v1.VolumeProjection{}
+		keys := sets.Set[string]{}
 		for _, v := range amCfg.Templates {
 			if v.ConfigMap != nil {
+				if keys.Has(v.ConfigMap.Key) {
+					level.Debug(logger).Log("msg", fmt.Sprintf("skipping %q due to duplicate key %q", v.ConfigMap.Key, v.ConfigMap.Name))
+					continue
+				}
 				sources = append(sources, v1.VolumeProjection{
 					ConfigMap: &v1.ConfigMapProjection{
 						LocalObjectReference: v1.LocalObjectReference{
@@ -538,9 +552,13 @@ func makeStatefulSetSpec(a *monitoringv1.Alertmanager, config Config, tlsAssetSe
 						}},
 					},
 				})
-
+				keys.Insert(v.ConfigMap.Key)
 			}
 			if v.Secret != nil {
+				if keys.Has(v.Secret.Key) {
+					level.Debug(logger).Log("msg", fmt.Sprintf("skipping %q due to duplicate key %q", v.Secret.Key, v.Secret.Name))
+					continue
+				}
 				sources = append(sources, v1.VolumeProjection{
 					Secret: &v1.SecretProjection{
 						LocalObjectReference: v1.LocalObjectReference{
@@ -552,6 +570,7 @@ func makeStatefulSetSpec(a *monitoringv1.Alertmanager, config Config, tlsAssetSe
 						}},
 					},
 				})
+				keys.Insert(v.Secret.Key)
 			}
 		}
 		volumes = append(volumes, v1.Volume{
@@ -727,7 +746,7 @@ func makeStatefulSetSpec(a *monitoringv1.Alertmanager, config Config, tlsAssetSe
 
 	containers, err := k8sutil.MergePatchContainers(defaultContainers, a.Spec.Containers)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to merge containers spec")
+		return nil, fmt.Errorf("failed to merge containers spec: %w", err)
 	}
 
 	var minReadySeconds int32
@@ -753,7 +772,7 @@ func makeStatefulSetSpec(a *monitoringv1.Alertmanager, config Config, tlsAssetSe
 
 	initContainers, err := k8sutil.MergePatchContainers(operatorInitContainers, a.Spec.InitContainers)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to merge init containers spec")
+		return nil, fmt.Errorf("failed to merge init containers spec: %w", err)
 	}
 
 	// PodManagementPolicy is set to Parallel to mitigate issues in kubernetes: https://github.com/kubernetes/kubernetes/issues/60164

@@ -24,27 +24,34 @@ import (
 // ScrapeConfigSpecApplyConfiguration represents an declarative configuration of the ScrapeConfigSpec type for use
 // with apply.
 type ScrapeConfigSpecApplyConfiguration struct {
-	StaticConfigs         []StaticConfigApplyConfiguration                  `json:"staticConfigs,omitempty"`
-	FileSDConfigs         []FileSDConfigApplyConfiguration                  `json:"fileSDConfigs,omitempty"`
-	HTTPSDConfigs         []HTTPSDConfigApplyConfiguration                  `json:"httpSDConfigs,omitempty"`
-	KubernetesSDConfigs   []KubernetesSDConfigApplyConfiguration            `json:"kubernetesSDConfigs,omitempty"`
-	ConsulSDConfigs       []ConsulSDConfigApplyConfiguration                `json:"consulSDConfigs,omitempty"`
-	RelabelConfigs        []*v1.RelabelConfig                               `json:"relabelings,omitempty"`
-	MetricsPath           *string                                           `json:"metricsPath,omitempty"`
-	ScrapeInterval        *v1.Duration                                      `json:"scrapeInterval,omitempty"`
-	ScrapeTimeout         *v1.Duration                                      `json:"scrapeTimeout,omitempty"`
-	HonorTimestamps       *bool                                             `json:"honorTimestamps,omitempty"`
-	HonorLabels           *bool                                             `json:"honorLabels,omitempty"`
-	Params                map[string][]string                               `json:"params,omitempty"`
-	Scheme                *string                                           `json:"scheme,omitempty"`
-	BasicAuth             *monitoringv1.BasicAuthApplyConfiguration         `json:"basicAuth,omitempty"`
-	Authorization         *monitoringv1.SafeAuthorizationApplyConfiguration `json:"authorization,omitempty"`
-	TLSConfig             *monitoringv1.SafeTLSConfigApplyConfiguration     `json:"tlsConfig,omitempty"`
-	SampleLimit           *uint64                                           `json:"sampleLimit,omitempty"`
-	TargetLimit           *uint64                                           `json:"targetLimit,omitempty"`
-	LabelLimit            *uint64                                           `json:"labelLimit,omitempty"`
-	LabelNameLengthLimit  *uint64                                           `json:"labelNameLengthLimit,omitempty"`
-	LabelValueLengthLimit *uint64                                           `json:"labelValueLengthLimit,omitempty"`
+	StaticConfigs            []StaticConfigApplyConfiguration                  `json:"staticConfigs,omitempty"`
+	FileSDConfigs            []FileSDConfigApplyConfiguration                  `json:"fileSDConfigs,omitempty"`
+	HTTPSDConfigs            []HTTPSDConfigApplyConfiguration                  `json:"httpSDConfigs,omitempty"`
+	KubernetesSDConfigs      []KubernetesSDConfigApplyConfiguration            `json:"kubernetesSDConfigs,omitempty"`
+	ConsulSDConfigs          []ConsulSDConfigApplyConfiguration                `json:"consulSDConfigs,omitempty"`
+	DNSSDConfigs             []DNSSDConfigApplyConfiguration                   `json:"dnsSDConfigs,omitempty"`
+	EC2SDConfigs             []EC2SDConfigApplyConfiguration                   `json:"ec2SDConfigs,omitempty"`
+	AzureSDConfigs           []AzureSDConfigApplyConfiguration                 `json:"azureSDConfigs,omitempty"`
+	GCESDConfigs             []GCESDConfigApplyConfiguration                   `json:"gceSDConfigs,omitempty"`
+	RelabelConfigs           []*v1.RelabelConfig                               `json:"relabelings,omitempty"`
+	MetricsPath              *string                                           `json:"metricsPath,omitempty"`
+	ScrapeInterval           *v1.Duration                                      `json:"scrapeInterval,omitempty"`
+	ScrapeTimeout            *v1.Duration                                      `json:"scrapeTimeout,omitempty"`
+	HonorTimestamps          *bool                                             `json:"honorTimestamps,omitempty"`
+	TrackTimestampsStaleness *bool                                             `json:"trackTimestampsStaleness,omitempty"`
+	HonorLabels              *bool                                             `json:"honorLabels,omitempty"`
+	Params                   map[string][]string                               `json:"params,omitempty"`
+	Scheme                   *string                                           `json:"scheme,omitempty"`
+	BasicAuth                *monitoringv1.BasicAuthApplyConfiguration         `json:"basicAuth,omitempty"`
+	Authorization            *monitoringv1.SafeAuthorizationApplyConfiguration `json:"authorization,omitempty"`
+	TLSConfig                *monitoringv1.SafeTLSConfigApplyConfiguration     `json:"tlsConfig,omitempty"`
+	SampleLimit              *uint64                                           `json:"sampleLimit,omitempty"`
+	TargetLimit              *uint64                                           `json:"targetLimit,omitempty"`
+	LabelLimit               *uint64                                           `json:"labelLimit,omitempty"`
+	LabelNameLengthLimit     *uint64                                           `json:"labelNameLengthLimit,omitempty"`
+	LabelValueLengthLimit    *uint64                                           `json:"labelValueLengthLimit,omitempty"`
+	KeepDroppedTargets       *uint64                                           `json:"keepDroppedTargets,omitempty"`
+	MetricRelabelConfigs     []*v1.RelabelConfig                               `json:"metricRelabelings,omitempty"`
 }
 
 // ScrapeConfigSpecApplyConfiguration constructs an declarative configuration of the ScrapeConfigSpec type for use with
@@ -118,6 +125,58 @@ func (b *ScrapeConfigSpecApplyConfiguration) WithConsulSDConfigs(values ...*Cons
 	return b
 }
 
+// WithDNSSDConfigs adds the given value to the DNSSDConfigs field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the DNSSDConfigs field.
+func (b *ScrapeConfigSpecApplyConfiguration) WithDNSSDConfigs(values ...*DNSSDConfigApplyConfiguration) *ScrapeConfigSpecApplyConfiguration {
+	for i := range values {
+		if values[i] == nil {
+			panic("nil value passed to WithDNSSDConfigs")
+		}
+		b.DNSSDConfigs = append(b.DNSSDConfigs, *values[i])
+	}
+	return b
+}
+
+// WithEC2SDConfigs adds the given value to the EC2SDConfigs field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the EC2SDConfigs field.
+func (b *ScrapeConfigSpecApplyConfiguration) WithEC2SDConfigs(values ...*EC2SDConfigApplyConfiguration) *ScrapeConfigSpecApplyConfiguration {
+	for i := range values {
+		if values[i] == nil {
+			panic("nil value passed to WithEC2SDConfigs")
+		}
+		b.EC2SDConfigs = append(b.EC2SDConfigs, *values[i])
+	}
+	return b
+}
+
+// WithAzureSDConfigs adds the given value to the AzureSDConfigs field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the AzureSDConfigs field.
+func (b *ScrapeConfigSpecApplyConfiguration) WithAzureSDConfigs(values ...*AzureSDConfigApplyConfiguration) *ScrapeConfigSpecApplyConfiguration {
+	for i := range values {
+		if values[i] == nil {
+			panic("nil value passed to WithAzureSDConfigs")
+		}
+		b.AzureSDConfigs = append(b.AzureSDConfigs, *values[i])
+	}
+	return b
+}
+
+// WithGCESDConfigs adds the given value to the GCESDConfigs field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the GCESDConfigs field.
+func (b *ScrapeConfigSpecApplyConfiguration) WithGCESDConfigs(values ...*GCESDConfigApplyConfiguration) *ScrapeConfigSpecApplyConfiguration {
+	for i := range values {
+		if values[i] == nil {
+			panic("nil value passed to WithGCESDConfigs")
+		}
+		b.GCESDConfigs = append(b.GCESDConfigs, *values[i])
+	}
+	return b
+}
+
 // WithRelabelConfigs adds the given value to the RelabelConfigs field in the declarative configuration
 // and returns the receiver, so that objects can be build by chaining "With" function invocations.
 // If called multiple times, values provided by each call will be appended to the RelabelConfigs field.
@@ -160,6 +219,14 @@ func (b *ScrapeConfigSpecApplyConfiguration) WithScrapeTimeout(value v1.Duration
 // If called multiple times, the HonorTimestamps field is set to the value of the last call.
 func (b *ScrapeConfigSpecApplyConfiguration) WithHonorTimestamps(value bool) *ScrapeConfigSpecApplyConfiguration {
 	b.HonorTimestamps = &value
+	return b
+}
+
+// WithTrackTimestampsStaleness sets the TrackTimestampsStaleness field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the TrackTimestampsStaleness field is set to the value of the last call.
+func (b *ScrapeConfigSpecApplyConfiguration) WithTrackTimestampsStaleness(value bool) *ScrapeConfigSpecApplyConfiguration {
+	b.TrackTimestampsStaleness = &value
 	return b
 }
 
@@ -254,5 +321,26 @@ func (b *ScrapeConfigSpecApplyConfiguration) WithLabelNameLengthLimit(value uint
 // If called multiple times, the LabelValueLengthLimit field is set to the value of the last call.
 func (b *ScrapeConfigSpecApplyConfiguration) WithLabelValueLengthLimit(value uint64) *ScrapeConfigSpecApplyConfiguration {
 	b.LabelValueLengthLimit = &value
+	return b
+}
+
+// WithKeepDroppedTargets sets the KeepDroppedTargets field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the KeepDroppedTargets field is set to the value of the last call.
+func (b *ScrapeConfigSpecApplyConfiguration) WithKeepDroppedTargets(value uint64) *ScrapeConfigSpecApplyConfiguration {
+	b.KeepDroppedTargets = &value
+	return b
+}
+
+// WithMetricRelabelConfigs adds the given value to the MetricRelabelConfigs field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the MetricRelabelConfigs field.
+func (b *ScrapeConfigSpecApplyConfiguration) WithMetricRelabelConfigs(values ...**v1.RelabelConfig) *ScrapeConfigSpecApplyConfiguration {
+	for i := range values {
+		if values[i] == nil {
+			panic("nil value passed to WithMetricRelabelConfigs")
+		}
+		b.MetricRelabelConfigs = append(b.MetricRelabelConfigs, *values[i])
+	}
 	return b
 }

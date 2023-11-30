@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,6 +37,18 @@ import (
 
 var prometheusKeyInShardStatefulSet = regexp.MustCompile("^(.+)/prometheus-(.+)-shard-[1-9][0-9]*$")
 var prometheusKeyInStatefulSet = regexp.MustCompile("^(.+)/prometheus-(.+)$")
+
+// Config defines the operator's parameters for the Prometheus controllers.
+// Whenever the value of one of these parameters is changed, it triggers an
+// update of the managed statefulsets.
+type Config struct {
+	LocalHost                  string
+	ReloaderConfig             operator.ContainerConfig
+	PrometheusDefaultBaseImage string
+	ThanosDefaultBaseImage     string
+	Annotations                operator.Map
+	Labels                     operator.Map
+}
 
 type StatusReporter struct {
 	Kclient         kubernetes.Interface
@@ -98,7 +110,8 @@ func NewTLSAssetSecret(p monitoringv1.PrometheusInterface, labels map[string]str
 }
 
 // ValidateRemoteWriteSpec checks that mutually exclusive configurations are not
-// included in the Prometheus remoteWrite configuration section.
+// included in the Prometheus remoteWrite configuration section, while also validating
+// the RemoteWriteSpec child fields.
 // Reference:
 // https://github.com/prometheus/prometheus/blob/main/docs/configuration/configuration.md#remote_write
 func ValidateRemoteWriteSpec(spec monitoringv1.RemoteWriteSpec) error {
@@ -108,6 +121,7 @@ func ValidateRemoteWriteSpec(spec monitoringv1.RemoteWriteSpec) error {
 		"oauth2":        spec.OAuth2,
 		"authorization": spec.Authorization,
 		"sigv4":         spec.Sigv4,
+		"azureAd":       spec.AzureAD,
 	} {
 		if reflect.ValueOf(v).IsNil() {
 			continue
@@ -116,7 +130,49 @@ func ValidateRemoteWriteSpec(spec monitoringv1.RemoteWriteSpec) error {
 	}
 
 	if len(nonNilFields) > 1 {
-		return errors.Errorf("%s can't be set at the same time, at most one of them must be defined", strings.Join(nonNilFields, " and "))
+		return fmt.Errorf("%s can't be set at the same time, at most one of them must be defined", strings.Join(nonNilFields, " and "))
+	}
+
+	if spec.AzureAD != nil {
+		if spec.AzureAD.ManagedIdentity == nil && spec.AzureAD.OAuth == nil {
+			return fmt.Errorf("must provide Azure Managed Identity or Azure OAuth in the Azure AD config")
+		}
+
+		if spec.AzureAD.ManagedIdentity != nil && spec.AzureAD.OAuth != nil {
+			return fmt.Errorf("cannot provide both Azure Managed Identity and Azure OAuth in the Azure AD config")
+		}
+
+		if spec.AzureAD.OAuth != nil {
+			_, err := uuid.Parse(spec.AzureAD.OAuth.ClientID)
+			if err != nil {
+				return fmt.Errorf("the provided Azure OAuth clientId is invalid")
+			}
+		}
+	}
+
+	return nil
+}
+
+func ValidateAlertmanagerEndpoints(am monitoringv1.AlertmanagerEndpoints) error {
+	var nonNilFields []string
+
+	if am.BearerTokenFile != "" {
+		nonNilFields = append(nonNilFields, fmt.Sprintf("%q", "bearerTokenFile"))
+	}
+
+	for k, v := range map[string]interface{}{
+		"basicAuth":     am.BasicAuth,
+		"authorization": am.Authorization,
+		"sigv4":         am.Sigv4,
+	} {
+		if reflect.ValueOf(v).IsNil() {
+			continue
+		}
+		nonNilFields = append(nonNilFields, fmt.Sprintf("%q", k))
+	}
+
+	if len(nonNilFields) > 1 {
+		return fmt.Errorf("%s can't be set at the same time, at most one of them must be defined", strings.Join(nonNilFields, " and "))
 	}
 
 	return nil
@@ -131,9 +187,10 @@ func (sr *StatusReporter) Process(ctx context.Context, p monitoringv1.Prometheus
 	}
 
 	var (
+		availableStatus    monitoringv1.ConditionStatus = monitoringv1.ConditionTrue
+		availableReason    string
 		availableCondition = monitoringv1.Condition{
-			Type:   monitoringv1.Available,
-			Status: monitoringv1.ConditionTrue,
+			Type: monitoringv1.Available,
 			LastTransitionTime: metav1.Time{
 				Time: time.Now().UTC(),
 			},
@@ -153,20 +210,30 @@ func (sr *StatusReporter) Process(ctx context.Context, p monitoringv1.Prometheus
 		obj, err := sr.SsetInfs.Get(ssetName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				// Object not yet in the store or already deleted.
+				// Statefulset hasn't been created or is already deleted.
+				availableStatus = monitoringv1.ConditionFalse
+				availableReason = "StatefulSetNotFound"
+				messages = append(messages, fmt.Sprintf("shard %d: statefulset %s not found", shard, ssetName))
+				pStatus.ShardStatuses = append(
+					pStatus.ShardStatuses,
+					monitoringv1.ShardStatus{
+						ShardID: strconv.Itoa(shard),
+					})
+
 				continue
 			}
-			return nil, errors.Wrap(err, "failed to retrieve statefulset")
+
+			return nil, fmt.Errorf("failed to retrieve statefulset: %w", err)
 		}
 
-		sset := obj.(*appsv1.StatefulSet)
+		sset := obj.(*appsv1.StatefulSet).DeepCopy()
 		if sr.Rr.DeletionInProgress(sset) {
 			continue
 		}
 
 		stsReporter, err := operator.NewStatefulSetReporter(ctx, sr.Kclient, sset)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to retrieve statefulset state")
+			return nil, fmt.Errorf("failed to retrieve statefulset state: %w", err)
 		}
 
 		pStatus.Replicas += int32(len(stsReporter.Pods))
@@ -190,12 +257,13 @@ func (sr *StatusReporter) Process(ctx context.Context, p monitoringv1.Prometheus
 			continue
 		}
 
-		if len(stsReporter.ReadyPods()) == 0 {
-			availableCondition.Reason = "NoPodReady"
-			availableCondition.Status = monitoringv1.ConditionFalse
-		} else if availableCondition.Status != monitoringv1.ConditionFalse {
-			availableCondition.Reason = "SomePodsNotReady"
-			availableCondition.Status = monitoringv1.ConditionDegraded
+		switch {
+		case len(stsReporter.ReadyPods()) == 0:
+			availableReason = "NoPodReady"
+			availableStatus = monitoringv1.ConditionFalse
+		case availableCondition.Status != monitoringv1.ConditionFalse:
+			availableReason = "SomePodsNotReady"
+			availableStatus = monitoringv1.ConditionDegraded
 		}
 
 		for _, p := range stsReporter.Pods {
@@ -205,10 +273,20 @@ func (sr *StatusReporter) Process(ctx context.Context, p monitoringv1.Prometheus
 		}
 	}
 
-	availableCondition.Message = strings.Join(messages, "\n")
-
-	reconciledCondition := sr.Reconciliations.GetCondition(key, p.GetObjectMeta().GetGeneration())
-	pStatus.Conditions = operator.UpdateConditions(pStatus.Conditions, availableCondition, reconciledCondition)
+	pStatus.Conditions = operator.UpdateConditions(
+		pStatus.Conditions,
+		monitoringv1.Condition{
+			Type:    monitoringv1.Available,
+			Status:  availableStatus,
+			Reason:  availableReason,
+			Message: strings.Join(messages, "\n"),
+			LastTransitionTime: metav1.Time{
+				Time: time.Now().UTC(),
+			},
+			ObservedGeneration: p.GetObjectMeta().GetGeneration(),
+		},
+		sr.Reconciliations.GetCondition(key, p.GetObjectMeta().GetGeneration()),
+	)
 
 	return &pStatus, nil
 }

@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus-operator/prometheus-operator/pkg/operator"
@@ -39,7 +39,7 @@ import (
 )
 
 var (
-	defaultTestConfig = &operator.Config{
+	defaultTestConfig = &prompkg.Config{
 		LocalHost:                  "localhost",
 		ReloaderConfig:             operator.DefaultReloaderTestConfig.ReloaderConfig,
 		PrometheusDefaultBaseImage: operator.DefaultPrometheusBaseImage,
@@ -48,7 +48,7 @@ var (
 )
 
 func newLogger() log.Logger {
-	return level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowWarn())
+	return level.NewFilter(log.NewLogfmtLogger(os.Stdout), level.AllowWarn())
 }
 
 func makeStatefulSetFromPrometheus(p monitoringv1.Prometheus) (*appsv1.StatefulSet, error) {
@@ -874,7 +874,7 @@ func TestTagAndShaAndVersion(t *testing.T) {
 }
 
 func TestPrometheusDefaultBaseImageFlag(t *testing.T) {
-	operatorConfig := &operator.Config{
+	operatorConfig := &prompkg.Config{
 		ReloaderConfig:             defaultTestConfig.ReloaderConfig,
 		PrometheusDefaultBaseImage: "nondefaultuseflag/quay.io/prometheus/prometheus",
 		ThanosDefaultBaseImage:     "nondefaultuseflag/quay.io/thanos/thanos",
@@ -926,7 +926,7 @@ func TestPrometheusDefaultBaseImageFlag(t *testing.T) {
 }
 
 func TestThanosDefaultBaseImageFlag(t *testing.T) {
-	thanosBaseImageConfig := &operator.Config{
+	thanosBaseImageConfig := &prompkg.Config{
 		ReloaderConfig:             defaultTestConfig.ReloaderConfig,
 		PrometheusDefaultBaseImage: "nondefaultuseflag/quay.io/prometheus/prometheus",
 		ThanosDefaultBaseImage:     "nondefaultuseflag/quay.io/thanos/thanos",
@@ -1534,7 +1534,7 @@ func TestRetentionAndRetentionSize(t *testing.T) {
 }
 
 func TestReplicasConfigurationWithSharding(t *testing.T) {
-	testConfig := &operator.Config{
+	testConfig := &prompkg.Config{
 		ReloaderConfig:             defaultTestConfig.ReloaderConfig,
 		PrometheusDefaultBaseImage: "quay.io/prometheus/prometheus",
 		ThanosDefaultBaseImage:     "quay.io/thanos/thanos:v0.7.0",
@@ -1596,7 +1596,7 @@ func TestReplicasConfigurationWithSharding(t *testing.T) {
 
 func TestSidecarResources(t *testing.T) {
 	operator.TestSidecarsResources(t, func(reloaderConfig operator.ContainerConfig) *appsv1.StatefulSet {
-		testConfig := &operator.Config{
+		testConfig := &prompkg.Config{
 			ReloaderConfig:             reloaderConfig,
 			PrometheusDefaultBaseImage: defaultTestConfig.PrometheusDefaultBaseImage,
 			ThanosDefaultBaseImage:     defaultTestConfig.ThanosDefaultBaseImage,
@@ -2069,6 +2069,83 @@ func TestConfigReloader(t *testing.T) {
 			for _, env := range c.Env {
 				if env.Name == "SHARD" && !reflect.DeepEqual(env.Value, strconv.Itoa(expectedShardNum)) {
 					t.Fatalf("expectd shard value is %s, but found %s", strconv.Itoa(expectedShardNum), env.Value)
+				}
+			}
+		}
+	}
+}
+
+func TestConfigReloaderWithSignal(t *testing.T) {
+	expectedShardNum := 0
+	logger := newLogger()
+	p := monitoringv1.Prometheus{
+		Spec: monitoringv1.PrometheusSpec{
+			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+				ReloadStrategy: func(r monitoringv1.ReloadStrategyType) *monitoringv1.ReloadStrategyType { return &r }(monitoringv1.ProcessSignalReloadStrategyType),
+			},
+		},
+	}
+
+	cg, err := prompkg.NewConfigGenerator(logger, &p, false)
+	require.NoError(t, err)
+
+	sset, err := makeStatefulSet(
+		"test",
+		&p,
+		p.Spec.BaseImage, p.Spec.Tag, p.Spec.SHA,
+		p.Spec.Retention,
+		p.Spec.RetentionSize,
+		p.Spec.Rules,
+		p.Spec.Query,
+		p.Spec.AllowOverlappingBlocks,
+		p.Spec.EnableAdminAPI,
+		p.Spec.QueryLogFile,
+		p.Spec.Thanos,
+		p.Spec.DisableCompaction,
+		defaultTestConfig,
+		cg,
+		nil,
+		"",
+		int32(expectedShardNum),
+		nil)
+	require.NoError(t, err)
+
+	expectedArgsConfigReloader := []string{
+		"--listen-address=:8080",
+		"--reload-method=signal",
+		"--runtimeinfo-url=http://localhost:9090/api/v1/status/runtimeinfo",
+		"--config-file=/etc/prometheus/config/prometheus.yaml.gz",
+		"--config-envsubst-file=/etc/prometheus/config_out/prometheus.env.yaml",
+	}
+
+	for _, c := range sset.Spec.Template.Spec.Containers {
+		switch c.Name {
+		case "config-reloader":
+			require.Equal(t, expectedArgsConfigReloader, c.Args)
+			for _, env := range c.Env {
+				if env.Name == "SHARD" {
+					require.Equal(t, strconv.Itoa(expectedShardNum), env.Value)
+				}
+			}
+
+		case "prometheus":
+			require.NotContains(t, c.Args, "--web.enable-lifecycle")
+		}
+	}
+
+	expectedArgsInitConfigReloader := []string{
+		"--watch-interval=0",
+		"--listen-address=:8080",
+		"--config-file=/etc/prometheus/config/prometheus.yaml.gz",
+		"--config-envsubst-file=/etc/prometheus/config_out/prometheus.env.yaml",
+	}
+
+	for _, c := range sset.Spec.Template.Spec.InitContainers {
+		if c.Name == "init-config-reloader" {
+			require.Equal(t, expectedArgsInitConfigReloader, c.Args)
+			for _, env := range c.Env {
+				if env.Name == "SHARD" {
+					require.Equal(t, strconv.Itoa(expectedShardNum), env.Value)
 				}
 			}
 		}
@@ -2609,8 +2686,6 @@ func TestThanosAdditionalArgsDuplicate(t *testing.T) {
 }
 
 func TestPrometheusQuerySpec(t *testing.T) {
-	durationPtr := func(s string) *monitoringv1.Duration { d := monitoringv1.Duration(s); return &d }
-
 	for _, tc := range []struct {
 		name string
 
@@ -2628,10 +2703,10 @@ func TestPrometheusQuerySpec(t *testing.T) {
 		},
 		{
 			name:           "all values provided",
-			lookbackDelta:  pointer.String("2m"),
-			maxConcurrency: pointer.Int32(10),
-			maxSamples:     pointer.Int32(10000),
-			timeout:        durationPtr("1m"),
+			lookbackDelta:  ptr.To("2m"),
+			maxConcurrency: ptr.To(int32(10)),
+			maxSamples:     ptr.To(int32(10000)),
+			timeout:        ptr.To(monitoringv1.Duration("1m")),
 
 			expected: []string{
 				"--query.lookback-delta=2m",
@@ -2642,10 +2717,10 @@ func TestPrometheusQuerySpec(t *testing.T) {
 		},
 		{
 			name:           "zero values are skipped",
-			lookbackDelta:  pointer.String("2m"),
-			maxConcurrency: pointer.Int32(0),
-			maxSamples:     pointer.Int32(0),
-			timeout:        durationPtr("1m"),
+			lookbackDelta:  ptr.To("2m"),
+			maxConcurrency: ptr.To(int32(0)),
+			maxSamples:     ptr.To(int32(0)),
+			timeout:        ptr.To(monitoringv1.Duration("1m")),
 
 			expected: []string{
 				"--query.lookback-delta=2m",
@@ -2654,10 +2729,10 @@ func TestPrometheusQuerySpec(t *testing.T) {
 		},
 		{
 			name:           "max samples skipped if version < 2.5",
-			lookbackDelta:  pointer.String("2m"),
-			maxConcurrency: pointer.Int32(10),
-			maxSamples:     pointer.Int32(10000),
-			timeout:        durationPtr("1m"),
+			lookbackDelta:  ptr.To("2m"),
+			maxConcurrency: ptr.To(int32(10)),
+			maxSamples:     ptr.To(int32(10000)),
+			timeout:        ptr.To(monitoringv1.Duration("1m")),
 			version:        "v2.4.0",
 
 			expected: []string{
@@ -2668,10 +2743,10 @@ func TestPrometheusQuerySpec(t *testing.T) {
 		},
 		{
 			name:           "max samples not skipped if version > 2.5",
-			lookbackDelta:  pointer.String("2m"),
-			maxConcurrency: pointer.Int32(10),
-			maxSamples:     pointer.Int32(10000),
-			timeout:        durationPtr("1m"),
+			lookbackDelta:  ptr.To("2m"),
+			maxConcurrency: ptr.To(int32(10)),
+			maxSamples:     ptr.To(int32(10000)),
+			timeout:        ptr.To(monitoringv1.Duration("1m")),
 			version:        "v2.5.0",
 
 			expected: []string{
@@ -2754,7 +2829,7 @@ func TestSecurityContextCapabilities(t *testing.T) {
 			name: "Thanos sidecar with object storage",
 			spec: monitoringv1.PrometheusSpec{
 				Thanos: &monitoringv1.ThanosSpec{
-					ObjectStorageConfigFile: func(s string) *string { return &s }("/etc/thanos.cfg"),
+					ObjectStorageConfigFile: ptr.To("/etc/thanos.cfg"),
 				},
 			},
 		},
@@ -2806,5 +2881,28 @@ func TestPodHostNetworkConfig(t *testing.T) {
 
 	if sset.Spec.Template.Spec.DNSPolicy != v1.DNSClusterFirstWithHostNet {
 		t.Fatalf("expected DNSPolicy configuration to match due to hostNetwork but failed")
+	}
+}
+
+func TestPersistentVolumeClaimRetentionPolicy(t *testing.T) {
+	sset, err := makeStatefulSetFromPrometheus(monitoringv1.Prometheus{
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec: monitoringv1.PrometheusSpec{
+			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+				PersistentVolumeClaimRetentionPolicy: &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+					WhenDeleted: appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+					WhenScaled:  appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	if sset.Spec.PersistentVolumeClaimRetentionPolicy.WhenDeleted != appsv1.DeletePersistentVolumeClaimRetentionPolicyType {
+		t.Fatalf("expected persistentVolumeClaimDeletePolicy.WhenDeleted to be %s but got %s", appsv1.DeletePersistentVolumeClaimRetentionPolicyType, sset.Spec.PersistentVolumeClaimRetentionPolicy.WhenDeleted)
+	}
+
+	if sset.Spec.PersistentVolumeClaimRetentionPolicy.WhenScaled != appsv1.DeletePersistentVolumeClaimRetentionPolicyType {
+		t.Fatalf("expected persistentVolumeClaimDeletePolicy.WhenScaled to be %s but got %s", appsv1.DeletePersistentVolumeClaimRetentionPolicyType, sset.Spec.PersistentVolumeClaimRetentionPolicy.WhenScaled)
 	}
 }

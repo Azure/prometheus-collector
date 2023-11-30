@@ -1,0 +1,33 @@
+- job_name: prometheus
+  scrape_interval: 15s
+  static_configs:
+    - targets: ["localhost:9090"]
+- job_name: gce_app_bar
+  scrape_interval: 5s
+  gce_sd_config:
+    - project: foo
+      zone: us-central1
+  relabel_configs:
+    - action: keep
+      source_labels:
+        - __meta_gce_label_app
+      regex: my_app
+- job_name: gce_app_bar_custom_shard_relabeling
+  scrape_interval: 5s
+  gce_sd_config:
+    - project: foo_custom_shard_relabeling
+      zone: us-central1
+  relabel_configs:
+    - action: keep
+      source_labels:
+        - __meta_gce_label_app
+      regex: my_app
+    - source_labels:
+      - __address__
+      target_label: __tmp_hash
+      modulus: 999
+      action: hashmod
+    - source_labels:
+      - __tmp_hash
+      regex: $(SHARD)
+      action: keep
