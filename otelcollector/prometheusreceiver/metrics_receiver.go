@@ -147,7 +147,6 @@ func (r *pReceiver) syncTargetAllocator(compareHash string, allocConf *targetAll
 	}
 
 	hash, err := structhash.Hash(scrapeConfigsResponse, 1)
-
 	if err != nil {
 		r.settings.Logger.Error("Failed to hash job list", zap.Error(err))
 		return "", err
@@ -237,13 +236,7 @@ func (r *pReceiver) applyCfg(cfg *config.Config) error {
 		discoveryCfg[scrapeConfig.JobName] = scrapeConfig.ServiceDiscoveryConfigs
 		r.settings.Logger.Info("Scrape job added", zap.String("jobName", scrapeConfig.JobName))
 	}
-	if err := r.discoveryManager.ApplyConfig(discoveryCfg); err != nil {
-		return err
-	}
-
-	r.webHandler.ApplyConfig(cfg)
-
-	return nil
+	return r.discoveryManager.ApplyConfig(discoveryCfg)
 }
 
 func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component.Host, logger log.Logger) error {
@@ -281,8 +274,9 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 	}
 
 	r.scrapeManager = scrape.NewManager(&scrape.Options{
-		PassMetadataInContext: true,
-		ExtraMetrics:          r.cfg.ReportExtraScrapeMetrics,
+		PassMetadataInContext:     true,
+		EnableProtobufNegotiation: r.cfg.EnableProtobufNegotiation,
+		ExtraMetrics:              r.cfg.ReportExtraScrapeMetrics,
 		HTTPClientOptions: []commonconfig.HTTPClientOption{
 			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
 		},
@@ -297,6 +291,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 			host.ReportFatalError(err)
 		}
 	}()
+
 	// Setup settings and logger and create Prometheus web handler
 	webOptions := web.Options{
 		ScrapeManager: r.scrapeManager,
