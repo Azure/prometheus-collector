@@ -1,6 +1,6 @@
 module github.com/vishiy/opentelemetry-collector-builder
 
-go 1.17
+go 1.20
 
 replace github.com/gracewehner/prometheusreceiver => ../prometheusreceiver
 
@@ -154,7 +154,6 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.89.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.89.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.89.0 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.89.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
 	github.com/ovh/go-ovh v1.4.1 // indirect
