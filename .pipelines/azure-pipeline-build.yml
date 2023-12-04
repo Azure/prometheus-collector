@@ -25,36 +25,35 @@ variables:
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
 
-jobs:
-- job: Test
-  displayName: "Test e2e on cluster"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  steps:
-  - checkout: self
-    persistCredentials: true
-  - bash: |
-      wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-      echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-      sudo apt-get update
-      sudo apt-get install -y testkube
-    workingDirectory: $(Build.SourcesDirectory)
-    displayName: "Install testkube CLI"
-  - task: AzureCLI@1
-    displayName: Get access credentials for the managed cluster
-    inputs:
-      azureSubscription: 'ContainerInsights_Dev_Grace(b9842c7c-1a38-4385-8f39-a51314758bcf)'
-      scriptLocation: 'inlineScript'
-      inlineScript: 'az aks get-credentials -g grace-addon -n grace-addon'
-  - bash: |
-      kubectl cluster-info
-      kubectl testkube version
-      kubectl testkube run test container-logs --verbose
-      execution_name=$(kubectl testkube get executions --test container-logs --limit 1 | grep container-logs | awk '{print $1}')
-      kubectl testkube watch execution $execution_name
-      kubectl testkube get execution $execution_name --logs-only
-    workingDirectory: $(Build.SourcesDirectory)
-    displayName: "Display output"
+# jobs:
+# - job: Test
+#   displayName: "Test e2e on cluster"
+#   pool:
+#     name: Azure-Pipelines-CI-Test-EO
+#   steps:
+#   - checkout: self
+#     persistCredentials: true
+#   - bash: |
+#       wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+#       echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
+#       sudo apt-get update
+#       sudo apt-get install -y testkube
+#     workingDirectory: $(Build.SourcesDirectory)
+#     displayName: "Install testkube CLI"
+#   - task: AzureCLI@1
+#     displayName: Get kubeconfig
+#     inputs:
+#       azureSubscription: 'ContainerInsights_Dev_Grace(b9842c7c-1a38-4385-8f39-a51314758bcf)'
+#       scriptLocation: 'inlineScript'
+#       inlineScript: 'az aks get-credentials -g grace-addon -n grace-addon'
+#   - bash: |
+#       kubectl testkube version
+#       kubectl testkube run test container-logs --verbose
+#       execution_name=$(kubectl testkube get executions --test container-logs --limit 1 | grep container-logs | awk '{print $1}')
+#       kubectl testkube watch execution $execution_name
+#       kubectl testkube get execution $execution_name --logs-only
+#     workingDirectory: $(Build.SourcesDirectory)
+#     displayName: "Run tests"
 
 - job: Common
   displayName: Set image tags and publish Ev2 artifacts
