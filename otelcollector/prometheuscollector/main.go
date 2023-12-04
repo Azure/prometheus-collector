@@ -58,7 +58,7 @@ func main(){
 
     if mac == "true" {
 		// Wait for addon-token-adapter to be healthy
-		tokenAdapterWaitSecs := 60
+		tokenAdapterWaitSecs := 20
 		waitedSecsSoFar := 1
 
 		for {
