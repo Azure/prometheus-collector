@@ -102,7 +102,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 
 	nsMonInf, err := getNamespaceInformer(ctx, map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, clientset, operatorMetrics)
 	if err != nil {
-		logger.Info(err, "Failed to create namespace informer in CRD watcher")
+		logger.Error(err, "Failed to create namespace informer in CRD watcher")
 	}
 
 	resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
