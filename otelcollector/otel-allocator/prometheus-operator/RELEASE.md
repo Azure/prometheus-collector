@@ -19,9 +19,9 @@ Release cadence of first pre-releases being cut is 6 weeks.
 | v0.49   | 2021-06-30                                 | Pawel Krupa (GitHub: @paulfantom)       |
 | v0.50   | 2021-08-11                                 | Pawel Krupa (GitHub: @paulfantom)       |
 | v0.51   | 2021-09-22                                 | Simon Pasquier (GitHub: @simonpasquier) |
-| v0.52   | 2021-11-03                                 | Filip Petkovski (Github: @fpetkovski)   |
+| v0.52   | 2021-11-03                                 | Filip Petkovski (GitHub: @fpetkovski)   |
 | v0.53   | 2021-12-15                                 | Simon Pasquier (GitHub: @simonpasquier) |
-| v0.54   | 2022-01-26                                 | Filip Petkovski (Github: @fpetkovski)   |
+| v0.54   | 2022-01-26                                 | Filip Petkovski (GitHub: @fpetkovski)   |
 | v0.55   | 2022-03-09                                 | Philip Gough (GitHub: @PhilipGough)     |
 | v0.56   | 2022-04-20                                 | Simon Pasquier (GitHub: @simonpasquier) |
 | v0.57   | 2022-06-01                                 | Simon Pasquier (GitHub: @simonpasquier) |
@@ -33,7 +33,7 @@ Release cadence of first pre-releases being cut is 6 weeks.
 | v0.63   | 2023-02-08                                 | Philip Gough (GitHub: @PhilipGough)     |
 | v0.64   | 2023-03-22                                 | Simon Pasquier (GitHub: @simonpasquier) |
 | v0.65   | 2023-05-03                                 | Philip Gough (GitHub: @PhilipGough)     |
-| v0.66   | 2023-06-14                                 | Arthur Sens (Github: @ArthurSens)       |
+| v0.66   | 2023-06-14                                 | Arthur Sens (GitHub: @ArthurSens)       |
 | v0.67   | 2023-07-26                                 | Simon Pasquier (GitHub: @simonpasquier) |
 | v0.68   | 2023-09-06                                 | **searching for volunteer**             |
 
