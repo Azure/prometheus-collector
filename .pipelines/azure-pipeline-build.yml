@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - rashmi/update-oss-components
+    #- rashmi/update-oss-components
 
 pr:
   autoCancel: true
