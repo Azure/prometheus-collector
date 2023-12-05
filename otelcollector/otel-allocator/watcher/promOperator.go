@@ -51,6 +51,7 @@ const (
 )
 
 func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocatorconfig.Config) (*PrometheusCRWatcher, error) {
+	var resourceSelector cache.SharedIndexInformer
 	mClient, err := monitoringclient.NewForConfig(cfg.ClusterConfig)
 	if err != nil {
 		return nil, err
@@ -103,10 +104,9 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 	nsMonInf, err := getNamespaceInformer(ctx, map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, clientset, operatorMetrics)
 	if err != nil {
 		logger.Error(err, "Failed to create namespace informer in promOperator CRD watcher")
-		//resourceSelector := nil
 
 	} else {
-		resourceSelector := prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
+		resourceSelector = prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics)
 	}
 
 	return &PrometheusCRWatcher{
