@@ -31,6 +31,9 @@ scrape_configs:
       regex: (.*)
       target_label: instance
       action: replace
+    - source_labels: [ __meta_kubernetes_pod_name ]
+      action: drop
+      regex: (etcd2-.*)
   metric_relabel_configs:
     - source_labels: [ __name__ ]
       action: drop
