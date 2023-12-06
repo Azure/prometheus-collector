@@ -51,6 +51,7 @@ const (
 )
 
 func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocatorconfig.Config) (*PrometheusCRWatcher, error) {
+	monitoringv1.GroupName = "azmonitoring.coreos.com"
 	var resourceSelector *prometheus.ResourceSelector
 	mClient, err := monitoringclient.NewForConfig(cfg.ClusterConfig)
 	if err != nil {
@@ -353,7 +354,6 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 			return nil, err
 		}
 
-		//promCfg := &promconfig.Config{}
 		unmarshalErr := yaml.Unmarshal(generatedConfig, promCfg)
 		if unmarshalErr != nil {
 			return nil, unmarshalErr
