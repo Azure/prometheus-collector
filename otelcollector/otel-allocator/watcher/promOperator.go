@@ -42,7 +42,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	// "k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd"
 
 	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 )
@@ -55,15 +55,15 @@ const (
 func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocatorconfig.Config) (*PrometheusCRWatcher, error) {
 	//monitoring.GroupName = "azmonitoring.coreos.com"
 	var resourceSelector *prometheus.ResourceSelector
-	// mycfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-	// 	clientcmd.NewDefaultClientConfigLoadingRules(),
-	// 	&clientcmd.ConfigOverrides{},
-	// ).ClientConfig()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// mClient, err := monitoringclient.NewForConfig(mycfg)
-	mClient, err := monitoringclient.NewForConfig(cfg.ClusterConfig)
+	mycfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{},
+	).ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	mClient, err := monitoringclient.NewForConfig(mycfg)
+	// mClient, err := monitoringclient.NewForConfig(cfg.ClusterConfig)
 
 	if err != nil {
 		return nil, err
