@@ -3,6 +3,7 @@ trigger:
     include:
     - main
     - ccp_shell_removal_branch
+    - update-metrics
 
 pr:
   autoCancel: true
