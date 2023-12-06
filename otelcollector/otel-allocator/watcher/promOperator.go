@@ -23,7 +23,6 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/go-logr/logr"
-	monitoring "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	promv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"github.com/prometheus-operator/prometheus-operator/pkg/assets"
@@ -52,7 +51,7 @@ const (
 )
 
 func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocatorconfig.Config) (*PrometheusCRWatcher, error) {
-	monitoring.GroupName = "azmonitoring.coreos.com"
+	//monitoring.GroupName = "azmonitoring.coreos.com"
 	var resourceSelector *prometheus.ResourceSelector
 	mClient, err := monitoringclient.NewForConfig(cfg.ClusterConfig)
 	if err != nil {
