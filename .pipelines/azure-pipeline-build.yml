@@ -813,7 +813,7 @@ jobs:
     name: Azure-Pipelines-CI-Test-EO
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
-  - Linux
+  - Linux_Prometheus_Collector
   variables:
     HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -954,7 +954,6 @@ jobs:
   - Image_Tags_and_Ev2_Artifacts
   - Linux_Prometheus_Collector
   - WindowsMultiArch_Prometheus_Collector
-  - Arc_Helm_Chart
   variables:
     HELM_CHART_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
