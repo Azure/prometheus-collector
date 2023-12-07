@@ -725,13 +725,14 @@ jobs:
             output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
             if (echo $output | grep $(WINDOWS_2019_TAG)) && (echo $output | grep $(WINDOWS_2022_TAG))
             then
-              echo "Images and chart are published to mcr"
+              echo "Images are published to mcr"
               exit 0
             fi
           done
-          echo "Images and chart are not published to mcr within 5 minutes"
+          echo "Images are not published to mcr within the timeout"
           exit 1
       displayName: "Build: check images are pushed to dev MCR"
+      retryCountOnTaskFailure: 3
 
     - powershell: |
         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
@@ -989,13 +990,14 @@ jobs:
             output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
             if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG))
             then
-              echo "Images and chart are published to mcr"
+              echo "Images are published to mcr"
               exit 0
             fi
           done
-          echo "Images and chart are not published to mcr within 5 minutes"
+          echo "Images are not published to mcr within the timeout"
           exit 1
-      displayName: "Check images are pushed to dev MCR"
+    displayName: "Check images are pushed to dev MCR"
+    retryCountOnTaskFailure: 3
 
   - bash: |
       helm pull oci://$(MCR_REGISTRY)$(MCR_REPOSITORY_HELM) --version $(HELM_SEMVER)
