@@ -162,9 +162,9 @@ jobs:
   displayName: "Build: linux golang reference app image"
   pool:
     name: Azure-Pipelines-CI-Test-EO
-  dependsOn: common
+  dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
-    LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
+    LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
@@ -186,9 +186,9 @@ jobs:
   displayName: "Build: linux python reference app image"
   pool:
     name: Azure-Pipelines-CI-Test-EO
-  dependsOn: common
+  dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
-    LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+    LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
@@ -210,9 +210,9 @@ jobs:
   displayName: "Build: windows golang reference app image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
-  dependsOn: common
+  dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
-    WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
+    WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
     skipComponentGovernanceDetection: true
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   steps:
@@ -227,9 +227,9 @@ jobs:
   displayName: "Build: windows python reference app image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
-  dependsOn: common
+  dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
-    WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+    WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
     skipComponentGovernanceDetection: true
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   steps:
@@ -244,9 +244,9 @@ jobs:
   displayName: "Build: linux prometheus-collector image"
   pool:
     name: Azure-Pipelines-CI-Test-EO
-  dependsOn: common
+  dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
-    LINUX_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+    LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
   steps:
@@ -445,9 +445,9 @@ jobs:
   displayName: "Build: target allocator image"
   pool:
     name: Azure-Pipelines-CI-Test-EO
-  dependsOn: common
+  dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
-    TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+    TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
     skipComponentGovernanceDetection: true
@@ -530,9 +530,9 @@ jobs:
   displayName: "Build: config reader image"
   pool:
     name: Azure-Pipelines-CI-Test-EO
-  dependsOn: common
+  dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
-    LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
+    LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
     skipComponentGovernanceDetection: true
@@ -618,10 +618,10 @@ jobs:
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
   dependsOn:
-  - Common
+  - Image_Tags_and_Ev2_Artifacts
   variables:
-    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
+    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
     skipComponentGovernanceDetection: true
   steps:
     - task: GoTool@0
@@ -657,10 +657,10 @@ jobs:
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
   dependsOn:
-  - Common
+  - Image_Tags_and_Ev2_Artifacts
   variables:
-    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
     skipComponentGovernanceDetection: true
   steps:
     - task: GoTool@0
@@ -698,13 +698,13 @@ jobs:
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
   dependsOn:
-  - Common
-  - Windows2019
-  - Windows2022
+  - Image_Tags_and_Ev2_Artifacts
+  - Windows2019_Prometheus_Collector
+  - Windows2022_Prometheus_Collector
   variables:
-    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
-    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.common.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
+    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
     skipComponentGovernanceDetection: true
   steps:
     - task: GoTool@0
@@ -812,13 +812,13 @@ jobs:
   pool:
     name: Azure-Pipelines-CI-Test-EO
   dependsOn:
-  - Common
+  - Image_Tags_and_Ev2_Artifacts
   - Linux
   variables:
-    HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
-    IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
-    IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-    ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
+    HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+    IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+    IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+    ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
     ARC_EXTENSION: true
     skipComponentGovernanceDetection: true
   steps:
@@ -865,10 +865,10 @@ jobs:
   pool:
     name: Azure-Pipelines-CI-Test-EO
   dependsOn:
-  - Common
-  - ARC_Chart
+  - Image_Tags_and_Ev2_Artifacts
+  - Arc_Helm_Chart
   variables:
-    HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
+    HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
     skipComponentGovernanceDetection: true
   steps:
   - bash: |
@@ -951,16 +951,16 @@ jobs:
     name: Azure-Pipelines-CI-Test-EO
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   dependsOn:
-  - Common
-  - Linux
-  - WindowsMultiArch
-  - ARC_Chart
+  - Image_Tags_and_Ev2_Artifacts
+  - Linux_Prometheus_Collector
+  - WindowsMultiArch_Prometheus_Collector
+  - Arc_Helm_Chart
   variables:
-    HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
-    HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
-    IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
-    IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-    HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+    HELM_CHART_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+    HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+    IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+    IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+    HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
     skipComponentGovernanceDetection: true
   steps:
   - checkout: self
