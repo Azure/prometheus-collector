@@ -3,6 +3,7 @@ trigger:
     include:
     - main
     - ccp_shell_removal_branch
+    - fix-cve
 
 pr:
   autoCancel: true
@@ -382,7 +383,7 @@ jobs:
         fi
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
-      condition: eq(variables.IS_PR, false)
+      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'
