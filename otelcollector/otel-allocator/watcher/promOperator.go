@@ -52,7 +52,7 @@ const (
 
 func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocatorconfig.Config) (*PrometheusCRWatcher, error) {
 	//monitoring.GroupName = "azmonitoring.coreos.com"
-	// var resourceSelector *prometheus.ResourceSelector
+	var resourceSelector *prometheus.ResourceSelector
 	// mycfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 	// 	clientcmd.NewDefaultClientConfigLoadingRules(),
 	// 	&clientcmd.ConfigOverrides{},
