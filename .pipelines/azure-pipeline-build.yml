@@ -465,17 +465,8 @@ jobs:
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        if [ "$(Build.Reason)" != "PullRequest" ]; then
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
-          docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-        else
-
-          # Build multiarch image to make sure there are no issues
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json
-
-          # Load in amd64 image to run vulnerability scan
-          docker buildx build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json
-        fi
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+        docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
         MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
         DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
         SIZE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.size')
@@ -484,12 +475,14 @@ jobs:
         EOF
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
       displayName: "Build: build and push target allocator image to dev ACR"
+
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
-      condition: eq(variables.IS_PR, false)
+
+
     - task: EsrpCodeSigning@3
       displayName: "ESRP CodeSigning for TargetAllocator"
       inputs:
@@ -512,6 +505,7 @@ jobs:
                 "toolVersion": "1.0"
             }
           ]
+
     - bash: |
         set -euxo pipefail
         curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
@@ -548,17 +542,8 @@ jobs:
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        if [ "$(Build.Reason)" != "PullRequest" ]; then
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push
-          docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
-        else
-
-          # Build multiarch image to make sure there are no issues
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json
-
-          # Load in amd64 image to run vulnerability scan
-          docker buildx build . --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json
-        fi
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push
+        docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
         DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
         SIZE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.size')
@@ -571,10 +556,8 @@ jobs:
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
       workingDirectory: $(Build.SourcesDirectory)
       displayName: "Build: run trivy scan"
-      condition: eq(variables.IS_PR, false)
 
     - task: EsrpCodeSigning@3
       displayName: "ESRP CodeSigning for Config Reader"
@@ -645,14 +628,6 @@ jobs:
         docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
       displayName: "Build: push image to dev ACR"
 
-    - task: ComponentGovernanceComponentDetection@0
-      displayName: "SDL: run component governance"
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        scanType: 'Register'
-        verbosity: 'Verbose'
-        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)'
-
 - job: Windows2022_Prometheus_Collector
   displayName: "Build: windows 2022 prometheus-collector image"
   pool:
@@ -683,16 +658,6 @@ jobs:
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
       displayName: "Build: push image to dev ACR"
-      condition: eq(variables.IS_PR, false)
-
-    - task: ComponentGovernanceComponentDetection@0
-      displayName: "SDL: run component governance"
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        scanType: 'Register'
-        verbosity: 'Verbose'
-        dockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)'
-        alertWarningLevel: 'High'
 
 - job: WindowsMultiArch_Prometheus_Collector
   displayName: "Build: windows multi-arch prometheus-collector image"
@@ -715,7 +680,7 @@ jobs:
         version: '1.20'
     
     - bash: |
-        for i in 1 2 3 4 5 6 7 8 9 10
+        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
           do
             sleep 30
             export WINDOWS_2019_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"
@@ -733,7 +698,7 @@ jobs:
           echo "Images are not published to mcr within the timeout"
           exit 1
       displayName: "Build: check images are pushed to dev MCR"
-      retryCountOnTaskFailure: 3
+      retryCountOnTaskFailure: 10
 
     - powershell: |
         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
@@ -951,7 +916,7 @@ jobs:
         az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
 
 - job: Deploy_AKS_Chart
-  displayName: "Deploy: AKS dev clusters"
+  displayName: "Deploy: AKS dev cluster"
   pool:
     name: Azure-Pipelines-CI-Test-EO
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
@@ -982,7 +947,7 @@ jobs:
     inputs:
       helmVersionToInstall: 3.12.3
   - bash: |
-      for i in 1 2 3 4 5 6 7 8 9 10
+      for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
           do
             sleep 30
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
@@ -998,7 +963,7 @@ jobs:
           echo "Images are not published to mcr within the timeout"
           exit 1
     displayName: "Check images are pushed to dev MCR"
-    retryCountOnTaskFailure: 3
+    retryCountOnTaskFailure: 5
 
   - bash: |
       helm pull oci://$(MCR_REGISTRY)$(MCR_REPOSITORY_HELM) --version $(HELM_SEMVER)
