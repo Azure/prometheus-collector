@@ -314,8 +314,7 @@ jobs:
         else
           # Build multiarch image to make sure there are no issues
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
-          # Load in amd64 image to run vulnerability scan
-          docker buildx build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json
+          docker pull $(LINUX_FULL_IMAGE_NAME)
         fi
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
