@@ -701,7 +701,8 @@ jobs:
         version: '1.20'
 
     - bash: |
-        export ACR_REPOSITORY_WITHOUT_SLASH="$(ACR_REPOSITORY:1)"
+        export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
+        export ACR_REPOSITORY_WITHOUT_SLASH="${ACR_REPOSITORY_VAR:1}"
 
         export WINDOWS_2019_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
