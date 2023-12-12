@@ -2,13 +2,12 @@ trigger:
   branches:
     include:
     - main
-    - grace/build-improvements
 
-#pr:
-  #autoCancel: true
-  #branches:
-    #include:
-    #- main
+pr:
+  autoCancel: true
+  branches:
+    include:
+    - main
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -243,6 +242,7 @@ jobs:
 
 - job: SDL_Binary_Scan
   displayName: "SDL: linux binary scanning"
+  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
   pool:
     name: Azure-Pipelines-CI-Test-EO
   steps:
