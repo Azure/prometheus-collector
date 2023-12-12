@@ -266,20 +266,20 @@ jobs:
     - bash: |
         sudo apt-get install build-essential -y
         make
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      #condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: "SDL: build otelcollector, promconfigvalidator, targetallocator, and fluent-bit plugin for scanning"
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      #condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         InputType: 'CommandLine'
         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
 
     - task: Gosec@1
       displayName: 'SDL: run gosec'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      #condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         targetPattern: 'gosecPattern'
         targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
@@ -290,14 +290,14 @@ jobs:
         chmod 775 DevSkim_linux_0.6.9/devskim
         ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
       displayName: 'SDL: run devskim'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      #condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       workingDirectory: $(Build.SourcesDirectory)
 
     - bash: |
         sudo gem install brakeman -v 5.4.1
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
+      #condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
     - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linux
