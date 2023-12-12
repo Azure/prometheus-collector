@@ -699,37 +699,62 @@ jobs:
       displayName: "Build: specify golang version"
       inputs:
         version: '1.20'
-    
-    - bash: |
-        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-          do
-            sleep 30
-            export WINDOWS_2019_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"
-            export WINDOWS_2022_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2022_BASE_IMAGE_VERSION)"
-            echo $WINDOWS_2019_TAG
-            echo $WINDOWS_2022_TAG
 
-            output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-            if (echo $output | grep $WINDOWS_2019_TAG) && (echo $output | grep $WINDOWS_2022_TAG)
-            then
-              echo "Images are published to mcr"
-              exit 0
-            fi
-          done
-          echo "Images are not published to mcr within the timeout"
-          exit 1
-      displayName: "Build: check images are pushed to dev MCR"
-      retryCountOnTaskFailure: 10
+    - bash: |
+        export ACR_REPOSITORY_WITHOUT_SLASH="$(ACR_REPOSITORY:1)"
+
+        export WINDOWS_2019_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+        if [ $? -ne 0 ]; then
+          echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION). Checking if MCR image is published."
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+            do
+              output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+              if (echo $output | grep $WINDOWS_2019_TAG)
+              then
+                echo "Images are published to mcr"
+                exit 0
+              fi
+              sleep 30
+            done
+            echo "Images are not published to mcr within the timeout"
+            exit 1
+
+          az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2019_TAG)
+        fi
+
+        export WINDOWS_2022_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2022_BASE_IMAGE_VERSION)"
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+        if [ $? -ne 0 ]; then
+          echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION). Checking if MCR image is published."
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+            do
+              output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+              if (echo $output | grep $WINDOWS_2022_TAG)
+              then
+                echo "Images are published to mcr"
+                exit 0
+              fi
+              sleep 30
+            done
+            echo "Images are not published to mcr within the timeout"
+            exit 1
+
+          az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2022_TAG)
+        fi
+      displayName: "Build: ensure images are present in ACR"
+      retryCountOnTaskFailure: 3
 
     - powershell: |
         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
         @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
-        docker pull $(MCR_REGISTRY)$(MCR_REPOSITORY):$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
-        docker pull $(MCR_REGISTRY)$(MCR_REPOSITORY):$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-        docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(MCR_REGISTRY)$(MCR_REPOSITORY):$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(MCR_REGISTRY)$(MCR_REPOSITORY):$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
         docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: Triggering manifest for multi-arc docker image"
+      displayName: "Build: Windows multi-arch manifest"
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
@@ -851,7 +876,7 @@ jobs:
       artifactName: drop
 
 - job: Deploy_Chart_ARC
-  displayName: "Deploy: ARC dev cluster"
+  displayName: "Deploy: Arc dev cluster"
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   pool:
     name: Azure-Pipelines-CI-Test-EO
