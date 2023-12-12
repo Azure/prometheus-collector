@@ -7,6 +7,8 @@
 # =========== HIGH ================
 # HIGH - telegraf
 GHSA-fr2g-9hjm-wr23
+# HIGH - otelgrpc, fix will be applied around Feb-March next year
+CVE-2023-47108
 
 # =========== MEDIUM ================
 # MEDIUM - otelcollector

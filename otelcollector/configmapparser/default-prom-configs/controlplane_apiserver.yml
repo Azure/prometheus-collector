@@ -22,8 +22,9 @@ scrape_configs:
   scheme: https
   tls_config:
     ca_file: /etc/kubernetes/secrets/ca.pem
+    cert_file: /etc/kubernetes/secrets/client.pem
+    key_file: /etc/kubernetes/secrets/client-key.pem
     insecure_skip_verify: true
-  bearer_token_file: /etc/kubernetes/secrets/token
   relabel_configs:
     - source_labels:
         - __meta_kubernetes_pod_label_k8s_app
