@@ -115,6 +115,28 @@ func getContainerLogs(clientset *kubernetes.Clientset, namespace string, podName
 	return buf.String(), nil
 }
 
+func CheckAllProcessesRunning(K8sClient *kubernetes.Clientset, Cfg *rest.Config, labelName, labelValue, namespace, containerName string, processes []string) error {
+	var processesGrepStringBuilder strings.Builder
+	for _, process := range processes {
+		processesGrepStringBuilder.WriteString(fmt.Sprintf("ps | grep \"%s\" | grep -v grep && ", process))
+	}
+	processesGrepString := strings.TrimSuffix(processesGrepStringBuilder.String(), " && ")
+
+	command := []string{"bash", "-c", processesGrepString}
+	pods, err := GetPodsWithLabel(K8sClient, namespace, labelName, labelValue)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Error when getting pods with label %s=%s: %v", labelName, labelValue, err))
+	}
+
+	for _, pod := range pods {
+		_, _, err := ExecCmd(K8sClient, Cfg, pod.Name, containerName, namespace, command)
+		if err != nil {
+			return errors.New(fmt.Sprintf("Error when running command %v in the container: %v", command, err))
+		}
+	}
+	return nil
+}
+
 func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, containerName string, namespace string, command []string) (stdout string, stderr string, err error) {
 	req := client.CoreV1().RESTClient().Post().
 		Resource("pods").
@@ -207,27 +229,5 @@ func CheckLivenessProbeRestartForProcess(K8sClient *kubernetes.Clientset, Cfg *r
 		break
 	}
 
-	return nil
-}
-
-func CheckAllProcessesRunning(K8sClient *kubernetes.Clientset, Cfg *rest.Config, labelName, labelValue, namespace, containerName string, processes []string) error {
-	var processesGrepStringBuilder strings.Builder
-	for _, process := range processes {
-		processesGrepStringBuilder.WriteString(fmt.Sprintf("ps | grep \"%s\" | grep -v grep && ", process))
-	}
-	processesGrepString := strings.TrimSuffix(processesGrepStringBuilder.String(), " && ")
-
-	command := []string{"bash", "-c", processesGrepString}
-	pods, err := GetPodsWithLabel(K8sClient, namespace, labelName, labelValue)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Error when getting pods with label %s=%s: %v", labelName, labelValue, err))
-	}
-
-	for _, pod := range pods {
-		_, _, err := ExecCmd(K8sClient, Cfg, pod.Name, containerName, namespace, command)
-		if err != nil {
-			return errors.New(fmt.Sprintf("Error when running command %v in the container: %v", command, err))
-		}
-	}
 	return nil
 }

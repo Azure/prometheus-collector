@@ -1,10 +1,11 @@
 # Ginkgo
 Tests are run using the [Ginkgo](https://onsi.github.io/ginkgo/) test framework. This is built upon the regular go test framework. It's advantages are that it:
-- Has an easily readable test structure using the Behavior-Driven-Development model that's used in many languages
-- Utilizes the Gomega package for easily understandable test failure errors with the goal that the output will tell you exactly what failed.
-- Has good support for parallelization and structuring what tests should be run in series and which can be run at the same time.
+- Has an easily readable test structure using the `Behavior-Driven Development` model that's used in many languages and is applicable outside golang. Follows a `Given..., When..., Then...` model. This is implemented in Ginkgo using the `Describe()`, `Context()`, and `It()`/`Specify()` functions.
+- Utilizes the [Gomega assertion package](https://onsi.github.io/gomega/) for easily understandable test failure errors with the goal that the output will tell you exactly what failed.
+- Has good support for parallelization and structuring which tests should be run in series and which can be run at the same time to speed up the tests.
+- Has extensive documentation and examples from OSS community.
 
-Ginkgo can be used for any tests written in golang, whether they are unit tests or integration tests.
+Ginkgo can be used for any tests written in golang, whether they are unit, integration, or e2e tests.
 
 ## Install Locally on your Dev Machine
 - While not in a directory that has a go.mod file, run `sudo -E go install -v github.com/onsi/ginkgo/v2/ginkgo@latest`. This installs the ginkgo command-line tool used to run Ginkgo tests.
@@ -19,6 +20,7 @@ Ginkgo can be used for any tests written in golang, whether they are unit tests 
 
   ```
   func TestE2E(t *testing.T) {
+    // Connects failures to the Gomega assertions
     RegisterFailHandler(Fail)
 
     RunSpecs(t, "E2E Test Suite")
@@ -34,12 +36,12 @@ Ginkgo can be used for any tests written in golang, whether they are unit tests 
   ```
 - Running `ginkgo bootstrap` in the directory with the golang files will create a starter test suite file for you.
 
-### Running Tests in Parallel
-- Ginkgo Test suites are run one at a time.
+## Running Tests in Parallel
+- Ginkgo Test Suites are run one at a time.
 - Ginkgo tests inside a suite are run parallely by default unless `Ordered` or `Serial` is specified as a parameter to a Describe function.
 
-#### Example
-- These two DescribeTable() tests will run at the same time. One tests a replica pod and the other tests a daemonset pod. Because Ordered is specified as a Decorator, each Entry in the table, however,  is run one at a time.
+### Example
+- These two `DescribeTable()` tests will run at the same time. One tests a replica pod and the other tests a daemonset pod. Because `Ordered` is specified as a Ginkgo `Decorator`, each `Entry` in the table, however, is run one at a time.
 - Testing the otelcollector is not running will run at around the same time on the replica pod and daemonset pod. However, MetricsExtension not running won't be tested on each pod until the otelcollector test finishes.
 
   ```go
@@ -64,46 +66,16 @@ Ginkgo can be used for any tests written in golang, whether they are unit tests 
   )
   ```
 
-### What Kinds of Test Can Be Run?
-- Any functionalities of the go-client package can be used for Kubernetes-specific tests. This includes:
+## What Kinds of Test Can Be Run?
+- Unit tests for golang code.
+- Any functionalities of the Kubernetes go-client package can be used for Kubernetes-specific tests. This includes:
   - Checking the status or spec of a Kubernetes resource (deployment, pod, configmap, container, CR, etc.)
   - Pulling the container logs
   - Running exec commands on a container
 - Use the Query API to query an Azure Monitor Workspace to verify metrics are ingested
 
-### Sonobuoy Integration
-- Same tests can be re-used for Arc by having the Sonobuoy container run the Ginkgo tests, just as we right now have it run the python tests.
-
-# TestKube
-Testkube is a runner framework for running the tests inside the cluster. Ginkgo is included as one of the out-of-the-box executors supported. It is deployed as a helm chart on the cluster.
-
-- Has an integrated dashboard to view results, set up tests, test suites, test schedules, etc. with a UX as an alternative to the (also available) CLI.
-- Includes test history, pass rate, and execution times.
-- Friendly user interface and easy Golang integration with out-of-the-box Ginkgo runner.
-- Dashboard must be accessed from within the cluster for now unless we set up an outside endpoint.
-
-### Getting Started
-- Install the CLI on linux/WSL:
-  ```bash
-    wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
-    echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
-    sudo apt-get update
-    sudo apt-get install -y testkube
-  ```
-  Other OS installation instructions are [here](https://docs.testkube.io/articles/install-cli/).
-- Install the [helm chart](https://docs.testkube.io/articles/helm-chart/) on your cluster:
-  ```bash
-  helm repo add kubeshop https://kubeshop.github.io/helm-charts
-  helm install --create-namespace my-testkube kubeshop/testkube
-  ```
-- The helm chart will install in the namespace `testkube`.
-- Run `testkube dashboard` to port-forward the dashboard.
-- Create a `clusterrole` and `clusterrolebinding` for the Ginkgo runner's service account with access to the Kubernetes API server.
-- Create a test connected to the Github repository and branch. Tests are just a custom resource behind the scenes and can be created with the UX, CLI, or applying a CR. Tests can be run through the UX or CLI.
-
-# Unit Tests
-Ginkgo is also used the same way for unit testing. When converting the configmap parsing code from Ruby to Golang, we'll also be able to utilize it for unit tests.
-Copilot can be helpful as a guideline with generating these tests. It struggles with importing the correct packages, and we'll want to use more realistic test cases, but it gives a good outline for Ginkgo testing. For example below was generated by Copilot for an outline of tests for the prometheus-collector-settings section of the configmap:
+### Unit Tests
+An outline of tests for the prometheus-collector-settings section of the configmap is below. With this, we can have many configmap test files and ensure each combination is parsed and the correct prometheus config and environment variables are produced.
 
 ```golang
 var _ = Describe("ConfigMapParser", func() {
@@ -120,18 +92,14 @@ var _ = Describe("ConfigMapParser", func() {
 
 		Context("when the configmap settings file exists", func() {
 			BeforeEach(func() {
-				// Create a temporary configmap settings file for testing
-				// You can use a library like ioutil.TempFile to create a temporary file
-				// with the desired content for testing.
+				// Setup an example configmap settings file for testing
 			})
 
 			AfterEach(func() {
 				// Remove the temporary configmap settings file
-				// You can use os.Remove to delete the temporary file after testing.
 			})
 
 			It("should parse the configmap settings file and return the values", func() {
-				// Call the ParsePrometheusCollectorSettings function
 				defaultMetricAccountName, clusterAlias, isOperatorEnabled, err := configmapparser.ParsePrometheusCollectorSettings()
 				Expect(err).To(BeNil())
 
@@ -155,17 +123,55 @@ var _ = Describe("ConfigMapParser", func() {
 })
 ```
 
-With this, we can have many configmap test files and ensure each combination is parsed and the correct prometheus config and environment variables are produced.
+### E2E Tests
+Much of the agent functionality cannot be tested with just unit tests and relies on making sure everything is working inside the container. For this, we use the Kubernetes go-client package to make calls to the Kubernetes API server. This is where a lot of the pre-release manual testing can be implemented with the automated tests. The `containerstatus` and `livenessprobe` packages are examples of these tests, which use the functions in the `utils` package to get the container status and perform container operations.
+
+In the case of E2E tests, the coding language does not matter since we are not testing the code directly, but instead the functionality of our containers running.
+
+These tests can be run on a dev cluster that you have kubeconfig/kubectl access to, or can be run directly inside CI/CD kubernetes clusters by using TestKube.
+
+# TestKube
+[Testkube](https://docs.testkube.io/) is an OSS runner framework for running the tests inside a Kubernetes cluster. It is deployed as a helm chart on the cluster. Ginkgo is included as one of the out-of-the-box executors supported.
+
+Behind the scenes, tests and executors are custom resources. Running a test starts a job that deploys the test executor pod which runs the Ginkgo tests (or a different framework setup).
+
+Some highlights are that:
+- Has an integrated dashboard to view results, set up tests, test suites, test schedules, etc. with a UX as an alternative to the (also available) CLI.
+- Includes test history, pass rate, and execution times.
+- Friendly user interface and easy Golang integration with out-of-the-box Ginkgo runner.
+- A [Teams channel notification](https://docs.testkube.io/articles/webhooks#microsoft-teams) can integrated with testkube for notifying if a test failed. These tests can be run after every merge to main or scheduled to be run on an interval.
+- Test suites can be created out of tests with a dependency flowchart that can be set up for if some tests should run at the same time or after others, or only run if one succeeds.
+- Many other test framework integrations including curl and postman for testing Kubernetes services and their APIs. Also, has a k6 and jmeter integration for performance testing Kubernetes services.
+- Dashboard must be accessed from within the cluster for now unless we set up an outside endpoint.
+
+### Getting Started
+- Install the CLI on linux/WSL:
+  ```bash
+    wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+    echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
+    sudo apt-get update
+    sudo apt-get install -y testkube
+  ```
+  Other OS installation instructions are [here](https://docs.testkube.io/articles/install-cli/).
+- Install the [helm chart](https://docs.testkube.io/articles/helm-chart/) on your cluster:
+  ```bash
+  helm repo add kubeshop https://kubeshop.github.io/helm-charts
+  helm install --create-namespace my-testkube kubeshop/testkube
+  ```
+- The helm chart will install in the namespace `testkube`.
+- Run `testkube dashboard` to port-forward the dashboard.
+- Create a `clusterrole` and `clusterrolebinding` for the Ginkgo runner's service account with access to the Kubernetes API server.
+- Create a test connected to the Github repository and branch. Tests are a custom resource behind the scenes and can be created with the UX, CLI, or applying a CR. Tests can be run through the UX or CLI.
 
 # When to Run Each Test
 - Unit tests can be included as part of the PR checks.
-- E2E tests can be run from dev machine pointing to your test cluster kubeconfig.
-- E2E tests run after deploying to dev and prod CI/CD clusters. A [Teams channel notification](https://docs.testkube.io/articles/webhooks#microsoft-teams) can integrated with testkube for notifying if it failed.
+- E2E tests can be run from dev machine pointing to your test cluster kubeconfig that is running the dev image.
+- E2E tests run after deploying to dev and prod CI/CD clusters. A [Teams channel notification](https://docs.testkube.io/articles/webhooks#microsoft-teams) can integrated with testkube for notifying if it failed. These tests can be run after every merge to main or scheduled to be run on an interval.
 
 ## Utilizing a PR Checklist
 - Have the e2e tests been run on a test cluster?
-- If feature, have tests been added?
-- If fix, can a test be added to detect the issue in the future?
+- If PR is a feature, have tests been added?
+- If PR is a fix, can a test be added to detect the issue in the future?
 
 # File Directory Structure
 ```
