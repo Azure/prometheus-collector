@@ -6,6 +6,8 @@ LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "windows"
 ENV MONITORING_DATA_DIRECTORY "C:\\opt\\genevamonitoringagent\\datadirectory"
 ENV MONITORING_MCS_MODE "1"
+# Set unfair semaphore wait for better initial CPU performance
+ENV COMPlus_ThreadPool_UnfairSemaphoreSpinLimit 0
 ENV tmpdir /opt/
 
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
