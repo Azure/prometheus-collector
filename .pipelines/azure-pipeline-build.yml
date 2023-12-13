@@ -242,7 +242,6 @@ jobs:
 
 - job: SDL_Binary_Scan
   displayName: "SDL: linux binary scanning"
-  condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
   pool:
     name: Azure-Pipelines-CI-Test-EO
   steps:
@@ -251,7 +250,6 @@ jobs:
 
     - task: CodeQL3000Init@0
       displayName: 'SDL: init codeql'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
     - task: GoTool@0
       displayName: "Build: specify golang version"
@@ -305,7 +303,6 @@ jobs:
 
     - task: CodeQL3000Init@0
       displayName: 'SDL: init codeql'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
     - task: GoTool@0
       displayName: "Build: specify golang version"
@@ -323,13 +320,8 @@ jobs:
 
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
-        if [ "$(Build.Reason)" != "PullRequest" ]; then
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
-          docker pull $(LINUX_FULL_IMAGE_NAME)
-        else
-          # Build multiarch image to make sure there are no issues
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
-        fi
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+        docker pull $(LINUX_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
 
@@ -401,7 +393,6 @@ jobs:
 
     - task: CodeQL3000Finalize@0
       displayName: 'SDL: run codeql'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
 
     - task: ComponentGovernanceComponentDetection@0
       displayName: "SDL: run component governance"
@@ -422,7 +413,6 @@ jobs:
 
     - task: SdtReport@2
       displayName: 'SDL: generate report'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         GdnExportAllTools: false
         GdnExportGdnToolBinSkim: true
@@ -434,7 +424,6 @@ jobs:
 
     - task: PublishSecurityAnalysisLogs@3
       displayName: 'SDL: publish report'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         ArtifactName: 'CodeAnalysisLogs'
         ArtifactType: 'Container'
@@ -451,7 +440,6 @@ jobs:
 
     - task: PostAnalysis@2
       displayName: 'SDL: Post-Build Analysis'
-      condition: or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         GdnBreakAllTools: false
         GdnBreakGdnToolBinSkim: true
@@ -709,18 +697,22 @@ jobs:
         docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
         if [ $? -ne 0 ]; then
           echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION). Checking if MCR image is published."
+          IMAGES_ARE_PUBLISHED=0
           for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
             do
               output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
               if (echo $output | grep $WINDOWS_2019_TAG)
               then
                 echo "Images are published to mcr"
-                exit 0
+                IMAGES_ARE_PUBLISHED=1
+                break
               fi
               sleep 30
             done
+          if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
             echo "Images are not published to mcr within the timeout"
             exit 1
+          fi
 
           az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2019_TAG)
         fi
@@ -729,19 +721,23 @@ jobs:
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
         if [ $? -ne 0 ]; then
-          echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION). Checking if MCR image is published."
+          echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION). Checking if MCR image is published."
+          IMAGES_ARE_PUBLISHED=0
           for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
             do
               output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
               if (echo $output | grep $WINDOWS_2022_TAG)
               then
                 echo "Images are published to mcr"
-                exit 0
+                IMAGES_ARE_PUBLISHED=1
+                break
               fi
               sleep 30
             done
+          if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
             echo "Images are not published to mcr within the timeout"
             exit 1
+          fi
 
           az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2022_TAG)
         fi
