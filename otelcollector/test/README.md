@@ -1,16 +1,19 @@
-# E2E Tests
-## Ginkgo
-Tests are run using the [Ginkgo](https://onsi.github.io/ginkgo/) test framework. This is built upon the regular go test framework. It's advantages are that it has an easily readable test structure, utilizes Gomega for easily understandable test failure errors, and good support for parallelization.
+# Ginkgo
+Tests are run using the [Ginkgo](https://onsi.github.io/ginkgo/) test framework. This is built upon the regular go test framework. It's advantages are that it:
+- Has an easily readable test structure using the Behavior-Driven-Development model that's used in many languages
+- Utilizes the Gomega package for easily understandable test failure errors with the goal that the output will tell you exactly what failed.
+- Has good support for parallelization and structuring what tests should be run in series and which can be run at the same time.
 
-### Install Locally
-- While not in a directory that has a go.mod file, run `sudo -E go install -v github.com/onsi/ginkgo/v2/ginkgo@latest`.
+Ginkgo can be used for any tests written in golang, whether they are unit tests or integration tests.
+
+## Install Locally on your Dev Machine
+- While not in a directory that has a go.mod file, run `sudo -E go install -v github.com/onsi/ginkgo/v2/ginkgo@latest`. This installs the ginkgo command-line tool used to run Ginkgo tests.
 - Run `ginkgo version` to check the installation succeeded. You may need to add `$GOBIN` to your `$PATH`.
 
-### Run Locally
-- Set your `kubeconfig` context to point to the cluster you'd like the tests to run on.
-- Change the directory to one with a ginkgo test suite file. Run `ginkgo -p`.
+## Run Tests Locally from your Dev Machine
+- Change to a directory with a ginkgo test suite file. Run `ginkgo -p`. This runs all the tests in that package with parallelization enabled.
 
-### Test Suites
+## Test Suites
 - Each Ginkgo test suite has a function that handles the testing object and abstracts that away. It runs all Ginkgo tests in the same package.
 - BeforeSuite() and AfterSuite() functions can be used for setup and teardown. We use these for connecting to the cluster to get the kubeconfig and creating a kubernetes go-client.
 
@@ -29,11 +32,11 @@ Tests are run using the [Ginkgo](https://onsi.github.io/ginkgo/) test framework.
     // Environment cleanup
   })
   ```
-- Running `ginkgo bootstrap` in the directory will create a starter test suite file for you.
+- Running `ginkgo bootstrap` in the directory with the golang files will create a starter test suite file for you.
 
 ### Running Tests in Parallel
-- Test suites are run one at a time.
-- Tests inside a suite are run parallely by default unless `Ordered` or `Serial` is specified as a parameter to a Describe function.
+- Ginkgo Test suites are run one at a time.
+- Ginkgo tests inside a suite are run parallely by default unless `Ordered` or `Serial` is specified as a parameter to a Describe function.
 
 #### Example
 - These two DescribeTable() tests will run at the same time. One tests a replica pod and the other tests a daemonset pod. Because Ordered is specified as a Decorator, each Entry in the table, however,  is run one at a time.
@@ -71,7 +74,7 @@ Tests are run using the [Ginkgo](https://onsi.github.io/ginkgo/) test framework.
 ### Sonobuoy Integration
 - Same tests can be re-used for Arc by having the Sonobuoy container run the Ginkgo tests, just as we right now have it run the python tests.
 
-## TestKube
+# TestKube
 Testkube is a runner framework for running the tests inside the cluster. Ginkgo is included as one of the out-of-the-box executors supported. It is deployed as a helm chart on the cluster.
 
 - Has an integrated dashboard to view results, set up tests, test suites, test schedules, etc. with a UX as an alternative to the (also available) CLI.
@@ -95,7 +98,7 @@ Testkube is a runner framework for running the tests inside the cluster. Ginkgo 
   ```
 - The helm chart will install in the namespace `testkube`.
 - Run `testkube dashboard` to port-forward the dashboard.
-- Create a clusterrole and clusterrolebinding for the Ginkgo runner's service account with access to the Kubernetes API server.
+- Create a `clusterrole` and `clusterrolebinding` for the Ginkgo runner's service account with access to the Kubernetes API server.
 - Create a test connected to the Github repository and branch. Tests are just a custom resource behind the scenes and can be created with the UX, CLI, or applying a CR. Tests can be run through the UX or CLI.
 
 # Unit Tests
@@ -163,3 +166,28 @@ With this, we can have many configmap test files and ensure each combination is 
 - Have the e2e tests been run on a test cluster?
 - If feature, have tests been added?
 - If fix, can a test be added to detect the issue in the future?
+
+# File Directory Structure
+```
+├── test                                 - e2e test suites to run on clusters. Unit tests are included alongside the golang files.
+│   ├── README.md                        - Info about setting up, writing, and running the tests.
+│   ├── <test suite package>             - Each test suite is a golang package.
+│   │   ├── <ginkgo test suite setup>    - Ginkgo syntax to setup for any tests in the package.
+|   |   |── <ginkgo tests>               - Actual Ginkgo tests.
+|   |   |── go.mod                       - Used to import the local utils module.
+|   |   |── go.sum
+│   ├── containerstatus                  - Test container logs have no errors, containers are running, and all processes are running.
+│   │   ├── suite_test.go                - Setup access to the Kubernetes cluster.
+|   |   |── container_status_test.go     - Run the tests for each container that's part of our agent.
+|   |   |── go.mod                       - Used to import the local utils module.
+|   |   |── go.sum
+│   ├── livenessprobe                    - Test that the pods detect and restart when a process is not running.
+│   │   ├── suite_test.go                - Setup access to the Kubernetes cluster.
+|   |   |── process_liveness_test.go     - Run the tests for each container that's part of our agent.
+|   |   |── go.mod                       - Used to import the local utils module.
+|   |   |── go.sum
+│   ├── utils                            - Utils for Kubernetes API calls
+|   |   |── utils.go                     - Functions for the test suites to use
+|   |   |── go.mod
+|   |   |── go.sum
+```
