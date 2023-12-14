@@ -23,7 +23,7 @@ spec:
         schema-versions: "v1"
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
-      serviceAccountName: ama-metrics-serviceaccount
+      serviceAccountName: ama-metrics-ccp-sa
       containers:
         - name: prometheus-collector
           image: "{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
@@ -229,7 +229,5 @@ spec:
             sources:
               - secret:
                   name: kube-apiserver-ssl
-              - secret:
-                  name: kube-apiserver-token
               - secret:
                   name: etcd-client-tls

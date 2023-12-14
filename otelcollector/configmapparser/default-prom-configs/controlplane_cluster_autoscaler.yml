@@ -17,6 +17,11 @@ scrape_configs:
       namespaces:
         names:
           - $$POD_NAMESPACE$$
+  tls_config:
+    ca_file: /etc/kubernetes/secrets/ca.pem
+    cert_file: /etc/kubernetes/secrets/client.pem
+    key_file: /etc/kubernetes/secrets/client-key.pem
+    insecure_skip_verify: true
   relabel_configs:
     - source_labels: [ __meta_kubernetes_pod_label_app, __meta_kubernetes_pod_container_name ]
       action: keep
