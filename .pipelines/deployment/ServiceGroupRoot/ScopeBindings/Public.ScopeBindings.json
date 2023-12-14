@@ -86,10 +86,6 @@
                 "replaceWith": "$(ProdMCRRepositoryHelmDependencies)"
               },
               {
-                "find": "__CHART_TAG__",
-                "replaceWith": "$(ChartTag)"
-              },
-              {
                 "find": "__PUSH_NEW_KSM_CHART__",
                 "replaceWith": "$(PushNewKSMChart)"
               },
