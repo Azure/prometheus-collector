@@ -16,9 +16,10 @@ func FLBPluginRegister(ctx unsafe.Pointer) int {
 	return output.FLBPluginRegister(ctx, "appinsights", "AppInsights GO!")
 }
 
-//export FLBPluginInit
 // (fluentbit will call this)
 // ctx (context) pointer to fluentbit context (state/ c code)
+//
+//export FLBPluginInit
 func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	// This will not load the plugin instance. FLBPluginFlush won't be called.
@@ -85,6 +86,8 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
 		return RecordExportingFailed(records)
+	case fluentbitScrapeTag:
+		return PushPrometheusMetricsToAppInsightsMetics(records)
 	default:
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)

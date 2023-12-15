@@ -142,6 +142,7 @@ const (
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
 	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
+	fluentbitScrapeTag                    = "prometheus.scrape"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
@@ -785,10 +786,10 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 
 				// Add to the total that PublishTimeseriesVolume() uses
 				if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
-					TimeseriesVolumeMutex.Lock()			
+					TimeseriesVolumeMutex.Lock()
 					TimeseriesReceivedTotal += metricsReceivedCount
 					TimeseriesVolumeMutex.Unlock()
-		
+
 				}
 
 			}
@@ -822,6 +823,18 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 		ExportingFailedMutex.Lock()
 		OtelCollectorExportingFailedCount += 1
 		ExportingFailedMutex.Unlock()
+	}
+	return output.FLB_OK
+}
+
+func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		// metricsDroppedCount, err := strconv.ParseFloat(ToString(record), 64)
+		// if err == nil {
+		// 	metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
+		// 	TelemetryClient.Track(metric)
+		// }
+		Log(ToString(record))
 	}
 	return output.FLB_OK
 }
