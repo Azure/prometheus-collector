@@ -13,6 +13,7 @@ CVE-2023-47108
 # =========== MEDIUM ================
 # MEDIUM - otelcollector
 CVE-2023-40577
+CVE-2019-3826
 # MEDIUM - promconfigvalidator
 CVE-2023-40577
 # MEDIUM - go vulnerabilities
