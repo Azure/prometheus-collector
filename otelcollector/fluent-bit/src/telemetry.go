@@ -143,6 +143,8 @@ const (
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
 	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
 	fluentbitScrapeTag                    = "prometheus.scrape"
+	meScrapeTag                           = "metricsextension.scrape"
+	otelcolScrapeTag                      = "otelcol.scrape"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
@@ -828,6 +830,30 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 }
 
 func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		// metricsDroppedCount, err := strconv.ParseFloat(ToString(record), 64)
+		// if err == nil {
+		// 	metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
+		// 	TelemetryClient.Track(metric)
+		// }
+		Log(ToString(record))
+	}
+	return output.FLB_OK
+}
+
+func PushMeMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		// metricsDroppedCount, err := strconv.ParseFloat(ToString(record), 64)
+		// if err == nil {
+		// 	metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
+		// 	TelemetryClient.Track(metric)
+		// }
+		Log(ToString(record))
+	}
+	return output.FLB_OK
+}
+
+func PushOtelColMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		// metricsDroppedCount, err := strconv.ParseFloat(ToString(record), 64)
 		// if err == nil {
