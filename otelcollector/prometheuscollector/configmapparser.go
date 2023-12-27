@@ -43,7 +43,8 @@ func confgimapparserforccp() {
     }
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings
-	startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-ccp-prometheus-collector-settings.rb")
+	// startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-ccp-prometheus-collector-settings.rb")
+	setEnvInFile()
 	// sets env : AZMON_DEFAULT_METRIC_ACCOUNT_NAME, AZMON_CLUSTER_LABEL, AZMON_CLUSTER_ALIAS, AZMON_OPERATOR_ENABLED_CHART_SETTING in /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var
 	filename := "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
 	err := setEnvVarsFromFile(filename)

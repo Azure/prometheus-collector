@@ -154,7 +154,7 @@ func (c *Configurator) Configure() {
 	fmt.Printf("End prometheus-collector-settings Processing\n")
 }
 
-func main() {
+func setEnvInFile() {
 	configurator := &Configurator{
 		ConfigLoader: &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/prometheus-collector-settings"},
 		ConfigParser: &ConfigProcessor{},
