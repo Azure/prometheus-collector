@@ -3,7 +3,7 @@ trigger:
     include:
     - main
     - ccp_shell_removal_branch
-    - update-tls
+    - kaveesh/remove_ruby
 
 pr:
   autoCancel: true
