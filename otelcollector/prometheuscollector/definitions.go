@@ -29,4 +29,15 @@ type Configurator struct {
 
 type FileConfigWriter struct {
 	ConfigProcessor *ConfigProcessor
+	Config map[string]string
+}
+
+// ConfigLoader is an interface for loading configurations.
+type ConfigLoader interface {
+	ParseConfigMapForDefaultScrapeSettings() (map[string]string, error)
+}
+
+// ConfigWriter is an interface for writing configurations to a file.
+type ConfigWriter interface {
+	WriteDefaultScrapeSettingsToFile(filename string) error
 }

@@ -53,7 +53,8 @@ func confgimapparserforccp() {
 	}
 
 	// Parse the settings for default scrape configs
-	startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-ccp-default-scrape-settings.rb")
+	// startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-ccp-default-scrape-settings.rb")
+	tomlparserCCPDefaultScrapeSettings()
 	// sets env: AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED...AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED in /opt/microsoft/configmapparser/config_default_scrape_settings_env_var
 	filename = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
 	err = setEnvVarsFromFile(filename)
