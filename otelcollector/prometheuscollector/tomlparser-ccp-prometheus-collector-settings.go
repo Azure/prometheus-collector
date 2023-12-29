@@ -42,8 +42,12 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedConfig map[s
 	if value, ok := parsedConfig["cluster_alias"]; ok {
 		cp.ClusterAlias = strings.TrimSpace(value)
 		fmt.Printf("Got configmap setting for cluster_alias: %s\n", cp.ClusterAlias)
-		cp.ClusterAlias = regexp.MustCompile(`[^0-9a-z]`).ReplaceAllString(cp.ClusterAlias, "_")
-		fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", cp.ClusterAlias)
+		// Only perform the replacement if cp.ClusterAlias is not an empty string
+		if cp.ClusterAlias != "" {
+			cp.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(cp.ClusterAlias, "_")
+			cp.ClusterAlias = strings.Trim(cp.ClusterAlias, "_")  // Trim underscores from the beginning and end (since cluster_alias is being passed in as "" which are being replaced with _)
+			fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", cp.ClusterAlias)
+		}
 	}
 
 	if operatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED"); operatorEnabled != "" && strings.ToLower(operatorEnabled) == "true" {
