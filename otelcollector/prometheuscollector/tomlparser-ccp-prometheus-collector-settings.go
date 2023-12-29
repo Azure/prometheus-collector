@@ -8,16 +8,6 @@ import (
 	"strings"
 )
 
-// ConfigLoader is an interface for loading configurations.
-type ConfigLoader interface {
-	ParseConfigMap() (map[string]string, error)
-}
-
-// FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
-type FilesystemConfigLoader struct {
-	ConfigMapMountPath string
-}
-
 func (fcl *FilesystemConfigLoader) ParseConfigMap() (map[string]string, error) {
 	config := make(map[string]string)
 
@@ -41,20 +31,6 @@ func (fcl *FilesystemConfigLoader) ParseConfigMap() (map[string]string, error) {
 	}
 
 	return config, nil
-}
-
-// ConfigParser is an interface for parsing configurations.
-type ConfigParser interface {
-	PopulateSettingValuesFromConfigMap(parsedConfig map[string]string)
-}
-
-// ConfigProcessor handles the processing of configuration settings.
-type ConfigProcessor struct {
-	DefaultMetricAccountName string
-	ClusterAlias             string
-	ClusterLabel             string
-	IsOperatorEnabled        string
-	IsOperatorEnabledChartSetting string
 }
 
 func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedConfig map[string]string) {
@@ -81,17 +57,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedConfig map[s
 	}
 }
 
-// ConfigWriter is an interface for writing configurations to a file.
-type ConfigWriter interface {
-	WriteConfigToFile(filename string) error
-}
-
-// FileConfigWriter implements ConfigWriter for writing configurations to a file.
-type FileConfigWriter struct {
-	ConfigProcessor *ConfigProcessor
-}
-
-func (fcw *FileConfigWriter) WriteConfigToFile(filename string) error {
+func (fcw *FileConfigWriter) WriteConfigToFile1(filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("Exception while opening file for writing prometheus-collector config environment variables: %s", err)
@@ -104,14 +70,6 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string) error {
 	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CHART_SETTING=%s\n", fcw.ConfigProcessor.IsOperatorEnabledChartSetting))
 
 	return nil
-}
-
-// Configurator is responsible for configuring the application.
-type Configurator struct {
-	ConfigLoader   ConfigLoader
-	ConfigParser   ConfigParser
-	ConfigWriter   ConfigWriter
-	ConfigFilePath string
 }
 
 func (c *Configurator) Configure() {
@@ -145,7 +103,7 @@ func (c *Configurator) Configure() {
 	fmt.Printf("AZMON_CLUSTER_ALIAS: '%s'\n", c.ConfigParser.ClusterAlias)
 	fmt.Printf("AZMON_CLUSTER_LABEL: %s\n", c.ConfigParser.ClusterLabel)
 
-	err := c.ConfigWriter.WriteConfigToFile(c.ConfigFilePath)
+	err := c.ConfigWriter.WriteConfigToFile1(c.ConfigFilePath)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		return
@@ -154,7 +112,7 @@ func (c *Configurator) Configure() {
 	fmt.Printf("End prometheus-collector-settings Processing\n")
 }
 
-func setEnvInFile() {
+func parseConfigAndSetEnvInFile() {
 	configurator := &Configurator{
 		ConfigLoader: &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/prometheus-collector-settings"},
 		ConfigParser: &ConfigProcessor{},

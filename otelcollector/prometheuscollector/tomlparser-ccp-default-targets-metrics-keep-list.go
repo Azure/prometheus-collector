@@ -1,103 +1,76 @@
 package main
 
-import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"regexp"
-	"strings"
-	"gopkg.in/yaml.v2"
-)
+// import (
+// 	"fmt"
+// 	"io/ioutil"
+// 	"os"
+// 	"regexp"
+// 	"strings"
+// )
 
-// ConfigLoader is an interface for loading configurations.
-type ConfigLoader interface {
-	ParseConfigMap() (map[string]string, error)
-}
+// func (fcl *FilesystemConfigLoader) ParseConfigMap2() (map[string]string, error) {
+// 	config := make(map[string]string)
 
-// FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
-type FilesystemConfigLoader struct {
-	ConfigMapMountPath string
-}
+// 	if _, err := os.Stat(fcl.ConfigMapMountPath); os.IsNotExist(err) {
+// 		fmt.Printf("configmap for ccp default scrape settings not mounted, using defaults\n")
+// 		return config, nil
+// 	}
 
-func (fcl *FilesystemConfigLoader) ParseConfigMap() (map[string]string, error) {
-	config := make(map[string]string)
+// 	content, err := ioutil.ReadFile(fcl.ConfigMapMountPath)
+// 	if err != nil {
+// 		fmt.Printf("Error reading config map file: %s, using defaults, please check config map for errors\n", err)
+// 		return nil, err
+// 	}
 
-	if _, err := os.Stat(fcl.ConfigMapMountPath); os.IsNotExist(err) {
-		fmt.Printf("configmap for ccp default scrape settings not mounted, using defaults\n")
-		return config, nil
-	}
+// 	lines := strings.Split(string(content), "\n")
+// 	for _, line := range lines {
+// 		parts := strings.SplitN(line, "=", 2)
+// 		if len(parts) == 2 {
+// 			config[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+// 		}
+// 	}
 
-	content, err := ioutil.ReadFile(fcl.ConfigMapMountPath)
-	if err != nil {
-		fmt.Printf("Error reading config map file: %s, using defaults, please check config map for errors\n", err)
-		return nil, err
-	}
+// 	return config, nil
+// }
 
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2 {
-			config[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
-		}
-	}
+// func (fcw *FileConfigWriter) WriteConfigToFile(filename string) error {
+// 	file, err := os.Create(filename)
+// 	if err != nil {
+// 		return fmt.Errorf("Exception while opening file for writing ccp default scrape settings environment variables: %s", err)
+// 	}
+// 	defer file.Close()
 
-	return config, nil
-}
+// 	for key, value := range fcw.Config {
+// 		file.WriteString(fmt.Sprintf("%s=%s\n", key, value))
+// 	}
 
-// ConfigWriter is an interface for writing configurations to a file.
-type ConfigWriter interface {
-	WriteConfigToFile(filename string) error
-}
+// 	return nil
+// }
 
-// FileConfigWriter implements ConfigWriter for writing configurations to a file.
-type FileConfigWriter struct {
-	Config map[string]string
-}
 
-func (fcw *FileConfigWriter) WriteConfigToFile(filename string) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("Exception while opening file for writing ccp default scrape settings environment variables: %s", err)
-	}
-	defer file.Close()
+// func (c *Configurator) Configure1() {
+// 	configMapSettings, err := c.ConfigLoader.ParseConfigMap2()
+// 	if err == nil && len(configMapSettings) > 0 {
+// 		err := c.ConfigWriter.WriteConfigToFile(c.ConfigFilePath)
+// 		if err != nil {
+// 			fmt.Printf("%v\n", err)
+// 			return
+// 		}
+// 	} else {
+// 		fmt.Printf("Configmap for ccp default scrape settings not found or empty, using defaults\n")
+// 	}
+// }
 
-	for key, value := range fcw.Config {
-		file.WriteString(fmt.Sprintf("%s=%s\n", key, value))
-	}
+// func tomlparserCCPTargetsMetricsKeepList() {
+// 	configurator := &Configurator{
+// 		ConfigLoader: &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/ccp-default-scrape-settings"},
+// 		ConfigWriter: &FileConfigWriter{},
+// 		ConfigFilePath: "/opt/microsoft/configmapparser/config_ccp_default_scrape_settings_env_var",
+// 	}
 
-	return nil
-}
+// 	fmt.Printf("Start ccp-default-scrape-settings Processing\n")
 
-// Configurator is responsible for configuring the application.
-type Configurator struct {
-	ConfigLoader   ConfigLoader
-	ConfigWriter   ConfigWriter
-	ConfigFilePath string
-}
+// 	configurator.Configure1()
 
-func (c *Configurator) Configure() {
-	configMapSettings, err := c.ConfigLoader.ParseConfigMap()
-	if err == nil && len(configMapSettings) > 0 {
-		err := c.ConfigWriter.WriteConfigToFile(c.ConfigFilePath)
-		if err != nil {
-			fmt.Printf("%v\n", err)
-			return
-		}
-	} else {
-		fmt.Printf("Configmap for ccp default scrape settings not found or empty, using defaults\n")
-	}
-}
-
-func main() {
-	configurator := &Configurator{
-		ConfigLoader: &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/ccp-default-scrape-settings"},
-		ConfigWriter: &FileConfigWriter{},
-		ConfigFilePath: "/opt/microsoft/configmapparser/config_ccp_default_scrape_settings_env_var",
-	}
-
-	fmt.Printf("Start ccp-default-scrape-settings Processing\n")
-
-	configurator.Configure()
-
-	fmt.Printf("End ccp-default-scrape-settings Processing\n")
-}
+// 	fmt.Printf("End ccp-default-scrape-settings Processing\n")
+// }
