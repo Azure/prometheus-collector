@@ -836,6 +836,8 @@ func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interfa
 		// 	metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
 		// 	TelemetryClient.Track(metric)
 		// }
+		event := appinsights.NewEventTelemetry("promMetrics")
+		TelemetryClient.Track(event)
 		Log(ToString(record))
 	}
 	return output.FLB_OK
@@ -848,6 +850,8 @@ func PushMeMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) in
 		// 	metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
 		// 	TelemetryClient.Track(metric)
 		// }
+		event := appinsights.NewEventTelemetry("meMetrics")
+		TelemetryClient.Track(event)
 		Log(ToString(record))
 	}
 	return output.FLB_OK
@@ -860,7 +864,9 @@ func PushOtelColMetricsToAppInsightsMetrics(records []map[interface{}]interface{
 		// 	metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
 		// 	TelemetryClient.Track(metric)
 		// }
+		event := appinsights.NewEventTelemetry("otelMetrics")
 		Log(ToString(record))
+		TelemetryClient.Track(event)
 	}
 	return output.FLB_OK
 }
