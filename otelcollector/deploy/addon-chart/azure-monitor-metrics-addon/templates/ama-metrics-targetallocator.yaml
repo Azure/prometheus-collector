@@ -33,7 +33,7 @@ spec:
         - --enable-prometheus-cr-watcher
         - --reload-config
         #image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
-        image: "docker.io/rashmichandrashekarms/ta:rs-21"
+        image: "docker.io/rashmichandrashekarms/ta:all-updates-17"
         imagePullPolicy: IfNotPresent
         resources:
           limits:
