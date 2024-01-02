@@ -50,6 +50,10 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	go PushMEProcessedAndReceivedCountToAppInsightsMetrics()
 
+	go PushPrometheusMetricsToAppInsightsMetrics()
+
+	go PushMeMetricsToAppInsightsMetrics()
+
 	return output.FLB_OK
 }
 
