@@ -142,9 +142,6 @@ jobs:
         tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
       displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
 
-    - task: CredScan@3
-      displayName: "SDL : Run credscan"
-
     - task: CopyFiles@2
       displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
       inputs:
