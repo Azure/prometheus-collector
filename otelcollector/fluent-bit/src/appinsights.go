@@ -47,13 +47,11 @@ func createLogger() *log.Logger {
 	var logfile *os.File
 	var logPath = "/opt/fluent-bit/fluent-bit-out-appinsights-runtime.log"
 
-	if err != nil {
-		log.Fatalf("Error creating/opening log file: %s", err)
-	}
 	if _, err := os.Stat(logPath); err == nil {
 		fmt.Printf("File Exists. Opening file in append mode...\n")
 		logfile, err = os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
+			log.Fatalf("Error creating/opening log file: %s", err)
 			SendException(err.Error())
 			fmt.Printf(err.Error())
 		}
