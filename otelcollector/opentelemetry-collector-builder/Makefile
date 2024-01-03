@@ -12,8 +12,8 @@ fluentbitplugin:
 promconfigvalidator:
 	make -C ../prom-config-validator-builder
 
-targetallocator:
-	make -C ../otel-allocator
+# targetallocator:
+# 	make -C ../otel-allocator
 
 configurationreader:
 	make -C ../configuration-reader-builder
