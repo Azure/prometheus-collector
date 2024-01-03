@@ -830,7 +830,7 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 }
 
 func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-	Log("promMetrics")
+	Log(fmt.Sprintf("promMetrics %s", cpuMetricName))
 	for _, record := range records {
 		metricName := "promMetrics"
 		metricValue := ToString(record)
@@ -847,7 +847,7 @@ func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interfa
 }
 
 func PushMeMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-	Log("meMetrics")
+	Log(fmt.Sprintf("meMetrics %s", cpuMetricName))
 	for _, record := range records {
 
 		metricName := "meMetrics"
@@ -865,7 +865,7 @@ func PushMeMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) in
 }
 
 func PushOtelColMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-	Log("otelMetrics")
+	Log(fmt.Sprintf("otelMetrics %s", cpuMetricName))
 	for _, record := range records {
 
 		metricName := "otelMetrics"
