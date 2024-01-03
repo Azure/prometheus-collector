@@ -831,41 +831,49 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 
 func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		// metricsDroppedCount, err := strconv.ParseFloat(ToString(record), 64)
-		// if err == nil {
-		// 	metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
-		// 	TelemetryClient.Track(metric)
-		// }
-		event := appinsights.NewEventTelemetry("promMetrics")
+		metricName := "promMetrics"
+		metricValue := ToString(record)
+
+		// Print metric in log
+		Log(metricName + ": " + metricValue)
+
+		// Send metric to App Insights telemetry
+		event := appinsights.NewEventTelemetry(metricName)
+		event.Properties["metric"] = metricValue
 		TelemetryClient.Track(event)
-		Log(ToString(record))
 	}
 	return output.FLB_OK
 }
 
 func PushMeMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		// metricsDroppedCount, err := strconv.ParseFloat(ToString(record), 64)
-		// if err == nil {
-		// 	metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
-		// 	TelemetryClient.Track(metric)
-		// }
-		event := appinsights.NewEventTelemetry("meMetrics")
+
+		metricName := "meMetrics"
+		metricValue := ToString(record)
+
+		// Print metric in log
+		Log(metricName + ": " + metricValue)
+
+		// Send metric to App Insights telemetry
+		event := appinsights.NewEventTelemetry(metricName)
+		event.Properties["metric"] = metricValue
 		TelemetryClient.Track(event)
-		Log(ToString(record))
 	}
 	return output.FLB_OK
 }
 
 func PushOtelColMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		// metricsDroppedCount, err := strconv.ParseFloat(ToString(record), 64)
-		// if err == nil {
-		// 	metric := appinsights.NewMetricTelemetry("meMetricsDroppedCount", metricsDroppedCount)
-		// 	TelemetryClient.Track(metric)
-		// }
-		event := appinsights.NewEventTelemetry("otelMetrics")
-		Log(ToString(record))
+
+		metricName := "otelMetrics"
+		metricValue := ToString(record)
+
+		// Print metric in log
+		Log(metricName + ": " + metricValue)
+
+		// Send metric to App Insights telemetry
+		event := appinsights.NewEventTelemetry(metricName)
+		event.Properties["metric"] = metricValue
 		TelemetryClient.Track(event)
 	}
 	return output.FLB_OK
