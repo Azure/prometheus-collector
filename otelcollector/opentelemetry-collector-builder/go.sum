@@ -537,7 +537,6 @@ github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometh
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.90.0 h1:Xkx1JT+GiJH9oawv61eM3yWdkXqT/fk5FcAT140PPqY=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.90.0/go.mod h1:wxJfumGLuNPUkKRMN+5rFCI7At+7BbMOvKpJSiAUqmQ=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.90.0 h1:3/v2gdRnq/oh7NuJ8qBtci2J/1IWKZ0tBTbZ8xTdfxI=
-github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.90.0/go.mod h1:FF1Uxgox+ptWe6a4Hdfw9AxuatYR8JggJDoVkrXY9aA=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0-rc5 h1:Ygwkfw9bpDvs+c9E34SdgGOj41dX/cbdlwvlWt0pnFI=

@@ -267,7 +267,8 @@ jobs:
       displayName: 'SDL: run binskim'
       inputs:
         InputType: 'CommandLine'
-        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+        # Remove - $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator for targetallocator since go 1.21 is not yet supported by build pipeline
+        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
 
     - task: Gosec@1
       displayName: 'SDL: run gosec'
