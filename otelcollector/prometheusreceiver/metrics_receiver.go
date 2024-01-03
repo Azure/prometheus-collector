@@ -40,7 +40,7 @@ import (
 const (
 	defaultGCInterval = 2 * time.Minute
 	gcIntervalDelta   = 1 * time.Minute
-	// Use same settings as Prometheus web server
+		// Use same settings as Prometheus web server
 	maxConnections     = 512
 	readTimeoutMinutes = 10
 )
@@ -258,7 +258,7 @@ func (r *pReceiver) applyCfg(cfg *config.Config) error {
 		discoveryCfg[scrapeConfig.JobName] = scrapeConfig.ServiceDiscoveryConfigs
 		r.settings.Logger.Info("Scrape job added", zap.String("jobName", scrapeConfig.JobName))
 	}
-	if err := r.discoveryManager.ApplyConfig(discoveryCfg); err != nil {
+		if err := r.discoveryManager.ApplyConfig(discoveryCfg); err != nil {
 		return err
 	}
 
@@ -319,7 +319,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 			host.ReportFatalError(err)
 		}
 	}()
-	// Setup settings and logger and create Prometheus web handler
+		// Setup settings and logger and create Prometheus web handler
 	webOptions := web.Options{
 		ScrapeManager: r.scrapeManager,
 		Context:       ctx,
