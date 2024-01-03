@@ -7,16 +7,23 @@ type FilesystemConfigLoader struct {
 
 // ConfigProcessor handles the processing of configuration settings.
 type ConfigProcessor struct {
-	DefaultMetricAccountName string
-	ClusterAlias             string
-	ClusterLabel             string
-	IsOperatorEnabled        string
-	IsOperatorEnabledChartSetting string
-}
+	DefaultMetricAccountName 		 			string
+	ClusterAlias             		  			string
+	ClusterLabel             		  			string
+	IsOperatorEnabled        		  			string
+	IsOperatorEnabledChartSetting 	  			string
+	ControlplaneKubeControllerManager 			string
+	ControlplaneKubeScheduler         			string
+	ControlplaneApiserver             			string
+	ControlplaneClusterAutoscaler     			string
+	ControlplaneEtcd                  			string
+	NoDefaultsEnabled                       	bool
+}	
 
 // ConfigParser is an interface for parsing configurations.
 type ConfigParser interface {
 	PopulateSettingValuesFromConfigMap(parsedConfig map[string]string)
+	PopulateDefaultSettingValuesFromConfigMap(parsedConfig map[string]string)
 }
 
 // Configurator is responsible for configuring the application.

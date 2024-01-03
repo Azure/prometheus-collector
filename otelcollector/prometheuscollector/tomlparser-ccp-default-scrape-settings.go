@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"regexp"
 )
 
 func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map[string]string, error) {
@@ -31,39 +32,104 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map
 	return config, nil
 }
 
-func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string) error {
+
+func (cp *ConfigProcessor) PopulateDefaultSettingValuesFromConfigMap(parsedConfig map[string]string) {
+	if val, ok := parsedConfig["controlplane-kube-controller-manager"]; ok && val != "" {
+		cp.ControlplaneKubeControllerManager = val
+		fmt.Printf("config::Using configmap scrape settings for controlplane-kube-controller-manager: %v\n", cp.ControlplaneKubeControllerManager)
+	}
+
+	if val, ok := parsedConfig["controlplane-kube-scheduler"]; ok && val != "" {
+		cp.ControlplaneKubeScheduler = val
+		fmt.Printf("config::Using configmap scrape settings for controlplane-kube-scheduler: %v\n", cp.ControlplaneKubeScheduler)
+	}
+
+	if val, ok := parsedConfig["controlplane-apiserver"]; ok && val != "" {
+		cp.ControlplaneApiserver = val
+		fmt.Printf("config::Using configmap scrape settings for controlplane-apiserver: %v\n", cp.ControlplaneApiserver)
+	}
+
+	if val, ok := parsedConfig["controlplane-cluster-autoscaler"]; ok && val != "" {
+		cp.ControlplaneClusterAutoscaler = val
+		fmt.Printf("config::Using configmap scrape settings for controlplane-cluster-autoscaler: %v\n", cp.ControlplaneClusterAutoscaler)
+	}
+
+	if val, ok := parsedConfig["controlplane-etcd"]; ok && val != "" {
+		cp.ControlplaneEtcd = val
+		fmt.Printf("config::Using configmap scrape settings for controlplane-etcd: %v\n", cp.ControlplaneEtcd)
+	}
+
+	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
+		controllerType := os.Getenv("CONTROLLER_TYPE")
+		if controllerType == "ReplicaSet" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" &&
+			cp.ControlplaneKubeControllerManager == "" && cp.ControlplaneKubeScheduler == "" &&
+			cp.ControlplaneApiserver == "" && cp.ControlplaneClusterAutoscaler == "" && cp.ControlplaneEtcd == "" {
+			cp.NoDefaultsEnabled = true
+		}
+	} else if cp.ControlplaneKubeControllerManager == "" && cp.ControlplaneKubeScheduler == "" &&
+		cp.ControlplaneApiserver == "" && cp.ControlplaneClusterAutoscaler == "" && cp.ControlplaneEtcd == "" {
+		cp.NoDefaultsEnabled = true
+	}
+
+	if cp.NoDefaultsEnabled {
+		fmt.Printf("No default scrape configs enabled")
+	}
+}
+
+
+func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, cp *ConfigProcessor) error {
 	file, err := os.Create(filename)
 	if err != nil {
-		return fmt.Errorf("exception while opening file for writing ccp default scrape settings environment variables: %s", err)
+		return fmt.Errorf("Exception while opening file for writing prometheus-collector config environment variables: %s", err)
 	}
 	defer file.Close()
 
-	for key, value := range fcw.Config {
-		_, err := file.WriteString(fmt.Sprintf("%s=%s\n", key, value))
-		if err != nil {
-			return fmt.Errorf("error writing to file: %s", err)
-		}
-	}
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_KUBE_CONTROLLER_MANAGER_ENABLED=%v\n", cp.ControlplaneKubeControllerManager))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_KUBE_SCHEDULER_ENABLED=%v\n", cp.ControlplaneKubeScheduler))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_APISERVER_ENABLED=%v\n", cp.ControlplaneApiserver))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_CLUSTER_AUTOSCALER_ENABLED=%v\n", cp.ControlplaneClusterAutoscaler))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_ETCD_ENABLED=%v\n", cp.ControlplaneEtcd))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", cp.NoDefaultsEnabled))
 
 	return nil
 }
 
 func (c *Configurator) ConfigureDefaultScrapeSettings() {
-	configMapSettings, err := c.ConfigLoader.ParseConfigMapForDefaultScrapeSettings()
+	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+
+	fmt.Printf("Start prometheus-collector-settings Processing\n")
+
+	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
+		configMapSettings, err := c.ConfigLoader.ParseConfigMapForDefaultScrapeSettings()
+		if err == nil && len(configMapSettings) > 0 {
+			c.ConfigParser.PopulateDefaultSettingValuesFromConfigMap(configMapSettings)
+		}
+	} else {
+		if _, err := os.Stat(c.ConfigLoader.ConfigMapMountPath); err == nil {
+			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
+		}
+	}
+
+	if mac := os.Getenv("MAC"); mac != "" && strings.TrimSpace(mac) == "true" {
+		clusterArray := strings.Split(strings.TrimSpace(os.Getenv("CLUSTER")), "/")
+		c.ConfigParser.ClusterAlias = clusterArray[len(clusterArray)-1]
+	} else {
+		c.ConfigParser.ClusterAlias = os.Getenv("CLUSTER")
+	}
+
+	if c.ConfigParser.ClusterAlias != "" && len(c.ConfigParser.ClusterAlias) > 0 {
+		c.ConfigParser.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(c.ConfigParser.ClusterAlias, "_")
+		c.ConfigParser.ClusterAlias = strings.Trim(c.ConfigParser.ClusterAlias, "_")
+		fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", c.ConfigParser.ClusterAlias)
+	}
+
+	err := c.ConfigWriter.WriteDefaultScrapeSettingsToFile(c.ConfigFilePath, c.ConfigParser)
 	if err != nil {
-		fmt.Printf("error parsing config map: %v\n", err)
+		fmt.Printf("%v\n", err)
 		return
 	}
 
-	if len(configMapSettings) > 0 {
-		err := c.ConfigWriter.WriteDefaultScrapeSettingsToFile(c.ConfigFilePath)
-		if err != nil {
-			fmt.Printf("error writing default scrape settings to file: %v\n", err)
-			return
-		}
-	} else {
-		fmt.Println("configmap for ccp default scrape settings not found or empty, using defaults")
-	}
+	fmt.Printf("End prometheus-collector-settings Processing\n")
 }
 
 func tomlparserCCPDefaultScrapeSettings() {
