@@ -21,14 +21,15 @@ import (
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 var reloaderConfig = ContainerConfig{
-	CPURequest:    "100m",
-	CPULimit:      "100m",
-	MemoryRequest: "50Mi",
-	MemoryLimit:   "50Mi",
-	Image:         "quay.io/prometheus-operator/prometheus-config-reloader:latest",
+	CPURequests:    Quantity{q: resource.MustParse("100m")},
+	CPULimits:      Quantity{q: resource.MustParse("100m")},
+	MemoryRequests: Quantity{q: resource.MustParse("50Mi")},
+	MemoryLimits:   Quantity{q: resource.MustParse("50Mi")},
+	Image:          "quay.io/prometheus-operator/prometheus-config-reloader:latest",
 }
 
 func TestCreateConfigReloaderEnableProbes(t *testing.T) {
@@ -121,6 +122,7 @@ func TestCreateConfigReloader(t *testing.T) {
 	logFormat := "logFormat"
 	logLevel := "logLevel"
 	configFile := "configFile"
+	webConfigFile := "webConfigFile"
 	configEnvsubstFile := "configEnvsubstFile"
 	watchedDirectories := []string{"directory1", "directory2"}
 	shard := int32(1)
@@ -140,6 +142,7 @@ func TestCreateConfigReloader(t *testing.T) {
 		ConfigFile(configFile),
 		ConfigEnvsubstFile(configEnvsubstFile),
 		WatchedDirectories(watchedDirectories),
+		WebConfigFile(webConfigFile),
 		Shard(shard),
 		ImagePullPolicy(expectedImagePullPolicy),
 	)
@@ -163,6 +166,9 @@ func TestCreateConfigReloader(t *testing.T) {
 	}
 	if !contains(container.Args, "--config-envsubst-file=configEnvsubstFile") {
 		t.Errorf("Expected '--config-envsubst-file=%s' not found in %s", configEnvsubstFile, container.Args)
+	}
+	if !contains(container.Args, "--web-config-file=webConfigFile") {
+		t.Errorf("Expected '--web-config-file=%s' not found in %s", webConfigFile, container.Args)
 	}
 	for _, dir := range watchedDirectories {
 		if !contains(container.Args, fmt.Sprintf("--watched-dir=%s", dir)) {
