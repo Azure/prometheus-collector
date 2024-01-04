@@ -255,7 +255,7 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.20'
+        version: '1.21.0'
 
     - bash: |
         sudo apt-get install build-essential -y
@@ -268,7 +268,7 @@ jobs:
       inputs:
         InputType: 'CommandLine'
         # Remove - $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator for targetallocator since go 1.21 is not yet supported by build pipeline, add this back once 1.21 is supported
-        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
 
     - task: Gosec@1
       displayName: 'SDL: run gosec'
