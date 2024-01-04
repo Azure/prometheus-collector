@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"time"
 
 	"os"
 
@@ -80,10 +79,6 @@ func updateTAConfigFile(configFilePath string) {
 	}
 
 	targetAllocatorConfigYaml, _ := yaml.Marshal(targetAllocatorConfig)
-	// adding intentional delay to test out
-	log.Println("Sleeping for 1 minute intentionally")
-	time.Sleep(1 * time.Minute)
-	log.Println("Done sleeping")
 	if err := os.WriteFile(taConfigFilePath, targetAllocatorConfigYaml, 0644); err != nil {
 		logFatalError(fmt.Sprintf("config-reader::Unable to write to: %s - %v\n", taConfigFilePath, err))
 		os.Exit(1)
