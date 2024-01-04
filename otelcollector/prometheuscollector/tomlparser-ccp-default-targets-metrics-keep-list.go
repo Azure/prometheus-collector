@@ -1,76 +1,140 @@
 package main
 
-// import (
-// 	"fmt"
-// 	"io/ioutil"
-// 	"os"
-// 	"regexp"
-// 	"strings"
-// )
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+	"gopkg.in/yaml.v2"
+)
 
-// func (fcl *FilesystemConfigLoader) ParseConfigMap2() (map[string]string, error) {
-// 	config := make(map[string]string)
+var (
+	configMapMountPath                     = "/etc/config/settings/default-targets-metrics-keep-list"
+	configSchemaVersion, minimalIngestionProfile string
+	controlplaneApiserverRegex, controlplaneClusterAutoscalerRegex string
+	controlplaneKubeSchedulerRegex, controlplaneKubeControllerManagerRegex string
+	controlplaneEtcdRegex                  string
+	LOGGING_PREFIX                         = "default-scrape-keep-lists"
+)
 
-// 	if _, err := os.Stat(fcl.ConfigMapMountPath); os.IsNotExist(err) {
-// 		fmt.Printf("configmap for ccp default scrape settings not mounted, using defaults\n")
-// 		return config, nil
-// 	}
+func parseConfigMap() map[string]interface{} {
+	if _, err := os.Stat(configMapMountPath); os.IsNotExist(err) {
+		fmt.Println("configmap prometheus-collector-configmap for default-targets-metrics-keep-list not mounted, using defaults")
+		return nil
+	}
 
-// 	content, err := ioutil.ReadFile(fcl.ConfigMapMountPath)
-// 	if err != nil {
-// 		fmt.Printf("Error reading config map file: %s, using defaults, please check config map for errors\n", err)
-// 		return nil, err
-// 	}
+	content, err := ioutil.ReadFile(configMapMountPath)
+	if err != nil {
+		fmt.Printf("Exception while parsing config map for default-targets-metrics-keep-list: %v, using defaults, please check config map for errors\n", err)
+		return nil
+	}
 
-// 	lines := strings.Split(string(content), "\n")
-// 	for _, line := range lines {
-// 		parts := strings.SplitN(line, "=", 2)
-// 		if len(parts) == 2 {
-// 			config[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
-// 		}
-// 	}
+	tree, err := toml.Load(string(content))
+	if err != nil {
+		fmt.Printf("Error parsing TOML: %v\n", err)
+		return nil
+	}
 
-// 	return config, nil
-// }
+	configMap := make(map[string]interface{})
 
-// func (fcw *FileConfigWriter) WriteConfigToFile(filename string) error {
-// 	file, err := os.Create(filename)
-// 	if err != nil {
-// 		return fmt.Errorf("Exception while opening file for writing ccp default scrape settings environment variables: %s", err)
-// 	}
-// 	defer file.Close()
+	// Extract values from the TOML tree and populate the configMap
+	// Replace 'get' methods with the appropriate way to extract values based on your TOML structure
+	// Example:
+	// configMap["controlplane-kube-controller-manager"] = tree.Get("controlplane-kube-controller-manager").(string)
+	// ... and so on ...
 
-// 	for key, value := range fcw.Config {
-// 		file.WriteString(fmt.Sprintf("%s=%s\n", key, value))
-// 	}
+	return configMap
+}
 
-// 	return nil
-// }
+func isValidRegex(input string) bool {
+	_, err := regexp.Compile(input)
+	return err == nil
+}
 
+func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) {
+	controlplaneKubeControllerManagerRegex = parsedConfig["controlplane-kube-controller-manager"].(string)
+	controlplaneKubeSchedulerRegex = parsedConfig["controlplane-kube-scheduler"].(string)
+	controlplaneApiserverRegex = parsedConfig["controlplane-apiserver"].(string)
+	controlplaneClusterAutoscalerRegex = parsedConfig["controlplane-cluster-autoscaler"].(string)
+	controlplaneEtcdRegex = parsedConfig["controlplane-etcd"].(string)
 
-// func (c *Configurator) Configure1() {
-// 	configMapSettings, err := c.ConfigLoader.ParseConfigMap2()
-// 	if err == nil && len(configMapSettings) > 0 {
-// 		err := c.ConfigWriter.WriteConfigToFile(c.ConfigFilePath)
-// 		if err != nil {
-// 			fmt.Printf("%v\n", err)
-// 			return
-// 		}
-// 	} else {
-// 		fmt.Printf("Configmap for ccp default scrape settings not found or empty, using defaults\n")
-// 	}
-// }
+	// Validate regex values
+	if !isValidRegex(controlplaneKubeControllerManagerRegex) {
+		fmt.Println("Invalid regex for controlplane-kube-controller-manager:", controlplaneKubeControllerManagerRegex)
+		controlplaneKubeControllerManagerRegex = ""
+	}
+	if !isValidRegex(controlplaneKubeSchedulerRegex) {
+		fmt.Println("Invalid regex for controlplane-kube-scheduler:", controlplaneKubeSchedulerRegex)
+		controlplaneKubeSchedulerRegex = ""
+	}
+	if !isValidRegex(controlplaneApiserverRegex) {
+		fmt.Println("Invalid regex for controlplane-apiserver:", controlplaneApiserverRegex)
+		controlplaneApiserverRegex = ""
+	}
+	if !isValidRegex(controlplaneClusterAutoscalerRegex) {
+		fmt.Println("Invalid regex for controlplane-cluster-autoscaler:", controlplaneClusterAutoscalerRegex)
+		controlplaneClusterAutoscalerRegex = ""
+	}
+	if !isValidRegex(controlplaneEtcdRegex) {
+		fmt.Println("Invalid regex for controlplane-etcd:", controlplaneEtcdRegex)
+		controlplaneEtcdRegex = ""
+	}
 
-// func tomlparserCCPTargetsMetricsKeepList() {
-// 	configurator := &Configurator{
-// 		ConfigLoader: &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/ccp-default-scrape-settings"},
-// 		ConfigWriter: &FileConfigWriter{},
-// 		ConfigFilePath: "/opt/microsoft/configmapparser/config_ccp_default_scrape_settings_env_var",
-// 	}
+	// Logging the values being set
+	fmt.Printf("controlplaneKubeControllerManagerRegex: %s\n", controlplaneKubeControllerManagerRegex)
+	fmt.Printf("controlplaneKubeSchedulerRegex: %s\n", controlplaneKubeSchedulerRegex)
+	fmt.Printf("controlplaneApiserverRegex: %s\n", controlplaneApiserverRegex)
+	fmt.Printf("controlplaneClusterAutoscalerRegex: %s\n", controlplaneClusterAutoscalerRegex)
+	fmt.Printf("controlplaneEtcdRegex: %s\n", controlplaneEtcdRegex)
+}
 
-// 	fmt.Printf("Start ccp-default-scrape-settings Processing\n")
+func populateRegexValuesWithMinimalIngestionProfile() {
+	if minimalIngestionProfile == "true" {
+		controlplaneKubeControllerManagerRegex += "|" + "Your Minimal MAC Value"
+		controlplaneKubeSchedulerRegex += "|" + "Your Minimal MAC Value"
+		controlplaneApiserverRegex += "|" + "Your Minimal MAC Value"
+		controlplaneClusterAutoscalerRegex += "|" + "Your Minimal MAC Value"
+		controlplaneEtcdRegex += "|" + "Your Minimal MAC Value"
+	}
+}
 
-// 	configurator.Configure1()
+func tomlparserCCPTargetsMetricsKeepList() {
+	configSchemaVersion = os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+	fmt.Println("Start default-targets-metrics-keep-list Processing")
 
-// 	fmt.Printf("End ccp-default-scrape-settings Processing\n")
-// }
+	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
+		configMapSettings := parseConfigMap()
+		if configMapSettings != nil {
+			populateSettingValuesFromConfigMap(configMapSettings)
+		}
+	} else {
+		if _, err := os.Stat(configMapMountPath); err == nil {
+			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
+		}
+	}
+
+	populateRegexValuesWithMinimalIngestionProfile()
+
+	// Write settings to a YAML file.
+	data := map[string]string{
+		"CONTROLPLANE_KUBE_CONTROLLER_MANAGER_KEEP_LIST_REGEX": controlplaneKubeControllerManagerRegex,
+		"CONTROLPLANE_KUBE_SCHEDULER_KEEP_LIST_REGEX":           controlplaneKubeSchedulerRegex,
+		"CONTROLPLANE_APISERVER_KEEP_LIST_REGEX":                 controlplaneApiserverRegex,
+		"CONTROLPLANE_CLUSTER_AUTOSCALER_KEEP_LIST_REGEX":        controlplaneClusterAutoscalerRegex,
+		"CONTROLPLANE_ETCD_KEEP_LIST_REGEX":                      controlplaneEtcdRegex,
+	}
+
+	out, err := yaml.Marshal(data)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	err = ioutil.WriteFile("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash", out, 0644)
+	if err != nil {
+		fmt.Printf("Exception while writing to file: %v\n", err)
+		return
+	}
+
+	fmt.Println("End default-targets-metrics-keep-list Processing")
+}
