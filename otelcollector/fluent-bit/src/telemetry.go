@@ -829,55 +829,55 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 	return output.FLB_OK
 }
 
-// func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-// 	Log(fmt.Sprintf("promMetrics"))
-// 	for _, record := range records {
-// 		metricName := "promMetrics"
-// 		metricValue := ToString(record)
+func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	Log(fmt.Sprintf("promMetrics"))
+	for _, record := range records {
+		metricName := "promMetrics"
+		metricValue := ToString(record)
 
-// 		// Print metric in log
-// 		Log(metricName + ": " + metricValue)
+		// Print metric in log
+		Log(metricName + ": " + metricValue)
 
-// 		// Send metric to App Insights telemetry
-// 		event := appinsights.NewEventTelemetry(metricName)
-// 		event.Properties["metric"] = metricValue
-// 		TelemetryClient.Track(event)
-// 	}
-// 	return output.FLB_OK
-// }
+		// Send metric to App Insights telemetry
+		event := appinsights.NewEventTelemetry(metricName)
+		event.Properties["metric"] = metricValue
+		TelemetryClient.Track(event)
+	}
+	return output.FLB_OK
+}
 
-// func PushMeMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-// 	Log(fmt.Sprintf("meMetrics"))
-// 	for _, record := range records {
+func PushMeMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	Log(fmt.Sprintf("meMetrics"))
+	for _, record := range records {
 
-// 		metricName := "meMetrics"
-// 		metricValue := ToString(record)
+		metricName := "meMetrics"
+		metricValue := ToString(record)
 
-// 		// Print metric in log
-// 		Log(metricName + ": " + metricValue)
+		// Print metric in log
+		Log(metricName + ": " + metricValue)
 
-// 		// Send metric to App Insights telemetry
-// 		event := appinsights.NewEventTelemetry(metricName)
-// 		event.Properties["metric"] = metricValue
-// 		TelemetryClient.Track(event)
-// 	}
-// 	return output.FLB_OK
-// }
+		// Send metric to App Insights telemetry
+		event := appinsights.NewEventTelemetry(metricName)
+		event.Properties["metric"] = metricValue
+		TelemetryClient.Track(event)
+	}
+	return output.FLB_OK
+}
 
-// func PushOtelColMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-// 	Log(fmt.Sprintf("otelMetrics"))
-// 	for _, record := range records {
+func PushOtelColMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	Log(fmt.Sprintf("otelMetrics"))
+	for _, record := range records {
 
-// 		metricName := "otelMetrics"
-// 		metricValue := ToString(record)
+		metricName := "otelMetrics"
+		metricValue := ToString(record)
 
-// 		// Print metric in log
-// 		Log(metricName + ": " + metricValue)
+		// Print metric in log
+		Log(metricName + ": " + metricValue)
 
-// 		// Send metric to App Insights telemetry
-// 		event := appinsights.NewEventTelemetry(metricName)
-// 		event.Properties["metric"] = metricValue
-// 		TelemetryClient.Track(event)
-// 	}
-// 	return output.FLB_OK
-// }
+		// Send metric to App Insights telemetry
+		event := appinsights.NewEventTelemetry(metricName)
+		event.Properties["metric"] = metricValue
+		TelemetryClient.Track(event)
+	}
+	return output.FLB_OK
+}
