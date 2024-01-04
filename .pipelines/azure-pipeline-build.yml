@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - rashmi/ta-wrapperandupgrade
 
 pr:
   autoCancel: true
