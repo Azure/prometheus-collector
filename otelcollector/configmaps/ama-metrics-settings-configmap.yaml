@@ -20,6 +20,9 @@ data:
     windowsexporter = false
     windowskubeproxy = false
     kappiebasic = true
+    networkobservabilityRetina = true
+    networkobservabilityHubble = true
+    networkobservabilityCilium = true
     prometheuscollectorhealth = false
     controlplane-apiserver = true
     controlplane-cluster-autoscaler = false
@@ -42,6 +45,9 @@ data:
     windowskubeproxy = ""
     podannotations = ""
     kappiebasic = ""
+    networkobservabilityRetina = ""
+    networkobservabilityHubble = ""
+    networkobservabilityCilium = ""
     controlplane-apiserver = ""
     controlplane-cluster-autoscaler = ""
     controlplane-kube-scheduler = ""
@@ -59,6 +65,9 @@ data:
     windowsexporter = "30s"
     windowskubeproxy = "30s"
     kappiebasic = "30s"
+    networkobservabilityRetina = "30s"
+    networkobservabilityHubble = "30s"
+    networkobservabilityCilium = "30s"
     prometheuscollectorhealth = "30s"
     podannotations = "30s"
   debug-mode: |-
