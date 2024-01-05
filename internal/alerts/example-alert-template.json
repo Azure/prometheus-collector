@@ -251,6 +251,24 @@
                                 "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
                             }
                         ]
+                    },
+                    {
+                        "alert": "New agent version found for prometheus collector",
+                        "expression": "count(count (kube_pod_container_info{image=~\"mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector.*\"})  by (image)) > 2",
+                        "for": "PT60S",
+                        "annotations": {
+                            "description": "New agent version found for prometheus collector. This alert is only used in near ring regions for prod monitoring clusters"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": false,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
                     }
                 ]
             }
