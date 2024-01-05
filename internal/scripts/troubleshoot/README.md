@@ -8,6 +8,7 @@ Prequisites:
 - Powershell and kubectl (if running locally)
 
 # AKS
+
 You can use the troubleshooting script provided [here](https://raw.githubusercontent.com/Azure/prometheus-collector/main/internal/scripts/troubleshoot/TroubleshootError.ps1) to diagnose the problem.
 
 Steps:
