@@ -137,11 +137,8 @@ func tomlparserCCPDefaultScrapeSettings() {
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/default-scrape-settings-enabled"},
 		ConfigWriter:   &FileConfigWriter{Config: map[string]string{}},
 		ConfigFilePath: "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var",
+		ConfigParser:   &ConfigProcessor{},
 	}
-	// Create a new ConfigProcessor instance
-    configProcessor := &ConfigProcessor{}
-    // Set ConfigParser in Configurator
-    configurator.ConfigParser = configProcessor
 
 	fmt.Println("Start ccp-default-scrape-settings Processing")
 	configurator.ConfigureDefaultScrapeSettings()
