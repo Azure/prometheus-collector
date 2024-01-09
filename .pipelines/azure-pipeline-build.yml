@@ -820,6 +820,47 @@ jobs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
 
+- job: Helm_Chart
+  displayName: "Package 1P helm chart"
+  pool:
+    name: Azure-Pipelines-CI-Test-EO
+  dependsOn:
+  - Image_Tags_and_Ev2_Artifacts
+  - Linux_Prometheus_Collector
+  - WindowsMultiArch_Prometheus_Collector
+  variables:
+    HELM_CHART_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+    HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+    IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+    IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+    HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+  steps:
+  - task: HelmInstaller@1
+    displayName: 'Build: install Helm version'
+    inputs:
+      helmVersionToInstall: 3.12.3
+
+  - bash: |
+      envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
+      helm version
+    displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
+  - bash: |
+      helm dep update
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/
+    displayName: "Build: update helm dependencies"
+  - bash: |
+      helm package ./prometheus-collector/
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
+    displayName: "Build: package helm chart"
+  - bash: |
+      helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+      helm push $(HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+      mkdir -p $(Build.ArtifactStagingDirectory)/chart
+      echo {\"image.name\":\"$(HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/chart/metadata.json
+    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
+    displayName: "Build: push helm chart to dev ACR"
+    condition: eq(variables.IS_PR, false)
+
 - job: Arc_Helm_Chart
   displayName: "Package: Arc helm chart"
   pool:
@@ -989,6 +1030,7 @@ jobs:
   - Image_Tags_and_Ev2_Artifacts
   - Linux_Prometheus_Collector
   - WindowsMultiArch_Prometheus_Collector
+  - Helm_Chart
   variables:
     HELM_CHART_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -1018,16 +1060,17 @@ jobs:
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
 
-            output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-            if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG))
+            output1=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+            output2=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY_HELM)/tags/list)
+            if (echo $output1 | grep $(IMAGE_TAG_WINDOWS)) && (echo $output2 | grep $(IMAGE_TAG))
             then
-              echo "Images are published to mcr"
+              echo "Images and chart are published to mcr"
               exit 0
             fi
           done
-          echo "Images are not published to mcr within the timeout"
+          echo "Images and chart are not published to mcr within the timeout"
           exit 1
-    displayName: "Check images are pushed to dev MCR"
+    displayName: "Check images and chart are pushed to dev MCR"
     retryCountOnTaskFailure: 5
 
   - bash: |
