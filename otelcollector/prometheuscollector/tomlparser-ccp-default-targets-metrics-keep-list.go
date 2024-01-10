@@ -100,11 +100,11 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 	}
 
 	// Logging the values being set
-	fmt.Printf("controlplaneKubeControllerManagerRegex: %s\n", regexValues.ControlplaneKubeControllerManagerRegex)
-	fmt.Printf("controlplaneKubeSchedulerRegex: %s\n", regexValues.ControlplaneKubeSchedulerRegex)
-	fmt.Printf("controlplaneApiserverRegex: %s\n", regexValues.ControlplaneApiserverRegex)
-	fmt.Printf("controlplaneClusterAutoscalerRegex: %s\n", regexValues.ControlplaneClusterAutoscalerRegex)
-	fmt.Printf("controlplaneEtcdRegex: %s\n", regexValues.ControlplaneEtcdRegex)
+	fmt.Printf("controlplaneKubeControllerManagerRegex: %s\n", regexValues.ControlplaneKubeControllerManager)
+	fmt.Printf("controlplaneKubeSchedulerRegex: %s\n", regexValues.ControlplaneKubeScheduler)
+	fmt.Printf("controlplaneApiserverRegex: %s\n", regexValues.ControlplaneApiserver)
+	fmt.Printf("controlplaneClusterAutoscalerRegex: %s\n", regexValues.ControlplaneClusterAutoscaler)
+	fmt.Printf("controlplaneEtcdRegex: %s\n", regexValues.ControlplaneEtcd)
 
 	return regexValues, nil // Return regex values and nil error if everything is valid
 }
