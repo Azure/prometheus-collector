@@ -1,5 +1,13 @@
 package main
 
+type RegexValues struct {
+	ControlplaneKubeControllerManager string
+	ControlplaneKubeScheduler         string
+	ControlplaneApiserver             string
+	ControlplaneClusterAutoscaler     string
+	ControlplaneEtcd                  string
+}
+
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
 type FilesystemConfigLoader struct {
 	ConfigMapMountPath string

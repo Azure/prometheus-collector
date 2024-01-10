@@ -73,33 +73,30 @@ func isValidRegex(input string) bool {
 	return err == nil
 }
 
-func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) {
-	controlplaneKubeControllerManagerRegex, _ := getStringValue(parsedConfig["controlplane-kube-controller-manager"])
-	controlplaneKubeSchedulerRegex, _ := getStringValue(parsedConfig["controlplane-kube-scheduler"])
-	controlplaneApiserverRegex, _ := getStringValue(parsedConfig["controlplane-apiserver"])
-	controlplaneClusterAutoscalerRegex, _ := getStringValue(parsedConfig["controlplane-cluster-autoscaler"])
-	controlplaneEtcdRegex, _ := getStringValue(parsedConfig["controlplane-etcd"])
+func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (RegexValues, error) {
+	regexValues := RegexValues{
+		ControlplaneKubeControllerManager: getStringValue(parsedConfig["controlplane-kube-controller-manager"]),
+		ControlplaneKubeScheduler:         getStringValue(parsedConfig["controlplane-kube-scheduler"]),
+		ControlplaneApiserver:             getStringValue(parsedConfig["controlplane-apiserver"]),
+		ControlplaneClusterAutoscaler:     getStringValue(parsedConfig["controlplane-cluster-autoscaler"]),
+		ControlplaneEtcd:                  getStringValue(parsedConfig["controlplane-etcd"]),
+	}
 
 	// Validate regex values
-	if controlplaneKubeControllerManagerRegex != "" && !isValidRegex(controlplaneKubeControllerManagerRegex) {
-		fmt.Println("Invalid regex for controlplane-kube-controller-manager:", controlplaneKubeControllerManagerRegex)
-		controlplaneKubeControllerManagerRegex = ""
+	if regexValues.ControlplaneKubeControllerManager != "" && !isValidRegex(regexValues.ControlplaneKubeControllerManager) {
+		return regexValues, fmt.Errorf("invalid regex for controlplane-kube-controller-manager: %s", regexValues.ControlplaneKubeControllerManager)
 	}
-	if controlplaneKubeSchedulerRegex != "" && !isValidRegex(controlplaneKubeSchedulerRegex) {
-		fmt.Println("Invalid regex for controlplane-kube-scheduler:", controlplaneKubeSchedulerRegex)
-		controlplaneKubeSchedulerRegex = ""
+	if regexValues.ControlplaneKubeScheduler != "" && !isValidRegex(regexValues.ControlplaneKubeScheduler) {
+		return regexValues, fmt.Errorf("invalid regex for controlplane-kube-scheduler: %s", regexValues.ControlplaneKubeScheduler)
 	}
-	if controlplaneApiserverRegex != "" && !isValidRegex(controlplaneApiserverRegex) {
-		fmt.Println("Invalid regex for controlplane-apiserver:", controlplaneApiserverRegex)
-		controlplaneApiserverRegex = ""
+	if regexValues.ControlplaneApiserver != "" && !isValidRegex(regexValues.ControlplaneApiserver) {
+		return regexValues, fmt.Errorf("invalid regex for controlplane-apiserver: %s", regexValues.ControlplaneApiserver)
 	}
-	if controlplaneClusterAutoscalerRegex != "" && !isValidRegex(controlplaneClusterAutoscalerRegex) {
-		fmt.Println("Invalid regex for controlplane-cluster-autoscaler:", controlplaneClusterAutoscalerRegex)
-		controlplaneClusterAutoscalerRegex = ""
+	if regexValues.ControlplaneClusterAutoscaler != "" && !isValidRegex(regexValues.ControlplaneClusterAutoscaler) {
+		return regexValues, fmt.Errorf("invalid regex for controlplane-cluster-autoscaler: %s", regexValues.ControlplaneClusterAutoscaler)
 	}
-	if controlplaneEtcdRegex != "" && !isValidRegex(controlplaneEtcdRegex) {
-		fmt.Println("Invalid regex for controlplane-etcd:", controlplaneEtcdRegex)
-		controlplaneEtcdRegex = ""
+	if regexValues.ControlplaneEtcd != "" && !isValidRegex(regexValues.ControlplaneEtcd) {
+		return regexValues, fmt.Errorf("invalid regex for controlplane-etcd: %s", regexValues.ControlplaneEtcd)
 	}
 
 	// Logging the values being set
@@ -108,15 +105,17 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) {
 	fmt.Printf("controlplaneApiserverRegex: %s\n", controlplaneApiserverRegex)
 	fmt.Printf("controlplaneClusterAutoscalerRegex: %s\n", controlplaneClusterAutoscalerRegex)
 	fmt.Printf("controlplaneEtcdRegex: %s\n", controlplaneEtcdRegex)
+
+	return regexValues, nil // Return regex values and nil error if everything is valid
 }
 
-func populateRegexValuesWithMinimalIngestionProfile() {
+func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 	if minimalIngestionProfile == "true" {
-		controlplaneKubeControllerManagerRegex += "|" + controlplaneKubeControllerManagerMinMac
-		controlplaneKubeSchedulerRegex += "|" + controlplaneKubeSchedulerMinMac
-		controlplaneApiserverRegex += "|" + controlplaneApiserverMinMac
-		controlplaneClusterAutoscalerRegex += "|" + controlplaneClusterAutoscalerMinMac
-		controlplaneEtcdRegex += "|" + controlplaneEtcdMinMac
+		controlplaneKubeControllerManagerRegex += "|" + regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
+		controlplaneKubeSchedulerRegex += "|" + regexValues.ControlplaneKubeScheduler + "|" + controlplaneKubeSchedulerMinMac
+		controlplaneApiserverRegex += "|" + regexValues.ControlplaneApiserver + "|" + controlplaneApiserverMinMac
+		controlplaneClusterAutoscalerRegex += "|" + regexValues.ControlplaneClusterAutoscaler + "|" + controlplaneClusterAutoscalerMinMac
+		controlplaneEtcdRegex += "|" + regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
 	}
 }
 
@@ -124,10 +123,17 @@ func tomlparserCCPTargetsMetricsKeepList() {
 	configSchemaVersion = os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	fmt.Println("Start default-targets-metrics-keep-list Processing")
 
+	var regexValues RegexValues
+
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
 		configMapSettings := parseConfigMapForKeepListRegex()
 		if configMapSettings != nil {
-			populateSettingValuesFromConfigMap(configMapSettings)
+			var err error
+			regexValues, err = populateSettingValuesFromConfigMap(configMapSettings) // Capture the returned RegexValues
+			if err != nil {
+				fmt.Printf("Error populating setting values: %v\n", err)
+				return
+			}
 		}
 	} else {
 		if _, err := os.Stat(configMapMountPath); err == nil {
@@ -135,7 +141,8 @@ func tomlparserCCPTargetsMetricsKeepList() {
 		}
 	}
 
-	populateRegexValuesWithMinimalIngestionProfile()
+	populateRegexValuesWithMinimalIngestionProfile(regexValues) // Pass the captured regexValues
+
 
 	// Write settings to a YAML file.
 	data := map[string]string{
