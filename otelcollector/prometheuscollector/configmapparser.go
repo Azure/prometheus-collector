@@ -63,7 +63,8 @@ func confgimapparserforccp() {
 	}
 
 	// Parse the settings for default targets metrics keep list config
-    startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-ccp-default-targets-metrics-keep-list.rb")
+    // startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-ccp-default-targets-metrics-keep-list.rb")
+	tomlparserCCPTargetsMetricsKeepList()
 	// sets regexhas file /opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash
 
 	startCommandAndWait("ruby", "/opt/microsoft/configmapparser/prometheus-ccp-config-merger.rb")
