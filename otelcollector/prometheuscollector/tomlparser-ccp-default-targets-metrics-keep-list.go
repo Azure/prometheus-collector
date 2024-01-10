@@ -26,7 +26,20 @@ var (
 	
 )
 
-func parseConfigMap() map[string]interface{} {
+// getStringValue checks the type of the value and returns it as a string if possible.
+func getStringValue(value interface{}) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case bool:
+		return fmt.Sprintf("%t", v) // Convert boolean to string representation
+	default:
+		// Handle other types if needed
+		return fmt.Sprintf("%v", v) // Convert any other type to its default string representation
+	}
+}
+
+func parseConfigMapForKeepListRegex() map[string]interface{} {
 	if _, err := os.Stat(configMapMountPath); os.IsNotExist(err) {
 		fmt.Println("configmap prometheus-collector-configmap for default-targets-metrics-keep-list not mounted, using defaults")
 		return nil
@@ -45,45 +58,46 @@ func parseConfigMap() map[string]interface{} {
 	}
 
 	configMap := make(map[string]interface{})
-	configMap["controlplane-kube-controller-manager"] = tree.Get("controlplane-kube-controller-manager").(string)
-	configMap["controlplane-kube-scheduler"] = tree.Get("controlplane-kube-scheduler").(string)
-	configMap["controlplane-apiserver"] = tree.Get("controlplane-apiserver").(string)
-	configMap["controlplane-cluster-autoscaler"] = tree.Get("controlplane-cluster-autoscaler").(string)
-	configMap["controlplane-etcd"] = tree.Get("controlplane-etcd").(string)
-	configMap["minimalingestionprofile"] = tree.Get("minimalingestionprofile").(string)
+	configMap["controlplane-kube-controller-manager"] = getStringValue(tree.Get("controlplane-kube-controller-manager"))
+	configMap["controlplane-kube-scheduler"] = getStringValue(tree.Get("controlplane-kube-scheduler"))
+	configMap["controlplane-apiserver"] = getStringValue(tree.Get("controlplane-apiserver"))
+	configMap["controlplane-cluster-autoscaler"] = getStringValue(tree.Get("controlplane-cluster-autoscaler"))
+	configMap["controlplane-etcd"] = getStringValue(tree.Get("controlplane-etcd"))
+	configMap["minimalingestionprofile"] = getStringValue(tree.Get("minimalingestionprofile"))
 
 	return configMap
 }
+
 func isValidRegex(input string) bool {
 	_, err := regexp.Compile(input)
 	return err == nil
 }
 
 func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) {
-	controlplaneKubeControllerManagerRegex = parsedConfig["controlplane-kube-controller-manager"].(string)
-	controlplaneKubeSchedulerRegex = parsedConfig["controlplane-kube-scheduler"].(string)
-	controlplaneApiserverRegex = parsedConfig["controlplane-apiserver"].(string)
-	controlplaneClusterAutoscalerRegex = parsedConfig["controlplane-cluster-autoscaler"].(string)
-	controlplaneEtcdRegex = parsedConfig["controlplane-etcd"].(string)
+	controlplaneKubeControllerManagerRegex, _ := getStringValue(parsedConfig["controlplane-kube-controller-manager"])
+	controlplaneKubeSchedulerRegex, _ := getStringValue(parsedConfig["controlplane-kube-scheduler"])
+	controlplaneApiserverRegex, _ := getStringValue(parsedConfig["controlplane-apiserver"])
+	controlplaneClusterAutoscalerRegex, _ := getStringValue(parsedConfig["controlplane-cluster-autoscaler"])
+	controlplaneEtcdRegex, _ := getStringValue(parsedConfig["controlplane-etcd"])
 
 	// Validate regex values
-	if !isValidRegex(controlplaneKubeControllerManagerRegex) {
+	if controlplaneKubeControllerManagerRegex != "" && !isValidRegex(controlplaneKubeControllerManagerRegex) {
 		fmt.Println("Invalid regex for controlplane-kube-controller-manager:", controlplaneKubeControllerManagerRegex)
 		controlplaneKubeControllerManagerRegex = ""
 	}
-	if !isValidRegex(controlplaneKubeSchedulerRegex) {
+	if controlplaneKubeSchedulerRegex != "" && !isValidRegex(controlplaneKubeSchedulerRegex) {
 		fmt.Println("Invalid regex for controlplane-kube-scheduler:", controlplaneKubeSchedulerRegex)
 		controlplaneKubeSchedulerRegex = ""
 	}
-	if !isValidRegex(controlplaneApiserverRegex) {
+	if controlplaneApiserverRegex != "" && !isValidRegex(controlplaneApiserverRegex) {
 		fmt.Println("Invalid regex for controlplane-apiserver:", controlplaneApiserverRegex)
 		controlplaneApiserverRegex = ""
 	}
-	if !isValidRegex(controlplaneClusterAutoscalerRegex) {
+	if controlplaneClusterAutoscalerRegex != "" && !isValidRegex(controlplaneClusterAutoscalerRegex) {
 		fmt.Println("Invalid regex for controlplane-cluster-autoscaler:", controlplaneClusterAutoscalerRegex)
 		controlplaneClusterAutoscalerRegex = ""
 	}
-	if !isValidRegex(controlplaneEtcdRegex) {
+	if controlplaneEtcdRegex != "" && !isValidRegex(controlplaneEtcdRegex) {
 		fmt.Println("Invalid regex for controlplane-etcd:", controlplaneEtcdRegex)
 		controlplaneEtcdRegex = ""
 	}
@@ -111,7 +125,7 @@ func tomlparserCCPTargetsMetricsKeepList() {
 	fmt.Println("Start default-targets-metrics-keep-list Processing")
 
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
-		configMapSettings := parseConfigMap()
+		configMapSettings := parseConfigMapForKeepListRegex()
 		if configMapSettings != nil {
 			populateSettingValuesFromConfigMap(configMapSettings)
 		}
