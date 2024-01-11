@@ -1,15 +1,16 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Release 01-08-2024
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-11-03-2023-c061beb4`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-11-03-2023-c061beb4-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-11-03-2023-c061beb4-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.1-main-11-03-2023-c061beb4-cfg`
+## Release 01-09-2024
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.3-main-01-09-2024-a192d342`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.3-main-01-09-2024-a192d342-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.3-main-01-09-2024-a192d342-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.3-main-01-09-2024-a192d342-cfg`
 * Change log -
   * Network Observability metrics update - https://github.com/Azure/prometheus-collector/pull/666
   * Windows powershell startup script bug fix - https://github.com/Azure/prometheus-collector/pull/694
   * Upgrade collector (0.90), collector-operator (0.90) and prometheus-operator (0.69.1)
   * Remove request values for windows ama-metrics daemonset (old behavior) - https://github.com/Azure/prometheus-collector/pull/707
+  * Build and release improvements
 
 ## Release 11-16-2023
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.2-main-11-17-2023-19f08915-win
