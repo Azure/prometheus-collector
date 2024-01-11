@@ -111,11 +111,21 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 
 func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 	if minimalIngestionProfile == "true" {
-		controlplaneKubeControllerManagerRegex += "|" + regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
-		controlplaneKubeSchedulerRegex += "|" + regexValues.ControlplaneKubeScheduler + "|" + controlplaneKubeSchedulerMinMac
-		controlplaneApiserverRegex += "|" + regexValues.ControlplaneApiserver + "|" + controlplaneApiserverMinMac
-		controlplaneClusterAutoscalerRegex += "|" + regexValues.ControlplaneClusterAutoscaler + "|" + controlplaneClusterAutoscalerMinMac
-		controlplaneEtcdRegex += "|" + regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
+		controlplaneKubeControllerManagerRegex += regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
+		controlplaneKubeSchedulerRegex += regexValues.ControlplaneKubeScheduler + "|" + controlplaneKubeSchedulerMinMac
+		controlplaneApiserverRegex += regexValues.ControlplaneApiserver + "|" + controlplaneApiserverMinMac
+		controlplaneClusterAutoscalerRegex += regexValues.ControlplaneClusterAutoscaler + "|" + controlplaneClusterAutoscalerMinMac
+		controlplaneEtcdRegex += regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
+
+		// Print the updated regex strings after appending values
+		fmt.Println("\nUpdated Regex Strings After Appending:")
+		fmt.Println("ControlplaneKubeControllerManagerRegex:", controlplaneKubeControllerManagerRegex)
+		fmt.Println("ControlplaneKubeSchedulerRegex:", controlplaneKubeSchedulerRegex)
+		fmt.Println("ControlplaneApiserverRegex:", controlplaneApiserverRegex)
+		fmt.Println("ControlplaneClusterAutoscalerRegex:", controlplaneClusterAutoscalerRegex)
+		fmt.Println("ControlplaneEtcdRegex:", controlplaneEtcdRegex)
+	} else {
+		fmt.Println("minimalIngestionProfile:", minimalIngestionProfile)
 	}
 }
 
