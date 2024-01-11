@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	LOGGING_PREFIX                        = "prometheus-config-merger"
 	mergedDefaultConfigPath               = "/opt/defaultsMergedConfig.yml"
 	replicasetControllerType              = "replicaset"
 	defaultPromConfigPathPrefix           = "/opt/microsoft/otelcollector/default-prom-configs/"

@@ -17,7 +17,6 @@ var (
 	controlplaneApiserverRegex, controlplaneClusterAutoscalerRegex string
 	controlplaneKubeSchedulerRegex, controlplaneKubeControllerManagerRegex string
 	controlplaneEtcdRegex                  string
-	LOGGING_PREFIX                         = "default-scrape-keep-lists"
 	controlplaneKubeControllerManagerMinMac = "rest_client_request_duration_seconds|rest_client_requests_total|workqueue_depth"
 	controlplaneKubeSchedulerMinMac         = "scheduler_pending_pods|scheduler_unschedulable_pods|scheduler_pod_scheduling_attempts|scheduler_queue_incoming_pods_total|scheduler_preemption_attempts_total|scheduler_preemption_victims|scheduler_scheduling_attempt_duration_seconds|scheduler_schedule_attempts_total|scheduler_pod_scheduling_duration_seconds"
 	controlplaneApiserverMinMac             = "apiserver_request_total|apiserver_cache_list_fetched_objects_total|apiserver_cache_list_returned_objects_total|apiserver_flowcontrol_demand_seats_average|apiserver_flowcontrol_current_limit_seats|apiserver_request_sli_duration_seconds_bucket|apiserver_request_sli_duration_seconds_count|apiserver_request_sli_duration_seconds_sum|process_start_time_seconds|apiserver_request_duration_seconds_bucket|apiserver_request_duration_seconds_count|apiserver_request_duration_seconds_sum|apiserver_storage_list_fetched_objects_total|apiserver_storage_list_returned_objects_total|apiserver_current_inflight_requests"
