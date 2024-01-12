@@ -1,7 +1,7 @@
 package utils
 
 const(
-	LogLineErrorsToExclude = []string{
+	LogLineErrorsToExclude = [...]string{
 		"\"filepath\":\"/MetricsExtensionConsoleDebugLog.log\"",
 	}
 )
