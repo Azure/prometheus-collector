@@ -265,18 +265,21 @@ jobs:
         make
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: "SDL: build otelcollector, promconfigvalidator, targetallocator, and fluent-bit plugin for scanning"
+      retryCountOnTaskFailure: 1
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
       inputs:
         InputType: 'CommandLine'
         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+      retryCountOnTaskFailure: 1
 
     - task: Gosec@1
       displayName: 'SDL: run gosec'
       inputs:
         targetPattern: 'gosecPattern'
         targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
+      retryCountOnTaskFailure: 1
 
     - bash: |
         wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
@@ -285,11 +288,13 @@ jobs:
         ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
       displayName: 'SDL: run devskim'
       workingDirectory: $(Build.SourcesDirectory)
+      retryCountOnTaskFailure: 1
 
     - bash: |
         sudo gem install brakeman -v 5.4.1
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
+      retryCountOnTaskFailure: 1
 
 - job: Linux_Prometheus_Collector
   displayName: "Build: linux prometheus-collector image"
