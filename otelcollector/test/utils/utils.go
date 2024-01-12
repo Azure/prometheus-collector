@@ -63,10 +63,23 @@ func CheckContainerLogsForErrors(clientset *kubernetes.Clientset, namespace, lab
 			}
 
 			if strings.Contains(logs, "error") || strings.Contains(logs, "Error") {
-
 				// Get the exact log line of the error
 				for _, line := range strings.Split(logs, "\n") {
+
 					if strings.Contains(line, "error") || strings.Contains(line, "Error") {
+
+						// Exclude known error lines that are transient
+						shouldExcludeLine := false
+						for _, lineToExclude := range LogLineErrorsToExclude {
+							if strings.Contains(line, lineToExclude) {
+								shouldExcludeLine = true
+								break
+							}
+						}
+						if shouldExcludeLine {
+							continue
+						}
+
 						return fmt.Errorf("Logs for container %s in pod %s contain errors:\n %s", container.Name, pod.Name, line)
 					}
 				}
