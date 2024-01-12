@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - build-improvement-fixes
+    - grace/build-improvement-fixes
 
 pr:
   autoCancel: true
