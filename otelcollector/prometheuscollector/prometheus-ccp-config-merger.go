@@ -248,6 +248,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 }
 
 func prometheusCcpConfigMerger() {
+	mergedDefaultConfigs := make(map[interface{}]interface{})  // Initialize mergedDefaultConfigs
 	setDefaultFileScrapeInterval("30s")
 	writeDefaultScrapeTargetsFile()
 	fmt.Printf("Done creating default targets file\n")
