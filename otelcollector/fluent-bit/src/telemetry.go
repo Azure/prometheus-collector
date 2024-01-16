@@ -143,7 +143,8 @@ const (
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
 	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
 	fluentbitScrapeTag                    = "prometheus.scrape"
-	meScrapeTag                           = "metricsextension.scrape"
+	meMemRssScrapeTag                     = "metricsextension.memVmrss.scrape"
+	otelcolMemRssScrapeTag                = "otelcollector.memVmrss.scrape"
 	otelcolScrapeTag                      = "otelcol.scrape"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
@@ -830,7 +831,6 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 }
 
 func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-	Log(fmt.Sprintf("promMetrics"))
 	for _, record := range records {
 		metricName := "promMetrics"
 		metricValue := ToString(record)
@@ -846,20 +846,32 @@ func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interfa
 	return output.FLB_OK
 }
 
-func PushMeMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-	Log(fmt.Sprintf("meMetrics"))
+func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
+		memVmrss, ok := record["memVmrss"].float64
+		if !ok {
+			message := fmt.Sprintf("meVMRSS is not a float64 value"\)
+				Log(message)
+				SendException(message)
+				return nil
+        }
+		metric := appinsights.NewMetricTelemetry("meVMRSS", memVmrss)
+		TelemetryClient.Track(metric)
+	}
+	return output.FLB_OK
+}
 
-		metricName := "meMetrics"
-		metricValue := ToString(record)
-
-		// Print metric in log
-		Log(metricName + ": " + metricValue)
-
-		// Send metric to App Insights telemetry
-		event := appinsights.NewEventTelemetry(metricName)
-		event.Properties["metric"] = metricValue
-		TelemetryClient.Track(event)
+func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		memVmrss, ok := record["memVmrss"].float64
+		if !ok {
+			message := fmt.Sprintf("otelcolVMRSS is not a float64 value"\)
+				Log(message)
+				SendException(message)
+				return nil
+        }
+		metric := appinsights.NewMetricTelemetry("otelcolVMRSS", memVmrss)
+		TelemetryClient.Track(metric)
 	}
 	return output.FLB_OK
 }
