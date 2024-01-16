@@ -66,7 +66,7 @@ jobs:
 
 
         #Truncating this to 112 characters to add the targetallocator suffix
-        TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
+        TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-112)
         TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
 
         #Truncating this to 113 to add the ref app suffices
