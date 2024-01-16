@@ -91,7 +91,7 @@ func (t *transaction) Append(_ storage.SeriesRef, ls labels.Labels, atMs int64, 
 	default:
 	}
 
-	ls = ls.Copy()
+	//ls = ls.Copy()
 
 	if len(t.externalLabels) != 0 {
 		ls = append(ls, t.externalLabels...)
