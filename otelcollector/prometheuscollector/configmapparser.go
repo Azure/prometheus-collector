@@ -67,7 +67,8 @@ func confgimapparserforccp() {
 	tomlparserCCPTargetsMetricsKeepList()
 	// sets regexhas file /opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash
 
-	startCommandAndWait("ruby", "/opt/microsoft/configmapparser/prometheus-ccp-config-merger.rb")
+	prometheusCcpConfigMerger()
+	// startCommandAndWait("ruby", "/opt/microsoft/configmapparser/prometheus-ccp-config-merger.rb")
 
 	os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
 	os.Setenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")
