@@ -93,10 +93,14 @@ func (t *transaction) Append(_ storage.SeriesRef, ls labels.Labels, atMs int64, 
 
 	//ls = ls.Copy()
 
+	fmt.Printf("ls: %v\n", ls)
+
 	if len(t.externalLabels) != 0 {
 		ls = append(ls, t.externalLabels...)
 		sort.Sort(ls)
 	}
+
+	fmt.Printf("ls: %v\n", ls)
 
 	if t.isNew {
 		if err := t.initTransaction(ls); err != nil {
