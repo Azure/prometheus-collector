@@ -2,18 +2,22 @@
 
 ### Use Prometheus Pod and Service Monitor Custom Resources
 The Azure Monitor metrics add-on supports scraping Prometheus metrics using Prometheus - Pod Monitors and Service Monitors, similar to the OSS Prometheus operator. Enabling the add-on will deploy the Pod and Service Monitor custom resource definitions to allow you to create your own custom resources.
-Creating these custom resources allows for easy configuration of scrape jobs in any namespace, especially useful in the multi tenancy scenario, where partners don’t have access to the kube-system namespace and one error prone scrape job might affect the other partners scrape jobs. This is also true without the multitenancy model. Currently, when there is an erroneous scrape job in the custom config map, all the jobs in custom config map are ignored and the addon uses just the default scrape jobs. 
+Creating these custom resources allows for easy configuration of scrape jobs in any namespace, especially useful in the multi tenancy scenario, where partners don’t have access to the kube-system namespace and one error prone scrape job might affect the other partners scrape jobs. This is also true without the multitenancy model. Currently, when there is an erroneous scrape job in the custom config map, all the jobs in custom config map are ignored and the addon uses just the default scrape jobs. For reference, see [create custom scrape config with ConfigMap](https://learn.microsoft.com/azure/azure-monitor/containers/prometheus-metrics-scrape-validate#create-prometheus-configuration-file).
 
-Doc link for the existing custom config map way of scrape job configuration – 
-https://learn.microsoft.com/en-us/azure/azure-monitor/containers/prometheus-metrics-scrape-validate#create-prometheus-configuration-file
+This document illustrates the steps need to setup custom resources (pod monitors and service monitors) with Azure Managed Prometheus to setup scrape jobs for the workloads running in your AKS clusters. 
 
-### Create a Pod or Service Monitor
-The metrics add-on will use the same custom resource definition (CRD) for pod and service monitors as Prometheus, except for a change in the group name and API version. If you have existing Prometheus CRDs and custom resources on your cluster, these will not conflict with the CRDs created by the add-on.
+### Pre-requisites
+1.	You have Azure Managed Prometheus Operator model configured in the AKS cluster. Currently this feature is in private preview – please send us an email to ciprometheus@microsoft.com to enable the feature for your cluster or subscription.
+2.	Azure Monitor Workspace is configured and receiving Azure Managed Prometheus metrics.
+3.	The workload that you want to scrape metrics from is deployed and running on the AKS cluster.
+
+### Enable Azure Managed Prometheus with Operator/CRD support
+Once your cluster/subscription is enabled with preview, you can enable Managed Prometheus for the AKS cluster. This will deploy the Azure Monitor metrics add-on and will automatically install the custom resource definition (CRD) for pod and service monitors. The add-on will use the same custom resource definition (CRD) for pod and service monitors as open-source Prometheus, except for a change in the group name and API version. If you have existing Prometheus CRDs and custom resources on your cluster, these will not conflict with the CRDs created by the add-on.
 At the same time, the CRDs created for the OSS Prometheus will not be picked up by the managed Prometheus addon. This is intentional for the purposes of isolation of scrape jobs.
 
-Use the Pod and Service Monitor templates   and follow the API specification to create your custom resources.
+### Create a Pod or Service Monitor
+Use the [Pod and Service Monitor templates](https://github.com/Azure/prometheus-collector/tree/main/otelcollector/customresources) and follow the API specification to create your custom resources. **Note** that if you are using existing pod/service monitors with Prometheus, you can simply change the API version to **azmonitoring.coreos.com/v1** for Managed Prometheus to start scraping metrics.
 Your pod and service monitors should look like the examples below:
-
 
 #### Example Service Monitor - 
 ```yaml
