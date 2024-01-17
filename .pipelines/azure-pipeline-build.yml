@@ -66,7 +66,7 @@ jobs:
 
 
         #Truncating this to 112 characters to add the targetallocator suffix
-        TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
+        TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-112)
         TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
 
         #Truncating this to 113 to add the ref app suffices
@@ -164,6 +164,7 @@ jobs:
     name: Azure-Pipelines-CI-Test-EO
   dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
+    skipComponentGovernanceDetection: true
     LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
@@ -188,6 +189,7 @@ jobs:
     name: Azure-Pipelines-CI-Test-EO
   dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
+    skipComponentGovernanceDetection: true
     LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
@@ -244,6 +246,8 @@ jobs:
   displayName: "SDL: linux binary scanning"
   pool:
     name: Azure-Pipelines-CI-Test-EO
+  variables:
+    skipComponentGovernanceDetection: true
   steps:
     - checkout: self
       submodules: true
@@ -261,18 +265,21 @@ jobs:
         make
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: "SDL: build otelcollector, promconfigvalidator, targetallocator, and fluent-bit plugin for scanning"
+      retryCountOnTaskFailure: 1
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
       inputs:
         InputType: 'CommandLine'
         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+      retryCountOnTaskFailure: 1
 
     - task: Gosec@1
       displayName: 'SDL: run gosec'
       inputs:
         targetPattern: 'gosecPattern'
         targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
+      retryCountOnTaskFailure: 1
 
     - bash: |
         wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
@@ -281,12 +288,13 @@ jobs:
         ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
       displayName: 'SDL: run devskim'
       workingDirectory: $(Build.SourcesDirectory)
+      retryCountOnTaskFailure: 1
 
     - bash: |
         sudo gem install brakeman -v 5.4.1
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
-
+      retryCountOnTaskFailure: 1
 
 - job: Linux_Prometheus_Collector
   displayName: "Build: linux prometheus-collector image"
@@ -820,47 +828,6 @@ jobs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
 
-- job: Helm_Chart
-  displayName: "Package 1P helm chart"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  dependsOn:
-  - Image_Tags_and_Ev2_Artifacts
-  - Linux_Prometheus_Collector
-  - WindowsMultiArch_Prometheus_Collector
-  variables:
-    HELM_CHART_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
-    HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-    IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-    IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-    HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
-  steps:
-  - task: HelmInstaller@1
-    displayName: 'Build: install Helm version'
-    inputs:
-      helmVersionToInstall: 3.12.3
-
-  - bash: |
-      envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/values.yaml
-      helm version
-    displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
-  - bash: |
-      helm dep update
-    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/prometheus-collector/
-    displayName: "Build: update helm dependencies"
-  - bash: |
-      helm package ./prometheus-collector/
-    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
-    displayName: "Build: package helm chart"
-  - bash: |
-      helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-      helm push $(HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
-      mkdir -p $(Build.ArtifactStagingDirectory)/chart
-      echo {\"image.name\":\"$(HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/chart/metadata.json
-    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/chart/
-    displayName: "Build: push helm chart to dev ACR"
-    condition: eq(variables.IS_PR, false)
-
 - job: Arc_Helm_Chart
   displayName: "Package: Arc helm chart"
   pool:
@@ -1030,7 +997,6 @@ jobs:
   - Image_Tags_and_Ev2_Artifacts
   - Linux_Prometheus_Collector
   - WindowsMultiArch_Prometheus_Collector
-  - Helm_Chart
   variables:
     HELM_CHART_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -1060,23 +1026,17 @@ jobs:
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
 
-            output1=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-            output2=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY_HELM)/tags/list)
-            if (echo $output1 | grep $(IMAGE_TAG_WINDOWS)) && (echo $output2 | grep $(IMAGE_TAG))
+            output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+            if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG))
             then
-              echo "Images and chart are published to mcr"
+              echo "Images are published to mcr"
               exit 0
             fi
           done
-          echo "Images and chart are not published to mcr within the timeout"
+          echo "Images are not published to mcr within the timeout"
           exit 1
-    displayName: "Check images and chart are pushed to dev MCR"
+    displayName: "Check images are pushed to dev MCR"
     retryCountOnTaskFailure: 5
-
-  - bash: |
-      helm pull oci://$(MCR_REGISTRY)$(MCR_REPOSITORY_HELM) --version $(HELM_SEMVER)
-    workingDirectory: $(Build.StagingDirectory)
-    displayName: "Pull helm chart from dev MCR"
 
   - bash: |
       export AKS_REGION="eastus"
