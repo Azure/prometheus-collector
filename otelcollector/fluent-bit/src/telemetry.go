@@ -145,6 +145,8 @@ const (
 	fluentbitScrapeTag                    = "prometheus.scrape"
 	meMemRssScrapeTag                     = "metricsextension.memVmrss.scrape"
 	otelcolMemRssScrapeTag                = "otelcollector.memVmrss.scrape"
+	otelcolCpuScrapeTag                   = "cpu.metricsextension"
+	meCpuScrapeTag                        = "cpu.otelcollector"
 	otelcolScrapeTag                      = "otelcol.scrape"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
@@ -830,18 +832,64 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 	return output.FLB_OK
 }
 
-func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+// func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+// 	for _, record := range records {
+// 		metricName := "promMetrics"
+// 		metricValue := ToString(record)
+
+// 		// Print metric in log
+// 		Log(metricName + ": " + metricValue)
+
+// 		// Send metric to App Insights telemetry
+// 		event := appinsights.NewEventTelemetry(metricName)
+// 		event.Properties["metric"] = metricValue
+// 		TelemetryClient.Track(event)
+// 	}
+// 	return output.FLB_OK
+// }
+
+
+func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		metricName := "promMetrics"
-		metricValue := ToString(record)
+		mecpuUsage, ok := record["cpuUsage"].float64
+		if !ok {
+			message := fmt.Sprintf("mecpuUsage is not a float64 value"\)
+				Log(message)
+				SendException(message)
+				return nil
+        }
+		metric := appinsights.NewMetricTelemetry("mecpuUsage", mecpuUsage)
+		TelemetryClient.Track(metric)
+	}
+	return output.FLB_OK
+}
 
-		// Print metric in log
-		Log(metricName + ": " + metricValue)
+func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		otelcpuUsage, ok := record["cpuUsage"].float64
+		if !ok {
+			message := fmt.Sprintf("otelcpuUsage is not a float64 value"\)
+				Log(message)
+				SendException(message)
+				return nil
+        }
+		metric := appinsights.NewMetricTelemetry("otelcpuUsage", otelcpuUsage)
+		TelemetryClient.Track(metric)
+	}
+	return output.FLB_OK
+}
 
-		// Send metric to App Insights telemetry
-		event := appinsights.NewEventTelemetry(metricName)
-		event.Properties["metric"] = metricValue
-		TelemetryClient.Track(event)
+func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		memVmrss, ok := record["memVmrss"].float64
+		if !ok {
+			message := fmt.Sprintf("meVMRSS is not a float64 value"\)
+				Log(message)
+				SendException(message)
+				return nil
+        }
+		metric := appinsights.NewMetricTelemetry("meVMRSS", memVmrss)
+		TelemetryClient.Track(metric)
 	}
 	return output.FLB_OK
 }
@@ -876,20 +924,20 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 	return output.FLB_OK
 }
 
-func PushOtelColMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-	Log(fmt.Sprintf("otelMetrics"))
-	for _, record := range records {
+// func PushOtelColMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+// 	Log(fmt.Sprintf("otelMetrics"))
+// 	for _, record := range records {
 
-		metricName := "otelMetrics"
-		metricValue := ToString(record)
+// 		metricName := "otelMetrics"
+// 		metricValue := ToString(record)
 
-		// Print metric in log
-		Log(metricName + ": " + metricValue)
+// 		// Print metric in log
+// 		Log(metricName + ": " + metricValue)
 
-		// Send metric to App Insights telemetry
-		event := appinsights.NewEventTelemetry(metricName)
-		event.Properties["metric"] = metricValue
-		TelemetryClient.Track(event)
-	}
-	return output.FLB_OK
-}
+// 		// Send metric to App Insights telemetry
+// 		event := appinsights.NewEventTelemetry(metricName)
+// 		event.Properties["metric"] = metricValue
+// 		TelemetryClient.Track(event)
+// 	}
+// 	return output.FLB_OK
+// }
