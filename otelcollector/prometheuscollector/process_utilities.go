@@ -160,4 +160,9 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
         stderrBytes, _ := ioutil.ReadAll(stderr)
         fmt.Print(string(stderrBytes))
     }()
+
+	// Close the pipes
+	stdout.Close()
+	stderr.Close()
+
 }
