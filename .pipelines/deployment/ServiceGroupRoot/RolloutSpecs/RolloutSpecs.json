@@ -22,50 +22,69 @@
       "name": "PushLinuxAgent",
       "targetType": "ServiceResource",
       "targetName": "PushLinuxAgent",
-      "actions": [ "Shell/PushAgentToACR" ],
-      "dependsOn": [ ]
+      "actions": [
+        "Shell/PushAgentToACR"
+      ],
+      "dependsOn": []
     },
     {
       "name": "PushWindowsAgent",
       "targetType": "ServiceResource",
       "targetName": "PushWindowsAgent",
-      "actions": [ "Shell/PushAgentToACR" ],
-      "dependsOn": [ ]
+      "actions": [
+        "Shell/PushAgentToACR"
+      ],
+      "dependsOn": []
     },
     {
       "name": "PushTargetAllocator",
       "targetType": "ServiceResource",
       "targetName": "PushTargetAllocator",
-      "actions": [ "Shell/PushAgentToACR" ],
-      "dependsOn": [ ]
+      "actions": [
+        "Shell/PushAgentToACR"
+      ],
+      "dependsOn": []
     },
     {
       "name": "PushConfigReader",
       "targetType": "ServiceResource",
       "targetName": "PushConfigReader",
-      "actions": [ "Shell/PushAgentToACR" ],
-      "dependsOn": [ ]
+      "actions": [
+        "Shell/PushAgentToACR"
+      ],
+      "dependsOn": []
     },
     {
       "name": "PushKSMChart",
       "targetType": "ServiceResource",
       "targetName": "PushKSMChart",
-      "actions": [ "Shell/PushAgentToACR" ],
-      "dependsOn": [ ]
+      "actions": [
+        "Shell/PushAgentToACR"
+      ],
+      "dependsOn": []
     },
     {
       "name": "PushNEChart",
       "targetType": "ServiceResource",
       "targetName": "PushNEChart",
-      "actions": [ "Shell/PushAgentToACR" ],
-      "dependsOn": [ ]
+      "actions": [
+        "Shell/PushAgentToACR"
+      ],
+      "dependsOn": []
     },
     {
       "name": "PushARCHelmChart",
       "targetType": "ServiceResource",
       "targetName": "PushARCHelmChart",
-      "actions": [ "Shell/PushAgentToACR" ],
-      "dependsOn": [ "PushLinuxAgent", "PushWindowsAgent", "PushKSMChart", "PushNEChart" ]
+      "actions": [
+        "Shell/PushAgentToACR"
+      ],
+      "dependsOn": [
+        "PushLinuxAgent",
+        "PushWindowsAgent",
+        "PushKSMChart",
+        "PushNEChart"
+      ]
     }
   ]
 }

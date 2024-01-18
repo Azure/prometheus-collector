@@ -1,5 +1,5 @@
 # Build the otel-allocator binary
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.20 as builder
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as builder
 
 WORKDIR /app
 # Copy prometheus-operator repo files
