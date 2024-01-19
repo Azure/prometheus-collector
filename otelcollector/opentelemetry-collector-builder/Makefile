@@ -8,11 +8,7 @@ otelcollector:
 	go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector .
 
 prometheusui:
-	wget https://github.com/prometheus/prometheus/releases/download/v$(PROMETHEUS_VERSION)/prometheus-web-ui-$(PROMETHEUS_VERSION).tar.gz
-	tar -xvzf prometheus-web-ui-$(PROMETHEUS_VERSION).tar.gz
-	rm -rf ../static
-	mv static ../
-	rm prometheus-web-ui-$(PROMETHEUS_VERSION).tar.gz
+	make -C ../prometheus-ui
 
 fluentbitplugin:
 	make -C ../fluent-bit/src
