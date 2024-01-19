@@ -11,12 +11,19 @@ import (
 	"hash"
 	"hash/fnv"
 	"io"
+	stdlog "log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"regexp"
+	"runtime"
+	"runtime/debug"
 	"sync"
 	"time"
+
+	"github.com/go-kit/log/level"
+	"github.com/mwitkow/go-conntrack"
 
 	"github.com/go-kit/log"
 	commonconfig "github.com/prometheus/common/config"
@@ -35,6 +42,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/web"
+
+	"github.com/prometheus/common/route"
+	toolkit_web "github.com/prometheus/exporter-toolkit/web"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/net/netutil"
+
+	"github.com/prometheus/prometheus/storage"
+	"github.com/prometheus/prometheus/util/httputil"
+	api_v1 "github.com/prometheus/prometheus/web/api/v1"
 )
 
 const (
@@ -58,6 +74,14 @@ type pReceiver struct {
 	scrapeManager    *scrape.Manager
 	discoveryManager *discovery.Manager
 	webHandler       *web.Handler
+}
+
+func setPathWithPrefix(prefix string) func(handlerName string, handler http.HandlerFunc) http.HandlerFunc {
+	return func(handlerName string, handler http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			handler(w, r.WithContext(httputil.ContextWithPath(r.Context(), prefix+r.URL.Path)))
+		}
+	}
 }
 
 // New creates a new prometheus.Receiver reference.
@@ -262,7 +286,7 @@ func (r *pReceiver) applyCfg(cfg *config.Config) error {
 		return err
 	}
 
-	r.webHandler.ApplyConfig(cfg)
+	//r.webHandler.ApplyConfig(cfg)
 
 	return nil
 }
@@ -319,8 +343,10 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 			host.ReportFatalError(err)
 		}
 	}()
-	// Setup settings and logger and create Prometheus web handler
-	webOptions := web.Options{
+
+	// Create Options just for easy readability for creating the API object.
+	// These settings are more applicable for what we want to expose for configuration for the Prometheus Receiver.
+	o := &web.Options{
 		ScrapeManager: r.scrapeManager,
 		Context:       ctx,
 		ListenAddress: ":9090",
@@ -345,24 +371,103 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 		IsAgent:        true,
 		Gatherer:       prometheus.DefaultGatherer,
 	}
-	go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	r.webHandler = web.New(go_kit_logger, &webOptions)
-	listener, err := r.webHandler.Listener()
+
+	// Creates the API object in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L314-L354
+	// Anything not defined by the options above will be nil, such as o.QueryEngine, o.Storage, etc. IsAgent=true, so these being nil is expected by Prometheus.
+	factorySPr := func(_ context.Context) api_v1.ScrapePoolsRetriever { return r.scrapeManager }
+	factoryTr := func(_ context.Context) api_v1.TargetRetriever { return r.scrapeManager }
+	factoryAr := func(_ context.Context) api_v1.AlertmanagerRetriever { return nil }
+	FactoryRr := func(_ context.Context) api_v1.RulesRetriever { return nil }
+	var app storage.Appendable
+	logger = log.NewNopLogger()
+
+	apiV1 := api_v1.NewAPI(o.QueryEngine, o.Storage, app, o.ExemplarStorage, factorySPr, factoryTr, factoryAr,
+		func() config.Config {
+			return *r.cfg.PrometheusConfig
+		},
+		o.Flags,
+		api_v1.GlobalURLOptions{
+			ListenAddress: o.ListenAddress,
+			Host:          o.ExternalURL.Host,
+			Scheme:        o.ExternalURL.Scheme,
+		},
+		func(f http.HandlerFunc) http.HandlerFunc {
+			return func(w http.ResponseWriter, r *http.Request) {
+				f(w, r)
+			}
+		},
+		o.LocalStorage,
+		o.TSDBDir,
+		o.EnableAdminAPI,
+		logger,
+		FactoryRr,
+		o.RemoteReadSampleLimit,
+		o.RemoteReadConcurrencyLimit,
+		o.RemoteReadBytesInFrame,
+		o.IsAgent,
+		o.CORSOrigin,
+		func() (api_v1.RuntimeInfo, error) {
+			status := api_v1.RuntimeInfo{
+				GoroutineCount: runtime.NumGoroutine(),
+				GOMAXPROCS:     runtime.GOMAXPROCS(0),
+				GOMEMLIMIT:     debug.SetMemoryLimit(-1),
+				GOGC:           os.Getenv("GOGC"),
+				GODEBUG:        os.Getenv("GODEBUG"),
+			}
+		
+			return status, nil
+		},
+		nil,
+		o.Gatherer,
+		o.Registerer,
+		nil,
+		o.EnableRemoteWriteReceiver,
+		o.EnableOTLPWriteReceiver,
+	)
+
+	// Create listener and monitor with conntrack in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
+	level.Info(logger).Log("msg", "Start listening for connections", "address", o.ListenAddress)
+	listener, err := net.Listen("tcp", o.ListenAddress)
 	if err != nil {
 		return err
 	}
-	// Pass config and let the web handler know the config is ready.
-	// These are needed because Prometheus allows reloading the config without restarting.
-	r.webHandler.ApplyConfig(r.cfg.PrometheusConfig)
-	r.webHandler.SetReady(true)
-	// Uses the same context as the discovery and scrape managers for shutting down
-	go func() {
-		if err := r.webHandler.Run(ctx, listener, ""); err != nil {
-			r.settings.Logger.Error("Web handler failed", zap.Error(err))
-			host.ReportFatalError(err)
-		}
-	}()
+	listener = netutil.LimitListener(listener, o.MaxConnections)
+	listener = conntrack.NewListener(listener,
+		conntrack.TrackWithName("http"),
+		conntrack.TrackWithTracing())
 
+	// Run the API server in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L582-L630
+	mux := http.NewServeMux()
+	router := route.New().WithInstrumentation(setPathWithPrefix(""))
+	mux.Handle("/", router)
+
+	// This is the path the web package uses, but the router above with no prefix can also be Registered by apiV1 instead.
+	apiPath := "/api"
+	if o.RoutePrefix != "/" {
+		apiPath = o.RoutePrefix + apiPath
+		level.Info(logger).Log("msg", "Router prefix", "prefix", o.RoutePrefix)
+	}
+	av1 := route.New().
+		WithInstrumentation(setPathWithPrefix(apiPath + "/v1"))
+	apiV1.Register(av1)
+	mux.Handle(apiPath+"/v1/", http.StripPrefix(apiPath+"/v1", av1))
+
+	errlog := stdlog.New(log.NewStdlibAdapter(level.Error(logger)), "", 0)
+	spanNameFormatter := otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+		return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+	})
+	httpSrv := &http.Server{
+		Handler:     otelhttp.NewHandler(mux, "", spanNameFormatter),
+		ErrorLog:    errlog,
+		ReadTimeout: o.ReadTimeout,
+	}
+	webconfig := ""
+
+	// An error channel will be needed for graceful shutdown in the Shutdown() method for the receiver
+	go func() {
+		toolkit_web.Serve(listener, httpSrv, &toolkit_web.FlagConfig{WebConfigFile: &webconfig}, logger)
+	}()
+	
 	return nil
 }
 
