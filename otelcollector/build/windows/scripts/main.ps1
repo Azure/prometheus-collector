@@ -359,6 +359,10 @@ function Start-OTEL-Collector {
         Start-Job -ScriptBlock { Start-Process -RedirectStandardError /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/otelcollector.exe" -ArgumentList @("--config", "/opt/microsoft/otelcollector/collector-config.yml") } > $null
     }
     tasklist /fi "imagename eq otelcollector.exe" /fo "table"  | findstr otelcollector
+
+    Write-Output "Starting prometheusui"
+    Start-Job -ScriptBlock { Start-Process -RedirectStandardError /opt/microsoft/otelcollector/collector-log.txt -NoNewWindow -FilePath "/opt/microsoft/otelcollector/prometheusui.exe" } > $null
+    tasklist /fi "imagename eq prometheusui.exe" /fo "table"  | findstr prometheusui
 }
 
 function Set-CertificateForME {

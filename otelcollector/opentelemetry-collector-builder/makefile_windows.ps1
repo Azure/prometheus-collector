@@ -37,3 +37,15 @@ Set-Location ..
 Set-Location opentelemetry-collector-builder
 
 Write-Output "FINISHED building promconfigvalidator"
+
+Write-Output "building prometheusui"
+
+Set-Location ..
+Set-Location prometheus-ui
+
+.\makefile_windows.ps1
+
+Set-Location ..
+Set-Location opentelemetry-collector-builder
+
+Write-Output "FINISHED building prometheusui"
