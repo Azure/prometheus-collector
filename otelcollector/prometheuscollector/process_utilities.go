@@ -2,6 +2,7 @@ package main
 
 import (
     "fmt"
+	"io"
     "os"
     "strings"
     "os/exec"
@@ -128,8 +129,15 @@ func startCommandAndWait(command string, args ...string) {
 	}
 }
 
+func copyOutput(src io.Reader, dest io.Writer) {
+	_, err := io.Copy(dest, src)
+	if err != nil {
+		fmt.Printf("Error copying output: %v\n", err)
+	}
+}
+
 func startMetricsExtensionWithConfigOverrides(configOverrides string) {
-	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "ConsoleLocal", "-LogLevel", "Warning", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Warning", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 	// Create pipes to capture stdout and stderr
     stdout, err := cmd.StdoutPipe()
     if err != nil {
@@ -143,26 +151,14 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
         return
     }
 
+	// Goroutines to copy stdout and stderr to parent process
+	go copyOutput(stdout, os.Stdout)
+	go copyOutput(stderr, os.Stderr)
+
     // Start the command
     err = cmd.Start()
     if err != nil {
         fmt.Printf("Error starting MetricsExtension: %v\n", err)
         return
     }
-
-    // Create goroutines to capture and print stdout and stderr
-    go func() {
-        stdoutBytes, _ := ioutil.ReadAll(stdout)
-        fmt.Print(string(stdoutBytes))
-    }()
-
-    go func() {
-        stderrBytes, _ := ioutil.ReadAll(stderr)
-        fmt.Print(string(stderrBytes))
-    }()
-
-	// Close the pipes
-	stdout.Close()
-	stderr.Close()
-
 }
