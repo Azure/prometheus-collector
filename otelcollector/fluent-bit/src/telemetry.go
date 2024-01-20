@@ -836,18 +836,18 @@ func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 	for _, record := range records {
 		metricName, ok := ToString(record["metricName"])
 		if !ok {
-			message := fmt.Sprintf("metricName is not a string"\)
-				Log(message)
-				SendException(message)
-				return nil
-        }
+			message := fmt.Sprintf("metricName is not a string")
+			Log(message)
+			SendException(message)
+			return nil
+		}
 		promMetrics, ok := record["promMetrics"].float64
 		if !ok {
-			message := fmt.Sprintf("promMetrics is not a float64 value"\)
-				Log(message)
-				SendException(message)
-				return nil
-        }
+			message := fmt.Sprintf("promMetrics is not a float64 value")
+			Log(message)
+			SendException(message)
+			return nil
+		}
 		metric := appinsights.NewMetricTelemetry(metricName, promMetrics)
 		TelemetryClient.Track(metric)
 	}
@@ -859,11 +859,11 @@ func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 		promMetrics, ok := record["promMetrics"].float64
 		if !ok {
-			message := fmt.Sprintf("promMetrics is not a float64 value"\)
-				Log(message)
-				SendException(message)
-				return nil
-        }
+			message := fmt.Sprintf("promMetrics is not a float64 value")
+			Log(message)
+			SendException(message)
+			return nil
+		}
 		metric := appinsights.NewMetricTelemetry("prometheus_sd_http_failures_total", promMetrics)
 		TelemetryClient.Track(metric)
 	}
@@ -874,11 +874,11 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		mecpuUsage, ok := record["cpuUsage"].float64
 		if !ok {
-			message := fmt.Sprintf("mecpuUsage is not a float64 value"\)
-				Log(message)
-				SendException(message)
-				return nil
-        }
+			message := fmt.Sprintf("mecpuUsage is not a float64 value")
+			Log(message)
+			SendException(message)
+			return nil
+		}
 		metric := appinsights.NewMetricTelemetry("mecpuUsage", mecpuUsage)
 		TelemetryClient.Track(metric)
 	}
@@ -889,11 +889,11 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 	for _, record := range records {
 		otelcpuUsage, ok := record["cpuUsage"].float64
 		if !ok {
-			message := fmt.Sprintf("otelcpuUsage is not a float64 value"\)
-				Log(message)
-				SendException(message)
-				return nil
-        }
+			message := fmt.Sprintf("otelcpuUsage is not a float64 value")
+			Log(message)
+			SendException(message)
+			return nil
+		}
 		metric := appinsights.NewMetricTelemetry("otelcpuUsage", otelcpuUsage)
 		TelemetryClient.Track(metric)
 	}
@@ -904,26 +904,11 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 	for _, record := range records {
 		memVmrss, ok := record["memVmrss"].float64
 		if !ok {
-			message := fmt.Sprintf("meVMRSS is not a float64 value"\)
-				Log(message)
-				SendException(message)
-				return nil
-        }
-		metric := appinsights.NewMetricTelemetry("meVMRSS", memVmrss)
-		TelemetryClient.Track(metric)
-	}
-	return output.FLB_OK
-}
-
-func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-	for _, record := range records {
-		memVmrss, ok := record["memVmrss"].float64
-		if !ok {
-			message := fmt.Sprintf("meVMRSS is not a float64 value"\)
-				Log(message)
-				SendException(message)
-				return nil
-        }
+			message := fmt.Sprintf("meVMRSS is not a float64 value")
+			Log(message)
+			SendException(message)
+			return nil
+		}
 		metric := appinsights.NewMetricTelemetry("meVMRSS", memVmrss)
 		TelemetryClient.Track(metric)
 	}
@@ -934,31 +919,13 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 	for _, record := range records {
 		memVmrss, ok := record["memVmrss"].float64
 		if !ok {
-			message := fmt.Sprintf("otelcolVMRSS is not a float64 value"\)
-				Log(message)
-				SendException(message)
-				return nil
-        }
+			message := fmt.Sprintf("otelcolVMRSS is not a float64 value")
+			Log(message)
+			SendException(message)
+			return nil
+		}
 		metric := appinsights.NewMetricTelemetry("otelcolVMRSS", memVmrss)
 		TelemetryClient.Track(metric)
 	}
 	return output.FLB_OK
 }
-
-// func PushOtelColMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-// 	Log(fmt.Sprintf("otelMetrics"))
-// 	for _, record := range records {
-
-// 		metricName := "otelMetrics"
-// 		metricValue := ToString(record)
-
-// 		// Print metric in log
-// 		Log(metricName + ": " + metricValue)
-
-// 		// Send metric to App Insights telemetry
-// 		event := appinsights.NewEventTelemetry(metricName)
-// 		event.Properties["metric"] = metricValue
-// 		TelemetryClient.Track(event)
-// 	}
-// 	return output.FLB_OK
-// }
