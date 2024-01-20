@@ -142,12 +142,12 @@ const (
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
 	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
-	fluentbitScrapeTag                    = "prometheus.scrape"
 	meMemRssScrapeTag                     = "metricsextension.memVmrss.scrape"
 	otelcolMemRssScrapeTag                = "otelcollector.memVmrss.scrape"
 	otelcolCpuScrapeTag                   = "cpu.metricsextension"
+	prom8888ScrapeTag                     = "prometheus.8888"
+	prom9090ScrapeTag                     = "prometheus.9090"
 	meCpuScrapeTag                        = "cpu.otelcollector"
-	otelcolScrapeTag                      = "otelcol.scrape"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
@@ -832,22 +832,43 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 	return output.FLB_OK
 }
 
-// func PushPrometheusMetricsToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-// 	for _, record := range records {
-// 		metricName := "promMetrics"
-// 		metricValue := ToString(record)
+func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		metricName, ok := ToString(record["metricName"])
+		if !ok {
+			message := fmt.Sprintf("metricName is not a string"\)
+				Log(message)
+				SendException(message)
+				return nil
+        }
+		promMetrics, ok := record["promMetrics"].float64
+		if !ok {
+			message := fmt.Sprintf("promMetrics is not a float64 value"\)
+				Log(message)
+				SendException(message)
+				return nil
+        }
+		metric := appinsights.NewMetricTelemetry(metricName, promMetrics)
+		TelemetryClient.Track(metric)
+	}
+	return output.FLB_OK
+}
 
-// 		// Print metric in log
-// 		Log(metricName + ": " + metricValue)
+func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
 
-// 		// Send metric to App Insights telemetry
-// 		event := appinsights.NewEventTelemetry(metricName)
-// 		event.Properties["metric"] = metricValue
-// 		TelemetryClient.Track(event)
-// 	}
-// 	return output.FLB_OK
-// }
-
+		promMetrics, ok := record["promMetrics"].float64
+		if !ok {
+			message := fmt.Sprintf("promMetrics is not a float64 value"\)
+				Log(message)
+				SendException(message)
+				return nil
+        }
+		metric := appinsights.NewMetricTelemetry("prometheus_sd_http_failures_total", promMetrics)
+		TelemetryClient.Track(metric)
+	}
+	return output.FLB_OK
+}
 
 func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {

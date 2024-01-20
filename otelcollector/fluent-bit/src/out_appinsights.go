@@ -86,14 +86,14 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
 		return RecordExportingFailed(records)
-	case fluentbitScrapeTag:
-		return PushPrometheusMetricsToAppInsightsMetrics(records)
 	case meScrapeTag:
 		return PushMeMetricsToAppInsightsMetrics(records)
-	case otelcolScrapeTag:
-		return PushOtelColMetricsToAppInsightsMetrics(records)
 	case otelcolCpuScrapeTag:
 		return PushOtelCpuToAppInsightsMetrics(records)
+	case prom8888ScrapeTag:
+		return PushProm8888ToAppInsightsMetrics(records)
+	case prom9090ScrapeTag:
+		return PushProm9090ToAppInsightsMetrics(records)
 	case meCpuScrapeTag:
 		return PushMECpuToAppInsightsMetrics(records)
 	default:
