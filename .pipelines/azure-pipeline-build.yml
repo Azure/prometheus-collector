@@ -616,6 +616,7 @@ jobs:
   displayName: "Build: windows 2019 prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   variables:
@@ -648,6 +649,7 @@ jobs:
   displayName: "Build: windows 2022 prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   variables:
@@ -680,6 +682,7 @@ jobs:
   displayName: "Build: windows multi-arch prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   - Windows2019_Prometheus_Collector
