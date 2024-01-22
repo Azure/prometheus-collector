@@ -49,7 +49,6 @@ var apiRouterPaths = []string{
 	"/status/flags",
 }
 
-
 func main() {
 	router := route.New()
 
@@ -60,7 +59,6 @@ func main() {
 			fmt.Fprintf(w, "Error opening React index.html: %v", err)
 			return
 		}
-		fmt.Printf("opened react app assets\n")
 		defer func() { _ = f.Close() }()
 		idx, err := io.ReadAll(f)
 		if err != nil {
@@ -68,13 +66,12 @@ func main() {
 			fmt.Fprintf(w, "Error reading React index.html: %v", err)
 			return
 		}
-		fmt.Printf("read react app assets\n")
+
 		replacedIdx := bytes.ReplaceAll(idx, []byte("CONSOLES_LINK_PLACEHOLDER"), []byte(""))
 		replacedIdx = bytes.ReplaceAll(replacedIdx, []byte("TITLE_PLACEHOLDER"), []byte("Prometheus Receiver"))
 		replacedIdx = bytes.ReplaceAll(replacedIdx, []byte("AGENT_MODE_PLACEHOLDER"), []byte(strconv.FormatBool(true)))
 		replacedIdx = bytes.ReplaceAll(replacedIdx, []byte("READY_PLACEHOLDER"), []byte(strconv.FormatBool(true)))
 		w.Write(replacedIdx)
-		fmt.Printf("replaced react app placeholders\n")
 	}
 
 	// Serve the React app.
@@ -82,7 +79,7 @@ func main() {
 		router.Get(p, serveReactApp)
 	}
 	for _, p := range reactRouterAgentPaths {
-			router.Get(p, serveReactApp)
+		router.Get(p, serveReactApp)
 	}
 
 	// The favicon and manifest are bundled as part of the React app, but we want to serve
@@ -103,16 +100,16 @@ func main() {
 		fs.ServeHTTP(w, r)
 	})
 
-	mux := http.NewServeMux()
-
+	// Route API calls to the port that's hosted by the otelcollector
+	// We need a reverse proxy because norm
 	api, err := url.Parse("http://localhost:9090")
 	if err != nil {
 		panic(err)
 	}
 	proxyHandler := func(p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 		return func(w http.ResponseWriter, r *http.Request) {
-						r.Host = api.Host
-						p.ServeHTTP(w, r)
+			r.Host = api.Host
+			p.ServeHTTP(w, r)
 		}
 	}
 	proxy := httputil.NewSingleHostReverseProxy(api)
@@ -121,23 +118,24 @@ func main() {
 		router.Get(apiPath + path, proxyHandler(proxy))
 	}
 
+	mux := http.NewServeMux()
 	mux.Handle("/", router)
-
-	listener, err := net.Listen("tcp", ":9091")
-	if err != nil {
-		panic(err)
-	}
 
 	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 	errlog := stdlog.New(log.NewStdlibAdapter(level.Error(logger)), "", 0)
-	
 	spanNameFormatter := otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 		return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 	})
+
 	httpSrv := &http.Server{
 		Handler:      withStackTracer(otelhttp.NewHandler(mux, "", spanNameFormatter), logger),
 		ReadTimeout: 100000,
 		ErrorLog:    errlog,
+	}
+
+	listener, err := net.Listen("tcp", ":9091")
+	if err != nil {
+		panic(err)
 	}
 
 	errCh := make(chan error, 1)
