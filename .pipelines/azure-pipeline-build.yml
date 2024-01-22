@@ -329,7 +329,7 @@ jobs:
 
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push --link
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push --link --cache-to type=registry,ref=$(ACR_REGISTRY)/$(ACR_REPOSITORY)/cache --cache-from type=registry,ref=$(ACR_REGISTRY)/$(ACR_REPOSITORY)/cache
         docker pull $(LINUX_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
