@@ -636,7 +636,9 @@ jobs:
       displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
     - powershell: |
-        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+        docker buildx create --name dockerbuilder
+        docker buildx use dockerbuilder
+        docker buildx . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build WS2019 image"
       retryCountOnTaskFailure: 2
