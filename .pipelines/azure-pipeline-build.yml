@@ -328,7 +328,7 @@ jobs:
 
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push --link
         docker pull $(LINUX_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
@@ -967,8 +967,7 @@ jobs:
         for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
           do
             state=$(az k8s-extension show --name azuremonitor-metrics --cluster-name ci-dev-arc-wcus --resource-group ci-dev-arc-wcus --cluster-type connectedClusters | jq -r '.provisioningState')
-            # We want to wait in case the status is 'Creating' or 'Updating' because of another PR merged shortly before the current one.
-            if [ "$state" = "Succeeded" ] || [ "$state" = "Failed" ]
+            if [ $state = "Succeeded" ]
             then
               echo "Cluster is ready to install extension"
               exit 0
