@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/build-improvements-2
 
 pr:
   autoCancel: true
