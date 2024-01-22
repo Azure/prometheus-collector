@@ -37,7 +37,7 @@ COPY ./NOTICE $tmpdir/microsoft
 ENV chocolateyVersion "1.4.0"
 RUN powershell -Command "Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" \
 # Fluentd depends on cool.io whose fat gem is only available for Ruby < 2.5, so need to specify --platform ruby when install Ruby > 2.5 and install msys2 to get dev tools
-&& choco install -y ruby --version 2.6.5.1 --params "'/InstallDir:C:\ruby26'" \
+RUN choco install -y ruby --version 2.6.5.1 --params "'/InstallDir:C:\ruby26'" \
 && choco install -y msys2 --version 20211130.0.0 --params "'/NoPath /NoUpdate /InstallDir:C:\ruby26\msys64'" \
 && choco install -y vim \
 # gangams - optional MSYS2 update via ridk failing in merged docker file so skipping that since we dont need optional update
