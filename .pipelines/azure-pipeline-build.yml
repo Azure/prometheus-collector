@@ -639,7 +639,7 @@ jobs:
 
     - powershell: |
         docker version
-        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION) --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:ltsc2019,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:ltsc2019
+        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg BUILDKIT_INLINE_CACHE=1
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build WS2019 image"
       retryCountOnTaskFailure: 2
@@ -672,7 +672,7 @@ jobs:
       displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
     - powershell: |
-        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION) --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:ltsc2022,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:ltsc2022
+        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg BUILDKIT_INLINE_CACHE=1
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build WS2022 image"
       retryCountOnTaskFailure: 2
