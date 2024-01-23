@@ -144,6 +144,11 @@ jobs:
     - task: CredScan@3
       displayName: "SDL : Run credscan"
 
+    - task: PoliCheck@2
+      displayName: "SDL : Run PoliCheck"
+      inputs:
+        targetType: 'F'
+        targetArgument: '$(Build.SourcesDirectory)'
     - task: CopyFiles@2
       displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
       inputs:
