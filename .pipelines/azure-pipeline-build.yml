@@ -241,6 +241,23 @@ jobs:
         docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
       displayName: "Build: build and push reference app python windows image to dev ACR"
       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+      
+- job: SDL_Policheck_Scan
+  displayName: "SDL: policheck scanning"
+  pool:
+    name: Azure-Pipelines-Windows-CI-Test-EO
+  variables:
+    skipComponentGovernanceDetection: true
+  steps:
+    - checkout: self
+      submodules: true
+
+    - task: PoliCheck@2
+      displayName: "SDL : Run PoliCheck"
+      inputs:
+        targetType: 'F'
+        targetArgument: '$(Build.SourcesDirectory)'
+
 
 - job: SDL_Binary_Scan
   displayName: "SDL: linux binary scanning"
