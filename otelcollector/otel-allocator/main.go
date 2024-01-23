@@ -55,6 +55,7 @@ func main() {
 		discoveryManager *discovery.Manager
 		collectorWatcher *collector.Client
 		promWatcher      allocatorWatcher.Watcher
+		fileWatcher      allocatorWatcher.Watcher
 		targetDiscoverer *target.Discoverer
 
 		discoveryCancel context.CancelFunc
