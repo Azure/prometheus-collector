@@ -44,12 +44,13 @@ const (
 )
 
 type Config struct {
-	ListenAddr                      string                `yaml:"listen_addr,omitempty"`
-	KubeConfigFilePath              string                `yaml:"kube_config_file_path,omitempty"`
-	ClusterConfig                   *rest.Config          `yaml:"-"`
-	RootLogger                      logr.Logger           `yaml:"-"`
-	ReloadConfig                    bool                  `yaml:"-"`
-	CollectorSelector               *metav1.LabelSelector `yaml:"collector_selector,omitempty"`
+	ListenAddr         string       `yaml:"listen_addr,omitempty"`
+	KubeConfigFilePath string       `yaml:"kube_config_file_path,omitempty"`
+	ClusterConfig      *rest.Config `yaml:"-"`
+	RootLogger         logr.Logger  `yaml:"-"`
+	ReloadConfig       bool         `yaml:"-"`
+	// CollectorSelector  *metav1.LabelSelector `yaml:"collector_selector,omitempty"`
+	LabelSelector                   map[string]string     `yaml:"collector_selector,omitempty"`
 	PromConfig                      *promconfig.Config    `yaml:"config"`
 	AllocationStrategy              string                `yaml:"allocation_strategy,omitempty"`
 	FilterStrategy                  string                `yaml:"filter_strategy,omitempty"`
