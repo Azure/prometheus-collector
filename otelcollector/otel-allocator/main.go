@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	gokitlog "github.com/go-kit/log"
@@ -55,7 +54,6 @@ func main() {
 		allocator        allocation.Allocator
 		discoveryManager *discovery.Manager
 		collectorWatcher *collector.Client
-		fileWatcher      allocatorWatcher.Watcher
 		promWatcher      allocatorWatcher.Watcher
 		targetDiscoverer *target.Discoverer
 
@@ -66,13 +64,6 @@ func main() {
 		interrupts      = make(chan os.Signal, 1)
 		errChan         = make(chan error)
 	)
-
-	// EULA statement is required for Arc extension
-	clusterResourceId := os.Getenv("CLUSTER")
-	if strings.EqualFold(clusterResourceId, "connectedclusters") {
-		setupLog.Info("MICROSOFT SOFTWARE LICENSE TERMS\n\nMICROSOFT Azure Arc-enabled Kubernetes\n\nThis software is licensed to you as part of your or your company's subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/")
-	}
-
 	cfg, configFilePath, err := config.Load()
 	if err != nil {
 		fmt.Printf("Failed to load config: %v", err)
@@ -89,8 +80,8 @@ func main() {
 	ctx := context.Background()
 	log := ctrl.Log.WithName("allocator")
 
-	allocatorPrehook = prehook.New(cfg.GetTargetsFilterStrategy(), log)
-	allocator, err = allocation.New(cfg.GetAllocationStrategy(), log, allocation.WithFilter(allocatorPrehook))
+	allocatorPrehook = prehook.New(cfg.FilterStrategy, log)
+	allocator, err = allocation.New(cfg.AllocationStrategy, log, allocation.WithFilter(allocatorPrehook))
 	if err != nil {
 		setupLog.Error(err, "Unable to initialize allocation strategy")
 		os.Exit(1)
@@ -107,6 +98,7 @@ func main() {
 		setupLog.Error(collectorWatcherErr, "Unable to initialize collector watcher")
 		os.Exit(1)
 	}
+
 	if cfg.ReloadConfig {
 		fileWatcher, err = allocatorWatcher.NewFileWatcher(setupLog.WithName("file-watcher"), configFilePath)
 		if err != nil {
@@ -118,7 +110,7 @@ func main() {
 	defer close(interrupts)
 
 	if cfg.PrometheusCR.Enabled {
-		promWatcher, err = allocatorWatcher.NewPrometheusCRWatcher(setupLog.WithName("prometheus-cr-watcher"), *cfg)
+		promWatcher, err = allocatorWatcher.NewPrometheusCRWatcher(ctx, setupLog.WithName("prometheus-cr-watcher"), *cfg)
 		if err != nil {
 			setupLog.Error(err, "Can't start the prometheus watcher")
 			os.Exit(1)
@@ -137,6 +129,7 @@ func main() {
 				}
 			})
 	}
+
 	if cfg.ReloadConfig {
 		runGroup.Add(
 			func() error {
@@ -165,11 +158,16 @@ func main() {
 	runGroup.Add(
 		func() error {
 			// Initial loading of the config file's scrape config
-			err = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, cfg.PromConfig)
-			if err != nil {
-				setupLog.Error(err, "Unable to apply initial configuration")
-				return err
+			if cfg.PromConfig != nil {
+				err = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, cfg.PromConfig.ScrapeConfigs)
+				if err != nil {
+					setupLog.Error(err, "Unable to apply initial configuration")
+					return err
+				}
+			} else {
+				setupLog.Info("Prometheus config empty, skipping initial discovery configuration")
 			}
+
 			err := targetDiscoverer.Watch(allocator.SetTargets)
 			setupLog.Info("Target discoverer exited")
 			return err
@@ -180,7 +178,7 @@ func main() {
 		})
 	runGroup.Add(
 		func() error {
-			err := collectorWatcher.Watch(ctx, cfg.LabelSelector, allocator.SetCollectors)
+			err := collectorWatcher.Watch(ctx, cfg.CollectorSelector, allocator.SetCollectors)
 			setupLog.Info("Collector watcher exited")
 			return err
 		},
@@ -211,7 +209,7 @@ func main() {
 						setupLog.Error(err, "Unable to load configuration")
 						continue
 					}
-					err = targetDiscoverer.ApplyConfig(event.Source, loadConfig)
+					err = targetDiscoverer.ApplyConfig(event.Source, loadConfig.ScrapeConfigs)
 					if err != nil {
 						setupLog.Error(err, "Unable to apply configuration")
 						continue
