@@ -165,8 +165,7 @@ string
 <td>
 <p>Tag of Alertmanager container image to be deployed. Defaults to the value of <code>version</code>.
 Version is ignored if Tag is set.
-Deprecated: use &lsquo;image&rsquo; instead.  The image tag can be specified
-as part of the image URL.</p>
+Deprecated: use &lsquo;image&rsquo; instead. The image tag can be specified as part of the image URL.</p>
 </td>
 </tr>
 <tr>
@@ -180,8 +179,7 @@ string
 <p>SHA of Alertmanager container image to be deployed. Defaults to the value of <code>version</code>.
 Similar to a tag, but the SHA explicitly deploys an immutable container image.
 Version and Tag are ignored if SHA is set.
-Deprecated: use &lsquo;image&rsquo; instead.  The image digest can be specified
-as part of the image URL.</p>
+Deprecated: use &lsquo;image&rsquo; instead. The image digest can be specified as part of the image URL.</p>
 </td>
 </tr>
 <tr>
@@ -193,7 +191,7 @@ string
 </td>
 <td>
 <p>Base image that is used to deploy pods, without tag.
-Deprecated: use &lsquo;image&rsquo; instead</p>
+Deprecated: use &lsquo;image&rsquo; instead.</p>
 </td>
 </tr>
 <tr>
@@ -584,6 +582,18 @@ GoDuration
 </tr>
 <tr>
 <td>
+<code>clusterLabel</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Defines the identifier that uniquely identifies the Alertmanager cluster.
+You should only set it when the Alertmanager cluster includes Alertmanager instances which are external to this Alertmanager resource. In practice, the addresses of the external instances are provided via the <code>.spec.additionalPeers</code> field.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>clusterPushpullInterval</code><br/>
 <em>
 <a href="#monitoring.coreos.com/v1.GoDuration">
@@ -828,7 +838,14 @@ string
 </em>
 </td>
 <td>
-<p>The label to use to retrieve the job name from.</p>
+<p>The label to use to retrieve the job name from.
+<code>jobLabel</code> selects the label from the associated Kubernetes <code>Pod</code>
+object which will be used as the <code>job</code> label for all metrics.</p>
+<p>For example if <code>jobLabel</code> is set to <code>foo</code> and the Kubernetes <code>Pod</code>
+object is labeled with <code>foo: bar</code>, then Prometheus adds the <code>job=&quot;bar&quot;</code>
+label to all ingested metrics.</p>
+<p>If the value of this field is empty, the <code>job</code> label of the metrics
+defaults to the namespace and name of the PodMonitor object (e.g. <code>&lt;namespace&gt;/&lt;name&gt;</code>).</p>
 </td>
 </tr>
 <tr>
@@ -839,7 +856,8 @@ string
 </em>
 </td>
 <td>
-<p>PodTargetLabels transfers labels on the Kubernetes Pod onto the target.</p>
+<p><code>podTargetLabels</code> defines the labels which are transferred from the
+associated Kubernetes <code>Pod</code> object onto the ingested metrics.</p>
 </td>
 </tr>
 <tr>
@@ -852,7 +870,8 @@ string
 </em>
 </td>
 <td>
-<p>A list of endpoints allowed as part of this PodMonitor.</p>
+<em>(Optional)</em>
+<p>List of endpoints part of this PodMonitor.</p>
 </td>
 </tr>
 <tr>
@@ -865,7 +884,7 @@ Kubernetes meta/v1.LabelSelector
 </em>
 </td>
 <td>
-<p>Selector to select Pod objects.</p>
+<p>Label selector to select the Kubernetes <code>Pod</code> objects.</p>
 </td>
 </tr>
 <tr>
@@ -878,7 +897,8 @@ NamespaceSelector
 </em>
 </td>
 <td>
-<p>Selector to select which namespaces the Endpoints objects are discovered from.</p>
+<p>Selector to select which namespaces the Kubernetes <code>Pods</code> objects
+are discovered from.</p>
 </td>
 </tr>
 <tr>
@@ -889,7 +909,9 @@ uint64
 </em>
 </td>
 <td>
-<p>SampleLimit defines per-scrape limit on number of scraped samples that will be accepted.</p>
+<em>(Optional)</em>
+<p><code>sampleLimit</code> defines a per-scrape limit on the number of scraped samples
+that will be accepted.</p>
 </td>
 </tr>
 <tr>
@@ -901,7 +923,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>TargetLimit defines a limit on the number of scraped targets that will be accepted.</p>
+<p><code>targetLimit</code> defines a limit on the number of scraped targets that will
+be accepted.</p>
 </td>
 </tr>
 <tr>
@@ -913,8 +936,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on number of labels that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on number of labels that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -926,8 +949,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on length of labels name that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on length of labels name that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -939,8 +962,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on length of labels value that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on length of labels value that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -967,8 +990,10 @@ AttachMetadata
 </em>
 </td>
 <td>
-<p>Attaches node metadata to discovered targets.
-Requires Prometheus v2.35.0 and above.</p>
+<em>(Optional)</em>
+<p><code>attachMetadata</code> defines additional metadata which is added to the
+discovered targets.</p>
+<p>It requires Prometheus &gt;= v2.37.0.</p>
 </td>
 </tr>
 </table>
@@ -1817,6 +1842,23 @@ container, that are generated as a result of StorageSpec objects.</p>
 </tr>
 <tr>
 <td>
+<code>persistentVolumeClaimRetentionPolicy</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#statefulsetpersistentvolumeclaimretentionpolicy-v1-apps">
+Kubernetes apps/v1.StatefulSetPersistentVolumeClaimRetentionPolicy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The field controls if and how PVCs are deleted during the lifecycle of a StatefulSet.
+The default behavior is all PVCs are retained.
+This is an alpha field from kubernetes 1.23 until 1.26 and a beta field from 1.26.
+It requires enabling the StatefulSetAutoDeletePVC feature gate.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>web</code><br/>
 <em>
 <a href="#monitoring.coreos.com/v1.PrometheusWebSpec">
@@ -1924,8 +1966,8 @@ Kubernetes core/v1.Affinity
 <td>
 <code>topologySpreadConstraints</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#topologyspreadconstraint-v1-core">
-[]Kubernetes core/v1.TopologySpreadConstraint
+<a href="#monitoring.coreos.com/v1.TopologySpreadConstraint">
+[]TopologySpreadConstraint
 </a>
 </em>
 </td>
@@ -2515,13 +2557,41 @@ that will be kept in memory. 0 means no limit.</p>
 </tr>
 <tr>
 <td>
+<code>reloadStrategy</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.ReloadStrategyType">
+ReloadStrategyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defines the strategy used to reload the Prometheus configuration.
+If not specified, the configuration is reloaded using the /-/reload HTTP endpoint.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maximumStartupDurationSeconds</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defines the maximum time that the <code>prometheus</code> container&rsquo;s startup probe will wait before being considered failed. The startup probe will return success after the WAL replay is complete.
+If set, the value should be greater than 60 (seconds). Otherwise it will be equal to 600 seconds (15 minutes).</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>baseImage</code><br/>
 <em>
 string
 </em>
 </td>
 <td>
-<p><em>Deprecated: use &lsquo;spec.image&rsquo; instead.</em></p>
+<p>Deprecated: use &lsquo;spec.image&rsquo; instead.</p>
 </td>
 </tr>
 <tr>
@@ -2532,8 +2602,7 @@ string
 </em>
 </td>
 <td>
-<p><em>Deprecated: use &lsquo;spec.image&rsquo; instead. The image&rsquo;s tag can be specified
-as part of the image name.</em></p>
+<p>Deprecated: use &lsquo;spec.image&rsquo; instead. The image&rsquo;s tag can be specified as part of the image name.</p>
 </td>
 </tr>
 <tr>
@@ -2544,8 +2613,7 @@ string
 </em>
 </td>
 <td>
-<p><em>Deprecated: use &lsquo;spec.image&rsquo; instead. The image&rsquo;s digest can be
-specified as part of the image name.</em></p>
+<p>Deprecated: use &lsquo;spec.image&rsquo; instead. The image&rsquo;s digest can be specified as part of the image name.</p>
 </td>
 </tr>
 <tr>
@@ -2613,7 +2681,7 @@ Rules
 <p>Defines the list of PrometheusRule objects to which the namespace label
 enforcement doesn&rsquo;t apply.
 This is only relevant when <code>spec.enforcedNamespaceLabel</code> is set to true.
-<em>Deprecated: use <code>spec.excludedFromEnforcement</code> instead.</em></p>
+Deprecated: use <code>spec.excludedFromEnforcement</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -2784,7 +2852,7 @@ bool
 <td>
 <p>AllowOverlappingBlocks enables vertical compaction and vertical query
 merge in Prometheus.</p>
-<p><em>Deprecated: this flag has no effect for Prometheus &gt;= 2.39.0 where overlapping blocks are enabled by default.</em></p>
+<p>Deprecated: this flag has no effect for Prometheus &gt;= 2.39.0 where overlapping blocks are enabled by default.</p>
 </td>
 </tr>
 <tr>
@@ -3010,11 +3078,14 @@ string
 </em>
 </td>
 <td>
-<p>JobLabel selects the label from the associated Kubernetes service which will be used as the <code>job</code> label for all metrics.</p>
-<p>For example:
-If in <code>ServiceMonitor.spec.jobLabel: foo</code> and in <code>Service.metadata.labels.foo: bar</code>,
-then the <code>job=&quot;bar&quot;</code> label is added to all metrics.</p>
-<p>If the value of this field is empty or if the label doesn&rsquo;t exist for the given Service, the <code>job</code> label of the metrics defaults to the name of the Kubernetes Service.</p>
+<p><code>jobLabel</code> selects the label from the associated Kubernetes <code>Service</code>
+object which will be used as the <code>job</code> label for all metrics.</p>
+<p>For example if <code>jobLabel</code> is set to <code>foo</code> and the Kubernetes <code>Service</code>
+object is labeled with <code>foo: bar</code>, then Prometheus adds the <code>job=&quot;bar&quot;</code>
+label to all ingested metrics.</p>
+<p>If the value of this field is empty or if the label doesn&rsquo;t exist for
+the given Service, the <code>job</code> label of the metrics defaults to the name
+of the associated Kubernetes <code>Service</code>.</p>
 </td>
 </tr>
 <tr>
@@ -3025,7 +3096,9 @@ then the <code>job=&quot;bar&quot;</code> label is added to all metrics.</p>
 </em>
 </td>
 <td>
-<p>TargetLabels transfers labels from the Kubernetes <code>Service</code> onto the created metrics.</p>
+<em>(Optional)</em>
+<p><code>targetLabels</code> defines the labels which are transferred from the
+associated Kubernetes <code>Service</code> object onto the ingested metrics.</p>
 </td>
 </tr>
 <tr>
@@ -3036,7 +3109,9 @@ then the <code>job=&quot;bar&quot;</code> label is added to all metrics.</p>
 </em>
 </td>
 <td>
-<p>PodTargetLabels transfers labels on the Kubernetes <code>Pod</code> onto the created metrics.</p>
+<em>(Optional)</em>
+<p><code>podTargetLabels</code> defines the labels which are transferred from the
+associated Kubernetes <code>Pod</code> object onto the ingested metrics.</p>
 </td>
 </tr>
 <tr>
@@ -3049,7 +3124,8 @@ then the <code>job=&quot;bar&quot;</code> label is added to all metrics.</p>
 </em>
 </td>
 <td>
-<p>A list of endpoints allowed as part of this ServiceMonitor.</p>
+<em>(Optional)</em>
+<p>List of endpoints part of this ServiceMonitor.</p>
 </td>
 </tr>
 <tr>
@@ -3062,7 +3138,7 @@ Kubernetes meta/v1.LabelSelector
 </em>
 </td>
 <td>
-<p>Selector to select Endpoints objects.</p>
+<p>Label selector to select the Kubernetes <code>Endpoints</code> objects.</p>
 </td>
 </tr>
 <tr>
@@ -3075,7 +3151,8 @@ NamespaceSelector
 </em>
 </td>
 <td>
-<p>Selector to select which namespaces the Kubernetes Endpoints objects are discovered from.</p>
+<p>Selector to select which namespaces the Kubernetes <code>Endpoints</code> objects
+are discovered from.</p>
 </td>
 </tr>
 <tr>
@@ -3087,7 +3164,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>SampleLimit defines per-scrape limit on number of scraped samples that will be accepted.</p>
+<p><code>sampleLimit</code> defines a per-scrape limit on the number of scraped samples
+that will be accepted.</p>
 </td>
 </tr>
 <tr>
@@ -3099,7 +3177,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>TargetLimit defines a limit on the number of scraped targets that will be accepted.</p>
+<p><code>targetLimit</code> defines a limit on the number of scraped targets that will
+be accepted.</p>
 </td>
 </tr>
 <tr>
@@ -3111,8 +3190,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on number of labels that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on number of labels that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -3124,8 +3203,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on length of labels name that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on length of labels name that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -3137,8 +3216,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on length of labels value that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on length of labels value that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -3165,8 +3244,10 @@ AttachMetadata
 </em>
 </td>
 <td>
-<p>Attaches node metadata to discovered targets.
-Requires Prometheus v2.37.0 and above.</p>
+<em>(Optional)</em>
+<p><code>attachMetadata</code> defines additional metadata which is added to the
+discovered targets.</p>
+<p>It requires Prometheus &gt;= v2.37.0.</p>
 </td>
 </tr>
 </table>
@@ -3987,7 +4068,7 @@ string
 <td>
 <p>File to read bearer token for accessing apiserver.</p>
 <p>Cannot be set at the same time as <code>basicAuth</code>, <code>authorization</code>, or <code>bearerToken</code>.</p>
-<p><em>Deprecated: this will be removed in a future release. Prefer using <code>authorization</code>.</em></p>
+<p>Deprecated: this will be removed in a future release. Prefer using <code>authorization</code>.</p>
 </td>
 </tr>
 <tr>
@@ -4030,10 +4111,32 @@ string
 <td>
 <p><em>Warning: this field shouldn&rsquo;t be used because the token value appears
 in clear-text. Prefer using <code>authorization</code>.</em></p>
-<p><em>Deprecated: this will be removed in a future release.</em></p>
+<p>Deprecated: this will be removed in a future release.</p>
 </td>
 </tr>
 </tbody>
+</table>
+<h3 id="monitoring.coreos.com/v1.AdditionalLabelSelectors">AdditionalLabelSelectors
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.TopologySpreadConstraint">TopologySpreadConstraint</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;OnResource&#34;</p></td>
+<td><p>Automatically add a label selector that will select all pods matching the same Prometheus/PrometheusAgent resource (irrespective of their shards).</p>
+</td>
+</tr><tr><td><p>&#34;OnShard&#34;</p></td>
+<td><p>Automatically add a label selector that will select all pods matching the same shard.</p>
+</td>
+</tr></tbody>
 </table>
 <h3 id="monitoring.coreos.com/v1.AlertingSpec">AlertingSpec
 </h3>
@@ -4269,7 +4372,7 @@ string
 <td>
 <p>File to read bearer token for Alertmanager.</p>
 <p>Cannot be set at the same time as <code>basicAuth</code>, <code>authorization</code>, or <code>sigv4</code>.</p>
-<p><em>Deprecated: this will be removed in a future release. Prefer using <code>authorization</code>.</em></p>
+<p>Deprecated: this will be removed in a future release. Prefer using <code>authorization</code>.</p>
 </td>
 </tr>
 <tr>
@@ -4540,8 +4643,7 @@ string
 <td>
 <p>Tag of Alertmanager container image to be deployed. Defaults to the value of <code>version</code>.
 Version is ignored if Tag is set.
-Deprecated: use &lsquo;image&rsquo; instead.  The image tag can be specified
-as part of the image URL.</p>
+Deprecated: use &lsquo;image&rsquo; instead. The image tag can be specified as part of the image URL.</p>
 </td>
 </tr>
 <tr>
@@ -4555,8 +4657,7 @@ string
 <p>SHA of Alertmanager container image to be deployed. Defaults to the value of <code>version</code>.
 Similar to a tag, but the SHA explicitly deploys an immutable container image.
 Version and Tag are ignored if SHA is set.
-Deprecated: use &lsquo;image&rsquo; instead.  The image digest can be specified
-as part of the image URL.</p>
+Deprecated: use &lsquo;image&rsquo; instead. The image digest can be specified as part of the image URL.</p>
 </td>
 </tr>
 <tr>
@@ -4568,7 +4669,7 @@ string
 </td>
 <td>
 <p>Base image that is used to deploy pods, without tag.
-Deprecated: use &lsquo;image&rsquo; instead</p>
+Deprecated: use &lsquo;image&rsquo; instead.</p>
 </td>
 </tr>
 <tr>
@@ -4955,6 +5056,18 @@ GoDuration
 </td>
 <td>
 <p>Interval between gossip attempts.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>clusterLabel</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Defines the identifier that uniquely identifies the Alertmanager cluster.
+You should only set it when the Alertmanager cluster includes Alertmanager instances which are external to this Alertmanager resource. In practice, the addresses of the external instances are provided via the <code>.spec.additionalPeers</code> field.</p>
 </td>
 </tr>
 <tr>
@@ -5380,7 +5493,9 @@ bool
 </em>
 </td>
 <td>
-<p>When set to true, Prometheus must have permissions to get Nodes.</p>
+<em>(Optional)</em>
+<p>When set to true, Prometheus must have the <code>get</code> permission on the
+<code>Nodes</code> objects.</p>
 </td>
 </tr>
 </tbody>
@@ -5503,7 +5618,78 @@ ManagedIdentity
 </em>
 </td>
 <td>
-<p>ManagedIdentity defines the Azure User-assigned Managed identity.</p>
+<em>(Optional)</em>
+<p>ManagedIdentity defines the Azure User-assigned Managed identity.
+Cannot be set at the same time as <code>oauth</code>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>oauth</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.AzureOAuth">
+AzureOAuth
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OAuth defines the oauth config that is being used to authenticate.
+Cannot be set at the same time as <code>managedIdentity</code>.</p>
+<p>It requires Prometheus &gt;= v2.48.0.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="monitoring.coreos.com/v1.AzureOAuth">AzureOAuth
+</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.AzureAD">AzureAD</a>)
+</p>
+<div>
+<p>AzureOAuth defines the Azure OAuth settings.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>clientId</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p><code>clientID</code> is the clientId of the Azure Active Directory application that is being used to authenticate.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>clientSecret</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secretkeyselector-v1-core">
+Kubernetes core/v1.SecretKeySelector
+</a>
+</em>
+</td>
+<td>
+<p><code>clientSecret</code> specifies a key of a Secret containing the client secret of the Azure Active Directory application that is being used to authenticate.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tenantId</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p><code>tenantID</code> is the tenant ID of the Azure Active Directory application that is being used to authenticate.</p>
 </td>
 </tr>
 </tbody>
@@ -5511,11 +5697,10 @@ ManagedIdentity
 <h3 id="monitoring.coreos.com/v1.BasicAuth">BasicAuth
 </h3>
 <p>
-(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.APIServerConfig">APIServerConfig</a>, <a href="#monitoring.coreos.com/v1.AlertmanagerEndpoints">AlertmanagerEndpoints</a>, <a href="#monitoring.coreos.com/v1.Endpoint">Endpoint</a>, <a href="#monitoring.coreos.com/v1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1.PodMetricsEndpoint">PodMetricsEndpoint</a>, <a href="#monitoring.coreos.com/v1.ProbeSpec">ProbeSpec</a>, <a href="#monitoring.coreos.com/v1.RemoteReadSpec">RemoteReadSpec</a>, <a href="#monitoring.coreos.com/v1.RemoteWriteSpec">RemoteWriteSpec</a>, <a href="#monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPSDConfig">HTTPSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>, <a href="#monitoring.coreos.com/v1beta1.HTTPConfig">HTTPConfig</a>)
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.APIServerConfig">APIServerConfig</a>, <a href="#monitoring.coreos.com/v1.AlertmanagerEndpoints">AlertmanagerEndpoints</a>, <a href="#monitoring.coreos.com/v1.Endpoint">Endpoint</a>, <a href="#monitoring.coreos.com/v1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1.PodMetricsEndpoint">PodMetricsEndpoint</a>, <a href="#monitoring.coreos.com/v1.ProbeSpec">ProbeSpec</a>, <a href="#monitoring.coreos.com/v1.RemoteReadSpec">RemoteReadSpec</a>, <a href="#monitoring.coreos.com/v1.RemoteWriteSpec">RemoteWriteSpec</a>, <a href="#monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPSDConfig">HTTPSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.KubernetesSDConfig">KubernetesSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>, <a href="#monitoring.coreos.com/v1beta1.HTTPConfig">HTTPConfig</a>)
 </p>
 <div>
-<p>BasicAuth allow an endpoint to authenticate over basic authentication
-More info: <a href="https://prometheus.io/docs/operating/configuration/#endpoints">https://prometheus.io/docs/operating/configuration/#endpoints</a></p>
+<p>BasicAuth configures HTTP Basic Authentication settings.</p>
 </div>
 <table>
 <thead>
@@ -5535,8 +5720,8 @@ Kubernetes core/v1.SecretKeySelector
 </em>
 </td>
 <td>
-<p>The secret in the service monitor namespace that contains the username
-for authentication.</p>
+<p><code>username</code> specifies a key of a Secret containing the username for
+authentication.</p>
 </td>
 </tr>
 <tr>
@@ -5549,8 +5734,8 @@ Kubernetes core/v1.SecretKeySelector
 </em>
 </td>
 <td>
-<p>The secret in the service monitor namespace that contains the password
-for authentication.</p>
+<p><code>password</code> specifies a key of a Secret containing the password for
+authentication.</p>
 </td>
 </tr>
 </tbody>
@@ -6062,6 +6247,23 @@ container, that are generated as a result of StorageSpec objects.</p>
 </tr>
 <tr>
 <td>
+<code>persistentVolumeClaimRetentionPolicy</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#statefulsetpersistentvolumeclaimretentionpolicy-v1-apps">
+Kubernetes apps/v1.StatefulSetPersistentVolumeClaimRetentionPolicy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The field controls if and how PVCs are deleted during the lifecycle of a StatefulSet.
+The default behavior is all PVCs are retained.
+This is an alpha field from kubernetes 1.23 until 1.26 and a beta field from 1.26.
+It requires enabling the StatefulSetAutoDeletePVC feature gate.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>web</code><br/>
 <em>
 <a href="#monitoring.coreos.com/v1.PrometheusWebSpec">
@@ -6169,8 +6371,8 @@ Kubernetes core/v1.Affinity
 <td>
 <code>topologySpreadConstraints</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#topologyspreadconstraint-v1-core">
-[]Kubernetes core/v1.TopologySpreadConstraint
+<a href="#monitoring.coreos.com/v1.TopologySpreadConstraint">
+[]TopologySpreadConstraint
 </a>
 </em>
 </td>
@@ -6758,6 +6960,34 @@ that will be kept in memory. 0 means no limit.</p>
 <p>It requires Prometheus &gt;= v2.47.0.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>reloadStrategy</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.ReloadStrategyType">
+ReloadStrategyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defines the strategy used to reload the Prometheus configuration.
+If not specified, the configuration is reloaded using the /-/reload HTTP endpoint.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maximumStartupDurationSeconds</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defines the maximum time that the <code>prometheus</code> container&rsquo;s startup probe will wait before being considered failed. The startup probe will return success after the WAL replay is complete.
+If set, the value should be greater than 60 (seconds). Otherwise it will be equal to 600 seconds (15 minutes).</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="monitoring.coreos.com/v1.Condition">Condition
@@ -6914,10 +7144,209 @@ The possible status values for this condition type are:
 </td>
 </tr></tbody>
 </table>
+<h3 id="monitoring.coreos.com/v1.CoreV1TopologySpreadConstraint">CoreV1TopologySpreadConstraint
+</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.TopologySpreadConstraint">TopologySpreadConstraint</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>maxSkew</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>MaxSkew describes the degree to which pods may be unevenly distributed.
+When <code>whenUnsatisfiable=DoNotSchedule</code>, it is the maximum permitted difference
+between the number of matching pods in the target topology and the global minimum.
+The global minimum is the minimum number of matching pods in an eligible domain
+or zero if the number of eligible domains is less than MinDomains.
+For example, in a 3-zone cluster, MaxSkew is set to 1, and pods with the same
+labelSelector spread as 2/2/1:
+In this case, the global minimum is 1.
+| zone1 | zone2 | zone3 |
+|  P P  |  P P  |   P   |
+- if MaxSkew is 1, incoming pod can only be scheduled to zone3 to become 2/2/2;
+scheduling it onto zone1(zone2) would make the ActualSkew(3-1) on zone1(zone2)
+violate MaxSkew(1).
+- if MaxSkew is 2, incoming pod can be scheduled onto any zone.
+When <code>whenUnsatisfiable=ScheduleAnyway</code>, it is used to give higher precedence
+to topologies that satisfy it.
+It&rsquo;s a required field. Default value is 1 and 0 is not allowed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>topologyKey</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>TopologyKey is the key of node labels. Nodes that have a label with this key
+and identical values are considered to be in the same topology.
+We consider each <key, value> as a &ldquo;bucket&rdquo;, and try to put balanced number
+of pods into each bucket.
+We define a domain as a particular instance of a topology.
+Also, we define an eligible domain as a domain whose nodes meet the requirements of
+nodeAffinityPolicy and nodeTaintsPolicy.
+e.g. If TopologyKey is &ldquo;kubernetes.io/hostname&rdquo;, each Node is a domain of that topology.
+And, if TopologyKey is &ldquo;topology.kubernetes.io/zone&rdquo;, each zone is a domain of that topology.
+It&rsquo;s a required field.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>whenUnsatisfiable</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#unsatisfiableconstraintaction-v1-core">
+Kubernetes core/v1.UnsatisfiableConstraintAction
+</a>
+</em>
+</td>
+<td>
+<p>WhenUnsatisfiable indicates how to deal with a pod if it doesn&rsquo;t satisfy
+the spread constraint.
+- DoNotSchedule (default) tells the scheduler not to schedule it.
+- ScheduleAnyway tells the scheduler to schedule the pod in any location,
+but giving higher precedence to topologies that would help reduce the
+skew.
+A constraint is considered &ldquo;Unsatisfiable&rdquo; for an incoming pod
+if and only if every possible node assignment for that pod would violate
+&ldquo;MaxSkew&rdquo; on some topology.
+For example, in a 3-zone cluster, MaxSkew is set to 1, and pods with the same
+labelSelector spread as 3/1/1:
+| zone1 | zone2 | zone3 |
+| P P P |   P   |   P   |
+If WhenUnsatisfiable is set to DoNotSchedule, incoming pod can only be scheduled
+to zone2(zone3) to become 3/2/1(3/1/2) as ActualSkew(2-1) on zone2(zone3) satisfies
+MaxSkew(1). In other words, the cluster can still be imbalanced, but scheduler
+won&rsquo;t make it <em>more</em> imbalanced.
+It&rsquo;s a required field.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>labelSelector</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LabelSelector is used to find matching pods.
+Pods that match this label selector are counted to determine the number of pods
+in their corresponding topology domain.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>minDomains</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MinDomains indicates a minimum number of eligible domains.
+When the number of eligible domains with matching topology keys is less than minDomains,
+Pod Topology Spread treats &ldquo;global minimum&rdquo; as 0, and then the calculation of Skew is performed.
+And when the number of eligible domains with matching topology keys equals or greater than minDomains,
+this value has no effect on scheduling.
+As a result, when the number of eligible domains is less than minDomains,
+scheduler won&rsquo;t schedule more than maxSkew Pods to those domains.
+If value is nil, the constraint behaves as if MinDomains is equal to 1.
+Valid values are integers greater than 0.
+When value is not nil, WhenUnsatisfiable must be DoNotSchedule.</p>
+<p>For example, in a 3-zone cluster, MaxSkew is set to 2, MinDomains is set to 5 and pods with the same
+labelSelector spread as 2/2/2:
+| zone1 | zone2 | zone3 |
+|  P P  |  P P  |  P P  |
+The number of domains is less than 5(MinDomains), so &ldquo;global minimum&rdquo; is treated as 0.
+In this situation, new pod with the same labelSelector cannot be scheduled,
+because computed skew will be 3(3 - 0) if new Pod is scheduled to any of the three zones,
+it will violate MaxSkew.</p>
+<p>This is a beta field and requires the MinDomainsInPodTopologySpread feature gate to be enabled (enabled by default).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeAffinityPolicy</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#nodeinclusionpolicy-v1-core">
+Kubernetes core/v1.NodeInclusionPolicy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeAffinityPolicy indicates how we will treat Pod&rsquo;s nodeAffinity/nodeSelector
+when calculating pod topology spread skew. Options are:
+- Honor: only nodes matching nodeAffinity/nodeSelector are included in the calculations.
+- Ignore: nodeAffinity/nodeSelector are ignored. All nodes are included in the calculations.</p>
+<p>If this value is nil, the behavior is equivalent to the Honor policy.
+This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeTaintsPolicy</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#nodeinclusionpolicy-v1-core">
+Kubernetes core/v1.NodeInclusionPolicy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeTaintsPolicy indicates how we will treat node taints when calculating
+pod topology spread skew. Options are:
+- Honor: nodes without taints, along with tainted nodes for which the incoming pod
+has a toleration, are included.
+- Ignore: node taints are ignored. All nodes are included.</p>
+<p>If this value is nil, the behavior is equivalent to the Ignore policy.
+This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>matchLabelKeys</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MatchLabelKeys is a set of pod label keys to select the pods over which
+spreading will be calculated. The keys are used to lookup values from the
+incoming pod labels, those key-value labels are ANDed with labelSelector
+to select the group of existing pods over which spreading will be calculated
+for the incoming pod. The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
+MatchLabelKeys cannot be set when LabelSelector isn&rsquo;t set.
+Keys that don&rsquo;t exist in the incoming pod labels will
+be ignored. A null or empty list means only match against labelSelector.</p>
+<p>This is a beta field and requires the MatchLabelKeysInPodTopologySpread feature gate to be enabled (enabled by default).</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="monitoring.coreos.com/v1.Duration">Duration
 (<code>string</code> alias)</h3>
 <p>
-(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.AlertmanagerEndpoints">AlertmanagerEndpoints</a>, <a href="#monitoring.coreos.com/v1.AlertmanagerGlobalConfig">AlertmanagerGlobalConfig</a>, <a href="#monitoring.coreos.com/v1.CommonPrometheusFields">CommonPrometheusFields</a>, <a href="#monitoring.coreos.com/v1.Endpoint">Endpoint</a>, <a href="#monitoring.coreos.com/v1.MetadataConfig">MetadataConfig</a>, <a href="#monitoring.coreos.com/v1.PodMetricsEndpoint">PodMetricsEndpoint</a>, <a href="#monitoring.coreos.com/v1.ProbeSpec">ProbeSpec</a>, <a href="#monitoring.coreos.com/v1.PrometheusSpec">PrometheusSpec</a>, <a href="#monitoring.coreos.com/v1.PrometheusTracingConfig">PrometheusTracingConfig</a>, <a href="#monitoring.coreos.com/v1.QuerySpec">QuerySpec</a>, <a href="#monitoring.coreos.com/v1.RemoteReadSpec">RemoteReadSpec</a>, <a href="#monitoring.coreos.com/v1.RemoteWriteSpec">RemoteWriteSpec</a>, <a href="#monitoring.coreos.com/v1.Rule">Rule</a>, <a href="#monitoring.coreos.com/v1.RuleGroup">RuleGroup</a>, <a href="#monitoring.coreos.com/v1.TSDBSpec">TSDBSpec</a>, <a href="#monitoring.coreos.com/v1.ThanosRulerSpec">ThanosRulerSpec</a>, <a href="#monitoring.coreos.com/v1.ThanosSpec">ThanosSpec</a>, <a href="#monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.DNSSDConfig">DNSSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.EC2SDConfig">EC2SDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.FileSDConfig">FileSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPSDConfig">HTTPSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>)
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.AlertmanagerEndpoints">AlertmanagerEndpoints</a>, <a href="#monitoring.coreos.com/v1.AlertmanagerGlobalConfig">AlertmanagerGlobalConfig</a>, <a href="#monitoring.coreos.com/v1.CommonPrometheusFields">CommonPrometheusFields</a>, <a href="#monitoring.coreos.com/v1.Endpoint">Endpoint</a>, <a href="#monitoring.coreos.com/v1.MetadataConfig">MetadataConfig</a>, <a href="#monitoring.coreos.com/v1.PodMetricsEndpoint">PodMetricsEndpoint</a>, <a href="#monitoring.coreos.com/v1.ProbeSpec">ProbeSpec</a>, <a href="#monitoring.coreos.com/v1.PrometheusSpec">PrometheusSpec</a>, <a href="#monitoring.coreos.com/v1.PrometheusTracingConfig">PrometheusTracingConfig</a>, <a href="#monitoring.coreos.com/v1.QuerySpec">QuerySpec</a>, <a href="#monitoring.coreos.com/v1.RemoteReadSpec">RemoteReadSpec</a>, <a href="#monitoring.coreos.com/v1.RemoteWriteSpec">RemoteWriteSpec</a>, <a href="#monitoring.coreos.com/v1.Rule">Rule</a>, <a href="#monitoring.coreos.com/v1.RuleGroup">RuleGroup</a>, <a href="#monitoring.coreos.com/v1.TSDBSpec">TSDBSpec</a>, <a href="#monitoring.coreos.com/v1.ThanosRulerSpec">ThanosRulerSpec</a>, <a href="#monitoring.coreos.com/v1.ThanosSpec">ThanosSpec</a>, <a href="#monitoring.coreos.com/v1alpha1.AzureSDConfig">AzureSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.DNSSDConfig">DNSSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.EC2SDConfig">EC2SDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.FileSDConfig">FileSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.GCESDConfig">GCESDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPSDConfig">HTTPSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.OpenStackSDConfig">OpenStackSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>)
 </p>
 <div>
 <p>Duration is a valid time duration that can be parsed by Prometheus model.ParseDuration() function.
@@ -7069,8 +7498,8 @@ Kubernetes meta/v1.LabelSelector
 <td>
 <code>resources</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core">
-Kubernetes core/v1.ResourceRequirements
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#volumeresourcerequirements-v1-core">
+Kubernetes core/v1.VolumeResourceRequirements
 </a>
 </em>
 </td>
@@ -7180,6 +7609,29 @@ in any namespaces.
 (Alpha) Using the namespace field of dataSourceRef requires the CrossNamespaceVolumeDataSource feature gate to be enabled.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>volumeAttributesClassName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
+If specified, the CSI driver will create or update the volume with the attributes defined
+in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
+it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
+will be applied to the claim but it&rsquo;s not allowed to reset this field to empty string once it is set.
+If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
+will be set by the persistentvolume controller if it exists.
+If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
+set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
+exists.
+More info: <a href="https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass">https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass</a>
+(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -7194,7 +7646,7 @@ Kubernetes core/v1.PersistentVolumeClaimStatus
 </td>
 <td>
 <em>(Optional)</em>
-<p><em>Deprecated: this field is never set.</em></p>
+<p>Deprecated: this field is never set.</p>
 </td>
 </tr>
 </tbody>
@@ -7205,7 +7657,8 @@ Kubernetes core/v1.PersistentVolumeClaimStatus
 (<em>Appears on:</em><a href="#monitoring.coreos.com/v1.ServiceMonitorSpec">ServiceMonitorSpec</a>)
 </p>
 <div>
-<p>Endpoint defines a scrapeable endpoint serving Prometheus metrics.</p>
+<p>Endpoint defines an endpoint serving Prometheus metrics to be scraped by
+Prometheus.</p>
 </div>
 <table>
 <thead>
@@ -7223,7 +7676,8 @@ string
 </em>
 </td>
 <td>
-<p>Name of the service port this endpoint refers to. Mutually exclusive with targetPort.</p>
+<p>Name of the Service port which this endpoint refers to.</p>
+<p>It takes precedence over <code>targetPort</code>.</p>
 </td>
 </tr>
 <tr>
@@ -7236,7 +7690,9 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 </em>
 </td>
 <td>
-<p>Name or number of the target port of the Pod behind the Service, the port must be specified with container port property. Mutually exclusive with port.</p>
+<p>Name or number of the target port of the <code>Pod</code> object behind the Service, the
+port must be specified with container port property.</p>
+<p>Deprecated: use <code>port</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -7247,8 +7703,8 @@ string
 </em>
 </td>
 <td>
-<p>HTTP path to scrape for metrics.
-If empty, Prometheus uses the default value (e.g. <code>/metrics</code>).</p>
+<p>HTTP path from which to scrape for metrics.</p>
+<p>If empty, Prometheus uses the default value (e.g. <code>/metrics</code>).</p>
 </td>
 </tr>
 <tr>
@@ -7259,9 +7715,10 @@ string
 </em>
 </td>
 <td>
-<p>HTTP scheme to use for scraping.
-<code>http</code> and <code>https</code> are the expected values unless you rewrite the <code>__scheme__</code> label via relabeling.
-If empty, Prometheus uses the default value <code>http</code>.</p>
+<p>HTTP scheme to use for scraping.</p>
+<p><code>http</code> and <code>https</code> are the expected values unless you rewrite the
+<code>__scheme__</code> label via relabeling.</p>
+<p>If empty, Prometheus uses the default value <code>http</code>.</p>
 </td>
 </tr>
 <tr>
@@ -7272,7 +7729,7 @@ map[string][]string
 </em>
 </td>
 <td>
-<p>Optional HTTP URL parameters</p>
+<p>params define optional HTTP URL parameters.</p>
 </td>
 </tr>
 <tr>
@@ -7285,8 +7742,8 @@ Duration
 </em>
 </td>
 <td>
-<p>Interval at which metrics should be scraped
-If not specified Prometheus&rsquo; global scrape interval is used.</p>
+<p>Interval at which Prometheus scrapes the metrics from the target.</p>
+<p>If empty, Prometheus uses the global scrape interval.</p>
 </td>
 </tr>
 <tr>
@@ -7299,8 +7756,9 @@ Duration
 </em>
 </td>
 <td>
-<p>Timeout after which the scrape is ended
-If not specified, the Prometheus global scrape timeout is used unless it is less than <code>Interval</code> in which the latter is used.</p>
+<p>Timeout after which Prometheus considers the scrape to be failed.</p>
+<p>If empty, Prometheus uses the global scrape timeout unless it is less
+than the target&rsquo;s scrape interval value in which the latter is used.</p>
 </td>
 </tr>
 <tr>
@@ -7313,7 +7771,8 @@ TLSConfig
 </em>
 </td>
 <td>
-<p>TLS configuration to use when scraping the endpoint</p>
+<em>(Optional)</em>
+<p>TLS configuration to use when scraping the target.</p>
 </td>
 </tr>
 <tr>
@@ -7324,7 +7783,8 @@ string
 </em>
 </td>
 <td>
-<p>File to read bearer token for scraping targets.</p>
+<p>File to read bearer token for scraping the target.</p>
+<p>Deprecated: use <code>authorization</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -7337,9 +7797,11 @@ Kubernetes core/v1.SecretKeySelector
 </em>
 </td>
 <td>
-<p>Secret to mount to read bearer token for scraping targets. The secret
-needs to be in the same namespace as the service monitor and accessible by
-the Prometheus Operator.</p>
+<em>(Optional)</em>
+<p><code>bearerTokenSecret</code> specifies a key of a Secret containing the bearer
+token for scraping targets. The secret needs to be in the same namespace
+as the ServiceMonitor object and readable by the Prometheus Operator.</p>
+<p>Deprecated: use <code>authorization</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -7352,7 +7814,10 @@ SafeAuthorization
 </em>
 </td>
 <td>
-<p>Authorization section for this endpoint</p>
+<em>(Optional)</em>
+<p><code>authorization</code> configures the Authorization header credentials to use when
+scraping the target.</p>
+<p>Cannot be set at the same time as <code>basicAuth</code>, or <code>oauth2</code>.</p>
 </td>
 </tr>
 <tr>
@@ -7363,7 +7828,8 @@ bool
 </em>
 </td>
 <td>
-<p>HonorLabels chooses the metric&rsquo;s labels on collisions with target labels.</p>
+<p>When true, <code>honorLabels</code> preserves the metric&rsquo;s labels when they collide
+with the target&rsquo;s labels.</p>
 </td>
 </tr>
 <tr>
@@ -7374,7 +7840,24 @@ bool
 </em>
 </td>
 <td>
-<p>HonorTimestamps controls whether Prometheus respects the timestamps present in scraped data.</p>
+<em>(Optional)</em>
+<p><code>honorTimestamps</code> controls whether Prometheus preserves the timestamps
+when exposed by the target.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>trackTimestampsStaleness</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p><code>trackTimestampsStaleness</code> defines whether Prometheus tracks staleness of
+the metrics that have an explicit timestamp present in scraped data.
+Has no effect if <code>honorTimestamps</code> is false.</p>
+<p>It requires Prometheus &gt;= v2.48.0.</p>
 </td>
 </tr>
 <tr>
@@ -7387,8 +7870,10 @@ BasicAuth
 </em>
 </td>
 <td>
-<p>BasicAuth allow an endpoint to authenticate over basic authentication
-More info: <a href="https://prometheus.io/docs/operating/configuration/#endpoints">https://prometheus.io/docs/operating/configuration/#endpoints</a></p>
+<em>(Optional)</em>
+<p><code>basicAuth</code> configures the Basic Authentication credentials to use when
+scraping the target.</p>
+<p>Cannot be set at the same time as <code>authorization</code>, or <code>oauth2</code>.</p>
 </td>
 </tr>
 <tr>
@@ -7401,7 +7886,10 @@ OAuth2
 </em>
 </td>
 <td>
-<p>OAuth2 for the URL. Only valid in Prometheus versions 2.27.0 and newer.</p>
+<em>(Optional)</em>
+<p><code>oauth2</code> configures the OAuth2 settings to use when scraping the target.</p>
+<p>It requires Prometheus &gt;= 2.27.0.</p>
+<p>Cannot be set at the same time as <code>authorization</code>, or <code>basicAuth</code>.</p>
 </td>
 </tr>
 <tr>
@@ -7414,7 +7902,9 @@ OAuth2
 </em>
 </td>
 <td>
-<p>MetricRelabelConfigs to apply to samples before ingestion.</p>
+<em>(Optional)</em>
+<p><code>metricRelabelings</code> configures the relabeling rules to apply to the
+samples before ingestion.</p>
 </td>
 </tr>
 <tr>
@@ -7427,10 +7917,12 @@ OAuth2
 </em>
 </td>
 <td>
-<p>RelabelConfigs to apply to samples before scraping.
-Prometheus Operator automatically adds relabelings for a few standard Kubernetes fields.
-The original scrape job&rsquo;s name is available via the <code>__tmp_prometheus_job_name</code> label.
-More info: <a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config">https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config</a></p>
+<em>(Optional)</em>
+<p><code>relabelings</code> configures the relabeling rules to apply the target&rsquo;s
+metadata labels.</p>
+<p>The Operator automatically adds relabelings for a few standard Kubernetes fields.</p>
+<p>The original scrape job&rsquo;s name is available via the <code>__tmp_prometheus_job_name</code> label.</p>
+<p>More info: <a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config">https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config</a></p>
 </td>
 </tr>
 <tr>
@@ -7441,7 +7933,9 @@ string
 </em>
 </td>
 <td>
-<p>ProxyURL eg <a href="http://proxyserver:2195">http://proxyserver:2195</a> Directs scrapes to proxy through this endpoint.</p>
+<em>(Optional)</em>
+<p><code>proxyURL</code> configures the HTTP Proxy URL (e.g.
+&ldquo;<a href="http://proxyserver:2195&quot;)">http://proxyserver:2195&rdquo;)</a> to go through when scraping the target.</p>
 </td>
 </tr>
 <tr>
@@ -7452,7 +7946,9 @@ bool
 </em>
 </td>
 <td>
-<p>FollowRedirects configures whether scrape requests follow HTTP 3xx redirects.</p>
+<em>(Optional)</em>
+<p><code>followRedirects</code> defines whether the scrape requests should follow HTTP
+3xx redirects.</p>
 </td>
 </tr>
 <tr>
@@ -7463,7 +7959,8 @@ bool
 </em>
 </td>
 <td>
-<p>Whether to enable HTTP2.</p>
+<em>(Optional)</em>
+<p><code>enableHttp2</code> can be used to disable HTTP2 when scraping the target.</p>
 </td>
 </tr>
 <tr>
@@ -7474,8 +7971,11 @@ bool
 </em>
 </td>
 <td>
-<p>Drop pods that are not running. (Failed, Succeeded). Enabled by default.
-More info: <a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase">https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase</a></p>
+<em>(Optional)</em>
+<p>When true, the pods which are not running (e.g. either in Failed or
+Succeeded state) are dropped during the target discovery.</p>
+<p>If unset, the filtering is enabled.</p>
+<p>More info: <a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase">https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase</a></p>
 </td>
 </tr>
 </tbody>
@@ -7850,7 +8350,8 @@ string
 (<em>Appears on:</em><a href="#monitoring.coreos.com/v1.RelabelConfig">RelabelConfig</a>)
 </p>
 <div>
-<p>LabelName is a valid Prometheus label name which may only contain ASCII letters, numbers, as well as underscores.</p>
+<p>LabelName is a valid Prometheus label name which may only contain ASCII
+letters, numbers, as well as underscores.</p>
 </div>
 <h3 id="monitoring.coreos.com/v1.ManagedIdentity">ManagedIdentity
 </h3>
@@ -7982,11 +8483,10 @@ Examples: <code>30s</code>, <code>1m</code>, <code>1h20m15s</code>, <code>15d</c
 <h3 id="monitoring.coreos.com/v1.OAuth2">OAuth2
 </h3>
 <p>
-(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.Endpoint">Endpoint</a>, <a href="#monitoring.coreos.com/v1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1.PodMetricsEndpoint">PodMetricsEndpoint</a>, <a href="#monitoring.coreos.com/v1.ProbeSpec">ProbeSpec</a>, <a href="#monitoring.coreos.com/v1.RemoteReadSpec">RemoteReadSpec</a>, <a href="#monitoring.coreos.com/v1.RemoteWriteSpec">RemoteWriteSpec</a>, <a href="#monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1beta1.HTTPConfig">HTTPConfig</a>)
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.Endpoint">Endpoint</a>, <a href="#monitoring.coreos.com/v1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1.PodMetricsEndpoint">PodMetricsEndpoint</a>, <a href="#monitoring.coreos.com/v1.ProbeSpec">ProbeSpec</a>, <a href="#monitoring.coreos.com/v1.RemoteReadSpec">RemoteReadSpec</a>, <a href="#monitoring.coreos.com/v1.RemoteWriteSpec">RemoteWriteSpec</a>, <a href="#monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.KubernetesSDConfig">KubernetesSDConfig</a>, <a href="#monitoring.coreos.com/v1beta1.HTTPConfig">HTTPConfig</a>)
 </p>
 <div>
-<p>OAuth2 allows an endpoint to authenticate with OAuth2.
-More info: <a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/#oauth2">https://prometheus.io/docs/prometheus/latest/configuration/configuration/#oauth2</a></p>
+<p>OAuth2 configures OAuth2 settings.</p>
 </div>
 <table>
 <thead>
@@ -8006,7 +8506,8 @@ SecretOrConfigMap
 </em>
 </td>
 <td>
-<p>The secret or configmap containing the OAuth2 client id</p>
+<p><code>clientId</code> specifies a key of a Secret or ConfigMap containing the
+OAuth2 client&rsquo;s ID.</p>
 </td>
 </tr>
 <tr>
@@ -8019,7 +8520,8 @@ Kubernetes core/v1.SecretKeySelector
 </em>
 </td>
 <td>
-<p>The secret containing the OAuth2 client secret</p>
+<p><code>clientSecret</code> specifies a key of a Secret containing the OAuth2
+client&rsquo;s secret.</p>
 </td>
 </tr>
 <tr>
@@ -8030,7 +8532,7 @@ string
 </em>
 </td>
 <td>
-<p>The URL to fetch the token from</p>
+<p><code>tokenURL</code> configures the URL to fetch the token from.</p>
 </td>
 </tr>
 <tr>
@@ -8041,7 +8543,7 @@ string
 </em>
 </td>
 <td>
-<p>OAuth2 scopes used for the token request</p>
+<p><code>scopes</code> defines the OAuth2 scopes used for the token request.</p>
 </td>
 </tr>
 <tr>
@@ -8052,7 +8554,9 @@ map[string]string
 </em>
 </td>
 <td>
-<p>Parameters to append to the token URL</p>
+<em>(Optional)</em>
+<p><code>endpointParams</code> configures the HTTP parameters to append to the token
+URL.</p>
 </td>
 </tr>
 </tbody>
@@ -8152,7 +8656,8 @@ string
 (<em>Appears on:</em><a href="#monitoring.coreos.com/v1.PodMonitorSpec">PodMonitorSpec</a>)
 </p>
 <div>
-<p>PodMetricsEndpoint defines a scrapeable endpoint of a Kubernetes Pod serving Prometheus metrics.</p>
+<p>PodMetricsEndpoint defines an endpoint serving Prometheus metrics to be scraped by
+Prometheus.</p>
 </div>
 <table>
 <thead>
@@ -8170,7 +8675,8 @@ string
 </em>
 </td>
 <td>
-<p>Name of the pod port this endpoint refers to. Mutually exclusive with targetPort.</p>
+<p>Name of the Pod port which this endpoint refers to.</p>
+<p>It takes precedence over <code>targetPort</code>.</p>
 </td>
 </tr>
 <tr>
@@ -8183,7 +8689,9 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 </em>
 </td>
 <td>
-<p>Deprecated: Use &lsquo;port&rsquo; instead.</p>
+<p>Name or number of the target port of the <code>Pod</code> object behind the Service, the
+port must be specified with container port property.</p>
+<p>Deprecated: use &lsquo;port&rsquo; instead.</p>
 </td>
 </tr>
 <tr>
@@ -8194,8 +8702,8 @@ string
 </em>
 </td>
 <td>
-<p>HTTP path to scrape for metrics.
-If empty, Prometheus uses the default value (e.g. <code>/metrics</code>).</p>
+<p>HTTP path from which to scrape for metrics.</p>
+<p>If empty, Prometheus uses the default value (e.g. <code>/metrics</code>).</p>
 </td>
 </tr>
 <tr>
@@ -8206,9 +8714,10 @@ string
 </em>
 </td>
 <td>
-<p>HTTP scheme to use for scraping.
-<code>http</code> and <code>https</code> are the expected values unless you rewrite the <code>__scheme__</code> label via relabeling.
-If empty, Prometheus uses the default value <code>http</code>.</p>
+<p>HTTP scheme to use for scraping.</p>
+<p><code>http</code> and <code>https</code> are the expected values unless you rewrite the
+<code>__scheme__</code> label via relabeling.</p>
+<p>If empty, Prometheus uses the default value <code>http</code>.</p>
 </td>
 </tr>
 <tr>
@@ -8219,7 +8728,7 @@ map[string][]string
 </em>
 </td>
 <td>
-<p>Optional HTTP URL parameters</p>
+<p><code>params</code> define optional HTTP URL parameters.</p>
 </td>
 </tr>
 <tr>
@@ -8232,8 +8741,8 @@ Duration
 </em>
 </td>
 <td>
-<p>Interval at which metrics should be scraped
-If not specified Prometheus&rsquo; global scrape interval is used.</p>
+<p>Interval at which Prometheus scrapes the metrics from the target.</p>
+<p>If empty, Prometheus uses the global scrape interval.</p>
 </td>
 </tr>
 <tr>
@@ -8246,8 +8755,9 @@ Duration
 </em>
 </td>
 <td>
-<p>Timeout after which the scrape is ended
-If not specified, the Prometheus global scrape interval is used.</p>
+<p>Timeout after which Prometheus considers the scrape to be failed.</p>
+<p>If empty, Prometheus uses the global scrape timeout unless it is less
+than the target&rsquo;s scrape interval value in which the latter is used.</p>
 </td>
 </tr>
 <tr>
@@ -8260,7 +8770,8 @@ PodMetricsEndpointTLSConfig
 </em>
 </td>
 <td>
-<p>TLS configuration to use when scraping the endpoint.</p>
+<em>(Optional)</em>
+<p>TLS configuration to use when scraping the target.</p>
 </td>
 </tr>
 <tr>
@@ -8273,9 +8784,11 @@ Kubernetes core/v1.SecretKeySelector
 </em>
 </td>
 <td>
-<p>Secret to mount to read bearer token for scraping targets. The secret
-needs to be in the same namespace as the pod monitor and accessible by
-the Prometheus Operator.</p>
+<em>(Optional)</em>
+<p><code>bearerTokenSecret</code> specifies a key of a Secret containing the bearer
+token for scraping targets. The secret needs to be in the same namespace
+as the PodMonitor object and readable by the Prometheus Operator.</p>
+<p>Deprecated: use <code>authorization</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -8286,7 +8799,8 @@ bool
 </em>
 </td>
 <td>
-<p>HonorLabels chooses the metric&rsquo;s labels on collisions with target labels.</p>
+<p>When true, <code>honorLabels</code> preserves the metric&rsquo;s labels when they collide
+with the target&rsquo;s labels.</p>
 </td>
 </tr>
 <tr>
@@ -8297,7 +8811,24 @@ bool
 </em>
 </td>
 <td>
-<p>HonorTimestamps controls whether Prometheus respects the timestamps present in scraped data.</p>
+<em>(Optional)</em>
+<p><code>honorTimestamps</code> controls whether Prometheus preserves the timestamps
+when exposed by the target.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>trackTimestampsStaleness</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p><code>trackTimestampsStaleness</code> defines whether Prometheus tracks staleness of
+the metrics that have an explicit timestamp present in scraped data.
+Has no effect if <code>honorTimestamps</code> is false.</p>
+<p>It requires Prometheus &gt;= v2.48.0.</p>
 </td>
 </tr>
 <tr>
@@ -8310,8 +8841,10 @@ BasicAuth
 </em>
 </td>
 <td>
-<p>BasicAuth allow an endpoint to authenticate over basic authentication.
-More info: <a href="https://prometheus.io/docs/operating/configuration/#endpoint">https://prometheus.io/docs/operating/configuration/#endpoint</a></p>
+<em>(Optional)</em>
+<p><code>basicAuth</code> configures the Basic Authentication credentials to use when
+scraping the target.</p>
+<p>Cannot be set at the same time as <code>authorization</code>, or <code>oauth2</code>.</p>
 </td>
 </tr>
 <tr>
@@ -8324,7 +8857,10 @@ OAuth2
 </em>
 </td>
 <td>
-<p>OAuth2 for the URL. Only valid in Prometheus versions 2.27.0 and newer.</p>
+<em>(Optional)</em>
+<p><code>oauth2</code> configures the OAuth2 settings to use when scraping the target.</p>
+<p>It requires Prometheus &gt;= 2.27.0.</p>
+<p>Cannot be set at the same time as <code>authorization</code>, or <code>basicAuth</code>.</p>
 </td>
 </tr>
 <tr>
@@ -8337,7 +8873,10 @@ SafeAuthorization
 </em>
 </td>
 <td>
-<p>Authorization section for this endpoint</p>
+<em>(Optional)</em>
+<p><code>authorization</code> configures the Authorization header credentials to use when
+scraping the target.</p>
+<p>Cannot be set at the same time as <code>basicAuth</code>, or <code>oauth2</code>.</p>
 </td>
 </tr>
 <tr>
@@ -8350,7 +8889,9 @@ SafeAuthorization
 </em>
 </td>
 <td>
-<p>MetricRelabelConfigs to apply to samples before ingestion.</p>
+<em>(Optional)</em>
+<p><code>metricRelabelings</code> configures the relabeling rules to apply to the
+samples before ingestion.</p>
 </td>
 </tr>
 <tr>
@@ -8363,10 +8904,12 @@ SafeAuthorization
 </em>
 </td>
 <td>
-<p>RelabelConfigs to apply to samples before scraping.
-Prometheus Operator automatically adds relabelings for a few standard Kubernetes fields.
-The original scrape job&rsquo;s name is available via the <code>__tmp_prometheus_job_name</code> label.
-More info: <a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config">https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config</a></p>
+<em>(Optional)</em>
+<p><code>relabelings</code> configures the relabeling rules to apply the target&rsquo;s
+metadata labels.</p>
+<p>The Operator automatically adds relabelings for a few standard Kubernetes fields.</p>
+<p>The original scrape job&rsquo;s name is available via the <code>__tmp_prometheus_job_name</code> label.</p>
+<p>More info: <a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config">https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config</a></p>
 </td>
 </tr>
 <tr>
@@ -8377,7 +8920,9 @@ string
 </em>
 </td>
 <td>
-<p>ProxyURL eg <a href="http://proxyserver:2195">http://proxyserver:2195</a> Directs scrapes to proxy through this endpoint.</p>
+<em>(Optional)</em>
+<p><code>proxyURL</code> configures the HTTP Proxy URL (e.g.
+&ldquo;<a href="http://proxyserver:2195&quot;)">http://proxyserver:2195&rdquo;)</a> to go through when scraping the target.</p>
 </td>
 </tr>
 <tr>
@@ -8388,7 +8933,9 @@ bool
 </em>
 </td>
 <td>
-<p>FollowRedirects configures whether scrape requests follow HTTP 3xx redirects.</p>
+<em>(Optional)</em>
+<p><code>followRedirects</code> defines whether the scrape requests should follow HTTP
+3xx redirects.</p>
 </td>
 </tr>
 <tr>
@@ -8399,7 +8946,8 @@ bool
 </em>
 </td>
 <td>
-<p>Whether to enable HTTP2.</p>
+<em>(Optional)</em>
+<p><code>enableHttp2</code> can be used to disable HTTP2 when scraping the target.</p>
 </td>
 </tr>
 <tr>
@@ -8410,8 +8958,11 @@ bool
 </em>
 </td>
 <td>
-<p>Drop pods that are not running. (Failed, Succeeded). Enabled by default.
-More info: <a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase">https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase</a></p>
+<em>(Optional)</em>
+<p>When true, the pods which are not running (e.g. either in Failed or
+Succeeded state) are dropped during the target discovery.</p>
+<p>If unset, the filtering is enabled.</p>
+<p>More info: <a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase">https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase</a></p>
 </td>
 </tr>
 </tbody>
@@ -8519,7 +9070,14 @@ string
 </em>
 </td>
 <td>
-<p>The label to use to retrieve the job name from.</p>
+<p>The label to use to retrieve the job name from.
+<code>jobLabel</code> selects the label from the associated Kubernetes <code>Pod</code>
+object which will be used as the <code>job</code> label for all metrics.</p>
+<p>For example if <code>jobLabel</code> is set to <code>foo</code> and the Kubernetes <code>Pod</code>
+object is labeled with <code>foo: bar</code>, then Prometheus adds the <code>job=&quot;bar&quot;</code>
+label to all ingested metrics.</p>
+<p>If the value of this field is empty, the <code>job</code> label of the metrics
+defaults to the namespace and name of the PodMonitor object (e.g. <code>&lt;namespace&gt;/&lt;name&gt;</code>).</p>
 </td>
 </tr>
 <tr>
@@ -8530,7 +9088,8 @@ string
 </em>
 </td>
 <td>
-<p>PodTargetLabels transfers labels on the Kubernetes Pod onto the target.</p>
+<p><code>podTargetLabels</code> defines the labels which are transferred from the
+associated Kubernetes <code>Pod</code> object onto the ingested metrics.</p>
 </td>
 </tr>
 <tr>
@@ -8543,7 +9102,8 @@ string
 </em>
 </td>
 <td>
-<p>A list of endpoints allowed as part of this PodMonitor.</p>
+<em>(Optional)</em>
+<p>List of endpoints part of this PodMonitor.</p>
 </td>
 </tr>
 <tr>
@@ -8556,7 +9116,7 @@ Kubernetes meta/v1.LabelSelector
 </em>
 </td>
 <td>
-<p>Selector to select Pod objects.</p>
+<p>Label selector to select the Kubernetes <code>Pod</code> objects.</p>
 </td>
 </tr>
 <tr>
@@ -8569,7 +9129,8 @@ NamespaceSelector
 </em>
 </td>
 <td>
-<p>Selector to select which namespaces the Endpoints objects are discovered from.</p>
+<p>Selector to select which namespaces the Kubernetes <code>Pods</code> objects
+are discovered from.</p>
 </td>
 </tr>
 <tr>
@@ -8580,7 +9141,9 @@ uint64
 </em>
 </td>
 <td>
-<p>SampleLimit defines per-scrape limit on number of scraped samples that will be accepted.</p>
+<em>(Optional)</em>
+<p><code>sampleLimit</code> defines a per-scrape limit on the number of scraped samples
+that will be accepted.</p>
 </td>
 </tr>
 <tr>
@@ -8592,7 +9155,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>TargetLimit defines a limit on the number of scraped targets that will be accepted.</p>
+<p><code>targetLimit</code> defines a limit on the number of scraped targets that will
+be accepted.</p>
 </td>
 </tr>
 <tr>
@@ -8604,8 +9168,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on number of labels that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on number of labels that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -8617,8 +9181,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on length of labels name that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on length of labels name that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -8630,8 +9194,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on length of labels value that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on length of labels value that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -8658,8 +9222,10 @@ AttachMetadata
 </em>
 </td>
 <td>
-<p>Attaches node metadata to discovered targets.
-Requires Prometheus v2.35.0 and above.</p>
+<em>(Optional)</em>
+<p><code>attachMetadata</code> defines additional metadata which is added to the
+discovered targets.</p>
+<p>It requires Prometheus &gt;= v2.37.0.</p>
 </td>
 </tr>
 </tbody>
@@ -9831,6 +10397,23 @@ container, that are generated as a result of StorageSpec objects.</p>
 </tr>
 <tr>
 <td>
+<code>persistentVolumeClaimRetentionPolicy</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#statefulsetpersistentvolumeclaimretentionpolicy-v1-apps">
+Kubernetes apps/v1.StatefulSetPersistentVolumeClaimRetentionPolicy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The field controls if and how PVCs are deleted during the lifecycle of a StatefulSet.
+The default behavior is all PVCs are retained.
+This is an alpha field from kubernetes 1.23 until 1.26 and a beta field from 1.26.
+It requires enabling the StatefulSetAutoDeletePVC feature gate.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>web</code><br/>
 <em>
 <a href="#monitoring.coreos.com/v1.PrometheusWebSpec">
@@ -9938,8 +10521,8 @@ Kubernetes core/v1.Affinity
 <td>
 <code>topologySpreadConstraints</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#topologyspreadconstraint-v1-core">
-[]Kubernetes core/v1.TopologySpreadConstraint
+<a href="#monitoring.coreos.com/v1.TopologySpreadConstraint">
+[]TopologySpreadConstraint
 </a>
 </em>
 </td>
@@ -10529,13 +11112,41 @@ that will be kept in memory. 0 means no limit.</p>
 </tr>
 <tr>
 <td>
+<code>reloadStrategy</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.ReloadStrategyType">
+ReloadStrategyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defines the strategy used to reload the Prometheus configuration.
+If not specified, the configuration is reloaded using the /-/reload HTTP endpoint.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maximumStartupDurationSeconds</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defines the maximum time that the <code>prometheus</code> container&rsquo;s startup probe will wait before being considered failed. The startup probe will return success after the WAL replay is complete.
+If set, the value should be greater than 60 (seconds). Otherwise it will be equal to 600 seconds (15 minutes).</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>baseImage</code><br/>
 <em>
 string
 </em>
 </td>
 <td>
-<p><em>Deprecated: use &lsquo;spec.image&rsquo; instead.</em></p>
+<p>Deprecated: use &lsquo;spec.image&rsquo; instead.</p>
 </td>
 </tr>
 <tr>
@@ -10546,8 +11157,7 @@ string
 </em>
 </td>
 <td>
-<p><em>Deprecated: use &lsquo;spec.image&rsquo; instead. The image&rsquo;s tag can be specified
-as part of the image name.</em></p>
+<p>Deprecated: use &lsquo;spec.image&rsquo; instead. The image&rsquo;s tag can be specified as part of the image name.</p>
 </td>
 </tr>
 <tr>
@@ -10558,8 +11168,7 @@ string
 </em>
 </td>
 <td>
-<p><em>Deprecated: use &lsquo;spec.image&rsquo; instead. The image&rsquo;s digest can be
-specified as part of the image name.</em></p>
+<p>Deprecated: use &lsquo;spec.image&rsquo; instead. The image&rsquo;s digest can be specified as part of the image name.</p>
 </td>
 </tr>
 <tr>
@@ -10627,7 +11236,7 @@ Rules
 <p>Defines the list of PrometheusRule objects to which the namespace label
 enforcement doesn&rsquo;t apply.
 This is only relevant when <code>spec.enforcedNamespaceLabel</code> is set to true.
-<em>Deprecated: use <code>spec.excludedFromEnforcement</code> instead.</em></p>
+Deprecated: use <code>spec.excludedFromEnforcement</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -10798,7 +11407,7 @@ bool
 <td>
 <p>AllowOverlappingBlocks enables vertical compaction and vertical query
 merge in Prometheus.</p>
-<p><em>Deprecated: this flag has no effect for Prometheus &gt;= 2.39.0 where overlapping blocks are enabled by default.</em></p>
+<p>Deprecated: this flag has no effect for Prometheus &gt;= 2.39.0 where overlapping blocks are enabled by default.</p>
 </td>
 </tr>
 <tr>
@@ -10966,6 +11575,28 @@ int32
 <td>
 <em>(Optional)</em>
 <p>The list has one entry per shard. Each entry provides a summary of the shard status.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>shards</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>Shards is the most recently observed number of shards.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>selector</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The selector used to match the pods targeted by this Prometheus resource.</p>
 </td>
 </tr>
 </tbody>
@@ -11456,6 +12087,28 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="monitoring.coreos.com/v1.ReloadStrategyType">ReloadStrategyType
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.CommonPrometheusFields">CommonPrometheusFields</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr><td><p>&#34;HTTP&#34;</p></td>
+<td><p>HTTPReloadStrategyType reloads the configuration using the /-/reload HTTP endpoint.</p>
+</td>
+</tr><tr><td><p>&#34;ProcessSignal&#34;</p></td>
+<td><p>ProcessSignalReloadStrategyType reloads the configuration by sending a SIGHUP signal to the process.</p>
+</td>
+</tr></tbody>
+</table>
 <h3 id="monitoring.coreos.com/v1.RemoteReadSpec">RemoteReadSpec
 </h3>
 <p>
@@ -11590,7 +12243,7 @@ string
 </td>
 <td>
 <p>File from which to read the bearer token for the URL.</p>
-<p><em>Deprecated: this will be removed in a future release. Prefer using <code>authorization</code>.</em></p>
+<p>Deprecated: this will be removed in a future release. Prefer using <code>authorization</code>.</p>
 </td>
 </tr>
 <tr>
@@ -11619,7 +12272,7 @@ string
 <td>
 <p><em>Warning: this field shouldn&rsquo;t be used because the token value appears
 in clear-text. Prefer using <code>authorization</code>.</em></p>
-<p><em>Deprecated: this will be removed in a future release.</em></p>
+<p>Deprecated: this will be removed in a future release.</p>
 </td>
 </tr>
 <tr>
@@ -11826,7 +12479,7 @@ string
 </td>
 <td>
 <p>File from which to read bearer token for the URL.</p>
-<p><em>Deprecated: this will be removed in a future release. Prefer using <code>authorization</code>.</em></p>
+<p>Deprecated: this will be removed in a future release. Prefer using <code>authorization</code>.</p>
 </td>
 </tr>
 <tr>
@@ -11887,7 +12540,7 @@ string
 <td>
 <p><em>Warning: this field shouldn&rsquo;t be used because the token value appears
 in clear-text. Prefer using <code>authorization</code>.</em></p>
-<p><em>Deprecated: this will be removed in a future release.</em></p>
+<p>Deprecated: this will be removed in a future release.</p>
 </td>
 </tr>
 <tr>
@@ -11941,6 +12594,18 @@ MetadataConfig
 <td>
 <em>(Optional)</em>
 <p>MetadataConfig configures the sending of series metadata to the remote storage.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>enableHTTP2</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Whether to enable HTTP2.</p>
 </td>
 </tr>
 </tbody>
@@ -12224,7 +12889,7 @@ Alertmanager.</p>
 <h3 id="monitoring.coreos.com/v1.SafeAuthorization">SafeAuthorization
 </h3>
 <p>
-(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.AlertmanagerEndpoints">AlertmanagerEndpoints</a>, <a href="#monitoring.coreos.com/v1.Authorization">Authorization</a>, <a href="#monitoring.coreos.com/v1.Endpoint">Endpoint</a>, <a href="#monitoring.coreos.com/v1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1.PodMetricsEndpoint">PodMetricsEndpoint</a>, <a href="#monitoring.coreos.com/v1.ProbeSpec">ProbeSpec</a>, <a href="#monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPSDConfig">HTTPSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>, <a href="#monitoring.coreos.com/v1beta1.HTTPConfig">HTTPConfig</a>)
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.AlertmanagerEndpoints">AlertmanagerEndpoints</a>, <a href="#monitoring.coreos.com/v1.Authorization">Authorization</a>, <a href="#monitoring.coreos.com/v1.Endpoint">Endpoint</a>, <a href="#monitoring.coreos.com/v1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1.PodMetricsEndpoint">PodMetricsEndpoint</a>, <a href="#monitoring.coreos.com/v1.ProbeSpec">ProbeSpec</a>, <a href="#monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPSDConfig">HTTPSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.KubernetesSDConfig">KubernetesSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>, <a href="#monitoring.coreos.com/v1beta1.HTTPConfig">HTTPConfig</a>)
 </p>
 <div>
 <p>SafeAuthorization specifies a subset of the Authorization struct, that is
@@ -12270,7 +12935,7 @@ Kubernetes core/v1.SecretKeySelector
 <h3 id="monitoring.coreos.com/v1.SafeTLSConfig">SafeTLSConfig
 </h3>
 <p>
-(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1.PodMetricsEndpointTLSConfig">PodMetricsEndpointTLSConfig</a>, <a href="#monitoring.coreos.com/v1.ProbeTLSConfig">ProbeTLSConfig</a>, <a href="#monitoring.coreos.com/v1.TLSConfig">TLSConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.EmailConfig">EmailConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPSDConfig">HTTPSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>, <a href="#monitoring.coreos.com/v1beta1.EmailConfig">EmailConfig</a>, <a href="#monitoring.coreos.com/v1beta1.HTTPConfig">HTTPConfig</a>)
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1.PodMetricsEndpointTLSConfig">PodMetricsEndpointTLSConfig</a>, <a href="#monitoring.coreos.com/v1.ProbeTLSConfig">ProbeTLSConfig</a>, <a href="#monitoring.coreos.com/v1.TLSConfig">TLSConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.EmailConfig">EmailConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPConfig">HTTPConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPSDConfig">HTTPSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.KubernetesSDConfig">KubernetesSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.OpenStackSDConfig">OpenStackSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>, <a href="#monitoring.coreos.com/v1beta1.EmailConfig">EmailConfig</a>, <a href="#monitoring.coreos.com/v1beta1.HTTPConfig">HTTPConfig</a>)
 </p>
 <div>
 <p>SafeTLSConfig specifies safe TLS configuration parameters.</p>
@@ -12390,39 +13055,13 @@ Kubernetes core/v1.ConfigMapKeySelector
 </tr>
 </tbody>
 </table>
-<h3 id="monitoring.coreos.com/v1.SecretOrConfigMapValidationError">SecretOrConfigMapValidationError
-</h3>
-<div>
-<p>SecretOrConfigMapValidationError is returned by SecretOrConfigMap.Validate()
-on semantically invalid configurations.</p>
-</div>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>err</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="monitoring.coreos.com/v1.ServiceMonitorSpec">ServiceMonitorSpec
 </h3>
 <p>
 (<em>Appears on:</em><a href="#monitoring.coreos.com/v1.ServiceMonitor">ServiceMonitor</a>)
 </p>
 <div>
-<p>ServiceMonitorSpec contains specification parameters for a ServiceMonitor.</p>
+<p>ServiceMonitorSpec defines the specification parameters for a ServiceMonitor.</p>
 </div>
 <table>
 <thead>
@@ -12440,11 +13079,14 @@ string
 </em>
 </td>
 <td>
-<p>JobLabel selects the label from the associated Kubernetes service which will be used as the <code>job</code> label for all metrics.</p>
-<p>For example:
-If in <code>ServiceMonitor.spec.jobLabel: foo</code> and in <code>Service.metadata.labels.foo: bar</code>,
-then the <code>job=&quot;bar&quot;</code> label is added to all metrics.</p>
-<p>If the value of this field is empty or if the label doesn&rsquo;t exist for the given Service, the <code>job</code> label of the metrics defaults to the name of the Kubernetes Service.</p>
+<p><code>jobLabel</code> selects the label from the associated Kubernetes <code>Service</code>
+object which will be used as the <code>job</code> label for all metrics.</p>
+<p>For example if <code>jobLabel</code> is set to <code>foo</code> and the Kubernetes <code>Service</code>
+object is labeled with <code>foo: bar</code>, then Prometheus adds the <code>job=&quot;bar&quot;</code>
+label to all ingested metrics.</p>
+<p>If the value of this field is empty or if the label doesn&rsquo;t exist for
+the given Service, the <code>job</code> label of the metrics defaults to the name
+of the associated Kubernetes <code>Service</code>.</p>
 </td>
 </tr>
 <tr>
@@ -12455,7 +13097,9 @@ then the <code>job=&quot;bar&quot;</code> label is added to all metrics.</p>
 </em>
 </td>
 <td>
-<p>TargetLabels transfers labels from the Kubernetes <code>Service</code> onto the created metrics.</p>
+<em>(Optional)</em>
+<p><code>targetLabels</code> defines the labels which are transferred from the
+associated Kubernetes <code>Service</code> object onto the ingested metrics.</p>
 </td>
 </tr>
 <tr>
@@ -12466,7 +13110,9 @@ then the <code>job=&quot;bar&quot;</code> label is added to all metrics.</p>
 </em>
 </td>
 <td>
-<p>PodTargetLabels transfers labels on the Kubernetes <code>Pod</code> onto the created metrics.</p>
+<em>(Optional)</em>
+<p><code>podTargetLabels</code> defines the labels which are transferred from the
+associated Kubernetes <code>Pod</code> object onto the ingested metrics.</p>
 </td>
 </tr>
 <tr>
@@ -12479,7 +13125,8 @@ then the <code>job=&quot;bar&quot;</code> label is added to all metrics.</p>
 </em>
 </td>
 <td>
-<p>A list of endpoints allowed as part of this ServiceMonitor.</p>
+<em>(Optional)</em>
+<p>List of endpoints part of this ServiceMonitor.</p>
 </td>
 </tr>
 <tr>
@@ -12492,7 +13139,7 @@ Kubernetes meta/v1.LabelSelector
 </em>
 </td>
 <td>
-<p>Selector to select Endpoints objects.</p>
+<p>Label selector to select the Kubernetes <code>Endpoints</code> objects.</p>
 </td>
 </tr>
 <tr>
@@ -12505,7 +13152,8 @@ NamespaceSelector
 </em>
 </td>
 <td>
-<p>Selector to select which namespaces the Kubernetes Endpoints objects are discovered from.</p>
+<p>Selector to select which namespaces the Kubernetes <code>Endpoints</code> objects
+are discovered from.</p>
 </td>
 </tr>
 <tr>
@@ -12517,7 +13165,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>SampleLimit defines per-scrape limit on number of scraped samples that will be accepted.</p>
+<p><code>sampleLimit</code> defines a per-scrape limit on the number of scraped samples
+that will be accepted.</p>
 </td>
 </tr>
 <tr>
@@ -12529,7 +13178,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>TargetLimit defines a limit on the number of scraped targets that will be accepted.</p>
+<p><code>targetLimit</code> defines a limit on the number of scraped targets that will
+be accepted.</p>
 </td>
 </tr>
 <tr>
@@ -12541,8 +13191,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on number of labels that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on number of labels that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -12554,8 +13204,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on length of labels name that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on length of labels name that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -12567,8 +13217,8 @@ uint64
 </td>
 <td>
 <em>(Optional)</em>
-<p>Per-scrape limit on length of labels value that will be accepted for a sample.
-Only valid in Prometheus versions 2.27.0 and newer.</p>
+<p>Per-scrape limit on length of labels value that will be accepted for a sample.</p>
+<p>It requires Prometheus &gt;= v2.27.0.</p>
 </td>
 </tr>
 <tr>
@@ -12595,8 +13245,10 @@ AttachMetadata
 </em>
 </td>
 <td>
-<p>Attaches node metadata to discovered targets.
-Requires Prometheus v2.37.0 and above.</p>
+<em>(Optional)</em>
+<p><code>attachMetadata</code> defines additional metadata which is added to the
+discovered targets.</p>
+<p>It requires Prometheus &gt;= v2.37.0.</p>
 </td>
 </tr>
 </tbody>
@@ -12786,7 +13438,7 @@ bool
 </em>
 </td>
 <td>
-<p><em>Deprecated: subPath usage will be removed in a future release.</em></p>
+<p>Deprecated: subPath usage will be removed in a future release.</p>
 </td>
 </tr>
 <tr>
@@ -12945,32 +13597,6 @@ string
 </td>
 <td>
 <p>Path to the client key file in the Prometheus container for the targets.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="monitoring.coreos.com/v1.TLSConfigValidationError">TLSConfigValidationError
-</h3>
-<div>
-<p>TLSConfigValidationError is returned by TLSConfig.Validate() on semantically
-invalid tls configurations.</p>
-</div>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>err</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
 </td>
 </tr>
 </tbody>
@@ -13861,8 +14487,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p><em>Deprecated: use &lsquo;image&rsquo; instead. The image&rsquo;s tag can be specified as
-part of the image name.</em></p>
+<p>Deprecated: use &lsquo;image&rsquo; instead. The image&rsquo;s tag can be specified as as part of the image name.</p>
 </td>
 </tr>
 <tr>
@@ -13874,8 +14499,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p><em>Deprecated: use &lsquo;image&rsquo; instead.  The image digest can be specified
-as part of the image name.</em></p>
+<p>Deprecated: use &lsquo;image&rsquo; instead.  The image digest can be specified as part of the image name.</p>
 </td>
 </tr>
 <tr>
@@ -13887,7 +14511,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p><em>Deprecated: use &lsquo;image&rsquo; instead.</em></p>
+<p>Deprecated: use &lsquo;image&rsquo; instead.</p>
 </td>
 </tr>
 <tr>
@@ -13941,7 +14565,7 @@ bool
 </em>
 </td>
 <td>
-<p><em>Deprecated: use <code>grpcListenLocal</code> and <code>httpListenLocal</code> instead.</em></p>
+<p>Deprecated: use <code>grpcListenLocal</code> and <code>httpListenLocal</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -14146,6 +14770,219 @@ if they are invalid or not supported the given Thanos version.
 In case of an argument conflict (e.g. an argument which is already set by the
 operator itself) or when providing an invalid argument, the reconciliation will
 fail and an error will be logged.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="monitoring.coreos.com/v1.TopologySpreadConstraint">TopologySpreadConstraint
+</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1.CommonPrometheusFields">CommonPrometheusFields</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>maxSkew</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>MaxSkew describes the degree to which pods may be unevenly distributed.
+When <code>whenUnsatisfiable=DoNotSchedule</code>, it is the maximum permitted difference
+between the number of matching pods in the target topology and the global minimum.
+The global minimum is the minimum number of matching pods in an eligible domain
+or zero if the number of eligible domains is less than MinDomains.
+For example, in a 3-zone cluster, MaxSkew is set to 1, and pods with the same
+labelSelector spread as 2/2/1:
+In this case, the global minimum is 1.
+| zone1 | zone2 | zone3 |
+|  P P  |  P P  |   P   |
+- if MaxSkew is 1, incoming pod can only be scheduled to zone3 to become 2/2/2;
+scheduling it onto zone1(zone2) would make the ActualSkew(3-1) on zone1(zone2)
+violate MaxSkew(1).
+- if MaxSkew is 2, incoming pod can be scheduled onto any zone.
+When <code>whenUnsatisfiable=ScheduleAnyway</code>, it is used to give higher precedence
+to topologies that satisfy it.
+It&rsquo;s a required field. Default value is 1 and 0 is not allowed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>topologyKey</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>TopologyKey is the key of node labels. Nodes that have a label with this key
+and identical values are considered to be in the same topology.
+We consider each <key, value> as a &ldquo;bucket&rdquo;, and try to put balanced number
+of pods into each bucket.
+We define a domain as a particular instance of a topology.
+Also, we define an eligible domain as a domain whose nodes meet the requirements of
+nodeAffinityPolicy and nodeTaintsPolicy.
+e.g. If TopologyKey is &ldquo;kubernetes.io/hostname&rdquo;, each Node is a domain of that topology.
+And, if TopologyKey is &ldquo;topology.kubernetes.io/zone&rdquo;, each zone is a domain of that topology.
+It&rsquo;s a required field.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>whenUnsatisfiable</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#unsatisfiableconstraintaction-v1-core">
+Kubernetes core/v1.UnsatisfiableConstraintAction
+</a>
+</em>
+</td>
+<td>
+<p>WhenUnsatisfiable indicates how to deal with a pod if it doesn&rsquo;t satisfy
+the spread constraint.
+- DoNotSchedule (default) tells the scheduler not to schedule it.
+- ScheduleAnyway tells the scheduler to schedule the pod in any location,
+but giving higher precedence to topologies that would help reduce the
+skew.
+A constraint is considered &ldquo;Unsatisfiable&rdquo; for an incoming pod
+if and only if every possible node assignment for that pod would violate
+&ldquo;MaxSkew&rdquo; on some topology.
+For example, in a 3-zone cluster, MaxSkew is set to 1, and pods with the same
+labelSelector spread as 3/1/1:
+| zone1 | zone2 | zone3 |
+| P P P |   P   |   P   |
+If WhenUnsatisfiable is set to DoNotSchedule, incoming pod can only be scheduled
+to zone2(zone3) to become 3/2/1(3/1/2) as ActualSkew(2-1) on zone2(zone3) satisfies
+MaxSkew(1). In other words, the cluster can still be imbalanced, but scheduler
+won&rsquo;t make it <em>more</em> imbalanced.
+It&rsquo;s a required field.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>labelSelector</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LabelSelector is used to find matching pods.
+Pods that match this label selector are counted to determine the number of pods
+in their corresponding topology domain.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>minDomains</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MinDomains indicates a minimum number of eligible domains.
+When the number of eligible domains with matching topology keys is less than minDomains,
+Pod Topology Spread treats &ldquo;global minimum&rdquo; as 0, and then the calculation of Skew is performed.
+And when the number of eligible domains with matching topology keys equals or greater than minDomains,
+this value has no effect on scheduling.
+As a result, when the number of eligible domains is less than minDomains,
+scheduler won&rsquo;t schedule more than maxSkew Pods to those domains.
+If value is nil, the constraint behaves as if MinDomains is equal to 1.
+Valid values are integers greater than 0.
+When value is not nil, WhenUnsatisfiable must be DoNotSchedule.</p>
+<p>For example, in a 3-zone cluster, MaxSkew is set to 2, MinDomains is set to 5 and pods with the same
+labelSelector spread as 2/2/2:
+| zone1 | zone2 | zone3 |
+|  P P  |  P P  |  P P  |
+The number of domains is less than 5(MinDomains), so &ldquo;global minimum&rdquo; is treated as 0.
+In this situation, new pod with the same labelSelector cannot be scheduled,
+because computed skew will be 3(3 - 0) if new Pod is scheduled to any of the three zones,
+it will violate MaxSkew.</p>
+<p>This is a beta field and requires the MinDomainsInPodTopologySpread feature gate to be enabled (enabled by default).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeAffinityPolicy</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#nodeinclusionpolicy-v1-core">
+Kubernetes core/v1.NodeInclusionPolicy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeAffinityPolicy indicates how we will treat Pod&rsquo;s nodeAffinity/nodeSelector
+when calculating pod topology spread skew. Options are:
+- Honor: only nodes matching nodeAffinity/nodeSelector are included in the calculations.
+- Ignore: nodeAffinity/nodeSelector are ignored. All nodes are included in the calculations.</p>
+<p>If this value is nil, the behavior is equivalent to the Honor policy.
+This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeTaintsPolicy</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#nodeinclusionpolicy-v1-core">
+Kubernetes core/v1.NodeInclusionPolicy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeTaintsPolicy indicates how we will treat node taints when calculating
+pod topology spread skew. Options are:
+- Honor: nodes without taints, along with tainted nodes for which the incoming pod
+has a toleration, are included.
+- Ignore: node taints are ignored. All nodes are included.</p>
+<p>If this value is nil, the behavior is equivalent to the Ignore policy.
+This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>matchLabelKeys</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MatchLabelKeys is a set of pod label keys to select the pods over which
+spreading will be calculated. The keys are used to lookup values from the
+incoming pod labels, those key-value labels are ANDed with labelSelector
+to select the group of existing pods over which spreading will be calculated
+for the incoming pod. The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
+MatchLabelKeys cannot be set when LabelSelector isn&rsquo;t set.
+Keys that don&rsquo;t exist in the incoming pod labels will
+be ignored. A null or empty list means only match against labelSelector.</p>
+<p>This is a beta field and requires the MatchLabelKeysInPodTopologySpread feature gate to be enabled (enabled by default).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>additionalLabelSelectors</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.AdditionalLabelSelectors">
+AdditionalLabelSelectors
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defines what Prometheus Operator managed labels should be added to labelSelector on the topologySpreadConstraint.</p>
 </td>
 </tr>
 </tbody>
@@ -15154,6 +15991,23 @@ container, that are generated as a result of StorageSpec objects.</p>
 </tr>
 <tr>
 <td>
+<code>persistentVolumeClaimRetentionPolicy</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#statefulsetpersistentvolumeclaimretentionpolicy-v1-apps">
+Kubernetes apps/v1.StatefulSetPersistentVolumeClaimRetentionPolicy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The field controls if and how PVCs are deleted during the lifecycle of a StatefulSet.
+The default behavior is all PVCs are retained.
+This is an alpha field from kubernetes 1.23 until 1.26 and a beta field from 1.26.
+It requires enabling the StatefulSetAutoDeletePVC feature gate.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>web</code><br/>
 <em>
 <a href="#monitoring.coreos.com/v1.PrometheusWebSpec">
@@ -15261,8 +16115,8 @@ Kubernetes core/v1.Affinity
 <td>
 <code>topologySpreadConstraints</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#topologyspreadconstraint-v1-core">
-[]Kubernetes core/v1.TopologySpreadConstraint
+<a href="#monitoring.coreos.com/v1.TopologySpreadConstraint">
+[]TopologySpreadConstraint
 </a>
 </em>
 </td>
@@ -15850,6 +16704,34 @@ that will be kept in memory. 0 means no limit.</p>
 <p>It requires Prometheus &gt;= v2.47.0.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>reloadStrategy</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.ReloadStrategyType">
+ReloadStrategyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defines the strategy used to reload the Prometheus configuration.
+If not specified, the configuration is reloaded using the /-/reload HTTP endpoint.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maximumStartupDurationSeconds</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defines the maximum time that the <code>prometheus</code> container&rsquo;s startup probe will wait before being considered failed. The startup probe will return success after the WAL replay is complete.
+If set, the value should be greater than 60 (seconds). Otherwise it will be equal to 600 seconds (15 minutes).</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -16028,6 +16910,48 @@ ScrapeConfigSpec
 </tr>
 <tr>
 <td>
+<code>azureSDConfigs</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1alpha1.AzureSDConfig">
+[]AzureSDConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AzureSDConfigs defines a list of Azure service discovery configurations.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gceSDConfigs</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1alpha1.GCESDConfig">
+[]GCESDConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>GCESDConfigs defines a list of GCE service discovery configurations.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>openstackSDConfigs</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1alpha1.OpenStackSDConfig">
+[]OpenStackSDConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OpenStackSDConfigs defines a list of OpenStack service discovery configurations.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>relabelings</code><br/>
 <em>
 <a href="#monitoring.coreos.com/v1.RelabelConfig">
@@ -16093,6 +17017,21 @@ bool
 <td>
 <em>(Optional)</em>
 <p>HonorTimestamps controls whether Prometheus respects the timestamps present in scraped data.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>trackTimestampsStaleness</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TrackTimestampsStaleness whether Prometheus tracks staleness of
+the metrics that have an explicit timestamp present in scraped data.
+Has no effect if <code>honorTimestamps</code> is false.
+It requires Prometheus &gt;= v2.48.0.</p>
 </td>
 </tr>
 <tr>
@@ -16349,6 +17288,170 @@ the resource&rsquo;s namespace.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="monitoring.coreos.com/v1alpha1.AttachMetadata">AttachMetadata
+</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1alpha1.KubernetesSDConfig">KubernetesSDConfig</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>node</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Attaches node metadata to discovered targets.
+When set to true, Prometheus must have the <code>get</code> permission on the
+<code>Nodes</code> objects.
+Only valid for Pod, Endpoint and Endpointslice roles.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="monitoring.coreos.com/v1alpha1.AzureSDConfig">AzureSDConfig
+</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>)
+</p>
+<div>
+<p>AzureSDConfig allow retrieving scrape targets from Azure VMs.
+See <a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/#azure_sd_config">https://prometheus.io/docs/prometheus/latest/configuration/configuration/#azure_sd_config</a></p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>environment</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The Azure environment.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>authenticationMethod</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<h1>The authentication method, either OAuth or ManagedIdentity.</h1>
+<p>See <a href="https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview">https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>subscriptionID</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The subscription ID. Always required.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tenantID</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Optional tenant ID. Only required with the OAuth authentication method.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>clientID</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Optional client ID. Only required with the OAuth authentication method.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>clientSecret</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secretkeyselector-v1-core">
+Kubernetes core/v1.SecretKeySelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Optional client secret. Only required with the OAuth authentication method.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourceGroup</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Optional resource group name. Limits discovery to this resource group.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>refreshInterval</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.Duration">
+Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RefreshInterval configures the refresh interval at which Prometheus will re-read the instance list.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>port</code><br/>
+<em>
+int
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The port to scrape metrics from. If using the public IP address, this must
+instead be specified in the relabeling rule.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig
 </h3>
 <p>
@@ -16465,7 +17568,7 @@ string
 </tr>
 <tr>
 <td>
-<code>tag_separator</code><br/>
+<code>tagSeparator</code><br/>
 <em>
 string
 </em>
@@ -16478,7 +17581,7 @@ If unset, Prometheus uses its default value.</p>
 </tr>
 <tr>
 <td>
-<code>node_meta</code><br/>
+<code>nodeMeta</code><br/>
 <em>
 map[string]string
 </em>
@@ -16490,7 +17593,7 @@ map[string]string
 </tr>
 <tr>
 <td>
-<code>allow_stale</code><br/>
+<code>allowStale</code><br/>
 <em>
 bool
 </em>
@@ -16503,7 +17606,7 @@ If unset, Prometheus uses its default value.</p>
 </tr>
 <tr>
 <td>
-<code>refresh_interval</code><br/>
+<code>refreshInterval</code><br/>
 <em>
 <a href="#monitoring.coreos.com/v1.Duration">
 Duration
@@ -16562,60 +17665,7 @@ OAuth2
 </tr>
 <tr>
 <td>
-<code>proxy_url</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Optional proxy URL.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>no_proxy</code><br/>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Comma-separated string that can contain IPs, CIDR notation, domain names
-that should be excluded from proxying. IP and domain names can
-contain port numbers.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>proxy_from_environment</code><br/>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Use proxy URL indicated by environment variables (HTTP_PROXY, https_proxy, HTTPs_PROXY, https_proxy, and no_proxy)
-If unset, Prometheus uses its default value.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>proxy_connect_header</code><br/>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secretkeyselector-v1-core">
-map[string]k8s.io/api/core/v1.SecretKeySelector
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Specifies headers to send to proxies during CONNECT requests.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>follow_redirects</code><br/>
+<code>followRedirects</code><br/>
 <em>
 bool
 </em>
@@ -16628,7 +17678,7 @@ If unset, Prometheus uses its default value.</p>
 </tr>
 <tr>
 <td>
-<code>enable_http2</code><br/>
+<code>enableHTTP2</code><br/>
 <em>
 bool
 </em>
@@ -17252,6 +18302,109 @@ Duration
 </tr>
 </tbody>
 </table>
+<h3 id="monitoring.coreos.com/v1alpha1.GCESDConfig">GCESDConfig
+</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>)
+</p>
+<div>
+<p>GCESDConfig configures scrape targets from GCP GCE instances.
+The private IP address is used by default, but may be changed to
+the public IP address with relabeling.
+See <a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/#gce_sd_config">https://prometheus.io/docs/prometheus/latest/configuration/configuration/#gce_sd_config</a></p>
+<p>The GCE service discovery will load the Google Cloud credentials
+from the file specified by the GOOGLE_APPLICATION_CREDENTIALS environment variable.
+See <a href="https://cloud.google.com/kubernetes-engine/docs/tutorials/authenticating-to-cloud-platform">https://cloud.google.com/kubernetes-engine/docs/tutorials/authenticating-to-cloud-platform</a></p>
+<p>A pre-requisite for using GCESDConfig is that a Secret containing valid
+Google Cloud credentials is mounted into the Prometheus or PrometheusAgent
+pod via the <code>.spec.secrets</code> field and that the GOOGLE_APPLICATION_CREDENTIALS
+environment variable is set to /etc/prometheus/secrets/<secret-name>/<credentials-filename.json>.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>project</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The Google Cloud Project ID</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zone</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The zone of the scrape targets. If you need multiple zones use multiple GCESDConfigs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>filter</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Filter can be used optionally to filter the instance list by other criteria
+Syntax of this filter is described in the filter query parameter section:
+<a href="https://cloud.google.com/compute/docs/reference/latest/instances/list">https://cloud.google.com/compute/docs/reference/latest/instances/list</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>refreshInterval</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.Duration">
+Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RefreshInterval configures the refresh interval at which Prometheus will re-read the instance list.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>port</code><br/>
+<em>
+int
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The port to scrape metrics from. If using the public IP address, this must
+instead be specified in the relabeling rule.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tagSeparator</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The tag separator is used to separate the tags on concatenation</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="monitoring.coreos.com/v1alpha1.HTTPConfig">HTTPConfig
 </h3>
 <p>
@@ -17519,15 +18672,6 @@ the inhibition to take effect.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="monitoring.coreos.com/v1alpha1.K8SRole">K8SRole
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em><a href="#monitoring.coreos.com/v1alpha1.K8SSelectorConfig">K8SSelectorConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.KubernetesSDConfig">KubernetesSDConfig</a>)
-</p>
-<div>
-<p>K8SRole is role of the service in Kubernetes.
-Currently the only supported role is &ldquo;Node&rdquo;.</p>
-</div>
 <h3 id="monitoring.coreos.com/v1alpha1.K8SSelectorConfig">K8SSelectorConfig
 </h3>
 <p>
@@ -17548,8 +18692,8 @@ Currently the only supported role is &ldquo;Node&rdquo;.</p>
 <td>
 <code>role</code><br/>
 <em>
-<a href="#monitoring.coreos.com/v1alpha1.K8SRole">
-K8SRole
+<a href="#monitoring.coreos.com/v1alpha1.Role">
+Role
 </a>
 </em>
 </td>
@@ -17637,15 +18781,144 @@ See <a href="https://prometheus.io/docs/prometheus/latest/configuration/configur
 <tbody>
 <tr>
 <td>
+<code>apiServer</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The API server address consisting of a hostname or IP address followed
+by an optional port number.
+If left empty, Prometheus is assumed to run inside
+of the cluster. It will discover API servers automatically and use the pod&rsquo;s
+CA certificate and bearer token file at /var/run/secrets/kubernetes.io/serviceaccount/.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>role</code><br/>
 <em>
-<a href="#monitoring.coreos.com/v1alpha1.K8SRole">
-K8SRole
+<a href="#monitoring.coreos.com/v1alpha1.Role">
+Role
 </a>
 </em>
 </td>
 <td>
 <p>Role of the Kubernetes entities that should be discovered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>basicAuth</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.BasicAuth">
+BasicAuth
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>BasicAuth information to use on every scrape request.
+Cannot be set at the same time as <code>authorization</code>, or <code>oauth2</code>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>authorization</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.SafeAuthorization">
+SafeAuthorization
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Authorization header to use on every scrape request.
+Cannot be set at the same time as <code>basicAuth</code>, or <code>oauth2</code>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>oauth2</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.OAuth2">
+OAuth2
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Optional OAuth 2.0 configuration.
+Cannot be set at the same time as <code>authorization</code>, or <code>basicAuth</code>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>followRedirects</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Configure whether HTTP requests follow HTTP 3xx redirects.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>enableHTTP2</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Whether to enable HTTP2.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tlsConfig</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.SafeTLSConfig">
+SafeTLSConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TLS configuration to use on every scrape request.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>namespaces</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1alpha1.NamespaceDiscovery">
+NamespaceDiscovery
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Optional namespace discovery. If omitted, Prometheus discovers targets across all namespaces.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>attachMetadata</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1alpha1.AttachMetadata">
+AttachMetadata
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Optional metadata to attach to discovered targets.
+It requires Prometheus &gt;= v2.35.0 for <code>pod</code> role and
+Prometheus &gt;= v2.37.0 for <code>endpoints</code> and <code>endpointslice</code> roles.</p>
 </td>
 </tr>
 <tr>
@@ -17835,7 +19108,7 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Whether to match on equality (false) or regular-expression (true).
-Deprecated as of AlertManager &gt;= v0.22.0 where a user should use MatchType instead.</p>
+Deprecated: for AlertManager &gt;= v0.22.0, <code>matchType</code> should be used instead.</p>
 </td>
 </tr>
 </tbody>
@@ -17925,6 +19198,306 @@ string
 </td>
 <td>
 <p>TimeIntervals is a list of TimeInterval</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="monitoring.coreos.com/v1alpha1.NamespaceDiscovery">NamespaceDiscovery
+</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1alpha1.KubernetesSDConfig">KubernetesSDConfig</a>)
+</p>
+<div>
+<p>NamespaceDiscovery is the configuration for discovering
+Kubernetes namespaces.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>ownNamespace</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Includes the namespace in which the Prometheus pod exists to the list of watched namesapces.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>names</code><br/>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>List of namespaces where to watch for resources.
+If empty and <code>ownNamespace</code> isn&rsquo;t true, Prometheus watches for resources in all namespaces.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="monitoring.coreos.com/v1alpha1.OpenStackSDConfig">OpenStackSDConfig
+</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>)
+</p>
+<div>
+<p>OpenStackSDConfig allow retrieving scrape targets from OpenStack Nova instances.
+See <a href="https://prometheus.io/docs/prometheus/latest/configuration/configuration/#openstack_sd_config">https://prometheus.io/docs/prometheus/latest/configuration/configuration/#openstack_sd_config</a></p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>role</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The OpenStack role of entities that should be discovered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The OpenStack Region.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>identityEndpoint</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IdentityEndpoint specifies the HTTP endpoint that is required to work with
+the Identity API of the appropriate version.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>username</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Username is required if using Identity V2 API. Consult with your provider&rsquo;s
+control panel to discover your account&rsquo;s username.
+In Identity V3, either userid or a combination of username
+and domainId or domainName are needed</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>userid</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UserID</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>password</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secretkeyselector-v1-core">
+Kubernetes core/v1.SecretKeySelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Password for the Identity V2 and V3 APIs. Consult with your provider&rsquo;s
+control panel to discover your account&rsquo;s preferred method of authentication.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>domainName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>At most one of domainId and domainName must be provided if using username
+with Identity V3. Otherwise, either are optional.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>domainID</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DomainID</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>projectName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The ProjectId and ProjectName fields are optional for the Identity V2 API.
+Some providers allow you to specify a ProjectName instead of the ProjectId.
+Some require both. Your provider&rsquo;s authentication policies will determine
+how these fields influence authentication.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>projectID</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProjectID</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>applicationCredentialName</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The ApplicationCredentialID or ApplicationCredentialName fields are
+required if using an application credential to authenticate. Some providers
+allow you to create an application credential to authenticate rather than a
+password.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>applicationCredentialId</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ApplicationCredentialID</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>applicationCredentialSecret</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secretkeyselector-v1-core">
+Kubernetes core/v1.SecretKeySelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The applicationCredentialSecret field is required if using an application
+credential to authenticate.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>allTenants</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Whether the service discovery should list all instances for all projects.
+It is only relevant for the &lsquo;instance&rsquo; role and usually requires admin permissions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>refreshInterval</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.Duration">
+Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Refresh interval to re-read the instance list.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>port</code><br/>
+<em>
+int
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The port to scrape metrics from. If using the public IP address, this must
+instead be specified in the relabeling rule.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>availability</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Availability of the endpoint to connect to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tlsConfig</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.SafeTLSConfig">
+SafeTLSConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TLS configuration applying to the target HTTP endpoint.</p>
 </td>
 </tr>
 </tbody>
@@ -19055,6 +20628,23 @@ container, that are generated as a result of StorageSpec objects.</p>
 </tr>
 <tr>
 <td>
+<code>persistentVolumeClaimRetentionPolicy</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#statefulsetpersistentvolumeclaimretentionpolicy-v1-apps">
+Kubernetes apps/v1.StatefulSetPersistentVolumeClaimRetentionPolicy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The field controls if and how PVCs are deleted during the lifecycle of a StatefulSet.
+The default behavior is all PVCs are retained.
+This is an alpha field from kubernetes 1.23 until 1.26 and a beta field from 1.26.
+It requires enabling the StatefulSetAutoDeletePVC feature gate.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>web</code><br/>
 <em>
 <a href="#monitoring.coreos.com/v1.PrometheusWebSpec">
@@ -19162,8 +20752,8 @@ Kubernetes core/v1.Affinity
 <td>
 <code>topologySpreadConstraints</code><br/>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#topologyspreadconstraint-v1-core">
-[]Kubernetes core/v1.TopologySpreadConstraint
+<a href="#monitoring.coreos.com/v1.TopologySpreadConstraint">
+[]TopologySpreadConstraint
 </a>
 </em>
 </td>
@@ -19751,6 +21341,109 @@ that will be kept in memory. 0 means no limit.</p>
 <p>It requires Prometheus &gt;= v2.47.0.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>reloadStrategy</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1.ReloadStrategyType">
+ReloadStrategyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defines the strategy used to reload the Prometheus configuration.
+If not specified, the configuration is reloaded using the /-/reload HTTP endpoint.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maximumStartupDurationSeconds</code><br/>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Defines the maximum time that the <code>prometheus</code> container&rsquo;s startup probe will wait before being considered failed. The startup probe will return success after the WAL replay is complete.
+If set, the value should be greater than 60 (seconds). Otherwise it will be equal to 600 seconds (15 minutes).</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="monitoring.coreos.com/v1alpha1.ProxyConfig">ProxyConfig
+</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1alpha1.ConsulSDConfig">ConsulSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.HTTPSDConfig">HTTPSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.KubernetesSDConfig">KubernetesSDConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.ScrapeConfigSpec">ScrapeConfigSpec</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>proxyUrl</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p><code>proxyURL</code> defines the HTTP proxy server to use.</p>
+<p>It requires Prometheus &gt;= v2.43.0.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>noProxy</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p><code>noProxy</code> is a comma-separated string that can contain IPs, CIDR notation, domain names
+that should be excluded from proxying. IP and domain names can
+contain port numbers.</p>
+<p>It requires Prometheus &gt;= v2.43.0.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>proxyFromEnvironment</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+If unset, Prometheus uses its default value.</p>
+<p>It requires Prometheus &gt;= v2.43.0.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>proxyConnectHeader</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#secretkeyselector-v1-core">
+map[string]k8s.io/api/core/v1.SecretKeySelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProxyConnectHeader optionally specifies headers to send to
+proxies during CONNECT requests.</p>
+<p>It requires Prometheus &gt;= v2.43.0.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="monitoring.coreos.com/v1alpha1.PushoverConfig">PushoverConfig
@@ -19890,6 +21583,18 @@ string
 <td>
 <em>(Optional)</em>
 <p>A title for supplementary URL, otherwise just the URL is shown</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>device</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The name of a device to send the notification to</p>
 </td>
 </tr>
 <tr>
@@ -20170,6 +21875,14 @@ It requires Alertmanager &gt;= 0.26.0.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="monitoring.coreos.com/v1alpha1.Role">Role
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em><a href="#monitoring.coreos.com/v1alpha1.K8SSelectorConfig">K8SSelectorConfig</a>, <a href="#monitoring.coreos.com/v1alpha1.KubernetesSDConfig">KubernetesSDConfig</a>)
+</p>
+<div>
+<p>Role is role of the service in Kubernetes.</p>
+</div>
 <h3 id="monitoring.coreos.com/v1alpha1.Route">Route
 </h3>
 <p>
@@ -20603,6 +22316,48 @@ HTTPConfig
 </tr>
 <tr>
 <td>
+<code>azureSDConfigs</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1alpha1.AzureSDConfig">
+[]AzureSDConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AzureSDConfigs defines a list of Azure service discovery configurations.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>gceSDConfigs</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1alpha1.GCESDConfig">
+[]GCESDConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>GCESDConfigs defines a list of GCE service discovery configurations.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>openstackSDConfigs</code><br/>
+<em>
+<a href="#monitoring.coreos.com/v1alpha1.OpenStackSDConfig">
+[]OpenStackSDConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OpenStackSDConfigs defines a list of OpenStack service discovery configurations.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>relabelings</code><br/>
 <em>
 <a href="#monitoring.coreos.com/v1.RelabelConfig">
@@ -20668,6 +22423,21 @@ bool
 <td>
 <em>(Optional)</em>
 <p>HonorTimestamps controls whether Prometheus respects the timestamps present in scraped data.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>trackTimestampsStaleness</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TrackTimestampsStaleness whether Prometheus tracks staleness of
+the metrics that have an explicit timestamp present in scraped data.
+Has no effect if <code>honorTimestamps</code> is false.
+It requires Prometheus &gt;= v2.48.0.</p>
 </td>
 </tr>
 <tr>
@@ -23894,6 +25664,18 @@ string
 <td>
 <em>(Optional)</em>
 <p>A title for supplementary URL, otherwise just the URL is shown</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>device</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The name of a device to send the notification to</p>
 </td>
 </tr>
 <tr>

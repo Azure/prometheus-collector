@@ -5,9 +5,13 @@ global:
     prometheus: default/test
     prometheus_replica: $(POD_NAME)
 scrape_configs:
-- job_name: scrapeconfig/default/testscrapeconfig1
+- job_name: scrapeConfig/default/testscrapeconfig1
   dns_sd_configs:
   - names:
     - node.demo.do.prometheus.io
     type: A
     port: 9100
+  relabel_configs:
+  - source_labels:
+    - job
+    target_label: __tmp_prometheus_job_name

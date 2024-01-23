@@ -1,3 +1,35 @@
+## 0.71.0 / 2024-01-12
+
+* [CHANGE] Configure the configuration reloader sidecar with the same web configuration as Prometheus and Alertmanager. #6194
+* [FEATURE] Implement the Scale subresource for the Prometheus and PrometheusAgent CRDs. #5962
+* [FEATURE] Add support for OpenStack Service Discovery to the ScrapeConfig CRD. #6168
+* [FEATURE] Add support for all settings of the Kubernetes Service Discovery to the ScrapeConfig CRD. #6178
+* [FEATURE] Add support for proxy settings to the ScrapeConfig CRD. #6001
+* [FEATURE] Add the `enableHTTP2` field to remote-write configuration. #6192
+* [FEATURE] Add `.spec.maximumStartupDurationSeconds` to the Prometheus and PrometheusAgent CRDs. #6137
+* [FEATURE] Emit Kubernetes events when detecting invalid configurations. #6179
+* [ENHANCEMENT] Add `additionalLabels` field to topology spread constraints for Prometheus and PrometheusAgent CRD. #5967
+* [ENHANCEMENT] Add `.spec.clusterLabel` to the Alertmanager CRD. #6162
+* [ENHANCEMENT] Add `prometheus_operator_status_update_errors_total` and `prometheus_operator_status_update_operations_total` metrics. #6185
+
+## 0.70.0 / 2023-11-30
+
+* [CHANGE] Use camelCase on scrapeConfig in prometheus job names. #6124
+* [CHANGE] Update field names for ConsulSD configs. #6094
+* [FEATURE] Add `trackTimestampsStaleness` field to `ServiceMonitor`, `PodMonitor` and `ScrapeConfig` CRDs. #6105
+* [FEATURE] Add `persistentVolumeClaimRetentionPolicy` field to the `Prometheus` and `PrometheusAgent` CRDs. #6038
+* [FEATURE] Support service,pod,endpoints,endpointslice,ingress roles to `KubernetesSDConfigs` in `ScrapeConfig` CRD. #6089
+* [FEATURE] Add support for Azure SD and GCE SD in `ScrapeConfig` CRD. #6078 #6009
+* [FEATURE] Add azure AD oauth support to remote write. #6037
+* [FEATURE] Add `.spec.reloadStrategy` to the Prometheus and PrometheusAgent CRDs. The value can be `HTTP` (default if not specified) or `ProcessSignal`. #5690
+* [ENHANCEMENT] Expose flag to enable the reloader probes in the jsonnet configuration. #6075
+* [ENHANCEMENT] Reduce memory usage for clusters with large number of secrets and/or configmaps. #5993
+* [ENHANCEMENT] Config reloader now sends all logs to `os.Stdout`. #6085
+* [BUGFIX] Remove verbose logging in admission-webhook pods. #6095
+* [BUGFIX] Fixed HTTP scheme value in the Consul SD configurations. #6098
+* [BUGFIX] Skip adding shard relabel rules if they were already set in `additionalScrapeConfigs`. #6099
+* [BUGFIX] Fix nil pointer exception when title and text are not set in MS Teams config. #6109
+
 ## 0.69.1 / 2023-11-09
 
 This release is built using Go 1.21.4 which addresses CVE-2023-45283 and CVE-2023-45284.

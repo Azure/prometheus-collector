@@ -48,7 +48,7 @@ const inhibitRuleNamespaceKey = "namespace"
 // or returns an error if
 // 1. s fails validation provided by upstream
 // 2. s fails to unmarshal into internal type
-// 3. the unmarshalled output is invalid
+// 3. the unmarshalled output is invalid.
 func alertmanagerConfigFromBytes(b []byte) (*alertmanagerConfig, error) {
 	// Run upstream Load function to get any validation checks that it runs.
 	_, err := config.Load(string(b))
@@ -110,7 +110,7 @@ type enforcer interface {
 	processInhibitRule(types.NamespacedName, *inhibitRule) *inhibitRule
 }
 
-// No enforcement
+// No enforcement.
 type noopEnforcer struct{}
 
 func (ne *noopEnforcer) processInhibitRule(_ types.NamespacedName, ir *inhibitRule) *inhibitRule {
@@ -122,7 +122,7 @@ func (ne *noopEnforcer) processRoute(_ types.NamespacedName, r *route) *route {
 	return r
 }
 
-// Enforcing the namespace label
+// Enforcing the namespace label.
 type namespaceEnforcer struct {
 	matchersV2Allowed bool
 }
@@ -505,7 +505,7 @@ func (cb *configBuilder) convertRoute(in *monitoringv1alpha1.Route, crKey types.
 	}
 }
 
-// convertReceiver converts a monitoringv1alpha1.Receiver to an alertmanager.receiver
+// convertReceiver converts a monitoringv1alpha1.Receiver to an alertmanager.receiver.
 func (cb *configBuilder) convertReceiver(ctx context.Context, in *monitoringv1alpha1.Receiver, crKey types.NamespacedName) (*receiver, error) {
 	var pagerdutyConfigs []*pagerdutyConfig
 	if l := len(in.PagerDutyConfigs); l > 0 {
@@ -1128,6 +1128,10 @@ func (cb *configBuilder) convertPushoverConfig(ctx context.Context, in monitorin
 		HTML:          in.HTML,
 	}
 
+	if in.Device != nil {
+		out.Device = *in.Device
+	}
+
 	{
 		userKey, err := cb.store.GetSecretKey(ctx, crKey.Namespace, *in.UserKey)
 		if err != nil {
@@ -1256,8 +1260,14 @@ func (cb *configBuilder) convertMSTeamsConfig(
 ) (*msTeamsConfig, error) {
 	out := &msTeamsConfig{
 		SendResolved: in.SendResolved,
-		Title:        *in.Title,
-		Text:         *in.Text,
+	}
+
+	if in.Title != nil {
+		out.Title = *in.Title
+	}
+
+	if in.Text != nil {
+		out.Text = *in.Text
 	}
 
 	webHookURL, err := cb.store.GetSecretKey(ctx, crKey.Namespace, in.WebhookURL)
@@ -1571,7 +1581,7 @@ func (cb *configBuilder) convertTLSConfig(in *monitoringv1.SafeTLSConfig, crKey 
 // sanitize the config against a specific Alertmanager version
 // types may be sanitized in one of two ways:
 // 1. stripping the unsupported config and log a warning
-// 2. error which ensures that config will not be reconciled - this will be logged by a calling function
+// 2. error which ensures that config will not be reconciled - this will be logged by a calling function.
 func (c *alertmanagerConfig) sanitize(amVersion semver.Version, logger log.Logger) error {
 	if c == nil {
 		return nil
@@ -1620,7 +1630,7 @@ func (c *alertmanagerConfig) sanitize(amVersion semver.Version, logger log.Logge
 	return c.Route.sanitize(amVersion, logger)
 }
 
-// sanitize globalConfig
+// sanitize globalConfig.
 func (gc *globalConfig) sanitize(amVersion semver.Version, logger log.Logger) error {
 	if gc == nil {
 		return nil
@@ -1769,7 +1779,7 @@ func (o *oauth2) sanitize(amVersion semver.Version, logger log.Logger) error {
 	return nil
 }
 
-// sanitize the receiver
+// sanitize the receiver.
 func (r *receiver) sanitize(amVersion semver.Version, logger log.Logger) error {
 	if r == nil {
 		return nil
@@ -1997,6 +2007,12 @@ func (poc *pushoverConfig) sanitize(amVersion semver.Version, logger log.Logger)
 		poc.TokenFile = ""
 	}
 
+	if poc.Device != "" && lessThanV0_26 {
+		msg := "'device' supported in Alertmanager >= 0.26.0 only - dropping field from pushover receiver config"
+		level.Warn(logger).Log("msg", msg, "current_version", amVersion.String())
+		poc.Device = ""
+	}
+
 	return poc.HTTPConfig.sanitize(amVersion, logger)
 }
 
@@ -2187,7 +2203,7 @@ func (ti *timeInterval) sanitize(amVersion semver.Version, logger log.Logger) er
 
 // sanitize a route and all its child routes.
 // Warns if the config is using deprecated syntax against a later version.
-// Returns an error if the config could potentially break routing logic
+// Returns an error if the config could potentially break routing logic.
 func (r *route) sanitize(amVersion semver.Version, logger log.Logger) error {
 	if r == nil {
 		return nil
@@ -2264,7 +2280,7 @@ func convertSliceToNilIfEmpty(in []string) []string {
 }
 
 // contains will return true if any slice value with all whitespace removed
-// is equal to the provided value with all whitespace removed
+// is equal to the provided value with all whitespace removed.
 func contains(value string, in []string) bool {
 	for _, str := range in {
 		if strings.ReplaceAll(value, " ", "") == strings.ReplaceAll(str, " ", "") {

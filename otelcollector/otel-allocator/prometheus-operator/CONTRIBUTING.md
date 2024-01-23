@@ -42,7 +42,7 @@ are very busy and read the mailing lists.
 The project also holds bi-weekly public meetings where maintainers,
 contributors and users of the Prometheus Operator and kube-prometheus can
 discuss issues, pull requests or any topic related to the projects. The
-meetings happen at 09:00 UTC on Monday, check the [online
+meetings happen at 11:00 UTC on Monday, check the [online
 notes](https://docs.google.com/document/d/1-fjJmzrwRpKmSPHtXN5u6VZnn39M28KqyQGBEJsqUOk/edit?usp=sharing)
 to know the exact dates and the connection details.
 
@@ -60,8 +60,7 @@ This is a rough outline of what a contributor's workflow looks like:
 - Make commits of logical units.
 - Make sure your commit messages are in the proper format (see below).
 - Push your changes to a topic branch in your fork of the repository.
-- Make sure the tests pass, and add any new tests as appropriate.
-- If the tests are checking long strings such as YAML, JSON or any other complex content, ensure you're using [golden files](https://pkg.go.dev/gotest.tools/v3/golden).
+- Make sure the tests pass, and add any new tests as appropriate. ([Testing guidelines](TESTING.md))
 - Submit a pull request to the original repository.
 
 Many files (documentation, manifests, ...) in this repository are auto-generated. For instance, `bundle.yaml` is generated from the *Jsonnet* files in `/jsonnet/prometheus-operator`. Before submitting a pull request, make sure that you've executed `make generate` and committed the generated changes.

@@ -5,8 +5,12 @@ global:
     prometheus: default/test
     prometheus_replica: $(POD_NAME)
 scrape_configs:
-- job_name: scrapeconfig/default/testscrapeconfig1
+- job_name: scrapeConfig/default/testscrapeconfig1
   file_sd_configs:
   - files:
     - /tmp/myfile.json
     refresh_interval: 5m
+  relabel_configs:
+  - source_labels:
+    - job
+    target_label: __tmp_prometheus_job_name

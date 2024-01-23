@@ -211,7 +211,7 @@ func testAMStorageUpdate(t *testing.T) {
 				VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 					Spec: v1.PersistentVolumeClaimSpec{
 						AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
-						Resources: v1.ResourceRequirements{
+						Resources: v1.VolumeResourceRequirements{
 							Requests: v1.ResourceList{
 								v1.ResourceStorage: resource.MustParse("200Mi"),
 							},
@@ -259,7 +259,7 @@ func testAMStorageUpdate(t *testing.T) {
 				VolumeClaimTemplate: monitoringv1.EmbeddedPersistentVolumeClaim{
 					Spec: v1.PersistentVolumeClaimSpec{
 						StorageClassName: ptr.To("unknown-storage-class"),
-						Resources: v1.ResourceRequirements{
+						Resources: v1.VolumeResourceRequirements{
 							Requests: v1.ResourceList{
 								v1.ResourceStorage: resource.MustParse("200Mi"),
 							},
@@ -2315,7 +2315,7 @@ func testAMWeb(t *testing.T) {
 			}
 		}
 
-		reloadSuccessTimestamp, err := framework.GetMetricVal(context.Background(), ns, podName, "8080", "reloader_last_reload_success_timestamp_seconds")
+		reloadSuccessTimestamp, err := framework.GetMetricVal(context.Background(), "https", ns, podName, "8080", "reloader_last_reload_success_timestamp_seconds")
 		if err != nil {
 			pollErr = err
 			return false, nil

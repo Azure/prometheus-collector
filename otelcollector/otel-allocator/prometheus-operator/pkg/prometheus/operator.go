@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,6 +37,18 @@ import (
 
 var prometheusKeyInShardStatefulSet = regexp.MustCompile("^(.+)/prometheus-(.+)-shard-[1-9][0-9]*$")
 var prometheusKeyInStatefulSet = regexp.MustCompile("^(.+)/prometheus-(.+)$")
+
+// Config defines the operator's parameters for the Prometheus controllers.
+// Whenever the value of one of these parameters is changed, it triggers an
+// update of the managed statefulsets.
+type Config struct {
+	LocalHost                  string
+	ReloaderConfig             operator.ContainerConfig
+	PrometheusDefaultBaseImage string
+	ThanosDefaultBaseImage     string
+	Annotations                operator.Map
+	Labels                     operator.Map
+}
 
 type StatusReporter struct {
 	Kclient         kubernetes.Interface
@@ -72,32 +85,26 @@ func statefulSetNameFromPrometheusName(p monitoringv1.PrometheusInterface, name 
 	return fmt.Sprintf("%s-%s-shard-%d", prefix(p), name, shard)
 }
 
-func NewTLSAssetSecret(p monitoringv1.PrometheusInterface, labels map[string]string) *v1.Secret {
-	objMeta := p.GetObjectMeta()
-	typeMeta := p.GetTypeMeta()
-
-	boolTrue := true
-	return &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   TLSAssetsSecretName(p),
-			Labels: labels,
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         typeMeta.APIVersion,
-					BlockOwnerDeletion: &boolTrue,
-					Controller:         &boolTrue,
-					Kind:               typeMeta.Kind,
-					Name:               objMeta.GetName(),
-					UID:                objMeta.GetUID(),
-				},
-			},
-		},
+func NewTLSAssetSecret(p monitoringv1.PrometheusInterface, config Config) *v1.Secret {
+	s := &v1.Secret{
 		Data: map[string][]byte{},
 	}
+
+	operator.UpdateObject(
+		s,
+		operator.WithLabels(config.Labels),
+		operator.WithAnnotations(config.Annotations),
+		operator.WithManagingOwner(p),
+		operator.WithName(TLSAssetsSecretName(p)),
+		operator.WithNamespace(p.GetObjectMeta().GetNamespace()),
+	)
+
+	return s
 }
 
 // ValidateRemoteWriteSpec checks that mutually exclusive configurations are not
-// included in the Prometheus remoteWrite configuration section.
+// included in the Prometheus remoteWrite configuration section, while also validating
+// the RemoteWriteSpec child fields.
 // Reference:
 // https://github.com/prometheus/prometheus/blob/main/docs/configuration/configuration.md#remote_write
 func ValidateRemoteWriteSpec(spec monitoringv1.RemoteWriteSpec) error {
@@ -119,12 +126,30 @@ func ValidateRemoteWriteSpec(spec monitoringv1.RemoteWriteSpec) error {
 		return fmt.Errorf("%s can't be set at the same time, at most one of them must be defined", strings.Join(nonNilFields, " and "))
 	}
 
+	if spec.AzureAD != nil {
+		if spec.AzureAD.ManagedIdentity == nil && spec.AzureAD.OAuth == nil {
+			return fmt.Errorf("must provide Azure Managed Identity or Azure OAuth in the Azure AD config")
+		}
+
+		if spec.AzureAD.ManagedIdentity != nil && spec.AzureAD.OAuth != nil {
+			return fmt.Errorf("cannot provide both Azure Managed Identity and Azure OAuth in the Azure AD config")
+		}
+
+		if spec.AzureAD.OAuth != nil {
+			_, err := uuid.Parse(spec.AzureAD.OAuth.ClientID)
+			if err != nil {
+				return fmt.Errorf("the provided Azure OAuth clientId is invalid")
+			}
+		}
+	}
+
 	return nil
 }
 
 func ValidateAlertmanagerEndpoints(am monitoringv1.AlertmanagerEndpoints) error {
 	var nonNilFields []string
 
+	//nolint:staticcheck // Ignore SA1019 this field is marked as deprecated.
 	if am.BearerTokenFile != "" {
 		nonNilFields = append(nonNilFields, fmt.Sprintf("%q", "bearerTokenFile"))
 	}
@@ -147,7 +172,7 @@ func ValidateAlertmanagerEndpoints(am monitoringv1.AlertmanagerEndpoints) error 
 	return nil
 }
 
-// Process will determine the Status of a Prometheus resource (server or agent) depending on its current state in the cluster
+// Process will determine the Status of a Prometheus resource (server or agent) depending on its current state in the cluster.
 func (sr *StatusReporter) Process(ctx context.Context, p monitoringv1.PrometheusInterface, key string) (*monitoringv1.PrometheusStatus, error) {
 
 	commonFields := p.GetCommonPrometheusFields()

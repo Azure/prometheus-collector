@@ -23,9 +23,9 @@ import (
 
 	v1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/client/applyconfiguration/monitoring/v1alpha1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -37,9 +37,9 @@ type FakePrometheusAgents struct {
 	ns   string
 }
 
-var prometheusagentsResource = schema.GroupVersionResource{Group: "monitoring.coreos.com", Version: "v1alpha1", Resource: "prometheusagents"}
+var prometheusagentsResource = v1alpha1.SchemeGroupVersion.WithResource("prometheusagents")
 
-var prometheusagentsKind = schema.GroupVersionKind{Group: "monitoring.coreos.com", Version: "v1alpha1", Kind: "PrometheusAgent"}
+var prometheusagentsKind = v1alpha1.SchemeGroupVersion.WithKind("PrometheusAgent")
 
 // Get takes name of the prometheusAgent, and returns the corresponding prometheusAgent object, and an error if there is any.
 func (c *FakePrometheusAgents) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.PrometheusAgent, err error) {
@@ -185,4 +185,26 @@ func (c *FakePrometheusAgents) ApplyStatus(ctx context.Context, prometheusAgent 
 		return nil, err
 	}
 	return obj.(*v1alpha1.PrometheusAgent), err
+}
+
+// GetScale takes name of the prometheusAgent, and returns the corresponding scale object, and an error if there is any.
+func (c *FakePrometheusAgents) GetScale(ctx context.Context, prometheusAgentName string, options v1.GetOptions) (result *autoscalingv1.Scale, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewGetSubresourceAction(prometheusagentsResource, c.ns, "scale", prometheusAgentName), &autoscalingv1.Scale{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
+}
+
+// UpdateScale takes the representation of a scale and updates it. Returns the server's representation of the scale, and an error, if there is any.
+func (c *FakePrometheusAgents) UpdateScale(ctx context.Context, prometheusAgentName string, scale *autoscalingv1.Scale, opts v1.UpdateOptions) (result *autoscalingv1.Scale, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(prometheusagentsResource, "scale", c.ns, scale), &autoscalingv1.Scale{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*autoscalingv1.Scale), err
 }

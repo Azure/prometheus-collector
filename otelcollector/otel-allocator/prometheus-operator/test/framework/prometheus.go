@@ -25,7 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -312,24 +311,44 @@ func (f *Framework) CreatePrometheusAndWaitUntilReady(ctx context.Context, ns st
 		return nil, fmt.Errorf("creating %v Prometheus instances failed (%v): %v", p.Spec.Replicas, p.Name, err)
 	}
 
-	if err := f.WaitForPrometheusReady(ctx, result, 5*time.Minute); err != nil {
+	result, err = f.WaitForPrometheusReady(ctx, result, 5*time.Minute)
+	if err != nil {
 		return nil, fmt.Errorf("waiting for %v Prometheus instances timed out (%v): %v", p.Spec.Replicas, p.Name, err)
 	}
 
 	return result, nil
 }
 
-func (f *Framework) ScalePrometheusAndWaitUntilReady(ctx context.Context, name, ns string, replicas int32) (*monitoringv1.Prometheus, error) {
+func (f *Framework) UpdatePrometheusReplicasAndWaitUntilReady(ctx context.Context, name, ns string, replicas int32) (*monitoringv1.Prometheus, error) {
 	return f.PatchPrometheusAndWaitUntilReady(
 		ctx,
 		name,
 		ns,
 		monitoringv1.PrometheusSpec{
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
-				Replicas: ptr.To(int32(replicas)),
+				Replicas: ptr.To(replicas),
 			},
 		},
 	)
+}
+
+func (f *Framework) ScalePrometheusAndWaitUntilReady(ctx context.Context, name, ns string, shards int32) (*monitoringv1.Prometheus, error) {
+	promClient := f.MonClientV1.Prometheuses(ns)
+	scale, err := promClient.GetScale(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Prometheus %s/%s scale: %w", ns, name, err)
+	}
+	scale.Spec.Replicas = shards
+
+	_, err = promClient.UpdateScale(ctx, name, scale, metav1.UpdateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to scale Prometheus %s/%s: %w", ns, name, err)
+	}
+	p, err := promClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Prometheus %s/%s: %w", ns, name, err)
+	}
+	return f.WaitForPrometheusReady(ctx, p, 5*time.Minute)
 }
 
 func (f *Framework) PatchPrometheus(ctx context.Context, name, ns string, spec monitoringv1.PrometheusSpec) (*monitoringv1.Prometheus, error) {
@@ -343,7 +362,7 @@ func (f *Framework) PatchPrometheus(ctx context.Context, name, ns string, spec m
 		},
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal Prometheus spec")
+		return nil, fmt.Errorf("failed to marshal Prometheus spec: %w", err)
 	}
 
 	p, err := f.MonClientV1.Prometheuses(ns).Patch(
@@ -367,28 +386,31 @@ func (f *Framework) PatchPrometheus(ctx context.Context, name, ns string, spec m
 func (f *Framework) PatchPrometheusAndWaitUntilReady(ctx context.Context, name, ns string, spec monitoringv1.PrometheusSpec) (*monitoringv1.Prometheus, error) {
 	p, err := f.PatchPrometheus(ctx, name, ns, spec)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to patch Prometheus %s/%s", ns, name)
+		return nil, fmt.Errorf("failed to patch Prometheus %s/%s: %w", ns, name, err)
 	}
 
-	if err := f.WaitForPrometheusReady(ctx, p, 5*time.Minute); err != nil {
+	p, err = f.WaitForPrometheusReady(ctx, p, 5*time.Minute)
+	if err != nil {
 		return nil, err
 	}
 
 	return p, nil
 }
 
-func (f *Framework) WaitForPrometheusReady(ctx context.Context, p *monitoringv1.Prometheus, timeout time.Duration) error {
+func (f *Framework) WaitForPrometheusReady(ctx context.Context, p *monitoringv1.Prometheus, timeout time.Duration) (*monitoringv1.Prometheus, error) {
 	expected := *p.Spec.Replicas
 	if p.Spec.Shards != nil && *p.Spec.Shards > 0 {
 		expected = expected * *p.Spec.Shards
 	}
 
+	var current *monitoringv1.Prometheus
+	var getErr error
 	if err := f.WaitForResourceAvailable(
 		ctx,
 		func(ctx context.Context) (resourceStatus, error) {
-			current, err := f.MonClientV1.Prometheuses(p.Namespace).Get(ctx, p.Name, metav1.GetOptions{})
-			if err != nil {
-				return resourceStatus{}, err
+			current, getErr = f.MonClientV1.Prometheuses(p.Namespace).Get(ctx, p.Name, metav1.GetOptions{})
+			if getErr != nil {
+				return resourceStatus{}, getErr
 			}
 			return resourceStatus{
 				expectedReplicas: expected,
@@ -399,20 +421,20 @@ func (f *Framework) WaitForPrometheusReady(ctx context.Context, p *monitoringv1.
 		},
 		timeout,
 	); err != nil {
-		return errors.Wrapf(err, "prometheus %v/%v failed to become available", p.Namespace, p.Name)
+		return nil, fmt.Errorf("prometheus %v/%v failed to become available: %w", p.Namespace, p.Name, err)
 	}
 
-	return nil
+	return current, nil
 }
 
 func (f *Framework) DeletePrometheusAndWaitUntilGone(ctx context.Context, ns, name string) error {
 	_, err := f.MonClientV1.Prometheuses(ns).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("requesting Prometheus custom resource %v failed", name))
+		return fmt.Errorf("requesting Prometheus custom resource %v failed: %w", name, err)
 	}
 
 	if err := f.MonClientV1.Prometheuses(ns).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
-		return errors.Wrap(err, fmt.Sprintf("deleting Prometheus custom resource %v failed", name))
+		return fmt.Errorf("deleting Prometheus custom resource %v failed: %w", name, err)
 	}
 
 	if err := f.WaitForPodsReady(
@@ -422,10 +444,7 @@ func (f *Framework) DeletePrometheusAndWaitUntilGone(ctx context.Context, ns, na
 		0,
 		prometheus.ListOptions(name),
 	); err != nil {
-		return errors.Wrap(
-			err,
-			fmt.Sprintf("waiting for Prometheus custom resource (%s) to vanish timed out", name),
-		)
+		return fmt.Errorf("waiting for Prometheus custom resource (%s) to vanish timed out: %w", name, err)
 	}
 
 	return nil
@@ -487,7 +506,7 @@ func (f *Framework) WaitForHealthyTargets(ctx context.Context, ns, svcName strin
 			return true, nil
 		}
 
-		loopErr = errors.Errorf("expected %d, found %d healthy targets", amount, len(targets))
+		loopErr = fmt.Errorf("expected %d, found %d healthy targets", amount, len(targets))
 		return false, nil
 	})
 	if err != nil {
@@ -609,7 +628,7 @@ func (f *Framework) GetHealthyTargets(ctx context.Context, ns, svcName string) (
 		case healthGood:
 			healthyTargets = append(healthyTargets, target)
 		case healthBad:
-			return nil, errors.Errorf("target %q: %s", target.ScrapeURL, target.LastError)
+			return nil, fmt.Errorf("target %q: %s", target.ScrapeURL, target.LastError)
 		}
 	}
 
@@ -628,7 +647,7 @@ func (f *Framework) CheckPrometheusFiringAlert(ctx context.Context, ns, svcName,
 	}
 
 	if len(q.Data.Result) != 1 {
-		return false, errors.Errorf("expected 1 query result but got %v", len(q.Data.Result))
+		return false, fmt.Errorf("expected 1 query result but got %v", len(q.Data.Result))
 	}
 
 	return true, nil
@@ -680,7 +699,7 @@ func (f *Framework) WaitForPrometheusFiringAlert(ctx context.Context, ns, svcNam
 	})
 
 	if err != nil {
-		return errors.Errorf(
+		return fmt.Errorf(
 			"waiting for alert '%v' to fire: %v: %v",
 			alertName,
 			err,

@@ -5,10 +5,14 @@ global:
     prometheus: default/test
     prometheus_replica: $(POD_NAME)
 scrape_configs:
-- job_name: scrapeconfig/default/testscrapeconfig1
+- job_name: scrapeConfig/default/testscrapeconfig1
   kubernetes_sd_configs:
   - role: node
     selectors:
     - role: node
       label: type=infra
       field: spec.unschedulable=false
+  relabel_configs:
+  - source_labels:
+    - job
+    target_label: __tmp_prometheus_job_name
