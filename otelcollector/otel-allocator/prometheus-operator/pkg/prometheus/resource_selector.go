@@ -340,8 +340,10 @@ func (rs *ResourceSelector) SelectPodMonitors(ctx context.Context, listFn ListAl
 
 	// If 'PodMonitorNamespaceSelector' is nil only check own namespace.
 	if cpf.PodMonitorNamespaceSelector == nil {
+		level.Debug(rs.l).Log("msg", "here-1")
 		namespaces = append(namespaces, objMeta.GetNamespace())
 	} else {
+		level.Debug(rs.l).Log("msg", "here-2")
 		podMonNSSelector, err := metav1.LabelSelectorAsSelector(cpf.PodMonitorNamespaceSelector)
 		if err != nil {
 			return nil, err
@@ -356,6 +358,7 @@ func (rs *ResourceSelector) SelectPodMonitors(ctx context.Context, listFn ListAl
 	level.Debug(rs.l).Log("msg", "filtering namespaces to select PodMonitors from", "namespaces", strings.Join(namespaces, ","), "namespace", objMeta.GetNamespace(), "prometheus", objMeta.GetName())
 
 	for _, ns := range namespaces {
+		level.Debug(rs.l).Log("msg", "here-3")
 		err := listFn(ns, podMonSelector, func(obj interface{}) {
 			k, ok := rs.accessor.MetaNamespaceKey(obj)
 			if ok {
@@ -375,6 +378,7 @@ func (rs *ResourceSelector) SelectPodMonitors(ctx context.Context, listFn ListAl
 	var rejected int
 	res := make(map[string]*monitoringv1.PodMonitor, len(podMonitors))
 	for namespaceAndName, pm := range podMonitors {
+		level.Debug(rs.l).Log("msg", "here-4")
 		var err error
 
 		for i, endpoint := range pm.Spec.PodMetricsEndpoints {
@@ -437,6 +441,7 @@ func (rs *ResourceSelector) SelectPodMonitors(ctx context.Context, listFn ListAl
 
 	pmKeys := []string{}
 	for k := range res {
+		level.Debug(rs.l).Log("msg", "here-5")
 		pmKeys = append(pmKeys, k)
 	}
 	level.Debug(rs.l).Log("msg", "selected PodMonitors", "podmonitors", strings.Join(pmKeys, ","), "namespace", objMeta.GetNamespace(), "prometheus", objMeta.GetName())
