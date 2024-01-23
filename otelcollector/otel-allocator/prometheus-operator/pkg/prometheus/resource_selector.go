@@ -359,6 +359,7 @@ func (rs *ResourceSelector) SelectPodMonitors(ctx context.Context, listFn ListAl
 
 	for _, ns := range namespaces {
 		level.Debug(rs.l).Log("msg", "here-3")
+		level.Debug(rs.l).Log("msg", "here-3", "ns-", ns)
 		err := listFn(ns, podMonSelector, func(obj interface{}) {
 			k, ok := rs.accessor.MetaNamespaceKey(obj)
 			if ok {
