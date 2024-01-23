@@ -15,6 +15,8 @@
 package v1
 
 import (
+	"os"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -22,8 +24,17 @@ import (
 	"github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
 )
 
+var PackageGroupName = func() string {
+	group := monitoring.GroupName
+	customGroupV1 := os.Getenv("PROMETHEUS_OPERATOR_V1_CUSTOM_GROUP")
+	if customGroupV1 != "" {
+		group = customGroupV1
+	}
+	return group
+}()
+
 // SchemeGroupVersion is the group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: monitoring.GroupName, Version: Version}
+var SchemeGroupVersion = schema.GroupVersion{Group: PackageGroupName, Version: Version}
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource
 func Resource(resource string) schema.GroupResource {
