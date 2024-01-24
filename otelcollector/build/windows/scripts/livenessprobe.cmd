@@ -1,3 +1,4 @@
+@echo off
 rem Get the current date and time
 setlocal enableextensions
 setlocal enabledelayedexpansion
@@ -31,7 +32,7 @@ for /f "tokens=*" %%a in ('tasklist /fo "table"') do (
 
 if "%MAC%" == "" (
     rem Non-MAC mode
-    if not defined MetricsExtension (
+    if %MetricsExtension%==false (
         echo "Metrics Extension is not running (Non-MAC mode)"
         goto eof
     )
@@ -56,11 +57,11 @@ if "%MAC%" == "" (
                 )
             )
         ) else (
-            if not defined MetricsExtension (
+            if %MetricsExtension%==false (
                 echo "Metrics Extension is not running (configuration exists)"
                 goto eof
             )
-            if not defined MonAgentLauncher (
+            if %MonAgentLauncher%==false (
                 echo "MonAgentLauncher is not running (configuration exists)"
                 goto eof
             )
@@ -75,7 +76,7 @@ if exist "C:\opt\microsoft\scripts\filesystemwatcher.txt" (
 )
 
 @REM "Checking if otelcollector is running"
-if not defined otelcollector (
+if %otelcollector%==false (
     echo "otelcollector is not running"
     goto eof
 )
