@@ -39,8 +39,10 @@ RUN powershell -Command "Set-ExecutionPolicy Bypass -Scope Process -Force; iex (
 # Fluentd depends on cool.io whose fat gem is only available for Ruby < 2.5, so need to specify --platform ruby when install Ruby > 2.5 and install msys2 to get dev tools
 RUN choco install -y ruby --version 2.6.5.1 --params "'/InstallDir:C:\ruby26'" \
 && choco install -y msys2 --version 20211130.0.0 --params "'/NoPath /NoUpdate /InstallDir:C:\ruby26\msys64'" \
-&& choco install -y vim \
-&& refreshenv \
+&& choco install -y vim
+
+# gangams - optional MSYS2 update via ridk failing in merged docker file so skipping that since we dont need optional update
+RUN refreshenv \
 && ridk install 3 \
 && echo gem: --no-document >> C:\ProgramData\gemrc \
 && gem install cool.io -v 1.5.4 --platform ruby \
@@ -54,9 +56,10 @@ RUN choco install -y ruby --version 2.6.5.1 --params "'/InstallDir:C:\ruby26'" \
 && gem install tomlrb -v 1.3.0 \
 && gem install deep_merge -v 1.2.1\
 && gem install colorize\
-&& gem sources --clear-all \
+&& gem sources --clear-all
+
 # Remove gem cache and chocolatey
-&& powershell -Command "Remove-Item -Force C:\ruby26\lib\ruby\gems\2.6.0\cache\*.gem; Remove-Item -Recurse -Force 'C:\ProgramData\chocolatey'"
+RUN powershell -Command "Remove-Item -Force C:\ruby26\lib\ruby\gems\2.6.0\cache\*.gem; Remove-Item -Recurse -Force 'C:\ProgramData\chocolatey'"
 
 SHELL ["powershell"]
 RUN ./opt/scripts/setup.ps1
