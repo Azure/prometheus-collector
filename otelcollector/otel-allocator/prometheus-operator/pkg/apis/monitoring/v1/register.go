@@ -19,9 +19,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
-
 	"os"
+
+	"github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring"
 )
 
 var PackageGroupName = func() string {

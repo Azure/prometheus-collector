@@ -26,6 +26,9 @@ LOGGING_PREFIX = "default-scrape-keep-lists"
 @windowskubeproxyRegex = ""
 @podannotationRegex = ""
 @kappiebasicRegex = ""
+@networkobservabilityRetinaRegex = ""
+@networkobservabilityHubbleRegex = ""
+@networkobservabilityCiliumRegex = ""
 
 #This will always be string "true" as we set the string value in the chart for both MAC and non MAC modes
 @minimalIngestionProfile = ENV["MINIMAL_INGESTION_PROFILE"]
@@ -44,6 +47,9 @@ end
 @kubestateRegex_minimal = "kube_horizontalpodautoscaler_spec_min_replicas|kube_horizontalpodautoscaler_status_desired_replicas|kube_job_status_active|kube_node_status_capacity|kube_job_status_succeeded|kube_job_spec_completions|kube_daemonset_status_number_misscheduled|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_current_number_scheduled|kube_daemonset_status_number_ready|kube_deployment_spec_replicas|kube_deployment_status_replicas_ready|kube_pod_container_status_last_terminated_reason|kube_node_status_condition|kube_pod_container_status_restarts_total|kube_pod_container_resource_requests|kube_pod_status_phase|kube_pod_container_resource_limits|kube_node_status_allocatable|kube_pod_info|kube_pod_owner|kube_resourcequota|kube_statefulset_replicas|kube_statefulset_status_replicas|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas_current|kube_statefulset_status_replicas_updated|kube_namespace_status_phase|kube_node_info|kube_statefulset_metadata_generation|kube_pod_labels|kube_pod_annotations|kube_horizontalpodautoscaler_status_current_replicas|kube_horizontalpodautoscaler_spec_max_replicas|kube_node_spec_taint|kube_pod_container_status_waiting_reason|kube_job_failed|kube_job_status_start_time|kube_deployment_status_replicas_available|kube_deployment_status_replicas_updated|kube_replicaset_owner|kubernetes_build_info|kube_pod_container_info"
 @nodeexporterRegex_minimal = "node_filesystem_readonly|node_cpu_seconds_total|node_memory_MemAvailable_bytes|node_memory_Buffers_bytes|node_memory_Cached_bytes|node_memory_MemFree_bytes|node_memory_Slab_bytes|node_memory_MemTotal_bytes|node_netstat_Tcp_RetransSegs|node_netstat_Tcp_OutSegs|node_netstat_TcpExt_TCPSynRetrans|node_load1|node_load5|node_load15|node_disk_read_bytes_total|node_disk_written_bytes_total|node_disk_io_time_seconds_total|node_filesystem_size_bytes|node_filesystem_avail_bytes|node_network_receive_bytes_total|node_network_transmit_bytes_total|node_vmstat_pgmajfault|node_network_receive_drop_total|node_network_transmit_drop_total|node_disk_io_time_weighted_seconds_total|node_exporter_build_info|node_time_seconds|node_uname_info|kubernetes_build_info"
 @kappiebasicRegex_minimal = "kappie.*"
+@networkobservabilityRetinaRegex_minimal = "networkobservability.*"
+@networkobservabilityHubbleRegex_minimal = "hubble.*"
+@networkobservabilityCiliumRegex_minimal = "cilium_drop.*|cilium_forward.*"
 @windowsexporterRegex_minimal = "windows_system_system_up_time|windows_cpu_time_total|windows_memory_available_bytes|windows_os_visible_memory_bytes|windows_memory_cache_bytes|windows_memory_modified_page_list_bytes|windows_memory_standby_cache_core_bytes|windows_memory_standby_cache_normal_priority_bytes|windows_memory_standby_cache_reserve_bytes|windows_memory_swap_page_operations_total|windows_logical_disk_read_seconds_total|windows_logical_disk_write_seconds_total|windows_logical_disk_size_bytes|windows_logical_disk_free_bytes|windows_net_bytes_total|windows_net_packets_received_discarded_total|windows_net_packets_outbound_discarded_total|windows_container_available|windows_container_cpu_usage_seconds_total|windows_container_memory_usage_commit_bytes|windows_container_memory_usage_private_working_set_bytes|windows_container_network_receive_bytes_total|windows_container_network_transmit_bytes_total"
 @windowskubeproxyRegex_minimal = "kubeproxy_sync_proxy_rules_duration_seconds|kubeproxy_sync_proxy_rules_duration_seconds_bucket|kubeproxy_sync_proxy_rules_duration_seconds_sum|kubeproxy_sync_proxy_rules_duration_seconds_count|rest_client_requests_total|rest_client_request_duration_seconds|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines"
 
@@ -56,6 +62,9 @@ end
 @kubestateRegex_minimal_mac = "kube_job_status_succeeded|kube_job_spec_completions|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_current_number_scheduled|kube_daemonset_status_number_misscheduled|kube_daemonset_status_number_ready|kube_deployment_status_replicas_ready|kube_pod_container_status_last_terminated_reason|kube_pod_container_status_waiting_reason|kube_pod_container_status_restarts_total|kube_node_status_allocatable|kube_pod_owner|kube_pod_container_resource_requests|kube_pod_status_phase|kube_pod_container_resource_limits|kube_replicaset_owner|kube_resourcequota|kube_namespace_status_phase|kube_node_status_capacity|kube_node_info|kube_pod_info|kube_deployment_spec_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_updated|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas|kube_statefulset_status_replicas_updated|kube_job_status_start_time|kube_job_status_active|kube_job_failed|kube_horizontalpodautoscaler_status_desired_replicas|kube_horizontalpodautoscaler_status_current_replicas|kube_horizontalpodautoscaler_spec_min_replicas|kube_horizontalpodautoscaler_spec_max_replicas|kubernetes_build_info|kube_node_status_condition|kube_node_spec_taint|kube_pod_container_info|kube_.*_labels|kube_.*_annotations|kube_service_info|kube_pod_container_status_running|kube_pod_container_status_waiting|kube_pod_container_status_terminated|kube_pod_container_state_started|kube_pod_created|kube_pod_start_time|kube_pod_init_container_info|kube_pod_init_container_status_terminated|kube_pod_init_container_status_terminated_reason|kube_pod_init_container_status_ready|kube_pod_init_container_resource_limits|kube_pod_init_container_status_running|kube_pod_init_container_status_waiting|kube_pod_init_container_status_restarts_total"
 @nodeexporterRegex_minimal_mac = "node_filesystem_readonly|node_memory_MemTotal_bytes|node_cpu_seconds_total|node_memory_MemAvailable_bytes|node_memory_Buffers_bytes|node_memory_Cached_bytes|node_memory_MemFree_bytes|node_memory_Slab_bytes|node_filesystem_avail_bytes|node_filesystem_size_bytes|node_time_seconds|node_exporter_build_info|node_load1|node_vmstat_pgmajfault|node_network_receive_bytes_total|node_network_transmit_bytes_total|node_network_receive_drop_total|node_network_transmit_drop_total|node_disk_io_time_seconds_total|node_disk_io_time_weighted_seconds_total|node_load5|node_load15|node_disk_read_bytes_total|node_disk_written_bytes_total|node_uname_info|kubernetes_build_info|node_boot_time_seconds"
 @kappiebasicRegex_minimal_mac = "kappie.*"
+@networkobservabilityRetinaRegex_minimal_mac = "networkobservability.*"
+@networkobservabilityHubbleRegex_minimal_mac = "hubble.*"
+@networkobservabilityCiliumRegex_minimal_mac = "cilium_drop.*|cilium_forward.*"
 @windowsexporterRegex_minimal_mac = "windows_system_system_up_time|windows_cpu_time_total|windows_memory_available_bytes|windows_os_visible_memory_bytes|windows_memory_cache_bytes|windows_memory_modified_page_list_bytes|windows_memory_standby_cache_core_bytes|windows_memory_standby_cache_normal_priority_bytes|windows_memory_standby_cache_reserve_bytes|windows_memory_swap_page_operations_total|windows_logical_disk_read_seconds_total|windows_logical_disk_write_seconds_total|windows_logical_disk_size_bytes|windows_logical_disk_free_bytes|windows_net_bytes_total|windows_net_packets_received_discarded_total|windows_net_packets_outbound_discarded_total|windows_container_available|windows_container_cpu_usage_seconds_total|windows_container_memory_usage_commit_bytes|windows_container_memory_usage_private_working_set_bytes|windows_container_network_receive_bytes_total|windows_container_network_transmit_bytes_total"
 @windowskubeproxyRegex_minimal_mac = "kubeproxy_sync_proxy_rules_duration_seconds|kubeproxy_sync_proxy_rules_duration_seconds_bucket|kubeproxy_sync_proxy_rules_duration_seconds_sum|kubeproxy_sync_proxy_rules_duration_seconds_count|rest_client_requests_total|rest_client_request_duration_seconds|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines"
 
@@ -191,6 +200,50 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kappiebasicRegex either not specified or not of type string")
     end
 
+    networkobservabilityRetinaRegex = parsedConfig[:networkobservabilityRetina]
+    if !networkobservabilityRetinaRegex.nil? && networkobservabilityRetinaRegex.kind_of?(String)
+      if !networkobservabilityRetinaRegex.empty?
+        if isValidRegex(networkobservabilityRetinaRegex) == true
+          @networkobservabilityRetinaRegex = networkobservabilityRetinaRegex
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for networkobservabilityRetina")
+        else
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for networkobservabilityRetina")
+        end
+      end
+    else
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "networkobservabilityRetinaRegex either not specified or not of type string")
+    end
+
+    networkobservabilityHubbleRegex = parsedConfig[:networkobservabilityHubble]
+    if !networkobservabilityHubbleRegex.nil? && networkobservabilityHubbleRegex.kind_of?(String)
+      if !networkobservabilityHubbleRegex.empty?
+        if isValidRegex(networkobservabilityHubbleRegex) == true
+          @networkobservabilityHubbleRegex = networkobservabilityHubbleRegex
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for networkobservabilityHubble")
+        else
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for networkobservabilityHubble")
+        end
+      end
+    else
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "networkobservabilityHubbleRegex either not specified or not of type string")
+    end
+
+    networkobservabilityCiliumRegex = parsedConfig[:networkobservabilityCilium]
+    if !networkobservabilityCiliumRegex.nil? && networkobservabilityCiliumRegex.kind_of?(String)
+      if !networkobservabilityCiliumRegex.empty?
+        if isValidRegex(networkobservabilityCiliumRegex) == true
+          @networkobservabilityCiliumRegex = networkobservabilityCiliumRegex
+          ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap metrics keep list regex for networkobservabilityCilium")
+        else
+          ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid keep list regex for networkobservabilityCilium")
+        end
+      end
+    else
+      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "networkobservabilityCiliumRegex either not specified or not of type string")
+    end
+
+
+
     windowsexporterRegex = parsedConfig[:windowsexporter]
     if !windowsexporterRegex.nil? && windowsexporterRegex.kind_of?(String)
       if !windowsexporterRegex.empty?
@@ -264,6 +317,9 @@ def populateRegexValuesWithMinimalIngestionProfile
         @kubestateRegex = @kubestateRegex + "|" + @kubestateRegex_minimal_mac
         @nodeexporterRegex = @nodeexporterRegex + "|" + @nodeexporterRegex_minimal_mac
         @kappiebasicRegex = @kappiebasicRegex + "|" + @kappiebasicRegex_minimal_mac
+        @networkobservabilityRetinaRegex = @networkobservabilityRetinaRegex + "|" + @networkobservabilityRetinaRegex_minimal_mac
+        @networkobservabilityHubbleRegex = @networkobservabilityHubbleRegex + "|" + @networkobservabilityHubbleRegex_minimal_mac
+        @networkobservabilityCiliumRegex = @networkobservabilityCiliumRegex + "|" + @networkobservabilityCiliumRegex_minimal_mac
         @windowsexporterRegex = @windowsexporterRegex + "|" + @windowsexporterRegex_minimal_mac
         @windowskubeproxyRegex = @windowskubeproxyRegex + "|" + @windowskubeproxyRegex_minimal_mac
       else
@@ -276,6 +332,9 @@ def populateRegexValuesWithMinimalIngestionProfile
         @kubestateRegex = @kubestateRegex + "|" + @kubestateRegex_minimal
         @nodeexporterRegex = @nodeexporterRegex + "|" + @nodeexporterRegex_minimal
         @kappiebasicRegex = @kappiebasicRegex + "|" + @kappiebasicRegex_minimal
+        @networkobservabilityRetinaRegex = @networkobservabilityRetinaRegex + "|" + @networkobservabilityRetinaRegex_minimal
+        @networkobservabilityHubbleRegex = @networkobservabilityHubbleRegex + "|" + @networkobservabilityHubbleRegex_minimal
+        @networkobservabilityCiliumRegex = @networkobservabilityCiliumRegex + "|" + @networkobservabilityCiliumRegex_minimal
         @windowsexporterRegex = @windowsexporterRegex + "|" + @windowsexporterRegex_minimal
         @windowskubeproxyRegex = @windowskubeproxyRegex + "|" + @windowskubeproxyRegex_minimal
       end
@@ -318,6 +377,9 @@ regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"] = @windowsexporterRegex
 regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"] = @windowskubeproxyRegex
 regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"] = @podannotationRegex
 regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"] = @kappiebasicRegex
+regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"] = @networkobservabilityRetinaRegex
+regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"] = @networkobservabilityHubbleRegex
+regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"] = @networkobservabilityCiliumRegex
 
 if !file.nil?
   # Close file after writing regex keep list hash
