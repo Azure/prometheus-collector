@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - kaveesh/liveness_timeout
 
 pr:
   autoCancel: true

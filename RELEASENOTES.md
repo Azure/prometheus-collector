@@ -2,7 +2,7 @@
 
 ### Pending
 * Change log -
-  * fix: update windows liveness timeoutSeconds, periodSeconds to 60
+  * fix: update windows liveness timeoutSeconds, periodSeconds to 60 and reduce tasklist usage in liveness probe
 
 
 ## Release 01-09-2024
