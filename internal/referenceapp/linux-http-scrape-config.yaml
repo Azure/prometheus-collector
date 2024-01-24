@@ -1,0 +1,18 @@
+scrape_configs:
+  - job_name: prometheus_ref_app_1
+    scheme: http
+    scrape_interval: 60s
+    kubernetes_sd_configs:
+    - role: pod
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: "prometheus-reference-app"
+    - source_labels: [__address__]
+      action: replace
+      target_label: __param_target
+      regex: ":2113"
+    - source_labels: [__param_target]
+      action: keep
+      regex: "2113"
+    - action: drop
