@@ -18,15 +18,15 @@ for /f "tokens=*" %%a in ('tasklist /fo "table"') do (
     set "output=%%a"
 
     REM Check for MetricsExtension.Native.exe
-    echo !output! | findstr /i "MetricsExtension.Native.exe" > nul
+    echo !output! | findstr /i "MetricsExtension" > nul
     if !errorlevel! equ 0 set MetricsExtension=true
 
     REM Check for MonAgentLauncher.exe
-    echo !output! | findstr /i "MonAgentLauncher.exe" > nul
+    echo !output! | findstr /i "MonAgentLauncher" > nul
     if !errorlevel! equ 0 set MonAgentLauncher=true
 
     REM Check for otelcollector.exe
-    echo !output! | findstr /i "otelcollector.exe" > nul
+    echo !output! | findstr /i "otelcollector" > nul
     if !errorlevel! equ 0 set otelcollector=true
 )
 
