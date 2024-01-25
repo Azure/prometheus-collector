@@ -147,7 +147,6 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 		fmt.Printf("Error creating output file: %v\n", err)
 		return
 	}
-	defer metricsextension_stdout_file.Close() // Close the file when done
 
 	// Create a file to store the stderr
 	metricsextension_stderr_file, err := os.Create("metricsextension_stderr.log")
@@ -155,8 +154,6 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 		fmt.Printf("Error creating output file: %v\n", err)
 		return
 	}
-	defer metricsextension_stderr_file.Close() // Close the file when done
-
 
 	// Create pipes to capture stdout and stderr
     stdout, err := cmd.StdoutPipe()
