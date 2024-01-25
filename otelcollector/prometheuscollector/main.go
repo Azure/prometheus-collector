@@ -116,14 +116,6 @@ func main(){
 		fmtVar("ME_VERSION", meVersion)
 	}
 
-	// Get Ruby version
-	rubyVersion, err := exec.Command("ruby", "--version").Output()
-	if err != nil {
-		fmt.Printf("Error getting Ruby version: %v\n", err)
-	} else {
-		fmtVar("RUBY_VERSION", string(rubyVersion))
-	}
-
 	// Get Golang version
 	golangVersion, err := readVersionFile("/opt/goversion.txt")
 	if err != nil {

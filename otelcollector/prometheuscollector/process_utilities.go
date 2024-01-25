@@ -129,15 +129,17 @@ func startCommandAndWait(command string, args ...string) {
 	}
 }
 
-func copyOutput(src io.Reader, dest io.Writer) {
-	_, err := io.Copy(dest, src)
+func copyOutput(src io.Reader, dest io.Writer, file *os.File) {
+	// Create a multi-writer to write to both the file and os.Stdout/os.Stderr
+	multiWriter := io.MultiWriter(dest, file)
+
+	_, err := io.Copy(multiWriter, src)
 	if err != nil {
 		fmt.Printf("Error copying output: %v\n", err)
 	}
 }
-
 func startMetricsExtensionWithConfigOverrides(configOverrides string) {
-	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Warning", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 	// Create pipes to capture stdout and stderr
     stdout, err := cmd.StdoutPipe()
     if err != nil {
@@ -152,8 +154,8 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
     }
 
 	// Goroutines to copy stdout and stderr to parent process
-	go copyOutput(stdout, os.Stdout)
-	go copyOutput(stderr, os.Stderr)
+	go copyOutput(stdout, os.Stdout, "metricsextension_stdout.log")
+	go copyOutput(stderr, os.Stderr, "metricsextension_sterr.log")
 
     // Start the command
     err = cmd.Start()
