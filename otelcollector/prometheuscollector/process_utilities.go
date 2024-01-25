@@ -140,6 +140,24 @@ func copyOutput(src io.Reader, dest io.Writer, file *os.File) {
 }
 func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+
+	// Create a file to store the stdoutput
+	metricsextension_stdout_file, err := os.Create("metricsextension_stdout.log")
+	if err != nil {
+		fmt.Printf("Error creating output file: %v\n", err)
+		return
+	}
+	defer metricsextension_stdout_file.Close() // Close the file when done
+
+	// Create a file to store the stderr
+	metricsextension_stderr_file, err := os.Create("metricsextension_stderr.log")
+	if err != nil {
+		fmt.Printf("Error creating output file: %v\n", err)
+		return
+	}
+	defer metricsextension_stderr_file.Close() // Close the file when done
+
+
 	// Create pipes to capture stdout and stderr
     stdout, err := cmd.StdoutPipe()
     if err != nil {
@@ -154,8 +172,8 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
     }
 
 	// Goroutines to copy stdout and stderr to parent process
-	go copyOutput(stdout, os.Stdout, "metricsextension_stdout.log")
-	go copyOutput(stderr, os.Stderr, "metricsextension_sterr.log")
+	go copyOutput(stdout, os.Stdout, metricsextension_stdout_file)
+	go copyOutput(stderr, os.Stderr, metricsextension_stderr_file)
 
     // Start the command
     err = cmd.Start()
