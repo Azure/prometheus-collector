@@ -24,6 +24,6 @@ version: ${IMAGE_TAG}
 appVersion: "${IMAGE_TAG}"
 dependencies:
 - name: prometheus-node-exporter
-  version: "4.21.0"
+  version: "4.26.0"
   repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
   condition: AzureMonitorMetrics.ArcExtension
