@@ -64,7 +64,9 @@ ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -a -installsuffix -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o targetallocator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -a -installsuffix -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o targetallocator . ; fi
 
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as targetallocator-wrapper-builder
+# # # FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as targetallocator-wrapper-builder
+FROM --platform=linux/amd64 mcr.microsoft.com/oss/go/microsoft/golang:1.21 as targetallocator-wrapper-builder
+
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 COPY --from=ta-builder /app/targetallocator ./targetallocator-wrapper-builder/
