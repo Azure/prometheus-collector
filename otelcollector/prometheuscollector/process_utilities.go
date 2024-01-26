@@ -139,6 +139,14 @@ func startCommandAndWait(command string, args ...string) {
 // 	}
 // }
 
+func copyOutputPipe(src io.Reader, dest io.Writer) {
+	_, err := io.Copy(dest, src)
+
+	if err != nil {
+		fmt.Printf("Error copying output: %v\n", err)
+	}
+}
+
 func copyOutputFile(src io.Reader, file *os.File) {
 	_, err := io.Copy(file, src)
 
@@ -181,7 +189,7 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	// For now only copy STDERR logs
 	// go copyOutputFile(stdout, metricsextension_stdout_file)
 	// go copyOutputMulti(stderr, os.Stderr, metricsextension_stderr_file)
-	go copyOutputFile(stderr, metricsextension_stderr_file)
+	go copyOutputPipe(stderr, os.Stderr)
 
     // Start the command
     err = cmd.Start()
