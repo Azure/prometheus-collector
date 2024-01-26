@@ -69,7 +69,7 @@ FROM --platform=linux/amd64 mcr.microsoft.com/oss/go/microsoft/golang:1.21 as ta
 
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
-COPY --from=ta-builder /app/targetallocator ./targetallocator-wrapper-builder/
+# COPY --from=ta-builder /app/targetallocator ./targetallocator-wrapper-builder/
 COPY ./targetallocator-wrapper-builder/go.mod ./targetallocator-wrapper-builder/go.sum ./targetallocator-wrapper-builder/
 RUN go version > goversion.txt
 WORKDIR /src/targetallocator-wrapper-builder
@@ -130,7 +130,7 @@ WORKDIR /opt/
 
 # Copy the pre-built binary file from the previous stage
 COPY --from=targetallocator-wrapper-builder /src/targetallocator-wrapper-builder/main-targetallocator .
-
+COPY --from=ta-builder /app/targetallocator .
 ENTRYPOINT ["./main-targetallocator"]
 
 # ENTRYPOINT [ "/bin/bash" ]
