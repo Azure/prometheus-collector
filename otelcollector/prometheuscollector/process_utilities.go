@@ -129,15 +129,15 @@ func startCommandAndWait(command string, args ...string) {
 	}
 }
 
-func copyOutputMulti(src io.Reader, dest io.Writer, file *os.File) {
-	// Create a multi-writer to write to both the file and os.Stdout/os.Stderr
-	multiWriter := io.MultiWriter(dest, file)
+// func copyOutputMulti(src io.Reader, dest io.Writer, file *os.File) {
+// 	// Create a multi-writer to write to both the file and os.Stdout/os.Stderr
+// 	multiWriter := io.MultiWriter(dest, file)
 
-	_, err := io.Copy(multiWriter, src)
-	if err != nil {
-		fmt.Printf("Error copying output: %v\n", err)
-	}
-}
+// 	_, err := io.Copy(multiWriter, src)
+// 	if err != nil {
+// 		fmt.Printf("Error copying output: %v\n", err)
+// 	}
+// }
 
 func copyOutputFile(src io.Reader, file *os.File) {
 	_, err := io.Copy(file, src)
@@ -180,7 +180,8 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	// Goroutines to copy stdout and stderr to parent process
 	// For now only copy STDERR logs
 	// go copyOutputFile(stdout, metricsextension_stdout_file)
-	go copyOutputMulti(stderr, os.Stderr, metricsextension_stderr_file)
+	// go copyOutputMulti(stderr, os.Stderr, metricsextension_stderr_file)
+	go copyOutputFile(stderr, metricsextension_stderr_file)
 
     // Start the command
     err = cmd.Start()
@@ -193,38 +194,39 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 func startMdsd() {
 	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-D")
 	// Create a file to store the stdoutput
-	mdsd_stdout_file, err := os.Create("mdsd_stdout.log")
-	if err != nil {
-		fmt.Printf("Error creating output file: %v\n", err)
-		return
-	}
+	// mdsd_stdout_file, err := os.Create("mdsd_stdout.log")
+	// if err != nil {
+	// 	fmt.Printf("Error creating output file: %v\n", err)
+	// 	return
+	// }
 
-	// Create a file to store the stderr
-	mdsd_stderr_file, err := os.Create("mdsd_stderr.log")
-	if err != nil {
-		fmt.Printf("Error creating output file: %v\n", err)
-		return
-	}
+	// // Create a file to store the stderr
+	// mdsd_stderr_file, err := os.Create("mdsd_stderr.log")
+	// if err != nil {
+	// 	fmt.Printf("Error creating output file: %v\n", err)
+	// 	return
+	// }
 
-	// Create pipes to capture stdout and stderr
-    stdout, err := cmd.StdoutPipe()
-    if err != nil {
-        fmt.Printf("Error creating stdout pipe: %v\n", err)
-        return
-    }
+	// // Create pipes to capture stdout and stderr
+    // stdout, err := cmd.StdoutPipe()
+    // if err != nil {
+    //     fmt.Printf("Error creating stdout pipe: %v\n", err)
+    //     return
+    // }
 
-    stderr, err := cmd.StderrPipe()
-    if err != nil {
-        fmt.Printf("Error creating stderr pipe: %v\n", err)
-        return
-    }
+    // stderr, err := cmd.StderrPipe()
+    // if err != nil {
+    //     fmt.Printf("Error creating stderr pipe: %v\n", err)
+    //     return
+    // }
 
-	// Goroutines to copy stdout and stderr to parent process
-	go copyOutputFile(stdout, mdsd_stdout_file)
-	go copyOutputMulti(stderr, os.Stderr, mdsd_stderr_file)
+	// // Goroutines to copy stdout and stderr to parent process
+	// go copyOutputFile(stdout, mdsd_stdout_file)
+	// go copyOutputMulti(stderr, os.Stderr, mdsd_stderr_file)
 
     // Start the command
-    err = cmd.Start()
+    // err = cmd.Start()
+    err := cmd.Start()
     if err != nil {
         fmt.Printf("Error starting mdsd: %v\n", err)
         return
