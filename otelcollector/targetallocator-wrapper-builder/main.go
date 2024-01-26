@@ -144,6 +144,6 @@ func main() {
 	}
 
 	// Start targetallocator
-	startCommand("targetallocator")
+	startCommand("/opt/targetallocator")
 
 }
