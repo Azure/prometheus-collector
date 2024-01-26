@@ -25,16 +25,18 @@ FROM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as ta-builder
 
 WORKDIR /app
 # Copy prometheus-operator repo files
-COPY ../../../otel-allocator/prometheus-operator/go.mod ../../../otel-allocator/prometheus-operator/go.sum ./prometheus-operator/
-
+###COPY ../../../otel-allocator/prometheus-operator/go.mod ../../../otel-allocator/prometheus-operator/go.sum ./prometheus-operator/
+COPY ./otel-allocator/prometheus-operator/go.mod ./otel-allocator/prometheus-operator/go.sum ./prometheus-operator/
 WORKDIR /app
-COPY ../../../otel-allocator/prometheus-operator/pkg/apis/monitoring/go.mod ../../../otel-allocator/prometheus-operator/pkg/apis/monitoring/go.sum ./prometheus-operator/pkg/apis/monitoring/
+###COPY ../../../otel-allocator/prometheus-operator/pkg/apis/monitoring/go.mod ../../../otel-allocator/prometheus-operator/pkg/apis/monitoring/go.sum ./prometheus-operator/pkg/apis/monitoring/
+COPY ./otel-allocator/prometheus-operator/pkg/apis/monitoring/go.mod ./otel-allocator/prometheus-operator/pkg/apis/monitoring/go.sum ./prometheus-operator/pkg/apis/monitoring/
 WORKDIR /app/prometheus-operator/pkg/apis/monitoring/
 RUN go mod download
 
 
 WORKDIR /app
-COPY ../../../otel-allocator/prometheus-operator/pkg/client/go.mod ../../../otel-allocator/prometheus-operator/pkg/client/go.sum ./prometheus-operator/pkg/client/
+# # # COPY ../../../otel-allocator/prometheus-operator/pkg/client/go.mod ../../../otel-allocator/prometheus-operator/pkg/client/go.sum ./prometheus-operator/pkg/client/
+COPY ./otel-allocator/prometheus-operator/pkg/client/go.mod ./otel-allocator/prometheus-operator/pkg/client/go.sum ./prometheus-operator/pkg/client/
 WORKDIR /app/prometheus-operator/pkg/client/
 RUN go mod download
 
@@ -43,14 +45,19 @@ RUN go mod download
 
 WORKDIR /app
 
-COPY ../../../otel-allocator/prometheus-operator /app/prometheus-operator
+# # # COPY ../../../otel-allocator/prometheus-operator /app/prometheus-operator
+COPY ./otel-allocator/prometheus-operator /app/prometheus-operator
+
 
 # Copy go mod and sum files
-COPY ../../../otel-allocator/go.mod ../../../otel-allocator/go.sum ./
+COPY ./otel-allocator/go.mod ./otel-allocator/go.sum ./
+# # # COPY ../../../otel-allocator/go.mod ../../../otel-allocator/go.sum ./
 
 RUN go mod download
 
-COPY ../../../otel-allocator .
+# # # COPY ../../../otel-allocator .
+COPY ./otel-allocator .
+
 
 ARG TARGETOS TARGETARCH
 # Build the Go app
