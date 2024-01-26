@@ -32,7 +32,8 @@ spec:
         args:
         - --enable-prometheus-cr-watcher
         - --reload-config
-        image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+        #image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+        image: "docker.io/rashmichandrashekarms/ta:ns-sel-val-5"
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -67,12 +68,20 @@ spec:
         volumeMounts:
         - mountPath: /conf
           name: ta-config-shared
+        # livenessProbe:
+        #   httpGet:
+        #     path: /metrics
+        #     port: 8080
+        #   initialDelaySeconds: 60
+        #   periodSeconds: 3
         livenessProbe:
           httpGet:
-            path: /metrics
+            path: /health
             port: 8080
           initialDelaySeconds: 60
-          periodSeconds: 3
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
       - name: config-reader
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
         imagePullPolicy: IfNotPresent
