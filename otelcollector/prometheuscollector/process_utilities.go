@@ -166,11 +166,11 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	// }
 
 	// Create a file to store the stderr
-	metricsextension_stderr_file, err := os.Create("metricsextension_stderr.log")
-	if err != nil {
-		fmt.Printf("Error creating output file: %v\n", err)
-		return
-	}
+	// metricsextension_stderr_file, err := os.Create("metricsextension_stderr.log")
+	// if err != nil {
+	// 	fmt.Printf("Error creating output file: %v\n", err)
+	// 	return
+	// }
 
 	// // Create pipes to capture stdout and stderr
     // stdout, err := cmd.StdoutPipe()
