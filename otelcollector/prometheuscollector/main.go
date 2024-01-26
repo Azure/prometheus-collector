@@ -98,7 +98,7 @@ func main(){
 	time.Sleep(10 * time.Second)
 	
 	fmt.Println("Starting MDSD")
-	startCommand("/usr/sbin/mdsd", "-a", "-A", "-e", "/opt/microsoft/linuxmonagent/mdsd.err", "-w", "/opt/microsoft/linuxmonagent/mdsd.warn", "-o", "/opt/microsoft/linuxmonagent/mdsd.info", "-q", "/opt/microsoft/linuxmonagent/mdsd.qos")
+	startMdsd()
 	
 	printMdsdVersion()
 	
