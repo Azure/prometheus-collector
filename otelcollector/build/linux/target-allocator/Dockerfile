@@ -60,7 +60,7 @@ RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as targetallocator-wrapper-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
-COPY --from=ta-builder /app/targetallocator ./targetallocator-wrapper-builder
+COPY --from=ta-builder /app/targetallocator ./targetallocator-wrapper-builder/
 COPY ./targetallocator-wrapper-builder/go.mod ./targetallocator-wrapper-builder/go.sum ./targetallocator-wrapper-builder/
 RUN go version > goversion.txt
 WORKDIR /src/targetallocator-wrapper-builder
