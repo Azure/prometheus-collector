@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"time"
 )
 
 var inotify_config_output_file = "/opt/inotifyoutput-ta-config.txt"
@@ -145,14 +144,14 @@ func main() {
 	}
 
 	// Start targetallocator
-	//startCommand("/opt/targetallocator", "--enable-prometheus-cr-watcher")
-	go forever()
-	select {} // block forever
+	startCommand("/opt/targetallocator", "--enable-prometheus-cr-watcher")
+	// go forever()
+	// select {} // block forever
 }
 
-func forever() {
-	for {
-		fmt.Printf("%v+\n", time.Now())
-		time.Sleep(time.Second)
-	}
-}
+// func forever() {
+// 	for {
+// 		fmt.Printf("%v+\n", time.Now())
+// 		time.Sleep(time.Second)
+// 	}
+// }
