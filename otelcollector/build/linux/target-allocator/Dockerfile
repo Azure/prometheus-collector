@@ -50,7 +50,7 @@ COPY ../../../otel-allocator/go.mod ../../../otel-allocator/go.sum ./
 
 RUN go mod download
 
-COPY . .
+COPY ../../../otel-allocator .
 
 ARG TARGETOS TARGETARCH
 # Build the Go app
