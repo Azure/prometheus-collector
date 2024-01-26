@@ -46,7 +46,7 @@ WORKDIR /app
 COPY ../../../otel-allocator/prometheus-operator /app/prometheus-operator
 
 # Copy go mod and sum files
-COPY go.mod go.sum ./
+COPY ../../../otel-allocator/go.mod ../../../otel-allocator/go.sum ./
 
 RUN go mod download
 
