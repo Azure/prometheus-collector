@@ -60,17 +60,17 @@ RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as targetallocator-wrapper-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
-COPY ./configuration-reader-builder/go.mod ./configuration-reader-builder/go.sum ./configuration-reader-builder/
+COPY --from=ta-builder /app/targetallocator ./targetallocator-wrapper-builder
+COPY ./targetallocator-wrapper-builder/go.mod ./targetallocator-wrapper-builder/go.sum ./targetallocator-wrapper-builder/
 RUN go version > goversion.txt
-WORKDIR /src/configuration-reader-builder
+WORKDIR /src/targetallocator-wrapper-builder
 RUN go mod download
-COPY ./configuration-reader-builder /src/configuration-reader-builder
+COPY ./targetallocator-wrapper-builder /src/targetallocator-wrapper-builder
 ARG TARGETOS TARGETARCH
-RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o configurationreader . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o configurationreader . ; fi
+RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main-targetallocator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main-targetallocator . ; fi
 
 
 # Build final exe
-
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 ENV PATH="/busybin:${PATH}"
 ENV OS_TYPE "linux"
@@ -120,7 +120,7 @@ COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so
 WORKDIR /opt/
 
 # Copy the pre-built binary file from the previous stage
-COPY --from=ta-builder /app/targetallocator .
+COPY --from=targetallocator-wrapper-builder /src/targetallocator-wrapper-builder/main-targetallocator .
 
 ENTRYPOINT ["./main-targetallocator"]
 
