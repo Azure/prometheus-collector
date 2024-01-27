@@ -44,6 +44,7 @@ COPY ./prometheuscollector/go.mod ./prometheuscollector/*.go .
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
+RUN go get
 RUN go build -o prometheuscollector .
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
@@ -84,7 +85,8 @@ ARG TARGETARCH
 RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update -y
-RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
+# RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
+RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
@@ -116,26 +118,26 @@ COPY --from=builder /var/opt/microsoft /var/opt/microsoft
 
 # executables
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
-COPY --from=builder /usr/bin/ruby /usr/bin/ruby
-COPY --from=builder /usr/lib/ruby /usr/lib/ruby
+# COPY --from=builder /usr/bin/ruby /usr/bin/ruby
+# COPY --from=builder /usr/lib/ruby /usr/lib/ruby
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
 # inotifywait dependencies
-COPY --from=builder /lib/libinotifytools.so.0 /lib/
+COPY --from=builder /lib/libinotifytools.so.0 /lib/libc.so.6 /lib/
 # ruby dependencies
-COPY --from=builder /usr/lib/libruby.so.3.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
-# ruby re2 dependencies
-COPY --from=builder /usr/lib/libre2.so.0a /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
+# COPY --from=builder /usr/lib/libruby.so.3.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
+# # ruby re2 dependencies
+# COPY --from=builder /usr/lib/libre2.so.0a /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
 # metricsextension dependencies
 COPY --from=builder /lib/libprotobuf.so.28 /lib/libgrpc++.so.1.42 /lib/libabsl_synchronization.so.2206.0.0 /lib/libboost_filesystem.so.1.76.0 /lib/libboost_coroutine.so.1.76.0 /lib/libboost_thread.so.1.76.0 /lib/libcpprest.so.2.10 /lib/libssl.so.1.1 /lib/libcrypto.so.1.1 /lib/libuuid.so.1 /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libz.so.1 /lib64/libgrpc.so.20 /lib/libabsl_raw_hash_set.so.2206.0.0 /lib/libabsl_hash.so.2206.0.0 /lib/libabsl_statusor.so.2206.0.0 /lib/libgpr.so.20 /lib/libupb.so.20 /lib/libabsl_status.so.2206.0.0 /lib/libabsl_time.so.2206.0.0 /lib/libabsl_strings.so.2206.0.0 /lib/libabsl_stacktrace.so.2206.0.0  /lib/libabsl_symbolize.so.2206.0.0 /lib/libabsl_malloc_internal.so.2206.0.0 /lib/libabsl_base.so.2206.0.0 /lib/libabsl_spinlock_wait.so.2206.0.0 /lib/libabsl_raw_logging_internal.so.2206.0.0 /lib/libboost_chrono.so.1.76.0 /lib/libboost_context.so.1.76.0 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libcares.so.2 /lib/libaddress_sorting.so.20 /lib/libre2.so.0a /lib/libabsl_cord.so.2206.0.0 /lib/libabsl_str_format_internal.so.2206.0.0 /lib/libabsl_time_zone.so.2206.0.0 /lib/libabsl_city.so.2206.0.0 /lib/libabsl_low_level_hash.so.2206.0.0 /lib/libabsl_cordz_info.so.2206.0.0 /lib/libabsl_strerror.so.2206.0.0 /lib/libabsl_int128.so.2206.0.0 /lib/libabsl_strings_internal.so.2206.0.0 /lib/libabsl_debugging_internal.so.2206.0.0 /lib/libabsl_demangle_internal.so.2206.0.0 /lib/libbrotlicommon.so.1 /lib/libabsl_cord_internal.so.2206.0.0 /lib/libabsl_cordz_functions.so.2206.0.0 /lib/libabsl_cordz_handle.so.2206.0.0 /lib/libabsl_throw_delegate.so.2206.0.0 /lib/libabsl_exponential_biased.so.2206.0.0 /lib/
 # mdsd dependencies
 COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
 COPY --from=builder /usr/local/lib/libtcmalloc_minimal.so.4 /usr/local/lib/
 
-# curl and its dependencies (needed for liveness probe to restart on configmap update?)
-COPY --from=builder /usr/bin/curl /usr/bin/
-COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libssl.so.1.1   /lib/libcrypto.so.1.1  /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
-COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
+# # curl and its dependencies (needed for liveness probe to restart on configmap update?)
+# COPY --from=builder /usr/bin/curl /usr/bin/
+# COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libssl.so.1.1   /lib/libcrypto.so.1.1  /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
+# COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
 
 # debug image
 # COPY --from=builder /busybin /busybin

@@ -98,7 +98,7 @@ func main(){
 	time.Sleep(10 * time.Second)
 	
 	fmt.Println("Starting MDSD")
-	startCommand("/usr/sbin/mdsd", "-a", "-A", "-e", "/opt/microsoft/linuxmonagent/mdsd.err", "-w", "/opt/microsoft/linuxmonagent/mdsd.warn", "-o", "/opt/microsoft/linuxmonagent/mdsd.info", "-q", "/opt/microsoft/linuxmonagent/mdsd.qos")
+	startMdsd()
 	
 	printMdsdVersion()
 	
@@ -114,14 +114,6 @@ func main(){
 		fmt.Printf("Error reading ME version file: %v\n", err)
 	} else {
 		fmtVar("ME_VERSION", meVersion)
-	}
-
-	// Get Ruby version
-	rubyVersion, err := exec.Command("ruby", "--version").Output()
-	if err != nil {
-		fmt.Printf("Error getting Ruby version: %v\n", err)
-	} else {
-		fmtVar("RUBY_VERSION", string(rubyVersion))
 	}
 
 	// Get Golang version
