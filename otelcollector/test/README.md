@@ -130,6 +130,19 @@ In the case of E2E tests, the coding language does not matter since we are not t
 
 These tests can be run on a dev cluster that you have kubeconfig/kubectl access to, or can be run directly inside CI/CD kubernetes clusters by using TestKube.
 
+### Test Filtering for Different Environments
+The ```Label("labelName")``` Ginkgo Decorator can be added to any test. This can be used when running the test to filter which tests should be run, depending on the environment or settings enabled.
+
+For example, some tests have the labels ```"arc-extension"``` or ```"operator"``` that should only be run if the environment has the Arc extension or has the operator enabled.
+
+To run tests for the addon without the operator enabled, run
+
+```
+ginkgo -p --label=filter '!(operator,arc-extension)'
+```
+
+In TestKube, this extra command can be added to the test in `Settings` -> `Variables and Secrets` -> `Arguments`.
+
 # TestKube
 [Testkube](https://docs.testkube.io/) is an OSS runner framework for running the tests inside a Kubernetes cluster. It is deployed as a helm chart on the cluster. Ginkgo is included as one of the out-of-the-box executors supported.
 

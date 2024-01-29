@@ -15,7 +15,7 @@ var _ = DescribeTable("The liveness probe should restart the replica pod", Order
  		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for all processes in pod to start up before running any other tests
-		time.Sleep(60 * time.Second)
+		time.Sleep(90 * time.Second)
  	},
  	Entry("when otelcollector is not running", "kube-system", "rsName", "ama-metrics", "prometheus-collector", "OpenTelemetryCollector is not running", "otelcollector", int64(120)),
 	Entry("when MetricsExtension is not running", "kube-system", "rsName", "ama-metrics", "prometheus-collector", "Metrics Extension is not running (configuration exists)", "MetricsExtension", int64(120)),
@@ -28,7 +28,7 @@ var _ = DescribeTable("The liveness probe should restart the daemonset pod", Ord
  		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for all processes in pod to start up before running any other tests
-		time.Sleep(60 * time.Second)
+		time.Sleep(90 * time.Second)
  	},
  	Entry("when otelcollector is not running", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", "OpenTelemetryCollector is not running", "otelcollector", int64(120)),
 	Entry("when MetricsExtension is not running", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", "Metrics Extension is not running (configuration exists)", "MetricsExtension", int64(120)),
