@@ -138,9 +138,14 @@ WORKDIR /opt/
 COPY --from=targetallocator-wrapper-builder /src/targetallocator-wrapper-builder/main-targetallocator .
 COPY --from=targetallocator-wrapper-builder /src/targetallocator-wrapper-builder/main-with-sleep/main-targetallocator-with-sleep .
 COPY --from=ta-builder /app/targetallocator .
-ENTRYPOINT ["./main-targetallocator-with-sleep"]
 
-#ENTRYPOINT ["./main-targetallocator"]
+
+# Expose the port on which the application listens
+EXPOSE 8080
+
+#ENTRYPOINT ["./main-targetallocator-with-sleep"]
+
+ENTRYPOINT ["./main-targetallocator"]
 
 # ENTRYPOINT [ "/bin/bash" ]
 # CMD [ "/opt/main-configreader.sh" ]
