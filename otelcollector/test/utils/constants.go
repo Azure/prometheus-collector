@@ -5,5 +5,6 @@ var(
 	LogLineErrorsToExclude = [...]string{
 		"\"filepath\":\"/MetricsExtensionConsoleDebugLog.log\"",
 		"create or renew cluster identity error",
+		"get token from status error",
 	}
 )
