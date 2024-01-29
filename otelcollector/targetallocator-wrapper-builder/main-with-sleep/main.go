@@ -1,4 +1,4 @@
-package main_with_sleep
+package main
 
 import (
 	"fmt"
