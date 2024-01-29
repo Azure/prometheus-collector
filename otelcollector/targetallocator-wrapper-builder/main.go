@@ -147,7 +147,7 @@ func main() {
 	startCommand("/opt/targetallocator", "--enable-prometheus-cr-watcher")
 
 	http.HandleFunc("/health", healthHandler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8081", nil)
 	// go forever()
 	// select {} // block forever
 }
