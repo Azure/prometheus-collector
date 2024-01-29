@@ -83,7 +83,6 @@ func CheckContainerLogsForErrors(clientset *kubernetes.Clientset, namespace, lab
 						return fmt.Errorf("Logs for container %s in pod %s contain errors:\n %s", container.Name, pod.Name, line)
 					}
 				}
-				return fmt.Errorf("Logs for container %s in pod %s contain errors", container.Name, pod.Name)
 			}
 		}
 	}
@@ -97,7 +96,7 @@ func GetPodsWithLabel(clientset *kubernetes.Clientset, namespace string, labelKe
 	if err != nil {
 		return nil, err
 	}
-	if podList == nil {
+	if podList == nil || len(podList.Items) == 0{
 		return nil, fmt.Errorf("no pods found with label %s=%s", labelKey, labelValue)
 	}
 
@@ -240,6 +239,27 @@ func CheckLivenessProbeRestartForProcess(K8sClient *kubernetes.Clientset, Cfg *r
 			}
 		}
 		break
+	}
+
+	return nil
+}
+
+func CheckIfAllContainersAreRunning(clientset *kubernetes.Clientset, namespace, labelKey string, labelValue string) (error) {
+	pods, err := GetPodsWithLabel(clientset, namespace, labelKey, labelValue)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Error getting pods with the specified labels: %v", err))
+	}
+
+	for _, pod := range pods {
+		if pod.Status.Phase != corev1.PodRunning {
+			return errors.New(fmt.Sprintf("Pod is not runinng. Phase is: %v", pod.Status.Phase))
+		}
+
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			if containerStatus.State.Running == nil {
+				return errors.New(fmt.Sprintf("Container %s is not running", containerStatus.Name))
+			}
+		}
 	}
 
 	return nil
