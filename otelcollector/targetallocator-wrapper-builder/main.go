@@ -93,7 +93,7 @@ func startCommand(command string, args ...string) {
 	// }
 
 	// Start the command
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
 		fmt.Printf("Error starting command: %v\n", err)
 		return
