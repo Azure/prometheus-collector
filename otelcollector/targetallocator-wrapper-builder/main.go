@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -10,35 +11,35 @@ import (
 
 var inotify_config_output_file = "/opt/inotifyoutput-ta-config.txt"
 
-func monitorInotify(outputFile string) error {
-	// Start inotify to watch for changes
-	fmt.Println("Starting inotify for watching config map update")
+// func monitorInotify(outputFile string) error {
+// 	// Start inotify to watch for changes
+// 	fmt.Println("Starting inotify for watching config map update")
 
-	_, err := os.Create(outputFile)
-	if err != nil {
-		log.Fatalf("Error creating output file: %v\n", err)
-	}
+// 	_, err := os.Create(outputFile)
+// 	if err != nil {
+// 		log.Fatalf("Error creating output file: %v\n", err)
+// 	}
 
-	// Define the command to start inotify
-	inotifyCommand := exec.Command(
-		"inotifywait",
-		"/etc/config/settings",
-		"--daemon",
-		"--recursive",
-		"--outfile", outputFile,
-		"--event", "create,delete",
-		"--format", "%e : %T",
-		"--timefmt", "+%s",
-	)
+// 	// Define the command to start inotify
+// 	inotifyCommand := exec.Command(
+// 		"inotifywait",
+// 		"/etc/config/settings",
+// 		"--daemon",
+// 		"--recursive",
+// 		"--outfile", outputFile,
+// 		"--event", "create,delete",
+// 		"--format", "%e : %T",
+// 		"--timefmt", "+%s",
+// 	)
 
-	// Start the inotify process
-	err = inotifyCommand.Start()
-	if err != nil {
-		log.Fatalf("Error starting inotify process: %v\n", err)
-	}
+// 	// Start the inotify process
+// 	err = inotifyCommand.Start()
+// 	if err != nil {
+// 		log.Fatalf("Error starting inotify process: %v\n", err)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func hasConfigChanged(filePath string) bool {
 	if _, err := os.Stat(filePath); err == nil {
@@ -80,35 +81,35 @@ func startCommand(command string, args ...string) {
 	// 	fmt.Println(v)
 	// }
 	// Create pipes to capture stdout and stderr
-	// stdout, err := cmd.StdoutPipe()
-	// if err != nil {
-	// 	fmt.Printf("Error creating stdout pipe: %v\n", err)
-	// 	return
-	// }
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Printf("Error creating stdout pipe: %v\n", err)
+		return
+	}
 
-	// stderr, err := cmd.StderrPipe()
-	// if err != nil {
-	// 	fmt.Printf("Error creating stderr pipe: %v\n", err)
-	// 	return
-	// }
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		fmt.Printf("Error creating stderr pipe: %v\n", err)
+		return
+	}
 
 	// Start the command
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		fmt.Printf("Error starting command: %v\n", err)
 		return
 	}
 
 	// Create goroutines to capture and print stdout and stderr
-	// go func() {
-	// 	stdoutBytes, _ := ioutil.ReadAll(stdout)
-	// 	fmt.Print(string(stdoutBytes))
-	// }()
+	go func() {
+		stdoutBytes, _ := ioutil.ReadAll(stdout)
+		fmt.Print(string(stdoutBytes))
+	}()
 
-	// go func() {
-	// 	stderrBytes, _ := ioutil.ReadAll(stderr)
-	// 	fmt.Print(string(stderrBytes))
-	// }()
+	go func() {
+		stderrBytes, _ := ioutil.ReadAll(stderr)
+		fmt.Print(string(stderrBytes))
+	}()
 }
 
 func main() {
@@ -144,6 +145,9 @@ func main() {
 
 	// Start targetallocator
 	startCommand("/opt/targetallocator", "--enable-prometheus-cr-watcher")
+
+	http.HandleFunc("/health", healthHandler)
+	http.ListenAndServe(":8080", nil)
 	// go forever()
 	// select {} // block forever
 }
