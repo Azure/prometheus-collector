@@ -143,6 +143,10 @@ COPY --from=ta-builder /app/targetallocator .
 # Expose the port on which the application listens
 EXPOSE 8080
 
+# Expose the port for livenss probe
+EXPOSE 8081
+
+
 #ENTRYPOINT ["./main-targetallocator-with-sleep"]
 
 ENTRYPOINT ["./main-targetallocator"]
