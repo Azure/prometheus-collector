@@ -78,6 +78,12 @@ COPY ./targetallocator-wrapper-builder /src/targetallocator-wrapper-builder
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main-targetallocator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main-targetallocator . ; fi
 
+# with sleep
+COPY ./targetallocator-wrapper-builder/main-with-sleep /src/targetallocator-wrapper-builder/main-with-sleep
+WORKDIR /src/targetallocator-wrapper-builder/main-with-sleep
+RUN go mod download
+RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main-targetallocator-with-sleep . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main-targetallocator-with-sleep . ; fi
+
 
 # Build final exe
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
@@ -130,8 +136,11 @@ WORKDIR /opt/
 
 # Copy the pre-built binary file from the previous stage
 COPY --from=targetallocator-wrapper-builder /src/targetallocator-wrapper-builder/main-targetallocator .
+COPY --from=targetallocator-wrapper-builder /src/targetallocator-wrapper-builder/main-with-sleep/main-targetallocator-with-sleep .
 COPY --from=ta-builder /app/targetallocator .
-ENTRYPOINT ["./main-targetallocator"]
+ENTRYPOINT ["./main-targetallocator-with-sleep"]
+
+#ENTRYPOINT ["./main-targetallocator"]
 
 # ENTRYPOINT [ "/bin/bash" ]
 # CMD [ "/opt/main-configreader.sh" ]
