@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -81,17 +80,17 @@ func startCommand(command string, args ...string) {
 	// 	fmt.Println(v)
 	// }
 	// Create pipes to capture stdout and stderr
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Printf("Error creating stdout pipe: %v\n", err)
-		return
-	}
+	// stdout, err := cmd.StdoutPipe()
+	// if err != nil {
+	// 	fmt.Printf("Error creating stdout pipe: %v\n", err)
+	// 	return
+	// }
 
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		fmt.Printf("Error creating stderr pipe: %v\n", err)
-		return
-	}
+	// stderr, err := cmd.StderrPipe()
+	// if err != nil {
+	// 	fmt.Printf("Error creating stderr pipe: %v\n", err)
+	// 	return
+	// }
 
 	// Start the command
 	err = cmd.Start()
@@ -101,15 +100,15 @@ func startCommand(command string, args ...string) {
 	}
 
 	// Create goroutines to capture and print stdout and stderr
-	go func() {
-		stdoutBytes, _ := ioutil.ReadAll(stdout)
-		fmt.Print(string(stdoutBytes))
-	}()
+	// go func() {
+	// 	stdoutBytes, _ := ioutil.ReadAll(stdout)
+	// 	fmt.Print(string(stdoutBytes))
+	// }()
 
-	go func() {
-		stderrBytes, _ := ioutil.ReadAll(stderr)
-		fmt.Print(string(stderrBytes))
-	}()
+	// go func() {
+	// 	stderrBytes, _ := ioutil.ReadAll(stderr)
+	// 	fmt.Print(string(stderrBytes))
+	// }()
 }
 
 func main() {
