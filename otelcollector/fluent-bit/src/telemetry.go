@@ -834,15 +834,15 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 
 func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		metricName, ok := ToString(record["metricName"])
-		if !ok {
+		metricName := ToString(record["metricName"])
+		if metricName == "" {
 			message := fmt.Sprintf("metricName is not a string")
 			Log(message)
 			SendException(message)
 			return 0
 		}
-		promMetrics, ok := record["promMetrics"].(float64)
-		if !ok {
+		promMetrics := record["promMetrics"].(float64)
+		if promMetrics == "" {
 			message := fmt.Sprintf("promMetrics is not a float64 value")
 			Log(message)
 			SendException(message)
@@ -857,8 +857,8 @@ func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 
-		promMetrics, ok := record["promMetrics"].(float64)
-		if !ok {
+		promMetrics := record["promMetrics"].(float64)
+		if promMetrics == "" {
 			message := fmt.Sprintf("promMetrics is not a float64 value")
 			Log(message)
 			SendException(message)
@@ -872,8 +872,8 @@ func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		mecpuUsage, ok := record["cpuUsage"].(float64) // Type assert to float64
-		if !ok {
+		mecpuUsage := record["cpuUsage"].(float64)
+		if mecpuUsage == "" {
 			message := fmt.Sprintf("mecpuUsage is not a float64 value")
 			Log(message)
 			SendException(message)
@@ -887,8 +887,8 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		otelcpuUsage, ok := record["cpuUsage"].(float64)
-		if !ok {
+		otelcpuUsage := record["cpuUsage"].(float64)
+		if otelcpuUsage == "" {
 			message := fmt.Sprintf("otelcpuUsage is not a float64 value")
 			Log(message)
 			SendException(message)
@@ -902,8 +902,8 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 
 func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		memVmrss, ok := record["memVmrss"].(float64)
-		if !ok {
+		memVmrss := record["memVmrss"].(float64)
+		if memVmrss == "" {
 			message := fmt.Sprintf("meVMRSS is not a float64 value")
 			Log(message)
 			SendException(message)
@@ -917,8 +917,8 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		memVmrss, ok := record["memVmrss"].(float64)
-		if !ok {
+		memVmrss := record["memVmrss"].(float64)
+		if memVmrss == "" {
 			message := fmt.Sprintf("otelcolVMRSS is not a float64 value")
 			Log(message)
 			SendException(message)
