@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -118,10 +117,11 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	configFilePtr := flag.String("config", "", "Config file to read")
-	flag.Parse()
-	otelConfigFilePath := *configFilePtr
-	updateTAConfigFile(otelConfigFilePath)
+	//configFilePtr := flag.String("config", "", "Config file to read")
+	//flag.Parse()
+	//otelConfigFilePath := *configFilePtr
+	// updateTAConfigFile(otelConfigFilePath)
+	updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
 
 	http.HandleFunc("/health", healthHandler)
 	http.ListenAndServe(":8081", nil)
