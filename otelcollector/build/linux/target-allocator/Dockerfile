@@ -141,15 +141,19 @@ COPY --from=ta-builder /app/targetallocator .
 
 
 # Expose the port on which the application listens
-EXPOSE 8080
+#EXPOSE 8080
 
 # Expose the port for livenss probe
 EXPOSE 8081
 
+CMD [ "/main-targetallocator" ] 
 
 #ENTRYPOINT ["./main-targetallocator-with-sleep"]
 
-ENTRYPOINT ["./main-targetallocator"]
+#ENTRYPOINT ["./main-targetallocator"]
+
+ENTRYPOINT ["./targetallocator"]
+
 
 # ENTRYPOINT [ "/bin/bash" ]
 # CMD [ "/opt/main-configreader.sh" ]
