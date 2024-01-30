@@ -67,7 +67,7 @@ jobs:
 
 
         #Truncating this to 112 characters to add the targetallocator suffix
-        TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
+        TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-112)
         TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
 
         #Truncating this to 113 to add the ref app suffices
@@ -165,6 +165,7 @@ jobs:
     name: Azure-Pipelines-CI-Test-EO
   dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
+    skipComponentGovernanceDetection: true
     LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
@@ -189,6 +190,7 @@ jobs:
     name: Azure-Pipelines-CI-Test-EO
   dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
+    skipComponentGovernanceDetection: true
     LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
@@ -240,11 +242,30 @@ jobs:
         docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
       displayName: "Build: build and push reference app python windows image to dev ACR"
       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+      
+- job: SDL_Policheck_Scan
+  displayName: "SDL: policheck scanning"
+  pool:
+    name: Azure-Pipelines-Windows-CI-Test-EO
+  variables:
+    skipComponentGovernanceDetection: true
+  steps:
+    - checkout: self
+      submodules: true
+
+    - task: PoliCheck@2
+      displayName: "SDL : Run PoliCheck"
+      inputs:
+        targetType: 'F'
+        targetArgument: '$(Build.SourcesDirectory)'
+
 
 - job: SDL_Binary_Scan
   displayName: "SDL: linux binary scanning"
   pool:
     name: Azure-Pipelines-CI-Test-EO
+  variables:
+    skipComponentGovernanceDetection: true
   steps:
     - checkout: self
       submodules: true
@@ -255,25 +276,28 @@ jobs:
     - task: GoTool@0
       displayName: "Build: specify golang version"
       inputs:
-        version: '1.20'
+        version: '1.21.5'
 
     - bash: |
         sudo apt-get install build-essential -y
         make
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
       displayName: "SDL: build otelcollector, promconfigvalidator, targetallocator, and fluent-bit plugin for scanning"
+      retryCountOnTaskFailure: 1
 
     - task: BinSkim@4
       displayName: 'SDL: run binskim'
       inputs:
         InputType: 'CommandLine'
         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+      retryCountOnTaskFailure: 1
 
     - task: Gosec@1
       displayName: 'SDL: run gosec'
       inputs:
         targetPattern: 'gosecPattern'
         targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
+      retryCountOnTaskFailure: 1
 
     - bash: |
         wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
@@ -282,12 +306,13 @@ jobs:
         ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
       displayName: 'SDL: run devskim'
       workingDirectory: $(Build.SourcesDirectory)
+      retryCountOnTaskFailure: 1
 
     - bash: |
         sudo gem install brakeman -v 5.4.1
         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
       displayName: 'SDL: run brakeman'
-
+      retryCountOnTaskFailure: 1
 
 - job: Linux_Prometheus_Collector
   displayName: "Build: linux prometheus-collector image"
@@ -609,6 +634,7 @@ jobs:
   displayName: "Build: windows 2019 prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   variables:
@@ -641,6 +667,7 @@ jobs:
   displayName: "Build: windows 2022 prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   variables:
@@ -673,6 +700,7 @@ jobs:
   displayName: "Build: windows multi-arch prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   - Windows2019_Prometheus_Collector
@@ -960,7 +988,8 @@ jobs:
         for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
           do
             state=$(az k8s-extension show --name azuremonitor-metrics --cluster-name ci-dev-arc-wcus --resource-group ci-dev-arc-wcus --cluster-type connectedClusters | jq -r '.provisioningState')
-            if [ $state = "Succeeded" ]
+            # We want to wait in case the status is 'Creating' or 'Updating' because of another PR merged shortly before the current one.
+            if [ "$state" = "Succeeded" ] || [ "$state" = "Failed" ]
             then
               echo "Cluster is ready to install extension"
               exit 0
@@ -1030,11 +1059,6 @@ jobs:
           exit 1
     displayName: "Check images are pushed to dev MCR"
     retryCountOnTaskFailure: 5
-
-  - bash: |
-      helm pull oci://$(MCR_REGISTRY)$(MCR_REPOSITORY_HELM) --version $(HELM_SEMVER)
-    workingDirectory: $(Build.StagingDirectory)
-    displayName: "Pull helm chart from dev MCR"
 
   - bash: |
       export AKS_REGION="eastus"

@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -72,28 +73,19 @@ func main() {
 		setupLog.Info("MICROSOFT SOFTWARE LICENSE TERMS\n\nMICROSOFT Azure Arc-enabled Kubernetes\n\nThis software is licensed to you as part of your or your company's subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/")
 	}
 
-	cliConf, err := config.ParseCLI()
+	cfg, configFilePath, err := config.Load()
 	if err != nil {
-		setupLog.Error(err, "Failed to parse parameters")
+		fmt.Printf("Failed to load config: %v", err)
+		os.Exit(1)
+	}
+	ctrl.SetLogger(cfg.RootLogger)
+
+	if validationErr := config.ValidateConfig(cfg); validationErr != nil {
+		setupLog.Error(validationErr, "Invalid configuration")
 		os.Exit(1)
 	}
 
-	// Defaulting to consistent hashing
-	allocationStrategy := "consistent-hashing"
-	// Config file will not exist at startup, so not attempting to load the file which results in an error and just using defaults here.
-	cfg := config.Config{
-		AllocationStrategy: &allocationStrategy,
-		LabelSelector: map[string]string{
-			"rsName":                         "ama-metrics",
-			"kubernetes.azure.com/managedby": "aks",
-		},
-	}
-
-	if validationErr := config.ValidateConfig(&cfg, &cliConf); validationErr != nil {
-		setupLog.Error(validationErr, "Invalid configuration")
-	}
-
-	cliConf.RootLogger.Info("Starting the Target Allocator")
+	cfg.RootLogger.Info("Starting the Target Allocator")
 	ctx := context.Background()
 	log := ctrl.Log.WithName("allocator")
 
@@ -103,26 +95,30 @@ func main() {
 		setupLog.Error(err, "Unable to initialize allocation strategy")
 		os.Exit(1)
 	}
-	srv := server.NewServer(log, allocator, cliConf.ListenAddr)
+	srv := server.NewServer(log, allocator, cfg.ListenAddr)
 
 	discoveryCtx, discoveryCancel := context.WithCancel(ctx)
 	discoveryManager = discovery.NewManager(discoveryCtx, gokitlog.NewNopLogger())
+	discovery.RegisterMetrics() // discovery manager metrics need to be enabled explicitly
+
 	targetDiscoverer = target.NewDiscoverer(log, discoveryManager, allocatorPrehook, srv)
-	collectorWatcher, collectorWatcherErr := collector.NewClient(log, cliConf.ClusterConfig)
+	collectorWatcher, collectorWatcherErr := collector.NewClient(log, cfg.ClusterConfig)
 	if collectorWatcherErr != nil {
 		setupLog.Error(collectorWatcherErr, "Unable to initialize collector watcher")
 		os.Exit(1)
 	}
-	fileWatcher, err = allocatorWatcher.NewFileWatcher(setupLog.WithName("file-watcher"), cliConf)
-	if err != nil {
-		setupLog.Error(err, "Can't start the file watcher")
-		os.Exit(1)
+	if cfg.ReloadConfig {
+		fileWatcher, err = allocatorWatcher.NewFileWatcher(setupLog.WithName("file-watcher"), configFilePath)
+		if err != nil {
+			setupLog.Error(err, "Can't start the file watcher")
+			os.Exit(1)
+		}
 	}
 	signal.Notify(interrupts, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer close(interrupts)
 
-	if *cliConf.PromCRWatcherConf.Enabled {
-		promWatcher, err = allocatorWatcher.NewPrometheusCRWatcher(setupLog.WithName("prometheus-cr-watcher"), cfg, cliConf)
+	if cfg.PrometheusCR.Enabled {
+		promWatcher, err = allocatorWatcher.NewPrometheusCRWatcher(setupLog.WithName("prometheus-cr-watcher"), *cfg)
 		if err != nil {
 			setupLog.Error(err, "Can't start the prometheus watcher")
 			os.Exit(1)
@@ -141,19 +137,21 @@ func main() {
 				}
 			})
 	}
-	runGroup.Add(
-		func() error {
-			fileWatcherErr := fileWatcher.Watch(eventChan, errChan)
-			setupLog.Info("File watcher exited")
-			return fileWatcherErr
-		},
-		func(_ error) {
-			setupLog.Info("Closing file watcher")
-			fileWatcherErr := fileWatcher.Close()
-			if fileWatcherErr != nil {
-				setupLog.Error(fileWatcherErr, "file watcher failed to close")
-			}
-		})
+	if cfg.ReloadConfig {
+		runGroup.Add(
+			func() error {
+				fileWatcherErr := fileWatcher.Watch(eventChan, errChan)
+				setupLog.Info("File watcher exited")
+				return fileWatcherErr
+			},
+			func(_ error) {
+				setupLog.Info("Closing file watcher")
+				fileWatcherErr := fileWatcher.Close()
+				if fileWatcherErr != nil {
+					setupLog.Error(fileWatcherErr, "file watcher failed to close")
+				}
+			})
+	}
 	runGroup.Add(
 		func() error {
 			discoveryManagerErr := discoveryManager.Run()
@@ -167,25 +165,10 @@ func main() {
 	runGroup.Add(
 		func() error {
 			// Initial loading of the config file's scrape config
-			cliConf.RootLogger.Info("Checking to see if config file exists for initial loading")
-			if _, err := os.Stat(*cliConf.ConfigFilePath); err == nil {
-				cliConf.RootLogger.Info("File Exists. Loading and applying config...\n")
-				loadConfig, err := fileWatcher.LoadConfig(ctx)
-				if err != nil {
-					setupLog.Error(err, "Unable to load configuration")
-				}
-				err = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, loadConfig)
-				if err != nil {
-					setupLog.Error(err, "Unable to apply initial configuration")
-					return err
-				}
-			} else {
-				cliConf.RootLogger.Info("Config file doesn't yet exist for initial loading, using empty config to begin with")
-				err = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, cfg.Config)
-				if err != nil {
-					setupLog.Error(err, "Unable to apply initial configuration")
-					return err
-				}
+			err = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, cfg.PromConfig)
+			if err != nil {
+				setupLog.Error(err, "Unable to apply initial configuration")
+				return err
 			}
 			err := targetDiscoverer.Watch(allocator.SetTargets)
 			setupLog.Info("Target discoverer exited")

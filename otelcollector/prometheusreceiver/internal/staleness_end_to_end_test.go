@@ -34,7 +34,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter"
-	"github.com/gracewehner/prometheusreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 )
 
 // Test that staleness markers are emitted for timeseries that intermittently disappear.
@@ -157,7 +157,7 @@ service:
 	require.NoError(t, err)
 
 	appSettings := otelcol.CollectorSettings{
-		Factories:      factories,
+		Factories:      func() (otelcol.Factories, error) { return factories, nil },
 		ConfigProvider: configProvider,
 		BuildInfo: component.BuildInfo{
 			Command:     "otelcol",

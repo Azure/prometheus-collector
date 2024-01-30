@@ -15,7 +15,9 @@
 package target
 
 import (
-	"github.com/cnf/structhash"
+	"hash"
+	"hash/fnv"
+
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -23,6 +25,7 @@ import (
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/model/relabel"
+	"gopkg.in/yaml.v3"
 
 	allocatorWatcher "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/watcher"
 )
@@ -40,7 +43,7 @@ type Discoverer struct {
 	close                chan struct{}
 	configsMap           map[allocatorWatcher.EventSource]*config.Config
 	hook                 discoveryHook
-	scrapeConfigsHash    string
+	scrapeConfigsHash    hash.Hash
 	scrapeConfigsUpdater scrapeConfigsUpdater
 }
 
@@ -82,14 +85,13 @@ func (m *Discoverer) ApplyConfig(source allocatorWatcher.EventSource, cfg *confi
 		}
 	}
 
-	hash, err := structhash.Hash(jobToScrapeConfig, 1)
+	hash, err := getScrapeConfigHash(jobToScrapeConfig)
 	if err != nil {
 		return err
 	}
 	// If the hash has changed, updated stored hash and send the new config.
 	// Otherwise skip updating scrape configs.
 	if m.scrapeConfigsUpdater != nil && m.scrapeConfigsHash != hash {
-		m.log.Info("ScrapeConfig hash is different, updating new scrapeconfig detected for ", "source", source.String())
 		err := m.scrapeConfigsUpdater.UpdateScrapeConfigResponse(jobToScrapeConfig)
 		if err != nil {
 			return err
@@ -131,4 +133,24 @@ func (m *Discoverer) Watch(fn func(targets map[string]*Item)) error {
 
 func (m *Discoverer) Close() {
 	close(m.close)
+}
+
+// Calculate a hash for a scrape config map.
+// This is done by marshaling to YAML because it's the most straightforward and doesn't run into problems with unexported fields.
+func getScrapeConfigHash(jobToScrapeConfig map[string]*config.ScrapeConfig) (hash.Hash64, error) {
+	var err error
+	hash := fnv.New64()
+	yamlEncoder := yaml.NewEncoder(hash)
+	for jobName, scrapeConfig := range jobToScrapeConfig {
+		_, err = hash.Write([]byte(jobName))
+		if err != nil {
+			return nil, err
+		}
+		err = yamlEncoder.Encode(scrapeConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+	yamlEncoder.Close()
+	return hash, err
 }

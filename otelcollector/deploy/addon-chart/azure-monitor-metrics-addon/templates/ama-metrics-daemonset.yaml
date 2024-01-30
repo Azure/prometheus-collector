@@ -310,9 +310,6 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
-            requests:
-              cpu: 150m
-              memory: 500Mi
           env:
             - name: CLUSTER
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
@@ -399,9 +396,9 @@ spec:
                 - cmd
                 - /c
                 - C:\opt\microsoft\scripts\livenessprobe.cmd
-            periodSeconds: 15
+            periodSeconds: 60
             initialDelaySeconds: 300
-            timeoutSeconds: 15
+            timeoutSeconds: 60
             failureThreshold: 3
         - name: addon-token-adapter-win
           command:
