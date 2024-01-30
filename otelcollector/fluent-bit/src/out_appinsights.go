@@ -88,6 +88,10 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return RecordExportingFailed(records)
 	case otelcolCpuScrapeTag:
 		return PushOtelCpuToAppInsightsMetrics(records)
+	case otelcolMemRssScrapeTag:
+		return PushOtelColMemRssToAppInsightsMetrics(records)
+	case meMemRssScrapeTag:
+		return PushMEMemRssToAppInsightsMetrics(records)
 	case prom8888ScrapeTag:
 		return PushProm8888ToAppInsightsMetrics(records)
 	case prom9090ScrapeTag:
