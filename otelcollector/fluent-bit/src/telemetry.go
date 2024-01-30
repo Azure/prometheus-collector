@@ -834,6 +834,13 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 
 func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
+		metricName, ok := ToString(record["metricName"])
+		if !ok {
+			message := fmt.Sprintf("metricName is not a string")
+			Log(message)
+			SendException(message)
+			return 0
+		}
 		promMetrics, ok := record["promMetrics"].(float64)
 		if !ok {
 			message := fmt.Sprintf("promMetrics is not a float64 value")
