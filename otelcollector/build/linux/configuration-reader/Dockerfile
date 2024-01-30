@@ -55,6 +55,8 @@ RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup-configreader.sh ${TARGETARCH}
 
+
+## FInal distroless image
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 ENV PATH="/busybin:${PATH}"
 ENV OS_TYPE "linux"
@@ -101,8 +103,13 @@ COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/lib
 # sh dependencies
 COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /lib/
 
+
+COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
+
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
-ENTRYPOINT [ "/bin/bash" ]
-CMD [ "/opt/main-configreader.sh" ]
+# ENTRYPOINT [ "/bin/bash" ]
+# CMD [ "/opt/main-configreader.sh" ]
+
+ENTRYPOINT ["./opt/configurationreader"]

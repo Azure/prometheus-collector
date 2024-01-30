@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 
 	"os"
 
@@ -87,9 +88,41 @@ func updateTAConfigFile(configFilePath string) {
 	log.Println("Updated file - targetallocator.yaml for the TargetAllocator to pick up new config changes")
 }
 
+func hasConfigChanged(filePath string) bool {
+	if _, err := os.Stat(filePath); err == nil {
+		fileInfo, err := os.Stat(filePath)
+		if err != nil {
+			fmt.Println("Error getting file info:", err)
+			os.Exit(1)
+		}
+
+		return fileInfo.Size() > 0
+	}
+	return false
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	status := http.StatusOK
+	message := "\ntargetallocator is running."
+
+	// if hasConfigChanged("/opt/inotifyoutput-ta-config.txt") {
+	// 	status = http.StatusServiceUnavailable
+	// 	message += "\ninotifyoutput.txt has been updated - targetallocator-config changed"
+	// }
+
+	w.WriteHeader(status)
+	fmt.Fprintln(w, message)
+	// if status != http.StatusOK {
+	// 	fmt.Printf(message)
+	// }
+}
+
 func main() {
 	configFilePtr := flag.String("config", "", "Config file to read")
 	flag.Parse()
 	otelConfigFilePath := *configFilePtr
 	updateTAConfigFile(otelConfigFilePath)
+
+	http.HandleFunc("/health", healthHandler)
+	http.ListenAndServe(":8081", nil)
 }
