@@ -35,11 +35,11 @@ AzureMonitorMetrics:
       - storageclasses
       - validatingwebhookconfigurations
       - volumeattachments
-  ImageRepository: ${MCR_REPOSITORY}
-  ImageTag: ${IMAGE_TAG}
-  ImageTagWin: ${IMAGE_TAG}-win
-  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator"
-  ImageTagCfgReader: ${IMAGE_TAG}-cfg"
+  ImageRepository: '/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
+  ImageTag: 6.8.3-main-01-09-2024-a192d342
+  ImageTagWin: 6.8.3-main-01-09-2024-a192d342-win
+  ImageTagTargetAllocator: 6.8.3-main-01-09-2024-a192d342-targetallocator"
+  ImageTagCfgReader: 6.8.3-main-01-09-2024-a192d342-cfg"
   TargetAllocatorEnabled: false
   DeploymentReplicas: 1
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
@@ -51,7 +51,7 @@ AzureMonitorMetrics:
     ImageTag: "master.230804.1"
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
     ImageTagWin: "20230120winbeta"
-  ArcExtension: ${ARC_EXTENSION}
+  ArcExtension: false
   ArcEnableOperator: false
   # Do not change the below settings. They are reserved for Arc Autonomous
   isArcACluster: false
