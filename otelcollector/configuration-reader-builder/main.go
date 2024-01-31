@@ -230,6 +230,11 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 		return
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		fmt.Printf("Error waiting for shell command: %v\n", err)
 	} else {
 		if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
 			if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
