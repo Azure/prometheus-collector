@@ -107,6 +107,7 @@ COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so
 
 
 COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
+COPY --from=builder /opt/*.sh $tmpdir/
 
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os/exec"
 
 	"os"
 
@@ -48,6 +49,10 @@ var RESET = "\033[0m"
 var RED = "\033[31m"
 
 var taConfigFilePath = "/ta-configuration/targetallocator.yaml"
+var taConfigUpdated = false
+var taLivenessCounter = 0
+
+// var inotifyTaConfigOutputFile = "/opt/inotifyoutput-ta-config.txt"
 
 func logFatalError(message string) {
 	// Always log the full message
@@ -85,6 +90,7 @@ func updateTAConfigFile(configFilePath string) {
 	}
 
 	log.Println("Updated file - targetallocator.yaml for the TargetAllocator to pick up new config changes")
+	taConfigUpdated = true
 }
 
 func hasConfigChanged(filePath string) bool {
@@ -100,20 +106,59 @@ func hasConfigChanged(filePath string) bool {
 	return false
 }
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
+func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
 	message := "\ntargetallocator is running."
 
-	// if hasConfigChanged("/opt/inotifyoutput-ta-config.txt") {
-	// 	status = http.StatusServiceUnavailable
-	// 	message += "\ninotifyoutput.txt has been updated - targetallocator-config changed"
-	// }
+	if taConfigUpdated {
+		status = http.StatusServiceUnavailable
+		message += "targetallocator-config changed"
+		taLivenessCounter++
+	}
+	if taLivenessCounter >= 4 {
+		// Setting this to false after 4 calls to healthhandler to make sure TA container doesnt keep restarting continuosly
+		taConfigUpdated = false
+		taLivenessCounter = 0
+	}
 
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
-	// if status != http.StatusOK {
-	// 	fmt.Printf(message)
-	// }
+	if status != http.StatusOK {
+		fmt.Printf(message)
+	}
+
+}
+
+// func taHealthHandler(w http.ResponseWriter, r *http.Request) {
+// 	status := http.StatusOK
+// 	message := "\ntargetallocator is running."
+
+// 	if hasConfigChanged(inotifyTaConfigOutputFile) {
+// 		status = http.StatusServiceUnavailable
+// 		message += "\ninotifyoutput-ta-config has been updated - target-allocator-config changed"
+// 	}
+
+// 	w.WriteHeader(status)
+// 	fmt.Fprintln(w, message)
+// 	if status != http.StatusOK {
+// 		fmt.Printf(message)
+// 	}
+// }
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	status := http.StatusOK
+	message := "\nconfig-reader is running."
+
+	if hasConfigChanged("/opt/inotifyoutput.txt") {
+		status = http.StatusServiceUnavailable
+		message += "\ninotifyoutput.txt has been updated - config-reader-config changed"
+	}
+
+	w.WriteHeader(status)
+	fmt.Fprintln(w, message)
+	if status != http.StatusOK {
+		fmt.Printf(message)
+	}
 }
 
 func main() {
@@ -121,8 +166,94 @@ func main() {
 	//flag.Parse()
 	//otelConfigFilePath := *configFilePtr
 	// updateTAConfigFile(otelConfigFilePath)
-	updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+
+	//configmap-parser.sh
+
+	_, err := os.Create("/opt/inotifyoutput.txt")
+	// inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
+	if err != nil {
+		log.Fatalf("Error creating output file: %v\n", err)
+	}
+
+	// Define the command to start inotify for config reader's liveness probe
+	inotifyCommandCfg := exec.Command(
+		"inotifywait",
+		"/etc/config/settings",
+		"--daemon",
+		"--recursive",
+		"--outfile", "/opt/inotifyoutput.txt",
+		"--event", "create,delete",
+		"--format", "%e : %T",
+		"--timefmt", "+%s",
+	)
+
+	// Start the inotify process
+	err = inotifyCommandCfg.Start()
+	if err != nil {
+		log.Fatalf("Error starting inotify process for config reader's liveness probe: %v\n", err)
+	}
+
+	// Define the command to start inotify for config reader's liveness probe
+	// taConfigFilePath := "/conf"
+
+	// // Create an output file for inotify events
+	// //outputFile := "/opt/inotifyoutput-ta-config.txt"
+	// _, err = os.Create(inotifyTaConfigOutputFile)
+	// if err != nil {
+	// 	log.Fatalf("Error creating output file for TA config: %v\n", err)
+	// }
+
+	// // Define the command to start inotify
+	// inotifyCommandTA := exec.Command(
+	// 	"inotifywait",
+	// 	taConfigFilePath,
+	// 	"--daemon",
+	// 	"--outfile", inotifyTaConfigOutputFile,
+	// 	"--event", "ATTRIB",
+	// 	"--format", "%e : %T",
+	// 	"--timefmt", "+%s",
+	// )
+
+	// // Start the inotify process
+	// err = inotifyCommandTA.Start()
+	// if err != nil {
+	// 	log.Fatalf("Error starting inotify process for watching TA config: %v\n", err)
+	// }
+
+	configParserCommand := exec.Command(
+		"/opt/configmap-parser.sh",
+	)
+
+	// Start the inotify process
+	err = configParserCommand.Start()
+	if err != nil {
+		log.Fatalf("Error running configparser: %v\n", err)
+	}
+
+	// Run configreader to update the configmap for TargetAllocator
+	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
+			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+		}
+	} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
+		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
+	} else {
+		log.Println("No configs found via configmap, not running config reader")
+	}
+
+	// if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ] && [ -e "/opt/microsoft/otelcollector/collector-config-default.yml" ] ; then
+	// 	  echo_warning "Running config reader with only default scrape configs enabled"
+	// 	  /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config-default.yml
+	// elif [ -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
+	// 	  echo_warning "Running config reader with merged default and custom scrape config via configmap"
+	// 	  /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config.yml
+	// else
+	// 	  echo_warning "No configs found via configmap, not running config reader"
+	// fi
+
+	// updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
 
 	http.HandleFunc("/health", healthHandler)
+	http.HandleFunc("/health-ta", taHealthHandler)
 	http.ListenAndServe(":8081", nil)
 }
