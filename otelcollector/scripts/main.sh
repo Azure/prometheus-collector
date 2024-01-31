@@ -17,9 +17,9 @@ echo_var "MODE" "$MODE"
 echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
 
-aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 -d)	
-export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey	
-echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc	
+aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 -d)
+export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey
+echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc
 source ~/.bashrc
 
 #get controller kind in lowercase, trimmed
@@ -48,7 +48,7 @@ fi
 
 # Add our target-allocator service to the no_proxy env variable
 export NO_PROXY=$NO_PROXY,ama-metrics-operator-targets.kube-system.svc.cluster.local
-echo "export NO_PROXY=$NO_PROXY" >> ~/.bashrc	
+echo "export NO_PROXY=$NO_PROXY" >> ~/.bashrc
 export no_proxy=$no_proxy,ama-metrics-operator-targets.kube-system.svc.cluster.local
 echo "export no_proxy=$no_proxy" >> ~/.bashrc
 
@@ -127,7 +127,7 @@ if [ "${MAC}" == "true" ]; then
                   tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz -Y off 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
             fi
             if [ ! -z $tokenAdapterResult ]; then
-                        echo "found token adapter to be healthy after $waitedSecsSoFar secs" 
+                        echo "found token adapter to be healthy after $waitedSecsSoFar secs"
                         # log telemetry about success after waiting for waitedSecsSoFar and break
                         echo "export tokenadapterHealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
                         break
@@ -139,7 +139,7 @@ if [ "${MAC}" == "true" ]; then
       #end wait for addon-token-adapter to be healthy
 fi
 
-export ME_CONFIG_FILE=$meConfigFile	
+export ME_CONFIG_FILE=$meConfigFile
 export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile
 echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
 echo "export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile" >> ~/.bashrc
@@ -188,7 +188,7 @@ if [ "${MAC}" != "true" ]; then
       source ~/.bashrc
 
       echo_var "AKV_FILES" "$AZMON_METRIC_ACCOUNTS_AKV_FILES"
-      
+
       echo "Starting metricsextension"
       # will need to rotate the entire log location
       # will need to remove accountname fetching from env
@@ -261,18 +261,18 @@ echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
 PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
 echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
-echo "starting telegraf"
-if [ "$TELEMETRY_DISABLED" != "true" ]; then
-  if [ "$CONTROLLER_TYPE" == "ReplicaSet" ]  && [ "${AZMON_OPERATOR_ENABLED}" == "true" ]; then
-    /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector-ta-enabled.conf &
-  elif [ "$CONTROLLER_TYPE" == "ReplicaSet" ]; then
-    /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
-  else
-    /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector-ds.conf &
-  fi
-  TELEGRAF_VERSION=`cat /opt/telegrafversion.txt`
-  echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
-fi
+# echo "starting telegraf"
+# if [ "$TELEMETRY_DISABLED" != "true" ]; then
+#   if [ "$CONTROLLER_TYPE" == "ReplicaSet" ]  && [ "${AZMON_OPERATOR_ENABLED}" == "true" ]; then
+#     /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector-ta-enabled.conf &
+#   elif [ "$CONTROLLER_TYPE" == "ReplicaSet" ]; then
+#     /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+#   else
+#     /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector-ds.conf &
+#   fi
+#   TELEGRAF_VERSION=`cat /opt/telegrafversion.txt`
+#   echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
+# fi
 
 echo "starting fluent-bit"
 mkdir /opt/microsoft/fluent-bit

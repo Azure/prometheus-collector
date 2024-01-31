@@ -62,7 +62,6 @@ COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/pro
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
-COPY ./telegraf/ $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit.conf ./fluent-bit/fluent-bit-daemonset.conf ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY ./react /static/react
@@ -113,7 +112,6 @@ COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
 COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
-COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
 COPY --from=builder /usr/sbin/crond /usr/sbin/crond
 COPY --from=builder /usr/bin/vim /usr/bin/vim
 COPY --from=builder /usr/share/vim /usr/share/vim
@@ -143,8 +141,6 @@ COPY --from=builder /usr/lib/libre2.so.0a /usr/lib/libstdc++.so.6 /usr/lib/libgc
 COPY --from=builder /lib/libprotobuf.so.28 /lib/libgrpc++.so.1.42 /lib/libabsl_synchronization.so.2206.0.0 /lib/libboost_filesystem.so.1.76.0 /lib/libboost_coroutine.so.1.76.0 /lib/libboost_thread.so.1.76.0 /lib/libcpprest.so.2.10 /lib/libssl.so.1.1 /lib/libcrypto.so.1.1 /lib/libuuid.so.1 /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libz.so.1 /lib64/libgrpc.so.20 /lib/libabsl_raw_hash_set.so.2206.0.0 /lib/libabsl_hash.so.2206.0.0 /lib/libabsl_statusor.so.2206.0.0 /lib/libgpr.so.20 /lib/libupb.so.20 /lib/libabsl_status.so.2206.0.0 /lib/libabsl_time.so.2206.0.0 /lib/libabsl_strings.so.2206.0.0 /lib/libabsl_stacktrace.so.2206.0.0  /lib/libabsl_symbolize.so.2206.0.0 /lib/libabsl_malloc_internal.so.2206.0.0 /lib/libabsl_base.so.2206.0.0 /lib/libabsl_spinlock_wait.so.2206.0.0 /lib/libabsl_raw_logging_internal.so.2206.0.0 /lib/libboost_chrono.so.1.76.0 /lib/libboost_context.so.1.76.0 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libcares.so.2 /lib/libaddress_sorting.so.20 /lib/libre2.so.0a /lib/libabsl_cord.so.2206.0.0 /lib/libabsl_str_format_internal.so.2206.0.0 /lib/libabsl_time_zone.so.2206.0.0 /lib/libabsl_city.so.2206.0.0 /lib/libabsl_low_level_hash.so.2206.0.0 /lib/libabsl_cordz_info.so.2206.0.0 /lib/libabsl_strerror.so.2206.0.0 /lib/libabsl_int128.so.2206.0.0 /lib/libabsl_strings_internal.so.2206.0.0 /lib/libabsl_debugging_internal.so.2206.0.0 /lib/libabsl_demangle_internal.so.2206.0.0 /lib/libbrotlicommon.so.1 /lib/libabsl_cord_internal.so.2206.0.0 /lib/libabsl_cordz_functions.so.2206.0.0 /lib/libabsl_cordz_handle.so.2206.0.0 /lib/libabsl_throw_delegate.so.2206.0.0 /lib/libabsl_exponential_biased.so.2206.0.0 /lib/
 # fluent-bit dependencies
 COPY --from=builder /lib/libssl.so.1.1 /lib/libcrypto.so.1.1 /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/liblzma.so.5 /lib/liblz4.so.1 /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libgpg-error.so.0 /lib/
-# telegraf dependencies
-COPY --from=builder /lib/libc.so.6 /lib/
 # mdsd dependencies
 COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
 COPY --from=builder /usr/local/lib/libtcmalloc_minimal.so.4 /usr/local/lib/
