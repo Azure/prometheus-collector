@@ -232,7 +232,7 @@ func main() {
 		return
 	}
 
-	err = cmd.Wait()
+	err = configParserCommand.Wait()
 	if err != nil {
 		fmt.Printf("Error waiting for shell command: %v\n", err)
 	} else {
