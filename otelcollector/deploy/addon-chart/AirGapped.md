@@ -6,7 +6,7 @@ We need this step because we need to get the secret created for the addon-token-
 Instructions on how to deploy ARM template -
 https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-enable?tabs=arm#enable-prometheus-and-grafana
 
-In the ARM template, comment out the section that enables the addon (with name - **"azuremonitormetrics-profile-"**(Lines 147 to 187), please comment the section acccordingly if template is updated)
+In the ARM template, comment out the section that enables the addon (with name - **"azuremonitormetrics-profile-"**(Lines 188 to 228), please comment the section acccordingly if template is updated)
 
 ### **Step 3: Go to addon-chart directory**
 ```
