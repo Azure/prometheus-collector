@@ -169,29 +169,29 @@ func main() {
 
 	//configmap-parser.sh
 
-	_, err := os.Create("/opt/inotifyoutput.txt")
-	// inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
-	if err != nil {
-		log.Fatalf("Error creating output file: %v\n", err)
-	}
+	// _, err := os.Create("/opt/inotifyoutput.txt")
+	// // inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
+	// if err != nil {
+	// 	log.Fatalf("Error creating output file: %v\n", err)
+	// }
 
-	// Define the command to start inotify for config reader's liveness probe
-	inotifyCommandCfg := exec.Command(
-		"inotifywait",
-		"/etc/config/settings",
-		"--daemon",
-		"--recursive",
-		"--outfile", "/opt/inotifyoutput.txt",
-		"--event", "create,delete",
-		"--format", "%e : %T",
-		"--timefmt", "+%s",
-	)
+	// // Define the command to start inotify for config reader's liveness probe
+	// inotifyCommandCfg := exec.Command(
+	// 	"inotifywait",
+	// 	"/etc/config/settings",
+	// 	"--daemon",
+	// 	"--recursive",
+	// 	"--outfile", "/opt/inotifyoutput.txt",
+	// 	"--event", "create,delete",
+	// 	"--format", "%e : %T",
+	// 	"--timefmt", "+%s",
+	// )
 
-	// Start the inotify process
-	err = inotifyCommandCfg.Start()
-	if err != nil {
-		log.Fatalf("Error starting inotify process for config reader's liveness probe: %v\n", err)
-	}
+	// // Start the inotify process
+	// err = inotifyCommandCfg.Start()
+	// if err != nil {
+	// 	log.Fatalf("Error starting inotify process for config reader's liveness probe: %v\n", err)
+	// }
 
 	// Define the command to start inotify for config reader's liveness probe
 	// taConfigFilePath := "/conf"
@@ -222,7 +222,7 @@ func main() {
 
 	configParserCommand := exec.Command(
 		"/bin/sh",
-		"/opt/configmap-parser.sh",
+		"configmap-parser.sh",
 	)
 
 	stdout, err := configParserCommand.Output()
@@ -235,36 +235,42 @@ func main() {
 	// Print the output
 	fmt.Println(string(stdout))
 
-	// Start the inotify process
-	// err = configParserCommand.Start()
+	// // Start the inotify process
+	// err := configParserCommand.Start()
 	// if err != nil {
 	// 	log.Fatalf("Error running configparser: %v\n", err)
 	// }
 
+	// err = configParserCommand.Wait()
+	// if err != nil {
+	// 	log.Fatalf("Error in wait: %v\n", err)
+
+	// }
+
 	// Run configreader to update the configmap for TargetAllocator
-	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
-		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
-			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
-		}
-	} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
-		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
-	} else {
-		log.Println("No configs found via configmap, not running config reader")
-	}
+	// if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+	// 	if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
+	// 		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+	// 	}
+	// } else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
+	// 	updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
+	// } else {
+	// 	log.Println("No configs found via configmap, not running config reader")
+	// }
 
-	// if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ] && [ -e "/opt/microsoft/otelcollector/collector-config-default.yml" ] ; then
-	// 	  echo_warning "Running config reader with only default scrape configs enabled"
-	// 	  /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config-default.yml
-	// elif [ -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
-	// 	  echo_warning "Running config reader with merged default and custom scrape config via configmap"
-	// 	  /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config.yml
-	// else
-	// 	  echo_warning "No configs found via configmap, not running config reader"
-	// fi
+	// // if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ] && [ -e "/opt/microsoft/otelcollector/collector-config-default.yml" ] ; then
+	// // 	  echo_warning "Running config reader with only default scrape configs enabled"
+	// // 	  /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config-default.yml
+	// // elif [ -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
+	// // 	  echo_warning "Running config reader with merged default and custom scrape config via configmap"
+	// // 	  /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config.yml
+	// // else
+	// // 	  echo_warning "No configs found via configmap, not running config reader"
+	// // fi
 
-	// updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+	// // updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
 
-	http.HandleFunc("/health", healthHandler)
-	http.HandleFunc("/health-ta", taHealthHandler)
-	http.ListenAndServe(":8081", nil)
+	// http.HandleFunc("/health", healthHandler)
+	// http.HandleFunc("/health-ta", taHealthHandler)
+	// http.ListenAndServe(":8081", nil)
 }
