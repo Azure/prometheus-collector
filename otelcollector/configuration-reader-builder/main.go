@@ -221,7 +221,7 @@ func main() {
 	// }
 
 	configParserCommand := exec.Command(
-		"bash",
+		"/bin/sh",
 		"/opt/configmap-parser.sh",
 	)
 
