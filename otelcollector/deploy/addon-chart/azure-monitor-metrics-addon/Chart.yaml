@@ -15,13 +15,13 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 6.8.2-ccp-shell-removal-branch-01-26-2024-6816611a
+version: 6.8.2-ccp-shell-removal-branch-01-30-2024-cbd6c5b7
 
 # This is the version number of the application being deployed (basically, imagetag for the image built/compatible with this chart semver above). This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "6.8.2-ccp-shell-removal-branch-01-26-2024-6816611a"
+appVersion: "6.8.2-ccp-shell-removal-branch-01-30-2024-cbd6c5b7"
 # dependencies:
 # - name: prometheus-node-exporter
 #   version: "4.21.0"
