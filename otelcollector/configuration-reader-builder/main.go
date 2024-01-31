@@ -230,6 +230,16 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 		return
+	} else {
+		if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+			if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
+				updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+			}
+		} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
+			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
+		} else {
+			log.Println("No configs found via configmap, not running config reader")
+		}
 	}
 
 	// Print the output
@@ -251,16 +261,6 @@ func main() {
 	} else {
 		log.Println("No configs found via configmap, not running config reader")
 	}
-
-	// if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ] && [ -e "/opt/microsoft/otelcollector/collector-config-default.yml" ] ; then
-	// 	  echo_warning "Running config reader with only default scrape configs enabled"
-	// 	  /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config-default.yml
-	// elif [ -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
-	// 	  echo_warning "Running config reader with merged default and custom scrape config via configmap"
-	// 	  /opt/configurationreader --config /opt/microsoft/otelcollector/collector-config.yml
-	// else
-	// 	  echo_warning "No configs found via configmap, not running config reader"
-	// fi
 
 	// updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
 
