@@ -1,6 +1,5 @@
-### **Step 1: Enable the Container Insights addon**
-Use the Azure Portal to enable the addon -> (Link to documenation)[https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-enable?tabs=cli#enable-full-monitoring-with-azure-portal]
-
+### **Step 1: Enable the Container Insights Add-On**
+Utilize the Azure Portal to enable the add-on. Follow the instructions provided in the [documentation](https://learn.microsoft.com/en-us/azure/azure-monitor/containers/kubernetes-monitoring-enable?tabs=cli#enable-full-monitoring-with-azure-portal).
 We need this step because we need to get the secret created for the addon-token-adapter to serve, which is created when the monitoring addon is enabled. The Managed Prometheus addon also uses this secret for its functioning.
 
 ### **Step 2: Deploy ARM templates for configuration** 
