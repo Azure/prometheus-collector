@@ -186,7 +186,7 @@ func startCommandAndWait(command string, args ...string) {
 	}
 
 	// Start the command
-	err = cmd.Start()
+	err = cmd.Run()
 	if err != nil {
 		fmt.Printf("Error starting command: %v\n", err)
 		return
@@ -204,10 +204,11 @@ func startCommandAndWait(command string, args ...string) {
 	}()
 
 	// Wait for the command to finish
-	err = cmd.Wait()
-	if err != nil {
-		fmt.Printf("Error waiting for command: %v\n", err)
-	}
+	// err = cmd.Wait()
+	// if err != nil {
+	// 	fmt.Printf("Error waiting for command: %v\n", err)
+	// }
+	fmt.Printf("Done command start and wait\n")
 }
 
 func main() {
