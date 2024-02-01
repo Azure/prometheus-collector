@@ -162,8 +162,9 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func startCommandAndWait(command string, args ...string) {
+func startCommandAndWait(command string, args ...string) bool {
 	cmd := exec.Command(command, args...)
+	// ret := false
 
 	// Set environment variables from os.Environ()
 	// cmd.Env = append(os.Environ())
@@ -176,20 +177,20 @@ func startCommandAndWait(command string, args ...string) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		fmt.Printf("Error creating stdout pipe: %v\n", err)
-		return
+		return false
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		fmt.Printf("Error creating stderr pipe: %v\n", err)
-		return
+		return false
 	}
 
 	// Start the command
 	err = cmd.Start()
 	if err != nil {
 		fmt.Printf("Error starting command: %v\n", err)
-		return
+		return false
 	}
 
 	// Create goroutines to capture and print stdout and stderr
@@ -207,8 +208,10 @@ func startCommandAndWait(command string, args ...string) {
 	err = cmd.Wait()
 	if err != nil {
 		fmt.Printf("Error waiting for command: %v\n", err)
+		return false
 	}
 	fmt.Printf("Done command start and wait\n")
+	return true
 }
 
 func main() {
@@ -275,7 +278,7 @@ func main() {
 	// 	"/opt/configmap-parser.sh",
 	// )
 
-	startCommandAndWait("/bin/sh", "/opt/configmap-parser.sh")
+	completed := startCommandAndWait("/bin/sh", "/opt/configmap-parser.sh")
 
 	//stdout, err := configParserCommand.Output()
 
@@ -298,15 +301,17 @@ func main() {
 	// 		log.Println("No configs found via configmap, not running config reader")
 	// 	}
 	// }
-
-	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
-		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
-			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+	if completed {
+		fmt.Println("func exec completed, running next steps")
+		if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+			if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
+				updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+			}
+		} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
+			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
+		} else {
+			log.Println("No configs found via configmap, not running config reader")
 		}
-	} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
-		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
-	} else {
-		log.Println("No configs found via configmap, not running config reader")
 	}
 
 	// Print the output
@@ -319,15 +324,15 @@ func main() {
 	// }
 
 	// Run configreader to update the configmap for TargetAllocator
-	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
-		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
-			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
-		}
-	} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
-		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
-	} else {
-		log.Println("No configs found via configmap, not running config reader")
-	}
+	// if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+	// 	if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
+	// 		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+	// 	}
+	// } else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
+	// 	updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
+	// } else {
+	// 	log.Println("No configs found via configmap, not running config reader")
+	// }
 
 	// updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
 
