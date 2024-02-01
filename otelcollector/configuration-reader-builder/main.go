@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os/exec"
@@ -161,6 +162,54 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func startCommandAndWait(command string, args ...string) {
+	cmd := exec.Command(command, args...)
+
+	// Set environment variables from os.Environ()
+	// cmd.Env = append(os.Environ())
+	// // Print the environment variables being passed into the cmd
+	// fmt.Println("Environment variables being passed into the command:")
+	// for _, v := range cmd.Env {
+	// 	fmt.Println(v)
+	// }
+	// Create pipes to capture stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Printf("Error creating stdout pipe: %v\n", err)
+		return
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		fmt.Printf("Error creating stderr pipe: %v\n", err)
+		return
+	}
+
+	// Start the command
+	err = cmd.Start()
+	if err != nil {
+		fmt.Printf("Error starting command: %v\n", err)
+		return
+	}
+
+	// Create goroutines to capture and print stdout and stderr
+	go func() {
+		stdoutBytes, _ := ioutil.ReadAll(stdout)
+		fmt.Print(string(stdoutBytes))
+	}()
+
+	go func() {
+		stderrBytes, _ := ioutil.ReadAll(stderr)
+		fmt.Print(string(stderrBytes))
+	}()
+
+	// Wait for the command to finish
+	err = cmd.Wait()
+	if err != nil {
+		fmt.Printf("Error waiting for command: %v\n", err)
+	}
+}
+
 func main() {
 	//configFilePtr := flag.String("config", "", "Config file to read")
 	//flag.Parse()
@@ -220,35 +269,47 @@ func main() {
 	// 	log.Fatalf("Error starting inotify process for watching TA config: %v\n", err)
 	// }
 
-	configParserCommand := exec.Command(
-		"/bin/sh",
-		"/opt/configmap-parser.sh",
-	)
+	// configParserCommand := exec.Command(
+	// 	"/bin/sh",
+	// 	"/opt/configmap-parser.sh",
+	// )
 
-	stdout, err := configParserCommand.Output()
+	startCommandAndWait("/bin/sh", "/opt/configmap-parser.sh")
 
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	//stdout, err := configParserCommand.Output()
 
-	err = configParserCommand.Wait()
-	if err != nil {
-		fmt.Printf("Error waiting for shell command: %v\n", err)
-	} else {
-		if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
-			if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
-				updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
-			}
-		} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
-			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
-		} else {
-			log.Println("No configs found via configmap, not running config reader")
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// 	return
+	// }
+
+	// err = configParserCommand.Wait()
+	// if err != nil {
+	// 	fmt.Printf("Error waiting for shell command: %v\n", err)
+	// } else {
+	// 	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+	// 		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
+	// 			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+	// 		}
+	// 	} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
+	// 		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
+	// 	} else {
+	// 		log.Println("No configs found via configmap, not running config reader")
+	// 	}
+	// }
+
+	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
+			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
 		}
+	} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
+		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
+	} else {
+		log.Println("No configs found via configmap, not running config reader")
 	}
 
 	// Print the output
-	fmt.Println(string(stdout))
+	// fmt.Println(string(stdout))
 
 	// Start the inotify process
 	// err = configParserCommand.Start()
