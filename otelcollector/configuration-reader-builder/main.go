@@ -167,7 +167,7 @@ func startCommandAndWait(command string, args ...string) bool {
 	// ret := false
 
 	// Set environment variables from os.Environ()
-	// cmd.Env = append(os.Environ())
+	cmd.Env = append(os.Environ())
 	// // Print the environment variables being passed into the cmd
 	// fmt.Println("Environment variables being passed into the command:")
 	// for _, v := range cmd.Env {
