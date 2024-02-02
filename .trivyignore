@@ -14,6 +14,7 @@ CVE-2023-39325
 GHSA-m425-mq94-257g
 CVE-2023-47090
 CVE-2023-46129
+CVE-2024-21626
 
 # =========== MEDIUM ================
 # MEDIUM - otelcollector
