@@ -10,6 +10,7 @@ import (
 	"os"
 
 	yaml "gopkg.in/yaml.v2"
+	github.com/joho/godotenv
 )
 
 type Config struct {
@@ -162,7 +163,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func startCommandAndWait(command string, args ...string) bool {
+func startCommandAndWait(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 	// ret := false
 
@@ -177,20 +178,20 @@ func startCommandAndWait(command string, args ...string) bool {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		fmt.Printf("Error creating stdout pipe: %v\n", err)
-		return false
+		return 
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		fmt.Printf("Error creating stderr pipe: %v\n", err)
-		return false
+		return 
 	}
 
 	// Start the command
 	err = cmd.Start()
 	if err != nil {
 		fmt.Printf("Error starting command: %v\n", err)
-		return false
+		return 
 	}
 
 	// Create goroutines to capture and print stdout and stderr
@@ -208,10 +209,9 @@ func startCommandAndWait(command string, args ...string) bool {
 	err = cmd.Wait()
 	if err != nil {
 		fmt.Printf("Error waiting for command: %v\n", err)
-		return false
+		return 
 	}
 	fmt.Printf("Done command start and wait\n")
-	return true
 }
 
 func main() {
@@ -278,7 +278,7 @@ func main() {
 	// 	"/opt/configmap-parser.sh",
 	// )
 
-	completed := startCommandAndWait("/bin/sh", "/opt/configmap-parser.sh")
+	startCommandAndWait("/bin/sh", "/opt/configmap-parser.sh")
 
 	//stdout, err := configParserCommand.Output()
 
@@ -301,8 +301,8 @@ func main() {
 	// 		log.Println("No configs found via configmap, not running config reader")
 	// 	}
 	// }
-	if completed {
-		fmt.Println("func exec completed, running next steps")
+
+	err := godotenv.Load("envvars.env")
 		if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
 			if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
 				updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
@@ -312,7 +312,6 @@ func main() {
 		} else {
 			log.Println("No configs found via configmap, not running config reader")
 		}
-	}
 
 	// Print the output
 	// fmt.Println(string(stdout))
