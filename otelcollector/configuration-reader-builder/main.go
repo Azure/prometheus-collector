@@ -302,7 +302,7 @@ func main() {
 	// 	}
 	// }
 
-	err = godotenv.Load("envvars.env")
+	err = godotenv.Load("/opt/envvars.env")
 	if err != nil {
 		fmt.Println("error loading env vars from envvars.env - %v", err)
 	}
