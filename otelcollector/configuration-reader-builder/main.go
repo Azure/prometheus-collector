@@ -302,7 +302,10 @@ func main() {
 	// 	}
 	// }
 
-	err := godotenv.Load("envvars.env")
+	err = godotenv.Load("envvars.env")
+	if err != nil {
+		fmt.Println("error loading env vars from envvars.env")
+	}
 	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
 		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
 			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
