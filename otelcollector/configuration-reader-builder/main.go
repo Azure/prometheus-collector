@@ -9,8 +9,8 @@ import (
 
 	"os"
 
+	"github.com/joho/godotenv"
 	yaml "gopkg.in/yaml.v2"
-	github.com/joho/godotenv
 )
 
 type Config struct {
@@ -178,20 +178,20 @@ func startCommandAndWait(command string, args ...string) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		fmt.Printf("Error creating stdout pipe: %v\n", err)
-		return 
+		return
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		fmt.Printf("Error creating stderr pipe: %v\n", err)
-		return 
+		return
 	}
 
 	// Start the command
 	err = cmd.Start()
 	if err != nil {
 		fmt.Printf("Error starting command: %v\n", err)
-		return 
+		return
 	}
 
 	// Create goroutines to capture and print stdout and stderr
@@ -209,7 +209,7 @@ func startCommandAndWait(command string, args ...string) {
 	err = cmd.Wait()
 	if err != nil {
 		fmt.Printf("Error waiting for command: %v\n", err)
-		return 
+		return
 	}
 	fmt.Printf("Done command start and wait\n")
 }
@@ -303,15 +303,15 @@ func main() {
 	// }
 
 	err := godotenv.Load("envvars.env")
-		if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
-			if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
-				updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
-			}
-		} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
-			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
-		} else {
-			log.Println("No configs found via configmap, not running config reader")
+	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
+			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
 		}
+	} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
+		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
+	} else {
+		log.Println("No configs found via configmap, not running config reader")
+	}
 
 	// Print the output
 	// fmt.Println(string(stdout))
