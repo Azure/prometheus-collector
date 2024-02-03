@@ -864,6 +864,7 @@ func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 		}
 		metric := appinsights.NewMetricTelemetry(metricNameString, promMetricsFloat)
 		TelemetryClient.Track(metric)
+		Log(fmt.Sprintf("Sent Prometheus metrics from 8888 port for  %s", metricNameString))
 	}
 	return output.FLB_OK
 }
@@ -888,6 +889,7 @@ func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 		metric := appinsights.NewMetricTelemetry("prometheus_sd_http_failures_total", promMetricsFloat)
 		TelemetryClient.Track(metric)
+		Log(fmt.Sprintf("Sent Prometheus metrics from 9090 port for prometheus_sd_http_failures_total"))
 	}
 	return output.FLB_OK
 }
@@ -912,6 +914,7 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 		metric := appinsights.NewMetricTelemetry("mecpuUsage", mecpuUsageFloat)
 		TelemetryClient.Track(metric)
+		Log(fmt.Sprintf("Sent ME Cpu usage metrics"))
 	}
 	return output.FLB_OK
 }
@@ -936,6 +939,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 
 		metric := appinsights.NewMetricTelemetry("otelcpuUsage", otelcpuUsageFloat)
 		TelemetryClient.Track(metric)
+		Log(fmt.Sprintf("Sent Otel Cpu usage metrics"))
 	}
 	return output.FLB_OK
 }
@@ -960,6 +964,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 		metric := appinsights.NewMetricTelemetry("meVMRSS", memVmrssFloat)
 		TelemetryClient.Track(metric)
+		Log(fmt.Sprintf("Sent ME memory usage metrics"))
 	}
 	return output.FLB_OK
 }
@@ -984,6 +989,7 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 
 		metric := appinsights.NewMetricTelemetry("otelcolVMRSS", memVmrssFloat)
 		TelemetryClient.Track(metric)
+		Log(fmt.Sprintf("Sent Otel memory usage metrics"))
 	}
 	return output.FLB_OK
 }
