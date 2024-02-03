@@ -51,6 +51,8 @@ var RESET = "\033[0m"
 var RED = "\033[31m"
 
 var taConfigFilePath = "/ta-configuration/targetallocator.yaml"
+
+// var taRestartTracker = "/ta-restart/restart-tracker.txt"
 var taConfigUpdated = false
 var taLivenessCounter = 0
 
@@ -92,6 +94,10 @@ func updateTAConfigFile(configFilePath string) {
 	}
 
 	log.Println("Updated file - targetallocator.yaml for the TargetAllocator to pick up new config changes")
+	// if err := os.WriteFile(taRestartTracker, []byte("Ready to restart TA"), 0644); err != nil {
+	// 	logFatalError(fmt.Sprintf("config-reader::Unable to write to: %s - %v\n", taRestartTracker, err))
+	// 	os.Exit(1)
+	// }
 	taConfigUpdated = true
 }
 
@@ -112,16 +118,24 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
 	message := "\ntargetallocator is running."
 
+	if taLivenessCounter >= 3 {
+		// Setting this to false after 3 calls to healthhandler to make sure TA container doesnt keep restarting continuosly
+		taConfigUpdated = false
+		taLivenessCounter = 0
+	}
+
 	if taConfigUpdated {
 		status = http.StatusServiceUnavailable
 		message += "targetallocator-config changed"
 		taLivenessCounter++
 	}
-	if taLivenessCounter >= 4 {
-		// Setting this to false after 4 calls to healthhandler to make sure TA container doesnt keep restarting continuosly
-		taConfigUpdated = false
-		taLivenessCounter = 0
-	}
+
+	// 	check_file = os.stat(taRestartTracker).st_size
+
+	// if(check_file == 0) {
+	//     print("The file is empty.")
+	// else:
+	//     print("The file is not empty.")
 
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
