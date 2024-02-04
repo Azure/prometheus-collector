@@ -841,6 +841,7 @@ func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 			SendException(message)
 			return 0
 		}
+		Log(fmt.Sprintf("%v", metricName))
 		metricNameString, ok := metricName.(string)
 		if !ok {
 			message := fmt.Sprintf("metricName is not a string value")
@@ -904,6 +905,7 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 			SendException(message)
 			return 0
 		}
+		Log(fmt.Sprintf("%v", mecpuUsage))
 		mecpuUsageFloat, ok := mecpuUsage.(float64)
 		if !ok {
 			message := fmt.Sprintf("mecpuUsage is not a float64 value")
@@ -928,7 +930,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 			SendException(message)
 			continue
 		}
-		Log(otelcpuUsage)
+		Log(fmt.Sprintf("%v", otelcpuUsage))
 		otelcpuUsageFloat, err := strconv.ParseFloat(fmt.Sprintf("%v", otelcpuUsage), 64)
 		if err != nil {
 			message := fmt.Sprintf("Failed to parse otelcpuUsage as float64: %v", err)
@@ -954,6 +956,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 			SendException(message)
 			return 0
 		}
+		Log(fmt.Sprintf("%v", memVmrss))
 		memVmrssFloat, ok := memVmrss.(float64)
 		if !ok {
 			message := fmt.Sprintf("memVmrss is not a float64 value for ME")
@@ -979,6 +982,7 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 			SendException(message)
 			return 0
 		}
+		Log(fmt.Sprintf("%v", memVmrss))
 		memVmrssFloat, ok := memVmrss.(float64)
 		if !ok {
 			message := fmt.Sprintf("memVmrss is not a float64 value for Otel")
