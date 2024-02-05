@@ -1,18 +1,38 @@
+@echo off
 rem Get the current date and time
 setlocal enableextensions
 setlocal enabledelayedexpansion
-for /f %%x in ('wmic path win32_utctime get /format:list ^| findstr "="') do (
-    set %%x)
+for /f %%x in ('wmic path win32_utctime get /format:list ^| findstr "="') do ( set %%x )
 set /a z=(14-100%Month%%%100)/12, y=10000%Year%%%10000-z
 set /a ut=y*365+y/4-y/100+y/400+(153*(100%Month%%%100+12*z-3)+2)/5+Day-719469
 set /a epochTimeNow=%ut%*86400 + 100%Hour%%%100*3600 + 100%Minute%%%100*60 + 100%Second%%%100
 
 set /a durationInMinutes = -1
 
+REM Run tasklist once and capture the output
+set "MetricsExtension=false"
+set "MonAgentLauncher=false"
+set "otelcollector=false"
+
+for /f "tokens=*" %%a in ('tasklist /fo "table"') do (
+    set "output=%%a"
+
+    REM Check for MetricsExtension.Native.exe
+    echo !output! | findstr /i "MetricsExtension" > nul
+    if !errorlevel! equ 0 set MetricsExtension=true
+
+    REM Check for MonAgentLauncher.exe
+    echo !output! | findstr /i "MonAgentLauncher" > nul
+    if !errorlevel! equ 0 set MonAgentLauncher=true
+
+    REM Check for otelcollector.exe
+    echo !output! | findstr /i "otelcollector" > nul
+    if !errorlevel! equ 0 set otelcollector=true
+)
+
 if "%MAC%" == "" (
     rem Non-MAC mode
-    tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
-    if !ERRORLEVEL! NEQ 0 (
+    if %MetricsExtension%==false (
         echo "Metrics Extension is not running (Non-MAC mode)"
         goto eof
     )
@@ -29,7 +49,7 @@ if "%MAC%" == "" (
                 set /a duration=%epochTimeNow%-!azmonContainerStartTime!
                 set /a durationInMinutes=!duration! / 60
                 if !durationInMinutes! == 0 (
-                    echo %epochTimeNo% "No configuration present for the AKS resource"
+                    echo %epochTimeNow% "No configuration present for the AKS resource"
                 )
                 if !durationInMinutes! GTR 15 (
                     echo "Greater than 15 mins, No configuration present for the AKS resource"
@@ -37,13 +57,11 @@ if "%MAC%" == "" (
                 )
             )
         ) else (
-            tasklist /fi "imagename eq MetricsExtension.Native.exe" /fo "table"  | findstr MetricsExtension > nul
-            if !ERRORLEVEL! NEQ 0 (
+            if %MetricsExtension%==false (
                 echo "Metrics Extension is not running (configuration exists)"
                 goto eof
             )
-            tasklist /fi "imagename eq MonAgentLauncher.exe" /fo "table"  | findstr MonAgentLauncher > nul
-            if !ERRORLEVEL! NEQ 0 (
+            if %MonAgentLauncher%==false (
                 echo "MonAgentLauncher is not running (configuration exists)"
                 goto eof
             )
@@ -51,31 +69,16 @@ if "%MAC%" == "" (
     )
 )
 
-@REM "Checking if fluent-bit is running"
-tasklist /fi "imagename eq fluent-bit.exe" /fo "table"  | findstr fluent-bit
-if %ERRORLEVEL% NEQ 0 (
-    echo "Fluent-Bit is not running"
-    exit /B 1
-)
-
 @REM "Checking if config map has been updated since agent start"
 if exist "C:\opt\microsoft\scripts\filesystemwatcher.txt" (
     echo "Config Map Updated or DCR/DCE updated since agent started"
-    exit /B  1
+    goto eof
 )
 
-@REM REM "Checking if Telegraf is running"
-tasklist /fi "imagename eq telegraf.exe" /fo "table"  | findstr telegraf
-if %ERRORLEVEL% NEQ 0 (
-    echo "Telegraf is not running"
-    exit /B 1
-)
-
-@REM REM "Checking if otelcollector is running"
-tasklist /fi "imagename eq otelcollector.exe" /fo "table"  | findstr otelcollector
-if %ERRORLEVEL% NEQ 0 (
+@REM "Checking if otelcollector is running"
+if %otelcollector%==false (
     echo "otelcollector is not running"
-    exit /B 1
+    goto eof
 )
 
 endlocal
