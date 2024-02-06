@@ -73,7 +73,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	}
 
 	incomingTag := strings.ToLower(C.GoString(tag))
-
+	Log("Print the incoming tag: %s", incomingTag)
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
 	case fluentbitEventsProcessedLastPeriodTag:
