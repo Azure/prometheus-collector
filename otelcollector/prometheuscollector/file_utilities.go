@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,13 +14,16 @@ import (
 
 func printMdsdVersion() {
 	cmd := exec.Command("mdsd", "--version")
-	cmd.Stderr = os.Stderr
-	output, err := cmd.Output()
+	// buffer to capture the output
+	var output bytes.Buffer
+	cmd.Stdout = &output
+
+	err := cmd.Run()
 	if err != nil {
 		fmt.Printf("Error getting MDSD version: %v\n", err)
 		return
 	}
-	fmtVar("MDSD_VERSION", string(output))
+	fmtVar("MDSD_VERSION", output.String())
 }
 
 func readVersionFile(filePath string) (string, error) {
