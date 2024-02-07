@@ -936,25 +936,25 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		otelcpuUsage, ok := record["cpuUsage"]
-		if !ok {
-			message := "otelcpuUsage was not found in the record"
-			Log(message)
-			SendException(message)
-			continue
-		}
-		Log(fmt.Sprintf("%v", otelcpuUsage))
-		otelcpuUsageFloat, err := strconv.ParseFloat(fmt.Sprintf("%v", otelcpuUsage), 64)
-		if err != nil {
-			message := fmt.Sprintf("Failed to parse otelcpuUsage as float64: %v", err)
-			Log(message)
-			SendException(message)
-			continue
-		}
+		// otelcpuUsage, ok := record["cpuUsage"]
+		// if !ok {
+		// 	message := "otelcpuUsage was not found in the record"
+		// 	Log(message)
+		// 	SendException(message)
+		// 	continue
+		// }
+		Log(fmt.Sprintf("%v", record))
+		// otelcpuUsageFloat, err := strconv.ParseFloat(fmt.Sprintf("%v", otelcpuUsage), 64)
+		// if err != nil {
+		// 	message := fmt.Sprintf("Failed to parse otelcpuUsage as float64: %v", err)
+		// 	Log(message)
+		// 	SendException(message)
+		// 	continue
+		// }
 
-		metric := appinsights.NewMetricTelemetry("otelcpuUsage", otelcpuUsageFloat)
-		TelemetryClient.Track(metric)
-		Log("Sent Otel Cpu usage metrics")
+		// metric := appinsights.NewMetricTelemetry("otelcpuUsage", otelcpuUsageFloat)
+		// TelemetryClient.Track(metric)
+		// Log("Sent Otel Cpu usage metrics")
 	}
 	return output.FLB_OK
 }
