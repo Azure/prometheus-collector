@@ -844,7 +844,7 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 
 func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(fmt.Sprintf("%+v", record))
+		Log(ToString(record))
 		metricName := record["metricName"]
 		if metricName == nil {
 			message := fmt.Sprintf("metricName was not found in the record")
@@ -885,7 +885,7 @@ func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(fmt.Sprintf("%+v", record))
+		Log(ToString(record))
 		promMetrics := record["promMetrics"]
 		if promMetrics == nil {
 			message := fmt.Sprintf("promMetrics was not found in the record")
@@ -911,7 +911,7 @@ func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(fmt.Sprintf("%+v", record))
+		Log(ToString(record))
 		mecpuUsage, ok := record["cpuUsage"]
 		if !ok {
 			message := "mecpuUsage was not found in the record"
@@ -937,7 +937,7 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(fmt.Sprintf("%+v", record))
+		Log(ToString(record))
 
 		otelcpuUsage, ok := record["cpuUsage"]
 		if !ok {
@@ -964,7 +964,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 
 func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(fmt.Sprintf("%+v", record))
+		Log(ToString(record))
 		memVmrss := record["memVmrss"]
 		if memVmrss == nil {
 			message := fmt.Sprintf("memVmrss was not found in the record for ME")
@@ -990,7 +990,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(fmt.Sprintf("%+v", record))
+		Log(ToString(record))
 		memVmrss := record["memVmrss"]
 		if memVmrss == nil {
 			message := fmt.Sprintf("memVmrss was not found in the record for Otel")
