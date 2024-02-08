@@ -44,12 +44,10 @@ AzureMonitorMetrics:
   RsMemoryRequest: 500Mi
   DsCPULimitLinux: 200m
   DsMemoryLimitLinux: 1Gi
-  DsCPURequestLinux: 50Mi
+  DsCPURequestLinux: 50m
   DsMemoryRequestLinux: 150Mi
   DsCPULimitWindows: 500m
   DsMemoryLimitWindows: 1Gi
-  DsCPURequestWindows: 150m
-  DsMemoryRequestWindows: 500Mi
   ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator"
   ImageTagCfgReader: ${IMAGE_TAG}-cfg"
   TargetAllocatorEnabled: false
