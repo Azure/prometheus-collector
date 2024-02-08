@@ -903,7 +903,7 @@ jobs:
 
 - job: Deploy_Chart_ARC
   displayName: "Deploy: Arc dev cluster"
-  condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+  #condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   pool:
     name: Azure-Pipelines-CI-Test-EO
   dependsOn:
