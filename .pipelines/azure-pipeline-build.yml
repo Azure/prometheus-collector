@@ -517,9 +517,9 @@ jobs:
       displayName: "Build: build and push CCP image to dev ACR"
 
     - bash: |
-        MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-        DIGEST=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-        SIZE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+        MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+        DIGEST=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+        SIZE=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.size')
         cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
         {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
         EOF
@@ -557,7 +557,7 @@ jobs:
         tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
         sudo mv oras-install/oras /usr/local/bin/
         rm -rf oras_1.0.0_*.tar.gz oras-install/
-        oras attach $(LINUX_FULL_IMAGE_NAME) \
+        oras attach $(LINUX_CCP_FULL_IMAGE_NAME) \
           --artifact-type 'application/vnd.cncf.notary.signature' \
           ./payload.json:application/cose \
           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
@@ -567,7 +567,7 @@ jobs:
 
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
+        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CCP_FULL_IMAGE_NAME)
         if [ $? -ne 0 ]; then
           exit 1
         fi
@@ -590,7 +590,7 @@ jobs:
       inputs:
         scanType: 'Register'
         verbosity: 'Verbose'
-        dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
+        dockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
         alertWarningLevel: 'High'
         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
@@ -600,7 +600,7 @@ jobs:
       condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
-        DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
+        DockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
 
     - task: SdtReport@2
       displayName: 'SDL: generate report'
