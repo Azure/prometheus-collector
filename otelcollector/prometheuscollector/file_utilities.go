@@ -1,177 +1,177 @@
 package main
 
 import (
-    "bufio"
-    "bytes"
-    "fmt"
-    "io"
-    "io/ioutil"
-    "log"
-    "os"
-    "os/exec"
-    "strings"
+	"bufio"
+	"bytes"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"strings"
 )
 
 func printMdsdVersion() {
-    cmd := exec.Command("mdsd", "--version")
-    // buffer to capture the output
-    var output bytes.Buffer
-    cmd.Stdout = &output
+	cmd := exec.Command("mdsd", "--version")
+	// buffer to capture the output
+	var output bytes.Buffer
+	cmd.Stdout = &output
 
-    err := cmd.Run()
-    if err != nil {
-        fmt.Printf("Error getting MDSD version: %v\n", err)
-        return
-    }
-    fmtVar("MDSD_VERSION", output.String())
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("Error getting MDSD version: %v\n", err)
+		return
+	}
+	fmtVar("MDSD_VERSION", output.String())
 }
 
 func readVersionFile(filePath string) (string, error) {
-    content, err := ioutil.ReadFile(filePath)
-    if err != nil {
-        return "", err
-    }
-    return string(content), nil
+	content, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }
 
 func fmtVar(name, value string) {
-    fmt.Printf("%s=\"%s\"", name, value)
+	fmt.Printf("%s=\"%s\"", name, value)
 }
 
 func existsAndNotEmpty(filename string) bool {
-    info, err := os.Stat(filename)
-    if os.IsNotExist(err) {
-        return false
-    }
-    if err != nil {
-        // Handle the error, e.g., log it or return false
-        return false
-    }
-    if info.Size() == 0 {
-        return false
-    }
-    return true
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	if err != nil {
+		// Handle the error, e.g., log it or return false
+		return false
+	}
+	if info.Size() == 0 {
+		return false
+	}
+	return true
 }
 
 func readAndTrim(filename string) (string, error) {
-    content, err := ioutil.ReadFile(filename)
-    if err != nil {
-        return "", err
-    }
-    trimmedContent := strings.TrimSpace(string(content))
-    return trimmedContent, nil
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	trimmedContent := strings.TrimSpace(string(content))
+	return trimmedContent, nil
 }
 
 func exists(path string) bool {
-    _, err := os.Stat(path)
-    if err != nil {
-        if os.IsNotExist(err) {
-            return false
-        }
-    }
-    return true
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
 }
 
 func copyFile(sourcePath, destinationPath string) error {
-    sourceFile, err := os.Open(sourcePath)
-    if err != nil {
-        return err
-    }
-    defer sourceFile.Close()
+	sourceFile, err := os.Open(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
 
-    destinationFile, err := os.Create(destinationPath)
-    if err != nil {
-        return err
-    }
-    defer destinationFile.Close()
+	destinationFile, err := os.Create(destinationPath)
+	if err != nil {
+		return err
+	}
+	defer destinationFile.Close()
 
-    _, err = io.Copy(destinationFile, sourceFile)
-    if err != nil {
-        return err
-    }
+	_, err = io.Copy(destinationFile, sourceFile)
+	if err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 func setEnvVarsFromFile(filename string) error {
-    // Check if the file exists
-    _, e := os.Stat(filename)
-    if os.IsNotExist(e) {
-        return fmt.Errorf("File does not exist: %s", filename)
-    }
-    // Open the file for reading
-    file, err := os.Open(filename)
-    if err != nil {
-        return err
-    }
-    defer file.Close()
+	// Check if the file exists
+	_, e := os.Stat(filename)
+	if os.IsNotExist(e) {
+		return fmt.Errorf("File does not exist: %s", filename)
+	}
+	// Open the file for reading
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
-    scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(file)
 
-    for scanner.Scan() {
-        line := scanner.Text()
-        parts := strings.Split(line, "=")
-        if len(parts) != 2 {
-            fmt.Printf("Skipping invalid line: %s\n", line)
-            continue
-        }
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Split(line, "=")
+		if len(parts) != 2 {
+			fmt.Printf("Skipping invalid line: %s\n", line)
+			continue
+		}
 
-        key := parts[0]
-        value := parts[1]
+		key := parts[0]
+		value := parts[1]
 
-        // Set the environment variable
-        err := os.Setenv(key, value)
-        if err != nil {
-            return err
-        }
-    }
+		// Set the environment variable
+		err := os.Setenv(key, value)
+		if err != nil {
+			return err
+		}
+	}
 
-    if err := scanner.Err(); err != nil {
-        return err
-    }
+	if err := scanner.Err(); err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 func monitorInotify(outputFile string) error {
-    // Start inotify to watch for changes
-    fmt.Println("Starting inotify for watching config map update")
+	// Start inotify to watch for changes
+	fmt.Println("Starting inotify for watching config map update")
 
-    _, err := os.Create(outputFile)
-    if err != nil {
-        log.Fatalf("Error creating output file: %v\n", err)
-    }
+	_, err := os.Create(outputFile)
+	if err != nil {
+		log.Fatalf("Error creating output file: %v\n", err)
+	}
 
-    // Define the command to start inotify
-    inotifyCommand := exec.Command(
-        "inotifywait",
-        "/etc/config/settings",
-        "--daemon",
-        "--recursive",
-        "--outfile", outputFile,
-        "--event", "create,delete",
-        "--format", "%e : %T",
-        "--timefmt", "+%s",
-    )
+	// Define the command to start inotify
+	inotifyCommand := exec.Command(
+		"inotifywait",
+		"/etc/config/settings",
+		"--daemon",
+		"--recursive",
+		"--outfile", outputFile,
+		"--event", "create,delete",
+		"--format", "%e : %T",
+		"--timefmt", "+%s",
+	)
 
-    // Start the inotify process
-    err = inotifyCommand.Start()
-    if err != nil {
-        log.Fatalf("Error starting inotify process: %v\n", err)
-    }
+	// Start the inotify process
+	err = inotifyCommand.Start()
+	if err != nil {
+		log.Fatalf("Error starting inotify process: %v\n", err)
+	}
 
-    return nil
+	return nil
 }
 
 func hasConfigChanged(filePath string) bool {
-    if _, err := os.Stat(filePath); err == nil {
-        fileInfo, err := os.Stat(filePath)
-        if err != nil {
-            fmt.Println("Error getting file info:", err)
-            os.Exit(1)
-        }
+	if _, err := os.Stat(filePath); err == nil {
+		fileInfo, err := os.Stat(filePath)
+		if err != nil {
+			fmt.Println("Error getting file info:", err)
+			os.Exit(1)
+		}
 
-        return fileInfo.Size() > 0
-    }
-    return false
+		return fileInfo.Size() > 0
+	}
+	return false
 }
