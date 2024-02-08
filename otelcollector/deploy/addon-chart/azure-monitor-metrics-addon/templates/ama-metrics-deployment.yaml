@@ -37,11 +37,11 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 7
-              memory: 14Gi
+              cpu: {{ .Values.AzureMonitorMetrics.RsCPULimit }}
+              memory: {{ .Values.AzureMonitorMetrics.RsMemoryLimit }}
             requests:
-              cpu: 150m
-              memory: 500Mi
+              cpu: {{ .Values.AzureMonitorMetrics.RsCPURequest }}
+              memory: {{ .Values.AzureMonitorMetrics.RsMemoryRequest }}
           {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
           envFrom:
             - secretRef:

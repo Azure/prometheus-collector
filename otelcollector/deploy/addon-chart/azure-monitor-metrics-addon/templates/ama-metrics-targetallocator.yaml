@@ -36,11 +36,11 @@ spec:
         imagePullPolicy: IfNotPresent
         resources:
           limits:
-            cpu: 5
-            memory: 8Gi
+            cpu: {{ .Values.AzureMonitorMetrics.TargetAllocatorCPULimit }}
+            memory: {{ .Values.AzureMonitorMetrics.TargetAllocatorMemoryLimit }}
           requests:
-            cpu: 10m
-            memory: 50Mi
+            cpu: {{ .Values.AzureMonitorMetrics.TargetAllocatorCPURequest }}
+            memory: {{ .Values.AzureMonitorMetrics.TargetAllocatorMemoryRequest }}
         env:
         - name: OTELCOL_NAMESPACE
           value: "kube-system"
@@ -78,11 +78,11 @@ spec:
         imagePullPolicy: IfNotPresent
         resources:
           limits:
-            cpu: 1
-            memory: 1Gi
+            cpu: {{ .Values.AzureMonitorMetrics.CfgReaderCPULimit }}
+            memory: {{ .Values.AzureMonitorMetrics.CfgReaderMemoryLimit }}
           requests:
-            cpu: 1m
-            memory: 10Mi
+            cpu: {{ .Values.AzureMonitorMetrics.CfgReaderCPURequest}}
+            memory: {{ .Values.AzureMonitorMetrics.CfgReaderMemoryRequest }}
         env:
         - name: CLUSTER
           {{- if .Values.AzureMonitorMetrics.ArcExtension }}
