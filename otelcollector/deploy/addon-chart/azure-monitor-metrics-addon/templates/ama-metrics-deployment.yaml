@@ -279,16 +279,32 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
+        {{- if ne .Values.tolerationsOnlyForControlPlane "true" }}
         - operator: "Exists"
-          effect: NoExecute
+          effect: "NoSchedule"
         - operator: "Exists"
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-          effect: NoSchedule
+          effect: "NoExecute"
+        - operator: "Exists"
+          effect: "PreferNoSchedule" 
+        {{- end }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
       volumes:
         - name: settings-vol-config
           configMap:
