@@ -144,4 +144,4 @@ prometheus-node-exporter:
   image:
     registry: mcr.microsoft.com
     repository: oss/prometheus/node-exporter
-tolerationsOnlyForControlPlane: "false"
+tolerationsOnlyForControlPlane: false
