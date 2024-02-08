@@ -406,9 +406,9 @@ spec:
                 - cmd
                 - /c
                 - C:\opt\microsoft\scripts\livenessprobe.cmd
-            periodSeconds: 15
+            periodSeconds: 60
             initialDelaySeconds: 300
-            timeoutSeconds: 15
+            timeoutSeconds: 60
             failureThreshold: 3
         - name: addon-token-adapter-win
           command:

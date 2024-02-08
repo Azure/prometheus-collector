@@ -340,7 +340,8 @@ jobs:
 
         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
         sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-        docker system prune --volumes -y
+        #docker system prune --volumes -y
+        docker system prune --all -f
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
@@ -634,6 +635,7 @@ jobs:
   displayName: "Build: windows 2019 prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   variables:
@@ -666,6 +668,7 @@ jobs:
   displayName: "Build: windows 2022 prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   variables:
@@ -698,6 +701,7 @@ jobs:
   displayName: "Build: windows multi-arch prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   - Windows2019_Prometheus_Collector
@@ -889,7 +893,6 @@ jobs:
       echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
     displayName: "Build: push helm chart to dev ACR"
-    condition: eq(variables.IS_PR, false)
 
   - task: PublishBuildArtifacts@1
     displayName: "Ev2: publish helm chart artifacts"

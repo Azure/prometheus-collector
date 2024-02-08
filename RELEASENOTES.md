@@ -1,5 +1,11 @@
 # Azure Monitor Metrics for AKS clusters
 
+### Pending
+* Change log -
+  * fix: stop copying libssl.so.1.1 & libcrypto.so.1.1 as they are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
+  * fix: update windows liveness timeoutSeconds, periodSeconds to 60 and reduce tasklist usage in liveness probe
+
+
 ## Release 01-09-2024
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.3-main-01-09-2024-a192d342`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.3-main-01-09-2024-a192d342-win`
