@@ -2,7 +2,7 @@
 
 ### Pending
 * Change log -
-  * fix: fix: stop copying libssl.so.1.1 & libcrypto.so.1.1 as they are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
+  * fix: stop copying libssl.so.1.1 & libcrypto.so.1.1 as they are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
   * fix: update windows liveness timeoutSeconds, periodSeconds to 60 and reduce tasklist usage in liveness probe
 
 
