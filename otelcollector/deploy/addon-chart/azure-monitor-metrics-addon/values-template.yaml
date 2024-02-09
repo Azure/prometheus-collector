@@ -138,7 +138,7 @@ Azure:
 ClusterDistribution: ""
 prometheus-node-exporter:
   service:
-    enabled: false
+    enabled: true
     port: 9110
     targetPort: 9110
   image:

@@ -233,7 +233,7 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-        {{- if ne .Values.tolerationsOnlyForControlPlane true }}
+        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
         - operator: "Exists"
           effect: "NoSchedule"
         - operator: "Exists"
