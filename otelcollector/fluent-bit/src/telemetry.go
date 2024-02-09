@@ -900,7 +900,7 @@ func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 			SendException(message)
 			continue
 		}
-		Log(fmt.Sprintf("%v", promMetricsFloat))
+		Log(ToString(promMetricsFloat))
 
 		metric := appinsights.NewMetricTelemetry("prometheus_sd_http_failures_total", promMetricsFloat)
 		TelemetryClient.Track(metric)
@@ -911,7 +911,7 @@ func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(ToString(record))
+
 		mecpuUsage, ok := record["cpuUsage"]
 		if !ok {
 			message := "mecpuUsage was not found in the record"
@@ -919,7 +919,7 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 			SendException(message)
 			continue
 		}
-		Log(fmt.Sprintf("%v", mecpuUsage))
+		Log(ToString(mecpuUsage))
 		mecpuUsageFloat, err := strconv.ParseFloat(fmt.Sprintf("%v", mecpuUsage), 64)
 		if err != nil {
 			message := fmt.Sprintf("Failed to parse mecpuUsage as float64: %v", err)
@@ -937,7 +937,6 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(ToString(record))
 
 		otelcpuUsage, ok := record["cpuUsage"]
 		if !ok {
@@ -946,6 +945,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 			SendException(message)
 			continue
 		}
+		Log(ToString(otelcpuUsage))
 
 		otelcpuUsageFloat, err := strconv.ParseFloat(fmt.Sprintf("%v", otelcpuUsage), 64)
 		if err != nil {
@@ -964,7 +964,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 
 func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(ToString(record))
+		Log(ToString(memVmrss))
 		memVmrss := record["memVmrss"]
 		if memVmrss == nil {
 			message := fmt.Sprintf("memVmrss was not found in the record for ME")
@@ -972,7 +972,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 			SendException(message)
 			continue
 		}
-		Log(fmt.Sprintf("%v", memVmrss))
+		Log(ToString(memVmrss))
 		memVmrssFloat, ok := memVmrss.(float64)
 		if !ok {
 			message := fmt.Sprintf("memVmrss is not a float64 value for ME")
@@ -990,7 +990,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(ToString(record))
+
 		memVmrss := record["memVmrss"]
 		if memVmrss == nil {
 			message := fmt.Sprintf("memVmrss was not found in the record for Otel")
@@ -998,7 +998,7 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 			SendException(message)
 			continue
 		}
-		Log(fmt.Sprintf("%v", memVmrss))
+		Log(ToString(memVmrss))
 		memVmrssFloat, ok := memVmrss.(float64)
 		if !ok {
 			message := fmt.Sprintf("memVmrss is not a float64 value for Otel")
