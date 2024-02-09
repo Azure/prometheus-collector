@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,16 +13,28 @@ import (
 
 func printMdsdVersion() {
 	cmd := exec.Command("mdsd", "--version")
-	// buffer to capture the output
-	var output bytes.Buffer
-	cmd.Stdout = &output
-
-	err := cmd.Run()
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		fmt.Printf("Error getting StdoutPipe for MDSD version: %v\n", err)
+		return
+	}
+
+	if err := cmd.Start(); err != nil {
+		fmt.Printf("Error starting command to get MDSD version: %v\n", err)
+		return
+	}
+
+	output, err := ioutil.ReadAll(stdout)
+	if err != nil {
+		fmt.Printf("Error reading MDSD version: %v\n", err)
+		return
+	}
+
+	if err := cmd.Wait(); err != nil {
 		fmt.Printf("Error getting MDSD version: %v\n", err)
 		return
 	}
-	fmtVar("MDSD_VERSION", output.String())
+	fmtVar("MDSD_VERSION", string(output))
 }
 
 func readVersionFile(filePath string) (string, error) {
@@ -38,7 +49,7 @@ func readVersionFile(filePath string) (string, error) {
 }
 
 func fmtVar(name, value string) {
-	fmt.Printf("%s=\"%s\"FOO \n", name, value)
+	fmt.Printf("%s=\"%s\"\n", name, strings.TrimRight(value, "\n\r"))
 }
 
 func existsAndNotEmpty(filename string) bool {
