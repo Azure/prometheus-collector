@@ -72,6 +72,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
+	Log("Print the incoming tag: %s", incomingTag)
 	case fluentbitEventsProcessedLastPeriodTag:
 		return UpdateMEReceivedMetricsCount(records)
 	case fluentbitProcessedCountTag:
@@ -82,7 +83,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
 		return RecordExportingFailed(records)
-	case "prometheus.scrape":
+	case "prometheusScrapeTag":
 		return PushPrometheusMetricsToAppInsightsMetrics(records)
 	default:
 		// Error messages from metrics extension and otelcollector
