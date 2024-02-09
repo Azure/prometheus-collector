@@ -16,9 +16,10 @@ func FLBPluginRegister(ctx unsafe.Pointer) int {
 	return output.FLBPluginRegister(ctx, "appinsights", "AppInsights GO!")
 }
 
-//export FLBPluginInit
 // (fluentbit will call this)
 // ctx (context) pointer to fluentbit context (state/ c code)
+//
+//export FLBPluginInit
 func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	// This will not load the plugin instance. FLBPluginFlush won't be called.
@@ -75,18 +76,25 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
 	case fluentbitEventsProcessedLastPeriodTag:
+		Log("Print the incoming tag: %s", incomingTag)
 		return UpdateMEReceivedMetricsCount(records)
 	case fluentbitProcessedCountTag:
+		Log("Print the incoming tag: %s", incomingTag)
 		return UpdateMEMetricsProcessedCount(records)
 	case fluentbitDiagnosticHeartbeatTag:
+		Log("Print the incoming tag: %s", incomingTag)
 		return PushMetricsDroppedCountToAppInsightsMetrics(records)
 	case fluentbitInfiniteMetricTag:
+		Log("Print the incoming tag: %s", incomingTag)
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
+		Log("Print the incoming tag: %s", incomingTag)
 		return RecordExportingFailed(records)
 	case "prometheus.log.scrape":
+		Log("Print the incoming tag: %s", incomingTag)
 		return PushPrometheusMetricsToAppInsightsMetrics(records)
 	default:
+		Log("Print the incoming tag: %s", incomingTag)
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)
 	}
