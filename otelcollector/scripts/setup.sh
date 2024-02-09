@@ -57,7 +57,7 @@ sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.tx
 
 # Install fluent-bit
 echo "Installing fluent-bit..."
-sudo tdnf install fluent-bit-2.0.9 -y
+sudo tdnf install fluent-bit-2.1.10 -y
 
 # Setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
