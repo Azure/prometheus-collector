@@ -35,12 +35,12 @@ AzureMonitorMetrics:
       - storageclasses
       - validatingwebhookconfigurations
       - volumeattachments
-  ImageRepository: ${MCR_REPOSITORY}
-  ImageTag: ${IMAGE_TAG}
-  ImageTagWin: ${IMAGE_TAG}-win
-  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator"
-  ImageTagCfgReader: ${IMAGE_TAG}-cfg"
-  TargetAllocatorEnabled: false
+  ImageRepository: "/azuremonitor/containerinsights/ciprod/prometheus-collector/images"
+  ImageTag: "6.8.3-main-01-09-2024-a192d342"
+  ImageTagWin: "6.8.3-main-01-09-2024-a192d342-win"
+  ImageTagTargetAllocator: "6.8.3-main-01-09-2024-a192d342-targetallocator"
+  ImageTagCfgReader: "6.8.3-main-01-09-2024-a192d342-cfg"
+  TargetAllocatorEnabled: true
   DeploymentReplicas: 1
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP -
@@ -51,8 +51,8 @@ AzureMonitorMetrics:
     ImageTag: "master.230804.1"
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
     ImageTagWin: "20230120winbeta"
-  ArcExtension: ${ARC_EXTENSION}
-  ArcEnableOperator: false
+  ArcExtension: false
+  ArcEnableOperator: true
   # Do not change the below settings. They are reserved for Arc Autonomous
   isArcACluster: false
   arcAutonomousSettings:
@@ -62,9 +62,11 @@ AzureMonitorMetrics:
 global:
   commonGlobals:
     CloudEnvironment: "azurepubliccloud"
-    Region: "${AKS_REGION}"
+    Region: "westus2"
+    #Region: "northcentralus"
     Customer:
-      AzureResourceID: ${AKS_RESOURCE_ID}
+      AzureResourceID: "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourcegroups/rashmi-operator-cfg/providers/Microsoft.ContainerService/managedClusters/rashmi-operator-cfg"
+      #AzureResourceID: /subscriptions/5a9b24b3-4658-4e41-b650-762cc0026438/resourcegroups/ci-scale-ksm/providers/Microsoft.ContainerService/managedClusters/ci-scale-ksm
 
 # For ARC backdoor testing
 Azure:
