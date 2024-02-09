@@ -844,7 +844,7 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 
 func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(ToString(record))
+
 		metricName := record["metricName"]
 		if metricName == nil {
 			message := fmt.Sprintf("metricName was not found in the record")
@@ -852,7 +852,7 @@ func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 			SendException(message)
 			continue
 		}
-		Log(fmt.Sprintf("%v", metricName))
+		Log(ToString(metricName))
 		metricNameString, ok := metricName.(string)
 		if !ok {
 			message := fmt.Sprintf("metricName is not a string value")
@@ -867,6 +867,7 @@ func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 			SendException(message)
 			continue
 		}
+		Log(ToString(promMetrics))
 		promMetricsFloat, ok := promMetrics.(float64)
 		if !ok {
 			message := fmt.Sprintf("promMetrics is not a float64 value")
@@ -885,7 +886,7 @@ func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(ToString(record))
+
 		promMetrics := record["promMetrics"]
 		if promMetrics == nil {
 			message := fmt.Sprintf("promMetrics was not found in the record")
@@ -893,6 +894,7 @@ func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 			SendException(message)
 			continue
 		}
+		Log(ToString(promMetrics))
 		promMetricsFloat, ok := promMetrics.(float64)
 		if !ok {
 			message := fmt.Sprintf("promMetrics is not a float64 value")
@@ -900,7 +902,6 @@ func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 			SendException(message)
 			continue
 		}
-		Log(ToString(promMetricsFloat))
 
 		metric := appinsights.NewMetricTelemetry("prometheus_sd_http_failures_total", promMetricsFloat)
 		TelemetryClient.Track(metric)
@@ -964,7 +965,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 
 func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(ToString(memVmrss))
+
 		memVmrss := record["memVmrss"]
 		if memVmrss == nil {
 			message := fmt.Sprintf("memVmrss was not found in the record for ME")
