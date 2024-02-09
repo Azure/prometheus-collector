@@ -31,11 +31,14 @@ func readVersionFile(filePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(content), nil
+	version := string(content)
+	// Remove line breaks
+	version = strings.TrimRight(version, "\n\r")
+	return version, nil
 }
 
 func fmtVar(name, value string) {
-	fmt.Printf("%s=\"%s\"", name, value)
+	fmt.Printf("%s=\"%s\"FOO \n", name, value)
 }
 
 func existsAndNotEmpty(filename string) bool {
