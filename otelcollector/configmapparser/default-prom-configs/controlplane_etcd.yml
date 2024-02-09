@@ -1,43 +1,43 @@
-scrape_configs:
-  - job_name: prometheus_ref_app_etcd
-    scheme: http
-    scrape_interval: $$SCRAPE_INTERVAL$$
-    kubernetes_sd_configs:
-    - role: pod
-    relabel_configs:
-    - source_labels: [__meta_kubernetes_pod_label_app]
-      action: keep
-      regex: "prometheus-reference-app"
 # scrape_configs:
-# - job_name: controlplane-etcd
-#   scrape_interval: $$SCRAPE_INTERVAL$$
-#   follow_redirects: false
-#   scheme: https
-#   label_limit: 63
-#   label_name_length_limit: 511
-#   label_value_length_limit: 1023
-#   kubernetes_sd_configs:
-#     - role: endpoints
-#       namespaces:
-#         names:
-#           - $$POD_NAMESPACE$$
-#   tls_config:
-#     ca_file: /etc/kubernetes/secrets/etcd-client-ca.crt
-#     cert_file: /etc/kubernetes/secrets/etcd-client.crt
-#     key_file: /etc/kubernetes/secrets/etcd-client.key
-#     insecure_skip_verify: true
-#   relabel_configs:
-#     - source_labels: [ __meta_kubernetes_service_label_app, __meta_kubernetes_pod_container_port_number ]
+#   - job_name: prometheus_ref_app_etcd
+#     scheme: http
+#     scrape_interval: $$SCRAPE_INTERVAL$$
+#     kubernetes_sd_configs:
+#     - role: pod
+#     relabel_configs:
+#     - source_labels: [__meta_kubernetes_pod_label_app]
 #       action: keep
-#       regex: etcd;2379
-#     - source_labels: [ __meta_kubernetes_pod_name ]
-#       regex: (.*)
-#       target_label: instance
-#       action: replace
-#     - source_labels: [ __meta_kubernetes_pod_name ]
-#       action: drop
-#       regex: (etcd2-.*)
-#   metric_relabel_configs:
-#     - source_labels: [ __name__ ]
-#       action: drop
-#       regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
+#       regex: "prometheus-reference-app"
+scrape_configs:
+- job_name: controlplane-etcd
+  scrape_interval: $$SCRAPE_INTERVAL$$
+  follow_redirects: false
+  scheme: https
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  kubernetes_sd_configs:
+    - role: endpoints
+      namespaces:
+        names:
+          - $$POD_NAMESPACE$$
+  tls_config:
+    ca_file: /etc/kubernetes/secrets/etcd-client-ca.crt
+    cert_file: /etc/kubernetes/secrets/etcd-client.crt
+    key_file: /etc/kubernetes/secrets/etcd-client.key
+    insecure_skip_verify: true
+  relabel_configs:
+    - source_labels: [ __meta_kubernetes_service_label_app, __meta_kubernetes_pod_container_port_number ]
+      action: keep
+      regex: etcd;2379
+    - source_labels: [ __meta_kubernetes_pod_name ]
+      regex: (.*)
+      target_label: instance
+      action: replace
+    - source_labels: [ __meta_kubernetes_pod_name ]
+      action: drop
+      regex: (etcd2-.*)
+  metric_relabel_configs:
+    - source_labels: [ __name__ ]
+      action: drop
+      regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
