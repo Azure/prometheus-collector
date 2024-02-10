@@ -33,7 +33,7 @@ spec:
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
-          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
+          image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.8.4-rashmi-hash-test-02-08-2024-c91dcae3"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
