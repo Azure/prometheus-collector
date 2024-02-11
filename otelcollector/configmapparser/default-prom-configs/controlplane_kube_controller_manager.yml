@@ -1,13 +1,3 @@
-# scrape_configs:
-#   - job_name: prometheus_ref_app_kube_controller_manager
-#     scheme: http
-#     scrape_interval: $$SCRAPE_INTERVAL$$
-#     kubernetes_sd_configs:
-#     - role: pod
-#     relabel_configs:
-#     - source_labels: [__meta_kubernetes_pod_label_app]
-#       action: keep
-#       regex: "prometheus-reference-app"
 scrape_configs:
 - job_name: controlplane-kube-controller-manager
   scrape_interval: $$SCRAPE_INTERVAL$$

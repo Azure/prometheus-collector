@@ -3,9 +3,6 @@ scrape_configs:
   scrape_interval: $$SCRAPE_INTERVAL$$
   follow_redirects: false
   scheme: https
-  label_limit: 63
-  label_name_length_limit: 511
-  label_value_length_limit: 1023
   kubernetes_sd_configs:
     - role: endpoints
       namespaces:
