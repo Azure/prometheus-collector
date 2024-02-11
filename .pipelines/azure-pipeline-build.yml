@@ -3,6 +3,7 @@ trigger:
     include:
     - main
     - ccp_shell_removal_branch
+    - kaveesh/fix_for_nina_branch
     - relabel-host
 
 pr:
