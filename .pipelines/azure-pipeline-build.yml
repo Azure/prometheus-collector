@@ -1176,7 +1176,7 @@ jobs:
 #         az config set extension.use_dynamic_install=yes_without_prompt
 #         az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
 
-# - job: Deploy_AKS_Chart
+ - job: Deploy_AKS_Chart
   displayName: "Deploy: AKS dev cluster"
   pool:
     name: Azure-Pipelines-CI-Test-EO
