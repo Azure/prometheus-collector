@@ -891,11 +891,8 @@ stages:
     condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
     pool:
      name: Azure-Pipelines-CI-Test-EO
-    dependsOn:
-    - Common
-    - ARC_Chart
     variables:
-      HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
+      HELM_SEMVER: $[ stageDependencies.Build.common.outputs['setup.SEMVER'] ]
     steps:
     - bash: |
         # Create JSON request body
@@ -976,17 +973,12 @@ stages:
     pool:
       name: Azure-Pipelines-CI-Test-EO
     condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-    dependsOn:
-    - Common
-    - Linux
-    - WindowsMultiArch
-    - ARC_Chart
     variables:
-      HELM_CHART_NAME: $[ dependencies.common.outputs['setup.HELM_CHART_NAME'] ]
-      HELM_SEMVER: $[ dependencies.common.outputs['setup.SEMVER'] ]
-      IMAGE_TAG: $[ dependencies.common.outputs['setup.SEMVER'] ]
-      IMAGE_TAG_WINDOWS: $[ dependencies.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-      HELM_FULL_IMAGE_NAME: $[ dependencies.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+      HELM_CHART_NAME: $[ stageDependencies.Build.common.outputs['setup.HELM_CHART_NAME'] ]
+      HELM_SEMVER: $[ stageDependencies.Build.common.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ stageDependencies.Build.common.outputs['setup.SEMVER'] ]
+      IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.common.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.common.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
     steps:
     - checkout: self
       submodules: true
