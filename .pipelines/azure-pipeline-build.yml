@@ -29,6 +29,7 @@ variables:
 stages:
 - stage: Build
   lockBehavior: sequential
+  environment: Prometheus-Collector
   jobs:
   - job: Common
     displayName: Set image tags and publish Ev2 artifacts
