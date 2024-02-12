@@ -910,9 +910,6 @@ stages:
     environment: Prometheus-Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    dependsOn:
-    - Image_Tags_and_Ev2_Artifacts
-    - Arc_Helm_Chart
     variables:
       HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
       skipComponentGovernanceDetection: true
@@ -1023,10 +1020,6 @@ stages:
     pool:
       name: Azure-Pipelines-CI-Test-EO
     condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-    dependsOn:
-    - Image_Tags_and_Ev2_Artifacts
-    - Linux_Prometheus_Collector
-    - WindowsMultiArch_Prometheus_Collector
     variables:
       HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
       HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
