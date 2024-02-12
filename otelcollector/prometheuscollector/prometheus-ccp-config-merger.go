@@ -177,6 +177,7 @@ func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]in
 			return nil
 		}
 
+		fmt.Printf("Merging config:  %v\n", config)
 		mergedDefaultConfigs = mergeYAML(mergedDefaultConfigs, config)
 	}
 	fmt.Printf("Done merging %d default prometheus config(s)\n", len(defaultScrapeConfigs))
@@ -248,8 +249,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 }
 
 func prometheusCcpConfigMerger() {
-	mergedDefaultConfigs = make(map[interface{}]interface{})  // Initialize mergedDefaultConfigs
+	mergedDefaultConfigs = make(map[interface{}]interface{}) // Initialize mergedDefaultConfigs
 	setDefaultFileScrapeInterval("30s")
 	writeDefaultScrapeTargetsFile()
-	fmt.Printf("Done creating default targets file\n")
 }
