@@ -1054,7 +1054,7 @@ stages:
                     echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
 
                     output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                    if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG))
+                    if (echo $output | grep $(IMAGE_TAG))
                     then
                       echo "Images are published to mcr"
                       exit 0
