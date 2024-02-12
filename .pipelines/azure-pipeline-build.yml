@@ -904,6 +904,7 @@ jobs:
 - deployment: Deploy_Chart_ARC
   displayName: "Deploy: Arc dev cluster"
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+  environment: Prometheus-Collector
   pool:
     name: Azure-Pipelines-CI-Test-EO
   dependsOn:
