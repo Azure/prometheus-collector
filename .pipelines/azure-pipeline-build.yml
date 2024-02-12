@@ -852,56 +852,56 @@ stages:
   #         pathToPublish: '$(Build.ArtifactStagingDirectory)'
   #         artifactName: drop
 
-  - job: Arc_Helm_Chart
-    displayName: "Package: Arc helm chart"
-    pool:
-      name: Azure-Pipelines-CI-Test-EO
-    dependsOn:
-    - Image_Tags_and_Ev2_Artifacts
-    - Linux_Prometheus_Collector
-    variables:
-      HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-      IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-      IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-      ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
-      ARC_EXTENSION: true
-      skipComponentGovernanceDetection: true
-    steps:
-    - task: HelmInstaller@1
-      displayName: 'Build: install Helm version'
-      inputs:
-        helmVersionToInstall: 3.12.3
+  # - job: Arc_Helm_Chart
+  #   displayName: "Package: Arc helm chart"
+  #   pool:
+  #     name: Azure-Pipelines-CI-Test-EO
+  #   dependsOn:
+  #   - Image_Tags_and_Ev2_Artifacts
+  #   - Linux_Prometheus_Collector
+  #   variables:
+  #     HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+  #     IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+  #     IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+  #     ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
+  #     ARC_EXTENSION: true
+  #     skipComponentGovernanceDetection: true
+  #   steps:
+  #   - task: HelmInstaller@1
+  #     displayName: 'Build: install Helm version'
+  #     inputs:
+  #       helmVersionToInstall: 3.12.3
 
-    - bash: |
-        export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
-        envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-        helm version
-      displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
+  #   - bash: |
+  #       export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
+  #       envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+  #       helm version
+  #     displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
 
-    - bash: |
-        helm dep update
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-      displayName: "Build: update helm dependencies"
+  #   - bash: |
+  #       helm dep update
+  #     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+  #     displayName: "Build: update helm dependencies"
 
-    - bash: |
-        helm package ./azure-monitor-metrics-addon/
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-      displayName: "Build: package helm chart"
+  #   - bash: |
+  #       helm package ./azure-monitor-metrics-addon/
+  #     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
+  #     displayName: "Build: package helm chart"
 
-    - bash: |
-        helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        helm push $(ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
-        mkdir -p $(Build.ArtifactStagingDirectory)/arc-chart
-        echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-      displayName: "Build: push helm chart to dev ACR"
+  #   - bash: |
+  #       helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  #       helm push $(ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+  #       mkdir -p $(Build.ArtifactStagingDirectory)/arc-chart
+  #       echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
+  #     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
+  #     displayName: "Build: push helm chart to dev ACR"
 
-    - task: PublishBuildArtifacts@1
-      displayName: "Ev2: publish helm chart artifacts"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
-      inputs:
-        pathToPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: drop
+  #   - task: PublishBuildArtifacts@1
+  #     displayName: "Ev2: publish helm chart artifacts"
+  #     condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+  #     inputs:
+  #       pathToPublish: '$(Build.ArtifactStagingDirectory)'
+  #       artifactName: drop
 
 - stage: Deploy
   jobs:
