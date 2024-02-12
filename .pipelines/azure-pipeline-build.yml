@@ -30,7 +30,7 @@ stages:
 - stage: Build
   lockBehavior: sequential
   jobs:
-  - job: Common
+  - deployment: Common
     displayName: Set image tags and publish Ev2 artifacts
     environment: Prometheus-Collector
     pool:
