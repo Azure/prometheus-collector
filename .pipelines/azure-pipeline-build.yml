@@ -4,6 +4,7 @@ trigger:
     - main
     - grace/testkube-cont
 
+
 pr:
   autoCancel: true
   branches:
