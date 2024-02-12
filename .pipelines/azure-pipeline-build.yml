@@ -35,132 +35,136 @@ stages:
     environment: Prometheus-Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    steps:
-      - checkout: self
-        submodules: true
-      - bash: |
-          if [ $(IS_PR) == "True" ]; then
-            BRANCH_NAME=$(System.PullRequest.SourceBranch)
-          else
-            BRANCH_NAME=$(Build.SourceBranch)
-            BRANCH_NAME=${BRANCH_NAME#refs/heads/}
-          fi
-          BRANCH_NAME=$(echo $BRANCH_NAME | tr / - | tr . - | tr _ - | cut -c1-90)
-          COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
-          DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
-          VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
-          SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
+    strategy:
+    # Default deployment strategy, more coming...
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            submodules: true
+          - bash: |
+              if [ $(IS_PR) == "True" ]; then
+                BRANCH_NAME=$(System.PullRequest.SourceBranch)
+              else
+                BRANCH_NAME=$(Build.SourceBranch)
+                BRANCH_NAME=${BRANCH_NAME#refs/heads/}
+              fi
+              BRANCH_NAME=$(echo $BRANCH_NAME | tr / - | tr . - | tr _ - | cut -c1-90)
+              COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
+              DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
+              VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
+              SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
 
-          LINUX_IMAGE_TAG=$SEMVER
-          # Truncating to 128 characters as it is required by docker
-          LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
+              LINUX_IMAGE_TAG=$SEMVER
+              # Truncating to 128 characters as it is required by docker
+              LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
 
-          #Truncating this to 124 to add the cfg suffix
-          LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
-          LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
-          
-          #Truncating this to 113 to add the ref app suffices
-          LINUX_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-113)
-          LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
-          LINUX_REF_APP_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-python
+              #Truncating this to 124 to add the cfg suffix
+              LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
+              LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
+              
+              #Truncating this to 113 to add the ref app suffices
+              LINUX_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-113)
+              LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
+              LINUX_REF_APP_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-python
 
-          # Truncating to 115 characters as it is required by docker (4 characters used in -win and 9 characters used in -ltsc2019/-ltsc2022)
-          WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-115)
-          WINDOWS_IMAGE_TAG=$WINDOWS_IMAGE_TAG_PREFIX-win
+              # Truncating to 115 characters as it is required by docker (4 characters used in -win and 9 characters used in -ltsc2019/-ltsc2022)
+              WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-115)
+              WINDOWS_IMAGE_TAG=$WINDOWS_IMAGE_TAG_PREFIX-win
 
 
-          #Truncating this to 112 characters to add the targetallocator suffix
-          TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
-          TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
+              #Truncating this to 112 characters to add the targetallocator suffix
+              TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
+              TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
 
-          #Truncating this to 113 to add the ref app suffices
-          WIN_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-107)
-          WIN_REF_APP_GOLANG_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-golang
-          WIN_REF_APP_PYTHON_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-python
+              #Truncating this to 113 to add the ref app suffices
+              WIN_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-107)
+              WIN_REF_APP_GOLANG_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-golang
+              WIN_REF_APP_PYTHON_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-python
 
-          # Truncating to 119 characters as it is required by docker (9 characters used in -ltsc2019/-ltsc2022)
-          WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
-          WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
+              # Truncating to 119 characters as it is required by docker (9 characters used in -ltsc2019/-ltsc2022)
+              WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
+              WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
 
-          LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
-          TARGET_ALLOCATOR_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_IMAGE_TAG
-          LINUX_CONFIG_READER_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CONFIG_READER_IMAGE_TAG
-          WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
-          HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
-          ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$ARC_HELM_CHART_NAME:$SEMVER
-          LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
-          LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_PYTHON_IMAGE_TAG
-          WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
-          WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_PYTHON_IMAGE_TAG
+              LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
+              TARGET_ALLOCATOR_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_IMAGE_TAG
+              LINUX_CONFIG_READER_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CONFIG_READER_IMAGE_TAG
+              WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
+              HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
+              ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$ARC_HELM_CHART_NAME:$SEMVER
+              LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
+              LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_PYTHON_IMAGE_TAG
+              WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
+              WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_PYTHON_IMAGE_TAG
 
-          echo "##vso[build.updatebuildnumber]$SEMVER"
-          echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
-          echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
-          echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_IMAGE_TAG;isOutput=true]$TARGET_ALLOCATOR_IMAGE_TAG"
-          echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_FULL_IMAGE_NAME"
-          echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_FULL_IMAGE_NAME;isOutput=true]$LINUX_CONFIG_READER_FULL_IMAGE_NAME"
-          echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
-          echo "##vso[task.setvariable variable=LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME"
-          echo "##vso[task.setvariable variable=LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME"
-          echo "##vso[task.setvariable variable=WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME"
-          echo "##vso[task.setvariable variable=WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME"
-          echo "##vso[task.setvariable variable=WINDOWS_IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
-          echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2019_BASE_IMAGE_VERSION"
-          echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2022_BASE_IMAGE_VERSION"
-          echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
-          echo "##vso[task.setvariable variable=ARC_HELM_CHART_NAME;isOutput=true]$ARC_HELM_CHART_NAME"
-          echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
-          echo "##vso[task.setvariable variable=ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$ARC_HELM_FULL_IMAGE_NAME"
-        displayName: 'Build: set image registry, repo, and tags'
-        name: setup
+              echo "##vso[build.updatebuildnumber]$SEMVER"
+              echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
+              echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
+              echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_IMAGE_TAG;isOutput=true]$TARGET_ALLOCATOR_IMAGE_TAG"
+              echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_FULL_IMAGE_NAME"
+              echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_FULL_IMAGE_NAME;isOutput=true]$LINUX_CONFIG_READER_FULL_IMAGE_NAME"
+              echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
+              echo "##vso[task.setvariable variable=LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME"
+              echo "##vso[task.setvariable variable=LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME"
+              echo "##vso[task.setvariable variable=WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME"
+              echo "##vso[task.setvariable variable=WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME"
+              echo "##vso[task.setvariable variable=WINDOWS_IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
+              echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2019_BASE_IMAGE_VERSION"
+              echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2022_BASE_IMAGE_VERSION"
+              echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
+              echo "##vso[task.setvariable variable=ARC_HELM_CHART_NAME;isOutput=true]$ARC_HELM_CHART_NAME"
+              echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
+              echo "##vso[task.setvariable variable=ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$ARC_HELM_FULL_IMAGE_NAME"
+            displayName: 'Build: set image registry, repo, and tags'
+            name: setup
 
-      - bash: |
-          cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts
-          cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
-          cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics-arc -r
-          export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
-          export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
-          export HELM_SEMVER=$SETUP_SEMVER
-          export IMAGE_TAG=$SETUP_SEMVER
-          export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
-          env
+          - bash: |
+              cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts
+              cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
+              cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics-arc -r
+              export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
+              export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
+              export HELM_SEMVER=$SETUP_SEMVER
+              export IMAGE_TAG=$SETUP_SEMVER
+              export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
+              env
 
-          envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
-          export ARC_EXTENSION=true
-          export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
-          envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
-          tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-arc
+              envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
+              export ARC_EXTENSION=true
+              export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
+              envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
+              tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-arc
 
-          cd $(Build.ArtifactStagingDirectory)
-          cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
-          export HELM_CHART_NAME="ama-metrics"
-          export ARC_EXTENSION=false
-          export AKS_REGION="westeurope"
-          export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu"
-          envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
-        displayName: 'Ev2: package artifacts.tar.gz for prod release'
+              cd $(Build.ArtifactStagingDirectory)
+              cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
+              export HELM_CHART_NAME="ama-metrics"
+              export ARC_EXTENSION=false
+              export AKS_REGION="westeurope"
+              export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu"
+              envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
+            displayName: 'Ev2: package artifacts.tar.gz for prod release'
 
-      - bash: |
-          cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
-          tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
-        displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
+          - bash: |
+              cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
+              tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
+            displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
 
-      - task: CredScan@3
-        displayName: "SDL : Run credscan"
+          - task: CredScan@3
+            displayName: "SDL : Run credscan"
 
-      - task: CopyFiles@2
-        displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
-        inputs:
-          SourceFolder: "$(Build.SourcesDirectory)/.pipelines/deployment"
-          Contents: |
-            **/*
-          TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
+          - task: CopyFiles@2
+            displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
+            inputs:
+              SourceFolder: "$(Build.SourcesDirectory)/.pipelines/deployment"
+              Contents: |
+                **/*
+              TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
 
-      - task: PublishBuildArtifacts@1
-        displayName: "Ev2: publish Ev2 deployment artifacts"
-        inputs:
-          pathToPublish: '$(Build.ArtifactStagingDirectory)'
-          artifactName: drop
+          - task: PublishBuildArtifacts@1
+            displayName: "Ev2: publish Ev2 deployment artifacts"
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: drop
 
   - job: Reference_App_Golang_Linux
     displayName: Build reference app image for golang linux
