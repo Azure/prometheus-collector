@@ -14,7 +14,7 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
 ## Run Tests Locally from your Dev Machine
 - Change to a directory with a ginkgo test suite file. Run `ginkgo -p`. This runs all the tests in that package with parallelization enabled.
 
-## Test Suites
+## Writing Tests and Test Suites
 - Each Ginkgo test suite has a function that handles the testing object and abstracts that away. It runs all Ginkgo tests in the same package.
 - BeforeSuite() and AfterSuite() functions can be used for setup and teardown. We use these for connecting to the cluster to get the kubeconfig and creating a kubernetes go-client.
 
@@ -36,11 +36,11 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
   ```
 - Running `ginkgo bootstrap` in the directory with the golang files will create a starter test suite file for you.
 
-## Running Tests in Parallel
+### Running Tests in Parallel
 - Ginkgo Test Suites are run one at a time.
 - Ginkgo tests inside a suite are run parallely by default unless `Ordered` or `Serial` is specified as a parameter to a Describe function.
 
-### Example
+#### Example
 - These two `DescribeTable()` tests will run at the same time. One tests a replica pod and the other tests a daemonset pod. Because `Ordered` is specified as a Ginkgo `Decorator`, each `Entry` in the table, however, is run one at a time.
 - Testing the otelcollector is not running will run at around the same time on the replica pod and daemonset pod. However, MetricsExtension not running won't be tested on each pod until the otelcollector test finishes.
 
@@ -66,13 +66,26 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
   )
   ```
 
+### Test Filtering for Different Environments
+The ```Label("labelName")``` Ginkgo Decorator can be added to any test. This can be used when running the test to filter which tests should be run, depending on the environment or settings enabled.
+
+For example, some tests have the labels ```"arc-extension"``` or ```"operator"``` that should only be run if the environment has the Arc extension or has the operator enabled.
+
+To run tests for the addon without the operator enabled, run
+
+```
+ginkgo -p --label=filter '!(operator,arc-extension)'
+```
+
+In TestKube, this extra command can be added to the test in `Settings` -> `Variables and Secrets` -> `Arguments`.
+
 ## What Kinds of Test Can Be Run?
 - Unit tests for golang code.
 - Any functionalities of the Kubernetes go-client package can be used for Kubernetes-specific tests. This includes:
   - Checking the status or spec of a Kubernetes resource (deployment, pod, configmap, container, CR, etc.)
-  - Pulling the container logs
-  - Running exec commands on a container
-- Use the Query API to query an Azure Monitor Workspace to verify metrics are ingested
+  - Pulling the container logs.
+  - Running exec commands on a container.
+- Use the Query API to query an Azure Monitor Workspace to verify metrics are ingested.
 
 ### Unit Tests
 An outline of tests for the prometheus-collector-settings section of the configmap is below. With this, we can have many configmap test files and ensure each combination is parsed and the correct prometheus config and environment variables are produced.
@@ -130,18 +143,47 @@ In the case of E2E tests, the coding language does not matter since we are not t
 
 These tests can be run on a dev cluster that you have kubeconfig/kubectl access to, or can be run directly inside CI/CD kubernetes clusters by using TestKube.
 
-### Test Filtering for Different Environments
-The ```Label("labelName")``` Ginkgo Decorator can be added to any test. This can be used when running the test to filter which tests should be run, depending on the environment or settings enabled.
 
-For example, some tests have the labels ```"arc-extension"``` or ```"operator"``` that should only be run if the environment has the Arc extension or has the operator enabled.
+# Bootstrap a Cluster to Run Ginkgo Tests
+- Follow the backdoor deployment instructions to deploy your ama-metrics chart onto the cluster.
+- Get the full resource ID of your AMW and run the following command to get a service principal to allow query access to your AMW:
 
-To run tests for the addon without the operator enabled, run
+  ```
+  az ad sp create-for-rbac --name <myAMWQuerySP> \
+  --role "Monitoring Data Reader" \
+  --scopes <AMW resource ID>
+  ```
 
-```
-ginkgo -p --label=filter '!(operator,arc-extension)'
-```
+- The JSON output should be similar to below. Save the `appId` as the Client ID and the `password` as the Client Secret.
 
-In TestKube, this extra command can be added to the test in `Settings` -> `Variables and Secrets` -> `Arguments`.
+  ```
+  {
+    "appId": "myAMWQuerySP",
+    "displayName": "myAMWQuerySP",
+    "password": "myServicePrincipalPassword",
+    "tenant": "myTentantId"
+  }
+  ```
+
+- Get the query endpoint for your AMW by following [these instructions](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-api-promql#query-endpoint).
+- With kubectl access to your cluster and your directory pointed to the cloned repo, run the following and replace the placeholders with the SP Client ID and Secret:
+
+  ```
+  sudo -E go install -v github.com/onsi/ginkgo/v2/ginkgo@latest
+
+  cd otelcollector/test
+
+  AMW_QUERY_ENDPOINT="<query endpoint>" QUERY_CLIENT_ID="<client ID>" QUERY_CLIENT_SECRET="<client secret>" \
+  ginkgo -p --label-values='!(operator || arc-extension)'
+  ```
+
+- To run only one package of tests, add the path to the tests in the command. For example, to only run the livenessprobe tests on your cluster:
+
+  ```
+  ./livenessprobe
+  ```
+
+- For more uses of the Ginkgo CLI, refer to the [docs](https://onsi.github.io/ginkgo/#ginkgo-cli-overview).
 
 # TestKube
 [Testkube](https://docs.testkube.io/) is an OSS runner framework for running the tests inside a Kubernetes cluster. It is deployed as a helm chart on the cluster. Ginkgo is included as one of the out-of-the-box executors supported.
@@ -154,7 +196,7 @@ Some highlights are that:
 - Friendly user interface and easy Golang integration with out-of-the-box Ginkgo runner.
 - A [Teams channel notification](https://docs.testkube.io/articles/webhooks#microsoft-teams) can integrated with testkube for notifying if a test failed. These tests can be run after every merge to main or scheduled to be run on an interval.
 - Test suites can be created out of tests with a dependency flowchart that can be set up for if some tests should run at the same time or after others, or only run if one succeeds.
-- Many other test framework integrations including curl and postman for testing Kubernetes services and their APIs. Also, has a k6 and jmeter integration for performance testing Kubernetes services.
+- Many other test framework integrations including curl and postman for testing Kubernetes services and their APIs. Also has a k6 and jmeter integration for performance testing Kubernetes services.
 - Dashboard must be accessed from within the cluster for now unless we set up an outside endpoint.
 
 ### Getting Started
