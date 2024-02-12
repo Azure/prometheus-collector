@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/serialized-test-cicd-infra
 
 pr:
   autoCancel: true
@@ -900,7 +901,7 @@ jobs:
       pathToPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: drop
 
-- job: Deploy_Chart_ARC
+- deployment: Deploy_Chart_ARC
   displayName: "Deploy: Arc dev cluster"
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   pool:
@@ -911,106 +912,110 @@ jobs:
   variables:
     HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
     skipComponentGovernanceDetection: true
-  steps:
-  - bash: |
-      # Create JSON request body
-      cat <<EOF > "request.json"
-        {
-          "artifactEndpoints": [
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - bash: |
+            # Create JSON request body
+            cat <<EOF > "request.json"
               {
-                  "Regions": [
-                      "westcentralus"
-                  ],
-                  "Releasetrains": [
-                      "pipeline"
-                  ],
-                  "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/cidev/ama-metrics-arc",
-                  "ExtensionUpdateFrequencyInMinutes": 5,
-                  "IsCustomerHidden": true,
-                  "ReadyforRollout": true,
-                  "RollbackVersion": null,
-                  "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
+                "artifactEndpoints": [
+                    {
+                        "Regions": [
+                            "westcentralus"
+                        ],
+                        "Releasetrains": [
+                            "pipeline"
+                        ],
+                        "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/cidev/ama-metrics-arc",
+                        "ExtensionUpdateFrequencyInMinutes": 5,
+                        "IsCustomerHidden": true,
+                        "ReadyforRollout": true,
+                        "RollbackVersion": null,
+                        "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
+                    }
+                ]
               }
-          ]
-        }
-      EOF
+            EOF
 
-      # Send Request
-      SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
-      RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85"
-      SPN_CLIENT_ID="9a4c55e9-576a-450a-88bd-53bd634db38d"
-      SPN_TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
-      METHOD="PUT"
+            # Send Request
+            SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
+            RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85"
+            SPN_CLIENT_ID="9a4c55e9-576a-450a-88bd-53bd634db38d"
+            SPN_TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
+            METHOD="PUT"
 
-      echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER, SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
+            echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER, SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
 
-      # MSI is not supported
-      echo "Login cli using spn"
-      az login --service-principal --username=$SPN_CLIENT_ID --password=$(ARC_SPN_SECRET) --tenant=$SPN_TENANT_ID
-      if [ $? -eq 0 ]; then
-        echo "Logged in successfully with spn"
-      else
-        echo "-e error failed to login to az with managed identity credentials"
-        exit 1
-      fi
-
-      ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
-      if [ $? -eq 0 ]; then
-        echo "get access token from resource:$RESOURCE_AUDIENCE successfully."
-      else
-        echo "-e error get access token from resource:$RESOURCE_AUDIENCE failed."
-        exit 1
-      fi
-      ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '"' | tr -d '"\r\n')
-
-      ARC_API_URL="https://eastus2euap.dp.kubernetesconfiguration.azure.com"
-      EXTENSION_NAME="microsoft.azuremonitor.containers.metrics"
-      API_VERSION="2021-05-01"
-
-      echo "start send request"
-      az rest --method $METHOD --headers "{\"Authorization\": \"Bearer $ACCESS_TOKEN\", \"Content-Type\": \"application/json\"}" --body @request.json --uri $ARC_API_URL/subscriptions/$SUBSCRIPTION/extensionTypeRegistrations/$EXTENSION_NAME/versions/$HELM_SEMVER?api-version=$API_VERSION
-      if [ $? -eq 0 ]; then
-        echo "arc extension registered successfully"
-      else
-        echo "-e error failed to register arc extension"
-        exit 1
-      fi
-    displayName: "Deploy: Release to dev release train"
-
-  - task: AzureCLI@2
-    displayName: "Deploy: wait for ci-dev-arc-wcus cluster to be ready"
-    inputs:
-      azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-          do
-            state=$(az k8s-extension show --name azuremonitor-metrics --cluster-name ci-dev-arc-wcus --resource-group ci-dev-arc-wcus --cluster-type connectedClusters | jq -r '.provisioningState')
-            # We want to wait in case the status is 'Creating' or 'Updating' because of another PR merged shortly before the current one.
-            if [ "$state" = "Succeeded" ] || [ "$state" = "Failed" ]
-            then
-              echo "Cluster is ready to install extension"
-              exit 0
+            # MSI is not supported
+            echo "Login cli using spn"
+            az login --service-principal --username=$SPN_CLIENT_ID --password=$(ARC_SPN_SECRET) --tenant=$SPN_TENANT_ID
+            if [ $? -eq 0 ]; then
+              echo "Logged in successfully with spn"
+            else
+              echo "-e error failed to login to az with managed identity credentials"
+              exit 1
             fi
-            sleep 30
-          done
-          echo "Cluster is installing a different version of the extension"
-          exit 1
-      retryCountOnTaskFailure: 5
 
-  - task: AzureCLI@2
-    displayName: "Deploy: ci-dev-arc-wcus cluster"
-    inputs:
-      azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        az config set extension.use_dynamic_install=yes_without_prompt
-        az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
+            ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
+            if [ $? -eq 0 ]; then
+              echo "get access token from resource:$RESOURCE_AUDIENCE successfully."
+            else
+              echo "-e error get access token from resource:$RESOURCE_AUDIENCE failed."
+              exit 1
+            fi
+            ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '"' | tr -d '"\r\n')
 
-- job: Deploy_AKS_Chart
+            ARC_API_URL="https://eastus2euap.dp.kubernetesconfiguration.azure.com"
+            EXTENSION_NAME="microsoft.azuremonitor.containers.metrics"
+            API_VERSION="2021-05-01"
+
+            echo "start send request"
+            az rest --method $METHOD --headers "{\"Authorization\": \"Bearer $ACCESS_TOKEN\", \"Content-Type\": \"application/json\"}" --body @request.json --uri $ARC_API_URL/subscriptions/$SUBSCRIPTION/extensionTypeRegistrations/$EXTENSION_NAME/versions/$HELM_SEMVER?api-version=$API_VERSION
+            if [ $? -eq 0 ]; then
+              echo "arc extension registered successfully"
+            else
+              echo "-e error failed to register arc extension"
+              exit 1
+            fi
+          displayName: "Deploy: Release to dev release train"
+
+        - task: AzureCLI@2
+          displayName: "Deploy: wait for ci-dev-arc-wcus cluster to be ready"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                do
+                  state=$(az k8s-extension show --name azuremonitor-metrics --cluster-name ci-dev-arc-wcus --resource-group ci-dev-arc-wcus --cluster-type connectedClusters | jq -r '.provisioningState')
+                  # We want to wait in case the status is 'Creating' or 'Updating' because of another PR merged shortly before the current one.
+                  if [ "$state" = "Succeeded" ] || [ "$state" = "Failed" ]
+                  then
+                    echo "Cluster is ready to install extension"
+                    exit 0
+                  fi
+                  sleep 30
+                done
+                echo "Cluster is installing a different version of the extension"
+                exit 1
+            retryCountOnTaskFailure: 5
+
+        - task: AzureCLI@2
+          displayName: "Deploy: ci-dev-arc-wcus cluster"
+          inputs:
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              az config set extension.use_dynamic_install=yes_without_prompt
+              az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
+
+- deployment: Deploy_AKS_Chart
   displayName: "Deploy: AKS dev cluster"
+  environment: Prometheus-Collector
   pool:
     name: Azure-Pipelines-CI-Test-EO
   condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
@@ -1025,61 +1030,64 @@ jobs:
     IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
     skipComponentGovernanceDetection: true
-  steps:
-  - checkout: self
-    submodules: true
-    persistCredentials: true
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - checkout: self
+          submodules: true
+          persistCredentials: true
 
-  - bash: |
-      git config --global user.name "AzureDevOps Agent"
-      git tag "v$(HELM_SEMVER)"
-      git push origin "v$(HELM_SEMVER)"
-    displayName: Tag commit with semver
+        - bash: |
+            git config --global user.name "AzureDevOps Agent"
+            git tag "v$(HELM_SEMVER)"
+            git push origin "v$(HELM_SEMVER)"
+          displayName: Tag commit with semver
 
-  - task: HelmInstaller@1
-    displayName: Install Helm version
-    inputs:
-      helmVersionToInstall: 3.12.3
-  - bash: |
-      for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-          do
-            sleep 30
-            echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
-            echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
+        - task: HelmInstaller@1
+          displayName: Install Helm version
+          inputs:
+            helmVersionToInstall: 3.12.3
+        - bash: |
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                do
+                  sleep 30
+                  echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
+                  echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
 
-            output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-            if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG))
-            then
-              echo "Images are published to mcr"
-              exit 0
-            fi
-          done
-          echo "Images are not published to mcr within the timeout"
-          exit 1
-    displayName: "Check images are pushed to dev MCR"
-    retryCountOnTaskFailure: 5
+                  output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                  if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG))
+                  then
+                    echo "Images are published to mcr"
+                    exit 0
+                  fi
+                done
+                echo "Images are not published to mcr within the timeout"
+                exit 1
+          displayName: "Check images are pushed to dev MCR"
+          retryCountOnTaskFailure: 5
 
-  - bash: |
-      export AKS_REGION="eastus"
-      export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
-      export ARC_EXTENSION="false"
-      envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-      ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-      cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-      helm dependency update
-    displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
+        - bash: |
+            export AKS_REGION="eastus"
+            export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
+            export ARC_EXTENSION="false"
+            envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+            ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+            cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+            helm dependency update
+          displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
 
-  - task: HelmDeploy@0
-    displayName: "Deploy: ci-dev-aks-mac-eus cluster"
-    inputs:
-      connectionType: 'Azure Resource Manager'
-      azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-      azureResourceGroup: 'ci-dev-aks-mac-eus-rg'
-      kubernetesCluster: 'ci-dev-aks-mac-eus'
-      namespace: 'default'
-      command: 'upgrade'
-      chartType: 'FilePath'
-      chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
-      releaseName: 'ama-metrics'
-      waitForExecution: false
-      arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+        - task: HelmDeploy@0
+          displayName: "Deploy: ci-dev-aks-mac-eus cluster"
+          inputs:
+            connectionType: 'Azure Resource Manager'
+            azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+            azureResourceGroup: 'ci-dev-aks-mac-eus-rg'
+            kubernetesCluster: 'ci-dev-aks-mac-eus'
+            namespace: 'default'
+            command: 'upgrade'
+            chartType: 'FilePath'
+            chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+            releaseName: 'ama-metrics'
+            waitForExecution: false
+            arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
