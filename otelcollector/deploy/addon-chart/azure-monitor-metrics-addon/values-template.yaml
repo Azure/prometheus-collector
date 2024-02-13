@@ -36,12 +36,13 @@ AzureMonitorMetrics:
       - validatingwebhookconfigurations
       - volumeattachments
   ImageRepository: "/azuremonitor/containerinsights/ciprod/prometheus-collector/images"
-  ImageTag: "6.8.4-rashmi-hash-test-02-08-2024-c91dcae3"
+  #ImageTag: "6.8.4-rashmi-hash-test-02-08-2024-c91dcae3"
+  ImageTag: "6.8.3-main-01-09-2024-a192d342"
   ImageTagWin: "6.8.3-main-01-09-2024-a192d342-win"
   ImageTagTargetAllocator: "6.8.3-main-01-09-2024-a192d342-targetallocator"
   ImageTagCfgReader: "6.8.3-main-01-09-2024-a192d342-cfg"
-  TargetAllocatorEnabled: false
-  DeploymentReplicas: 1
+  TargetAllocatorEnabled: true
+  DeploymentReplicas: 2
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP -
   # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
