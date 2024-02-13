@@ -7,12 +7,47 @@ Tests are run using the [Ginkgo](https://onsi.github.io/ginkgo/) test framework.
 
 Ginkgo can be used for any tests written in golang, whether they are unit, integration, or e2e tests.
 
-## Install Locally on your Dev Machine
-- While not in a directory that has a go.mod file, run `sudo -E go install -v github.com/onsi/ginkgo/v2/ginkgo@latest`. This installs the ginkgo command-line tool used to run Ginkgo tests.
-- Run `ginkgo version` to check the installation succeeded. You may need to add `$GOBIN` to your `$PATH`.
+## Bootstrap a Dev Cluster to Run Ginkgo Tests
+- Follow the backdoor deployment instructions to deploy your ama-metrics chart onto the cluster.
+- Get the full resource ID of your AMW and run the following command to get a service principal to allow query access to your AMW:
 
-## Run Tests Locally from your Dev Machine
-- Change to a directory with a ginkgo test suite file. Run `ginkgo -p`. This runs all the tests in that package with parallelization enabled.
+  ```
+  az ad sp create-for-rbac --name <myAMWQuerySP> \
+  --role "Monitoring Data Reader" \
+  --scopes <AMW resource ID>
+  ```
+
+- The JSON output should be similar to below. Save the `appId` as the Client ID and the `password` as the Client Secret.
+
+  ```
+  {
+    "appId": "myAMWQuerySP",
+    "displayName": "myAMWQuerySP",
+    "password": "myServicePrincipalPassword",
+    "tenant": "myTentantId"
+  }
+  ```
+
+- Get the query endpoint for your AMW by following [these instructions](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-api-promql#query-endpoint).
+- With kubectl access to your cluster and your directory pointed to the cloned repo, run the following and replace the placeholders with the SP Client ID and Secret:
+
+  ```
+  sudo -E go install -v github.com/onsi/ginkgo/v2/ginkgo@latest
+
+  cd otelcollector/test
+
+  AMW_QUERY_ENDPOINT="<query endpoint>" QUERY_CLIENT_ID="<client ID>" QUERY_CLIENT_SECRET="<client secret>" \
+  ginkgo -p --label-values='!(operator || arc-extension)'
+  ```
+
+- To run only one package of tests, add the path to the tests in the command. For example, to only run the livenessprobe tests on your cluster:
+
+  ```
+  ginkgo -p --label-values='!(operator || arc-extension)' ./livenessprobe
+  ```
+
+- For more uses of the Ginkgo CLI, refer to the [docs](https://onsi.github.io/ginkgo/#ginkgo-cli-overview).
+
 
 ## Writing Tests and Test Suites
 - Each Ginkgo test suite has a function that handles the testing object and abstracts that away. It runs all Ginkgo tests in the same package.
@@ -27,7 +62,7 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
   }
 
   var _ = BeforeSuite(func() {
-    // Get cluster context and create go-client clientset
+    // Get cluster context and create go-client
   })
 
   var _ = AfterSuite(func() {
@@ -143,48 +178,6 @@ In the case of E2E tests, the coding language does not matter since we are not t
 
 These tests can be run on a dev cluster that you have kubeconfig/kubectl access to, or can be run directly inside CI/CD kubernetes clusters by using TestKube.
 
-
-# Bootstrap a Cluster to Run Ginkgo Tests
-- Follow the backdoor deployment instructions to deploy your ama-metrics chart onto the cluster.
-- Get the full resource ID of your AMW and run the following command to get a service principal to allow query access to your AMW:
-
-  ```
-  az ad sp create-for-rbac --name <myAMWQuerySP> \
-  --role "Monitoring Data Reader" \
-  --scopes <AMW resource ID>
-  ```
-
-- The JSON output should be similar to below. Save the `appId` as the Client ID and the `password` as the Client Secret.
-
-  ```
-  {
-    "appId": "myAMWQuerySP",
-    "displayName": "myAMWQuerySP",
-    "password": "myServicePrincipalPassword",
-    "tenant": "myTentantId"
-  }
-  ```
-
-- Get the query endpoint for your AMW by following [these instructions](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-api-promql#query-endpoint).
-- With kubectl access to your cluster and your directory pointed to the cloned repo, run the following and replace the placeholders with the SP Client ID and Secret:
-
-  ```
-  sudo -E go install -v github.com/onsi/ginkgo/v2/ginkgo@latest
-
-  cd otelcollector/test
-
-  AMW_QUERY_ENDPOINT="<query endpoint>" QUERY_CLIENT_ID="<client ID>" QUERY_CLIENT_SECRET="<client secret>" \
-  ginkgo -p --label-values='!(operator || arc-extension)'
-  ```
-
-- To run only one package of tests, add the path to the tests in the command. For example, to only run the livenessprobe tests on your cluster:
-
-  ```
-  ./livenessprobe
-  ```
-
-- For more uses of the Ginkgo CLI, refer to the [docs](https://onsi.github.io/ginkgo/#ginkgo-cli-overview).
-
 # TestKube
 [Testkube](https://docs.testkube.io/) is an OSS runner framework for running the tests inside a Kubernetes cluster. It is deployed as a helm chart on the cluster. Ginkgo is included as one of the out-of-the-box executors supported.
 
@@ -199,7 +192,7 @@ Some highlights are that:
 - Many other test framework integrations including curl and postman for testing Kubernetes services and their APIs. Also has a k6 and jmeter integration for performance testing Kubernetes services.
 - Dashboard must be accessed from within the cluster for now unless we set up an outside endpoint.
 
-### Getting Started
+## Getting Started
 - Install the CLI on linux/WSL:
   ```bash
     wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
@@ -215,18 +208,110 @@ Some highlights are that:
   ```
 - The helm chart will install in the namespace `testkube`.
 - Run `testkube dashboard` to port-forward the dashboard.
-- Create a `clusterrole` and `clusterrolebinding` for the Ginkgo runner's service account with access to the Kubernetes API server.
 - Create a test connected to the Github repository and branch. Tests are a custom resource behind the scenes and can be created with the UX, CLI, or applying a CR. Tests can be run through the UX or CLI.
+- Edit the `ginkgo-reader` clusterrole to give the API server permissions needed for the tests. Run `kubectl edit clusterrole ginkgo-reader` to change to:
+  ```
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metdata:
+    name: ginkgo-reader
+  rules:
+  - apiGroups:
+    - '*'
+    resources:
+    - '*'
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+  - apiGroups:
+    - ""
+    resources:
+    - pods/exec
+    verbs:
+    - create
+  ```
+
+## Bootstrap a CI/CD Cluster to Run Ginkgo Tests
+- Install the ama-metrics agent through the backdoor deployment.
+- Follow the steps in the above section to install TestKube on the cluster and give permissions to the Ginkgo executor to call the API server.
+- Run the following to add the existing tests to the cluster:
+  ```
+  cd ./testkube
+  kubectl apply -f testkube-test-crs.yaml
+  ```
+- The file `testkube-test-crs.yaml` will also be applied through the build pipeline for every merge to main right before the tests are run.
+  This is so any updates can be checked in, consistent between CI/CD clusters, and applied to all clusters at once.
+- Create the kubernetes secret with the AMW access:
+  ```
+  ```
+- Add to the `Deploy_AKS_Chart` job to deploy the chart to another cluster:
+  ```
+  - task: HelmDeploy@0
+    displayName: "Deploy: ci-dev-aks-mac-eus cluster"
+    inputs:
+      connectionType: 'Azure Resource Manager'
+      azureSubscription: 'ContainerInsights_Dev_Grace(b9842c7c-1a38-4385-8f39-a51314758bcf)'
+      azureResourceGroup: 'grace-addon'
+      kubernetesCluster: 'grace-addon'
+      namespace: 'kube-system'
+      command: 'upgrade'
+      chartType: 'FilePath'
+      chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+      releaseName: 'ama-metrics'
+      waitForExecution: false
+      arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+  ```
+- Add running the tests on the cluster to the build pipeline:
+  ```
+  - deployment: Testkube
+    displayName: "Test: run testkube tests"
+    environment: Prometheus-Collector
+    dependsOn: Deploy_AKS_Chart
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    variables:
+      skipComponentGovernanceDetection: true
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - bash: |
+              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
+              sudo apt-get update
+              sudo apt-get install -y testkube
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install testkube CLI"
+          - task: AzureCLI@1
+            displayName: Get kubeconfig
+            inputs:
+              azureSubscription: 'ContainerInsights_Dev_Grace(b9842c7c-1a38-4385-8f39-a51314758bcf)'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az aks get-credentials -g grace-addon -n grace-addon'
+          - bash: |
+              sleep 120
+            displayName: "Wait for cluster to be ready"
+          - bash: |
+              kubectl testkube run testsuite e2e --verbose
+              execution_name=$(kubectl testkube get testsuiteexecution --test e2e --limit 1 | grep e2e | awk '{print $1}')
+              kubectl testkube watch testsuiteexecution $execution_name
+              kubectl testkube get testsuiteexecution $execution_name --logs-only
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Run tests"
+  ```
 
 # When to Run Each Test
 - Unit tests can be included as part of the PR checks.
 - E2E tests can be run from dev machine pointing to your test cluster kubeconfig that is running the dev image.
 - E2E tests run after deploying to dev and prod CI/CD clusters. A [Teams channel notification](https://docs.testkube.io/articles/webhooks#microsoft-teams) can integrated with testkube for notifying if it failed. These tests can be run after every merge to main or scheduled to be run on an interval.
 
-## Utilizing a PR Checklist
-- Have the e2e tests been run on a test cluster?
-- If PR is a feature, have tests been added?
-- If PR is a fix, can a test be added to detect the issue in the future?
+## PR Checklist
+- [ ] Code Change: Have end-to-end Ginkgo tests been run on your cluster?
+  - [ ] Features: Have tests been added for this feature?
+  - [ ] Fixes: Is there a test that could have caught this issue and could validate that the fix works?
 
 # File Directory Structure
 ```
@@ -235,20 +320,30 @@ Some highlights are that:
 │   ├── <test suite package>             - Each test suite is a golang package.
 │   │   ├── <ginkgo test suite setup>    - Ginkgo syntax to setup for any tests in the package.
 |   |   |── <ginkgo tests>               - Actual Ginkgo tests.
-|   |   |── go.mod                       - Used to import the local utils module.
+|   |   |── go.mod                       - Used to import the local utils module (and any other packages).
 |   |   |── go.sum
 │   ├── containerstatus                  - Test container logs have no errors, containers are running, and all processes are running.
 │   │   ├── suite_test.go                - Setup access to the Kubernetes cluster.
 |   |   |── container_status_test.go     - Run the tests for each container that's part of our agent.
-|   |   |── go.mod                       - Used to import the local utils module.
+|   |   |── go.mod
 |   |   |── go.sum
 │   ├── livenessprobe                    - Test that the pods detect and restart when a process is not running.
 │   │   ├── suite_test.go                - Setup access to the Kubernetes cluster.
 |   |   |── process_liveness_test.go     - Run the tests for each container that's part of our agent.
-|   |   |── go.mod                       - Used to import the local utils module.
+|   |   |── go.mod
 |   |   |── go.sum
-│   ├── utils                            - Utils for Kubernetes API calls
-|   |   |── utils.go                     - Functions for the test suites to use
+│   ├── prometheusui                     - Test that the Prometheus UI paths are accessible and the API returns data.
+│   │   ├── suite_test.go                - Setup access to the Kubernetes cluster.
+|   |   |── prometheus_ui_test.go
+|   |   |── go.mod
+|   |   |── go.sum
+│   ├── querymetrics                     - Query the AMW and validate the data returned is expected.
+│   │   ├── suite_test.go                - Setup access to the Kubernetes cluster.
+|   |   |── query_metrics_test.go
+|   |   |── go.mod
+|   |   |── go.sum
+│   ├── utils                            - Utils for Kubernetes API calls.
+|   |   |── utils.go                     - Functions for the test suites to use.
 |   |   |── go.mod
 |   |   |── go.sum
 ```

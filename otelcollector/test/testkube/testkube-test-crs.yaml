@@ -1,0 +1,136 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: containerstatus
+  namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
+spec:
+  type: ginkgo/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/Azure/prometheus-collector
+      branch: grace/testkube
+      path: otelcollector/test
+  executionRequest:
+    args:
+      - "--label-filter"
+      - "!(arc-extension,operator)"
+      - "./containerstatus"
+    executePostRunScriptBeforeScraping: false
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: livenessprobe
+  namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
+spec:
+  type: ginkgo/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/Azure/prometheus-collector
+      branch: grace/testkube
+      path: otelcollector/test
+  executionRequest:
+    args:
+      - "--label-filter"
+      - "!(arc-extension,operator)"
+      - "./livenessprobe"
+    executePostRunScriptBeforeScraping: false
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: prometheusui
+  namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
+spec:
+  type: ginkgo/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/Azure/prometheus-collector
+      branch: grace/testkube
+      path: otelcollector/test
+  executionRequest:
+    args:
+      - "--label-filter"
+      - "!(arc-extension,operator)"
+      - "./prometheusui"
+    executePostRunScriptBeforeScraping: false
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: querymetrics
+  namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
+spec:
+  type: ginkgo/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/Azure/prometheus-collector
+      branch: grace/testkube
+      path: otelcollector/test
+  executionRequest:
+    args:
+      - "--label-filter"
+      - "!(arc-extension,operator)"
+      - "./querymetrics"
+    executePostRunScriptBeforeScraping: false
+    variables:
+      AMW_QUERY_ENDPOINT:
+        name: AMW_QUERY_ENDPOINT
+        type: secret
+        valueFrom:
+          secretKeyRef:
+            name: e2e-testvars
+            key: AMW_QUERY_ENDPOINT
+      QUERY_ACCESS_CLIENT_ID:
+        name: QUERY_ACCESS_CLIENT_ID
+        type: secret
+        valueFrom:
+          secretKeyRef:
+            name: e2e-testvars
+            key: QUERY_ACCESS_CLIENT_ID
+      QUERY_ACCESS_TOKEN_SECRET:
+        name: QUERY_ACCESS_TOKEN_SECRET
+        type: secret
+        valueFrom:
+          secretKeyRef:
+            name: e2e-testvars
+            key: QUERY_ACCESS_TOKEN_SECRET
+---
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: e2e-tests
+  namespace: testkube
+spec:
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: containerstatus
+    - test: prometheusui
+    - test: querymetrics
+  - stopOnFailure: false
+    execute:
+    - delay: 3m0s
+  - stopOnFailure: false
+    execute:
+    - test: livenessprobe
