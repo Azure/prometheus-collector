@@ -36,7 +36,7 @@ scrape_configs:
       target_label: instance
       action: replace
     - source_labels: [ host ]
-      regex: (.*)
+      regex: hcp-kubernetes.*.svc.cluster.local:443
       target_label: host
       replacement: two-kittens
   metric_relabel_configs:

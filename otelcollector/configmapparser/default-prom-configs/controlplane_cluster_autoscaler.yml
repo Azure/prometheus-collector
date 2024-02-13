@@ -46,6 +46,6 @@ scrape_configs:
       action: drop
       regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
     - source_labels: [ host ]
-      regex: (.*)
+      regex: ^hcp-kubernetes.*.svc.cluster.local:443$
       target_label: host
-      replacement: two-little-kittens
+      replacement: kube-apiserver
