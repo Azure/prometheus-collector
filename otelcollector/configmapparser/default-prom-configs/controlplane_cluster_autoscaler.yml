@@ -45,3 +45,7 @@ scrape_configs:
     - source_labels: [ __name__ ]
       action: drop
       regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
+    - source_labels: [ host ]
+      regex: (.*)
+      target_label: host
+      replacement: two-little-kittens
