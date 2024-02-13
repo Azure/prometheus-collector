@@ -220,7 +220,7 @@ else
       mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 
       # Running mdsd --version can't be captured into a variable unlike telegraf and otelcollector, have to run after printing the string
-      echo -n -e "${Cyan}MDSD_VERSION${Color_Off}="; mdsd --version | tr -d '\n'
+      echo -n -e "${Cyan}MDSD_VERSION${Color_Off}="; mdsd --version | xargs
 
       echo "Waiting for 30s for MDSD to get the config and put them in place for ME"
       # sleep for 30 seconds
@@ -233,7 +233,7 @@ else
 fi
 
 # Get ME version
-ME_VERSION=`cat /opt/metricsextversion.txt | tr -d '\n'`
+ME_VERSION=`cat /opt/metricsextversion.txt | xargs`
 echo_var "ME_VERSION" "$ME_VERSION"
 
 # Get ruby version
