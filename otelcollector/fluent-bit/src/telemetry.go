@@ -886,7 +886,7 @@ func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log((record).(string))
+		Log(fmt.Sprintf("%v", record))
 		promMetrics := record["promMetrics"]
 		if promMetrics == nil {
 			message := fmt.Sprintf("promMetrics was not found in the record")
