@@ -1126,6 +1126,10 @@ stages:
               scriptLocation: 'inlineScript'
               inlineScript: 'az aks get-credentials -g grace-addon -n grace-addon'
           - bash: |
+              sleep 120
+            displayName: "Wait for cluster to be ready"
+          - bash: |
+              sleep 120
               kubectl testkube version
               kubectl testkube run test container-logs --verbose
               execution_name=$(kubectl testkube get executions --test container-logs --limit 1 | grep container-logs | awk '{print $1}')
