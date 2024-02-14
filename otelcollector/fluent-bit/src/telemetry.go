@@ -991,7 +991,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		// Log(ToString(record))
+		Log(fmt.Sprintf("%v", record))
 		memVmrss := record["memVmrss"]
 		if memVmrss == nil {
 			message := fmt.Sprintf("memVmrss was not found in the record for Otel")
