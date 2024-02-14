@@ -38,10 +38,7 @@ scrape_configs:
     - source_labels: [ host ]
       action: hashmod
       modulus: 10000000000 # take last 19 digits of the MD5 hash. (Prom won't let us take more than this)
-      target_label: __tmp_hosthash
-    - source_labels: [ __tmp_hosthash ]
-      replacement: $1
-      target_label: host
+      target_label: hosthash
   metric_relabel_configs:
     - source_labels: [ __name__ ]
       action: drop

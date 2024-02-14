@@ -237,11 +237,11 @@ ME_VERSION=`cat /opt/metricsextversion.txt | awk 'BEGIN{RS=""; OFS=" "} {$1=$1; 
 echo_var "ME_VERSION" "$ME_VERSION"
 
 # Get ruby version
-RUBY_VERSION=`ruby --version | tr -d '\n'`
-echo_var "RUBY_VERSION" "$RUBY_VERSION"
+RUBY_VERSION=$(ruby --version | tr -d '\n\r')
+echo "RUBY_VERSION" "$RUBY_VERSION"
 
 # Get golang version
-GOLANG_VERSION=`cat /opt/goversion.txt | tr -d '\n'`
+GOLANG_VERSION=$(cat /opt/goversion.txt | tr -d '\n')
 echo_var "GOLANG_VERSION" "$GOLANG_VERSION"
 
 # Start otelcollector
