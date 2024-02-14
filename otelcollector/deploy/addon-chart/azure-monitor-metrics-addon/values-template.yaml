@@ -38,10 +38,28 @@ AzureMonitorMetrics:
   ImageRepository: ${MCR_REPOSITORY}
   ImageTag: ${IMAGE_TAG}
   ImageTagWin: ${IMAGE_TAG}-win
+  RsCPULimit: 7
+  RsMemoryLimit: 14Gi
+  RsCPURequest: 150m
+  RsMemoryRequest: 500Mi
+  DsCPULimitLinux: 200m
+  DsMemoryLimitLinux: 1Gi
+  DsCPURequestLinux: 50m
+  DsMemoryRequestLinux: 150Mi
+  DsCPULimitWindows: 500m
+  DsMemoryLimitWindows: 1Gi
   ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator"
   ImageTagCfgReader: ${IMAGE_TAG}-cfg"
   TargetAllocatorEnabled: false
   DeploymentReplicas: 1
+  CfgReaderCPULimit: 1
+  CfgReaderMemoryLimit: 1Gi
+  CfgReaderCpuRequest: 1m
+  CfgReaderMemoryRequest: 10Mi
+  TargetAllocatorCPULimit: 5
+  TargetAllocatorMemoryLimit: 8Gi
+  TargetAllocatorCPURequest: 10m
+  TargetAllocatorMemoryRequest: 50Mi
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP -
   # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
@@ -120,10 +138,10 @@ Azure:
 ClusterDistribution: ""
 prometheus-node-exporter:
   service:
-    enabled: false
+    enabled: true
     port: 9110
     targetPort: 9110
   image:
     registry: mcr.microsoft.com
     repository: oss/prometheus/node-exporter
-
+tolerationsOnlyForControlPlane: false
