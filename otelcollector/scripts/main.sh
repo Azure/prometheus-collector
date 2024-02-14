@@ -233,7 +233,7 @@ else
 fi
 
 # Get ME version
-ME_VERSION=`cat /opt/metricsextversion.txt | xargs`
+ME_VERSION=`cat /opt/metricsextversion.txt | awk 'BEGIN{RS=""; OFS=" "} {$1=$1; print}'`
 echo_var "ME_VERSION" "$ME_VERSION"
 
 # Get ruby version
