@@ -31,7 +31,7 @@ func readVersionFile(filePath string) (string, error) {
 }
 
 func fmtVar(name, value string) {
-	fmt.Printf("%s=\"%s\"", name, strings.TrimRight(value, "\n\r"))
+	fmt.Printf("%s=\"%s\"\n", name, strings.TrimRight(value, "\n\r"))
 }
 
 func existsAndNotEmpty(filename string) bool {

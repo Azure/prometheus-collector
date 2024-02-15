@@ -220,7 +220,7 @@ else
       mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 
       # Running mdsd --version can't be captured into a variable unlike telegraf and otelcollector, have to run after printing the string
-      echo -n -e "${Cyan}MDSD_VERSION${Color_Off}="; mdsd --version | xargs
+      echo -n -e "${Cyan}MDSD_VERSION${Color_Off}="; mdsd --version
 
       echo "Waiting for 30s for MDSD to get the config and put them in place for ME"
       # sleep for 30 seconds
@@ -233,15 +233,15 @@ else
 fi
 
 # Get ME version
-ME_VERSION=`cat /opt/metricsextversion.txt | awk 'BEGIN{RS=""; OFS=" "} {$1=$1; print}'`
+ME_VERSION=`cat /opt/metricsextversion.txt`
 echo_var "ME_VERSION" "$ME_VERSION"
 
 # Get ruby version
-RUBY_VERSION=$(ruby --version | tr -d '\n\r')
-echo "RUBY_VERSION" "$RUBY_VERSION"
+RUBY_VERSION=`ruby --version`
+echo_var "RUBY_VERSION" "$RUBY_VERSION"
 
 # Get golang version
-GOLANG_VERSION=$(cat /opt/goversion.txt | tr -d '\n')
+GOLANG_VERSION=`cat /opt/goversion.txt`
 echo_var "GOLANG_VERSION" "$GOLANG_VERSION"
 
 # Start otelcollector
@@ -256,9 +256,9 @@ else
       echo "Starting otelcollector"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
-OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version | tr -d '\n'`
+OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version`
 echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
-PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION | tr -d '\n'`
+PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
 echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
 echo "starting telegraf"
