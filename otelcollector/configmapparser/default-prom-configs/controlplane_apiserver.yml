@@ -42,7 +42,7 @@ scrape_configs:
       target_label: hosthash
     - source_labels: [ host ]
       target_label: host_alias
-      regex: (*):*
+      regex: (.*):*
       replacement: $1  # Replace the entire label value with the first captured group.
       action: replace
   metric_relabel_configs:
