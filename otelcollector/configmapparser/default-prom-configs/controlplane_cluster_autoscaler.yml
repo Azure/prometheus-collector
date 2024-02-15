@@ -45,11 +45,13 @@ scrape_configs:
       target_label: hostalias
       regex: $$POD_NAMESPACE$$.svc.cluster.local
       replacement: $1  # Replace the entire label value with the first captured group.
+    - action: keep
+      regex: (.*)
   metric_relabel_configs:
     - source_labels: [ __name__ ]
       action: drop
       regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
     - source_labels: [ host ]
-      target_label: hostalias2
+      target_label: host
       regex: .*($$POD_NAMESPACE$$.svc.cluster.local).*
       replacement: $1  # Replace the entire label value with the first captured group.

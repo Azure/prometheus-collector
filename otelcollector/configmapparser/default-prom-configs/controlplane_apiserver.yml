@@ -40,11 +40,6 @@ scrape_configs:
       separator: "-"
       modulus: 10000000000 # take last 19 digits of the MD5 hash. (Prom won't let us take more than this)
       target_label: hosthash
-    - source_labels: [ host ]
-      target_label: hostalias
-      regex: (.*):*
-      replacement: $1  # Replace the entire label value with the first captured group.
-      action: replace
   metric_relabel_configs:
     - source_labels: [ __name__ ]
       action: drop

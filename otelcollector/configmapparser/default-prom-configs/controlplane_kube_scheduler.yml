@@ -42,6 +42,11 @@ scrape_configs:
       regex: (.*)
       target_label: instance
       action: replace
+    - source_labels: [ host ]
+      target_label: host
+      regex: (.*).(.*)
+      replacement: $1  # Replace the entire label value with the first captured group.
+      action: replace
   metric_relabel_configs:
     - source_labels: [ __name__ ]
       action: drop
