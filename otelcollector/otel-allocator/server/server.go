@@ -110,6 +110,28 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // configurations such that the underlying prometheus marshaling is used. After that, the YAML is converted
 // in to a JSON format for consumers to use.
 func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.ScrapeConfig) error {
+	s.logger.Info("Rashmi-UpdateScrapeConfigResponse")
+	// s.logger.Info("remove regex for keepequal")
+	// if configs != nil {
+	// 	// var sc = jobToScrapeConfig.([]interface{})
+	// 	for _, scrapeConfig := range configs {
+	// 		//scrapeConfig := scrapeConfig.(map[string]interface{})
+	// 		if scrapeConfig["relabel_configs"] != nil {
+	// 			relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
+	// 			for _, relabelConfig := range relabelConfigs {
+	// 				relabelConfig := relabelConfig.(map[string]interface{})
+	// 				//replace $ with $$ for regex field
+	// 				if relabelConfig["action"] == "keepequal" {
+	// 					// Adding this check here since regex can be boolean and the conversion will fail
+	// 					fmt.Println(relabelConfig["regex"])
+	// 					//relabelConfig["regex"] = nil
+	// 					delete(relabelConfig, "regex")
+	// 					fmt.Println(relabelConfig["regex"])
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 	var configBytes []byte
 	configBytes, err := yaml.Marshal(configs)
 	if err != nil {
@@ -120,6 +142,8 @@ func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.Scrap
 	if err != nil {
 		return err
 	}
+	s.logger.Info("Rashmi-jsonConfig:", jsonConfig)
+
 	s.mtx.Lock()
 	s.scrapeConfigResponse = jsonConfig
 	s.mtx.Unlock()
