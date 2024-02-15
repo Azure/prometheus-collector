@@ -8,12 +8,9 @@ import (
 )
 
 var _ = Describe("Query Metrics Test Suite", func() {
-	Context("when querying metrics", func() {
+	Context("When querying metrics", func() {
 		It("should return the expected results", func() {
-			client, err := utils.CreatePrometheusAPIClient()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(client).NotTo(BeNil())
-			_, err = utils.RunQuery(client, "up")
+			_, err := utils.InstantQuery(PrometheusQueryClient, "up")
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -192,7 +191,7 @@ func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, 
 		Stdout: &stdoutB,
 		Stderr: &stderrB,
 	}); err != nil {
-		return stdoutB.String(), stderrB.String(), errors.New(fmt.Sprintf("Error when running command %v in the container: %v", command, err))
+		return stdoutB.String(), stderrB.String(), errors.New(fmt.Sprintf("Error when running command %v in the container: %v. Stderr: %s", command, err, stderrB.String()))
 	}
 
 	return stdoutB.String(), stderrB.String(), nil
@@ -214,7 +213,7 @@ func CheckLivenessProbeRestartForProcess(K8sClient *kubernetes.Clientset, Cfg *r
 			return fmt.Errorf("stderr: %s", stderr)
 		}
 
-		err = WatchForPodRestart(K8sClient, namespace, labelName, labelValue, timeout, pod.Name, containerName, terminatedMessage)
+		err = WatchForPodRestart(K8sClient, namespace, labelName, labelValue, timeout, containerName, terminatedMessage)
 		if err != nil {
 			return err
 		}
@@ -223,7 +222,7 @@ func CheckLivenessProbeRestartForProcess(K8sClient *kubernetes.Clientset, Cfg *r
 	return nil
 }
 
-func WatchForPodRestart(K8sClient *kubernetes.Clientset, namespace, labelName, labelValue string, timeout int64, podName, containerName, terminatedMessage string) error {
+func WatchForPodRestart(K8sClient *kubernetes.Clientset, namespace, labelName, labelValue string, timeout int64, containerName, terminatedMessage string) error {
 	watcher, err := K8sClient.CoreV1().Pods(namespace).Watch(context.Background(), metav1.ListOptions{
 		LabelSelector:   fmt.Sprintf("%s=%s", labelName, labelValue),
 		TimeoutSeconds: &timeout,
@@ -237,7 +236,7 @@ func WatchForPodRestart(K8sClient *kubernetes.Clientset, namespace, labelName, l
 		select {
 		case event, ok := <-watcher.ResultChan():
 			if !ok {
-				return fmt.Errorf(" %s pod did not restart before timeout", podName)
+				return fmt.Errorf("%s=%s pod did not restart before timeout", labelName, labelValue)
 			}
 			if event.Type != "MODIFIED" {
 				continue
@@ -248,11 +247,10 @@ func WatchForPodRestart(K8sClient *kubernetes.Clientset, namespace, labelName, l
 				return fmt.Errorf("event.Object is not of type *corev1.Pod")
 			}
 
-			fmt.Printf("Pod %s is status %v\n", p.Name, p.Status)
-
 			for _, containerStatus := range p.Status.ContainerStatuses {
 				if containerStatus.Name == containerName && containerStatus.LastTerminationState.Terminated != nil {
-					if containerStatus.LastTerminationState.Terminated.Reason == "Error" {//&& strings.Contains(containerStatus.LastTerminationState.Terminated.Message, terminatedMessage) {
+					if containerStatus.LastTerminationState.Terminated.Reason == "Error" &&
+						(terminatedMessage == "" || strings.Contains(containerStatus.LastTerminationState.Terminated.Message, terminatedMessage)) {
 						return nil
 					}
 				}
@@ -344,12 +342,12 @@ type TokenResponse struct {
 	AccessToken  string `json:"access_token"`
 }
 
-func GetQueryAccessToken() (string, error) {
+func GetQueryAccessToken(clientID, clientSecret string) (string, error) {
 	apiUrl := "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/oauth2/token"
 	data := url.Values{}
 	data.Set("grant_type", "client_credentials")
-	data.Set("client_id", os.Getenv("QUERY_ACCESS_CLIENT_ID"))
-	data.Set("client_secret", os.Getenv("QUERY_ACCESS_CLIENT_SECRET"))
+	data.Set("client_id", clientID)
+	data.Set("client_secret", clientSecret)
 	data.Set("resource", "https://prometheus.monitor.azure.com")
 
 	client := &http.Client{}
@@ -389,8 +387,8 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return t.underlyingTransport.RoundTrip(req)
 }
 
-func CreatePrometheusAPIClient() (v1.API, error) {
-	token, err := GetQueryAccessToken()
+func CreatePrometheusAPIClient(amwQueryEndpoint, clientId, clientSecret string) (v1.API, error) {
+	token, err := GetQueryAccessToken(clientId, clientSecret)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get query access token: %s", err.Error())
 	}
@@ -398,7 +396,7 @@ func CreatePrometheusAPIClient() (v1.API, error) {
 		return nil, fmt.Errorf("Failed to get query access token: token is empty")
 	}
 	config := api.Config{
-		Address: os.Getenv("AMW_QUERY_ENDPOINT"),
+		Address: amwQueryEndpoint,
 		RoundTripper: &transport{underlyingTransport: http.DefaultTransport, apiToken: token},
 	}
 	prometheusAPIClient, err := api.NewClient(config)
@@ -408,7 +406,7 @@ func CreatePrometheusAPIClient() (v1.API, error) {
 	return v1.NewAPI(prometheusAPIClient), nil
 }
 
-func RunQuery(api v1.API, query string) (v1.Warnings, error) {
+func InstantQuery(api v1.API, query string) (v1.Warnings, error) {
 	result, warnings, err := api.Query(context.Background(), query, time.Now())
 	if err != nil {
 		return warnings, fmt.Errorf("Failed to run query: %s", err.Error())
@@ -429,20 +427,18 @@ func RunQuery(api v1.API, query string) (v1.Warnings, error) {
 	return warnings, nil
 }
 
-func GetAndUpdateConfigMap(clientset *kubernetes.Clientset) error {
-	namespace := "kube-system"
-	configMapName := "ama-metrics-settings-configmap"
+func GetAndUpdateConfigMap(clientset *kubernetes.Clientset, configMapName, configMapNamespace string) error {
 	ctx := context.Background()
 
 	// Get the configmap
-	configMap, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, configMapName, metav1.GetOptions{})
+	configMap, err := clientset.CoreV1().ConfigMaps(configMapNamespace).Get(ctx, configMapName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to get configmap: %s", err.Error())
 	}
 
 	// Update the configmap
 	configMap.Data["test_field"] = uuid.New().String()
-	_, err = clientset.CoreV1().ConfigMaps(namespace).Update(ctx, configMap, metav1.UpdateOptions{})
+	_, err = clientset.CoreV1().ConfigMaps(configMapNamespace).Update(ctx, configMap, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update configmap: %s", err.Error())
 	}

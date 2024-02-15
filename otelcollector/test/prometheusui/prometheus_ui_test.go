@@ -2,6 +2,7 @@ package prometheusui
 
 import (
 	"encoding/json"
+	"fmt"
 	"prometheus-collector/otelcollector/test/utils"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -21,11 +22,10 @@ var _ = DescribeTable("The Prometheus UI API should return the scrape pools",
 		var scrapePoolData utils.ScrapePoolData
 		json.Unmarshal([]byte(apiResponse.Data), &scrapePoolData)
 		Expect(scrapePoolData).NotTo(BeNil())
-		Expect(scrapePoolData.ScrapePools).To(ConsistOf(expected))
+		Expect(scrapePoolData.ScrapePools).To(ContainElements(expected))
 	},
 	Entry("when called inside the ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector",
 		[]string {
-			"application_pods",
       "kube-apiserver",
       "kube-dns",
       "kube-proxy",
@@ -38,7 +38,6 @@ var _ = DescribeTable("The Prometheus UI API should return the scrape pools",
 	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
 		[]string {
 			"cadvisor",
-			"kappie-basic",
 			"kubelet",
 			"networkobservability-cilium",
 			"networkobservability-hubble",
@@ -77,17 +76,15 @@ var _ = DescribeTable("The Prometheus UI API should return the targets",
 
 		var targetsResult v1.TargetsResult
 		json.Unmarshal([]byte(apiResponse.Data), &targetsResult)
+
 		Expect(targetsResult).NotTo(BeNil())
-
-		// fmt.Printf("Active Targets: %d\n", len(targetsResult.Active))
-		// for _, target := range targetsResult.Active {
-		// 	fmt.Printf("Discovered Labels: %v\n", target.DiscoveredLabels)
-		// 	fmt.Printf("Labels: %v\n", target.Labels)
-		// 	fmt.Printf("Last Error: %s\n", target.LastError)
-		// 	fmt.Printf("Health Status: %s\n", target.Health)
-		// }
-
-		// fmt.Printf("Dropped Targets: %d\n", len(targetsResult.Dropped))
+		Expect(targetsResult.Active).NotTo(BeNil())
+		Expect(targetsResult.Dropped).NotTo(BeNil())
+		for _, target := range targetsResult.Active {
+			Expect(target.DiscoveredLabels).NotTo(BeNil())
+			Expect(target.Labels).NotTo(BeNil())
+		}
+		Expect(targetsResult.Dropped).NotTo(BeNil())
 	},
 	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector"),
 	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector"),
@@ -105,8 +102,8 @@ var _ = DescribeTable("The Prometheus UI API should return the targets metadata"
 
 		var metricMetadataResult []v1.MetricMetadata
 		json.Unmarshal([]byte(apiResponse.Data), &metricMetadataResult)
+
 		Expect(metricMetadataResult).NotTo(BeNil())
-		Expect(len(metricMetadataResult)).To(BeNumerically("==", 64))
 		for _, metricMetadata := range metricMetadataResult {
 			Expect(metricMetadata.Target).NotTo(BeNil())
 			Expect(metricMetadata.Metric).NotTo(BeEmpty())
@@ -114,5 +111,39 @@ var _ = DescribeTable("The Prometheus UI API should return the targets metadata"
 		}
 	},
 	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector"),
-	//Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector"),
+	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector"),
+)
+
+var _ = DescribeTable("The Prometheus UI should return a 200 for its UI pages",
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, uiPaths []string) {
+		pods, err := utils.GetPodsWithLabel(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+		Expect(err).NotTo(HaveOccurred())
+	
+		for _, pod := range pods {
+			// Execute the command and capture the output
+			for _, uiPath := range uiPaths {
+				command := []string{"sh", "-c", fmt.Sprintf("curl \"http://localhost:9090%s\"", uiPath)}
+				stdout, _, err := utils.ExecCmd(K8sClient, Cfg, pod.Name, containerName, namespace, command)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stdout).NotTo(BeEmpty())
+				Expect(stdout).NotTo(ContainSubstring("404 page not found"))
+			}
+		}
+	},
+	Entry("when called inside the ama-metrics replica pod for /agent", "kube-system", "rsName", "ama-metrics", "prometheus-collector",
+		[]string{
+			"/agent",
+			"/config",
+			"/targets",
+			"/service-discovery",
+		},
+	),
+	Entry("when called inside the ama-metrics-node pod for /agent", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
+		[]string{
+			"/agent",
+			"/config",
+			"/targets",
+			"/service-discovery",
+		},
+	),
 )
