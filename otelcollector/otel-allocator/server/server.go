@@ -137,12 +137,14 @@ func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.Scrap
 	if err != nil {
 		return err
 	}
+
+	s.logger.Info("Rashmi", "yamlConfig:", string(configBytes))
 	var jsonConfig []byte
 	jsonConfig, err = yaml2.YAMLToJSON(configBytes)
 	if err != nil {
 		return err
 	}
-	s.logger.Info("Rashmi-jsonConfig:", jsonConfig)
+	s.logger.Info("Rashmi", "jsonConfig:", string(jsonConfig))
 
 	s.mtx.Lock()
 	s.scrapeConfigResponse = jsonConfig
