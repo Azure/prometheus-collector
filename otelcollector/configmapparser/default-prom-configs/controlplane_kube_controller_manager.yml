@@ -51,5 +51,5 @@ scrape_configs:
       action: drop
       regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
     - source_labels: [ hosthash ]
-      replacement: $1
+      action: replace
       target_label: host

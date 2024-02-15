@@ -1,16 +1,15 @@
 package main
 
 import (
-    "fmt"
-    "os"
-    "os/exec"
-    "io/ioutil"
-    "strings"
-    "log"
-    "io"
-    "bufio"
+	"bufio"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"strings"
 )
-
 
 func printMdsdVersion() {
 	cmd := exec.Command("mdsd", "--version")
@@ -32,41 +31,41 @@ func readVersionFile(filePath string) (string, error) {
 }
 
 func fmtVar(name, value string) {
-	fmt.Printf("%s=\"%s\"\n", name, value)
+	fmt.Printf("%s=\"%s\"", name, strings.TrimRight(value, "\n\r"))
 }
 
 func existsAndNotEmpty(filename string) bool {
-    info, err := os.Stat(filename)
-    if os.IsNotExist(err) {
-        return false
-    }
-    if err != nil {
-        // Handle the error, e.g., log it or return false
-        return false
-    }
-    if info.Size() == 0 {
-        return false
-    }
-    return true
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	if err != nil {
+		// Handle the error, e.g., log it or return false
+		return false
+	}
+	if info.Size() == 0 {
+		return false
+	}
+	return true
 }
 
 func readAndTrim(filename string) (string, error) {
-    content, err := ioutil.ReadFile(filename)
-    if err != nil {
-        return "", err
-    }
-    trimmedContent := strings.TrimSpace(string(content))
-    return trimmedContent, nil
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	trimmedContent := strings.TrimSpace(string(content))
+	return trimmedContent, nil
 }
 
 func exists(path string) bool {
-    _, err := os.Stat(path)
-    if err != nil {
-        if os.IsNotExist(err) {
-            return false
-        }
-    }
-    return true
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
 }
 
 func copyFile(sourcePath, destinationPath string) error {
