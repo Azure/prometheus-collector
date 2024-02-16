@@ -35,12 +35,11 @@ scrape_configs:
       regex: (.*)
       target_label: instance
       action: replace
-    - source_labels: [ host, __address__ ]
-      action: hashmod
-      separator: "-"
-      modulus: 18446744073709551615 # math.MaxUint64 causing us to never mod, and only hash the label value
-      target_label: hosthash
   metric_relabel_configs:
     - source_labels: [ __name__ ]
       action: drop
       regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
+    - source_labels: [ host ]
+      action: hashmod
+      modulus: 18446744073709551615 # math.MaxUint64 causing us to never mod, and only hash the label value
+      target_label: hostalias

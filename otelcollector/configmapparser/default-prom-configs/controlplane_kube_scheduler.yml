@@ -46,12 +46,12 @@ scrape_configs:
     - source_labels: [ __name__ ]
       action: drop
       regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
-    - source_labels: [ host, __address__ ]
-      action: hashmod
-      separator: "-"
-      modulus: 18446744073709551615 # math.MaxUint64 causing us to never mod, and only hash the label value
-      target_label: hosthash
     - source_labels: [ host ]
       regex: ^hcp-kubernetes.*.svc.cluster.local:443$
-      target_label: host
+      target_label: hostalias
       replacement: kube-apiserver
+    - source_labels: [ hostalias ]
+      action: hashmod
+      regex: ^$ # emtpy host alias will have a hash
+      modulus: 18446744073709551615 # math.MaxUint64 causing us to never mod, and only hash the label value
+      target_label: hostalias
