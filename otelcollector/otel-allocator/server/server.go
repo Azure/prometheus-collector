@@ -144,7 +144,7 @@ func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.Scrap
 	if err != nil {
 		return err
 	}
-	// s.logger.Info("Rashmi", "jsonConfig:", string(jsonConfig))
+	s.logger.Info("Rashmi", "jsonConfig:", string(jsonConfig))
 
 	s.mtx.Lock()
 	s.scrapeConfigResponse = jsonConfig
