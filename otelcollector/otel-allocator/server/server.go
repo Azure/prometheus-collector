@@ -112,20 +112,14 @@ func (s *Server) Shutdown(ctx context.Context) error {
 func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.ScrapeConfig) error {
 	s.logger.Info("Rashmi-UpdateScrapeConfigResponse")
 	s.logger.Info("remove regex for keepequal")
-	if configs != nil {
-		for _, scrapeConfig := range configs {
-			scrapeConfig := scrapeConfig.(map[string]interface{})
-			if scrapeConfig["relabel_configs"] != nil {
-				relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
+	if jobToScrapeConfig != nil {
+		for _, scrapeConfig := range jobToScrapeConfig {
+			if scrapeConfig.RelabelConfigs != nil {
+				relabelConfigs := scrapeConfig.RelabelConfigs
 				for _, relabelConfig := range relabelConfigs {
-					relabelConfig := relabelConfig.(map[string]interface{})
-					//replace $ with $$ for regex field
-					if relabelConfig["action"] == "keepequal" {
-						// Adding this check here since regex can be boolean and the conversion will fail
-						fmt.Println(relabelConfig["regex"])
-						//relabelConfig["regex"] = nil
-						delete(relabelConfig, "regex")
-						// fmt.Println(relabelConfig["regex"])
+					if relabelConfig.Action == "keepequal" {
+						s.logger.Info("Rashmi", "relabelConfig.Regex", relabelConfig.Regex)
+						relabelConfig.Regex = relabel.MustNewRegexp(".*")
 					}
 				}
 			}
