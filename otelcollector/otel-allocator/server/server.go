@@ -120,7 +120,7 @@ func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.Scrap
 				for _, relabelConfig := range relabelConfigs {
 					if relabelConfig.Action == "keepequal" {
 						s.logger.Info("Rashmi", "relabelConfig.Regex", relabelConfig.Regex)
-						relabelConfig.Regex = relabel.MustNewRegexp(".*")
+						relabelConfig.Regex = relabel.MustNewRegexp("")
 					}
 				}
 			}
