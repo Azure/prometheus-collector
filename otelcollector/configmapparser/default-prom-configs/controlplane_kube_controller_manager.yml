@@ -43,7 +43,7 @@ scrape_configs:
       target_label: instance
       action: replace
     - source_labels: [ host ]
-      regex: hcp-kubernetes.*.svc.cluster.local:443
+      regex: (.*)
       target_label: host
       replacement: kube-apiserver
   metric_relabel_configs:

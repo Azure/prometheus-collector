@@ -42,16 +42,10 @@ scrape_configs:
       target_label: instance
       action: replace
     - source_labels: [ host ]
-      target_label: hostalias
-      regex: $$POD_NAMESPACE$$.svc.cluster.local
-      replacement: $1  # Replace the entire label value with the first captured group.
-    - action: keep
-      regex: (.*)
+      regex: hcp-kubernetes.*.svc.cluster.local:443
+      target_label: host
+      replacement: kube-apiserver
   metric_relabel_configs:
     - source_labels: [ __name__ ]
       action: drop
       regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
-    - source_labels: [ host ]
-      target_label: host
-      regex: .*($$POD_NAMESPACE$$.svc.cluster.local).*
-      replacement: $1  # Replace the entire label value with the first captured group.
