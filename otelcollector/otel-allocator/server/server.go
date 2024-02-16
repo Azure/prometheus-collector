@@ -32,6 +32,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	promconfig "github.com/prometheus/prometheus/config"
+	"github.com/prometheus/prometheus/model/relabel"
 	"gopkg.in/yaml.v2"
 
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/allocation"
@@ -112,8 +113,8 @@ func (s *Server) Shutdown(ctx context.Context) error {
 func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.ScrapeConfig) error {
 	s.logger.Info("Rashmi-UpdateScrapeConfigResponse")
 	s.logger.Info("remove regex for keepequal")
-	if jobToScrapeConfig != nil {
-		for _, scrapeConfig := range jobToScrapeConfig {
+	if configs != nil {
+		for _, scrapeConfig := range configs {
 			if scrapeConfig.RelabelConfigs != nil {
 				relabelConfigs := scrapeConfig.RelabelConfigs
 				for _, relabelConfig := range relabelConfigs {
