@@ -53,5 +53,5 @@ scrape_configs:
     - source_labels: [ hostalias ]
       action: hashmod
       regex: ^$ # emtpy host alias will have a hash
-      modulus: 18446744073709551615 # math.MaxUint64 causing us to never mod, and only hash the label value
-      target_label: hostalias
+      modulus: 10000000000000000000 # take last 19 digits of the MD5 hash. (Prom won't let us take more than this)
+      target_label: host
