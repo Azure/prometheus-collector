@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
@@ -32,7 +33,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	promconfig "github.com/prometheus/prometheus/config"
-	"github.com/prometheus/prometheus/model/relabel"
 	"gopkg.in/yaml.v2"
 
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/allocation"
@@ -112,20 +112,20 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // in to a JSON format for consumers to use.
 func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.ScrapeConfig) error {
 	s.logger.Info("Rashmi-UpdateScrapeConfigResponse")
-	s.logger.Info("remove regex for keepequal")
-	if configs != nil {
-		for _, scrapeConfig := range configs {
-			if scrapeConfig.RelabelConfigs != nil {
-				relabelConfigs := scrapeConfig.RelabelConfigs
-				for _, relabelConfig := range relabelConfigs {
-					if relabelConfig.Action == "keepequal" {
-						s.logger.Info("Rashmi", "relabelConfig.Regex", relabelConfig.Regex)
-						relabelConfig.Regex = relabel.MustNewRegexp("")
-					}
-				}
-			}
-		}
-	}
+	// s.logger.Info("remove regex for keepequal")
+	// if configs != nil {
+	// 	for _, scrapeConfig := range configs {
+	// 		if scrapeConfig.RelabelConfigs != nil {
+	// 			relabelConfigs := scrapeConfig.RelabelConfigs
+	// 			for _, relabelConfig := range relabelConfigs {
+	// 				if relabelConfig.Action == "keepequal" {
+	// 					s.logger.Info("Rashmi", "relabelConfig.Regex", relabelConfig.Regex)
+	// 					relabelConfig.Regex = relabel.MustNewRegexp("")
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 	// s.logger.Info("Rashmi", "yamlConfig:", string(configBytes))
 	var configBytes []byte
 	configBytes, err := yaml.Marshal(configs)
@@ -141,8 +141,36 @@ func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.Scrap
 	}
 	s.logger.Info("Rashmi", "jsonConfig:", string(jsonConfig))
 
+	var jobToScrapeConfig map[string]interface{}
+	err = json.Unmarshal(jsonConfig, &jobToScrapeConfig)
+	if jobToScrapeConfig != nil {
+		// var sc = jobToScrapeConfig.([]interface{})
+		for _, scrapeConfig := range jobToScrapeConfig {
+			scrapeConfig := scrapeConfig.(map[string]interface{})
+			if scrapeConfig["relabel_configs"] != nil {
+				relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
+				for _, relabelConfig := range relabelConfigs {
+					relabelConfig := relabelConfig.(map[string]interface{})
+					//replace $ with $$ for regex field
+					if relabelConfig["action"] == "keepequal" {
+						// Adding this check here since regex can be boolean and the conversion will fail
+						s.logger.Info("Rashmi", "relabel-regex-before:", relabelConfig["regex"])
+						//relabelConfig["regex"] = nil
+						delete(relabelConfig, "regex")
+						s.logger.Info("Rashmi", "relabel-regex-after:", relabelConfig["regex"])
+					}
+				}
+			}
+		}
+	}
+
+	jsonConfigNew, err := json.Marshal(jobToScrapeConfig)
+	if err != nil {
+		return err
+	}
+
 	s.mtx.Lock()
-	s.scrapeConfigResponse = jsonConfig
+	s.scrapeConfigResponse = jsonConfigNew
 	s.mtx.Unlock()
 	return nil
 }
