@@ -44,6 +44,7 @@ scrape_configs:
   metric_relabel_configs:
     - source_labels: [ host ]
       action: hashmod
+      regex: (.+)
       modulus: 10000000000000000000 # take last 19 digits of the MD5 hash. (Prom won't let us take more than this)
       target_label: hostalias
     - source_labels: [ host ]
@@ -52,6 +53,7 @@ scrape_configs:
       replacement: kube-apiserver
     - source_labels: [ hostalias ]
       action: replace
+      regex: (.+)
       target_label: host
     - source_labels: [ __name__ ]
       action: drop
