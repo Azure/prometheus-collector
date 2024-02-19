@@ -49,11 +49,9 @@ scrape_configs:
     # Replace the host with hostalias
     - source_labels: [ hostalias, host ]
       separator: ";"
-      regex: (.+);(.+)
+      regex: [a-zA-Z0-9]+;[a-zA-Z0-9]+
       replacement: $1
       target_label: host
     - source_labels: [ __name__ ]
       action: drop
       regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
-    - action: labeldrop
-      regex: hostalias

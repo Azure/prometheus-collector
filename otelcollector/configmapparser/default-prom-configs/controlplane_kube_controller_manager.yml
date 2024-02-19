@@ -46,7 +46,7 @@ scrape_configs:
     # Generate host alias
     - source_labels: [ host ]
       action: hashmod
-      regex: (.+)
+      regex: [a-zA-Z0-9]+
       modulus: 10000000000000000000 # take last 19 digits of the MD5 hash. (Prom won't let us take more than this)
       target_label: hostalias
     - action: replace
@@ -62,5 +62,3 @@ scrape_configs:
     - source_labels: [ __name__ ]
       action: drop
       regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
-    - action: labeldrop
-      regex: hostalias
