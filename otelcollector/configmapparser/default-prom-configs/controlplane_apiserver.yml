@@ -48,7 +48,7 @@ scrape_configs:
       replacement: kube-apiserver
     # Replace the host with hostalias
     - source_labels: [ hostalias, host ]
-      regex: (.+);(.+)
+      regex: ^(.+);(.+)$
       action: replace
       target_label: host
     - source_labels: [ __name__ ]
