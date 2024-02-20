@@ -1,8 +1,6 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Pending
-
-## Pending
 * Change log -
   * Add new regions for Azure Monitor Workspace ('brazilsoutheast', 'francecentral', 'ukwest', 'koreasouth', 'switzerlandwest', 'japaneast', 'swedencentral', 'canadaeast', 'norwaywest', 'southindia', 'australiaeast', 'swedensouth')
 
