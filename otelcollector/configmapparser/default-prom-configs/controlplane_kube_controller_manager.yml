@@ -56,7 +56,7 @@ scrape_configs:
     # Replace the host with hostalias
     - source_labels: [ hostalias, host ]
       regex: ^(.+);(.+)$
-      replacement: $$1
+      action: replace
       target_label: host
     - source_labels: [ __name__ ]
       action: drop
