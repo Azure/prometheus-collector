@@ -50,7 +50,7 @@ scrape_configs:
     - source_labels: [ hostalias, host ]
       separator: ";"
       regex: ^(.+);(.+)$
-      replacement: $1
+      replacement: $1;$2
       target_label: host
     - source_labels: [ __name__ ]
       action: drop
