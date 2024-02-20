@@ -146,8 +146,7 @@ const (
 	otelcolMemRssScrapeTag                = "procai.otelcollector.memVmrss.scrape"
 	otelcolCpuScrapeTag                   = "cpu.otelcollector"
 	meCpuScrapeTag                        = "cpu.metricsextension"
-	prom8888ScrapeTag                     = "prometheus.8888"
-	prom9090ScrapeTag                     = "prometheus.9090"
+	promScrapeTag                         = "promscrape.scrape"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
@@ -842,102 +841,40 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 	return output.FLB_OK
 }
 
-// func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-// 	for _, record := range records {
-// 		// Log(ToString(record))
-// 		metricName := record["metricName"]
-// 		if metricName == nil {
-// 			message := fmt.Sprintf("metricName was not found in the record")
-// 			Log(message)
-// 			SendException(message)
-// 			continue
-// 		}
-// 		Log(ToString(metricName))
-// 		metricNameString, ok := metricName.(string)
-// 		if !ok {
-// 			message := fmt.Sprintf("metricName is not a string value")
-// 			Log(message)
-// 			SendException(message)
-// 			continue
-// 		}
-// 		promMetrics := record["promMetrics"]
-// 		if promMetrics == nil {
-// 			message := fmt.Sprintf("promMetrics was not found in the record")
-// 			Log(message)
-// 			SendException(message)
-// 			continue
-// 		}
-// 		Log(ToString(promMetrics))
-// 		promMetricsFloat, ok := promMetrics.(float64)
-// 		if !ok {
-// 			message := fmt.Sprintf("promMetrics is not a float64 value")
-// 			Log(message)
-// 			SendException(message)
-// 			continue
-// 		}
+func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	// Define a regular expression to extract the metric name, metric value and other details
+	var logRegex = regexp.MustCompile(`^(?P<time>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?P<metricName>otelcol_processor_dropped_metric_points|otelcol_receiver_refused_metric_points|otelcol_receiver_accepted_metric_points|otelcol_exporter_sent_metric_points|otelcol_exporter_queue_size|otelcol_exporter_send_failed_metric_points|otelcol_process_memory_rss|otelcol_processor_batch_batch_send_size_bytes_sum|otelcol_processor_batch_batch_send_size_bytes_count)\{[^}]*\}\s+=\s+(?P<metricValue>\d+(\.\d+)?)$`)
 
-// 		Log(fmt.Sprintf("%v", promMetricsFloat))
-// 		metric := appinsights.NewMetricTelemetry(metricNameString, promMetricsFloat)
-// 		TelemetryClient.Track(metric)
-// 		Log(fmt.Sprintf("Sent Prometheus metrics from 8888 port for  %s", metricNameString))
-// 	}
-// 	return output.FLB_OK
-// }
-
-func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-	for _, record := range records {
-		Log(fmt.Sprintf("%v", record))
-		promMetrics := record["promMetrics"]
-		if promMetrics == nil {
-			message := fmt.Sprintf("promMetrics was not found in the record")
-			Log(message)
-			SendException(message)
-			continue
-		}
-		Log(ToString(promMetrics))
-		promMetricsFloat, ok := promMetrics.(float64)
-		if !ok {
-			message := fmt.Sprintf("promMetrics is not a float64 value")
-			Log(message)
-			SendException(message)
-			continue
-		}
-
-		metric := appinsights.NewMetricTelemetry("prometheus_sd_http_failures_total", promMetricsFloat)
-		TelemetryClient.Track(metric)
-		Log(fmt.Sprintf("Sent Prometheus metrics from 9090 port for prometheus_sd_http_failures_total"))
-	}
-	return output.FLB_OK
-}
-------
-func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
 		Log(logEntry)
 
-		// Define a regular expression to extract mem.VmRSS value
-		var memVmrssRegex = regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
-		groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
+		groupMatches := logRegex.FindStringSubmatch(logEntry)
 
-		if len(groupMatches) > 1 {
-			// Convert mem.VmRSS value to float64
-			memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
-			if err != nil {
-				message := fmt.Sprintf("Failed to convert mem.VmRSS to float64: %v", err)
-				Log(message)
-				SendException(message)
-				continue
-			}
-
-			// Create and send metric
-			metric := appinsights.NewMetricTelemetry("meVMRSS", memVmrssFloat)
-			TelemetryClient.Track(metric)
-			Log(fmt.Sprintf("Sent ME memory usage metrics"))
+		if len(groupMatches) < 4 {
+			message := fmt.Sprintf("Failed to parse log record: %s", logEntry)
+			Log(message)
+			SendException(message)
+			continue
 		}
+
+		// Extract the metric value and convert to float
+		metricValue, err := strconv.ParseFloat(groupMatches[3], 64)
+		if err != nil {
+			message := fmt.Sprintf("Failed to convert metric value to float64: %v", err)
+			Log(message)
+			SendException(message)
+			continue
+		}
+
+		// Create and send metric
+		metric := appinsights.NewMetricTelemetry(groupMatches[2], metricValue)
+		TelemetryClient.Track(metric)
+		Log(fmt.Sprintf("Sent %s metrics", groupMatches[2]))
 	}
 	return output.FLB_OK
 }
---------
+
 func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
