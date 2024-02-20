@@ -92,6 +92,7 @@ func (m *Discoverer) ApplyConfig(source allocatorWatcher.EventSource, cfg *confi
 	// If the hash has changed, updated stored hash and send the new config.
 	// Otherwise skip updating scrape configs.
 	if m.scrapeConfigsUpdater != nil && m.scrapeConfigsHash != hash {
+		m.log.Info("Rashmi-hash is different", "source", source.String())
 		err := m.scrapeConfigsUpdater.UpdateScrapeConfigResponse(jobToScrapeConfig)
 		if err != nil {
 			return err

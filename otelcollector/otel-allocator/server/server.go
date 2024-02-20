@@ -133,13 +133,13 @@ func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.Scrap
 		return err
 	}
 
-	s.logger.Info("Rashmi", "yamlConfig:", string(configBytes))
+	// s.logger.Info("Rashmi", "yamlConfig:", string(configBytes))
 	var jsonConfig []byte
 	jsonConfig, err = yaml2.YAMLToJSON(configBytes)
 	if err != nil {
 		return err
 	}
-	s.logger.Info("Rashmi", "jsonConfig:", string(jsonConfig))
+	// s.logger.Info("Rashmi", "jsonConfig:", string(jsonConfig))
 
 	var jobToScrapeConfig map[string]interface{}
 	err = json.Unmarshal(jsonConfig, &jobToScrapeConfig)
@@ -152,7 +152,7 @@ func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.Scrap
 				for _, relabelConfig := range relabelConfigs {
 					relabelConfig := relabelConfig.(map[string]interface{})
 					//replace $ with $$ for regex field
-					if relabelConfig["action"] == "keepequal" {
+					if relabelConfig["action"] == "keepequal" || relabelConfig["action"] == "dropequal" {
 						// Adding this check here since regex can be boolean and the conversion will fail
 						s.logger.Info("Rashmi", "relabel-regex-before:", relabelConfig["regex"])
 						//relabelConfig["regex"] = nil
