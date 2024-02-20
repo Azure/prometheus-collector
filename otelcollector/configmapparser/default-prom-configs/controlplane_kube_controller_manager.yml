@@ -46,10 +46,10 @@ scrape_configs:
     # Generate host alias
     - source_labels: [ host ]
       action: hashmod
-      regex: [a-zA-Z0-9]+
+      regex: (.+)
       modulus: 10000000000000000000 # take last 19 digits of the MD5 hash. (Prom won't let us take more than this)
       target_label: hostalias
-    - action: replace
+    - source_labels: [ host ]
       regex: ^(localhost|\[::1\]):443$
       target_label: hostalias
       replacement: kube-apiserver
