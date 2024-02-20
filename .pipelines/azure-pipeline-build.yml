@@ -3,7 +3,7 @@ trigger:
     include:
     - main
     - ccp_shell_removal_branch
-    - relabel-host-pasthistory
+    - ccp_shell_removal_branch_prod
 
 pr:
   autoCancel: true
