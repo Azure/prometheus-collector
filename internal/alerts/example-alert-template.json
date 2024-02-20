@@ -261,7 +261,7 @@
                         },
                         "severity": 4,
                         "resolveConfiguration": {
-                            "autoResolved": false,
+                            "autoResolved": true,
                             "timeToResolve": "PT10M"
                         },
                         "actions": [

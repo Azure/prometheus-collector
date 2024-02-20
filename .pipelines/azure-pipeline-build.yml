@@ -54,7 +54,7 @@ jobs:
         #Truncating this to 124 to add the cfg suffix
         LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
         LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
-        
+
         #Truncating this to 113 to add the ref app suffices
         LINUX_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-113)
         LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
@@ -242,6 +242,23 @@ jobs:
       displayName: "Build: build and push reference app python windows image to dev ACR"
       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
 
+- job: SDL_Policheck_Scan
+  displayName: "SDL: policheck scanning"
+  pool:
+    name: Azure-Pipelines-Windows-CI-Test-EO
+  variables:
+    skipComponentGovernanceDetection: true
+  steps:
+    - checkout: self
+      submodules: true
+
+    - task: PoliCheck@2
+      displayName: "SDL : Run PoliCheck"
+      inputs:
+        targetType: 'F'
+        targetArgument: '$(Build.SourcesDirectory)'
+
+
 - job: SDL_Binary_Scan
   displayName: "SDL: linux binary scanning"
   pool:
@@ -322,13 +339,14 @@ jobs:
 
         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
         sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-        docker system prune --volumes -y
+        #docker system prune --volumes -y
+        docker system prune --all -f
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
         docker pull $(LINUX_FULL_IMAGE_NAME)
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: build and push image to dev ACR"
@@ -480,7 +498,7 @@ jobs:
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push  --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
         docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
         MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
         DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
@@ -557,7 +575,7 @@ jobs:
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
         docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
         DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
@@ -616,6 +634,7 @@ jobs:
   displayName: "Build: windows 2019 prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   variables:
@@ -648,6 +667,7 @@ jobs:
   displayName: "Build: windows 2022 prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   variables:
@@ -680,6 +700,7 @@ jobs:
   displayName: "Build: windows multi-arch prometheus-collector image"
   pool:
     name: Azure-Pipelines-Windows-CI-Test-EO
+  timeoutInMinutes: 120
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   - Windows2019_Prometheus_Collector
@@ -871,7 +892,6 @@ jobs:
       echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
     workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
     displayName: "Build: push helm chart to dev ACR"
-    condition: eq(variables.IS_PR, false)
 
   - task: PublishBuildArtifacts@1
     displayName: "Ev2: publish helm chart artifacts"
@@ -932,7 +952,7 @@ jobs:
       else
         echo "-e error failed to login to az with managed identity credentials"
         exit 1
-      fi    
+      fi
 
       ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
       if [ $? -eq 0 ]; then
@@ -940,7 +960,7 @@ jobs:
       else
         echo "-e error get access token from resource:$RESOURCE_AUDIENCE failed."
         exit 1
-      fi   
+      fi
       ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '"' | tr -d '"\r\n')
 
       ARC_API_URL="https://eastus2euap.dp.kubernetesconfiguration.azure.com"
@@ -962,7 +982,7 @@ jobs:
     inputs:
       azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
       scriptType: 'bash'
-      scriptLocation: 'inlineScript' 
+      scriptLocation: 'inlineScript'
       inlineScript: |
         for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
           do
@@ -984,7 +1004,7 @@ jobs:
     inputs:
       azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
       scriptType: 'bash'
-      scriptLocation: 'inlineScript' 
+      scriptLocation: 'inlineScript'
       inlineScript: |
         az config set extension.use_dynamic_install=yes_without_prompt
         az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
