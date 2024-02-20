@@ -142,12 +142,12 @@ const (
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
 	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
-	meMemRssScrapeTag                     = "metricsextension.memVmrss.scrape"
-	otelcolMemRssScrapeTag                = "otelcollector.memVmrss.scrape"
+	meMemRssScrapeTag                     = "procai.metricsextension.memVmrss.scrape"
+	otelcolMemRssScrapeTag                = "procai.otelcollector.memVmrss.scrape"
+	otelcolCpuScrapeTag                   = "cpu.otelcollector"
 	meCpuScrapeTag                        = "cpu.metricsextension"
 	prom8888ScrapeTag                     = "prometheus.8888"
 	prom9090ScrapeTag                     = "prometheus.9090"
-	otelcolCpuScrapeTag                   = "cpu.otelcollector"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
@@ -842,47 +842,47 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 	return output.FLB_OK
 }
 
-func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-	for _, record := range records {
-		// Log(ToString(record))
-		metricName := record["metricName"]
-		if metricName == nil {
-			message := fmt.Sprintf("metricName was not found in the record")
-			Log(message)
-			SendException(message)
-			continue
-		}
-		Log(ToString(metricName))
-		metricNameString, ok := metricName.(string)
-		if !ok {
-			message := fmt.Sprintf("metricName is not a string value")
-			Log(message)
-			SendException(message)
-			continue
-		}
-		promMetrics := record["promMetrics"]
-		if promMetrics == nil {
-			message := fmt.Sprintf("promMetrics was not found in the record")
-			Log(message)
-			SendException(message)
-			continue
-		}
-		Log(ToString(promMetrics))
-		promMetricsFloat, ok := promMetrics.(float64)
-		if !ok {
-			message := fmt.Sprintf("promMetrics is not a float64 value")
-			Log(message)
-			SendException(message)
-			continue
-		}
+// func PushProm8888ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+// 	for _, record := range records {
+// 		// Log(ToString(record))
+// 		metricName := record["metricName"]
+// 		if metricName == nil {
+// 			message := fmt.Sprintf("metricName was not found in the record")
+// 			Log(message)
+// 			SendException(message)
+// 			continue
+// 		}
+// 		Log(ToString(metricName))
+// 		metricNameString, ok := metricName.(string)
+// 		if !ok {
+// 			message := fmt.Sprintf("metricName is not a string value")
+// 			Log(message)
+// 			SendException(message)
+// 			continue
+// 		}
+// 		promMetrics := record["promMetrics"]
+// 		if promMetrics == nil {
+// 			message := fmt.Sprintf("promMetrics was not found in the record")
+// 			Log(message)
+// 			SendException(message)
+// 			continue
+// 		}
+// 		Log(ToString(promMetrics))
+// 		promMetricsFloat, ok := promMetrics.(float64)
+// 		if !ok {
+// 			message := fmt.Sprintf("promMetrics is not a float64 value")
+// 			Log(message)
+// 			SendException(message)
+// 			continue
+// 		}
 
-		Log(fmt.Sprintf("%v", promMetricsFloat))
-		metric := appinsights.NewMetricTelemetry(metricNameString, promMetricsFloat)
-		TelemetryClient.Track(metric)
-		Log(fmt.Sprintf("Sent Prometheus metrics from 8888 port for  %s", metricNameString))
-	}
-	return output.FLB_OK
-}
+// 		Log(fmt.Sprintf("%v", promMetricsFloat))
+// 		metric := appinsights.NewMetricTelemetry(metricNameString, promMetricsFloat)
+// 		TelemetryClient.Track(metric)
+// 		Log(fmt.Sprintf("Sent Prometheus metrics from 8888 port for  %s", metricNameString))
+// 	}
+// 	return output.FLB_OK
+// }
 
 func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
@@ -909,46 +909,41 @@ func PushProm9090ToAppInsightsMetrics(records []map[interface{}]interface{}) int
 	}
 	return output.FLB_OK
 }
-
-func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+------
+func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		// Log(ToString(record))
-		mecpuUsage, ok := record["cpuUsage"]
-		if !ok {
-			message := "mecpuUsage was not found in the record"
-			Log(message)
-			SendException(message)
-			continue
-		}
-		Log(ToString(mecpuUsage))
-		mecpuUsageFloat, err := strconv.ParseFloat(fmt.Sprintf("%v", mecpuUsage), 64)
-		if err != nil {
-			message := fmt.Sprintf("Failed to parse mecpuUsage as float64: %v", err)
-			Log(message)
-			SendException(message)
-			continue
-		}
+		var logEntry = ToString(record["message"])
+		Log(logEntry)
 
-		metric := appinsights.NewMetricTelemetry("mecpuUsage", mecpuUsageFloat)
-		TelemetryClient.Track(metric)
-		Log(fmt.Sprintf("Sent ME Cpu usage metrics"))
+		// Define a regular expression to extract mem.VmRSS value
+		var memVmrssRegex = regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
+		groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
+
+		if len(groupMatches) > 1 {
+			// Convert mem.VmRSS value to float64
+			memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
+			if err != nil {
+				message := fmt.Sprintf("Failed to convert mem.VmRSS to float64: %v", err)
+				Log(message)
+				SendException(message)
+				continue
+			}
+
+			// Create and send metric
+			metric := appinsights.NewMetricTelemetry("meVMRSS", memVmrssFloat)
+			TelemetryClient.Track(metric)
+			Log(fmt.Sprintf("Sent ME memory usage metrics"))
+		}
 	}
 	return output.FLB_OK
 }
-
+--------
 func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		// Log(ToString(record))
-		otelcpuUsage, ok := record["cpuUsage"]
-		if !ok {
-			message := "otelcpuUsage was not found in the record"
-			Log(message)
-			SendException(message)
-			continue
-		}
-		Log(ToString(otelcpuUsage))
+		var logEntry = ToString(record["message"])
+		Log(logEntry)
 
-		otelcpuUsageFloat, err := strconv.ParseFloat(fmt.Sprintf("%v", otelcpuUsage), 64)
+		otelcpuUsage, err := strconv.ParseFloat(logEntry, 64)
 		if err != nil {
 			message := fmt.Sprintf("Failed to parse otelcpuUsage as float64: %v", err)
 			Log(message)
@@ -956,61 +951,86 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 			continue
 		}
 
-		metric := appinsights.NewMetricTelemetry("otelcpuUsage", otelcpuUsageFloat)
+		metric := appinsights.NewMetricTelemetry("otelcpuUsage", otelcpuUsage)
 		TelemetryClient.Track(metric)
 		Log("Sent Otel Cpu usage metrics")
 	}
 	return output.FLB_OK
 }
 
-func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		// Log(ToString(record))
-		memVmrss := record["memVmrss"]
-		if memVmrss == nil {
-			message := fmt.Sprintf("memVmrss was not found in the record for ME")
-			Log(message)
-			SendException(message)
-			continue
-		}
-		Log(ToString(memVmrss))
-		memVmrssFloat, ok := memVmrss.(float64)
-		if !ok {
-			message := fmt.Sprintf("memVmrss is not a float64 value for ME")
+		var logEntry = ToString(record["message"])
+		Log(logEntry)
+		meCpuUsage, err := strconv.ParseFloat(logEntry, 64)
+		if err != nil {
+			message := fmt.Sprintf("Failed to convert exec value to float64: %v", err)
 			Log(message)
 			SendException(message)
 			continue
 		}
 
-		metric := appinsights.NewMetricTelemetry("meVMRSS", memVmrssFloat)
+		// Create and send metric
+		metric := appinsights.NewMetricTelemetry("meCpuUsage", meCpuUsage)
 		TelemetryClient.Track(metric)
-		Log(fmt.Sprintf("Sent ME memory usage metrics"))
+		Log(fmt.Sprintf("Sent ME Cpu usage metrics"))
+
+	}
+	return output.FLB_OK
+}
+
+func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	for _, record := range records {
+		var logEntry = ToString(record["message"])
+		Log(logEntry)
+
+		// Define a regular expression to extract mem.VmRSS value
+		var memVmrssRegex = regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
+		groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
+
+		if len(groupMatches) > 1 {
+			// Convert mem.VmRSS value to float64
+			memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
+			if err != nil {
+				message := fmt.Sprintf("Failed to convert mem.VmRSS to float64: %v", err)
+				Log(message)
+				SendException(message)
+				continue
+			}
+
+			// Create and send metric
+			metric := appinsights.NewMetricTelemetry("meVMRSS", memVmrssFloat)
+			TelemetryClient.Track(metric)
+			Log(fmt.Sprintf("Sent ME memory usage metrics"))
+		}
 	}
 	return output.FLB_OK
 }
 
 func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
-		Log(fmt.Sprintf("%v", record))
-		memVmrss := record["memVmrss"]
-		if memVmrss == nil {
-			message := fmt.Sprintf("memVmrss was not found in the record for Otel")
-			Log(message)
-			SendException(message)
-			continue
-		}
-		Log(ToString(memVmrss))
-		memVmrssFloat, ok := memVmrss.(float64)
-		if !ok {
-			message := fmt.Sprintf("memVmrss is not a float64 value for Otel")
-			Log(message)
-			SendException(message)
-			continue
-		}
+		var logEntry = ToString(record["message"])
+		Log(logEntry)
 
-		metric := appinsights.NewMetricTelemetry("otelcolVMRSS", memVmrssFloat)
-		TelemetryClient.Track(metric)
-		Log(fmt.Sprintf("Sent Otel memory usage metrics"))
+		// Define a regular expression to extract mem.VmRSS value
+		var memVmrssRegex = regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
+		groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
+
+		if len(groupMatches) > 1 {
+			// Convert mem.VmRSS value to float64
+			memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
+			if err != nil {
+				message := fmt.Sprintf("Failed to convert mem.VmRSS to float64: %v", err)
+				Log(message)
+				SendException(message)
+				continue
+			}
+
+			// Create and send metric
+			metric := appinsights.NewMetricTelemetry("otelcolVMRSS", memVmrssFloat)
+			TelemetryClient.Track(metric)
+			Log(fmt.Sprintf("Sent Otel memory usage metrics"))
+		}
 	}
 	return output.FLB_OK
 }
