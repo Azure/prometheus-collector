@@ -49,14 +49,14 @@ scrape_configs:
       regex: ^(.+)$
       modulus: 10000000000000000000 # take last 19 digits of the MD5 hash. (Prom won't let us take more than this)
       target_label: hostalias
-    - action: replace
+    - source_labels: [ host ]
       regex: ^hcp-kubernetes.*.svc.cluster.local:443$
       target_label: hostalias
       replacement: kube-apiserver
     # Replace the host with hostalias
-    - source_labels: [ host, hostalias ]
+    - source_labels: [ hostalias, host ]
       regex: ^(.+);(.+)$
-      replacement: $2
+      replacement: $$1
       target_label: host
     - source_labels: [ __name__ ]
       action: drop
