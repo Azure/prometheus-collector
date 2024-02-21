@@ -32,7 +32,8 @@ spec:
         args:
         - --enable-prometheus-cr-watcher
         - --reload-config
-        image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+        # image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+        image: "docker.io/rashmichandrashekarms/ta:regex-fix-8"
         imagePullPolicy: IfNotPresent
         resources:
           limits:
