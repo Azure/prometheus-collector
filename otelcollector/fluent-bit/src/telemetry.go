@@ -142,8 +142,8 @@ const (
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
 	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
-	meMemRssScrapeTag                     = "procai.metricsextension.memVmrss.scrape"
-	otelcolMemRssScrapeTag                = "procai.otelcollector.memVmrss.scrape"
+	meMemRssScrapeTag                     = "procai.metricsextension.memvmrss.scrape"
+	otelcolMemRssScrapeTag                = "procai.otelcollector.memvmrss.scrape"
 	otelcolCpuScrapeTag                   = "cpu.otelcollector"
 	meCpuScrapeTag                        = "cpu.metricsextension"
 	promScrapeTag                         = "promscrape.scrape"
@@ -901,7 +901,7 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		Log(logEntry)
 		meCpuUsage, err := strconv.ParseFloat(logEntry, 64)
 		if err != nil {
-			message := fmt.Sprintf("Failed to convert exec value to float64: %v", err)
+			message := fmt.Sprintf("Failed to parse meCpuUsage as float64: %v", err)
 			Log(message)
 			SendException(message)
 			continue
@@ -924,7 +924,6 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 		// Define a regular expression to extract mem.VmRSS value
 		var memVmrssRegex = regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
 		groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
-
 		if len(groupMatches) > 1 {
 			// Convert mem.VmRSS value to float64
 			memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
