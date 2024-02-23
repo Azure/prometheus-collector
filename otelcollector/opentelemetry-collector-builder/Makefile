@@ -1,4 +1,4 @@
-all: otelcollector fluentbitplugin promconfigvalidator #targetallocator
+all: otelcollector fluentbitplugin promconfigvalidator targetallocator
 
 .PHONY: otelcollector
 otelcollector:
@@ -12,9 +12,8 @@ fluentbitplugin:
 promconfigvalidator:
 	make -C ../prom-config-validator-builder
 
-# add this back once golang 1.21 is supported in ado builds
-# targetallocator:
-# 	make -C ../otel-allocator
+targetallocator:
+	make -C ../otel-allocator
 
 configurationreader:
 	make -C ../configuration-reader-builder

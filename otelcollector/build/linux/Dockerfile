@@ -77,12 +77,9 @@ RUN tdnf repolist --refresh
 RUN tdnf update -y
 RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
 RUN mkdir /busybin && busybox --install /busybin
-RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
-# If wanting to run without distroless, uncomment this line and comment everything after
-#CMD [ "/opt/main.sh" ]
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
