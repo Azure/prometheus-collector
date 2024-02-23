@@ -1,0 +1,30 @@
+
+[comment]: # (Note that your PR title should follow the conventional commit format: https://conventionalcommits.org/en/v1.0.0/#summary)
+# PR Description
+
+[comment]: # (The below checklist is for PRs adding new features. If a box is not checked, add a reason why it's not needed.)
+# New Feature Checklist
+- [ ] List telemetry added about the feature
+- [ ] Link to the one-pager about the feature
+- [ ] List any tasks necessary for release (3P docs, AKS RP chart changes, etc.)
+- [ ] Attach results of scale and perf testing
+
+[comment]: # (The below checklist is for code changes. Not all boxes necessarily need to be checked. Build, doc, and template changes do not need to fill out the checklist.)
+# Tests Checklist
+- [ ] Have end-to-end Ginkgo tests been run on your cluster and passed?
+  - Labels used when running the tests on your cluster:
+    - [ ] `operator`
+    - [ ] `windows`
+    - [ ] `arm64`
+    - [ ] `arc-extension`
+- [ ] Have new tests been added?
+  - [ ] Features: Have tests been added for this feature?
+  - [ ] Fixes: Is there a test that could have caught this issue and could validate that the fix works?
+  - [ ] Is a new scrape job needed?
+    - [ ] The scrape job was added to the folder [test-cluster-yamls](/otelcollector/test/test-cluster-yamls/) in the correct configmap or as a CR. 
+  - [ ] Was a new test label added?
+    - [ ] A string constant for the label was added to [constants.go](/otelcollector/test/utils/constants.go).
+    - [ ] The label and description was added to the [test README](/otelcollector/test/README.md).
+    - [ ] The label was added to this [PR checklist](/.github/pull_request_template).
+    - [ ] The label was added as needed to [testkube-test-crs.yaml](/otelcollector/test/testkube/testkube-test-crs.yaml).
+

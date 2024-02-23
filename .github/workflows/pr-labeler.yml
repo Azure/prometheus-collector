@@ -1,9 +1,15 @@
-name: size-label #https://github.com/kubernetes/kubernetes/labels?q=size
+name: labeler
 on: 
   pull_request:
     branches:
       - main
 jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
   size-label:
     runs-on: ubuntu-latest
     permissions:
