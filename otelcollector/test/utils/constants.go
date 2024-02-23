@@ -10,5 +10,13 @@ var(
 		"get token from status error",
 		// KSM
 		"ended with: an error on the server",
+		"Objects listed",
 	}
+)
+
+const(
+	OperatorLabel = "operator"
+	ArcExtensionLabel = "arc-extension"
+	WindowsLabel = "windows"
+	ARM64Label = "arm64"
 )

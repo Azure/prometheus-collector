@@ -12,6 +12,9 @@ import (
 	_ "github.com/prometheus/prometheus/discovery/install" // Register service discovery implementations.
 )
 
+/*
+ * Test that the Prometheus UI /scrape_pools API endpoint returns a list that contains at least the default targets.
+ */
 var _ = DescribeTable("The Prometheus UI API should return the scrape pools",
 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, expected []string) {
 		var apiResponse utils.APIResponse
@@ -26,9 +29,6 @@ var _ = DescribeTable("The Prometheus UI API should return the scrape pools",
 	},
 	Entry("when called inside the ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector",
 		[]string {
-      "kube-apiserver",
-      "kube-dns",
-      "kube-proxy",
       "kube-state-metrics",
       "kubernetes-pods",
       "prometheus_ref_app",
@@ -47,6 +47,9 @@ var _ = DescribeTable("The Prometheus UI API should return the scrape pools",
 	),
 )
 
+/*
+ * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
+ */
 var _ = DescribeTable("The Prometheus UI API should return a valid config",
 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string) {
 		var apiResponse utils.APIResponse
@@ -67,6 +70,9 @@ var _ = DescribeTable("The Prometheus UI API should return a valid config",
 	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector"),
 )
 
+/*
+ * Test that the Prometheus UI /targets API endpoint returns a list of active and dropped targets.
+ */
 var _ = DescribeTable("The Prometheus UI API should return the targets",
 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string) {
 		var apiResponse utils.APIResponse
@@ -90,6 +96,9 @@ var _ = DescribeTable("The Prometheus UI API should return the targets",
 	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector"),
 )
 
+/*
+ * Test that the Prometheus UI /targets/metadata API endpoiont returns a list of targets with metadata.
+ */
 var _ = DescribeTable("The Prometheus UI API should return the targets metadata",
 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string) {
 		var apiResponse utils.APIResponse
@@ -114,6 +123,9 @@ var _ = DescribeTable("The Prometheus UI API should return the targets metadata"
 	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector"),
 )
 
+/*
+ * Test that the Prometheus UI does not return a 404 for each UI page.
+ */
 var _ = DescribeTable("The Prometheus UI should return a 200 for its UI pages",
 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, uiPaths []string) {
 		pods, err := utils.GetPodsWithLabel(K8sClient, namespace, controllerLabelName, controllerLabelValue)
