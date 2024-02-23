@@ -127,10 +127,12 @@ spec:
     execute:
     - test: containerstatus
     - test: prometheusui
-    - test: querymetrics
   - stopOnFailure: false
     execute:
-    - delay: 3m0s
+    - delay: 2m0s
+  - stopOnFailure: false
+    execute:
+    - test: querymetrics
   - stopOnFailure: false
     execute:
     - test: livenessprobe
