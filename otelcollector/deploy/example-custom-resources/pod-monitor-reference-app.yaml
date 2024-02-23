@@ -10,7 +10,21 @@ spec:
     matchLabels:
       app: prometheus-reference-app
   podMetricsEndpoints:
-  - relabelings:
+  - scheme: https
+    tlsConfig:
+      ca:
+        secret:
+          key: "client-cert.pem"
+          name: "ama-metrics-mtls-secret"
+      cert:
+        secret:
+          key: "client-cert.pem"
+          name: "ama-metrics-mtls-secret"
+      keySecret:
+          key: "client-key.pem"
+          name: "ama-metrics-mtls-secret"
+      insecureSkipVerify: false
+    relabelings:
     - sourceLabels: [__meta_kubernetes_pod_label_app]
       action: keep
       regex: "prometheus-reference-app"
@@ -18,6 +32,3 @@ spec:
       action: replace
       regex: ('$$NODE_NAME$$')
       targetLabel: instance
-
-  
-

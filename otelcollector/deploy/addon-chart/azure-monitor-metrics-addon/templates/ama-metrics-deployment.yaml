@@ -37,11 +37,11 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 7
-              memory: 14Gi
+              cpu: {{ .Values.AzureMonitorMetrics.RsCPULimit }}
+              memory: {{ .Values.AzureMonitorMetrics.RsMemoryLimit }}
             requests:
-              cpu: 150m
-              memory: 500Mi
+              cpu: {{ .Values.AzureMonitorMetrics.RsCPURequest }}
+              memory: {{ .Values.AzureMonitorMetrics.RsMemoryRequest }}
           {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
           envFrom:
             - secretRef:
@@ -169,6 +169,9 @@ spec:
             - mountPath: /etc/config/settings
               name: settings-vol-config
               readOnly: true
+            - mountPath: /etc/prometheus/certs
+              name: ama-metrics-tls-secret-volume
+              readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
@@ -279,16 +282,32 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
+        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
         - operator: "Exists"
-          effect: NoExecute
+          effect: "NoSchedule"
         - operator: "Exists"
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-          effect: NoSchedule
+          effect: "NoExecute"
+        - operator: "Exists"
+          effect: "PreferNoSchedule" 
+        {{- end }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
       volumes:
         - name: settings-vol-config
           configMap:
@@ -308,6 +327,10 @@ spec:
           hostPath:
             path: /etc/pki/ca-trust/anchors/
             type: DirectoryOrCreate
+        - name: ama-metrics-tls-secret-volume
+          secret:
+            secretName: ama-metrics-mtls-secret
+            optional: true
         {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
         - name: anchors-ubuntu
           hostPath:

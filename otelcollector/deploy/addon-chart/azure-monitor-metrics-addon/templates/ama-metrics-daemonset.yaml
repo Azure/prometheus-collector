@@ -30,11 +30,11 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 200m
-              memory: 1Gi
+              cpu: {{ .Values.AzureMonitorMetrics.DsCPULimitLinux }}
+              memory: {{ .Values.AzureMonitorMetrics.DsMemoryLimitLinux }}
             requests:
-              cpu: 50m
-              memory: 150Mi
+              cpu: {{ .Values.AzureMonitorMetrics.DsCPURequestLinux }}
+              memory: {{ .Values.AzureMonitorMetrics.DsMemoryRequestLinux }}
           {{- if and (eq .Values.AzureMonitorMetrics.ArcExtension true) (.Values.Azure.proxySettings.isProxyEnabled) }}
           envFrom:
             - secretRef:
@@ -137,6 +137,9 @@ spec:
             - mountPath: /etc/config/settings
               name: settings-vol-config
               readOnly: true
+            - mountPath: /etc/prometheus/certs
+              name: ama-metrics-tls-secret-volume
+              readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
@@ -233,20 +236,40 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
+        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
         - operator: "Exists"
-          effect: NoExecute
+          effect: "NoSchedule"
         - operator: "Exists"
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-          effect: NoSchedule
+          effect: "NoExecute"
+        - operator: "Exists"
+          effect: "PreferNoSchedule" 
+        {{- end }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
       volumes:
         - name: settings-vol-config
           configMap:
             name: ama-metrics-settings-configmap
+            optional: true
+        - name: ama-metrics-tls-secret-volume
+          secret:
+            secretName: ama-metrics-mtls-secret
             optional: true
         - name: prometheus-config-vol
           configMap:
@@ -308,8 +331,8 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 500m
-              memory: 1Gi
+              cpu:  {{ .Values.AzureMonitorMetrics.DsCPULimitWindows }}
+              memory: {{ .Values.AzureMonitorMetrics.DsMemoryLimitWindows }}
           env:
             - name: CLUSTER
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
@@ -383,6 +406,9 @@ spec:
               readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
+              readOnly: true
+            - mountPath: /etc/prometheus/certs
+              name: ama-metrics-tls-secret-volume
               readOnly: true
             - name: host-log-containers
               readOnly: true
@@ -459,6 +485,10 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
+        - name: ama-metrics-tls-secret-volume
+          secret:
+            secretName: ama-metrics-mtls-secret
+            optional: true
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
