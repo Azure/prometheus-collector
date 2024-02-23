@@ -484,9 +484,7 @@ jobs:
   displayName: "Build: linux CCP prometheus-collector image"
   pool:
     name: Azure-Pipelines-CI-Test-EO
-  dependsOn:
-    - Image_Tags_and_Ev2_Artifacts
-    - Linux_Prometheus_Collector
+  dependsOn: Image_Tags_and_Ev2_Artifacts
   variables:
     LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
