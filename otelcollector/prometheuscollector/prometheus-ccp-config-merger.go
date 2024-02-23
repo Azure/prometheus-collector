@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"strings"
 
@@ -29,7 +29,7 @@ var (
 var mergedDefaultConfigs map[interface{}]interface{}
 
 func loadRegexHash() {
-	data, err := ioutil.ReadFile(regexHashFile)
+	data, err := os.ReadFile(regexHashFile)
 	if err != nil {
 		fmt.Printf("Exception in loadRegexHash for prometheus config: %v. Keep list regexes will not be used\n", err)
 		return
@@ -44,7 +44,7 @@ func loadRegexHash() {
 func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 	fmt.Printf("Adding keep list regex or minimal ingestion regex for %s\n", yamlConfigFile)
 
-	content, err := ioutil.ReadFile(yamlConfigFile)
+	content, err := os.ReadFile(yamlConfigFile)
 	if err != nil {
 		fmt.Printf("Error reading config file %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
 		return
@@ -74,7 +74,7 @@ func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 		}
 
 		if cfgYamlWithMetricRelabelConfig, err := yaml.Marshal(config); err == nil {
-			if err := ioutil.WriteFile(yamlConfigFile, cfgYamlWithMetricRelabelConfig, 0644); err != nil {
+			if err := os.WriteFile(yamlConfigFile, []byte(cfgYamlWithMetricRelabelConfig), fs.FileMode(0644)); err != nil {
 				fmt.Printf("Error writing to file %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
 			}
 		} else {
@@ -96,10 +96,10 @@ func populateDefaultPrometheusConfig() {
 		if exists && kubeControllerManagerMetricsKeepListRegex != "" {
 			appendMetricRelabelConfig(controlplaneKubeControllerManagerFile, kubeControllerManagerMetricsKeepListRegex)
 		}
-		contents, err := ioutil.ReadFile(controlplaneKubeControllerManagerFile)
+		contents, err := os.ReadFile(controlplaneKubeControllerManagerFile)
 		if err == nil {
 			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = ioutil.WriteFile(controlplaneKubeControllerManagerFile, contents, 0644)
+			err = os.WriteFile(controlplaneKubeControllerManagerFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneKubeControllerManagerFile)
 	}
@@ -109,10 +109,10 @@ func populateDefaultPrometheusConfig() {
 		if exists && controlplaneKubeSchedulerKeepListRegex != "" {
 			appendMetricRelabelConfig(controlplaneKubeSchedulerDefaultFile, controlplaneKubeSchedulerKeepListRegex)
 		}
-		contents, err := ioutil.ReadFile(controlplaneKubeSchedulerDefaultFile)
+		contents, err := os.ReadFile(controlplaneKubeSchedulerDefaultFile)
 		if err == nil {
 			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = ioutil.WriteFile(controlplaneKubeSchedulerDefaultFile, contents, 0644)
+			err = os.WriteFile(controlplaneKubeSchedulerDefaultFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneKubeSchedulerDefaultFile)
 	}
@@ -122,10 +122,10 @@ func populateDefaultPrometheusConfig() {
 		if exists && controlplaneApiserverKeepListRegex != "" {
 			appendMetricRelabelConfig(controlplaneApiserverDefaultFile, controlplaneApiserverKeepListRegex)
 		}
-		contents, err := ioutil.ReadFile(controlplaneApiserverDefaultFile)
+		contents, err := os.ReadFile(controlplaneApiserverDefaultFile)
 		if err == nil {
 			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = ioutil.WriteFile(controlplaneApiserverDefaultFile, contents, 0644)
+			err = os.WriteFile(controlplaneApiserverDefaultFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneApiserverDefaultFile)
 	}
@@ -135,10 +135,10 @@ func populateDefaultPrometheusConfig() {
 		if exists && controlplaneClusterAutoscalerKeepListRegex != "" {
 			appendMetricRelabelConfig(controlplaneClusterAutoscalerFile, controlplaneClusterAutoscalerKeepListRegex)
 		}
-		contents, err := ioutil.ReadFile(controlplaneClusterAutoscalerFile)
+		contents, err := os.ReadFile(controlplaneClusterAutoscalerFile)
 		if err == nil {
 			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = ioutil.WriteFile(controlplaneClusterAutoscalerFile, contents, 0644)
+			err = os.WriteFile(controlplaneClusterAutoscalerFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneClusterAutoscalerFile)
 	}
@@ -148,10 +148,10 @@ func populateDefaultPrometheusConfig() {
 		if exists && controlplaneEtcdKeepListRegex != "" {
 			appendMetricRelabelConfig(controlplaneEtcdDefaultFile, controlplaneEtcdKeepListRegex)
 		}
-		contents, err := ioutil.ReadFile(controlplaneEtcdDefaultFile)
+		contents, err := os.ReadFile(controlplaneEtcdDefaultFile)
 		if err == nil {
 			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = ioutil.WriteFile(controlplaneEtcdDefaultFile, contents, 0644)
+			err = os.WriteFile(controlplaneEtcdDefaultFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneEtcdDefaultFile)
 	}
@@ -164,7 +164,7 @@ func populateDefaultPrometheusConfig() {
 
 func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]interface{} {
 	for _, defaultScrapeConfig := range defaultScrapeConfigs {
-		data, err := ioutil.ReadFile(defaultScrapeConfig)
+		data, err := os.ReadFile(defaultScrapeConfig)
 		if err != nil {
 			fmt.Printf("Error reading default scrape config %s: %v. No default scrape targets will be included\n", defaultScrapeConfig, err)
 			return nil
@@ -211,7 +211,7 @@ func writeDefaultScrapeTargetsFile() {
 			fmt.Printf("Starting to merge default prometheus config values in collector template as backup\n")
 			mergedDefaultConfigYaml, err := yaml.Marshal(mergedDefaultConfigs)
 			if err == nil {
-				err = ioutil.WriteFile(mergedDefaultConfigPath, mergedDefaultConfigYaml, 0644)
+				err = os.WriteFile(mergedDefaultConfigPath, []byte(mergedDefaultConfigYaml), fs.FileMode(0644))
 				if err != nil {
 					fmt.Printf("Error writing merged default prometheus config to file: %v\n", err)
 				}
@@ -232,7 +232,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 	}
 
 	for _, currentFile := range defaultFilesArray {
-		contents, err := ioutil.ReadFile(currentFile)
+		contents, err := os.ReadFile(currentFile)
 		if err != nil {
 			fmt.Printf("Error reading file %s: %v\n", currentFile, err)
 			continue
@@ -240,7 +240,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 
 		contents = []byte(strings.Replace(string(contents), "$$SCRAPE_INTERVAL$$", scrapeInterval, -1))
 
-		err = ioutil.WriteFile(currentFile, contents, 0644)
+		err = os.WriteFile(currentFile, contents, fs.FileMode(0644))
 		if err != nil {
 			fmt.Printf("Error writing to file %s: %v\n", currentFile, err)
 		}
@@ -248,7 +248,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 }
 
 func prometheusCcpConfigMerger() {
-	mergedDefaultConfigs = make(map[interface{}]interface{})  // Initialize mergedDefaultConfigs
+	mergedDefaultConfigs = make(map[interface{}]interface{}) // Initialize mergedDefaultConfigs
 	setDefaultFileScrapeInterval("30s")
 	writeDefaultScrapeTargetsFile()
 	fmt.Printf("Done creating default targets file\n")

@@ -2,27 +2,26 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"regexp"
 	"strings"
 
-	"gopkg.in/yaml.v2"
 	"github.com/pelletier/go-toml"
+	"gopkg.in/yaml.v2"
 )
 
 var (
-	configMapMountPath                     = "/etc/config/settings/default-targets-metrics-keep-list"
-	configSchemaVersion, minimalIngestionProfile string
-	controlplaneApiserverRegex, controlplaneClusterAutoscalerRegex string
+	configMapMountPath                                                     = "/etc/config/settings/default-targets-metrics-keep-list"
+	configSchemaVersion, minimalIngestionProfile                           string
+	controlplaneApiserverRegex, controlplaneClusterAutoscalerRegex         string
 	controlplaneKubeSchedulerRegex, controlplaneKubeControllerManagerRegex string
-	controlplaneEtcdRegex                  string
-	controlplaneKubeControllerManagerMinMac = "rest_client_request_duration_seconds|rest_client_requests_total|workqueue_depth"
-	controlplaneKubeSchedulerMinMac         = "scheduler_pending_pods|scheduler_unschedulable_pods|scheduler_pod_scheduling_attempts|scheduler_queue_incoming_pods_total|scheduler_preemption_attempts_total|scheduler_preemption_victims|scheduler_scheduling_attempt_duration_seconds|scheduler_schedule_attempts_total|scheduler_pod_scheduling_duration_seconds"
-	controlplaneApiserverMinMac             = "apiserver_request_total|apiserver_cache_list_fetched_objects_total|apiserver_cache_list_returned_objects_total|apiserver_flowcontrol_demand_seats_average|apiserver_flowcontrol_current_limit_seats|apiserver_request_sli_duration_seconds_bucket|apiserver_request_sli_duration_seconds_count|apiserver_request_sli_duration_seconds_sum|process_start_time_seconds|apiserver_request_duration_seconds_bucket|apiserver_request_duration_seconds_count|apiserver_request_duration_seconds_sum|apiserver_storage_list_fetched_objects_total|apiserver_storage_list_returned_objects_total|apiserver_current_inflight_requests"
-	controlplaneClusterAutoscalerMinMac     = "rest_client_requests_total|cluster_autoscaler_((last_activity|cluster_safe_to_autoscale|scale_down_in_cooldown|scaled_up_nodes_total|unneeded_nodes_count|unschedulable_pods_count|nodes_count))|cloudprovider_azure_api_request_(errors|duration_seconds_(bucket|count))"
-	controlplaneEtcdMinMac                   = "etcd_server_has_leader|rest_client_requests_total|etcd_mvcc_db_total_size_in_bytes|etcd_mvcc_db_total_size_in_use_in_bytes|etcd_server_slow_read_indexes_total|etcd_server_slow_apply_total|etcd_network_client_grpc_sent_bytes_total|etcd_server_heartbeat_send_failures_total"
-	
+	controlplaneEtcdRegex                                                  string
+	controlplaneKubeControllerManagerMinMac                                = "rest_client_request_duration_seconds|rest_client_requests_total|workqueue_depth"
+	controlplaneKubeSchedulerMinMac                                        = "scheduler_pending_pods|scheduler_unschedulable_pods|scheduler_pod_scheduling_attempts|scheduler_queue_incoming_pods_total|scheduler_preemption_attempts_total|scheduler_preemption_victims|scheduler_scheduling_attempt_duration_seconds|scheduler_schedule_attempts_total|scheduler_pod_scheduling_duration_seconds"
+	controlplaneApiserverMinMac                                            = "apiserver_request_total|apiserver_cache_list_fetched_objects_total|apiserver_cache_list_returned_objects_total|apiserver_flowcontrol_demand_seats_average|apiserver_flowcontrol_current_limit_seats|apiserver_request_sli_duration_seconds_bucket|apiserver_request_sli_duration_seconds_count|apiserver_request_sli_duration_seconds_sum|process_start_time_seconds|apiserver_request_duration_seconds_bucket|apiserver_request_duration_seconds_count|apiserver_request_duration_seconds_sum|apiserver_storage_list_fetched_objects_total|apiserver_storage_list_returned_objects_total|apiserver_current_inflight_requests"
+	controlplaneClusterAutoscalerMinMac                                    = "rest_client_requests_total|cluster_autoscaler_((last_activity|cluster_safe_to_autoscale|scale_down_in_cooldown|scaled_up_nodes_total|unneeded_nodes_count|unschedulable_pods_count|nodes_count))|cloudprovider_azure_api_request_(errors|duration_seconds_(bucket|count))"
+	controlplaneEtcdMinMac                                                 = "etcd_server_has_leader|rest_client_requests_total|etcd_mvcc_db_total_size_in_bytes|etcd_mvcc_db_total_size_in_use_in_bytes|etcd_server_slow_read_indexes_total|etcd_server_slow_apply_total|etcd_network_client_grpc_sent_bytes_total|etcd_server_heartbeat_send_failures_total"
 )
 
 // getStringValue checks the type of the value and returns it as a string if possible.
@@ -44,7 +43,7 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 		return nil
 	}
 
-	content, err := ioutil.ReadFile(configMapMountPath)
+	content, err := os.ReadFile(configMapMountPath)
 	if err != nil {
 		fmt.Printf("Exception while parsing config map for default-targets-metrics-keep-list: %v, using defaults, please check config map for errors\n", err)
 		return nil
@@ -79,7 +78,7 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 		ControlplaneApiserver:             getStringValue(parsedConfig["controlplane-apiserver"]),
 		ControlplaneClusterAutoscaler:     getStringValue(parsedConfig["controlplane-cluster-autoscaler"]),
 		ControlplaneEtcd:                  getStringValue(parsedConfig["controlplane-etcd"]),
-		MinimalIngestionProfile:		   getStringValue(parsedConfig["minimalingestionprofile"]),
+		MinimalIngestionProfile:           getStringValue(parsedConfig["minimalingestionprofile"]),
 	}
 
 	// Validate regex values
@@ -157,14 +156,13 @@ func tomlparserCCPTargetsMetricsKeepList() {
 
 	populateRegexValuesWithMinimalIngestionProfile(regexValues) // Pass the captured regexValues
 
-
 	// Write settings to a YAML file.
 	data := map[string]string{
-		"CONTROLPLANE_KUBE_CONTROLLER_MANAGER_KEEP_LIST_REGEX":   controlplaneKubeControllerManagerRegex,
-		"CONTROLPLANE_KUBE_SCHEDULER_KEEP_LIST_REGEX":            controlplaneKubeSchedulerRegex,
-		"CONTROLPLANE_APISERVER_KEEP_LIST_REGEX":                 controlplaneApiserverRegex,
-		"CONTROLPLANE_CLUSTER_AUTOSCALER_KEEP_LIST_REGEX":        controlplaneClusterAutoscalerRegex,
-		"CONTROLPLANE_ETCD_KEEP_LIST_REGEX":                      controlplaneEtcdRegex,
+		"CONTROLPLANE_KUBE_CONTROLLER_MANAGER_KEEP_LIST_REGEX": controlplaneKubeControllerManagerRegex,
+		"CONTROLPLANE_KUBE_SCHEDULER_KEEP_LIST_REGEX":          controlplaneKubeSchedulerRegex,
+		"CONTROLPLANE_APISERVER_KEEP_LIST_REGEX":               controlplaneApiserverRegex,
+		"CONTROLPLANE_CLUSTER_AUTOSCALER_KEEP_LIST_REGEX":      controlplaneClusterAutoscalerRegex,
+		"CONTROLPLANE_ETCD_KEEP_LIST_REGEX":                    controlplaneEtcdRegex,
 	}
 
 	out, err := yaml.Marshal(data)
@@ -173,7 +171,7 @@ func tomlparserCCPTargetsMetricsKeepList() {
 		return
 	}
 
-	err = ioutil.WriteFile("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash", out, 0644)
+	err = os.WriteFile("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash", []byte(out), fs.FileMode(0644))
 	if err != nil {
 		fmt.Printf("Exception while writing to file: %v\n", err)
 		return
