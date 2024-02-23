@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - kaveesh/step_0
+    - ccp_shell_removal_branch
 
 pr:
   autoCancel: true
