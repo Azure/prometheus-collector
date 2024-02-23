@@ -843,7 +843,7 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 
 func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	// Define a regular expression to extract the metric name, metric value and other details
-	var logRegex = regexp.MustCompile(`^(?P<time>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?P<metricName>otelcol_processor_dropped_metric_points|otelcol_receiver_refused_metric_points|otelcol_receiver_accepted_metric_points|otelcol_exporter_sent_metric_points|otelcol_exporter_queue_size|otelcol_exporter_send_failed_metric_points|otelcol_process_memory_rss|otelcol_processor_batch_batch_send_size_bytes_sum|otelcol_processor_batch_batch_send_size_bytes_count)\{[^}]*\}\s+=\s+(?P<metricValue>\d+(\.\d+)?)$`)
+	var logRegex = regexp.MustCompile(`^(?P<metricName>otelcol_processor_dropped_metric_points|otelcol_receiver_refused_metric_points|otelcol_receiver_accepted_metric_points|otelcol_exporter_sent_metric_points|otelcol_exporter_queue_size|otelcol_exporter_send_failed_metric_points|otelcol_process_memory_rss|otelcol_processor_batch_batch_send_size_bytes_sum|otelcol_processor_batch_batch_send_size_bytes_count)\{[^}]*\}\s+=\s+(?P<metricValue>\d+)$`)
 
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
@@ -851,7 +851,7 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 		groupMatches := logRegex.FindStringSubmatch(logEntry)
 
-		if len(groupMatches) < 4 {
+		if len(groupMatches) < 3 {
 			message := fmt.Sprintf("Failed to parse log record: %s", logEntry)
 			Log(message)
 			SendException(message)
@@ -859,7 +859,7 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		}
 
 		// Extract the metric value and convert to float
-		metricValue, err := strconv.ParseFloat(groupMatches[3], 64)
+		metricValue, err := strconv.ParseFloat(groupMatches[2], 64)
 		if err != nil {
 			message := fmt.Sprintf("Failed to convert metric value to float64: %v", err)
 			Log(message)
@@ -868,9 +868,9 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		}
 
 		// Create and send metric
-		metric := appinsights.NewMetricTelemetry(groupMatches[2], metricValue)
+		metric := appinsights.NewMetricTelemetry(groupMatches[1], metricValue)
 		TelemetryClient.Track(metric)
-		Log(fmt.Sprintf("Sent %s metrics", groupMatches[2]))
+		Log(fmt.Sprintf("Sent %s metrics", groupMatches[1]))
 	}
 	return output.FLB_OK
 }
