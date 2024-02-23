@@ -266,12 +266,21 @@ echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 echo "starting fluent-bit"
 mkdir /opt/microsoft/fluent-bit
 touch /opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log
-echo "Sleeping for 3 minutes before starting Fluent Bit..."
-sleep 180
+
 fluent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
+FLUENT_BIT_PID=$!
 FLUENT_BIT_VERSION=`fluent-bit --version`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
+
+echo "Killing Fluent Bit process..."
+kill $FLUENT_BIT_PID
+
+echo "Sleeping for 3 minutes before restarting Fluent Bit..."
+sleep 180
+
+echo "Restarting Fluent Bit..."
+fluent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
 
 if [ "${MAC}" == "true" ]; then
   # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.
