@@ -4,9 +4,9 @@
     - ama-metrics replicaset
     - ama-metrics-node daemonset
     - ama-metrics-ksm replicaset
-    - ama-metrics-targets-operator replicaset \[label=operator\]
-    - prometheus-node-exporter daemonset \[label=arc-extension\]
-  - All expected processes are running on the containers. Processes for the `prometheus-collector`  replicaset and daemonset container are:
+    - ama-metrics-targets-operator replicaset `label=operator`
+    - prometheus-node-exporter daemonset `label=arc-extension`
+  - All expected processes are running on the containers. Processes for the `prometheus-collector` replicaset and daemonset container are:
     - fluent-bit
     - telegraf
     - otelcollector
@@ -19,17 +19,24 @@
     - ama-metrics replicaset
     - ama-metrics-node daemonset
     - ama-metrics-ksm replicaset
-    - ama-metrics-targets-operator replicaset \[label=operator\]
-    - prometheus-node-exporter daemonset \[label=arc-extension\]
+    - ama-metrics-targets-operator replicaset `label=operator`
+    - prometheus-node-exporter daemonset `label=arc-extension`
 - Liveness Probe
   - When processes aren't running on the `prometheus-collector` replicaset container, the container should restart. Processes include:
     - otelcollector
     - metricsextension
     - mdsd
-  - When processes aren't running on the `prometheus-collector` replicaset container, the container should restart. Processes include:
+  - When processes aren't running on the `prometheus-collector` daemonset container, the container should restart. Processes include:
     - otelcollector
     - metricsextension
     - mdsd
+  - When processes aren't running on the `prometheus-collector` windows daemonset container, the container should restart. Processes include: `label=windows`
+    - otelcollector
+    - MetricsExtension.Native
+    - MonAgentLauncher
+  - When the `ama-metrics-prometheus-config` configmap is updated, the `prometheus-collector` replicaset container restarts.
+  - When the `the ama-metrics-config-node` configmap is updated, the `prometheus-collector` daemonset container restarts.
+  - When the `ama-metrics-prometheus-config-node-windows` configmap is updated, the `prometheus-collector` windows daemonset container restarts. `label=windows`
 - Prometheus UI
   - The Prometheus UI API should return the expected scrape pools for both the `prometheus-collector` replicaset and daemonset containers.
   - The Prometheus UI API should return a valid Prometheus config for both the `prometheus-collector` replicaset and daemonset containers.
@@ -38,6 +45,13 @@
   - The Prometheus UI should return a 200 for its UI pages for both the `prometheus-collector` replicaset and daemonset containers.
 - Query Metrics from the AMW
   - Querying for the `up` metric returns data.
+
+## Current Labels for Tests
+- Unlabeled: These tests should run on every basic cluster.
+- `operator`: Tests that should only run when the target allocator is enabled.
+- `arc-extension`: Tests that should only run on Arc clusters with the extension enabled.
+- `windows`: Tests that should only run on clusters that have Windows nodes.
+- `arm64`: Tests that should only run on clusters taht have ARM64 nodes.
 
 # File Directory Structure
 ```
@@ -70,6 +84,7 @@
 |   |   |── go.sum
 │   ├── utils                            - Utils for Kubernetes API calls.
 |   |   |── utils.go                     - Functions for the test suites to use.
+|   |   |── constants.go                 - Defined constants for test labels and transient errors to ignore.
 |   |   |── go.mod
 |   |   |── go.sum
 ```
@@ -84,7 +99,15 @@ Tests are run using the [Ginkgo](https://onsi.github.io/ginkgo/) test framework.
 Ginkgo can be used for any tests written in golang, whether they are unit, integration, or e2e tests.
 
 ## Bootstrap a Dev Cluster to Run Ginkgo Tests
+### Prerequisites
 - Follow the backdoor deployment instructions to deploy your ama-metrics chart onto the cluster.
+- Deploy the following apps and configmaps on your cluster:
+  - [Linux reference app](../../internal/referenceapp/prometheus-reference-app.yaml)
+  - [Windows reference app](../../internal/referenceapp/win-prometheus-reference-app.yaml)
+  - [Scraping configmaps](./test-cluster-yamls/configmaps)
+  - [Pod and Service Monitor CRs](./test-cluster-yamls/customresources)
+
+### Setup
 - Get the full resource ID of your AMW and run the following command to get a service principal to allow query access to your AMW:
 
   ```
@@ -390,13 +413,19 @@ Some highlights are that:
             displayName: "Run tests"
   ```
 
-# When to Run Each Test
+# Processes
+## When to Run Each Test
 - During development of a feature or fix, run the e2e tests following the instructions to bootstrap your cluster to run Ginkgo tests.
 - In your PR, use the PR checklist to include results of the e2e tests on your cluster.
 - After merging the PR into main, the new main build will be deployed on the CI/CD clusters. The e2e tests will be run on the cluster through TestKube. The pipeline is locked to deploy a new chart and run tests sequentially for only one merge at a time, so that there is no conflict between PRs merged around the same time.
 - The TestKube tests will also be run nightly.
 
-## PR Checklist
-- [ ] Code Change: Have end-to-end Ginkgo tests been run on your cluster?
-  - [ ] Features: Have tests been added for this feature?
-  - [ ] Fixes: Is there a test that could have caught this issue and could validate that the fix works?
+## Creating a New Test or Test Suite
+- Any test added inside a test suite will automatically be picked up to run after merging to main.
+- Any test suite added should be included in `testkube-test-crs.yaml` that will be applied on the CI/CD clusters.
+- If a new scrape job is required for a test, add the scrape job to the correct configmap or add a custom resource under the folder [test-cluster-yamls](./test-cluster-yamls/).
+- If you add a new label:
+  - Use a constant for the string in the constants.go file.
+  - Add the label and description in the labels section of this README.
+  - Add the label to the PR checklist file.
+  - Add the label where needed in `testkube-test-crs.yaml`.
