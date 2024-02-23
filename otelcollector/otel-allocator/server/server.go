@@ -111,53 +111,31 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // configurations such that the underlying prometheus marshaling is used. After that, the YAML is converted
 // in to a JSON format for consumers to use.
 func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.ScrapeConfig) error {
-	s.logger.Info("Rashmi-UpdateScrapeConfigResponse")
-	// s.logger.Info("remove regex for keepequal")
-	// if configs != nil {
-	// 	for _, scrapeConfig := range configs {
-	// 		if scrapeConfig.RelabelConfigs != nil {
-	// 			relabelConfigs := scrapeConfig.RelabelConfigs
-	// 			for _, relabelConfig := range relabelConfigs {
-	// 				if relabelConfig.Action == "keepequal" {
-	// 					s.logger.Info("Rashmi", "relabelConfig.Regex", relabelConfig.Regex)
-	// 					relabelConfig.Regex = relabel.MustNewRegexp("")
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
-	// s.logger.Info("Rashmi", "yamlConfig:", string(configBytes))
 	var configBytes []byte
 	configBytes, err := yaml.Marshal(configs)
 	if err != nil {
 		return err
 	}
 
-	// s.logger.Info("Rashmi", "yamlConfig:", string(configBytes))
 	var jsonConfig []byte
 	jsonConfig, err = yaml2.YAMLToJSON(configBytes)
 	if err != nil {
 		return err
 	}
-	// s.logger.Info("Rashmi", "jsonConfig:", string(jsonConfig))
 
 	var jobToScrapeConfig map[string]interface{}
 	err = json.Unmarshal(jsonConfig, &jobToScrapeConfig)
 	if jobToScrapeConfig != nil {
-		// var sc = jobToScrapeConfig.([]interface{})
 		for _, scrapeConfig := range jobToScrapeConfig {
 			scrapeConfig := scrapeConfig.(map[string]interface{})
 			if scrapeConfig["relabel_configs"] != nil {
 				relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
 				for _, relabelConfig := range relabelConfigs {
 					relabelConfig := relabelConfig.(map[string]interface{})
-					//replace $ with $$ for regex field
+					// Dropping regex key from the map since unmarshalling this on the client(metrics_receiver.go) results in error
+					// because of the bug here - https://github.com/prometheus/prometheus/issues/12534
 					if relabelConfig["action"] == "keepequal" || relabelConfig["action"] == "dropequal" {
-						// Adding this check here since regex can be boolean and the conversion will fail
-						s.logger.Info("Rashmi", "relabel-regex-before:", relabelConfig["regex"])
-						//relabelConfig["regex"] = nil
 						delete(relabelConfig, "regex")
-						s.logger.Info("Rashmi", "relabel-regex-after:", relabelConfig["regex"])
 					}
 				}
 			}
