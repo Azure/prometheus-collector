@@ -342,7 +342,6 @@ jobs:
 
         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
         sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-        docker system prune --volumes -y
         docker system prune --all -f
         docker images -q --filter "dangling=true" | xargs docker rmi
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -350,7 +349,7 @@ jobs:
 
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
         docker pull $(LINUX_FULL_IMAGE_NAME)
         docker system prune --all -f
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -667,7 +666,7 @@ jobs:
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push  --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
         docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
         MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
         DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
@@ -744,7 +743,7 @@ jobs:
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
         docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
         DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
@@ -1071,7 +1070,7 @@ jobs:
 
 - job: Deploy_Chart_ARC
   displayName: "Deploy: Arc dev cluster"
-  # condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+  condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
   pool:
     name: Azure-Pipelines-CI-Test-EO
   dependsOn:
