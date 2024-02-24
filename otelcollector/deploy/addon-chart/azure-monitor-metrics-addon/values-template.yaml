@@ -65,7 +65,6 @@ global:
     Region: "${AKS_REGION}"
     Customer:
       AzureResourceID: ${AKS_RESOURCE_ID}
-      
 # For ARC backdoor testing
 Azure:
   Extension:
