@@ -273,12 +273,14 @@ FLUENT_BIT_VERSION=`fluent-bit --version`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
 
+sleep 180
 echo "Killing Fluent Bit process..."
 kill $FLUENT_BIT_PID
 
 echo "Sleeping for 3 minutes before restarting Fluent Bit..."
 sleep 180
 
+# Restarting Fluent Bit to make the exec plugin work
 echo "Restarting Fluent Bit..."
 fluent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
 
