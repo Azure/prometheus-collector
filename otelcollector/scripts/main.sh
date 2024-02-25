@@ -266,10 +266,10 @@ echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 echo "starting fluent-bit"
 mkdir /opt/microsoft/fluent-bit
 touch /opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log
-touch /opt/fluent-bit/execotelcollector.log
-touch /opt/fluent-bit/execmetricsextension.log
+# touch /opt/fluent-bit/execotelcollector.log
+# touch /opt/fluent-bit/execmetricsextension.log
 
-sleep 80
+# sleep 80
 
 fluent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
 # FLUENT_BIT_PID=$!
