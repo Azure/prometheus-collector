@@ -273,9 +273,9 @@ FLUENT_BIT_VERSION=`fluent-bit --version`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
 
-sleep 180
+sleep 60
 echo "Killing Fluent Bit process..."
-kill $FLUENT_BIT_PID
+kill -9 $FLUENT_BIT_PID
 
 echo "Sleeping for 3 minutes before restarting Fluent Bit..."
 sleep 180

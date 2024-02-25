@@ -854,7 +854,7 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		if len(groupMatches) < 3 {
 			message := fmt.Sprintf("Failed to parse log record: %s", logEntry)
 			Log(message)
-			SendException(message)
+			// SendException(message)
 			continue
 		}
 
@@ -863,7 +863,7 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		if err != nil {
 			message := fmt.Sprintf("Failed to convert metric value to float64: %v", err)
 			Log(message)
-			SendException(message)
+			// SendException(message)
 			continue
 		}
 
