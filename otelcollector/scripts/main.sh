@@ -262,33 +262,17 @@ PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
 echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
 
-
 echo "starting fluent-bit"
 mkdir /opt/microsoft/fluent-bit
 touch /opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log
-# touch /opt/fluent-bit/execotelcollector.log
-# touch /opt/fluent-bit/execmetricsextension.log
 
-# sleep 80
 
 fluent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
-# FLUENT_BIT_PID=$!
+
 FLUENT_BIT_VERSION=`fluent-bit --version`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
 
-
-
-# sleep 60
-# echo "Killing Fluent Bit process..."
-# kill -9 $FLUENT_BIT_PID
-
-# echo "Sleeping for 3 minutes before restarting Fluent Bit..."
-# sleep 80
-
-# # Restarting Fluent Bit to make the exec plugin work
-# echo "Restarting Fluent Bit..."
-# fluent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
 
 if [ "${MAC}" == "true" ]; then
   # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.

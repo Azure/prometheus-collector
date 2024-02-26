@@ -144,7 +144,7 @@ const (
 	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
 	meMemRssScrapeTag                     = "procai.metricsextension.memvmrss.scrape"
 	otelcolMemRssScrapeTag                = "procai.otelcollector.memvmrss.scrape"
-	otelcolCpuScrapeTag                   = "cpu.otelcollector"
+	systemCpuScrapeTag                    = "cpu.system"
 	meCpuScrapeTag                        = "cpu.metricsextension"
 	promScrapeTag                         = "promscrape.scrape"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
@@ -854,7 +854,7 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		if len(groupMatches) < 3 {
 			message := fmt.Sprintf("Failed to parse log record: %s", logEntry)
 			Log(message)
-			// SendException(message)
+			SendException(message)
 			continue
 		}
 
@@ -863,7 +863,7 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		if err != nil {
 			message := fmt.Sprintf("Failed to convert metric value to float64: %v", err)
 			Log(message)
-			// SendException(message)
+			SendException(message)
 			continue
 		}
 
@@ -875,43 +875,22 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	return output.FLB_OK
 }
 
-func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+func PushSystemCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
 		Log(logEntry)
 
-		otelcpuUsage, err := strconv.ParseFloat(logEntry, 64)
+		systemcpuUsage, err := strconv.ParseFloat(logEntry, 64)
 		if err != nil {
-			message := fmt.Sprintf("Failed to parse otelcpuUsage as float64: %v", err)
+			message := fmt.Sprintf("Failed to parse system cpu Usage as float64: %v", err)
 			Log(message)
 			SendException(message)
 			continue
 		}
 
-		metric := appinsights.NewMetricTelemetry("otelcpuUsage", otelcpuUsage)
+		metric := appinsights.NewMetricTelemetry("systemcpuUsage", systemcpuUsage)
 		TelemetryClient.Track(metric)
-		Log("Sent Otel Cpu usage metrics")
-	}
-	return output.FLB_OK
-}
-
-func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
-	for _, record := range records {
-		var logEntry = ToString(record["message"])
-		Log(logEntry)
-		meCpuUsage, err := strconv.ParseFloat(logEntry, 64)
-		if err != nil {
-			message := fmt.Sprintf("Failed to parse meCpuUsage as float64: %v", err)
-			Log(message)
-			SendException(message)
-			continue
-		}
-
-		// Create and send metric
-		metric := appinsights.NewMetricTelemetry("meCpuUsage", meCpuUsage)
-		TelemetryClient.Track(metric)
-		Log(fmt.Sprintf("Sent ME Cpu usage metrics"))
-
+		Log("Sent system Cpu usage metrics")
 	}
 	return output.FLB_OK
 }

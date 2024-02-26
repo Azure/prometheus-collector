@@ -86,16 +86,14 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
 		return RecordExportingFailed(records)
-	case otelcolCpuScrapeTag:
-		return PushOtelCpuToAppInsightsMetrics(records)
+	case systemCpuScrapeTag:
+		return PushSystemCpuToAppInsightsMetrics(records)
 	case otelcolMemRssScrapeTag:
 		return PushOtelColMemRssToAppInsightsMetrics(records)
 	case meMemRssScrapeTag:
 		return PushMEMemRssToAppInsightsMetrics(records)
 	case promScrapeTag:
 		return PushPromToAppInsightsMetrics(records)
-	case meCpuScrapeTag:
-		return PushMECpuToAppInsightsMetrics(records)
 	default:
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)
