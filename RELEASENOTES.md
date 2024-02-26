@@ -1,5 +1,6 @@
 # Azure Monitor Metrics for AKS clusters
 
+
 ## Release 02-26-2024
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
@@ -8,6 +9,7 @@
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
 * Change log -
   * fix: Fix for yaml unmarshal bug for keepequal/dropequal - https://github.com/Azure/prometheus-collector/pull/753 
+  * Add new regions for Azure Monitor Workspace ('brazilsoutheast', 'francecentral', 'ukwest', 'koreasouth', 'switzerlandwest', 'japaneast', 'swedencentral', 'canadaeast', 'norwaywest', 'southindia', 'australiaeast', 'swedensouth')
 
 ## Release 02-14-2024
 
