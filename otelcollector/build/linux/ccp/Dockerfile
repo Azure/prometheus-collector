@@ -38,13 +38,8 @@ RUN go get
 RUN go build -o prometheuscollector .
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
-LABEL description="Azure Monitor Prometheus metrics collector"
-LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "linux"
 ENV tmpdir /opt
-# Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
-ENV TELEMETRY_DISABLED false
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
 ENV MALLOC_ARENA_MAX=2
 RUN mkdir -p $tmpdir/microsoft/configmapparser/
@@ -76,7 +71,8 @@ RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
-ENV TELEMETRY_DISABLED false
+LABEL description="Azure Monitor Prometheus metrics collector"
+LABEL maintainer="ciprometheus@microsoft.com"
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
 ENV MALLOC_ARENA_MAX=2
 ENV PATH="/busybin:${PATH}"

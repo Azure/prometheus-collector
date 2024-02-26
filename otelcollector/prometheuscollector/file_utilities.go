@@ -11,7 +11,6 @@ import (
     "bufio"
 )
 
-
 func printMdsdVersion() {
 	cmd := exec.Command("mdsd", "--version")
 	cmd.Stderr = os.Stderr
@@ -41,7 +40,6 @@ func existsAndNotEmpty(filename string) bool {
         return false
     }
     if err != nil {
-        // Handle the error, e.g., log it or return false
         return false
     }
     if info.Size() == 0 {

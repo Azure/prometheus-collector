@@ -43,9 +43,7 @@ func confgimapparserforccp() {
     }
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings
-	// startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-ccp-prometheus-collector-settings.rb")
 	parseConfigAndSetEnvInFile()
-	// sets env : AZMON_DEFAULT_METRIC_ACCOUNT_NAME, AZMON_CLUSTER_LABEL, AZMON_CLUSTER_ALIAS, AZMON_OPERATOR_ENABLED_CHART_SETTING in /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var
 	filename := "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
 	err := setEnvVarsFromFile(filename)
 	if err != nil {
@@ -53,9 +51,7 @@ func confgimapparserforccp() {
 	}
 
 	// Parse the settings for default scrape configs
-	// startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-ccp-default-scrape-settings.rb")
 	tomlparserCCPDefaultScrapeSettings()
-	// sets env: AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED...AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED in /opt/microsoft/configmapparser/config_default_scrape_settings_env_var
 	filename = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
 	err = setEnvVarsFromFile(filename)
 	if err != nil {
@@ -63,12 +59,9 @@ func confgimapparserforccp() {
 	}
 
 	// Parse the settings for default targets metrics keep list config
-    // startCommandAndWait("ruby", "/opt/microsoft/configmapparser/tomlparser-ccp-default-targets-metrics-keep-list.rb")
 	tomlparserCCPTargetsMetricsKeepList()
-	// sets regexhas file /opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash
 
 	prometheusCcpConfigMerger()
-	// startCommandAndWait("ruby", "/opt/microsoft/configmapparser/prometheus-ccp-config-merger.rb")
 
 	os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
 	os.Setenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")

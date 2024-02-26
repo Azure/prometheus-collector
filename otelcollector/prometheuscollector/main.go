@@ -20,9 +20,6 @@ func main(){
 	aksRegion := os.Getenv("AKSREGION")
 	ccpMetricsEnabled := os.Getenv("CCP_METRICS_ENABLED")
 
-	// wait for configmap sync container to finish initialization
-	// waitForConfigmapSyncContainer()
-
 	outputFile := "/opt/inotifyoutput.txt"
 	err := monitorInotify(outputFile)
 	if err != nil {
@@ -32,7 +29,7 @@ func main(){
 	if ccpMetricsEnabled == "true" {
 		confgimapparserforccp()
 	} else {
-		// Will implement this function when merging back to main
+		// TODO : Part of Step 1 of ccp merge to main
 		// configmapparser()
 	}
 
@@ -45,14 +42,8 @@ func main(){
 			meConfigFile = "/usr/sbin/me.config"
 		}
 	} else {
-		// If controllerType is not "replicaset," exit the program with a status code of 1 and a failure message.
-		println("Failed: controllerType is not 'replicaset'")
+		println("Failed: controllerType is not 'replicaset' and only replicaset mode is supported for CCP")
 		os.Exit(1)
-		// if clusterOverride == "true" {
-		// 	meConfigFile = "/usr/sbin/me_ds_internal.config"
-		// } else {
-		// 	meConfigFile = "/usr/sbin/me_ds.config"
-		// }
 	}
 	fmt.Println("meConfigFile:", meConfigFile)
 
@@ -134,19 +125,13 @@ func main(){
 		fmt.Println("Starting otelcollector in replicaset with Target allocator settings")
 		collectorConfig = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
 	} else if azmonUseDefaultPrometheusConfig == "true" {
-		// Commenting this out since config can be applied via CRD
-		// fmt.Println("Starting otelcollector with only default scrape configs enabled")
+		fmt.Println("Starting otelcollector with only default scrape configs enabled")
 		collectorConfig = "/opt/microsoft/otelcollector/collector-config-default.yml"
 	} else {
-		fmt.Println("Starting otelcollector")
+		fmt.Println("Starting otelcollector with collector-config.yml")
 		collectorConfig = "/opt/microsoft/otelcollector/collector-config.yml"
 	}
 
-	// cmd := exec.Command("/opt/microsoft/otelcollector/otelcollector", "--config", collectorConfig)
-	// err = cmd.Start()
-	// if err != nil {
-	// 	fmt.Printf("Error starting otelcollector: %v\n", err)
-	// }
 	fmt.Println("startCommand otelcollector")
 	startCommand("/opt/microsoft/otelcollector/otelcollector", "--config", collectorConfig)
 
@@ -191,12 +176,6 @@ func main(){
 		if err != nil {
 			log.Fatalf("Error starting inotify process: %v\n", err)
 		}
-
-		// // Wait for the inotify process to finish (which won't happen as it's running as a daemon)
-		// err = inotifyCommand.Wait()
-		// if err != nil {
-		// 	log.Fatalf("Error waiting for inotify process: %v\n", err)
-		// }
 	}
 
 	// Setting time at which the container started running

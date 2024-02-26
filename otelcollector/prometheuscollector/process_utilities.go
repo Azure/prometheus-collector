@@ -44,11 +44,7 @@ func startCommand(command string, args ...string) {
 
 	// Set environment variables from os.Environ()
 	cmd.Env = append(os.Environ())
-	// // Print the environment variables being passed into the cmd
-	// fmt.Println("Environment variables being passed into the command:")
-	// for _, v := range cmd.Env {
-	// 	fmt.Println(v)
-	// }
+
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -85,12 +81,7 @@ func startCommandAndWait(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
 	// Set environment variables from os.Environ()
-	// cmd.Env = append(os.Environ())
-	// // Print the environment variables being passed into the cmd
-	// fmt.Println("Environment variables being passed into the command:")
-	// for _, v := range cmd.Env {
-	// 	fmt.Println(v)
-	// }
+	cmd.Env = append(os.Environ())
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -158,27 +149,26 @@ func copyOutputFile(src io.Reader, file *os.File) {
 func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 
-	// // Create a file to store the stdoutput
-	// metricsextension_stdout_file, err := os.Create("metricsextension_stdout.log")
-	// if err != nil {
-	// 	fmt.Printf("Error creating output file: %v\n", err)
-	// 	return
-	// }
+	// Create a file to store the stdoutput
+	metricsextension_stdout_file, err := os.Create("metricsextension_stdout.log")
+	if err != nil {
+		fmt.Printf("Error creating output file for metrics extension: %v\n", err)
+		return
+	}
 
 	// Create a file to store the stderr
-	// metricsextension_stderr_file, err := os.Create("metricsextension_stderr.log")
-	// if err != nil {
-	// 	fmt.Printf("Error creating output file: %v\n", err)
-	// 	return
-	// }
+	metricsextension_stderr_file, err := os.Create("metricsextension_stderr.log")
+	if err != nil {
+		fmt.Printf("Error creating output file for metrics extension: %v\n", err)
+		return
+	}
 
-	// // Create pipes to capture stdout and stderr
-    // stdout, err := cmd.StdoutPipe()
-    // if err != nil {
-    //     fmt.Printf("Error creating stdout pipe: %v\n", err)
-    //     return
-    // }
-
+	// Create pipes to capture stdout and stderr
+    stdout, err := cmd.StdoutPipe()
+    if err != nil {
+        fmt.Printf("Error creating stdout pipe: %v\n", err)
+        return
+    }
     stderr, err := cmd.StderrPipe()
     if err != nil {
         fmt.Printf("Error creating stderr pipe: %v\n", err)
@@ -189,7 +179,10 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	// For now only copy STDERR logs
 	// go copyOutputFile(stdout, metricsextension_stdout_file)
 	// go copyOutputMulti(stderr, os.Stderr, metricsextension_stderr_file)
-	go copyOutputPipe(stderr, os.Stderr)
+	// go copyOutputPipe(stderr, os.Stderr)
+
+	go copyOutputMulti(stdout, os.Stdout, metricsextension_stdout_file)
+	go copyOutputMulti(stderr, os.Stderr, metricsextension_stderr_file)
 
     // Start the command
     err = cmd.Start()
@@ -201,40 +194,43 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 
 func startMdsd() {
 	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-D")
-	// Create a file to store the stdoutput
-	// mdsd_stdout_file, err := os.Create("mdsd_stdout.log")
-	// if err != nil {
-	// 	fmt.Printf("Error creating output file: %v\n", err)
-	// 	return
-	// }
+	Create a file to store the stdoutput
+	mdsd_stdout_file, err := os.Create("mdsd_stdout.log")
+	if err != nil {
+		fmt.Printf("Error creating output file for mdsd: %v\n", err)
+		return
+	}
 
-	// // Create a file to store the stderr
-	// mdsd_stderr_file, err := os.Create("mdsd_stderr.log")
-	// if err != nil {
-	// 	fmt.Printf("Error creating output file: %v\n", err)
-	// 	return
-	// }
+	// Create a file to store the stderr
+	mdsd_stderr_file, err := os.Create("mdsd_stderr.log")
+	if err != nil {
+		fmt.Printf("Error creating output file for mdsd: %v\n", err)
+		return
+	}
 
-	// // Create pipes to capture stdout and stderr
-    // stdout, err := cmd.StdoutPipe()
-    // if err != nil {
-    //     fmt.Printf("Error creating stdout pipe: %v\n", err)
-    //     return
-    // }
+	// Create pipes to capture stdout and stderr
+    stdout, err := cmd.StdoutPipe()
+    if err != nil {
+        fmt.Printf("Error creating stdout pipe: %v\n", err)
+        return
+    }
 
-    // stderr, err := cmd.StderrPipe()
-    // if err != nil {
-    //     fmt.Printf("Error creating stderr pipe: %v\n", err)
-    //     return
-    // }
+    stderr, err := cmd.StderrPipe()
+    if err != nil {
+        fmt.Printf("Error creating stderr pipe: %v\n", err)
+        return
+    }
 
 	// // Goroutines to copy stdout and stderr to parent process
 	// go copyOutputFile(stdout, mdsd_stdout_file)
 	// go copyOutputMulti(stderr, os.Stderr, mdsd_stderr_file)
 
+	go copyOutputMulti(stdout, os.Stdout, mdsd_stdout_file)
+	go copyOutputMulti(stderr, os.Stderr, mdsd_stderr_file)
+
+
     // Start the command
-    // err = cmd.Start()
-    err := cmd.Start()
+    err = cmd.Start()
     if err != nil {
         fmt.Printf("Error starting mdsd: %v\n", err)
         return
