@@ -1,5 +1,9 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Pending
+* Change log -
+  * Add new regions for Azure Monitor Workspace ('brazilsoutheast', 'francecentral', 'ukwest', 'koreasouth', 'switzerlandwest', 'japaneast', 'swedencentral', 'canadaeast', 'norwaywest', 'southindia', 'australiaeast', 'swedensouth')
+
 ## Release 02-14-2024
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-02-14-2024-90d01292`

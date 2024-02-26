@@ -30,6 +30,18 @@ param azureMonitorWorkspaceResourceId string
   'japanwest',
   'koreacentral',
   'switzerlandnorth',
+  'brazilsoutheast',
+  'francecentral',
+  'ukwest',
+  'koreasouth',
+  'switzerlandwest',
+  'japaneast',
+  'swedencentral',
+  'canadaeast',
+  'norwaywest',
+  'southindia',
+  'australiaeast',
+  'swedensouth',
   'usgovvirginia'
 ])
 param azureMonitorWorkspaceLocation string
