@@ -231,7 +231,9 @@ else
       echo "Starting metricsextension"
       /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc_prom -ConfigOverrides $meConfigString > /dev/null &
 fi
-
+ME_PID=$!
+echo_var "ME_PID" "$ME_PID"
+sed -i "s/\${ME_PID}/$ME_PID/" $fluentBitConfigFile
 # Get ME version
 ME_VERSION=`cat /opt/metricsextversion.txt`
 echo_var "ME_VERSION" "$ME_VERSION"
@@ -256,6 +258,9 @@ else
       echo "Starting otelcollector"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
+OTEL_PID=$!
+echo_var "OTEL_PID" "$OTEL_PID"
+sed -i "s/\${OTEL_PID}/$OTEL_PID/" $fluentBitConfigFile
 OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version`
 echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
 PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
