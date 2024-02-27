@@ -90,7 +90,7 @@
         "description": "A new GUID used to identify the role assignment"
       }
     }
-  },
+  },KubernetesRecordingRulesRuleGroup
   "variables": {
     "azureMonitorWorkspaceSubscriptionId": "[split(parameters('azureMonitorWorkspaceResourceId'),'/')[2]]",
     "clusterSubscriptionId": "[split(parameters('clusterResourceId'),'/')[2]]",

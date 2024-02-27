@@ -89,7 +89,7 @@
 							},
 							"clusterLocation": {
 								"type": "string"
-							}
+							}KubernetesRecordingRulesRuleGroup
 						},
 						"variables": {
 							"clusterSubscriptionId": "[split(parameters('clusterResourceId'),'/')[2]]",
