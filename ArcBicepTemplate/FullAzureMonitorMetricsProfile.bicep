@@ -56,7 +56,7 @@ param grafanaLocation string
 param grafanaSku string
 
 @description('A new GUID used to identify the role assignment')
-param roleNameGuid string = newGuid()KubernetesRecordingRulesRuleGroup
+param roleNameGuid string = newGuid()
 
 var azureMonitorWorkspaceSubscriptionId = split(azureMonitorWorkspaceResourceId, '/')[2]
 var clusterSubscriptionId = split(clusterResourceId, '/')[2]
