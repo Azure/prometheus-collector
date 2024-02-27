@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
+	"reflect"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -92,8 +94,10 @@ func populateDefaultPrometheusConfig() {
 	currentControllerType := strings.TrimSpace(strings.ToLower(os.Getenv("CONTROLLER_TYPE")))
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_KUBE_CONTROLLER_MANAGER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		fmt.Println("Kube Controller Manager enabled.")
 		kubeControllerManagerMetricsKeepListRegex, exists := regexHash["CONTROLPLANE_KUBE_CONTROLLER_MANAGER_KEEP_LIST_REGEX"]
 		if exists && kubeControllerManagerMetricsKeepListRegex != "" {
+			fmt.Printf("Using regex for Kube Controller Manager: %s\n", kubeControllerManagerMetricsKeepListRegex)
 			appendMetricRelabelConfig(controlplaneKubeControllerManagerFile, kubeControllerManagerMetricsKeepListRegex)
 		}
 		contents, err := os.ReadFile(controlplaneKubeControllerManagerFile)
@@ -163,42 +167,72 @@ func populateDefaultPrometheusConfig() {
 }
 
 func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]interface{} {
-	for _, defaultScrapeConfig := range defaultScrapeConfigs {
-		data, err := os.ReadFile(defaultScrapeConfig)
-		if err != nil {
-			fmt.Printf("Error reading default scrape config %s: %v. No default scrape targets will be included\n", defaultScrapeConfig, err)
-			return nil
-		}
+	mergedDefaultConfigs := make(map[interface{}]interface{})
 
-		config := make(map[interface{}]interface{})
-		err = yaml.Unmarshal(data, &config)
-		if err != nil {
-			fmt.Printf("Error unmarshalling YAML for default scrape config %s: %v. No default scrape targets will be included\n", defaultScrapeConfig, err)
-			return nil
-		}
+	if len(defaultScrapeConfigs) > 0 {
+		mergedDefaultConfigs["scrape_configs"] = make([]interface{}, 0)
 
-		mergedDefaultConfigs = mergeYAML(mergedDefaultConfigs, config)
+		for _, defaultScrapeConfig := range defaultScrapeConfigs {
+			defaultConfigYaml, err := loadYAMLFromFile(defaultScrapeConfig)
+			if err != nil {
+				log.Printf("Error loading YAML from file %s: %s\n", defaultScrapeConfig, err)
+				continue
+			}
+
+			mergedDefaultConfigs = deepMerge(mergedDefaultConfigs, defaultConfigYaml)
+		}
 	}
+
 	fmt.Printf("Done merging %d default prometheus config(s)\n", len(defaultScrapeConfigs))
+
 	return mergedDefaultConfigs
 }
 
-func mergeYAML(dest, src map[interface{}]interface{}) map[interface{}]interface{} {
-	for key, srcVal := range src {
-		destVal, exists := dest[key]
-		if exists {
-			srcMap, isMap := srcVal.(map[interface{}]interface{})
-			destMap, isDestMap := destVal.(map[interface{}]interface{})
-			if isMap && isDestMap {
-				dest[key] = mergeYAML(destMap, srcMap)
-			} else {
-				dest[key] = srcVal
+func loadYAMLFromFile(filename string) (map[interface{}]interface{}, error) {
+	fileContent, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	var yamlData map[interface{}]interface{}
+	err = yaml.Unmarshal(fileContent, &yamlData)
+	if err != nil {
+		return nil, err
+	}
+
+	return yamlData, nil
+}
+
+// This needs unit tests
+
+func deepMerge(target, source map[interface{}]interface{}) map[interface{}]interface{} {
+	for key, sourceValue := range source {
+		targetValue, exists := target[key]
+
+		if !exists {
+			target[key] = sourceValue
+			continue
+		}
+
+		targetMap, targetMapOk := targetValue.(map[interface{}]interface{})
+		sourceMap, sourceMapOk := sourceValue.(map[interface{}]interface{})
+
+		if targetMapOk && sourceMapOk {
+			target[key] = deepMerge(targetMap, sourceMap)
+		} else if reflect.TypeOf(targetValue) == reflect.TypeOf(sourceValue) {
+			// Both are slices, concatenate them
+			if targetSlice, targetSliceOk := targetValue.([]interface{}); targetSliceOk {
+				if sourceSlice, sourceSliceOk := sourceValue.([]interface{}); sourceSliceOk {
+					target[key] = append(targetSlice, sourceSlice...)
+				}
 			}
 		} else {
-			dest[key] = srcVal
+			// If types are different, simply overwrite with the source value
+			target[key] = sourceValue
 		}
 	}
-	return dest
+
+	return target
 }
 
 func writeDefaultScrapeTargetsFile() {
