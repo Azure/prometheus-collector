@@ -203,6 +203,8 @@ func loadYAMLFromFile(filename string) (map[interface{}]interface{}, error) {
 	return yamlData, nil
 }
 
+// This needs unit tests
+
 func deepMerge(target, source map[interface{}]interface{}) map[interface{}]interface{} {
 	for key, sourceValue := range source {
 		targetValue, exists := target[key]
