@@ -181,8 +181,11 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	// go copyOutputMulti(stderr, os.Stderr, metricsextension_stderr_file)
 	// go copyOutputPipe(stderr, os.Stderr)
 
-	go copyOutputMulti(stdout, os.Stdout, metricsextension_stdout_file)
-	go copyOutputMulti(stderr, os.Stderr, metricsextension_stderr_file)
+	// go copyOutputMulti(stdout, os.Stdout, metricsextension_stdout_file)
+	// go copyOutputMulti(stderr, os.Stderr, metricsextension_stderr_file)
+
+	go copyOutputFile(stdout, metricsextension_stdout_file)
+	go copyOutputFile(stderr, metricsextension_stderr_file)
 
 	// Start the command
 	err = cmd.Start()
@@ -225,8 +228,11 @@ func startMdsd() {
 	// go copyOutputFile(stdout, mdsd_stdout_file)
 	// go copyOutputMulti(stderr, os.Stderr, mdsd_stderr_file)
 
-	go copyOutputMulti(stdout, os.Stdout, mdsd_stdout_file)
-	go copyOutputMulti(stderr, os.Stderr, mdsd_stderr_file)
+	// go copyOutputMulti(stdout, os.Stdout, mdsd_stdout_file)
+	// go copyOutputMulti(stderr, os.Stderr, mdsd_stderr_file)
+
+	go copyOutputFile(stdout, mdsd_stdout_file)
+	go copyOutputFile(stderr, mdsd_stderr_file)
 
 	// Start the command
 	err = cmd.Start()
