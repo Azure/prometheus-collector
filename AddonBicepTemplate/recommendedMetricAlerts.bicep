@@ -287,7 +287,7 @@ resource recommendedMetricAlerts 'Microsoft.AlertsManagement/prometheusRuleGroup
       }
       {
         alert: 'Average PV usage is greater than 80%'
-        expression: 'avg by (namespace, controller, container, cluster)(((kubelet_volume_stats_used_bytes{job="kubelet"} / on(namespace,cluster,pod,container) group_left kubelet_volume_stats_capacity_bytes{job="kubelet"}) * on(namespace, pod, cluster) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_name", "(.*)")) > .8)'
+        expression: 'avg by (namespace, controller, container, cluster)(((kubelet_volume_stats_used_bytes{job="kubelet"} / on(namespace,cluster,pod,container) group_left kubelet_volume_stats_capacity_bytes{job="kubelet"}) * on(namespace, pod, cluster) group_left(controller) label_replace(kube_pod_owner, "controller", "$1", "owner_name", "(.*)"))) > .8'
         for: 'PT15M'
         annotations: {
           description: 'Average PV usage on pod {{ $labels.pod }} in container {{ $labels.container }}  is greater than 80%'
