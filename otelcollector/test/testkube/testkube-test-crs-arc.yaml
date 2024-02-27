@@ -18,7 +18,7 @@ spec:
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,operator,linux-daemonset-custom-config)"
+      - "!(windows,operator,linux-daemonset-custom-config)"
       - "./containerstatus"
     executePostRunScriptBeforeScraping: false
 ---
@@ -42,7 +42,7 @@ spec:
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,operator,linux-daemonset-custom-config)"
+      - "!(windows,operator,linux-daemonset-custom-config)"
       - "./livenessprobe"
     executePostRunScriptBeforeScraping: false
 ---
@@ -66,7 +66,7 @@ spec:
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,operator,linux-daemonset-custom-config)"
+      - "!(windows,operator,linux-daemonset-custom-config)"
       - "./prometheusui"
     executePostRunScriptBeforeScraping: false
 ---
@@ -90,7 +90,7 @@ spec:
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,operator,linux-daemonset-custom-config)"
+      - "!(windows,operator,linux-daemonset-custom-config)"
       - "./querymetrics"
     executePostRunScriptBeforeScraping: false
     variables:

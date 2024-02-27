@@ -2,62 +2,27 @@ package utils
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"flag"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"path/filepath"
 	"strings"
-	"time"
 
+	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/client-go/util/homedir"
-
-	"github.com/prometheus/client_golang/api"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/prometheus/common/model"
 
 	"bytes"
 	"fmt"
 	"io"
-
-	"github.com/google/uuid"
 )
 
-func SetupKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
-	var kubeconfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-	flag.Parse()
-
-	cfg, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-	if err != nil {
-		cfg, err = rest.InClusterConfig()
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	
-	client, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return client, cfg, nil
-}
-
+/*
+ * Checks that the logs of all containers in all pods with the given label do not contain any errors.
+ * Also returns an error if there are no pods that exist with the given label.
+ */
 func CheckContainerLogsForErrors(clientset *kubernetes.Clientset, namespace, labelName, labelValue string) error {
 	// Get all pods with the given label
 	pods, err := GetPodsWithLabel(clientset, namespace, labelName, labelValue)
@@ -100,6 +65,9 @@ func CheckContainerLogsForErrors(clientset *kubernetes.Clientset, namespace, lab
 	return nil
 }
 
+/*
+ * Returns all pods in the given namespace with the given label.
+ */
 func GetPodsWithLabel(clientset *kubernetes.Clientset, namespace string, labelKey string, labelValue string) ([]corev1.Pod, error) {
 	podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: labelKey + "=" + labelValue,
@@ -114,6 +82,9 @@ func GetPodsWithLabel(clientset *kubernetes.Clientset, namespace string, labelKe
 	return podList.Items, nil
 }
 
+/*
+ * Helper function that returns the logs of the given container in the given pod.
+ */
 func getContainerLogs(clientset *kubernetes.Clientset, namespace string, podName string, containerName string) (string, error) {
 	req := clientset.CoreV1().RESTClient().Get().
 		Namespace(namespace).
@@ -138,6 +109,9 @@ func getContainerLogs(clientset *kubernetes.Clientset, namespace string, podName
 	return buf.String(), nil
 }
 
+/*
+ * For the given list of processes, checks that all of them are running in all the containers with the given name, in the pods with the given label. 
+ */
 func CheckAllProcessesRunning(K8sClient *kubernetes.Clientset, Cfg *rest.Config, labelName, labelValue, namespace, containerName string, processes []string) error {
 	var processesGrepStringBuilder strings.Builder
 	for _, process := range processes {
@@ -160,6 +134,9 @@ func CheckAllProcessesRunning(K8sClient *kubernetes.Clientset, Cfg *rest.Config,
 	return nil
 }
 
+/*
+ * Executes the given command in the specified container of the pod and returns the stdout and stderr.
+ */
 func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, containerName string, namespace string, command []string) (stdout string, stderr string, err error) {
 	req := client.CoreV1().RESTClient().Post().
 		Resource("pods").
@@ -197,6 +174,9 @@ func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, 
 	return stdoutB.String(), stderrB.String(), nil
 }
 
+/*
+ * For a specified container name in pods with a given label and a process name, this checks that the liveness probe restarts the container when the process is terminated.
+ */
 func CheckLivenessProbeRestartForProcess(K8sClient *kubernetes.Clientset, Cfg *rest.Config, labelName, labelValue, namespace, containerName, terminatedMessage, processName string, restartCommand []string, timeout int64) error {
 	pods, err := GetPodsWithLabel(K8sClient, namespace, labelName, labelValue)
 	if err != nil {
@@ -222,6 +202,10 @@ func CheckLivenessProbeRestartForProcess(K8sClient *kubernetes.Clientset, Cfg *r
 	return nil
 }
 
+/*
+ * Waits for the container in the pod to restart and checks that the terminated message contains the specified message.
+ * Errors if the container does not restart before the timeout.
+ */
 func WatchForPodRestart(K8sClient *kubernetes.Clientset, namespace, labelName, labelValue string, timeout int64, containerName, terminatedMessage string) error {
 	watcher, err := K8sClient.CoreV1().Pods(namespace).Watch(context.Background(), metav1.ListOptions{
 		LabelSelector:   fmt.Sprintf("%s=%s", labelName, labelValue),
@@ -262,6 +246,9 @@ func WatchForPodRestart(K8sClient *kubernetes.Clientset, namespace, labelName, l
 	return nil
 }
 
+/*
+ * For all pods with the specified namespace and label value, ensure all containers within those pods have the status 'Running'.
+ */
 func CheckIfAllContainersAreRunning(clientset *kubernetes.Clientset, namespace, labelKey string, labelValue string) (error) {
 	pods, err := GetPodsWithLabel(clientset, namespace, labelKey, labelValue)
 	if err != nil {
@@ -283,151 +270,10 @@ func CheckIfAllContainersAreRunning(clientset *kubernetes.Clientset, namespace, 
 	return nil
 }
 
-type APIResponse struct {
-	Status    string          `json:"status"`
-	Data      json.RawMessage `json:"data"`
-	ErrorType v1.ErrorType    `json:"errorType"`
-	Error     string          `json:"error"`
-	Warnings  []string        `json:"warnings,omitempty"`
-}
-
-type ScrapePoolData struct {
-	ScrapePools []string `json:"scrapePools"`
-}
-
-type PrometheusConfigData struct {
-	PrometheusConfigYAML string `json:"yaml"`
-}
-
-func QueryPromUIFromPod(clientset *kubernetes.Clientset, cfg *rest.Config, namespace string, labelKey string, labelValue string, containerName string, queryPath string, result *APIResponse) (error) {
-	pods, err := GetPodsWithLabel(clientset, namespace, labelKey, labelValue)
-	if err != nil {
-		return err
-	}
-
-	for _, pod := range pods {
-		// Execute the command and capture the output
-		command := []string{"sh", "-c", fmt.Sprintf("curl \"http://localhost:9090%s\"", queryPath)}
-		stdout, _, err := ExecCmd(clientset, cfg, pod.Name, containerName, namespace, command)
-		if err != nil {
-			return err
-		}
-
-		if stdout == "" {
-			return fmt.Errorf("Curl for %s was empty", queryPath)
-		}
-
-		err = json.Unmarshal([]byte(stdout), &result)
-		if err != nil {
-			return fmt.Errorf("Failed to unmarshal the json: %s", err.Error())
-		}
-	
-		if result.Status != "success" {
-			return fmt.Errorf("Failed to query from Prometheus UI: %s", stdout)
-		}
-
-		return nil
-	}
-
-	return nil
-}
-
-type TokenResponse struct {
-	TokenType    string `json:"token_type"`
-	ExpiresIn    string `json:"expires_in"`
-	ExtExpiresIn string `json:"ext_expires_in"`
-	ExpiresOn    string `json:"expires_on"`
-	NotBefore    string `json:"not_before"`
-	Resource     string `json:"resource"`
-	AccessToken  string `json:"access_token"`
-}
-
-func GetQueryAccessToken(clientID, clientSecret string) (string, error) {
-	apiUrl := "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/oauth2/token"
-	data := url.Values{}
-	data.Set("grant_type", "client_credentials")
-	data.Set("client_id", clientID)
-	data.Set("client_secret", clientSecret)
-	data.Set("resource", "https://prometheus.monitor.azure.com")
-
-	client := &http.Client{}
-	r, err := http.NewRequest(http.MethodPost, apiUrl, strings.NewReader(data.Encode()))
-	if err != nil {
-		return "", fmt.Errorf("Failed create request for authorization token: %s", err.Error())
-	}
-	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := client.Do(r)
-	if err != nil {
-		return "", fmt.Errorf("Failed to request authorization token: %s", err.Error())
-	}
-	fmt.Printf("response: %v\n",resp)
-	defer resp.Body.Close()
-  body, err := ioutil.ReadAll(resp.Body)
-  if err != nil {
-		return "", fmt.Errorf("Failed to read body of auth token response: %s", err.Error())
-	}
-
-	var tokenResponse TokenResponse
-	err = json.Unmarshal([]byte(body), &tokenResponse)
-	if err != nil {
-		return "", fmt.Errorf("Failed to unmarshal the token response: %s", err.Error())
-	}
-
-	return tokenResponse.AccessToken, nil
-}
-
-type transport struct {
-	underlyingTransport http.RoundTripper
-	apiToken string
-}
-
-func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", t.apiToken))
-	return t.underlyingTransport.RoundTrip(req)
-}
-
-func CreatePrometheusAPIClient(amwQueryEndpoint, clientId, clientSecret string) (v1.API, error) {
-	token, err := GetQueryAccessToken(clientId, clientSecret)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to get query access token: %s", err.Error())
-	}
-	if token == "" {
-		return nil, fmt.Errorf("Failed to get query access token: token is empty")
-	}
-	config := api.Config{
-		Address: amwQueryEndpoint,
-		RoundTripper: &transport{underlyingTransport: http.DefaultTransport, apiToken: token},
-	}
-	prometheusAPIClient, err := api.NewClient(config)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to create Prometheus API client: %s", err.Error())
-	}
-	return v1.NewAPI(prometheusAPIClient), nil
-}
-
-func InstantQuery(api v1.API, query string) (v1.Warnings, error) {
-	result, warnings, err := api.Query(context.Background(), query, time.Now())
-	if err != nil {
-		return warnings, fmt.Errorf("Failed to run query: %s", err.Error())
-	}
-	for _, sample := range result.(model.Vector) {
-		fmt.Printf("Metric: %s\n", sample.Metric)
-		fmt.Printf("Metric Name: %s\n", sample.Metric["__name__"])
-		fmt.Printf("Cluster: %s\n", sample.Metric["cluster"])
-		fmt.Printf("Job: %s\n", sample.Metric["job"])
-		fmt.Printf("Instance: %s\n", sample.Metric["instance"])
-		fmt.Printf("external_label_1: %s\n", sample.Metric["external_label_1"])
-		fmt.Printf("external_label_123: %s\n", sample.Metric["external_label_123"])
-		fmt.Printf("Value: %s\n", sample.Value)
-		fmt.Printf("Timestamp: %s\n", sample.Timestamp)
-		fmt.Printf("Histogram: %s\n", sample.Histogram)
-	}
-
-	return warnings, nil
-}
-
-func GetAndUpdateConfigMap(clientset *kubernetes.Clientset, configMapName, configMapNamespace string) error {
+/*
+ *
+ */
+ func GetAndUpdateConfigMap(clientset *kubernetes.Clientset, configMapName, configMapNamespace string) error {
 	ctx := context.Background()
 
 	// Get the configmap

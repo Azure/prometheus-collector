@@ -78,7 +78,7 @@ var _ = When("the liveness probe", Ordered, func() {
 				),
 			)
 
-			It("the ama-metrics-config-node configmap has updated, the container should restart", func() {
+			It("the ama-metrics-config-node configmap has updated, the container should restart", Label(utils.LinuxDaemonsetCustomConfig), func() {
 				err := utils.GetAndUpdateConfigMap(K8sClient, "ama-metrics-prometheus-config-node", "kube-system")
 				Expect(err).NotTo(HaveOccurred())
 				err = utils.WatchForPodRestart(K8sClient, "kube-system", "dsName", "ama-metrics-node", 120, "prometheus-collector",

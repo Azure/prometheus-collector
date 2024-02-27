@@ -35,7 +35,7 @@
     - MetricsExtension.Native
     - MonAgentLauncher
   - When the `ama-metrics-prometheus-config` configmap is updated, the `prometheus-collector` replicaset container restarts.
-  - When the `the ama-metrics-config-node` configmap is updated, the `prometheus-collector` daemonset container restarts.
+  - When the `the ama-metrics-config-node` configmap is updated, the `prometheus-collector` daemonset container restarts. `label=linux-daemonset-custom-config`
   - When the `ama-metrics-prometheus-config-node-windows` configmap is updated, the `prometheus-collector` windows daemonset container restarts. `label=windows`
 - Prometheus UI
   - The Prometheus UI API should return the expected scrape pools for both the `prometheus-collector` replicaset and daemonset containers.
@@ -52,6 +52,7 @@
 - `arc-extension`: Tests that should only run on Arc clusters with the extension enabled.
 - `windows`: Tests that should only run on clusters that have Windows nodes.
 - `arm64`: Tests that should only run on clusters taht have ARM64 nodes.
+- `linux-daemonset-custom-config`: Tests that should only run on clusters that have the ama-metrics-config-node configmap.
 
 # File Directory Structure
 ```
@@ -82,8 +83,11 @@
 |   |   |── query_metrics_test.go
 |   |   |── go.mod
 |   |   |── go.sum
-│   ├── utils                            - Utils for Kubernetes API calls.
-|   |   |── utils.go                     - Functions for the test suites to use.
+│   ├── utils                            - Generalized utils functions for the test suites to use.
+|   |   |── amw_query_api_utils.go       - Utils to query metrics from the AMW.
+|   |   |── kubernetes_api_utils.go      - Utils that call the kubernetes API.
+|   |   |── prometheus_ui_api_utils.go   - Utils that call the Prometheus UI.
+|   |   |── setup_utils.go               - Setup functions for cluster access.
 |   |   |── constants.go                 - Defined constants for test labels and transient errors to ignore.
 |   |   |── go.mod
 |   |   |── go.sum
@@ -100,7 +104,7 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
 
 ## Bootstrap a Dev Cluster to Run Ginkgo Tests
 ### Prerequisites
-- Follow the backdoor deployment instructions to deploy your ama-metrics chart onto the cluster.
+- Follow the [backdoor deployment instructions](../deploy/addon-chart/Readme.md). to deploy your ama-metrics chart onto the cluster.
 - Deploy the following apps and configmaps on your cluster:
   - [Linux reference app](../../internal/referenceapp/prometheus-reference-app.yaml)
   - [Windows reference app](../../internal/referenceapp/win-prometheus-reference-app.yaml)
@@ -111,9 +115,7 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
 - Get the full resource ID of your AMW and run the following command to get a service principal to allow query access to your AMW:
 
   ```
-  az ad sp create-for-rbac --name <myAMWQuerySP> \
-  --role "Monitoring Data Reader" \
-  --scopes <AMW resource ID>
+  az ad sp create-for-rbac --name <myAMWQuerySP> --role "Monitoring Data Reader" --scopes <AMW resource ID>
   ```
 
 - The JSON output should be similar to below. Save the `appId` as the Client ID and the `password` as the Client Secret.
@@ -134,14 +136,15 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
 
   cd otelcollector/test
 
-  AMW_QUERY_ENDPOINT="<query endpoint>" QUERY_CLIENT_ID="<client ID>" QUERY_CLIENT_SECRET="<client secret>" \
+  AMW_QUERY_ENDPOINT="<query endpoint>" QUERY_ACCESS_CLIENT_ID="<client ID>" QUERY_ACCESS_CLIENT_SECRET="<client secret>" \
   ginkgo -p -r --keep-going --label-filter='!/./'
   ```
-- `--label-filter='!/./` is a regex expression that runs all tests that don't have a label.
-- `--label-filter='!/./ || LABELNAME` is a regex expression that runs all tests that don't have a label and tests that have the label `LABELNAME`.
+- `--label-filter='!/./` is an expression that runs all tests that don't have a label.
+- `--label-filter='!/./ || LABELNAME` is an expression that runs all tests that don't have a label and tests that have the label `LABELNAME`.
+- `--label-filter='!(arc-extension,windows)'` is an expression that runs all tests, including those with labels, except for tests labeled `arc-extension` or `windows`.
 - To run only one package of tests, add the path to the tests in the command. For example, to only run the livenessprobe tests on your cluster:
   ```
-  ginkgo -p -r --keep-going --label-filter !/./ ./livenessprobe
+  ginkgo -p -r --keep-going ./livenessprobe
   ```
 - For more uses of the Ginkgo CLI, refer to the [docs](https://onsi.github.io/ginkgo/#ginkgo-cli-overview).
 
@@ -201,7 +204,7 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
 ### Test Filtering for Different Environments
 The `Label("labelName")` Ginkgo `Decorator` can be added to any test. This can be used when running the test to filter which tests should be run, depending on the environment or settings enabled.
 
-For example, some tests have the labels ```"arc-extension"``` or ```"operator"``` that should only be run if the environment has the Arc extension or has the operator enabled.
+For example, some tests have the labels ```"arc-extension"``` or ```"operator"``` that should only be run if the environment has the Arc extension or has the operator enabled. To exclude tests with these labels use `--label-filter='!(arc-extension,operator)'`.
 
 To run only tests without labels, use `--label-filter` with the regex expression:
 ```
@@ -304,47 +307,19 @@ Some highlights are that:
 - The helm chart will install in the namespace `testkube`.
 - Run `testkube dashboard` to port-forward the dashboard.
 - Create a test connected to the Github repository and branch. Tests are a custom resource behind the scenes and can be created with the UX, CLI, or applying a CR. Tests can be run through the UX or CLI.
-- Apply the following yaml to edit the permissions needed for the Ginkgo executor to be able to make calls to the API server:
+- Apply the yaml [api-server-permissions.yaml](./testkube/api-server-permissions.yaml) to update the permissions needed for the Ginkgo executor to be able to make calls to the API server:
   ```
-  apiVersion: rbac.authorization.k8s.io/v1
-  kind: ClusterRole
-  metadata:
-    name: ginkgo-reader
-    namespace: testkube
-  rules:
-  - apiGroups:
-    - '*'
-    resources:
-    - '*'
-    verbs:
-    - get
-    - list
-    - watch
-    - create
-  - apiGroups:
-    - ""
-    resources:
-    - pods/exec
-    verbs:
-    - create
-  ---
-  apiVersion: rbac.authorization.k8s.io/v1
-  kind: ClusterRoleBinding
-  metadata:
-    name: ginkgo-read-everything
-    namespace: testkube
-  subjects:
-  - kind: ServiceAccount
-    name: testkube-api-server-tests-job
-    namespace: testkube
-  roleRef:
-    kind: ClusterRole
-    name: ginkgo-reader
-    apiGroup: rbac.authorization.k8s.io
+  cd ./testkube
+  kubectl apply -f api-server-permissions.yaml
   ```
 
 ## Bootstrap a CI/CD Cluster to Run Ginkgo Tests
-- Install the ama-metrics agent through the backdoor deployment.
+- Install the ama-metrics agent through the [backdoor deployment](../deploy/addon-chart/Readme.md).
+- Deploy the following apps and configmaps on the cluster:
+  - [Linux reference app](../../internal/referenceapp/prometheus-reference-app.yaml)
+  - [Windows reference app](../../internal/referenceapp/win-prometheus-reference-app.yaml)
+  - [Scraping configmaps](./test-cluster-yamls/configmaps)
+  - [Pod and Service Monitor CRs](./test-cluster-yamls/customresources)
 - Follow the steps in the above `Getting Started` section to install TestKube on the cluster and give permissions to the Ginkgo executor to call the API server.
 - Run the following to add the existing tests to the cluster:
   ```
@@ -422,10 +397,11 @@ Some highlights are that:
 
 ## Creating a New Test or Test Suite
 - Any test added inside a test suite will automatically be picked up to run after merging to main.
-- Any test suite added should be included in `testkube-test-crs.yaml` that will be applied on the CI/CD clusters.
+- Any test suite added should be included in [testkube-test-crs.yaml](./testkube/testkube-test-crs.yaml) that will be applied on the CI/CD clusters.
+- Any additional permissions needed for access to the API server should be added to [api-server-permissions.yaml](./testkube/api-server-permissions.yaml).
 - If a new scrape job is required for a test, add the scrape job to the correct configmap or add a custom resource under the folder [test-cluster-yamls](./test-cluster-yamls/).
 - If you add a new label:
   - Use a constant for the string in the constants.go file.
   - Add the label and description in the labels section of this README.
   - Add the label to the PR checklist file.
-  - Add the label where needed in `testkube-test-crs.yaml`.
+  - Add the label where needed in [testkube-test-crs.yaml](./testkube/testkube-test-crs.yaml).

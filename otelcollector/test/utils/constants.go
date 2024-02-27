@@ -19,4 +19,5 @@ const(
 	ArcExtensionLabel = "arc-extension"
 	WindowsLabel = "windows"
 	ARM64Label = "arm64"
+	LinuxDaemonsetCustomConfig = "linux-daemonset-custom-config"
 )
