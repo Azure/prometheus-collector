@@ -110,7 +110,6 @@ COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/lib
 
 # debug image
 COPY --from=builder /busybin /busybin
-COPY --from=builder /static/react /static/react
 COPY --from=builder /var/lib/logrotate /var/lib/logrotate
 COPY --from=builder /var/spool/cron /var/spool/cron
 COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
