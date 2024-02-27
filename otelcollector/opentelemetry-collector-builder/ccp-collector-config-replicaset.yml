@@ -3,8 +3,6 @@ exporters:
     endpoint: "127.0.0.1:9091"
     const_labels:
       cluster: $AZMON_CLUSTER_LABEL
-  file:
-    path: /opt/microsoft/otelcollector/promotel.json
   otlp:
     endpoint: 127.0.0.1:55680
     tls:
@@ -31,16 +29,20 @@ processors:
       action: insert
 receivers:
     prometheus:
-      config:
+      target_allocator:
+        endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
+        interval: 30s
+        collector_id: "$POD_NAME"
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
       exporters: [otlp]
-      processors: [batch, resource]
+      processors: [batch,resource]
   telemetry:
     logs:
       level: warn
       encoding: json
+      output_paths: ["collector.log.json"]
     metrics:
       level: detailed

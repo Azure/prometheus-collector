@@ -1,9 +1,9 @@
 package main
 
 import (
-    "fmt"
-    "os"
-    "strings"
+	"fmt"
+	"os"
+	"strings"
 )
 
 func confgimapparserforccp() {
@@ -11,8 +11,8 @@ func confgimapparserforccp() {
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"
 	// Set agent config schema version
-    if existsAndNotEmpty("/etc/config/settings/schema-version") {
-        configVersion, err := readAndTrim(configVersionPath)
+	if existsAndNotEmpty("/etc/config/settings/schema-version") {
+		configVersion, err := readAndTrim(configVersionPath)
 		if err != nil {
 			fmt.Println("Error reading config version file:", err)
 			return
@@ -24,11 +24,11 @@ func confgimapparserforccp() {
 		}
 		// Set the environment variable
 		os.Setenv("AZMON_AGENT_CFG_FILE_VERSION", configVersion)
-    }
+	}
 
-    // Set agent config file version
-    if existsAndNotEmpty("/etc/config/settings/config-version") {
-        configSchemaVersion, err := readAndTrim(configSchemaPath)
+	// Set agent config file version
+	if existsAndNotEmpty("/etc/config/settings/config-version") {
+		configSchemaVersion, err := readAndTrim(configSchemaPath)
 		if err != nil {
 			fmt.Println("Error reading config schema version file:", err)
 			return
@@ -40,7 +40,7 @@ func confgimapparserforccp() {
 		}
 		// Set the environment variable
 		os.Setenv("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion)
-    }
+	}
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings
 	parseConfigAndSetEnvInFile()
@@ -68,17 +68,17 @@ func confgimapparserforccp() {
 
 	// No need to merge custom prometheus config, only merging in the default configs
 	os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
-		startCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
-		if !exists("/opt/collector-config-with-defaults.yml") {
-			fmt.Printf("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+	startCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
+	if !exists("/opt/collector-config-with-defaults.yml") {
+		fmt.Printf("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+	} else {
+		sourcePath := "/opt/collector-config-with-defaults.yml"
+		destinationPath := "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
+		err := copyFile(sourcePath, destinationPath)
+		if err != nil {
+			fmt.Printf("Error copying file: %v\n", err)
 		} else {
-			sourcePath := "/opt/collector-config-with-defaults.yml"
-			destinationPath := "/opt/microsoft/otelcollector/collector-config-default.yml"
-			err := copyFile(sourcePath, destinationPath)
-					if err != nil {
-						fmt.Printf("Error copying file: %v\n", err)
-					} else {
-						fmt.Println("File copied successfully.")
-					}
+			fmt.Println("File copied successfully.")
 		}
+	}
 }

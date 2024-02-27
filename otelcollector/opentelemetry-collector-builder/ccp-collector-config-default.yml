@@ -3,8 +3,6 @@ exporters:
     endpoint: "127.0.0.1:9091"
     const_labels:
       cluster: $AZMON_CLUSTER_LABEL
-  file:
-    path: /opt/microsoft/otelcollector/promotel.json
   otlp:
     endpoint: 127.0.0.1:55680
     tls:
@@ -32,15 +30,19 @@ processors:
 receivers:
     prometheus:
       config:
+        scrape_configs:
+        # scrape_configs must be non-null for collector to start
+        - job_name: empty_job
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
       exporters: [otlp]
-      processors: [batch, resource]
+      processors: [batch,resource]
   telemetry:
     logs:
       level: warn
       encoding: json
+      output_paths: ["collector.log.json"]
     metrics:
       level: detailed

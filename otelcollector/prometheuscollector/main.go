@@ -1,20 +1,20 @@
 package main
 
 import (
-    "fmt"
-	"net/http"
-    "os"
-    "os/exec"
-    "time"
-    "io/ioutil"
-    "strings"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"os"
+	"os/exec"
 	"strconv"
+	"strings"
+	"time"
 )
 
-func main(){
+func main() {
 	mac := os.Getenv("MAC")
-    controllerType := os.Getenv("CONTROLLER_TYPE")
+	controllerType := os.Getenv("CONTROLLER_TYPE")
 	clusterOverride := os.Getenv("CLUSTER_OVERRIDE")
 	cluster := os.Getenv("CLUSTER")
 	aksRegion := os.Getenv("AKSREGION")
@@ -47,7 +47,7 @@ func main(){
 	}
 	fmt.Println("meConfigFile:", meConfigFile)
 
-    if mac == "true" {
+	if mac == "true" {
 		// Wait for addon-token-adapter to be healthy
 		tokenAdapterWaitSecs := 20
 		waitedSecsSoFar := 1
@@ -75,7 +75,7 @@ func main(){
 			time.Sleep(1 * time.Second)
 			waitedSecsSoFar++
 		}
-    }
+	}
 
 	// Set environment variables
 	os.Setenv("ME_CONFIG_FILE", meConfigFile)
@@ -87,19 +87,19 @@ func main(){
 
 	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 	time.Sleep(10 * time.Second)
-	
+
 	fmt.Println("Starting MDSD")
 	startMdsd()
-	
+
 	printMdsdVersion()
-	
+
 	fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
 	time.Sleep(30 * time.Second)
-	
+
 	fmt.Println("Starting metricsextension with config overrides")
 	startMetricsExtensionWithConfigOverrides(meConfigFile)
 
-    // Get ME version
+	// Get ME version
 	meVersion, err := readVersionFile("/opt/metricsextversion.txt")
 	if err != nil {
 		fmt.Printf("Error reading ME version file: %v\n", err)
@@ -123,13 +123,14 @@ func main(){
 
 	if controllerType == "replicaset" && azmonOperatorEnabled == "true" {
 		fmt.Println("Starting otelcollector in replicaset with Target allocator settings")
-		collectorConfig = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
+		collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-replicaset.yml"
 	} else if azmonUseDefaultPrometheusConfig == "true" {
 		fmt.Println("Starting otelcollector with only default scrape configs enabled")
-		collectorConfig = "/opt/microsoft/otelcollector/collector-config-default.yml"
+		collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
 	} else {
-		fmt.Println("Starting otelcollector with collector-config.yml")
-		collectorConfig = "/opt/microsoft/otelcollector/collector-config.yml"
+		fmt.Println("Should never reach here -> Implement this when merging this into main.sh -> Reverting to default collection for now.")
+		// collectorConfig = "/opt/microsoft/otelcollector/collector-config.yml"
+		collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
 	}
 
 	fmt.Println("startCommand otelcollector")
@@ -179,30 +180,30 @@ func main(){
 	}
 
 	// Setting time at which the container started running
-    epochTimeNow := time.Now().Unix()
-    epochTimeNowReadable := time.Unix(epochTimeNow, 0).Format(time.RFC3339)
+	epochTimeNow := time.Now().Unix()
+	epochTimeNowReadable := time.Unix(epochTimeNow, 0).Format(time.RFC3339)
 
-    // Writing the epoch time to a file
-    file, err := os.Create("/opt/microsoft/liveness/azmon-container-start-time")
-    if err != nil {
-        fmt.Println("Error creating file:", err)
-        return
-    }
-    defer file.Close()
+	// Writing the epoch time to a file
+	file, err := os.Create("/opt/microsoft/liveness/azmon-container-start-time")
+	if err != nil {
+		fmt.Println("Error creating file:", err)
+		return
+	}
+	defer file.Close()
 
-    _, err = file.WriteString(fmt.Sprintf("%d", epochTimeNow))
-    if err != nil {
-        fmt.Println("Error writing to file:", err)
-        return
-    }
+	_, err = file.WriteString(fmt.Sprintf("%d", epochTimeNow))
+	if err != nil {
+		fmt.Println("Error writing to file:", err)
+		return
+	}
 
-    // Printing the environment variable and the readable time
-    fmt.Printf("AZMON_CONTAINER_START_TIME=%d\n", epochTimeNow)
-    fmt.Printf("AZMON_CONTAINER_START_TIME_READABLE=%s\n", epochTimeNowReadable)
+	// Printing the environment variable and the readable time
+	fmt.Printf("AZMON_CONTAINER_START_TIME=%d\n", epochTimeNow)
+	fmt.Printf("AZMON_CONTAINER_START_TIME_READABLE=%s\n", epochTimeNowReadable)
 
-    // Expose a health endpoint for liveness probe
-    http.HandleFunc("/health", healthHandler)
-    http.ListenAndServe(":8080", nil)
+	// Expose a health endpoint for liveness probe
+	http.HandleFunc("/health", healthHandler)
+	http.ListenAndServe(":8080", nil)
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -263,7 +264,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
-	if (status != http.StatusOK) {
+	if status != http.StatusOK {
 		fmt.Printf(message)
 	}
 }
