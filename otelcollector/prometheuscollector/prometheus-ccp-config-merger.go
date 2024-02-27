@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"os"
+	"reflect"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -101,19 +101,11 @@ func populateDefaultPrometheusConfig() {
 			appendMetricRelabelConfig(controlplaneKubeControllerManagerFile, kubeControllerManagerMetricsKeepListRegex)
 		}
 		contents, err := os.ReadFile(controlplaneKubeControllerManagerFile)
-		fmt.Printf("Reaches here CONTROLPLANE_KUBE_CONTROLLER_MANAGER_KEEP_LIST_REGEX")
 		if err == nil {
 			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
 			err = os.WriteFile(controlplaneKubeControllerManagerFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneKubeControllerManagerFile)
-		if len(defaultConfigs) == 0 {
-			fmt.Println("No default configs found.")
-		} else {
-			for _, config := range defaultConfigs {
-				fmt.Printf("- %s\n", config)
-			}
-		}
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_KUBE_SCHEDULER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
@@ -122,19 +114,11 @@ func populateDefaultPrometheusConfig() {
 			appendMetricRelabelConfig(controlplaneKubeSchedulerDefaultFile, controlplaneKubeSchedulerKeepListRegex)
 		}
 		contents, err := os.ReadFile(controlplaneKubeSchedulerDefaultFile)
-		fmt.Printf("Reaches here CONTROLPLANE_KUBE_SCHEDULER_KEEP_LIST_REGEX")
 		if err == nil {
 			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
 			err = os.WriteFile(controlplaneKubeSchedulerDefaultFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneKubeSchedulerDefaultFile)
-		if len(defaultConfigs) == 0 {
-			fmt.Println("No default configs found.")
-		} else {
-			for _, config := range defaultConfigs {
-				fmt.Printf("- %s\n", config)
-			}
-		}
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_APISERVER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
@@ -143,19 +127,11 @@ func populateDefaultPrometheusConfig() {
 			appendMetricRelabelConfig(controlplaneApiserverDefaultFile, controlplaneApiserverKeepListRegex)
 		}
 		contents, err := os.ReadFile(controlplaneApiserverDefaultFile)
-		fmt.Printf("Reaches here CONTROLPLANE_KUBE_SCHEDULER_KEEP_LIST_REGEX")
 		if err == nil {
 			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
 			err = os.WriteFile(controlplaneApiserverDefaultFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneApiserverDefaultFile)
-		if len(defaultConfigs) == 0 {
-			fmt.Println("No default configs found.")
-		} else {
-			for _, config := range defaultConfigs {
-				fmt.Printf("- %s\n", config)
-			}
-		}
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_CLUSTER_AUTOSCALER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
@@ -164,19 +140,11 @@ func populateDefaultPrometheusConfig() {
 			appendMetricRelabelConfig(controlplaneClusterAutoscalerFile, controlplaneClusterAutoscalerKeepListRegex)
 		}
 		contents, err := os.ReadFile(controlplaneClusterAutoscalerFile)
-		fmt.Printf("Reaches here CONTROLPLANE_CLUSTER_AUTOSCALER_KEEP_LIST_REGEX")
 		if err == nil {
 			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
 			err = os.WriteFile(controlplaneClusterAutoscalerFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneClusterAutoscalerFile)
-		if len(defaultConfigs) == 0 {
-			fmt.Println("No default configs found.")
-		} else {
-			for _, config := range defaultConfigs {
-				fmt.Printf("- %s\n", config)
-			}
-		}
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_ETCD_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
@@ -185,19 +153,11 @@ func populateDefaultPrometheusConfig() {
 			appendMetricRelabelConfig(controlplaneEtcdDefaultFile, controlplaneEtcdKeepListRegex)
 		}
 		contents, err := os.ReadFile(controlplaneEtcdDefaultFile)
-		fmt.Printf("Reaches here CONTROLPLANE_ETCD_KEEP_LIST_REGEX")
 		if err == nil {
 			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
 			err = os.WriteFile(controlplaneEtcdDefaultFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneEtcdDefaultFile)
-		if len(defaultConfigs) == 0 {
-			fmt.Println("No default configs found.")
-		} else {
-			for _, config := range defaultConfigs {
-				fmt.Printf("- %s\n", config)
-			}
-		}
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
@@ -229,7 +189,7 @@ func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]in
 }
 
 func loadYAMLFromFile(filename string) (map[interface{}]interface{}, error) {
-	fileContent, err := ioutil.ReadFile(filename)
+	fileContent, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -245,16 +205,27 @@ func loadYAMLFromFile(filename string) (map[interface{}]interface{}, error) {
 
 func deepMerge(target, source map[interface{}]interface{}) map[interface{}]interface{} {
 	for key, sourceValue := range source {
-		if targetValue, ok := target[key]; ok {
-			switch sourceValue := sourceValue.(type) {
-			case map[interface{}]interface{}:
-				if targetValue, ok := targetValue.(map[interface{}]interface{}); ok {
-					target[key] = deepMerge(targetValue, sourceValue)
+		targetValue, exists := target[key]
+
+		if !exists {
+			target[key] = sourceValue
+			continue
+		}
+
+		targetMap, targetMapOk := targetValue.(map[interface{}]interface{})
+		sourceMap, sourceMapOk := sourceValue.(map[interface{}]interface{})
+
+		if targetMapOk && sourceMapOk {
+			target[key] = deepMerge(targetMap, sourceMap)
+		} else if reflect.TypeOf(targetValue) == reflect.TypeOf(sourceValue) {
+			// Both are slices, concatenate them
+			if targetSlice, targetSliceOk := targetValue.([]interface{}); targetSliceOk {
+				if sourceSlice, sourceSliceOk := sourceValue.([]interface{}); sourceSliceOk {
+					target[key] = append(targetSlice, sourceSlice...)
 				}
-			default:
-				target[key] = sourceValue
 			}
 		} else {
+			// If types are different, simply overwrite with the source value
 			target[key] = sourceValue
 		}
 	}
