@@ -89,7 +89,7 @@
             "description": "A new GUID used to identify the role assignment"
         }
     }
-  },KubernetesRecordingRulesRuleGroup
+  },
   "variables": {
     "azureMonitorWorkspaceSubscriptionId": "[split(parameters('azureMonitorWorkspaceResourceId'),'/')[2]]",
     "clusterSubscriptionId": "[split(parameters('clusterResourceId'),'/')[2]]",
@@ -101,7 +101,7 @@
     "nodeRecordingRuleGroup": "NodeRecordingRulesRuleGroup-",
     "nodeRecordingRuleGroupName": "[concat(variables('nodeRecordingRuleGroup'), variables('clusterName'))]",
     "nodeRecordingRuleGroupDescription": "Node Recording Rules RuleGroup",
-    "kubernetesRecordingRuleGroup": "KubernetesReccordingRulesRuleGroup-",
+    "kubernetesRecordingRuleGroup": "KubernetesRecordingRulesRuleGroup-",
     "kubernetesRecordingRuleGroupName": "[concat(variables('kubernetesRecordingRuleGroup'), variables('clusterName'))]",
     "kubernetesRecordingRuleGroupDescription": "Kubernetes Recording Rules RuleGroup",
     "version": " - 0.1"

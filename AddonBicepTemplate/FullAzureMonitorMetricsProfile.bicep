@@ -56,7 +56,7 @@ param grafanaSku string
 param grafanaAdminObjectId string
 
 @description('A new GUID used to identify the role assignment')
-param roleNameGuid string = newGuid()KubernetesRecordingRulesRuleGroup
+param roleNameGuid string = newGuid()
 
 var azureMonitorWorkspaceSubscriptionId = split(azureMonitorWorkspaceResourceId, '/')[2]
 var clusterSubscriptionId = split(clusterResourceId, '/')[2]
@@ -68,7 +68,7 @@ var dcraName = 'MSProm-${clusterLocation}-${clusterName}'
 var nodeRecordingRuleGroupPrefix = 'NodeRecordingRulesRuleGroup-'
 var nodeRecordingRuleGroupName = '${nodeRecordingRuleGroupPrefix}${clusterName}'
 var nodeRecordingRuleGroupDescription = 'Node Recording Rules RuleGroup'
-var kubernetesRecordingRuleGrouPrefix = 'KubernetesReccordingRulesRuleGroup-'
+var kubernetesRecordingRuleGrouPrefix = 'KubernetesRecordingRulesRuleGroup-'
 var kubernetesRecordingRuleGroupName = '${kubernetesRecordingRuleGrouPrefix}${clusterName}'
 var kubernetesRecordingRuleGroupDescription = 'Kubernetes Recording Rules RuleGroup'
 var nodeRecordingRuleGroupWin = 'NodeRecordingRulesRuleGroup-Win-'
