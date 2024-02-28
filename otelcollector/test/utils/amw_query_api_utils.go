@@ -57,6 +57,7 @@ func GetQueryAccessToken(clientID, clientSecret string) (string, error) {
   if err != nil {
 		return "", fmt.Errorf("Failed to read body of auth token response: %s", err.Error())
 	}
+	fmt.Printf("bod: %v\n", body)
 
 	var tokenResponse TokenResponse
 	err = json.Unmarshal([]byte(body), &tokenResponse)

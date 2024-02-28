@@ -1,6 +1,7 @@
 package querymetrics
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -32,6 +33,9 @@ var _ = BeforeSuite(func() {
 	var err error
 	K8sClient, Cfg, err = utils.SetupKubernetesClient()
 	Expect(err).NotTo(HaveOccurred())
+
+	fmt.Printf(os.Getenv("AMW_QUERY_ENDPOINT"))
+	fmt.Printf(os.Getenv("QUERY_ACCESS_CLIENT_ID"))
 
 	PrometheusQueryClient, err = utils.CreatePrometheusAPIClient(
 		os.Getenv("AMW_QUERY_ENDPOINT"),
