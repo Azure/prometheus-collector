@@ -12,7 +12,7 @@ scrape_configs:
       target_label: new_label
       action: replace
       regex: "(.*)"
-      replacement: "new_value_$1"
+      replacement: new_value:$$1
 # scrape_configs:
 # - job_name: controlplane-etcd
 #   scrape_interval: $$SCRAPE_INTERVAL$$

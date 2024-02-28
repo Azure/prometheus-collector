@@ -58,6 +58,7 @@ COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 COPY --from=prometheuscollector-builder --chmod=777 /prometheuscollector/prometheuscollector $tmpdir/prometheuscollector/
+COPY ./react /static/react
 
 ARG TARGETARCH
 RUN tdnf clean all
@@ -90,6 +91,7 @@ COPY --from=builder /opt /opt
 COPY --from=builder /etc /etc
 COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_internal.config /usr/sbin/
 COPY --from=builder /var/opt/microsoft /var/opt/microsoft
+COPY --from=builder /static/react /static/react
 
 # executables
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
