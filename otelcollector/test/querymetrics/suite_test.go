@@ -34,8 +34,8 @@ var _ = BeforeSuite(func() {
 	K8sClient, Cfg, err = utils.SetupKubernetesClient()
 	Expect(err).NotTo(HaveOccurred())
 
-	fmt.Printf(os.Getenv("AMW_QUERY_ENDPOINT"))
-	fmt.Printf(os.Getenv("QUERY_ACCESS_CLIENT_ID"))
+	fmt.Println(os.Getenv("AMW_QUERY_ENDPOINT"))
+	fmt.Println(os.Getenv("QUERY_ACCESS_CLIENT_ID"))
 
 	PrometheusQueryClient, err = utils.CreatePrometheusAPIClient(
 		os.Getenv("AMW_QUERY_ENDPOINT"),
