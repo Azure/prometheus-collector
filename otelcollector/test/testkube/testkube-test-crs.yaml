@@ -109,12 +109,12 @@ spec:
             name: e2e-testvars
             key: QUERY_ACCESS_CLIENT_ID
       QUERY_ACCESS_TOKEN_SECRET:
-        name: QUERY_ACCESS_TOKEN_SECRET
+        name: QUERY_ACCESS_CLIENT_SECRET
         type: secret
         valueFrom:
           secretKeyRef:
             name: e2e-testvars
-            key: QUERY_ACCESS_TOKEN_SECRET
+            key: QUERY_ACCESS_CLIENT_SECRET
 ---
 apiVersion: tests.testkube.io/v3
 kind: TestSuite

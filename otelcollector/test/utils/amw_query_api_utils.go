@@ -33,14 +33,16 @@ type TokenResponse struct {
  * Get the access token to the AMW query API
  */
 func GetQueryAccessToken(clientID, clientSecret string) (string, error) {
+	if clientID == "" || clientSecret == "" {
+		return "", fmt.Errorf("Client ID or Client Secret is empty")
+	}
+
 	apiUrl := "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/oauth2/token"
 	data := url.Values{}
 	data.Set("grant_type", "client_credentials")
 	data.Set("client_id", clientID)
 	data.Set("client_secret", clientSecret)
 	data.Set("resource", "https://prometheus.monitor.azure.com")
-
-	fmt.Printf("data: %v\n", data)
 
 	client := &http.Client{}
 	r, err := http.NewRequest(http.MethodPost, apiUrl, strings.NewReader(data.Encode()))
@@ -49,19 +51,19 @@ func GetQueryAccessToken(clientID, clientSecret string) (string, error) {
 	}
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	fmt.Printf("request: %v\n", r)
-
 	resp, err := client.Do(r)
 	if err != nil {
 		return "", fmt.Errorf("Failed to request authorization token: %s", err.Error())
 	}
-	fmt.Printf("response: %v\n",resp)
 	defer resp.Body.Close()
   body, err := ioutil.ReadAll(resp.Body)
   if err != nil {
 		return "", fmt.Errorf("Failed to read body of auth token response: %s", err.Error())
 	}
-	fmt.Printf("body: %s\n", string(body))
+
+	if resp.StatusCode != http.StatusOK {
+    return "", fmt.Errorf("Request for token returned status code: %s. Error Message: %s\n", resp.StatusCode, string(body))
+	}
 
 	var tokenResponse TokenResponse
 	err = json.Unmarshal([]byte(body), &tokenResponse)

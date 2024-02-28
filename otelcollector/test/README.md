@@ -35,7 +35,7 @@
     - MetricsExtension.Native
     - MonAgentLauncher
   - When the `ama-metrics-prometheus-config` configmap is updated, the `prometheus-collector` replicaset container restarts.
-  - When the `the ama-metrics-config-node` configmap is updated, the `prometheus-collector` daemonset container restarts. `label=linux-daemonset-custom-config`
+  - When the `ama-metrics-config-node` configmap is updated, the `prometheus-collector` daemonset container restarts. `label=linux-daemonset-custom-config`
   - When the `ama-metrics-prometheus-config-node-windows` configmap is updated, the `prometheus-collector` windows daemonset container restarts. `label=windows`
 - Prometheus UI
   - The Prometheus UI API should return the expected scrape pools for both the `prometheus-collector` replicaset and daemonset containers.
@@ -91,6 +91,13 @@
 |   |   |── constants.go                 - Defined constants for test labels and transient errors to ignore.
 |   |   |── go.mod
 |   |   |── go.sum
+│   ├── test-cluster-yamls               - YAMLs to deploy on your test cluster and CI/CD clusters.
+|   |   |── configmaps                   - Configmaps for scrape jobs tested.
+|   |   |── customresources              - PodMonitor and ServiceMonitors for scrape jobs tested.
+│   ├── testkube                         - YAMLS to deploy on CI/CD clusters for TestKube.
+|   |   |── api-server-permissions.yaml  - Permissions for the TestKube runner pods to call the API server.
+|   |   |── testkube-test-crs.yaml       - CRs for TestKube test suites and tests for AKS CI/CD clusters.
+|   |   |── testkube-test-crs-arc.yaml   - CRs for TestKube test suites and tests for Arc CI/CD clusters.
 ```
 
 # Ginkgo
@@ -130,7 +137,13 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
   ```
 
 - Get the query endpoint for your AMW by following [these instructions](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-api-promql#query-endpoint).
-- With kubectl access to your cluster and your directory pointed to the cloned repo, run the following and replace the placeholders with the SP Client ID and Secret:
+- Setup your devbox environment by ensuring the following:
+  - Kubectl access is pointed to your cluster.
+  - You have cloned this repo and your current directory is pointed to the root.
+  - You are connected to the corpnet VPN.
+
+## Running the Tests
+- Run the commands below by replacing the placeholders with the SP Client ID, SP Secret, and the AMW query endpoint:
   ```
   sudo -E go install -v github.com/onsi/ginkgo/v2/ginkgo@latest
 
@@ -139,9 +152,10 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
   AMW_QUERY_ENDPOINT="<query endpoint>" QUERY_ACCESS_CLIENT_ID="<client ID>" QUERY_ACCESS_CLIENT_SECRET="<client secret>" \
   ginkgo -p -r --keep-going --label-filter='!/./'
   ```
-- `--label-filter='!/./` is an expression that runs all tests that don't have a label.
-- `--label-filter='!/./ || LABELNAME` is an expression that runs all tests that don't have a label and tests that have the label `LABELNAME`.
-- `--label-filter='!(arc-extension,windows)'` is an expression that runs all tests, including those with labels, except for tests labeled `arc-extension` or `windows`.
+- You can customize which tests are run with `--label-filter`:
+  - `--label-filter='!/./` is an expression that runs all tests that don't have a label.
+  - `--label-filter='!/./ || LABELNAME` is an expression that runs all tests that don't have a label and tests that have the label `LABELNAME`.
+  - `--label-filter='!(arc-extension,windows)'` is an expression that runs all tests, including those with labels, except for tests labeled `arc-extension` or `windows`.
 - To run only one package of tests, add the path to the tests in the command. For example, to only run the livenessprobe tests on your cluster:
   ```
   ginkgo -p -r --keep-going ./livenessprobe
@@ -405,3 +419,6 @@ Some highlights are that:
   - Add the label and description in the labels section of this README.
   - Add the label to the PR checklist file.
   - Add the label where needed in [testkube-test-crs.yaml](./testkube/testkube-test-crs.yaml).
+
+## PR Checklist
+Test processes for a PR are covered in the [PR checklist](/.github/pull_request_template.md).

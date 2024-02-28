@@ -1,7 +1,6 @@
 package querymetrics
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -34,14 +33,17 @@ var _ = BeforeSuite(func() {
 	K8sClient, Cfg, err = utils.SetupKubernetesClient()
 	Expect(err).NotTo(HaveOccurred())
 
-	fmt.Printf("endpoint: %s\n", os.Getenv("AMW_QUERY_ENDPOINT"))
-	fmt.Printf("client-id: %s\n", os.Getenv("QUERY_ACCESS_CLIENT_ID"))
-	fmt.Printf("client-secret: %s\n", os.Getenv("QUERY_ACCESS_CLIENT_SECRET"))
-
+	amwQueryEndpoint := os.Getenv("AMW_QUERY_ENDPOINT")
+	Expect(amwQueryEndpoint).NotTo(BeEmpty())
+	clientID := os.Getenv("QUERY_ACCESS_CLIENT_ID")
+	Expect(clientID).NotTo(BeEmpty())
+	clientSecret := os.Getenv("QUERY_ACCESS_CLIENT_SECRET")
+	Expect(clientSecret).NotTo(BeEmpty())
+	
 	PrometheusQueryClient, err = utils.CreatePrometheusAPIClient(
-		os.Getenv("AMW_QUERY_ENDPOINT"),
-		os.Getenv("QUERY_ACCESS_CLIENT_ID"),
-		os.Getenv("QUERY_ACCESS_CLIENT_SECRET"),
+		amwQueryEndpoint,
+		clientID,
+		clientSecret,
 	)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(PrometheusQueryClient).NotTo(BeNil())
