@@ -150,18 +150,18 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 
 	// Create a file to store the stdoutput
-	metricsextension_stdout_file, err := os.Create("metricsextension_stdout.log")
-	if err != nil {
-		fmt.Printf("Error creating output file for metrics extension: %v\n", err)
-		return
-	}
+	// metricsextension_stdout_file, err := os.Create("metricsextension_stdout.log")
+	// if err != nil {
+	// 	fmt.Printf("Error creating output file for metrics extension: %v\n", err)
+	// 	return
+	// }
 
-	// Create a file to store the stderr
-	metricsextension_stderr_file, err := os.Create("metricsextension_stderr.log")
-	if err != nil {
-		fmt.Printf("Error creating output file for metrics extension: %v\n", err)
-		return
-	}
+	// // Create a file to store the stderr
+	// metricsextension_stderr_file, err := os.Create("metricsextension_stderr.log")
+	// if err != nil {
+	// 	fmt.Printf("Error creating output file for metrics extension: %v\n", err)
+	// 	return
+	// }
 
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
@@ -176,16 +176,17 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	}
 
 	// Goroutines to copy stdout and stderr to parent process
-	// For now only copy STDERR logs
-	// go copyOutputFile(stdout, metricsextension_stdout_file)
-	// go copyOutputMulti(stderr, os.Stderr, metricsextension_stderr_file)
-	// go copyOutputPipe(stderr, os.Stderr)
+	// Copy output to only stdout & stderr
+	go copyOutputPipe(stdout, os.Stdout)
+	go copyOutputPipe(stderr, os.Stderr)
 
+	// Copy output to both stdout & stderr and file
 	// go copyOutputMulti(stdout, os.Stdout, metricsextension_stdout_file)
 	// go copyOutputMulti(stderr, os.Stderr, metricsextension_stderr_file)
 
-	go copyOutputFile(stdout, metricsextension_stdout_file)
-	go copyOutputFile(stderr, metricsextension_stderr_file)
+	// Copy output only to file
+	// go copyOutputFile(stdout, metricsextension_stdout_file)
+	// go copyOutputFile(stderr, metricsextension_stderr_file)
 
 	// Start the command
 	err = cmd.Start()
@@ -197,19 +198,19 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 
 func startMdsd() {
 	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-D")
-	// Create a file to store the stdoutput
-	mdsd_stdout_file, err := os.Create("mdsd_stdout.log")
-	if err != nil {
-		fmt.Printf("Error creating output file for mdsd: %v\n", err)
-		return
-	}
+	// // Create a file to store the stdoutput
+	// mdsd_stdout_file, err := os.Create("mdsd_stdout.log")
+	// if err != nil {
+	// 	fmt.Printf("Error creating output file for mdsd: %v\n", err)
+	// 	return
+	// }
 
-	// Create a file to store the stderr
-	mdsd_stderr_file, err := os.Create("mdsd_stderr.log")
-	if err != nil {
-		fmt.Printf("Error creating output file for mdsd: %v\n", err)
-		return
-	}
+	// // Create a file to store the stderr
+	// mdsd_stderr_file, err := os.Create("mdsd_stderr.log")
+	// if err != nil {
+	// 	fmt.Printf("Error creating output file for mdsd: %v\n", err)
+	// 	return
+	// }
 
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
@@ -224,15 +225,18 @@ func startMdsd() {
 		return
 	}
 
-	// // Goroutines to copy stdout and stderr to parent process
-	// go copyOutputFile(stdout, mdsd_stdout_file)
-	// go copyOutputMulti(stderr, os.Stderr, mdsd_stderr_file)
+	// Goroutines to copy stdout and stderr to parent process
+	// Copy output to only stdout and stderr
+	go copyOutputPipe(stdout, os.Stdout)
+	go copyOutputPipe(stderr, os.Stderr)
 
+	// Copy output to both stdout and file
 	// go copyOutputMulti(stdout, os.Stdout, mdsd_stdout_file)
 	// go copyOutputMulti(stderr, os.Stderr, mdsd_stderr_file)
 
-	go copyOutputFile(stdout, mdsd_stdout_file)
-	go copyOutputFile(stderr, mdsd_stderr_file)
+	// Copy output only to file
+	// go copyOutputFile(stdout, mdsd_stdout_file)
+	// go copyOutputFile(stderr, mdsd_stderr_file)
 
 	// Start the command
 	err = cmd.Start()
