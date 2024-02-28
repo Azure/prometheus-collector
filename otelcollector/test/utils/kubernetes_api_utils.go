@@ -271,7 +271,7 @@ func CheckIfAllContainersAreRunning(clientset *kubernetes.Clientset, namespace, 
 }
 
 /*
- *
+ * Update an unused field in configmap with a random value to cause a configmap update event.
  */
  func GetAndUpdateConfigMap(clientset *kubernetes.Clientset, configMapName, configMapNamespace string) error {
 	ctx := context.Background()

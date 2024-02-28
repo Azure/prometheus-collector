@@ -30,7 +30,7 @@ type TokenResponse struct {
 }
 
 /*
- *
+ * Get the access token to the AMW query API
  */
 func GetQueryAccessToken(clientID, clientSecret string) (string, error) {
 	apiUrl := "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/oauth2/token"
@@ -40,12 +40,16 @@ func GetQueryAccessToken(clientID, clientSecret string) (string, error) {
 	data.Set("client_secret", clientSecret)
 	data.Set("resource", "https://prometheus.monitor.azure.com")
 
+	fmt.Printf("data: %v\n", data)
+
 	client := &http.Client{}
 	r, err := http.NewRequest(http.MethodPost, apiUrl, strings.NewReader(data.Encode()))
 	if err != nil {
 		return "", fmt.Errorf("Failed create request for authorization token: %s", err.Error())
 	}
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	fmt.Printf("request: %v\n", r)
 
 	resp, err := client.Do(r)
 	if err != nil {
