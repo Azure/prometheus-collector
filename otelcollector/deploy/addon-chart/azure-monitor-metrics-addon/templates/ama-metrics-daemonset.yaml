@@ -30,11 +30,11 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 200m
-              memory: 1Gi
+              cpu: {{ .Values.AzureMonitorMetrics.DsCPULimitLinux }}
+              memory: {{ .Values.AzureMonitorMetrics.DsMemoryLimitLinux }}
             requests:
-              cpu: 50m
-              memory: 150Mi
+              cpu: {{ .Values.AzureMonitorMetrics.DsCPURequestLinux }}
+              memory: {{ .Values.AzureMonitorMetrics.DsMemoryRequestLinux }}
           {{- if and (eq .Values.AzureMonitorMetrics.ArcExtension true) (.Values.Azure.proxySettings.isProxyEnabled) }}
           envFrom:
             - secretRef:
@@ -236,16 +236,32 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
+        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
         - operator: "Exists"
-          effect: NoExecute
+          effect: "NoSchedule"
         - operator: "Exists"
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-          effect: NoSchedule
+          effect: "NoExecute"
+        - operator: "Exists"
+          effect: "PreferNoSchedule" 
+        {{- end }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
       volumes:
         - name: settings-vol-config
           configMap:
@@ -315,8 +331,8 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 500m
-              memory: 1Gi
+              cpu:  {{ .Values.AzureMonitorMetrics.DsCPULimitWindows }}
+              memory: {{ .Values.AzureMonitorMetrics.DsMemoryLimitWindows }}
           env:
             - name: CLUSTER
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"

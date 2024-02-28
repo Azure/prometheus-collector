@@ -1,11 +1,22 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Release 02-08-2024
 
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-<tbd>-cfg`
+## Release 02-26-2024
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Change log -
+  * fix: Fix for yaml unmarshal bug for keepequal/dropequal - https://github.com/Azure/prometheus-collector/pull/753 
+  * Add new regions for Azure Monitor Workspace ('brazilsoutheast', 'francecentral', 'ukwest', 'koreasouth', 'switzerlandwest', 'japaneast', 'swedencentral', 'canadaeast', 'norwaywest', 'southindia', 'australiaeast', 'swedensouth')
+
+## Release 02-14-2024
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-02-14-2024-90d01292`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-02-14-2024-90d01292-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-02-14-2024-90d01292-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-02-14-2024-90d01292-cfg`
 * Change log -
   * feat: add ccp config map settings for public preview
   * feat: Enable MTLS authentication
@@ -16,6 +27,7 @@
   * fix: [infra] Fix commented out ARC deploy chart condition
   * fix: stop copying libssl.so.1.1 & libcrypto.so.1.1 as they are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
   * fix: update windows liveness timeoutSeconds, periodSeconds to 60 and reduce tasklist usage in liveness probe
+  * toggle: toggle internal clusters for FIPS fix
 
 
 ## Release 01-09-2024
