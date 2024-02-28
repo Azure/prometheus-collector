@@ -69,10 +69,10 @@ func confgimapparserforccp() {
 	// No need to merge custom prometheus config, only merging in the default configs
 	os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 	startCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
-	if !exists("/opt/collector-config-with-defaults.yml") {
+	if !exists("/opt/ccp-collector-config-with-defaults.yml") {
 		fmt.Printf("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
 	} else {
-		sourcePath := "/opt/collector-config-with-defaults.yml"
+		sourcePath := "/opt/ccp-collector-config-with-defaults.yml"
 		destinationPath := "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
 		err := copyFile(sourcePath, destinationPath)
 		if err != nil {
