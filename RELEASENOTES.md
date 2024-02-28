@@ -1,7 +1,37 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 02-08-2024
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-<tbd>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-<tbd>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.4-main-<tbd>-cfg`
+* Change log -
+  * feat: add ccp config map settings for public preview
+  * feat: Enable MTLS authentication
+  * fix: add some metrics for civ2 ux
+  * fix: Add telemetry for collector and addon token adaptor
+  * fix: Set autoresolve to true for new agent version alert
+  * fix: SDL Requirment : add policheck
+  * fix: [infra] Fix commented out ARC deploy chart condition
+  * fix: stop copying libssl.so.1.1 & libcrypto.so.1.1 as they are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
+  * fix: update windows liveness timeoutSeconds, periodSeconds to 60 and reduce tasklist usage in liveness probe
+
+
+## Release 01-09-2024
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.3-main-01-09-2024-a192d342`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.3-main-01-09-2024-a192d342-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.3-main-01-09-2024-a192d342-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.3-main-01-09-2024-a192d342-cfg`
+* Change log -
+  * Network Observability metrics update - https://github.com/Azure/prometheus-collector/pull/666
+  * Windows powershell startup script bug fix - https://github.com/Azure/prometheus-collector/pull/694
+  * Upgrade collector (0.90), collector-operator (0.90) and prometheus-operator (0.69.1)
+  * Remove request values for windows ama-metrics daemonset (old behavior) - https://github.com/Azure/prometheus-collector/pull/707
+  * Build and release improvements
+
 ## Release 11-16-2023
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.2-main-<tbd>-win
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.2-main-11-17-2023-19f08915-win
 * Change log -
   * Fix Windows liveness probe for error level evaluation
 

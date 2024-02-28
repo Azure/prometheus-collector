@@ -15,6 +15,7 @@
 package allocation
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/buraksezer/consistent"
@@ -111,7 +112,7 @@ func (c *consistentHashingAllocator) addTargetToTargetItems(tg *target.Item) {
 		delete(c.targetItemsPerJobPerCollector[tg.CollectorName][tg.JobName], tg.Hash())
 		TargetsPerCollector.WithLabelValues(previousColName.String(), consistentHashingStrategyName).Set(float64(c.collectors[previousColName.String()].NumTargets))
 	}
-	colOwner := c.consistentHasher.LocateKey([]byte(tg.Hash()))
+	colOwner := c.consistentHasher.LocateKey([]byte(strings.Join(tg.TargetURL, "")))
 	tg.CollectorName = colOwner.String()
 	c.targetItems[tg.Hash()] = tg
 	c.addCollectorTargetItemMapping(tg)
@@ -214,7 +215,7 @@ func (c *consistentHashingAllocator) SetTargets(targets map[string]*target.Item)
 			// Check for deletions
 			if len(targetsDiffEmptyCollectorSet.Removals()) > 0 {
 				c.log.Info("Targets removed, Removing targets from the targetItems set")
-				for k, _ := range targetsDiffEmptyCollectorSet.Removals() {
+				for k := range targetsDiffEmptyCollectorSet.Removals() {
 					// Delete item from target items
 					delete(c.targetItems, k)
 				}

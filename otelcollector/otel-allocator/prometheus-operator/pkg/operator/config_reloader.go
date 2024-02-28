@@ -21,7 +21,6 @@ import (
 	"strconv"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -42,6 +41,7 @@ const (
 type ConfigReloader struct {
 	name               string
 	config             ContainerConfig
+	webConfigFile      string
 	configFile         string
 	configEnvsubstFile string
 	imagePullPolicy    v1.PullPolicy
@@ -69,6 +69,13 @@ func ReloaderRunOnce() ReloaderOption {
 func WatchedDirectories(watchedDirectories []string) ReloaderOption {
 	return func(c *ConfigReloader) {
 		c.watchedDirectories = watchedDirectories
+	}
+}
+
+// WebConfigFile sets the webConfigFile option for the config-reloader container
+func WebConfigFile(config string) ReloaderOption {
+	return func(c *ConfigReloader) {
+		c.webConfigFile = config
 	}
 }
 
@@ -121,7 +128,7 @@ func LogFormat(logFormat string) ReloaderOption {
 	}
 }
 
-// LogLevel sets the logLevel option for the config-reloader container\
+// LogLevel sets the logLevel option for the config-reloader container
 func LogLevel(logLevel string) ReloaderOption {
 	return func(c *ConfigReloader) {
 		c.logLevel = logLevel
@@ -189,6 +196,10 @@ func CreateConfigReloader(name string, options ...ReloaderOption) v1.Container {
 		)
 	}
 
+	if len(configReloader.webConfigFile) > 0 {
+		args = append(args, fmt.Sprintf("--web-config-file=%s", configReloader.webConfigFile))
+	}
+
 	if len(configReloader.reloadURL.String()) > 0 {
 		args = append(args, fmt.Sprintf("--reload-url=%s", configReloader.reloadURL.String()))
 	}
@@ -215,24 +226,6 @@ func CreateConfigReloader(name string, options ...ReloaderOption) v1.Container {
 		args = append(args, fmt.Sprintf("--log-format=%s", configReloader.logFormat))
 	}
 
-	resources := v1.ResourceRequirements{
-		Limits:   v1.ResourceList{},
-		Requests: v1.ResourceList{},
-	}
-
-	if configReloader.config.CPURequest != "0" {
-		resources.Requests[v1.ResourceCPU] = resource.MustParse(configReloader.config.CPURequest)
-	}
-	if configReloader.config.CPULimit != "0" {
-		resources.Limits[v1.ResourceCPU] = resource.MustParse(configReloader.config.CPULimit)
-	}
-	if configReloader.config.MemoryRequest != "0" {
-		resources.Requests[v1.ResourceMemory] = resource.MustParse(configReloader.config.MemoryRequest)
-	}
-	if configReloader.config.MemoryLimit != "0" {
-		resources.Limits[v1.ResourceMemory] = resource.MustParse(configReloader.config.MemoryLimit)
-	}
-
 	if configReloader.shard != nil {
 		envVars = append(envVars, v1.EnvVar{
 			Name:  ShardEnvVar,
@@ -252,7 +245,7 @@ func CreateConfigReloader(name string, options ...ReloaderOption) v1.Container {
 		Args:                     args,
 		Ports:                    ports,
 		VolumeMounts:             configReloader.volumeMounts,
-		Resources:                resources,
+		Resources:                configReloader.config.ResourceRequirements(),
 		SecurityContext: &v1.SecurityContext{
 			AllowPrivilegeEscalation: &boolFalse,
 			ReadOnlyRootFilesystem:   &boolTrue,

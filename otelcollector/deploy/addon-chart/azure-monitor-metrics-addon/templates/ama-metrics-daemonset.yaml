@@ -137,6 +137,9 @@ spec:
             - mountPath: /etc/config/settings
               name: settings-vol-config
               readOnly: true
+            - mountPath: /etc/prometheus/certs
+              name: ama-metrics-tls-secret-volume
+              readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
@@ -248,6 +251,10 @@ spec:
           configMap:
             name: ama-metrics-settings-configmap
             optional: true
+        - name: ama-metrics-tls-secret-volume
+          secret:
+            secretName: ama-metrics-mtls-secret
+            optional: true
         - name: prometheus-config-vol
           configMap:
             name: ama-metrics-prometheus-config-node
@@ -310,9 +317,6 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
-            requests:
-              cpu: 150m
-              memory: 500Mi
           env:
             - name: CLUSTER
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
@@ -387,6 +391,9 @@ spec:
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
+            - mountPath: /etc/prometheus/certs
+              name: ama-metrics-tls-secret-volume
+              readOnly: true
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
@@ -399,9 +406,9 @@ spec:
                 - cmd
                 - /c
                 - C:\opt\microsoft\scripts\livenessprobe.cmd
-            periodSeconds: 15
+            periodSeconds: 60
             initialDelaySeconds: 300
-            timeoutSeconds: 15
+            timeoutSeconds: 60
             failureThreshold: 3
         - name: addon-token-adapter-win
           command:
@@ -462,6 +469,10 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
+        - name: ama-metrics-tls-secret-volume
+          secret:
+            secretName: ama-metrics-mtls-secret
+            optional: true
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
