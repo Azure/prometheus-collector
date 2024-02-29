@@ -19,17 +19,17 @@ var K8sClient 	*kubernetes.Clientset
 var Cfg       	*rest.Config
 
 func TestPrometheusUI(t *testing.T) {
-	RegisterFailHandler(Fail)
+  RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Prometheus UI Test Suite")
+  RunSpecs(t, "Prometheus UI Test Suite")
 }
 
 var _ = BeforeSuite(func() {
-	var err error
-	K8sClient, Cfg, err = utils.SetupKubernetesClient()
-	Expect(err).NotTo(HaveOccurred())
+  var err error
+  K8sClient, Cfg, err = utils.SetupKubernetesClient()
+  Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
-	By("tearing down the test environment")
+  By("tearing down the test environment")
 })

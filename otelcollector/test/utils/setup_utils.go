@@ -17,26 +17,26 @@ import (
  * If the file is not found, it will assume the tests are running in a Kubernetes cluster and use the in-cluster configuration.
  */
 func SetupKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
-	var kubeconfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-	flag.Parse()
+  var kubeconfig *string
+  if home := homedir.HomeDir(); home != "" {
+    kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+  } else {
+    kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+  }
+  flag.Parse()
 
-	cfg, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-	if err != nil {
-		cfg, err = rest.InClusterConfig()
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	
-	client, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		return nil, nil, err
-	}
+  cfg, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+  if err != nil {
+    cfg, err = rest.InClusterConfig()
+    if err != nil {
+      return nil, nil, err
+    }
+  }
+  
+  client, err := kubernetes.NewForConfig(cfg)
+  if err != nil {
+    return nil, nil, err
+  }
 
-	return client, cfg, nil
+  return client, cfg, nil
 }

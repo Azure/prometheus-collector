@@ -15,14 +15,14 @@ import (
  */
 var _ = DescribeTable("The containers should be running",
   func(namespace string, controllerLabelName string, controllerLabelValue string) {
-		err := utils.CheckIfAllContainersAreRunning(K8sClient, namespace, controllerLabelName, controllerLabelValue)
-		Expect(err).NotTo(HaveOccurred())
-	},
-	Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics"),
-	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node"),
-	Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
-	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel)),
-	Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
+    err := utils.CheckIfAllContainersAreRunning(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+    Expect(err).NotTo(HaveOccurred())
+  },
+  Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics"),
+  Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node"),
+  Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
+  Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel)),
+  Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
 )
 
 /*
@@ -30,33 +30,33 @@ var _ = DescribeTable("The containers should be running",
  * The linux replicaset and daemonset will should have the same processes running.
  */
 var _ = DescribeTable("All processes are running",
-	func(namespace, labelName, labelValue, containerName string, processes []string) {
-		err := utils.CheckAllProcessesRunning(K8sClient, Cfg, labelName, labelValue, namespace, containerName, processes)
-		Expect(err).NotTo(HaveOccurred())
-	},
-	Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics", "prometheus-collector",
-		[]string {
-			"fluent-bit",
-			"telegraf",
-			"otelcollector",
-			"mdsd -a -A -e",
-			"MetricsExtension",
-			"inotifywait /etc/config/settings",
-			"inotifywait /etc/mdsd.d",
-			"crond",
-		},
-	),
-	Entry("when checking the ama-metrics-node daemonset pods", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
-	  []string {
-			"fluent-bit",
-			"telegraf",
-			"otelcollector",
-			"mdsd -a -A -e",
-			"MetricsExtension",
-			"inotifywait /etc/config/settings",
-			"inotifywait /etc/mdsd.d",
-			"crond",
-	  },
+  func(namespace, labelName, labelValue, containerName string, processes []string) {
+    err := utils.CheckAllProcessesRunning(K8sClient, Cfg, labelName, labelValue, namespace, containerName, processes)
+    Expect(err).NotTo(HaveOccurred())
+  },
+  Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics", "prometheus-collector",
+    []string {
+      "fluent-bit",
+      "telegraf",
+      "otelcollector",
+      "mdsd -a -A -e",
+      "MetricsExtension",
+      "inotifywait /etc/config/settings",
+      "inotifywait /etc/mdsd.d",
+      "crond",
+    },
+  ),
+  Entry("when checking the ama-metrics-node daemonset pods", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
+    []string {
+      "fluent-bit",
+      "telegraf",
+      "otelcollector",
+      "mdsd -a -A -e",
+      "MetricsExtension",
+      "inotifywait /etc/config/settings",
+      "inotifywait /etc/mdsd.d",
+      "crond",
+    },
   ),
 )
 
@@ -67,13 +67,13 @@ var _ = DescribeTable("All processes are running",
  * The label and values are provided to get a list of pods only with that label.
  */
 var _ = DescribeTable("The container logs should not contain errors",
-	func(namespace string, controllerLabelName string, controllerLabelValue string) {
-		err := utils.CheckContainerLogsForErrors(K8sClient, namespace, controllerLabelName, controllerLabelValue)
-		Expect(err).NotTo(HaveOccurred())
-	},
-	Entry("when checking the ama-metrics replica pods", "kube-system", "rsName", "ama-metrics"),
-	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node"),
-	Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
-	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel)),
-	Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
+  func(namespace string, controllerLabelName string, controllerLabelValue string) {
+    err := utils.CheckContainerLogsForErrors(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+    Expect(err).NotTo(HaveOccurred())
+  },
+  Entry("when checking the ama-metrics replica pods", "kube-system", "rsName", "ama-metrics"),
+  Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node"),
+  Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
+  Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel)),
+  Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
 )

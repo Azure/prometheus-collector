@@ -239,47 +239,47 @@ An outline of tests for the prometheus-collector-settings section of the configm
 
 ```golang
 var _ = Describe("ConfigMapParser", func() {
-	Describe("ParsePrometheusCollectorSettings", func() {
-		Context("when the configmap settings file does not exist", func() {
-			It("should return empty values and no error", func() {
-				defaultMetricAccountName, clusterAlias, isOperatorEnabled, err := configmapparser.ParsePrometheusCollectorSettings()
-				Expect(err).To(BeNil())
-				Expect(defaultMetricAccountName).To(Equal(""))
-				Expect(clusterAlias).To(Equal(""))
-				Expect(isOperatorEnabled).To(Equal(""))
-			})
-		})
+  Describe("ParsePrometheusCollectorSettings", func() {
+    Context("when the configmap settings file does not exist", func() {
+      It("should return empty values and no error", func() {
+        defaultMetricAccountName, clusterAlias, isOperatorEnabled, err := configmapparser.ParsePrometheusCollectorSettings()
+        Expect(err).To(BeNil())
+        Expect(defaultMetricAccountName).To(Equal(""))
+        Expect(clusterAlias).To(Equal(""))
+        Expect(isOperatorEnabled).To(Equal(""))
+      })
+    })
 
-		Context("when the configmap settings file exists", func() {
-			BeforeEach(func() {
-				// Setup an example configmap settings file for testing
-			})
+    Context("when the configmap settings file exists", func() {
+      BeforeEach(func() {
+        // Setup an example configmap settings file for testing
+      })
 
-			AfterEach(func() {
-				// Remove the temporary configmap settings file
-			})
+      AfterEach(func() {
+        // Remove the temporary configmap settings file
+      })
 
-			It("should parse the configmap settings file and return the values", func() {
-				defaultMetricAccountName, clusterAlias, isOperatorEnabled, err := configmapparser.ParsePrometheusCollectorSettings()
-				Expect(err).To(BeNil())
+      It("should parse the configmap settings file and return the values", func() {
+        defaultMetricAccountName, clusterAlias, isOperatorEnabled, err := configmapparser.ParsePrometheusCollectorSettings()
+        Expect(err).To(BeNil())
 
-				// Assert the expected values
-				Expect(defaultMetricAccountName).To(Equal("expected_default_metric_account_name"))
-				Expect(clusterAlias).To(Equal("expected_cluster_alias"))
-				Expect(isOperatorEnabled).To(Equal("expected_operator_enabled"))
-			})
+        // Assert the expected values
+        Expect(defaultMetricAccountName).To(Equal("expected_default_metric_account_name"))
+        Expect(clusterAlias).To(Equal("expected_cluster_alias"))
+        Expect(isOperatorEnabled).To(Equal("expected_operator_enabled"))
+      })
 
-			It("should handle parsing errors and return an error", func() {
-				// Create a temporary configmap settings file with invalid content for testing parsing errors
+      It("should handle parsing errors and return an error", func() {
+        // Create a temporary configmap settings file with invalid content for testing parsing errors
 
-				// Call the ParsePrometheusCollectorSettings function
-				_, _, _, err := configmapparser.ParsePrometheusCollectorSettings()
+        // Call the ParsePrometheusCollectorSettings function
+        _, _, _, err := configmapparser.ParsePrometheusCollectorSettings()
 
-				// Assert that an error is returned
-				Expect(err).To(HaveOccurred())
-			})
-		})
-	})
+        // Assert that an error is returned
+        Expect(err).To(HaveOccurred())
+      })
+    })
+  })
 })
 ```
 
