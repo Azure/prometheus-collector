@@ -101,7 +101,7 @@
     "nodeRecordingRuleGroup": "NodeRecordingRulesRuleGroup-",
     "nodeRecordingRuleGroupName": "[concat(variables('nodeRecordingRuleGroup'), variables('clusterName'))]",
     "nodeRecordingRuleGroupDescription": "Node Recording Rules RuleGroup",
-    "kubernetesRecordingRuleGroup": "KubernetesReccordingRulesRuleGroup-",
+    "kubernetesRecordingRuleGroup": "KubernetesRecordingRulesRuleGroup-",
     "kubernetesRecordingRuleGroupName": "[concat(variables('kubernetesRecordingRuleGroup'), variables('clusterName'))]",
     "kubernetesRecordingRuleGroupDescription": "Kubernetes Recording Rules RuleGroup",
     "version": " - 0.1"
