@@ -266,5 +266,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, message)
 	if status != http.StatusOK {
 		fmt.Printf(message)
+		writeTerminationLog(message)
 	}
 }

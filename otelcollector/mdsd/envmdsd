@@ -1,3 +1,4 @@
+
 export MDSD_LOG="/opt/microsoft/linuxmonagent"
 export SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
 export MDSD_FLUENT_SOCKET_PORT="28230"

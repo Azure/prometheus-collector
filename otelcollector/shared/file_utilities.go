@@ -1,14 +1,15 @@
 package main
 
 import (
-    "fmt"
-    "os"
-    "os/exec"
-    "io/ioutil"
-    "strings"
-    "log"
-    "io"
-    "bufio"
+	"bufio"
+	"fmt"
+	"io"
+	"io/fs"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"strings"
 )
 
 func printMdsdVersion() {
@@ -35,36 +36,36 @@ func fmtVar(name, value string) {
 }
 
 func existsAndNotEmpty(filename string) bool {
-    info, err := os.Stat(filename)
-    if os.IsNotExist(err) {
-        return false
-    }
-    if err != nil {
-        return false
-    }
-    if info.Size() == 0 {
-        return false
-    }
-    return true
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	if err != nil {
+		return false
+	}
+	if info.Size() == 0 {
+		return false
+	}
+	return true
 }
 
 func readAndTrim(filename string) (string, error) {
-    content, err := ioutil.ReadFile(filename)
-    if err != nil {
-        return "", err
-    }
-    trimmedContent := strings.TrimSpace(string(content))
-    return trimmedContent, nil
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	trimmedContent := strings.TrimSpace(string(content))
+	return trimmedContent, nil
 }
 
 func exists(path string) bool {
-    _, err := os.Stat(path)
-    if err != nil {
-        if os.IsNotExist(err) {
-            return false
-        }
-    }
-    return true
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
 }
 
 func copyFile(sourcePath, destinationPath string) error {
@@ -169,4 +170,10 @@ func hasConfigChanged(filePath string) bool {
 		return fileInfo.Size() > 0
 	}
 	return false
+}
+
+func writeTerminationLog(message string) {
+	if err := os.WriteFile("/dev/termination-log", []byte(message), fs.FileMode(0644)); err != nil {
+		log.Printf("Error writing to termination log: %v", err)
+	}
 }
