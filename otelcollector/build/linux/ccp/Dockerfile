@@ -57,7 +57,7 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
-COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/ccpmain/
+COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/main/
 COPY ./react /static/react
 
 ARG TARGETARCH
@@ -69,7 +69,7 @@ RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox d
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
-RUN $tmpdir/setup.sh ${TARGETARCH}
+RUN $tmpdir/ccpsetup.sh ${TARGETARCH}
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 LABEL description="Azure Monitor Prometheus metrics collector"
