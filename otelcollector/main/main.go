@@ -27,7 +27,7 @@ func main() {
 	}
 
 	if ccpMetricsEnabled == "true" {
-		confgimapparserforccp()
+		configmapparserforccp()
 	} else {
 		// TODO : Part of Step 1 of ccp merge to main
 		// configmapparser()
