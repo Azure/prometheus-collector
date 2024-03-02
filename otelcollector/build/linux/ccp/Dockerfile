@@ -28,14 +28,14 @@ COPY ./prometheusreceiver /src/prometheusreceiver
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as prometheuscollector-builder
-WORKDIR /prometheuscollector
-COPY ./prometheuscollector/go.mod ./prometheuscollector/*.go .
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as ccpmain-builder
+WORKDIR /main
+COPY ../shared/*.go ./main/go.mod ./main/*.go .
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 RUN go get
-RUN go build -o prometheuscollector .
+RUN go build -o ccpmain .
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 ENV OS_TYPE "linux"
@@ -57,7 +57,7 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
-COPY --from=prometheuscollector-builder --chmod=777 /prometheuscollector/prometheuscollector $tmpdir/prometheuscollector/
+COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/main/
 COPY ./react /static/react
 
 ARG TARGETARCH
@@ -69,7 +69,7 @@ RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox d
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
-RUN $tmpdir/setup.sh ${TARGETARCH}
+RUN $tmpdir/ccpsetup.sh ${TARGETARCH}
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 LABEL description="Azure Monitor Prometheus metrics collector"
@@ -105,47 +105,41 @@ COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
 COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
 COPY --from=builder /usr/local/lib/libtcmalloc_minimal.so.4 /usr/local/lib/
 
-# curl and its dependencies (needed for liveness probe to restart on configmap update?)
+# debug image
+COPY --from=builder /busybin /busybin
+COPY --from=builder /var/lib/logrotate /var/lib/logrotate
+COPY --from=builder /var/spool/cron /var/spool/cron
+COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
+COPY --from=builder /usr/share/pki/ /usr/share/pki
+COPY --from=builder /usr/bin/bash /usr/bin/bash
+COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
+COPY --from=builder /usr/sbin/crond /usr/sbin/crond
+COPY --from=builder /usr/bin/vim /usr/bin/vim
+COPY --from=builder /usr/share/vim /usr/share/vim
+COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
+COPY --from=builder /usr/bin/gzip /usr/bin/
+COPY --from=builder /usr/bin/update-ca-trust /usr/bin
+COPY --from=builder /bin/sh /bin/sh
+COPY --from=builder /usr/bin/p11-kit /usr/bin
+COPY --from=builder /usr/bin/trust /usr/bin
+COPY --from=builder /lib/libreadline.so.8 /lib/
+COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
+COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre.so.1 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
+COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
+COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
+COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /lib/
+COPY --from=builder /usr/lib64/pkcs11 /usr/lib64
+COPY --from=builder /usr/lib/pkcs11 /usr/lib/
+COPY --from=builder /usr/libexec/p11-kit /usr/libexec
+COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/libffi.so.8 /lib/
+COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
+COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
 COPY --from=builder /usr/bin/curl /usr/bin/
 COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
 COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
-
-# debug image
-# COPY --from=builder /busybin /busybin
-# COPY --from=builder /var/lib/logrotate /var/lib/logrotate
-# COPY --from=builder /var/spool/cron /var/spool/cron
-# COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
-# COPY --from=builder /usr/share/pki/ /usr/share/pki
-# COPY --from=builder /usr/bin/bash /usr/bin/bash
-# COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
-# COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
-# COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
-# COPY --from=builder /usr/sbin/crond /usr/sbin/crond
-# COPY --from=builder /usr/bin/vim /usr/bin/vim
-# COPY --from=builder /usr/share/vim /usr/share/vim
-# COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
-# COPY --from=builder /usr/bin/gzip /usr/bin/
-# COPY --from=builder /usr/bin/update-ca-trust /usr/bin
-# COPY --from=builder /bin/sh /bin/sh
-# COPY --from=builder /usr/bin/p11-kit /usr/bin
-# COPY --from=builder /usr/bin/trust /usr/bin
-# COPY --from=builder /lib/libreadline.so.8 /lib/
-# COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
-# COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre.so.1 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
-# COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
-# COPY --from=builder /lib/libssl.so.1.1 /lib/libcrypto.so.1.1 /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/liblzma.so.5 /lib/liblz4.so.1 /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libgpg-error.so.0 /lib/
-# COPY --from=builder /lib/libc.so.6 /lib/
-# COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
-# COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /lib/
-# COPY --from=builder /usr/lib64/pkcs11 /usr/lib64
-# COPY --from=builder /usr/lib/pkcs11 /usr/lib/
-# COPY --from=builder /usr/libexec/p11-kit /usr/libexec
-# COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/libffi.so.8 /lib/
-# COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
-# COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
 
 # Expose the port on which the application listens
 EXPOSE 8080
 
 # Run the Go executable, entrypoint
-ENTRYPOINT ["./opt/prometheuscollector/prometheuscollector"]
+ENTRYPOINT ["./opt/main/ccpmain"]

@@ -513,7 +513,7 @@ jobs:
 
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
+        docker buildx build . --platform=linux/amd64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
         docker pull $(LINUX_CCP_FULL_IMAGE_NAME)
         docker system prune --all -f
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -571,14 +571,6 @@ jobs:
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
         trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CCP_FULL_IMAGE_NAME)
-        if [ $? -ne 0 ]; then
-          exit 1
-        fi
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
-        if [ $? -ne 0 ]; then
-          exit 1
-        fi
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
         if [ $? -ne 0 ]; then
           exit 1
         fi

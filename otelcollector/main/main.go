@@ -27,7 +27,7 @@ func main() {
 	}
 
 	if ccpMetricsEnabled == "true" {
-		confgimapparserforccp()
+		configmapparserforccp()
 	} else {
 		// TODO : Part of Step 1 of ccp merge to main
 		// configmapparser()
@@ -208,7 +208,7 @@ func main() {
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
-	message := "\nprometheuscollector is running."
+	message := "prometheuscollector is running."
 	macMode := os.Getenv("MAC") == "true"
 
 	if macMode {
@@ -217,13 +217,13 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 				azmonContainerStartTimeStr, err := ioutil.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
 				if err != nil {
 					status = http.StatusServiceUnavailable
-					message += "\nError reading azmon-container-start-time: " + err.Error()
+					message = "Error reading azmon-container-start-time: " + err.Error()
 				}
 
 				azmonContainerStartTime, err := strconv.Atoi(strings.TrimSpace(string(azmonContainerStartTimeStr)))
 				if err != nil {
 					status = http.StatusServiceUnavailable
-					message += "\nError converting azmon-container-start-time to integer: " + err.Error()
+					message = "Error converting azmon-container-start-time to integer: " + err.Error()
 				}
 
 				epochTimeNow := int(time.Now().Unix())
@@ -231,40 +231,41 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 				durationInMinutes := duration / 60
 
 				if durationInMinutes%5 == 0 {
-					message += fmt.Sprintf("\n%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
+					message = fmt.Sprintf("%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
 				}
 
 				if durationInMinutes > 15 {
 					status = http.StatusServiceUnavailable
-					message += "\nNo configuration present for the AKS resource"
+					message = "No configuration present for the AKS resource"
 				}
 			}
 		}
 	} else {
 		if !isProcessRunning("MetricsExtension") {
 			status = http.StatusServiceUnavailable
-			message += "\nMetrics Extension is not running."
+			message = "Metrics Extension is not running."
 		}
 	}
 
 	if !isProcessRunning("otelcollector") {
 		status = http.StatusServiceUnavailable
-		message += "\nOpenTelemetryCollector is not running."
+		message = "OpenTelemetryCollector is not running."
 	}
 
 	if hasConfigChanged("/opt/inotifyoutput.txt") {
 		status = http.StatusServiceUnavailable
-		message += "\ninotifyoutput.txt has been updated - config changed"
+		message = "inotifyoutput.txt has been updated - config changed"
 	}
 
 	if hasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
 		status = http.StatusServiceUnavailable
-		message += "\ninotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
+		message = "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
 	}
 
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
 	if status != http.StatusOK {
 		fmt.Printf(message)
+		writeTerminationLog(message)
 	}
 }
