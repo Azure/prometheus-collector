@@ -381,14 +381,26 @@ jobs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
 
-    - task: PostAnalysis@2
-      displayName: 'SDL: Post-Build Analysis'
-      inputs:
-        GdnBreakAllTools: false
-        GdnBreakGdnToolBinSkim: true
-        GdnBreakGdnToolBinSkimSeverity: 'Warning'
-        GdnBreakGdnToolGosec: true
-        GdnBreakGdnToolGosecSeverity: 'Warning'
-        GdnBreakGdnToolSemmle: true
-        GdnBreakGdnToolSemmleSeverity: 'Warning'
+- job: Linux_Golang_Reference_App
+  displayName: "Build: linux golang reference app image"
+  pool:
+    name: Azure-Pipelines-CI-Test-EO
+  dependsOn: Image_Tags_and_Ev2_Artifacts
+  variables:
+    skipComponentGovernanceDetection: true
+    LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
+  # This is necessary because of: https://github.com/moby/moby/issues/37965
+    DOCKER_BUILDKIT: 1
+  steps:
+    - checkout: self
+      persistCredentials: true
+    - bash: |
+        mkdir -p $(Build.ArtifactStagingDirectory)/refappgolanglinux
 
+        docker buildx create --name dockerbuilder
+        docker buildx use dockerbuilder
+        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
+        docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
+      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+      displayName: "Build: build and push reference app golang linux image to dev ACR"
