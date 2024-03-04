@@ -54,7 +54,7 @@ AzureMonitorMetrics:
   DeploymentReplicas: 1
   CfgReaderCPULimit: 1
   CfgReaderMemoryLimit: 1Gi
-  CfgReaderCpuRequest: 1m
+  CfgReaderCPURequest: 1m
   CfgReaderMemoryRequest: 10Mi
   TargetAllocatorCPULimit: 5
   TargetAllocatorMemoryLimit: 8Gi
