@@ -284,11 +284,14 @@ var _ = Describe("ConfigMapParser", func() {
 ```
 
 ### E2E Tests
-Much of the agent functionality cannot be tested with just unit tests and relies on making sure everything is working inside the container. For this, we use the Kubernetes go-client package to make calls to the Kubernetes API server. This is where a lot of the pre-release manual testing can be implemented with the automated tests. The go packages in this directory are examples of these tests, which use the functions in the `utils` package to get the container status and perform container operations.
-
-In the case of E2E tests, the coding language does not matter since we are not testing the code directly, but instead the functionality of our containers running.
-
 These tests can be run on a dev cluster that you have kubeconfig/kubectl access to, or can be run directly inside CI/CD kubernetes clusters by using TestKube.
+
+#### Packages
+- [k8s.io/client-go/kubernetes](https://pkg.go.dev/k8s.io/client-go/kubernetes)
+- [k8s.io/api/core/v1](https://pkg.go.dev/k8s.io/api/core/v1)
+- [github.com/prometheus/client_golang/api](https://pkg.go.dev/github.com/prometheus/client_golang/api)
+- [github.com/prometheus/client_golang/api/prometheus/v1](https://pkg.go.dev/github.com/prometheus/client_golang/api/prometheus/v1)
+- [github.com/prometheus-operator/prometheus-operator/pkg/client/versioned](https://pkg.go.dev/github.com/prometheus-operator/prometheus-operator/pkg/client/versioned)
 
 # TestKube
 [Testkube](https://docs.testkube.io/) is an OSS runner framework for running the tests inside a Kubernetes cluster. It is deployed as a helm chart on the cluster. Ginkgo is included as one of the out-of-the-box executors supported.
@@ -327,7 +330,7 @@ Some highlights are that:
   kubectl apply -f api-server-permissions.yaml
   ```
 
-## Bootstrap a CI/CD Cluster to Run Ginkgo Tests
+## Bootstrap a CI/CD Cluster to Run TestKube Tests
 - Install the ama-metrics agent through the [backdoor deployment](../deploy/addon-chart/Readme.md).
 - Deploy the following apps and configmaps on the cluster:
   - [Linux reference app](../../internal/referenceapp/prometheus-reference-app.yaml)
@@ -394,10 +397,38 @@ Some highlights are that:
               sleep 120
             displayName: "Wait for cluster to be ready"
           - bash: |
-              kubectl testkube run testsuite e2e --verbose
-              execution_name=$(kubectl testkube get testsuiteexecution --test e2e --limit 1 | grep e2e | awk '{print $1}')
-              kubectl testkube watch testsuiteexecution $execution_name
-              kubectl testkube get testsuiteexecution $execution_name --logs-only
+              # Run the full test suite
+              kubectl testkube run testsuite e2e-tests --verbose
+
+              # Get the current id of the test suite now running
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests --limit 1 | grep e2e-tests | awk '{print $1}')
+
+              # Watch until each test in the test suite has finished
+              kubectl testkube watch testsuiteexecution $execution_id
+
+              # Get the results as a formatted json file
+              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
+
+              # For any test that has failed, print out the Ginkgo logs
+              if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
+
+                # Get each test name and id that failed
+                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
+                  testName=$(echo $line | cut -d ' ' -f 1)
+                  id=$(echo $line | cut -d ' ' -f 2)
+                  echo "Test $testName failed. Test ID: $id"
+
+                  # Get the Ginkgo logs of the test
+                  kubectl testkube get execution $id > out 2>error.log
+
+                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
+                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
+                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+                done
+
+                # Explicitly fail the ADO task since at least one test failed
+                exit 1
+              fi
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Run tests"
   ```
