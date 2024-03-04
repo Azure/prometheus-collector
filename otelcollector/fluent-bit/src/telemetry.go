@@ -880,48 +880,40 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 	var totalCpuUsage float64
 	var count int
 
-	ticker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
+	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
+	deadline := time.Now().Add(duration)
+
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop() // This will stop the ticker when the function returns
 
-	// Create a timer that will stop the ticker
-	timer := time.NewTimer(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
-	go func() {
-		<-timer.C
-		ticker.Stop()
-	}()
+	for ; time.Now().Before(deadline); <-ticker.C {
+		for _, record := range records {
+			var logEntry = ToString(record["message"])
+			Log(logEntry)
 
-	for ; true; <-ticker.C {
-		select {
-		case <-ticker.C:
-			for _, record := range records {
-				var logEntry = ToString(record["message"])
-				Log(logEntry)
-
-				otelcpuUsage, err := strconv.ParseFloat(logEntry, 64)
-				if err != nil {
-					message := fmt.Sprintf("Failed to parse otelcpuUsage as float64: %v", err)
-					Log(message)
-					SendException(message)
-					continue
-				}
-
-				totalCpuUsage += otelcpuUsage
-				count++
+			otelcpuUsage, err := strconv.ParseFloat(logEntry, 64)
+			if err != nil {
+				message := fmt.Sprintf("Failed to parse otelcpuUsage as float64: %v", err)
+				Log(message)
+				SendException(message)
+				continue
 			}
 
-			if count > 0 {
-				averageCpuUsage := totalCpuUsage / float64(count)
-				metric := appinsights.NewMetricTelemetry("otelcpuUsage", averageCpuUsage)
-				TelemetryClient.Track(metric)
-				Log("Sent Otel Cpu usage metrics")
+			totalCpuUsage += otelcpuUsage
+			count++
+		}
 
-				totalCpuUsage = 0
-				count = 0
-			}
-		case <-timer.C:
-			return output.FLB_OK
+		if count > 0 {
+			averageCpuUsage := totalCpuUsage / float64(count)
+			metric := appinsights.NewMetricTelemetry("otelcpuUsage", averageCpuUsage)
+			TelemetryClient.Track(metric)
+			Log("Sent Otel Cpu usage metrics")
+
+			totalCpuUsage = 0
+			count = 0
 		}
 	}
+	Log("Breaking out of PushOtelCpuToAppInsightsMetrics ticker")
 	return output.FLB_OK
 }
 
@@ -929,48 +921,40 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var totalCpuUsage float64
 	var count int
 
-	ticker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
+	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
+	deadline := time.Now().Add(duration)
+
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop() // This will stop the ticker when the function returns
 
-	// Create a timer that will stop the ticker
-	timer := time.NewTimer(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
-	go func() {
-		<-timer.C
-		ticker.Stop()
-	}()
+	for ; time.Now().Before(deadline); <-ticker.C {
+		for _, record := range records {
+			var logEntry = ToString(record["message"])
+			Log(logEntry)
 
-	for ; true; <-ticker.C {
-		select {
-		case <-ticker.C:
-			for _, record := range records {
-				var logEntry = ToString(record["message"])
-				Log(logEntry)
-
-				meCpuUsage, err := strconv.ParseFloat(logEntry, 64)
-				if err != nil {
-					message := fmt.Sprintf("Failed to parse meCpuUsage as float64: %v", err)
-					Log(message)
-					SendException(message)
-					continue
-				}
-
-				totalCpuUsage += meCpuUsage
-				count++
+			meCpuUsage, err := strconv.ParseFloat(logEntry, 64)
+			if err != nil {
+				message := fmt.Sprintf("Failed to parse meCpuUsage as float64: %v", err)
+				Log(message)
+				SendException(message)
+				continue
 			}
 
-			if count > 0 {
-				averageCpuUsage := totalCpuUsage / float64(count)
-				metric := appinsights.NewMetricTelemetry("meCpuUsage", averageCpuUsage)
-				TelemetryClient.Track(metric)
-				Log("Sent ME Cpu usage metrics")
+			totalCpuUsage += meCpuUsage
+			count++
+		}
 
-				totalCpuUsage = 0
-				count = 0
-			}
-		case <-timer.C:
-			return output.FLB_OK
+		if count > 0 {
+			averageCpuUsage := totalCpuUsage / float64(count)
+			metric := appinsights.NewMetricTelemetry("meCpuUsage", averageCpuUsage)
+			TelemetryClient.Track(metric)
+			Log("Sent ME Cpu usage metrics")
+
+			totalCpuUsage = 0
+			count = 0
 		}
 	}
+	Log("Breaking out of PushMECpuToAppInsightsMetrics ticker")
 	return output.FLB_OK
 }
 
@@ -978,108 +962,93 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 	var totalMemUsage float64
 	var count int
 
-	ticker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
-	defer ticker.Stop() // This will stop the ticker when the function returns
+	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
+	deadline := time.Now().Add(duration)
 
-	// Create a timer that will stop the ticker
-	timer := time.NewTimer(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
-	go func() {
-		<-timer.C
-		ticker.Stop()
-	}()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 
-	for ; true; <-ticker.C {
-		select {
-		case <-ticker.C:
-			for _, record := range records {
-				var logEntry = ToString(record["message"])
-				Log(logEntry)
+	for ; time.Now().Before(deadline); <-ticker.C {
+		for _, record := range records {
+			var logEntry = ToString(record["message"])
+			Log(logEntry)
 
-				// Define a regular expression to extract mem.VmRSS value
-				var memVmrssRegex = regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
-				groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
-				if len(groupMatches) > 1 {
-					// Convert mem.VmRSS value to float64
-					memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
-					if err != nil {
-						message := fmt.Sprintf("Failed to convert mem.VmRSS to float64: %v", err)
-						Log(message)
-						SendException(message)
-						continue
-					}
-
-					totalMemUsage += memVmrssFloat
-					count++
+			// Define a regular expression to extract mem.VmRSS value
+			var memVmrssRegex = regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
+			groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
+			if len(groupMatches) > 1 {
+				// Convert mem.VmRSS value to float64
+				memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
+				if err != nil {
+					message := fmt.Sprintf("Failed to convert mem.VmRSS to float64: %v", err)
+					Log(message)
+					SendException(message)
+					continue
 				}
-			}
 
-			if count > 0 {
-				averageMemUsage := totalMemUsage / float64(count)
-				metric := appinsights.NewMetricTelemetry("meVMRSS", averageMemUsage)
-				TelemetryClient.Track(metric)
-				Log("Sent ME memory usage metrics")
-
-				totalMemUsage = 0
-				count = 0
+				totalMemUsage += memVmrssFloat
+				count++
 			}
-		case <-timer.C:
-			return output.FLB_OK
+		}
+
+		if count > 0 {
+			averageMemUsage := totalMemUsage / float64(count)
+			metric := appinsights.NewMetricTelemetry("meVMRSS", averageMemUsage)
+			TelemetryClient.Track(metric)
+			Log("Sent ME memory usage metrics")
+
+			totalMemUsage = 0
+			count = 0
 		}
 	}
+	Log("Breaking out of PushMEMemRssToAppInsightsMetrics ticker")
 	return output.FLB_OK
 }
+
 func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var totalMemUsage float64
 	var count int
 
-	ticker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
+	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
+	deadline := time.Now().Add(duration)
+
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop() // This will stop the ticker when the function returns
 
-	// Create a timer that will stop the ticker
-	timer := time.NewTimer(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
-	go func() {
-		<-timer.C
-		ticker.Stop()
-	}()
+	for ; time.Now().Before(deadline); <-ticker.C {
+		for _, record := range records {
+			var logEntry = ToString(record["message"])
+			Log(logEntry)
 
-	for ; true; <-ticker.C {
-		select {
-		case <-ticker.C:
-			for _, record := range records {
-				var logEntry = ToString(record["message"])
-				Log(logEntry)
+			// Define a regular expression to extract mem.VmRSS value
+			var memVmrssRegex = regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
+			groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
 
-				// Define a regular expression to extract mem.VmRSS value
-				var memVmrssRegex = regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
-				groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
-
-				if len(groupMatches) > 1 {
-					// Convert mem.VmRSS value to float64
-					memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
-					if err != nil {
-						message := fmt.Sprintf("Failed to convert mem.VmRSS to float64: %v", err)
-						Log(message)
-						SendException(message)
-						continue
-					}
-
-					totalMemUsage += memVmrssFloat
-					count++
+			if len(groupMatches) > 1 {
+				// Convert mem.VmRSS value to float64
+				memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
+				if err != nil {
+					message := fmt.Sprintf("Failed to convert mem.VmRSS to float64: %v", err)
+					Log(message)
+					SendException(message)
+					continue
 				}
-			}
 
-			if count > 0 {
-				averageMemUsage := totalMemUsage / float64(count)
-				metric := appinsights.NewMetricTelemetry("otelcolVMRSS", averageMemUsage)
-				TelemetryClient.Track(metric)
-				Log("Sent Otel memory usage metrics")
-
-				totalMemUsage = 0
-				count = 0
+				totalMemUsage += memVmrssFloat
+				count++
 			}
-		case <-timer.C:
-			return output.FLB_OK
+		}
+
+		if count > 0 {
+			averageMemUsage := totalMemUsage / float64(count)
+			metric := appinsights.NewMetricTelemetry("otelcolVMRSS", averageMemUsage)
+			TelemetryClient.Track(metric)
+			Log("Sent Otel memory usage metrics")
+
+			totalMemUsage = 0
+			count = 0
 		}
 	}
+	Log("Breaking out of PushOtelColMemRssToAppInsightsMetrics ticker")
 	return output.FLB_OK
 }
