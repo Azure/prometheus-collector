@@ -1,3 +1,4 @@
+name: Azure.prometheus-collector
 trigger:
   branches:
     include:
