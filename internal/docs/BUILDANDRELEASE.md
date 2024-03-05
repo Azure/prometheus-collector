@@ -66,6 +66,7 @@ Each merge into `main` will push the image to the public mcr and deploy to the d
 
 ## Release Process
 - **PR 1**: Bump the version in the VERSION file following semantic versioning.
+    - Add the latest addon-token-adapter version in the values-template.yaml file by checking the version [here](https://mcr.microsoft.com/v2/aks/msi/addon-token-adapter/tags/list).
     - If you know your PR with the last feature changes will be the last one before the release, you can do this then.
     - **Build 1**: The `values.yaml` and `Chart.yaml` templates for the HELM chart will automatically be replaced with the image tag and the HELM chart version during the CI/CD build.
 - **Release**: Create a release in [ADO](https://github-private.visualstudio.com/azure/_release?_a=releases&view=mine&definitionId=79).

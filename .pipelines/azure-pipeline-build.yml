@@ -2,12 +2,50 @@ trigger:
   branches:
     include:
     - main
+  paths:
+    exclude:
+    - '*.md'
+    - '**/*.md'
+    - '.github/*'
+    - 'AddonArmTemplate/*'
+    - 'AddonBicepTemplate/*'
+    - 'AddonPolicyTemplate/*'
+    - 'AddonTerraformTemplate/*'
+    - 'ArcArmTemplate/*'
+    - 'ArcBicepTemplate/*'
+    - 'Azure-ARM-templates/*'
+    - 'GeneratedMonitoringArtifacts/*'
+    - 'internal/alerts/*'
+    - 'internal/docs/*'
+    - 'internal/monitoring/*'
+    - 'internal/scripts/*'
+    - 'internal/mixins/*'
+    - 'tools/*'
 
 pr:
   autoCancel: true
   branches:
     include:
     - main
+  paths:
+    exclude:
+    - '*.md'
+    - '**/*.md'
+    - '.github/*'
+    - 'AddonArmTemplate/*'
+    - 'AddonBicepTemplate/*'
+    - 'AddonPolicyTemplate/*'
+    - 'AddonTerraformTemplate/*'
+    - 'ArcArmTemplate/*'
+    - 'ArcBicepTemplate/*'
+    - 'Azure-ARM-templates/*'
+    - 'GeneratedMonitoringArtifacts/*'
+    - 'internal/alerts/*'
+    - 'internal/docs/*'
+    - 'internal/monitoring/*'
+    - 'internal/scripts/*'
+    - 'internal/mixins/*'
+    - 'tools/*'
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -907,7 +945,7 @@ stages:
   jobs:
   - deployment: Deploy_Chart_ARC
     displayName: "Deploy: Arc dev cluster"
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(failed(Deploy_Chart_ARC), eq(variables['System.StageAttempt'], 1)))
     environment: Prometheus-Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
@@ -1020,7 +1058,7 @@ stages:
     environment: Prometheus-Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(failed(Deploy_AKS_Chart), eq(variables['System.StageAttempt'], 1)))
     variables:
       HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
       HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -1119,26 +1157,48 @@ stages:
               azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
               scriptLocation: 'inlineScript'
               inlineScript: 'az aks get-credentials -g ci-dev-aks-mac-eus-rg -n ci-dev-aks-mac-eus'
+          
+          - bash: |
+              kubectl apply -f ./testkube
+              kubectl appky -f ./test-cluster-yamls
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+            displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
 
           - bash: |
               sleep 180
             displayName: "Wait for cluster to be ready"
 
           - bash: |
+              # Run the full test suite
               kubectl testkube run testsuite e2e-tests --verbose
-              execution_name=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests --limit 1 | grep e2e-tests | awk '{print $1}')
-              kubectl testkube watch testsuiteexecution $execution_name
-              kubectl testkube get testsuiteexecution $execution_name --output json > testkube-results.json
 
+              # Get the current id of the test suite now running
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests --limit 1 | grep e2e-tests | awk '{print $1}')
+
+              # Watch until the all the tests in the test suite finish
+              kubectl testkube watch testsuiteexecution $execution_id
+
+              # Get the results as a formatted json file
+              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
+
+              # For any test that has failed, print out the Ginkgo logs
               if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
-                echo "The following testkube tests failed:"
+
+                # Get each test name and id that failed
                 jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
                   testName=$(echo $line | cut -d ' ' -f 1)
                   id=$(echo $line | cut -d ' ' -f 2)
                   echo "Test $testName failed. Test ID: $id"
-                  kubectl testkube get execution $id > out 2>error
-                  cat error | tac | awk '/go: downloading/ {exit} 1' | tac
+
+                  # Get the Ginkgo logs of the test
+                  kubectl testkube get execution $id > out 2>error.log
+
+                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
+                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
+                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
                 done
+
+                # Explicitly fail the ADO task since at least one test failed
                 exit 1
               fi
             workingDirectory: $(Build.SourcesDirectory)

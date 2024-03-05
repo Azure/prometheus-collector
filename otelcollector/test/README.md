@@ -432,6 +432,7 @@ Some highlights are that:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Run tests"
   ```
+- Add the alerting to the CI/CD cluster following [these instructions](/internal/alerts).
 
 # Processes
 ## When to Run Each Test
