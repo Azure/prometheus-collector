@@ -2,12 +2,52 @@ trigger:
   branches:
     include:
     - main
+    - grace/test-file-exclude
+  paths:
+    exclude:
+    - '*.md'
+    - '**/*.md'
+    - '.github/*'
+    - 'AddonArmTemplate/*'
+    - 'AddonBicepTemplate/*'
+    - 'AddonPolicyTemplate/*'
+    - 'AddonTerraformTemplate/*'
+    - 'ArcArmTemplate/*'
+    - 'ArcBicepTemplate/*'
+    - 'Azure-ARM-templates/*'
+    - 'GeneratedMonitoringArtifacts/*'
+    - 'internal/alerts/*'
+    - 'internal/docs/*'
+    - 'internal/monitoring/*'
+    - 'internal/scripts/*'
+    - 'internal/mixins/*'
+    - 'tools/*'
+    - '.pipelines/azure-pipeline'build.yml'
 
 pr:
   autoCancel: true
   branches:
     include:
     - main
+  paths:
+    exclude:
+    - '*.md'
+    - '**/*.md'
+    - '.github/*'
+    - 'AddonArmTemplate/*'
+    - 'AddonBicepTemplate/*'
+    - 'AddonPolicyTemplate/*'
+    - 'AddonTerraformTemplate/*'
+    - 'ArcArmTemplate/*'
+    - 'ArcBicepTemplate/*'
+    - 'Azure-ARM-templates/*'
+    - 'GeneratedMonitoringArtifacts/*'
+    - 'internal/alerts/*'
+    - 'internal/docs/*'
+    - 'internal/monitoring/*'
+    - 'internal/scripts/*'
+    - 'internal/mixins/*'
+    - 'tools/*'
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
