@@ -48,6 +48,7 @@ pr:
     - 'internal/scripts/*'
     - 'internal/mixins/*'
     - 'tools/*'
+    - '.pipelines/azure-pipeline'build.yml'
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
