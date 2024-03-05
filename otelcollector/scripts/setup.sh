@@ -50,6 +50,11 @@ cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
 mkdir /opt/microsoft/linuxmonagent
 
+# Install telegraf
+echo "Installing telegraf..."
+sudo tdnf install telegraf-1.27.3 -y
+sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.txt
+
 # Install fluent-bit
 echo "Installing fluent-bit..."
 sudo tdnf install fluent-bit-2.1.10 -y
@@ -69,3 +74,5 @@ sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversi
 rm -f $TMPDIR/metricsext2*.rpm
 rm -f $TMPDIR/azure-mdsd*.rpm
 
+# Remove mdsd's telegraf
+rm /usr/sbin/telegraf

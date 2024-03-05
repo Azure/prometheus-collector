@@ -267,6 +267,19 @@ PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
 echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
 
+echo "starting telegraf"
+if [ "$TELEMETRY_DISABLED" != "true" ]; then
+  if [ "$CONTROLLER_TYPE" == "ReplicaSet" ]  && [ "${AZMON_OPERATOR_ENABLED}" == "true" ]; then
+    /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector-ta-enabled.conf &
+  elif [ "$CONTROLLER_TYPE" == "ReplicaSet" ]; then
+    /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
+  else
+    /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector-ds.conf &
+  fi
+  TELEGRAF_VERSION=`cat /opt/telegrafversion.txt`
+  echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
+fi
+
 echo "starting fluent-bit"
 mkdir /opt/microsoft/fluent-bit
 touch /opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log
