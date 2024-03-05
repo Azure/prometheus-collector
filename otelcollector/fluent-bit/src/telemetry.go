@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -132,6 +134,7 @@ const (
 	envComputerName                       = "NODE_NAME"
 	envDefaultMetricAccountName           = "AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
 	envPodName                            = "POD_NAME"
+	envContainerCpuLimit                  = "CONTAINER_CPU_LIMIT"
 	envTelemetryOffSwitch                 = "DISABLE_TELEMETRY"
 	envNamespace                          = "POD_NAMESPACE"
 	envHelmReleaseName                    = "HELM_RELEASE_NAME"
@@ -202,6 +205,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["podname"] = os.Getenv(envPodName)
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
+	CommonProperties["containercpulimit"] = os.Getenv(envContainerCpuLimit)
 
 	isMacMode := os.Getenv("MAC")
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
@@ -879,6 +883,7 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var totalCpuUsage float64
 	var count int
+	var cpuUsages []float64
 
 	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
 	deadline := time.Now().Add(duration)
@@ -901,6 +906,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 
 			totalCpuUsage += otelcpuUsage
 			count++
+			cpuUsages = append(cpuUsages, otelcpuUsage)
 		}
 
 		if count > 0 {
@@ -909,8 +915,16 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 			TelemetryClient.Track(metric)
 			Log("Sent Otel Cpu usage metrics")
 
+			sort.Float64s(cpuUsages)
+			index := int(math.Ceil(0.95 * float64(len(cpuUsages))))
+			percentile95 := cpuUsages[index-1]
+			metric95 := appinsights.NewMetricTelemetry("otelcpuUsage95", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent Otel 95th percentile  Cpu usage metrics")
+
 			totalCpuUsage = 0
 			count = 0
+			cpuUsages = []float64{}
 		}
 	}
 	Log("Breaking out of PushOtelCpuToAppInsightsMetrics ticker")
@@ -920,6 +934,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var totalCpuUsage float64
 	var count int
+	var cpuUsages []float64
 
 	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
 	deadline := time.Now().Add(duration)
@@ -942,16 +957,25 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 			totalCpuUsage += meCpuUsage
 			count++
+			cpuUsages = append(cpuUsages, meCpuUsage)
 		}
 
 		if count > 0 {
 			averageCpuUsage := totalCpuUsage / float64(count)
 			metric := appinsights.NewMetricTelemetry("meCpuUsage", averageCpuUsage)
 			TelemetryClient.Track(metric)
-			Log("Sent ME Cpu usage metrics")
+			Log("Sent ME Average Cpu usage metrics")
+
+			sort.Float64s(cpuUsages)
+			index := int(math.Ceil(0.95 * float64(len(cpuUsages))))
+			percentile95 := cpuUsages[index-1]
+			metric95 := appinsights.NewMetricTelemetry("meCpuUsage95", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent ME 95th percentile  Cpu usage metrics")
 
 			totalCpuUsage = 0
 			count = 0
+			cpuUsages = []float64{}
 		}
 	}
 	Log("Breaking out of PushMECpuToAppInsightsMetrics ticker")
@@ -961,6 +985,7 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var totalMemUsage float64
 	var count int
+	var memUsages []float64
 
 	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
 	deadline := time.Now().Add(duration)
@@ -988,17 +1013,27 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 				totalMemUsage += memVmrssFloat
 				count++
+				memUsages = append(memUsages, memVmrssFloat)
 			}
 		}
 
 		if count > 0 {
 			averageMemUsage := totalMemUsage / float64(count)
-			metric := appinsights.NewMetricTelemetry("meVMRSS", averageMemUsage)
+			metric := appinsights.NewMetricTelemetry("meVMRSSAvg", averageMemUsage)
 			TelemetryClient.Track(metric)
-			Log("Sent ME memory usage metrics")
+			Log("Sent ME average memory usage metrics")
+
+			// Calculate 95th percentile
+			sort.Float64s(memUsages)
+			index := int(math.Ceil(0.95 * float64(len(memUsages))))
+			percentile95 := memUsages[index-1]
+			metric95 := appinsights.NewMetricTelemetry("meVMRSS95", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent ME 95th percentile memory usage metrics")
 
 			totalMemUsage = 0
 			count = 0
+			memUsages = []float64{}
 		}
 	}
 	Log("Breaking out of PushMEMemRssToAppInsightsMetrics ticker")
@@ -1008,6 +1043,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var totalMemUsage float64
 	var count int
+	var memUsages []float64
 
 	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
 	deadline := time.Now().Add(duration)
@@ -1036,17 +1072,27 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 
 				totalMemUsage += memVmrssFloat
 				count++
+				memUsages = append(memUsages, memVmrssFloat)
 			}
 		}
 
 		if count > 0 {
 			averageMemUsage := totalMemUsage / float64(count)
-			metric := appinsights.NewMetricTelemetry("otelcolVMRSS", averageMemUsage)
+			metric := appinsights.NewMetricTelemetry("otelcolVMRSSAvg", averageMemUsage)
 			TelemetryClient.Track(metric)
-			Log("Sent Otel memory usage metrics")
+			Log("Sent Otel average memory usage metrics")
+
+			// Calculate 95th percentile
+			sort.Float64s(memUsages)
+			index := int(math.Ceil(0.95 * float64(len(memUsages))))
+			percentile95 := memUsages[index-1]
+			metric95 := appinsights.NewMetricTelemetry("otelcolVMRSS95", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent Otel 95th percentile memory usage metrics")
 
 			totalMemUsage = 0
 			count = 0
+			memUsages = []float64{}
 		}
 	}
 	Log("Breaking out of PushOtelColMemRssToAppInsightsMetrics ticker")
