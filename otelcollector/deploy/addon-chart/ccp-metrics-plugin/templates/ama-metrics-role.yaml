@@ -9,7 +9,6 @@ rules:
     resources:
       [
         "pods",
-        "services",
         "endpoints",
       ]
     verbs: ["list", "get", "watch"]

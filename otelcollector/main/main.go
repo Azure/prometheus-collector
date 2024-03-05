@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	mac := os.Getenv("MAC")
+	// mac := os.Getenv("MAC")
 	controllerType := os.Getenv("CONTROLLER_TYPE")
 	clusterOverride := os.Getenv("CLUSTER_OVERRIDE")
 	cluster := os.Getenv("CLUSTER")
@@ -47,34 +47,32 @@ func main() {
 	}
 	fmt.Println("meConfigFile:", meConfigFile)
 
-	if mac == "true" {
-		// Wait for addon-token-adapter to be healthy
-		tokenAdapterWaitSecs := 20
-		waitedSecsSoFar := 1
+	// Wait for addon-token-adapter to be healthy
+	tokenAdapterWaitSecs := 20
+	waitedSecsSoFar := 1
 
-		for {
-			if waitedSecsSoFar > tokenAdapterWaitSecs {
-				_, err := http.Get("http://localhost:9999/healthz")
-				if err != nil {
-					fmt.Printf("giving up waiting for token adapter to become healthy after %d secs\n", waitedSecsSoFar)
-					// Log telemetry about failure after waiting for waitedSecsSoFar and break
-					fmt.Printf("export tokenadapterUnhealthyAfterSecs=%d\n", waitedSecsSoFar)
-					break
-				}
-			} else {
-				fmt.Printf("checking health of token adapter after %d secs\n", waitedSecsSoFar)
-				resp, err := http.Get("http://localhost:9999/healthz")
-				if err == nil && resp.StatusCode == http.StatusOK {
-					fmt.Printf("found token adapter to be healthy after %d secs\n", waitedSecsSoFar)
-					// Log telemetry about success after waiting for waitedSecsSoFar and break
-					fmt.Printf("export tokenadapterHealthyAfterSecs=%d\n", waitedSecsSoFar)
-					break
-				}
+	for {
+		if waitedSecsSoFar > tokenAdapterWaitSecs {
+			_, err := http.Get("http://localhost:9999/healthz")
+			if err != nil {
+				fmt.Printf("giving up waiting for token adapter to become healthy after %d secs\n", waitedSecsSoFar)
+				// Log telemetry about failure after waiting for waitedSecsSoFar and break
+				fmt.Printf("export tokenadapterUnhealthyAfterSecs=%d\n", waitedSecsSoFar)
+				break
 			}
-
-			time.Sleep(1 * time.Second)
-			waitedSecsSoFar++
+		} else {
+			fmt.Printf("checking health of token adapter after %d secs\n", waitedSecsSoFar)
+			resp, err := http.Get("http://localhost:9999/healthz")
+			if err == nil && resp.StatusCode == http.StatusOK {
+				fmt.Printf("found token adapter to be healthy after %d secs\n", waitedSecsSoFar)
+				// Log telemetry about success after waiting for waitedSecsSoFar and break
+				fmt.Printf("export tokenadapterHealthyAfterSecs=%d\n", waitedSecsSoFar)
+				break
+			}
 		}
+
+		time.Sleep(1 * time.Second)
+		waitedSecsSoFar++
 	}
 
 	// Set environment variables
@@ -150,33 +148,31 @@ func main() {
 		fmtVar("PROMETHEUS_VERSION", prometheusVersion)
 	}
 
-	if mac == "true" {
-		// Start inotify to watch for changes
-		fmt.Println("Starting inotify for watching mdsd config update")
+	// Start inotify to watch for changes
+	fmt.Println("Starting inotify for watching mdsd config update")
 
-		// Create an output file for inotify events
-		outputFile := "/opt/inotifyoutput-mdsd-config.txt"
-		_, err := os.Create(outputFile)
-		if err != nil {
-			log.Fatalf("Error creating output file: %v\n", err)
-		}
+	// Create an output file for inotify events
+	outputFile = "/opt/inotifyoutput-mdsd-config.txt"
+	_, err = os.Create(outputFile)
+	if err != nil {
+		log.Fatalf("Error creating output file: %v\n", err)
+	}
 
-		// Define the command to start inotify
-		inotifyCommand := exec.Command(
-			"inotifywait",
-			"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
-			"--daemon",
-			"--outfile", outputFile,
-			"--event", "ATTRIB",
-			"--format", "%e : %T",
-			"--timefmt", "+%s",
-		)
+	// Define the command to start inotify
+	inotifyCommand := exec.Command(
+		"inotifywait",
+		"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
+		"--daemon",
+		"--outfile", outputFile,
+		"--event", "ATTRIB",
+		"--format", "%e : %T",
+		"--timefmt", "+%s",
+	)
 
-		// Start the inotify process
-		err = inotifyCommand.Start()
-		if err != nil {
-			log.Fatalf("Error starting inotify process: %v\n", err)
-		}
+	// Start the inotify process
+	err = inotifyCommand.Start()
+	if err != nil {
+		log.Fatalf("Error starting inotify process: %v\n", err)
 	}
 
 	// Setting time at which the container started running
@@ -209,41 +205,34 @@ func main() {
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
 	message := "prometheuscollector is running."
-	macMode := os.Getenv("MAC") == "true"
+	// macMode := os.Getenv("MAC") == "true"
 
-	if macMode {
-		if _, err := os.Stat("/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"); os.IsNotExist(err) {
-			if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
-				azmonContainerStartTimeStr, err := ioutil.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
-				if err != nil {
-					status = http.StatusServiceUnavailable
-					message = "Error reading azmon-container-start-time: " + err.Error()
-				}
-
-				azmonContainerStartTime, err := strconv.Atoi(strings.TrimSpace(string(azmonContainerStartTimeStr)))
-				if err != nil {
-					status = http.StatusServiceUnavailable
-					message = "Error converting azmon-container-start-time to integer: " + err.Error()
-				}
-
-				epochTimeNow := int(time.Now().Unix())
-				duration := epochTimeNow - azmonContainerStartTime
-				durationInMinutes := duration / 60
-
-				if durationInMinutes%5 == 0 {
-					message = fmt.Sprintf("%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
-				}
-
-				if durationInMinutes > 15 {
-					status = http.StatusServiceUnavailable
-					message = "No configuration present for the AKS resource"
-				}
+	if _, err := os.Stat("/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"); os.IsNotExist(err) {
+		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
+			azmonContainerStartTimeStr, err := ioutil.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
+			if err != nil {
+				status = http.StatusServiceUnavailable
+				message = "Error reading azmon-container-start-time: " + err.Error()
 			}
-		}
-	} else {
-		if !isProcessRunning("MetricsExtension") {
-			status = http.StatusServiceUnavailable
-			message = "Metrics Extension is not running."
+
+			azmonContainerStartTime, err := strconv.Atoi(strings.TrimSpace(string(azmonContainerStartTimeStr)))
+			if err != nil {
+				status = http.StatusServiceUnavailable
+				message = "Error converting azmon-container-start-time to integer: " + err.Error()
+			}
+
+			epochTimeNow := int(time.Now().Unix())
+			duration := epochTimeNow - azmonContainerStartTime
+			durationInMinutes := duration / 60
+
+			if durationInMinutes%5 == 0 {
+				message = fmt.Sprintf("%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
+			}
+
+			if durationInMinutes > 15 {
+				status = http.StatusServiceUnavailable
+				message = "No configuration present for the AKS resource"
+			}
 		}
 	}
 

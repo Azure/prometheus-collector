@@ -45,7 +45,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedConfig map[s
 		// Only perform the replacement if cp.ClusterAlias is not an empty string
 		if cp.ClusterAlias != "" {
 			cp.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(cp.ClusterAlias, "_")
-			cp.ClusterAlias = strings.Trim(cp.ClusterAlias, "_")  // Trim underscores from the beginning and end (since cluster_alias is being passed in as "" which are being replaced with _)
+			cp.ClusterAlias = strings.Trim(cp.ClusterAlias, "_") // Trim underscores from the beginning and end (since cluster_alias is being passed in as "" which are being replaced with _)
 			fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", cp.ClusterAlias)
 		}
 	}
@@ -61,7 +61,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedConfig map[s
 	}
 }
 
-func (fcw *FileConfigWriter) WriteConfigToFile1(filename string) error {
+func (fcw *FileConfigWriter) WriteConfigToFile(filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("Exception while opening file for writing prometheus-collector config environment variables: %s", err)
@@ -107,7 +107,7 @@ func (c *Configurator) Configure() {
 	fmt.Printf("AZMON_CLUSTER_ALIAS: '%s'\n", c.ConfigParser.ClusterAlias)
 	fmt.Printf("AZMON_CLUSTER_LABEL: %s\n", c.ConfigParser.ClusterLabel)
 
-	err := c.ConfigWriter.WriteConfigToFile1(c.ConfigFilePath)
+	err := c.ConfigWriter.WriteConfigToFile(c.ConfigFilePath)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		return
@@ -118,9 +118,9 @@ func (c *Configurator) Configure() {
 
 func parseConfigAndSetEnvInFile() {
 	configurator := &Configurator{
-		ConfigLoader: &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/prometheus-collector-settings"},
-		ConfigParser: &ConfigProcessor{},
-		ConfigWriter: &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
+		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/prometheus-collector-settings"},
+		ConfigParser:   &ConfigProcessor{},
+		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
 		ConfigFilePath: "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var",
 	}
 
