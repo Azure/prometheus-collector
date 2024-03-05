@@ -46,7 +46,7 @@ pr:
     - 'internal/scripts/*'
     - 'internal/mixins/*'
     - 'tools/*'
-    - 'azure-pipeline-build.yml'
+    - '.pipeline/azure-pipeline-build.yml'
 jobs:
   build:
     name: Build and Test
