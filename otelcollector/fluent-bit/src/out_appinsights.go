@@ -16,9 +16,10 @@ func FLBPluginRegister(ctx unsafe.Pointer) int {
 	return output.FLBPluginRegister(ctx, "appinsights", "AppInsights GO!")
 }
 
-//export FLBPluginInit
 // (fluentbit will call this)
 // ctx (context) pointer to fluentbit context (state/ c code)
+//
+//export FLBPluginInit
 func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	// This will not load the plugin instance. FLBPluginFlush won't be called.
@@ -58,6 +59,8 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	var record map[interface{}]interface{}
 	var records []map[interface{}]interface{}
 
+	incomingTag := strings.ToLower(C.GoString(tag))
+	Log("Print the incoming tag: %s", incomingTag)
 	// Create Fluent Bit decoder
 	dec := output.NewDecoder(data, int(length))
 
@@ -71,8 +74,6 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		records = append(records, record)
 	}
 
-	incomingTag := strings.ToLower(C.GoString(tag))
-
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
 	case fluentbitEventsProcessedLastPeriodTag:
@@ -85,6 +86,16 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
 		return RecordExportingFailed(records)
+	case otelcolCpuScrapeTag:
+		return PushOtelCpuToAppInsightsMetrics(records)
+	case otelcolMemRssScrapeTag:
+		return PushOtelColMemRssToAppInsightsMetrics(records)
+	case meMemRssScrapeTag:
+		return PushMEMemRssToAppInsightsMetrics(records)
+	case promScrapeTag:
+		return PushPromToAppInsightsMetrics(records)
+	case meCpuScrapeTag:
+		return PushMECpuToAppInsightsMetrics(records)
 	default:
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)

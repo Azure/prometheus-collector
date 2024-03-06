@@ -3,7 +3,7 @@ module Docker-Provider/source/plugins/go/src
 go 1.14
 
 require (
-	github.com/fluent/fluent-bit-go v0.0.0-20220311094233-780004bf5562
+	github.com/fluent/fluent-bit-go v0.0.0-20230731091245-a7a013e2473c
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/prometheus/client_golang v1.18.0
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
