@@ -957,7 +957,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 			cpuUsages = []float64{}
 		}
 	}
-	Log("Breaking out of PushOtelCpuToAppInsightsMetrics ticker")
+
 	return output.FLB_OK
 }
 
@@ -1008,7 +1008,7 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 			cpuUsages = []float64{}
 		}
 	}
-	Log("Breaking out of PushMECpuToAppInsightsMetrics ticker")
+
 	return output.FLB_OK
 }
 
@@ -1066,7 +1066,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 			memUsages = []float64{}
 		}
 	}
-	Log("Breaking out of PushMEMemRssToAppInsightsMetrics ticker")
+
 	return output.FLB_OK
 }
 
@@ -1125,6 +1125,6 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 			memUsages = []float64{}
 		}
 	}
-	Log("Breaking out of PushOtelColMemRssToAppInsightsMetrics ticker")
+
 	return output.FLB_OK
 }
