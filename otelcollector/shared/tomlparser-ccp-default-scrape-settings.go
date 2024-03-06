@@ -45,33 +45,34 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map
 		}
 	}
 
+	fmt.Println("using configmap for ccp scrape settings...")
 	return config, nil
 }
 
 func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string) {
 	if val, ok := parsedConfig["controlplane-kube-controller-manager"]; ok && val != "" {
 		cp.ControlplaneKubeControllerManager = val
-		fmt.Printf("config::Using configmap scrape settings for controlplane-kube-controller-manager: %v\n", cp.ControlplaneKubeControllerManager)
+		fmt.Printf("config::Using scrape settings for controlplane-kube-controller-manager: %v\n", cp.ControlplaneKubeControllerManager)
 	}
 
 	if val, ok := parsedConfig["controlplane-kube-scheduler"]; ok && val != "" {
 		cp.ControlplaneKubeScheduler = val
-		fmt.Printf("config::Using configmap scrape settings for controlplane-kube-scheduler: %v\n", cp.ControlplaneKubeScheduler)
+		fmt.Printf("config::Using scrape settings for controlplane-kube-scheduler: %v\n", cp.ControlplaneKubeScheduler)
 	}
 
 	if val, ok := parsedConfig["controlplane-apiserver"]; ok && val != "" {
 		cp.ControlplaneApiserver = val
-		fmt.Printf("config::Using configmap scrape settings for controlplane-apiserver: %v\n", cp.ControlplaneApiserver)
+		fmt.Printf("config::Using scrape settings for controlplane-apiserver: %v\n", cp.ControlplaneApiserver)
 	}
 
 	if val, ok := parsedConfig["controlplane-cluster-autoscaler"]; ok && val != "" {
 		cp.ControlplaneClusterAutoscaler = val
-		fmt.Printf("config::Using configmap scrape settings for controlplane-cluster-autoscaler: %v\n", cp.ControlplaneClusterAutoscaler)
+		fmt.Printf("config::Using scrape settings for controlplane-cluster-autoscaler: %v\n", cp.ControlplaneClusterAutoscaler)
 	}
 
 	if val, ok := parsedConfig["controlplane-etcd"]; ok && val != "" {
 		cp.ControlplaneEtcd = val
-		fmt.Printf("config::Using configmap scrape settings for controlplane-etcd: %v\n", cp.ControlplaneEtcd)
+		fmt.Printf("config::Using scrape settings for controlplane-etcd: %v\n", cp.ControlplaneEtcd)
 	}
 
 	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {

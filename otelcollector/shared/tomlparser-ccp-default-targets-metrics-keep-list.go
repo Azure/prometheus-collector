@@ -121,12 +121,13 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		controlplaneEtcdRegex += regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
 
 		// Print the updated regex strings after appending values
-		fmt.Println("\nUpdated Regex Strings After Appending:")
-		fmt.Println("ControlplaneKubeControllerManagerRegex:", controlplaneKubeControllerManagerRegex)
-		fmt.Println("ControlplaneKubeSchedulerRegex:", controlplaneKubeSchedulerRegex)
-		fmt.Println("ControlplaneApiserverRegex:", controlplaneApiserverRegex)
-		fmt.Println("ControlplaneClusterAutoscalerRegex:", controlplaneClusterAutoscalerRegex)
-		fmt.Println("ControlplaneEtcdRegex:", controlplaneEtcdRegex)
+		// Only log this in debug mode
+		// fmt.Println("Updated Regex Strings After Appending:")
+		// fmt.Println("ControlplaneKubeControllerManagerRegex:", controlplaneKubeControllerManagerRegex)
+		// fmt.Println("ControlplaneKubeSchedulerRegex:", controlplaneKubeSchedulerRegex)
+		// fmt.Println("ControlplaneApiserverRegex:", controlplaneApiserverRegex)
+		// fmt.Println("ControlplaneClusterAutoscalerRegex:", controlplaneClusterAutoscalerRegex)
+		// fmt.Println("ControlplaneEtcdRegex:", controlplaneEtcdRegex)
 	} else {
 		fmt.Println("minimalIngestionProfile:", regexValues.MinimalIngestionProfile)
 	}
