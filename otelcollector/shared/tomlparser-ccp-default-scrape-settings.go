@@ -7,6 +7,17 @@ import (
 	"strings"
 )
 
+func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string, error) {
+	config := make(map[string]string)
+	// Set default values
+	config["controlplane-apiserver"] = "true"
+	config["controlplane-cluster-autoscaler"] = "false"
+	config["controlplane-kube-scheduler"] = "false"
+	config["controlplane-kube-controller-manager"] = "false"
+	config["controlplane-etcd"] = "true"
+	return config, nil
+}
+
 func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map[string]string, error) {
 	config := make(map[string]string)
 	// Set default values
@@ -18,7 +29,6 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map
 
 	if _, err := os.Stat(fcl.ConfigMapMountPath); os.IsNotExist(err) {
 		fmt.Println("configmap for ccp default scrape settings not mounted, using defaults")
-
 		return config, nil
 	}
 
@@ -38,7 +48,7 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map
 	return config, nil
 }
 
-func (cp *ConfigProcessor) PopulateDefaultSettingValuesFromConfigMap(parsedConfig map[string]string) {
+func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string) {
 	if val, ok := parsedConfig["controlplane-kube-controller-manager"]; ok && val != "" {
 		cp.ControlplaneKubeControllerManager = val
 		fmt.Printf("config::Using configmap scrape settings for controlplane-kube-controller-manager: %v\n", cp.ControlplaneKubeControllerManager)
@@ -106,12 +116,14 @@ func (c *Configurator) ConfigureDefaultScrapeSettings() {
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
 		configMapSettings, err := c.ConfigLoader.ParseConfigMapForDefaultScrapeSettings()
 		if err == nil && len(configMapSettings) > 0 {
-			c.ConfigParser.PopulateDefaultSettingValuesFromConfigMap(configMapSettings)
+			c.ConfigParser.PopulateSettingValues(configMapSettings)
 		}
 	} else {
-		if _, err := os.Stat(c.ConfigLoader.ConfigMapMountPath); err == nil {
-			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
+		defaultSettings, err := c.ConfigLoader.SetDefaultScrapeSettings()
+		if err == nil && len(defaultSettings) > 0 {
+			c.ConfigParser.PopulateSettingValues(defaultSettings)
 		}
+		fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
 	}
 
 	if mac := os.Getenv("MAC"); mac != "" && strings.TrimSpace(mac) == "true" {

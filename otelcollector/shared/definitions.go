@@ -6,7 +6,7 @@ type RegexValues struct {
 	ControlplaneApiserver             string
 	ControlplaneClusterAutoscaler     string
 	ControlplaneEtcd                  string
-	MinimalIngestionProfile		      string
+	MinimalIngestionProfile           string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
@@ -16,23 +16,23 @@ type FilesystemConfigLoader struct {
 
 // ConfigProcessor handles the processing of configuration settings.
 type ConfigProcessor struct {
-	DefaultMetricAccountName 		 			string
-	ClusterAlias             		  			string
-	ClusterLabel             		  			string
-	IsOperatorEnabled        		  			string
-	IsOperatorEnabledChartSetting 	  			string
-	ControlplaneKubeControllerManager 			string
-	ControlplaneKubeScheduler         			string
-	ControlplaneApiserver             			string
-	ControlplaneClusterAutoscaler     			string
-	ControlplaneEtcd                  			string
-	NoDefaultsEnabled                       	bool
-}	
+	DefaultMetricAccountName          string
+	ClusterAlias                      string
+	ClusterLabel                      string
+	IsOperatorEnabled                 string
+	IsOperatorEnabledChartSetting     string
+	ControlplaneKubeControllerManager string
+	ControlplaneKubeScheduler         string
+	ControlplaneApiserver             string
+	ControlplaneClusterAutoscaler     string
+	ControlplaneEtcd                  string
+	NoDefaultsEnabled                 bool
+}
 
 // ConfigParser is an interface for parsing configurations.
 type ConfigParser interface {
 	PopulateSettingValuesFromConfigMap(parsedConfig map[string]string)
-	PopulateDefaultSettingValuesFromConfigMap(parsedConfig map[string]string)
+	PopulateSettingValues(parsedConfig map[string]string)
 }
 
 // Configurator is responsible for configuring the application.
@@ -45,12 +45,13 @@ type Configurator struct {
 
 type FileConfigWriter struct {
 	ConfigProcessor *ConfigProcessor
-	Config map[string]string
+	Config          map[string]string
 }
 
 // ConfigLoader is an interface for loading configurations.
 type ConfigLoader interface {
 	ParseConfigMapForDefaultScrapeSettings() (map[string]string, error)
+	SetDefaultScrapeSettings() (map[string]string, error)
 }
 
 // ConfigWriter is an interface for writing configurations to a file.
