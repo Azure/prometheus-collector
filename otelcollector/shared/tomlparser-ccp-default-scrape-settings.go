@@ -2,23 +2,29 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"strings"
 	"regexp"
+	"strings"
 )
 
 func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map[string]string, error) {
 	config := make(map[string]string)
+	// Set default values
+	config["controlplane-apiserver"] = "true"
+	config["controlplane-cluster-autoscaler"] = "false"
+	config["controlplane-kube-scheduler"] = "false"
+	config["controlplane-kube-controller-manager"] = "false"
+	config["controlplane-etcd"] = "true"
 
 	if _, err := os.Stat(fcl.ConfigMapMountPath); os.IsNotExist(err) {
 		fmt.Println("configmap for ccp default scrape settings not mounted, using defaults")
+
 		return config, nil
 	}
 
-	content, err := ioutil.ReadFile(fcl.ConfigMapMountPath)
+	content, err := os.ReadFile(string(fcl.ConfigMapMountPath))
 	if err != nil {
-		return nil, fmt.Errorf("error reading config map file: %s", err)
+		return config, fmt.Errorf("using default values, error reading config map file: %s", err)
 	}
 
 	lines := strings.Split(string(content), "\n")
@@ -31,7 +37,6 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map
 
 	return config, nil
 }
-
 
 func (cp *ConfigProcessor) PopulateDefaultSettingValuesFromConfigMap(parsedConfig map[string]string) {
 	if val, ok := parsedConfig["controlplane-kube-controller-manager"]; ok && val != "" {
@@ -75,7 +80,6 @@ func (cp *ConfigProcessor) PopulateDefaultSettingValuesFromConfigMap(parsedConfi
 		fmt.Printf("No default scrape configs enabled")
 	}
 }
-
 
 func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, cp *ConfigProcessor) error {
 	file, err := os.Create(filename)
