@@ -135,6 +135,7 @@ const (
 	envDefaultMetricAccountName           = "AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
 	envPodName                            = "POD_NAME"
 	envContainerCpuLimit                  = "CONTAINER_CPU_LIMIT"
+	envContainerMemoryLimit               = "CONTAINER_MEMORY_LIMIT"
 	envTelemetryOffSwitch                 = "DISABLE_TELEMETRY"
 	envNamespace                          = "POD_NAMESPACE"
 	envHelmReleaseName                    = "HELM_RELEASE_NAME"
@@ -206,6 +207,35 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
 	CommonProperties["containercpulimit"] = os.Getenv(envContainerCpuLimit)
+	CommonProperties["containermemorylimit"] = os.Getenv(envContainerMemoryLimit)
+	CommonProperties["defaultscrapekubelet"] = os.Getenv("AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapecoreDns"] = os.Getenv("AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapecadvisor"] = os.Getenv("AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapekubeproxy"] = os.Getenv("AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapeapiserver"] = os.Getenv("AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapekubestate"] = os.Getenv("AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenodeexporter"] = os.Getenv("AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapecollectorhealth"] = os.Getenv("AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapewindowsexporter"] = os.Getenv("AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapewindowskubeproxy"] = os.Getenv("AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapepodannotations"] = os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED")
+	CommonProperties["podannotationns"] = os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX")
+	CommonProperties["defaultscrapekappiebasic"] = os.Getenv("AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenetworkobservabilityRetina"] = os.Getenv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenetworkobservabilityHubble"] = os.Getenv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenetworkobservabilityCilium"] = os.Getenv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED")
+	CommonProperties["nodeexportertargetport"] = os.Getenv("NODE_EXPORTER_TARGETPORT")
+	CommonProperties["nodeexportername"] = os.Getenv("NODE_EXPORTER_NAME")
+	CommonProperties["kubestatename"] = os.Getenv("KUBE_STATE_NAME")
+	CommonProperties["kubestateversion"] = os.Getenv("KUBE_STATE_VERSION")
+	CommonProperties["nodeexporterversion"] = os.Getenv("NODE_EXPORTER_VERSION")
+	CommonProperties["akvauth"] = os.Getenv("AKVAUTH")
+	CommonProperties["debugmodeenabled"] = os.Getenv("DEBUG_MODE_ENABLED")
+	CommonProperties["kubestatemetriclabelsallowlist"] = os.Getenv("KUBE_STATE_METRIC_LABELS_ALLOWLIST")
+	CommonProperties["kubestatemetricannotationsallowlist"] = os.Getenv("KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST")
+	CommonProperties["httpproxyenabled"] = os.Getenv("HTTP_PROXY_ENABLED")
+	CommonProperties["tadapterh"] = os.Getenv("tokenadapterHealthyAfterSecs")
+	CommonProperties["tadapterf"] = os.Getenv("tokenadapterUnhealthyAfterSecs")
 
 	isMacMode := os.Getenv("MAC")
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
@@ -911,7 +941,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 
 		if count > 0 {
 			averageCpuUsage := totalCpuUsage / float64(count)
-			metric := appinsights.NewMetricTelemetry("otelcpuUsage", averageCpuUsage)
+			metric := appinsights.NewMetricTelemetry("otelcpuUsageAvg", averageCpuUsage)
 			TelemetryClient.Track(metric)
 			Log("Sent Otel Cpu usage metrics")
 
@@ -962,7 +992,7 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 		if count > 0 {
 			averageCpuUsage := totalCpuUsage / float64(count)
-			metric := appinsights.NewMetricTelemetry("meCpuUsage", averageCpuUsage)
+			metric := appinsights.NewMetricTelemetry("meCpuUsageAvg", averageCpuUsage)
 			TelemetryClient.Track(metric)
 			Log("Sent ME Average Cpu usage metrics")
 
