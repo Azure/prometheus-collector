@@ -33,6 +33,7 @@ jobs:
   variables:
     skipComponentGovernanceDetection: true
   steps:
+    - checkout: self
     - bash: |
         declare -a expected_patterns
         expected_patterns=(
@@ -72,6 +73,7 @@ jobs:
 
         echo "Build not required by changes"
         echo "##vso[task.setvariable variable=SKIP_BUILD;isOutput=true]true"
+    workingDirectory: $(Build.SourcesDirectory)
 
 - job: Image_Tags_and_Ev2_Artifacts
   displayName: "Build: Set image tags and publish Ev2 artifacts"
