@@ -105,7 +105,6 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	}
 
 	controllerType := os.Getenv("CONTROLLER_TYPE")
-	isOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 
 	var prometheusConfig map[string]interface{}
 	err = yaml.Unmarshal([]byte(promConfigFileContents), &prometheusConfig)
