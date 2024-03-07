@@ -57,7 +57,7 @@ jobs:
             "internal/mixins/.*"
             "tools/.*"
           )
-        changed_files=$(git diff --name-only main..$(Build.SourceBranch))
+        changed_files=$(git diff --name-only main...$(Build.SourceBranch))
 
         for file in $changed_files; do
             found=false
