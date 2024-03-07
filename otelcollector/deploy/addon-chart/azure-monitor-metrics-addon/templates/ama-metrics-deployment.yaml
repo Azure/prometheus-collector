@@ -63,16 +63,14 @@ spec:
               {{- end }}
             - name: MAC
               value: "true"
-            - name: CCP_METRICS_ENABLED
-              value: "true"
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: AZMON_OPERATOR_ENABLED
-            # {{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
-            #   value: "true"
-            # {{- else }}
+            {{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
+              value: "true"
+            {{- else }}
               value: "false"
-            # {{- end }}
+            {{- end }}
             - name: customEnvironment
               {{- if .Values.AzureMonitorMetrics.ArcExtension }}
               value: "{{ lower .Values.Azure.Cluster.Cloud }}"
@@ -165,8 +163,6 @@ spec:
               value: "true" # only supported value is the string "true"
           securityContext:
             privileged: false
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
           volumeMounts:
             - mountPath: /etc/config/settings
               name: settings-vol-config
@@ -197,9 +193,11 @@ spec:
               readOnly: true
             {{- end }}
           livenessProbe:
-            httpGet:
-              path: /health
-              port: 8080
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - /opt/microsoft/liveness/livenessprobe.sh
             initialDelaySeconds: 60
             periodSeconds: 15
             timeoutSeconds: 5
@@ -345,3 +343,4 @@ spec:
             secretName: ama-metrics-proxy-cert
             optional: true
         {{- end }}
+        
