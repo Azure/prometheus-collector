@@ -37,6 +37,19 @@ jobs:
     - bash: |
         git status
         echo $(Build.SourceBranch)
+
+        if [ $(IS_PR) == "True" ]; then
+          BRANCH_NAME=$(System.PullRequest.SourceBranch)
+        else
+          BRANCH_NAME=$(Build.SourceBranch)
+          BRANCH_NAME=${BRANCH_NAME#refs/heads/}
+        fi
+
+        if [ $(IS_MAIN_BRANCH) == "True" ]; then
+          changed_files=$(git diff --name-only HEAD^ HEAD)
+        else
+          changed_files=$(git diff --name-only $(BRANCH_NAME)..origin/main)
+        fi
         
         declare -a expected_patterns
         expected_patterns=(
@@ -57,7 +70,6 @@ jobs:
             "internal/mixins/.*"
             "tools/.*"
           )
-        changed_files=$(git diff --name-only main...$(Build.SourceBranch))
 
         for file in $changed_files; do
             found=false
