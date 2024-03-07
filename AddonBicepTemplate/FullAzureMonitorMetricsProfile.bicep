@@ -30,6 +30,18 @@ param azureMonitorWorkspaceResourceId string
   'japanwest',
   'koreacentral',
   'switzerlandnorth',
+  'brazilsoutheast',
+  'francecentral',
+  'ukwest',
+  'koreasouth',
+  'switzerlandwest',
+  'japaneast',
+  'swedencentral',
+  'canadaeast',
+  'norwaywest',
+  'southindia',
+  'australiaeast',
+  'swedensouth',
   'usgovvirginia'
 ])
 param azureMonitorWorkspaceLocation string
@@ -56,7 +68,7 @@ var dcraName = 'MSProm-${clusterLocation}-${clusterName}'
 var nodeRecordingRuleGroupPrefix = 'NodeRecordingRulesRuleGroup-'
 var nodeRecordingRuleGroupName = '${nodeRecordingRuleGroupPrefix}${clusterName}'
 var nodeRecordingRuleGroupDescription = 'Node Recording Rules RuleGroup'
-var kubernetesRecordingRuleGrouPrefix = 'KubernetesReccordingRulesRuleGroup-'
+var kubernetesRecordingRuleGrouPrefix = 'KubernetesRecordingRulesRuleGroup-'
 var kubernetesRecordingRuleGroupName = '${kubernetesRecordingRuleGrouPrefix}${clusterName}'
 var kubernetesRecordingRuleGroupDescription = 'Kubernetes Recording Rules RuleGroup'
 var nodeRecordingRuleGroupWin = 'NodeRecordingRulesRuleGroup-Win-'

@@ -657,7 +657,7 @@ jobs:
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push  --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
         docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
         MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
         DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
@@ -734,7 +734,7 @@ jobs:
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
+        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
         docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
         DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
