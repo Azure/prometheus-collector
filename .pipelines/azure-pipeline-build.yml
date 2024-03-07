@@ -317,6 +317,8 @@ jobs:
     name: Azure-Pipelines-CI-Test-EO
   variables:
     skipComponentGovernanceDetection: true
+  dependsOn: Determine_Build_Necessary
+  condition: and(succeeded(), eq(dependencies.Foo.outputs['Determine_Build_Neccessary.SKIP_BUILD'], false))
   steps:
     - checkout: self
       submodules: true
