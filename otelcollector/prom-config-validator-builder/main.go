@@ -128,7 +128,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						if _, isString := relabelConfig["regex"].(string); isString {
 							regexString := relabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-							if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
+							if strings.EqualFold(controllerType, daemonSetControllerType) {
 								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
 								// Doing the below since we dont want to substitute $ with $$ for env variables NODE_NAME and NODE_IP.
 								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
@@ -141,7 +141,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					if relabelConfig["replacement"] != nil {
 						replacement := relabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-						if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
+						if strings.EqualFold(controllerType, daemonSetControllerType) {
 							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
 							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
 							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
