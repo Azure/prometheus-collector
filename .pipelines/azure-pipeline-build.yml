@@ -82,7 +82,7 @@ jobs:
             done
             if [[ $found == false ]]; then
                 echo "Build required by $file"
-                echo "##vso[task.setvariable variable=SKIP_BUILD;isOutput=true]false"
+                echo "##vso[task.setvariable variable=SKIP_BUILD;isOutput=true]$found"
                 exit 0
             fi
         done
@@ -95,7 +95,7 @@ jobs:
 - job: Image_Tags_and_Ev2_Artifacts
   displayName: "Build: Set image tags and publish Ev2 artifacts"
   dependsOn: Determine_Build_Necessary
-  condition: and(succeeded(), eq(dependencies.Determine_Build_Neccessary.outputs['filesChanged.SKIP_BUILD'], false))
+  condition: and(succeeded(), eq(dependencies.Determine_Build_Necessary.outputs['filesChanged.SKIP_BUILD'], false))
   pool:
     name: Azure-Pipelines-CI-Test-EO
   variables:
@@ -335,7 +335,7 @@ jobs:
   variables:
     skipComponentGovernanceDetection: true
   dependsOn: Determine_Build_Necessary
-  condition: and(succeeded(), eq(dependencies.Determine_Build_Neccessary.outputs['filesChanged.SKIP_BUILD'], false))
+  condition: and(succeeded(), eq(dependencies.Determine_Build_Necessary.outputs['filesChanged.SKIP_BUILD'], false))
   steps:
     - checkout: self
       submodules: true
