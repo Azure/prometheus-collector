@@ -3,54 +3,12 @@ trigger:
     include:
     - main
     - grace/test-file-exclude
-  paths:
-    exclude:
-    - '*.md'
-    - '**/*.md'
-    - '.github/*'
-    - 'AddonArmTemplate/*'
-    - 'AddonBicepTemplate/*'
-    - 'AddonPolicyTemplate/*'
-    - 'AddonTerraformTemplate/*'
-    - 'ArcArmTemplate/*'
-    - 'ArcBicepTemplate/*'
-    - 'Azure-ARM-templates/*'
-    - 'GeneratedMonitoringArtifacts/*'
-    - 'internal/alerts/*'
-    - 'internal/docs/*'
-    - 'internal/monitoring/*'
-    - 'internal/scripts/*'
-    - 'internal/mixins/*'
-    - 'tools/*'
-    - '.pipelines/azure-pipeline-build.yml'
-    - '.pipelines/azure-pipeline-no-build.yml'
 
 pr:
   autoCancel: true
   branches:
     include:
     - main
-  paths:
-    exclude:
-    - '*.md'
-    - '**/*.md'
-    - '.github/*'
-    - 'AddonArmTemplate/*'
-    - 'AddonBicepTemplate/*'
-    - 'AddonPolicyTemplate/*'
-    - 'AddonTerraformTemplate/*'
-    - 'ArcArmTemplate/*'
-    - 'ArcBicepTemplate/*'
-    - 'Azure-ARM-templates/*'
-    - 'GeneratedMonitoringArtifacts/*'
-    - 'internal/alerts/*'
-    - 'internal/docs/*'
-    - 'internal/monitoring/*'
-    - 'internal/scripts/*'
-    - 'internal/mixins/*'
-    - 'tools/*'
-    - '.pipelines/azure-pipeline-build.yml'
-    - '.pipelines/azure-pipeline-no-build.yml'
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -68,8 +26,57 @@ variables:
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
 
 jobs:
+- job: Determine_Build_Necessary
+  displayName: "Build: Determine if changes require a new build"
+  pool:
+    name: Azure-Pipelines-CI-Test-EO
+  variables:
+    skipComponentGovernanceDetection: true
+  steps:
+    - bash: |
+        declare -a expected_patterns
+        expected_patterns=(
+          ".*\.md$"
+          ".*/.*\.md$"
+          "\.github/.*"
+          "AddonArmTemplate/.*"
+          "AddonBicepTemplate/.*"
+            "AddonTerraformTemplate/.*"
+            "ArcArmTemplate/.*"
+            "ArcBicepTemplate/.*"
+            "Azure-ARM-templates/.*"
+            "GeneratedMonitoringArtifacts/.*"
+            "internal/alerts/.*"
+            "internal/docs/.*"
+            "internal/monitoring/.*"
+            "internal/scripts/.*"
+            "internal/mixins/.*"
+            "tools/.*"
+          )
+        changed_files=$(git diff --name-only main..HEAD)
+
+        for file in $changed_files; do
+            found=false
+            for pattern in "${expected_patterns[@]}"; do
+                if [[ $file =~ $pattern ]]; then
+                    found=true
+                    break
+                fi
+            done
+            if [[ $found == false ]]; then
+                echo "Build required by $file"
+                echo "##vso[task.setvariable variable=SKIP_BUILD;isOutput=true]false"
+                exit 0
+            fi
+        done
+
+        echo "Build not required by changes"
+        echo "##vso[task.setvariable variable=SKIP_BUILD;isOutput=true]true"
+
 - job: Image_Tags_and_Ev2_Artifacts
   displayName: "Build: Set image tags and publish Ev2 artifacts"
+  dependsOn: Determine_Build_Necessary
+  condition: and(succeeded(), eq(dependencies.Foo.outputs['Determine_Build_Neccessary.SKIP_BUILD'], false))
   pool:
     name: Azure-Pipelines-CI-Test-EO
   variables:
