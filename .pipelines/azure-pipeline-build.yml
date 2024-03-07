@@ -70,6 +70,7 @@ jobs:
             "internal/scripts/.*"
             "internal/mixins/.*"
             "tools/.*"
+            "\.pipelines/.*"
           )
 
         for file in $changed_files; do
