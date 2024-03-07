@@ -35,6 +35,7 @@ jobs:
   steps:
     - checkout: self
     - bash: |
+        git status
         declare -a expected_patterns
         expected_patterns=(
           ".*\.md$"
