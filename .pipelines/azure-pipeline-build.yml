@@ -48,7 +48,7 @@ jobs:
         if [ $(IS_MAIN_BRANCH) == "True" ]; then
           changed_files=$(git diff --name-only HEAD^ HEAD)
         else
-          changed_files=$(git diff --name-only $(BRANCH_NAME)..origin/main)
+          changed_files=$(git diff --name-only $BRANCH_NAME..origin/main)
         fi
         
         declare -a expected_patterns
