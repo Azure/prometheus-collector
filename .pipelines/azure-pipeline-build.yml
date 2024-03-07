@@ -48,6 +48,7 @@ jobs:
         if [ $(IS_MAIN_BRANCH) == "True" ]; then
           changed_files=$(git diff --name-only HEAD^ HEAD)
         else
+          git checkout $BRANCH_NAME
           changed_files=$(git diff --name-only $BRANCH_NAME..origin/main)
         fi
         
