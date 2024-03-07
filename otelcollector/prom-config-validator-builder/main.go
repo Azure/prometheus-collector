@@ -161,11 +161,9 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						if _, isString := metricRelabelConfig["regex"].(string); isString {
 							regexString := metricRelabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-							if strings.EqualFold(controllerType, daemonSetControllerType) {
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
-							}
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
 							metricRelabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -174,11 +172,9 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					if metricRelabelConfig["replacement"] != nil {
 						replacement := metricRelabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-						if strings.EqualFold(controllerType, daemonSetControllerType) {
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
-						}
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
