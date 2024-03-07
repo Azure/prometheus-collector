@@ -36,6 +36,8 @@ jobs:
     - checkout: self
     - bash: |
         git status
+        echo $(Build.SourceBranch)
+        
         declare -a expected_patterns
         expected_patterns=(
           ".*\.md$"
@@ -55,7 +57,7 @@ jobs:
             "internal/mixins/.*"
             "tools/.*"
           )
-        changed_files=$(git diff --name-only main..HEAD)
+        changed_files=$(git diff --name-only main..$(Build.SourceBranch))
 
         for file in $changed_files; do
             found=false
