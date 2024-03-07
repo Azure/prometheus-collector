@@ -90,11 +90,12 @@ jobs:
         echo "Build not required by changes"
         echo "##vso[task.setvariable variable=SKIP_BUILD;isOutput=true]true"
       workingDirectory: $(Build.SourcesDirectory)
+      name: filesChanged
 
 - job: Image_Tags_and_Ev2_Artifacts
   displayName: "Build: Set image tags and publish Ev2 artifacts"
   dependsOn: Determine_Build_Necessary
-  condition: and(succeeded(), eq(dependencies.Foo.outputs['Determine_Build_Neccessary.SKIP_BUILD'], false))
+  condition: and(succeeded(), eq(dependencies.Determine_Build_Neccessary.outputs['filesChanged.SKIP_BUILD'], false))
   pool:
     name: Azure-Pipelines-CI-Test-EO
   variables:
@@ -334,7 +335,7 @@ jobs:
   variables:
     skipComponentGovernanceDetection: true
   dependsOn: Determine_Build_Necessary
-  condition: and(succeeded(), eq(dependencies.Foo.outputs['Determine_Build_Neccessary.SKIP_BUILD'], false))
+  condition: and(succeeded(), eq(dependencies.Determine_Build_Neccessary.outputs['filesChanged.SKIP_BUILD'], false))
   steps:
     - checkout: self
       submodules: true
