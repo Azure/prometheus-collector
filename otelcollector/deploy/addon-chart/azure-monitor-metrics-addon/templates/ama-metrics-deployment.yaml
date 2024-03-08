@@ -72,10 +72,10 @@ spec:
               value: "false"
             {{- end }}
             - name: customEnvironment
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ lower .Values.Azure.Cluster.Cloud }}"
-              {{- else if .Values.AzureMonitorMetrics.isArcACluster }}
+              {{- if .Values.AzureMonitorMetrics.isArcACluster }}
               value: "arcautonomous"
+              {{- else if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ lower .Values.Azure.Cluster.Cloud }}"
               {{- else }}
               value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
               {{- end }}
