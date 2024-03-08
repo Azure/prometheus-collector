@@ -48,8 +48,8 @@ AzureMonitorMetrics:
   DsMemoryRequestLinux: 150Mi
   DsCPULimitWindows: 500m
   DsMemoryLimitWindows: 1Gi
-  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator"
-  ImageTagCfgReader: ${IMAGE_TAG}-cfg"
+  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator
+  ImageTagCfgReader: ${IMAGE_TAG}-cfg
   TargetAllocatorEnabled: true
   DeploymentReplicas: 1
   CfgReaderCPULimit: 1
