@@ -50,7 +50,7 @@ AzureMonitorMetrics:
   DsMemoryLimitWindows: 1Gi
   ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator"
   ImageTagCfgReader: ${IMAGE_TAG}-cfg"
-  TargetAllocatorEnabled: false
+  TargetAllocatorEnabled: true
   DeploymentReplicas: 1
   CfgReaderCPULimit: 1
   CfgReaderMemoryLimit: 1Gi
