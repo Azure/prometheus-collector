@@ -49,8 +49,6 @@ type OtelConfig struct {
 var RESET = "\033[0m"
 var RED = "\033[31m"
 
-const daemonSetControllerType = "DaemonSet"
-
 func logFatalError(message string) {
 	// Do not set env var if customer is running outside of agent to just validate config
 	if os.Getenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT") == "true" {
@@ -105,9 +103,6 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		return err
 	}
 
-	controllerType := os.Getenv("CONTROLLER_TYPE")
-	isOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
-
 	var prometheusConfig map[string]interface{}
 	err = yaml.Unmarshal([]byte(promConfigFileContents), &prometheusConfig)
 	if err != nil {
@@ -129,12 +124,10 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						if _, isString := relabelConfig["regex"].(string); isString {
 							regexString := relabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-							if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-								// Doing the below since we dont want to substitute $ with $$ for env variables NODE_NAME and NODE_IP.
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
-							}
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							// Doing the below since we dont want to substitute $ with $$ for env variables NODE_NAME and NODE_IP.
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
 							relabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -142,11 +135,9 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					if relabelConfig["replacement"] != nil {
 						replacement := relabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-						if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
-						}
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
 						relabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
@@ -162,11 +153,9 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						if _, isString := metricRelabelConfig["regex"].(string); isString {
 							regexString := metricRelabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
-							if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
-								modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
-							}
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
 							metricRelabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -175,11 +164,9 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 					if metricRelabelConfig["replacement"] != nil {
 						replacement := metricRelabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
-						if strings.EqualFold(controllerType, daemonSetControllerType) || strings.EqualFold(isOperatorEnabled, "false") {
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
-							modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
-						}
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
