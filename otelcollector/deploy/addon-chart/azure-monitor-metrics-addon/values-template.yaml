@@ -73,7 +73,7 @@ AzureMonitorMetrics:
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
     ImageTagWin: "20230120winbeta"
   ArcExtension: ${ARC_EXTENSION}
-  ArcEnableOperator: true
+  ArcEnableOperator: false
   # Do not change the below settings. They are reserved for Arc Autonomous
   isArcACluster: false
   arcAutonomousSettings:
