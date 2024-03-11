@@ -145,6 +145,7 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
 ## Running the Tests
 - Run the commands below by replacing the placeholders with the SP Client ID, SP Secret, and the AMW query endpoint:
   ```
+  (linux) export GOPROXY=https://proxy.golang.org / (powershell) $env:GOPROXY = "https://proxy.golang.org"
   sudo -E go install -v github.com/onsi/ginkgo/v2/ginkgo@latest
 
   cd otelcollector/test
