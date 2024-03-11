@@ -1,4 +1,4 @@
-module github.com/rashmy/prom-config-validator-builder
+module github.com/prometheus-collector/otelcollector/prom-config-validator-builder
 
 go 1.20
 
