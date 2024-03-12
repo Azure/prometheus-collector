@@ -126,6 +126,8 @@ func CheckAllProcessesRunning(K8sClient *kubernetes.Clientset, Cfg *rest.Config,
 	if os == "linux" {
 		processesGrepString = strings.TrimSuffix(processesGrepStringBuilder.String(), " && ")
 	} else if os == "windows" {
+		// special case handling for filesystemwatcher as its running as a powershell process
+		processesGrepStringBuilder.WriteString(fmt.Sprintf("Get-Process | Where-Object { $_.ProcessName -eq 'powershell' } | Select-Object ProcessName, Id, @{Name=\"Arguments\";Expression={(Get-WmiObject Win32_Process -Filter \"ProcessId = $($_.Id)\").CommandLine}} | Where-Object { $_.Arguments -like '*filesystemwatcher*' }; "))
 		processesGrepString = strings.TrimSuffix(processesGrepStringBuilder.String(), "; ")
 	}
 
