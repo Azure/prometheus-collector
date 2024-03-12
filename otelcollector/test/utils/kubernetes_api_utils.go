@@ -112,30 +112,15 @@ func getContainerLogs(clientset *kubernetes.Clientset, namespace string, podName
 /*
  * For the given list of processes, checks that all of them are running in all the containers with the given name, in the pods with the given label.
  */
-func CheckAllProcessesRunning(K8sClient *kubernetes.Clientset, Cfg *rest.Config, labelName, labelValue, namespace, containerName string, processes []string, os string) error {
+func CheckAllProcessesRunning(K8sClient *kubernetes.Clientset, Cfg *rest.Config, labelName, labelValue, namespace, containerName string, processes []string) error {
 	var processesGrepStringBuilder strings.Builder
 	for _, process := range processes {
-		if os == "linux" {
-			processesGrepStringBuilder.WriteString(fmt.Sprintf("ps | grep \"%s\" | grep -v grep && ", process))
-		} else if os == "windows" {
-			processesGrepStringBuilder.WriteString(fmt.Sprintf("Get-Process | Where-Object { $_.ProcessName -eq '%s' } | Select-Object -First 1; ", process))
-		}
+		processesGrepStringBuilder.WriteString(fmt.Sprintf("ps | grep \"%s\" | grep -v grep && ", process))
 	}
 
-	processesGrepString := ""
-	if os == "linux" {
-		processesGrepString = strings.TrimSuffix(processesGrepStringBuilder.String(), " && ")
-	} else if os == "windows" {
-		// special case handling for filesystemwatcher as its running as a powershell process
-		processesGrepStringBuilder.WriteString(fmt.Sprintf("Get-Process | Where-Object { $_.ProcessName -eq 'powershell' } | Select-Object ProcessName, Id, @{Name=\"Arguments\";Expression={(Get-WmiObject Win32_Process -Filter \"ProcessId = $($_.Id)\").CommandLine}} | Where-Object { $_.Arguments -like '*filesystemwatcher*' }; "))
-		processesGrepString = strings.TrimSuffix(processesGrepStringBuilder.String(), "; ")
-	}
+	processesGrepString := strings.TrimSuffix(processesGrepStringBuilder.String(), " && ")
 
 	command := []string{"bash", "-c", processesGrepString}
-
-	if os == "windows" {
-		command = []string{"powershell", "-Command", processesGrepString}
-	}
 
 	pods, err := GetPodsWithLabel(K8sClient, namespace, labelName, labelValue)
 	if err != nil {
@@ -146,6 +131,42 @@ func CheckAllProcessesRunning(K8sClient *kubernetes.Clientset, Cfg *rest.Config,
 		_, _, err := ExecCmd(K8sClient, Cfg, pod.Name, containerName, namespace, command)
 		if err != nil {
 			return fmt.Errorf("Error when running command %v in the container: %v", command, err)
+		}
+	}
+	return nil
+}
+
+/*
+ * For the given list of processes, checks that all of them are running in all the containers with the given name, in the pods with the given label.
+ */
+func CheckAllWindowsProcessesRunning(K8sClient *kubernetes.Clientset, Cfg *rest.Config, labelName, labelValue, namespace, containerName string, processes []string) error {
+	var processesGrepStringBuilder strings.Builder
+	processesGrepStringBuilder.WriteString(fmt.Sprintf("ps | findstr"))
+	for _, process := range processes {
+		processesGrepStringBuilder.WriteString(fmt.Sprintf(" /c:'%s'", process))
+	}
+
+	// special case handling for filesystemwatcher as its running as a powershell process
+	// processesGrepStringBuilder.WriteString(fmt.Sprintf("Get-Process | Where-Object { $_.ProcessName -eq 'powershell' } | Select-Object ProcessName, Id, @{Name=\"Arguments\";Expression={(Get-WmiObject Win32_Process -Filter \"ProcessId = $($_.Id)\").CommandLine}} | Where-Object { $_.Arguments -like '*filesystemwatcher*' }; "))
+	processesGrepString := strings.TrimSuffix(processesGrepStringBuilder.String(), "; ")
+
+	command := []string{"powershell", "-Command", processesGrepString}
+
+	pods, err := GetPodsWithLabel(K8sClient, namespace, labelName, labelValue)
+	if err != nil {
+		return fmt.Errorf("Error when getting pods with label %s=%s: %v", labelName, labelValue, err)
+	}
+
+	for _, pod := range pods {
+		ret_stdout, _, err := ExecCmd(K8sClient, Cfg, pod.Name, containerName, namespace, command)
+		if err != nil {
+			return fmt.Errorf("Error when running command %v in the container: %v", command, err)
+		}
+		// Check if all processes are present in the ret_stdout
+		for _, process := range processes {
+			if !strings.Contains(ret_stdout, process) {
+				return fmt.Errorf("Process %s is not running in pod %s container %s", process, pod.Name, containerName)
+			}
 		}
 	}
 	return nil

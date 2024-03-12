@@ -32,7 +32,7 @@ var _ = DescribeTable("The containers should be running",
  */
 var _ = DescribeTable("All processes are running",
 	func(namespace, labelName, labelValue, containerName string, processes []string) {
-		err := utils.CheckAllProcessesRunning(K8sClient, Cfg, labelName, labelValue, namespace, containerName, processes, "linux")
+		err := utils.CheckAllProcessesRunning(K8sClient, Cfg, labelName, labelValue, namespace, containerName, processes)
 		Expect(err).NotTo(HaveOccurred())
 	},
 	Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics", "prometheus-collector",
@@ -66,19 +66,19 @@ var _ = DescribeTable("All processes are running",
  */
 var _ = DescribeTable("All processes are running",
 	func(namespace, labelName, labelValue, containerName string, processes []string) {
-		err := utils.CheckAllProcessesRunning(K8sClient, Cfg, labelName, labelValue, namespace, containerName, processes, "windows")
+		err := utils.CheckAllWindowsProcessesRunning(K8sClient, Cfg, labelName, labelValue, namespace, containerName, processes)
 		Expect(err).NotTo(HaveOccurred())
 	},
 	Entry("when checking the ama-metrics-win-node daemonset pods", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector",
 		[]string{
-			"fluent-bit.exe",
-			"telegraf.exe",
-			"otelcollector.exe",
-			"MonAgentLauncher.exe",
-			"MonAgentHost.exe",
-			"MonAgentManager.exe",
-			"MonAgentCore.exe",
-			"MetricsExtension.Native.exe",
+			"fluent-bit",
+			"telegraf",
+			"otelcollector",
+			"MetricsExtension",
+			"MonAgentLauncher",
+			"MonAgentHost",
+			"MonAgentManager",
+			"MonAgentCore",
 		},
 		Label(utils.WindowsLabel),
 	),
