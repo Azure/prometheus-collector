@@ -150,8 +150,10 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
   cd otelcollector/test
 
   AMW_QUERY_ENDPOINT="<query endpoint>" QUERY_ACCESS_CLIENT_ID="<client ID>" QUERY_ACCESS_CLIENT_SECRET="<client secret>" \
-  ginkgo -p -r --keep-going --label-filter='!/./'
+  ginkgo -p -r --keep-going --label-filter='!/./' -ldflags="-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com" 
   ```
+- `AMW_QUERY_ENDPOINT`, `QUERY_ACCESS_CLIENT_ID`, and `QUERY_ACCESS_CLIENT_SECRET` give access to query from the AMW connected to the cluster.
+- `-ldflags="-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com"` allows use of the Prometheus Operator client package to get info about PodMonitors and ServiceMonitors under our group name instead of the OSS Prometheus group.
 - You can customize which tests are run with `--label-filter`:
   - `--label-filter='!/./` is an expression that runs all tests that don't have a label.
   - `--label-filter='!/./ || LABELNAME` is an expression that runs all tests that don't have a label and tests that have the label `LABELNAME`.
@@ -331,7 +333,20 @@ Some highlights are that:
   ```
 
 ## Bootstrap a CI/CD Cluster to Run TestKube Tests
-- Install the ama-metrics agent through the [backdoor deployment](../deploy/addon-chart/Readme.md).
+- Create a new cluster using the [ARM template](./ci/cd) as a starting point with the nodepool type matrix. This template does the following and can be edited to create a private cluster or http(s) proxy cluster:
+  - Creates an AMW in the subscription and resource group the ARM template is deployed in.
+  - Creates an AKS cluster in the subscription and resource group the ARM template is deployed in with the following nodepools:
+    - AMD64 Ubuntu Linux
+    - FIPS-Enabled AMD64 Ubuntu Linux
+    - ARM64 Ubuntu Linux
+    - AMD64 Mariner Linux
+    - ARM64 Mariner Linux
+    - Windows 2019
+    - Windows 2022
+  - Creates the DCE, DCR, and DCRA for the AMW and AKS cluster.
+  - Creates the recording rules for Linux and Windows.
+  - [Optional] The alert rule group for CI/CD ICM alerting can be changed from `enabled: false` to `enabled: true`.
+- Install the ama-metrics agent helm chart through the [backdoor deployment](../deploy/addon-chart/Readme.md#step-3-go-to-addon-chart-directory) starting at Step 3.
 - Deploy the following apps and configmaps on the cluster:
   - [Linux reference app](../../internal/referenceapp/prometheus-reference-app.yaml)
   - [Windows reference app](../../internal/referenceapp/win-prometheus-reference-app.yaml)
@@ -351,7 +366,7 @@ Some highlights are that:
 - Add to the `Deploy_AKS_Chart` job in the pipeline yaml to deploy the chart to another cluster. Replace the `azureResourceGroup` and `kubernetesCluster` with the corresponding values.
   ```
   - task: HelmDeploy@0
-    displayName: "Deploy: ci-dev-aks-mac-eus cluster"
+    displayName: "Deploy: <cluster-name> cluster"
     inputs:
       connectionType: 'Azure Resource Manager'
       azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
@@ -432,7 +447,7 @@ Some highlights are that:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Run tests"
   ```
-- Add the alerting to the CI/CD cluster following [these instructions](/internal/alerts).
+
 
 # Processes
 ## When to Run Each Test
