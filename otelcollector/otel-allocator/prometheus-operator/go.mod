@@ -2,10 +2,6 @@ module github.com/prometheus-operator/prometheus-operator
 
 go 1.21
 
-replace github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring => ./pkg/apis/monitoring
-
-replace github.com/prometheus-operator/prometheus-operator/pkg/client => ./pkg/client
-
 require (
 	github.com/alecthomas/kingpin/v2 v2.3.2
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137
@@ -37,7 +33,7 @@ require (
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
 	golang.org/x/net v0.17.0
 	golang.org/x/sync v0.4.0
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.28.3
 	k8s.io/apiextensions-apiserver v0.28.3
