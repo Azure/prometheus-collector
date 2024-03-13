@@ -61,7 +61,7 @@ extends:
       - job: Image_Tags_and_Ev2_Artifacts
         displayName: "Build: Set image tags and publish Ev2 artifacts"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          type: linux
         variables:
         - name: skipComponentGovernanceDetection
           value: true
@@ -197,7 +197,7 @@ extends:
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          type: linux
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
         - name: skipComponentGovernanceDetection
@@ -227,7 +227,7 @@ extends:
       - job: Linux_Python_Reference_App
         displayName: "Build: linux python reference app image"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          type: linux
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
         - name: skipComponentGovernanceDetection
@@ -256,7 +256,7 @@ extends:
       - job: Golang_Windows_Reference_App
         displayName: "Build: windows golang reference app image"
         pool:
-          name: Azure-Pipelines-Windows-CI-Test-EO
+          type: windows
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
         - name: WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME
@@ -277,7 +277,7 @@ extends:
       - job: Windows_Python_Reference_App
         displayName: "Build: windows python reference app image"
         pool:
-          name: Azure-Pipelines-Windows-CI-Test-EO
+          type: windows
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
         - name: WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME
@@ -298,7 +298,7 @@ extends:
       - job: SDL_Policheck_Scan
         displayName: "SDL: policheck scanning"
         pool:
-          name: Azure-Pipelines-Windows-CI-Test-EO
+          type: windows
         variables:
         - name: skipComponentGovernanceDetection
           value: true
@@ -317,7 +317,7 @@ extends:
       - job: SDL_Binary_Scan
         displayName: "SDL: linux binary scanning"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          type: windows
         variables:
         - name: skipComponentGovernanceDetection
           value: true
@@ -374,7 +374,7 @@ extends:
       - job: Linux_Prometheus_Collector
         displayName: "Build: linux prometheus-collector image"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          type: linux
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
         - name: LINUX_FULL_IMAGE_NAME
@@ -533,7 +533,7 @@ extends:
       - job: Linux_Target_Allocator
         displayName: "Build: target allocator image"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          type: linux
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
         - name: TARGET_ALLOCATOR_FULL_IMAGE_NAME
@@ -616,7 +616,7 @@ extends:
       - job: Linux_Config_Reader
         displayName: "Build: config reader image"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          type: linux
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
         - name: LINUX_CONFIG_READER_FULL_IMAGE_NAME
@@ -696,7 +696,7 @@ extends:
       - job: Windows2019_Prometheus_Collector
         displayName: "Build: windows 2019 prometheus-collector image"
         pool:
-          name: Azure-Pipelines-Windows-CI-Test-EO
+          type: windows
         timeoutInMinutes: 120
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
@@ -734,7 +734,7 @@ extends:
       - job: Windows2022_Prometheus_Collector
         displayName: "Build: windows 2022 prometheus-collector image"
         pool:
-          name: Azure-Pipelines-Windows-CI-Test-EO
+          type: windows
         timeoutInMinutes: 120
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
@@ -747,6 +747,8 @@ extends:
           value: true
         - name: ob_outputDirectory
           value: '$(Build.ArtifactStagingDirectory)/ONEBRANCH_ARTIFACT'
+        - name: WindowsContainerImage
+          value: 'onebranch.azurecr.io/windows/ltsc2022/vse2022:latest'
         steps:
         - task: GoTool@0
           displayName: "Build: specify golang version"
@@ -772,7 +774,7 @@ extends:
       - job: WindowsMultiArch_Prometheus_Collector
         displayName: "Build: windows multi-arch prometheus-collector image"
         pool:
-          name: Azure-Pipelines-Windows-CI-Test-EO
+          type: windows
         timeoutInMinutes: 120
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
@@ -926,7 +928,7 @@ extends:
       - job: Arc_Helm_Chart
         displayName: "Package: Arc helm chart"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          type: linux
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
         - Linux_Prometheus_Collector
@@ -987,7 +989,7 @@ extends:
         displayName: "Deploy: Arc dev cluster"
         condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          type: linux
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
         - Arc_Helm_Chart
@@ -1099,7 +1101,7 @@ extends:
       - job: Deploy_AKS_Chart
         displayName: "Deploy: AKS dev cluster"
         pool:
-          name: Azure-Pipelines-CI-Test-EO
+          type: linux
         condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
