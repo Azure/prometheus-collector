@@ -1,33 +1,23 @@
 kind: ConfigMap
 apiVersion: v1
 data:
-  schema-version:
-    #string.used by agent to parse config. supported versions are {v1}. Configs with other schema versions will be rejected by the agent.
-    v1
-  config-version:
-    #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
-    ver1
-  prometheus-collector-settings: |-
-    cluster_alias = ""
+  config-version: ver1
+  debug-mode: enabled = false
   default-scrape-settings-enabled: |-
     kubelet = true
-    coredns = false
+    coredns = true
     cadvisor = true
-    kubeproxy = false
-    apiserver = false
+    kubeproxy = true
+    apiserver = true
     kubestate = true
     nodeexporter = true
-    windowsexporter = false
-    windowskubeproxy = false
+    windowsexporter = true
+    windowskubeproxy = true
     kappiebasic = true
     networkobservabilityRetina = true
     networkobservabilityHubble = true
     networkobservabilityCilium = true
     prometheuscollectorhealth = false
-  # Regex for which namespaces to scrape through pod annotation based scraping.
-  # This is none by default. Use '.*' to scrape all namespaces of annotated pods.
-  pod-annotation-based-scraping: |-
-    podannotationnamespaceregex = ""
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""
@@ -60,8 +50,9 @@ data:
     networkobservabilityCilium = "30s"
     prometheuscollectorhealth = "30s"
     podannotations = "30s"
-  debug-mode: |-
-    enabled = false
+  pod-annotation-based-scraping: podannotationnamespaceregex = ".*"
+  prometheus-collector-settings: cluster_alias = ""
+  schema-version: v1
 metadata:
   name: ama-metrics-settings-configmap
   namespace: kube-system
