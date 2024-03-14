@@ -21,6 +21,7 @@ CVE-2024-21626
 CVE-2023-48795
 # MEDIUM - promconfigvalidator
 CVE-2023-48795
+CVE-2024-24786
 # MEDIUM - telegraf
 GHSA-jq35-85cj-fj4p
 GHSA-7ww5-4wqc-m92c
