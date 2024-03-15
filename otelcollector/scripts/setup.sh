@@ -77,4 +77,4 @@ sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversi
 rm -f $TMPDIR/metricsext2*.rpm
 rm -f $TMPDIR/azure-mdsd*.rpm
 # Remove mdsd's telegraf
-rm /usr/sbin/telegraf
+# rm /usr/sbin/telegraf
