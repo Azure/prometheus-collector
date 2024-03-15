@@ -210,26 +210,26 @@ else
       # sleep for 10 seconds
       sleep 10
 
-      echo "Setting env variables from envmdsd file for MDSD"
-      cat /etc/mdsd.d/envmdsd | while read line; do
-            echo $line >> ~/.bashrc
-      done
-      source /etc/mdsd.d/envmdsd
-      echo "Starting MDSD"
+      ##echo "Setting env variables from envmdsd file for MDSD"
+      ##cat /etc/mdsd.d/envmdsd | while read line; do
+      ##      echo $line >> ~/.bashrc
+      ##done
+      ##source /etc/mdsd.d/envmdsd
+      ##echo "Starting MDSD"
       # Use options -T 0x1 or -T 0xFFFF for debug logging
-      mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
+      ##mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 
       # Running mdsd --version can't be captured into a variable unlike telegraf and otelcollector, have to run after printing the string
-      echo -n -e "${Cyan}MDSD_VERSION${Color_Off}="; mdsd --version
+      ##echo -n -e "${Cyan}MDSD_VERSION${Color_Off}="; mdsd --version
 
-      echo "Waiting for 30s for MDSD to get the config and put them in place for ME"
+      ##echo "Waiting for 30s for MDSD to get the config and put them in place for ME"
       # sleep for 30 seconds
-      sleep 30
+      ##sleep 30
 
       echo "Reading me config file as a string for configOverrides paramater"
       export meConfigString=`cat $ME_CONFIG_FILE | tr '\r' ' ' |  tr '\n' ' ' | sed 's/\"/\\"/g' | sed 's/ //g'`
       echo "Starting metricsextension"
-      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc_prom -ConfigOverrides $meConfigString > /dev/null &
+      /usr/sbin/MetricsExtension -Logger File -LogLevel Info -TokenSource AMCS -DataDirectory /etc/metricsextension/config-cache -Input otlp_grpc_prom -ConfigOverrides $meConfigString > /dev/null &
 fi
 
 # Get ME version

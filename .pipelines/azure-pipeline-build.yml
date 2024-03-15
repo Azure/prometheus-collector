@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - vishwa/otlp-0
 
 pr:
   autoCancel: true
