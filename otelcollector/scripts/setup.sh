@@ -34,7 +34,7 @@ gem install tomlrb
 gem install deep_merge
 gem install re2
 
-#echo "Installing mdsd..."
+echo "Installing mdsd..."
 # if [ "${ARCH}" != "amd64" ]; then
 #   wget https://github.com/Azure/prometheus-collector/releases/download/azure-mdsd-1.23.3/azure-mdsd_1.23.4-build.master.28_aarch64.rpm
 #   sudo tdnf install -y azure-mdsd_1.23.4-build.master.28_aarch64.rpm
@@ -44,7 +44,7 @@ gem install re2
 # fi
 
 # Install this way once moving to the Mariner published RPMs:
-#sudo tdnf install -y azure-mdsd-1.27.4
+sudo tdnf install -y azure-mdsd-1.27.4
 
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
@@ -77,4 +77,4 @@ sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversi
 rm -f $TMPDIR/metricsext2*.rpm
 rm -f $TMPDIR/azure-mdsd*.rpm
 # Remove mdsd's telegraf
-# rm /usr/sbin/telegraf
+rm /usr/sbin/telegraf
