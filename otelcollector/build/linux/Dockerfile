@@ -68,7 +68,7 @@ COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
-COPY ./mdsd/envmdsd $tmpdir/
+# COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 
 ARG TARGETARCH
@@ -117,7 +117,7 @@ COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
 COPY --from=builder /usr/sbin/crond /usr/sbin/crond
 COPY --from=builder /usr/bin/vim /usr/bin/vim
 COPY --from=builder /usr/share/vim /usr/share/vim
-COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
+# COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
 COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
 COPY --from=builder /usr/bin/gzip /usr/bin/
 COPY --from=builder /usr/bin/curl /usr/bin/
