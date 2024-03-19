@@ -5,6 +5,10 @@
 # none
 
 # =========== HIGH ================
+# HIGH fluentbit
+CVE-2023-48105
+# MEDIUM fluentbit
+CVE-2023-52284
 # HIGH - otelcollector
 # HIGH - telegraf
 GHSA-fr2g-9hjm-wr23
@@ -33,6 +37,7 @@ CVE-2023-44487
 CVE-2023-50658
 CVE-2024-28110
 CVE-2024-27289
+CVE-2023-2816
 # MEDIUM - go vulnerabilities
 # MEDIUM - mariner
 CVE-2023-5678
