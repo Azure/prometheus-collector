@@ -282,12 +282,12 @@ FLUENT_BIT_VERSION=`fluent-bit --version`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
 
-if [ "${MAC}" == "true" ]; then
-  # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.
-  echo "starting inotify for watching mdsd config update"
-  touch /opt/inotifyoutput-mdsd-config.txt
-  inotifywait /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
-fi
+#if [ "${MAC}" == "true" ]; then
+#  # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.
+#  echo "starting inotify for watching mdsd config update"
+#  touch /opt/inotifyoutput-mdsd-config.txt
+#  inotifywait /etc/mdsd.d/config-cache/metricsextension/TokenConfig.json --daemon --outfile "/opt/inotifyoutput-mdsd-config.txt" --event ATTRIB --format '%e : %T' --timefmt '+%s'
+#fi
 
 # Setting time at which the container started running, so that it can be used for empty configuration checks in livenessprobe
 epochTimeNow=`date +%s`
