@@ -15,6 +15,8 @@ GHSA-m425-mq94-257g
 CVE-2023-47090
 CVE-2023-46129
 CVE-2024-21626
+# HIGH - fluent-bit
+CVE-2023-48105
 
 # =========== MEDIUM ================
 # MEDIUM - otelcollector
@@ -33,6 +35,9 @@ CVE-2023-44487
 CVE-2023-50658
 CVE-2024-28110
 CVE-2024-27289
+CVE-2023-2816
 # MEDIUM - go vulnerabilities
 # MEDIUM - mariner
 CVE-2023-5678
+# MEDIUM - fluent-bit
+CVE-2023-52284

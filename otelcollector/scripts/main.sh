@@ -17,9 +17,30 @@ echo_var "MODE" "$MODE"
 echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
 
-aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 -d)
-export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey
-echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc
+customEnvironment_lower=$(echo "$customEnvironment" | tr '[:upper:]' '[:lower:]')
+if [ "$customEnvironment_lower" == "azurepubliccloud" ]; then
+  encodedaikey="MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
+elif [ "$customEnvironment_lower" == "azureusgovernment" ]; then
+  encodedaikey="ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5"
+  aiendpoint="https://dc.applicationinsights.us/v2/track"
+elif [ "$customEnvironment_lower" == "azurechinacloud" ]; then
+  encodedaikey="ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4"
+  aiendpoint="https://dc.applicationinsights.azure.cn/v2/track"
+# elif [ "$customEnvironment_lower" == "usnat" ]; then
+#   encodedaikey="usnat key"
+# elif [ "$customEnvironment_lower" == "ussec" ]; then
+#   encodedaikey="ussec key"
+else
+    echo "Unknown customEnvironment: $customEnvironment_lower, setting telemetry output to the default azurepubliccloud instance"
+    encodedaikey="MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
+fi
+
+export APPLICATIONINSIGHTS_AUTH=$encodedaikey
+echo "export APPLICATIONINSIGHTS_AUTH=$encodedaikey" >> ~/.bashrc
+if [ -n "$aiendpoint" ]; then
+    export APPLICATIONINSIGHTS_ENDPOINT="$aiendpoint"
+    echo "export APPLICATIONINSIGHTS_ENDPOINT=\"$aiendpoint\"" >> ~/.bashrc
+fi
 source ~/.bashrc
 
 #get controller kind in lowercase, trimmed
