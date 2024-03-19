@@ -1,4 +1,4 @@
-module prometheus-collector/otelcollector/test/operator
+module operator
 
 go 1.20
 
