@@ -28,57 +28,9 @@ variables:
 stages:
 - stage: Build
   jobs:
-  - job: Determine_Build_Necessary
-    displayName: "Build: Determine if changes require a new build"
-    pool:
-      name: Azure-Pipelines-CI-Test-EO
-    variables:
-      skipComponentGovernanceDetection: true
-    steps:
-      - bash: |
-          declare -a expected_patterns
-          expected_patterns=(
-            ".*\.md$"
-            ".*/.*\.md$"
-            "\.github/.*"
-            "AddonArmTemplate/.*"
-            "AddonBicepTemplate/.*"
-              "AddonTerraformTemplate/.*"
-              "ArcArmTemplate/.*"
-              "ArcBicepTemplate/.*"
-              "Azure-ARM-templates/.*"
-              "GeneratedMonitoringArtifacts/.*"
-              "internal/alerts/.*"
-              "internal/docs/.*"
-              "internal/monitoring/.*"
-              "internal/scripts/.*"
-              "internal/mixins/.*"
-              "tools/.*"
-            )
-          changed_files=$(git diff --name-only main..HEAD)
-
-          for file in $changed_files; do
-              found=false
-              for pattern in "${expected_patterns[@]}"; do
-                  if [[ $file =~ $pattern ]]; then
-                      found=true
-                      break
-                  fi
-              done
-              if [[ $found == false ]]; then
-                  echo "Build required by $file"
-                  echo "##vso[task.setvariable variable=SKIP_BUILD;isOutput=true]false"
-                  exit 0
-              fi
-          done
-
-          echo "Build not required by changes"
-          echo "##vso[task.setvariable variable=SKIP_BUILD;isOutput=true]true"
-
   - job: Image_Tags_and_Ev2_Artifacts
     displayName: "Build: Set image tags and publish Ev2 artifacts"
     dependsOn: Determine_Build_Necessary
-    condition: and(succeeded(), eq(dependencies.Foo.outputs['Determine_Build_Neccessary.SKIP_BUILD'], false))
     pool:
       name: Azure-Pipelines-CI-Test-EO
     variables:
@@ -316,7 +268,6 @@ stages:
     pool:
       name: Azure-Pipelines-CI-Test-EO
     dependsOn: Determine_Build_Necessary
-    condition: and(succeeded(), eq(dependencies.Foo.outputs['Determine_Build_Neccessary.SKIP_BUILD'], false))
     variables:
       skipComponentGovernanceDetection: true
     steps:
