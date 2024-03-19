@@ -30,7 +30,6 @@ stages:
   jobs:
   - job: Image_Tags_and_Ev2_Artifacts
     displayName: "Build: Set image tags and publish Ev2 artifacts"
-    dependsOn: Determine_Build_Necessary
     pool:
       name: Azure-Pipelines-CI-Test-EO
     variables:
@@ -267,7 +266,6 @@ stages:
     displayName: "SDL: linux binary scanning"
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    dependsOn: Determine_Build_Necessary
     variables:
       skipComponentGovernanceDetection: true
     steps:
