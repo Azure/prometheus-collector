@@ -2,50 +2,12 @@ trigger:
   branches:
     include:
     - main
-  paths:
-    exclude:
-    - '*.md'
-    - '**/*.md'
-    - '.github/*'
-    - 'AddonArmTemplate/*'
-    - 'AddonBicepTemplate/*'
-    - 'AddonPolicyTemplate/*'
-    - 'AddonTerraformTemplate/*'
-    - 'ArcArmTemplate/*'
-    - 'ArcBicepTemplate/*'
-    - 'Azure-ARM-templates/*'
-    - 'GeneratedMonitoringArtifacts/*'
-    - 'internal/alerts/*'
-    - 'internal/docs/*'
-    - 'internal/monitoring/*'
-    - 'internal/scripts/*'
-    - 'internal/mixins/*'
-    - 'tools/*'
 
 pr:
   autoCancel: true
   branches:
     include:
     - main
-  paths:
-    exclude:
-    - '*.md'
-    - '**/*.md'
-    - '.github/*'
-    - 'AddonArmTemplate/*'
-    - 'AddonBicepTemplate/*'
-    - 'AddonPolicyTemplate/*'
-    - 'AddonTerraformTemplate/*'
-    - 'ArcArmTemplate/*'
-    - 'ArcBicepTemplate/*'
-    - 'Azure-ARM-templates/*'
-    - 'GeneratedMonitoringArtifacts/*'
-    - 'internal/alerts/*'
-    - 'internal/docs/*'
-    - 'internal/monitoring/*'
-    - 'internal/scripts/*'
-    - 'internal/mixins/*'
-    - 'tools/*'
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -1126,12 +1088,12 @@ stages:
               arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
 
   - deployment: Testkube
-    displayName: "Test: run testkube tests"
+    displayName: "Test: AKS testkube tests"
     environment: Prometheus-Collector
     dependsOn: Deploy_AKS_Chart
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
     variables:
       HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
       HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -1160,7 +1122,7 @@ stages:
           
           - bash: |
               kubectl apply -f ./testkube
-              kubectl appky -f ./test-cluster-yamls
+              kubectl apply -f ./test-cluster-yamls
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
             displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
 

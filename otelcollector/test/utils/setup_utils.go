@@ -1,14 +1,20 @@
 package utils
 
 import (
+	"encoding/json"
 	"flag"
 	"path/filepath"
 
 	"k8s.io/client-go/rest"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
+
+	"io/ioutil"
+
+	"github.com/ghodss/yaml"
 )
 
 /*
@@ -39,4 +45,28 @@ func SetupKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
   }
 
   return client, cfg, nil
+}
+
+func ReadFileContent(filename string) ([]byte, error) {
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	return content, nil
+}
+
+func ParseK8sYaml(yamlBytes []byte) (corev1.ConfigMap, error) {
+	// convert the yaml to json
+	jsonBytes, err := yaml.YAMLToJSON(yamlBytes)
+	if err != nil {
+		return corev1.ConfigMap{}, err
+	}
+	// unmarshal the json into the kube struct
+	var configmap = corev1.ConfigMap{}
+	err = json.Unmarshal(jsonBytes, &configmap)
+	if err != nil {
+		return corev1.ConfigMap{}, err
+	}
+
+	return configmap, nil
 }
