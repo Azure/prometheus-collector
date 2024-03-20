@@ -20,7 +20,7 @@ echo_var "CLUSTER" "$CLUSTER"
 customEnvironment_lower=$(echo "$customEnvironment" | tr '[:upper:]' '[:lower:]')
 if [ "$customEnvironment_lower" == "azurepubliccloud" ]; then
   encodedaikey="MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
-elif [ "$customEnvironment_lower" == "azureusgovernment" ]; then
+elif [ "$customEnvironment_lower" == "azureusgovernmentcloud" ]; then
   # encodedaikey="ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5"
   # aiendpoint="https://dc.applicationinsights.us/v2/track"
   encodedaikey="OWNmYzNmZDEtMzFiZS1mOWE4LTgzMmYtMjNiYzIzNmQ0MWIy"
