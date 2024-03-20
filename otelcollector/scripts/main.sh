@@ -25,7 +25,8 @@ elif [ "$customEnvironment_lower" == "azureusgovernmentcloud" ]; then
   # encodedaikey="ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5"
   # aiendpoint="https://dc.applicationinsights.us/v2/track"
   encodedaikey="OWNmYzNmZDEtMzFiZS1mOWE4LTgzMmYtMjNiYzIzNmQ0MWIy"
-  aiendpoint="https://usgovvirginia-1.in.applicationinsights.azure.us/"
+  aiendpoint="https://dc.applicationinsights.azure.us/v2/track"
+  # aiendpoint="https://usgovvirginia-1.in.applicationinsights.azure.us/"
   echo "setting telemetry output to the azureusgovernmentcloud instance"
 elif [ "$customEnvironment_lower" == "azurechinacloud" ]; then
   encodedaikey="ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4"
