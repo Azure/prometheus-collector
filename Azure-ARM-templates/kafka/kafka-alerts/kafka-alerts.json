@@ -1,0 +1,172 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "clusterName": {
+            "type": "string",
+            "metadata": {
+                "description": "Cluster name"
+            }
+        },
+        "clusterResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "Cluster Resource Id"
+            }
+        },
+        "actionGroupResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "Action Group ResourceId"
+            }
+        },
+        "azureMonitorWorkspaceResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "ResourceId of Azure Monitor Workspace (AMW) to associate to"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]"
+        }
+    },
+    "variables": {
+        "kubernetesAlertRuleGroup": "KubernetesAlert-KafkaExporterAlerts",
+        "kubernetesAlertRuleGroupName": "[concat(variables('kubernetesAlertRuleGroup'), parameters('clusterName'))]",
+        "kubernetesAlertRuleGroupDescription": "Kubernetes Alert RuleGroup-KafkaExporterAlerts",
+        "version": " - 0.1"
+    },
+    "resources": [
+        {
+            "name": "[variables('kubernetesAlertRuleGroupName')]",
+            "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+            "apiVersion": "2023-03-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "description": "[concat(variables('kubernetesAlertRuleGroupDescription'), variables('version'))]",
+                "scopes": [
+                    "[parameters('azureMonitorWorkspaceResourceId')]",
+                    "[parameters('clusterResourceId')]"
+                ],
+                "clusterName": "[parameters('clusterName')]",
+                "interval": "PT1M",
+                "rules": [
+                    {
+                        "alert": "KafkaUnderReplicatedPartition",
+                        "expression": "kafka_topic_partition_under_replicated_partition > 0",
+                        "for": "PT5M",
+                        "annotations": {
+                            "description": "Cluster {{ $labels.cluster}} has under replicated kafka partitions."
+                        },
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "enabled": true,
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KafkaTooLargeConsumerGroupLag",
+                        "expression": "sum(kafka_consumergroup_lag) by (consumergroup) > 50",
+                        "for": "PT5M",
+                        "annotations": {
+                            "summary": "Kafka consumers group (instance {{ $labels.instance }})",
+                            "description": "Kafka consumers group\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }} Cluster {{ $labels.cluster}}"
+                        },
+                        "enabled": true,
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KafkaNoMessageForTooLong",
+                        "expression": "changes(kafka_topic_partition_current_offset[10m]) == 0",
+                        "for": "PT5M",
+                        "annotations": {
+                            "description": "No messages are seen for more than 10 minutes in Cluster {{ $labels.cluster}}"
+                        },
+                        "enabled": true,
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KafkaBrokerDown",
+                        "expression": "kafka_brokers < 1",
+                        "for": "PT5M",
+                        "annotations": {
+                            "summary": "Kafka broker *{{ $labels.instance }}* alert status",
+                            "description": "One or more of the Kafka broker *{{ $labels.instance }}* is down in Cluster {{ $labels.cluster}}"
+                        },
+                        "enabled": true,
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "KafkaTopicsReplicas",
+                        "expression": "sum(kafka_topic_partition_in_sync_replica) by (topic) < 1",
+                        "for": "PT5M",
+                        "annotations": {
+                            "summary": "Kafka topics replicas (instance {{ $labels.instance }})",
+                            "description": "Kafka topic in-sync partition\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }} Cluster {{ $labels.cluster}}"
+                        },
+                        "enabled": true,
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT15M"
+                        },
+                        "labels": {
+                            "severity": "warning"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}
