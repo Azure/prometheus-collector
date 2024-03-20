@@ -19,9 +19,11 @@ CVE-2024-21626
 # =========== MEDIUM ================
 # MEDIUM - otelcollector
 CVE-2023-48795
+CVE-2024-24557
 # MEDIUM - promconfigvalidator
 CVE-2023-48795
 CVE-2024-24786
+CVE-2024-24557
 # MEDIUM - telegraf
 GHSA-jq35-85cj-fj4p
 GHSA-7ww5-4wqc-m92c
@@ -35,6 +37,8 @@ CVE-2023-44487
 CVE-2023-50658
 CVE-2024-28110
 CVE-2024-27289
+CVE-2024-24557
+CVE-2024-29018
 # MEDIUM - go vulnerabilities
 # MEDIUM - mariner
 CVE-2023-5678
