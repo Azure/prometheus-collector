@@ -20,14 +20,17 @@ echo_var "CLUSTER" "$CLUSTER"
 customEnvironment_lower=$(echo "$customEnvironment" | tr '[:upper:]' '[:lower:]')
 if [ "$customEnvironment_lower" == "azurepubliccloud" ]; then
   encodedaikey="MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
+  echo "setting telemetry output to the default azurepubliccloud instance" 
 elif [ "$customEnvironment_lower" == "azureusgovernmentcloud" ]; then
   # encodedaikey="ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5"
   # aiendpoint="https://dc.applicationinsights.us/v2/track"
   encodedaikey="OWNmYzNmZDEtMzFiZS1mOWE4LTgzMmYtMjNiYzIzNmQ0MWIy"
   aiendpoint="https://usgovvirginia-1.in.applicationinsights.azure.us/"
+  echo "setting telemetry output to the azureusgovernmentcloud instance"
 elif [ "$customEnvironment_lower" == "azurechinacloud" ]; then
   encodedaikey="ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4"
   aiendpoint="https://dc.applicationinsights.azure.cn/v2/track"
+  echo "setting telemetry output to the azurechinacloud instance"
 # elif [ "$customEnvironment_lower" == "usnat" ]; then
 #   encodedaikey="usnat key"
 # elif [ "$customEnvironment_lower" == "ussec" ]; then
