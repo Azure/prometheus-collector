@@ -143,6 +143,7 @@ function Set-EnvironmentVariablesAndConfigParser {
     [Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH", $encodedaikey, "Process")
     [Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH", $encodedaikey, "Machine")
     if ($null -ne $aiendpoint) {
+        [Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_ENDPOINT", $aiendpoint, "Process")
         [Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_ENDPOINT", $aiendpoint, "Machine")
     }
 
