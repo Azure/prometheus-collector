@@ -5,8 +5,8 @@ go 1.20
 replace prometheus-collector/otelcollector/test/utils => ../utils
 
 require (
-	github.com/onsi/ginkgo/v2 v2.15.0
-	github.com/onsi/gomega v1.31.1
+	github.com/onsi/ginkgo/v2 v2.13.1
+	github.com/onsi/gomega v1.30.0
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.71.2
 	k8s.io/apimachinery v0.28.4
 	k8s.io/client-go v0.28.4
