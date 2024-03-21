@@ -8,7 +8,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	promOperatorClient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
+
+	//promOperatorClient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"k8s.io/client-go/rest"
 )
 
@@ -17,7 +18,7 @@ import (
 
 var K8sClient 	*kubernetes.Clientset
 var Cfg       	*rest.Config
-var PromClient 	promOperatorClient.Interface
+//var PromClient 	promOperatorClient.Interface
 
 /*
  * These tests MUST be run with the flag:
@@ -34,8 +35,8 @@ var _ = BeforeSuite(func() {
   var err error
   K8sClient, Cfg, err = utils.SetupKubernetesClient()
   Expect(err).NotTo(HaveOccurred())
-	PromClient, err = promOperatorClient.NewForConfig(Cfg)
-  Expect(err).NotTo(HaveOccurred())
+	//PromClient, err = promOperatorClient.NewForConfig(Cfg)
+  //Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
