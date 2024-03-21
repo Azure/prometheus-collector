@@ -8,6 +8,13 @@ require (
 	github.com/onsi/ginkgo/v2 v2.14.0
 	github.com/onsi/gomega v1.30.0
 	prometheus-collector/otelcollector/test/utils v0.0.0-00010101000000-000000000000
+  github.com/ghodss/yaml v1.0.0
+	github.com/google/uuid v1.3.0
+	github.com/prometheus/client_golang v1.18.0
+	github.com/prometheus/common v0.46.0
+	k8s.io/api v0.28.4
+	k8s.io/apimachinery v0.28.4
+	k8s.io/client-go v0.28.4
 )
 
 require (
