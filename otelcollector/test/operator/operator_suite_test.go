@@ -1,6 +1,7 @@
 package operator
 
 import (
+	"prometheus-collector/otelcollector/test/utils"
 	"testing"
 
 	"k8s.io/client-go/kubernetes"
