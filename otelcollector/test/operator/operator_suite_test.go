@@ -6,12 +6,15 @@ import (
 	"path/filepath"
 	"testing"
 
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	//promOperatorClient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
