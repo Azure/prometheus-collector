@@ -9,8 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	promOperatorClient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"k8s.io/client-go/rest"
-
-	"prometheus-collector/otelcollector/test/utils"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
