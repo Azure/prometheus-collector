@@ -4,20 +4,16 @@ import (
 	"prometheus-collector/otelcollector/test/utils"
 	"testing"
 
-	"k8s.io/client-go/kubernetes"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	//promOperatorClient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
-	"k8s.io/client-go/rest"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var K8sClient 	*kubernetes.Clientset
-var Cfg       	*rest.Config
+//var K8sClient 	*kubernetes.Clientset
+//var Cfg       	*rest.Config
 //var PromClient 	promOperatorClient.Interface
 
 /*
@@ -33,7 +29,8 @@ func TestOperator(t *testing.T) {
 
 var _ = BeforeSuite(func() {
   var err error
-  K8sClient, Cfg, err = utils.SetupKubernetesClient()
+  //K8sClient, Cfg, err = utils.SetupKubernetesClient()
+	_, _, err = utils.SetupKubernetesClient()
   Expect(err).NotTo(HaveOccurred())
 	//PromClient, err = promOperatorClient.NewForConfig(Cfg)
   //Expect(err).NotTo(HaveOccurred())
