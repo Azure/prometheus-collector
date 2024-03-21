@@ -48,6 +48,10 @@ if [ -n "$aiendpoint" ]; then
     export APPLICATIONINSIGHTS_ENDPOINT="$aiendpoint"
     echo "export APPLICATIONINSIGHTS_ENDPOINT=\"$aiendpoint\"" >> ~/.bashrc
 fi
+# Delete this when telegraf is removed
+aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 -d)
+export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey
+echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc
 source ~/.bashrc
 
 #get controller kind in lowercase, trimmed

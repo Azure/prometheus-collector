@@ -146,6 +146,11 @@ function Set-EnvironmentVariablesAndConfigParser {
         [Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_ENDPOINT", $aiendpoint, "Process")
         [Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_ENDPOINT", $aiendpoint, "Machine")
     }
+    
+    # Delete this when telegraf is removed
+    $aiKeyDecoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:APPLICATIONINSIGHTS_AUTH))
+    [System.Environment]::SetEnvironmentVariable("TELEMETRY_APPLICATIONINSIGHTS_KEY", $aiKeyDecoded, "Process")
+    [System.Environment]::SetEnvironmentVariable("TELEMETRY_APPLICATIONINSIGHTS_KEY", $aiKeyDecoded, "Machine")
 
     # run config parser
     ruby /opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb
