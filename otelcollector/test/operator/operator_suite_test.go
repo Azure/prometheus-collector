@@ -1,7 +1,6 @@
 package operator
 
 import (
-	"prometheus-collector/otelcollector/test/utils"
 	"testing"
 
 	"k8s.io/client-go/kubernetes"
@@ -10,24 +9,23 @@ import (
 	. "github.com/onsi/gomega"
 	promOperatorClient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"k8s.io/client-go/rest"
-)
 
-// These tests use Ginkgo (BDD-style Go testing framework). Refer to
-// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
+	"prometheus-collector/otelcollector/test/utils"
+)
 
 var K8sClient 	*kubernetes.Clientset
 var Cfg       	*rest.Config
-var PromClient 	promOperatorClient.Interface
+var PromClient  promOperatorClient.Interface
 
 /*
  * These tests MUST be run with the flag:
  * -ldflags="-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com"
  * in order for the prometheus-operator package to get CRs using our custom API group name.
  */
-func TestOperator(t *testing.T) {
+func TestPrometheusOperatorCRs(t *testing.T) {
   RegisterFailHandler(Fail)
 
-  RunSpecs(t, "Operator Test Suite")
+  RunSpecs(t, "Prometheus Operator CRs Test Suite")
 }
 
 var _ = BeforeSuite(func() {
