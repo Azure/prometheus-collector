@@ -24,18 +24,22 @@ if [ "$customEnvironment_lower" == "azurepubliccloud" ]; then
 elif [ "$customEnvironment_lower" == "azureusgovernmentcloud" ]; then
   encodedaikey="ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5"
   aiendpoint="https://dc.applicationinsights.us/v2/track"
+  # IngestionEndpoint=https://usgovvirginia-1.in.applicationinsights.azure.us/;AADAudience=https://monitor.azure.us/
   echo "setting telemetry output to the azureusgovernmentcloud instance"
 elif [ "$customEnvironment_lower" == "azurechinacloud" ]; then
   encodedaikey="ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4"
   aiendpoint="https://dc.applicationinsights.azure.cn/v2/track"
+  # IngestionEndpoint=https://chinanorth3-0.in.applicationinsights.azure.cn/;AADAudience=https://monitor.azure.cn/
   echo "setting telemetry output to the azurechinacloud instance"
 elif [ "$customEnvironment_lower" == "usnat" ]; then
-  encodedaikey="usnat key"
+  encodedaikey="ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw"
   aiendpoint="https://dc.applicationinsights.azure.eaglex.ic.gov/v2/track"
+  # IngestionEndpoint: usnateast-0.in.applicationinsights.azure.eaglex.ic.gov
   echo "setting telemetry output to the usnat instance"
 elif [ "$customEnvironment_lower" == "ussec" ]; then
-  encodedaikey="ussec key"
+  encodedaikey="ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl"
   aiendpoint="https://dc.applicationinsights.azure.microsoft.scloud/v2/track"
+  # IngestionEndpoint: usseceast-0.in.applicationinsights.azure.microsoft.scloud
   echo "setting telemetry output to the ussec instance"
 else
     echo "Unknown customEnvironment: $customEnvironment_lower, setting telemetry output to the default azurepubliccloud instance"

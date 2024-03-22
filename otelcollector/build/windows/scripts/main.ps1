@@ -124,12 +124,12 @@ function Set-EnvironmentVariablesAndConfigParser {
             Write-Host "setting telemetry output to the azurechinacloud instance"
         }
         "usnat" {
-            $encodedaikey = "usnat key"
+            $encodedaikey = "ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw"
             $aiendpoint = "https://dc.applicationinsights.azure.eaglex.ic.gov/v2/track"
             Write-Host "setting telemetry output to the usnat instance"
         }
         "ussec" {
-            $encodedaikey = "ussec key"
+            $encodedaikey = "ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl"
             $aiendpoint = "https://dc.applicationinsights.azure.microsoft.scloud/v2/track"
             Write-Host "setting telemetry output to the ussec instance"
         }
