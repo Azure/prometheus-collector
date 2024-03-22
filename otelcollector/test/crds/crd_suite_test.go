@@ -1,6 +1,7 @@
 package crds
 
 import (
+	"prometheus-collector/otelcollector/test/utils"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -20,9 +21,9 @@ func TestCRDs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-  // var err error
-  // K8sClient, Cfg, err = utils.SetupKubernetesClient()
-  // Expect(err).NotTo(HaveOccurred())
+  var err error
+  _, _, err = utils.SetupKubernetesClient()
+  Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
