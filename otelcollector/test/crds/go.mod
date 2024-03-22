@@ -1,6 +1,6 @@
 module prometheus-collector/otelcollector/test/crds
 
-go 1.20
+go 1.21
 
 replace prometheus-collector/otelcollector/test/utils => ../utils
 
