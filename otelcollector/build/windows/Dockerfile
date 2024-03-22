@@ -10,8 +10,6 @@ ENV MONITORING_MCS_MODE "1"
 ENV COMPlus_ThreadPool_UnfairSemaphoreSpinLimit 0
 ENV tmpdir /opt/
 
-# Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH "MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
 ENV TELEMETRY_DISABLED false
 
 COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
