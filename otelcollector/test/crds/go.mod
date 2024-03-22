@@ -8,6 +8,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.14.0
 	github.com/onsi/gomega v1.30.0
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.72.0
+	k8s.io/apimachinery v0.29.2
 	k8s.io/client-go v0.29.2
 	prometheus-collector/otelcollector/test/utils v0.0.0-00010101000000-000000000000
 )
@@ -56,7 +57,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.29.2 // indirect
 	k8s.io/apiextensions-apiserver v0.29.2 // indirect
-	k8s.io/apimachinery v0.29.2 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240209001042-7a0d5b415232 // indirect
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e // indirect
