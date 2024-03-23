@@ -65,8 +65,8 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Install ME
 echo "Installing Metrics Extension..."
-wget https://github.com/Azure/prometheus-collector/releases/download/me-otlp-0/metricsext2-2.2024.229.525-1.cm2.x86_64.rpm
-sudo tdnf install -y metricsext2-2.2024.229.525-1.cm2.x86_64.rpm
+wget https://github.com/Azure/prometheus-collector/releases/download/me-otlp-0/metricsext2-2.2024.322.1938-1.cm2.x86_64.rpm
+sudo tdnf install -y metricsext2-2.2024.322.1938-1.cm2.x86_64.rpm
 #sudo tdnf install -y metricsext2-2.2023.928.2134
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
