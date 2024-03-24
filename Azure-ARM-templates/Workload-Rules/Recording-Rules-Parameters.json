@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "clusterName": {
+      "value": "<cluster_name>"
+    },
+    "clusterResourceId": {
+      "value": "/subscriptions/<sub_id>/resourcegroups/<rg_name>/providers/Microsoft.ContainerService/managedClusters/<cluster_name>"
+    },
+    "azureMonitorWorkspaceResourceId": {
+      "value": "/subscriptions/<sub_id>/resourcegroups/<rg_name>/providers/microsoft.monitor/accounts/<amw_name>"
+    },
+    "location": {
+      "value": "<amw_location>"
+    }
+  }
+}
