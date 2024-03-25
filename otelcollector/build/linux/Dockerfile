@@ -85,6 +85,16 @@ RUN $tmpdir/setup.sh ${TARGETARCH}
 #CMD [ "/opt/main.sh" ]
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
+# Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
+ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+# Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
+ENV APPLICATIONINSIGHTS_AUTH_USGOVERNMENT ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5
+# Below is for ContainerInsightsPrometheusCollector-Mooncake AppInsights Resource
+ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4
+# Below is for ContainerInsightsPrometheusCollector-USSec AppInsights Resource
+ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
+# Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
+ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
 ENV TELEMETRY_DISABLED false
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
 ENV MALLOC_ARENA_MAX=2

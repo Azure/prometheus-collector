@@ -109,27 +109,27 @@ function Set-EnvironmentVariablesAndConfigParser {
     $customEnvironment = [System.Environment]::GetEnvironmentVariable("customEnvironment", "process").ToLower()
     switch ($customEnvironment) {
         "azurepubliccloud" {
-            $encodedaikey = "MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_PUBLIC", "process")
             $aiendpoint = $null
             Write-Host "setting telemetry output to the default azurepubliccloud instance"
         }
         "azureusgovernmentcloud" {
-            $encodedaikey = "ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5"
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_USGOVERNMENT", "process")
             $aiendpoint = "https://dc.applicationinsights.us/v2/track"
             Write-Host "setting telemetry output to the azureusgovernmentcloud instance"
         }
         "azurechinacloud" {
-            $encodedaikey = "ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4"
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_CHINACLOUD", "process")
             $aiendpoint = "https://dc.applicationinsights.azure.cn/v2/track"
             Write-Host "setting telemetry output to the azurechinacloud instance"
         }
         "usnat" {
-            $encodedaikey = "ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw"
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_USNAT", "process")
             $aiendpoint = "https://dc.applicationinsights.azure.eaglex.ic.gov/v2/track"
             Write-Host "setting telemetry output to the usnat instance"
         }
         "ussec" {
-            $encodedaikey = "ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl"
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_USSEC", "process")
             $aiendpoint = "https://dc.applicationinsights.azure.microsoft.scloud/v2/track"
             Write-Host "setting telemetry output to the ussec instance"
         }

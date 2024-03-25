@@ -19,25 +19,25 @@ echo_var "CLUSTER" "$CLUSTER"
 
 customEnvironment_lower=$(echo "$customEnvironment" | tr '[:upper:]' '[:lower:]')
 if [ "$customEnvironment_lower" == "azurepubliccloud" ]; then
-  encodedaikey="MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
+  encodedaikey="$APPLICATIONINSIGHTS_AUTH_PUBLIC"
   echo "setting telemetry output to the default azurepubliccloud instance" 
 elif [ "$customEnvironment_lower" == "azureusgovernmentcloud" ]; then
-  encodedaikey="ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5"
+  encodedaikey="$APPLICATIONINSIGHTS_AUTH_USGOVERNMENT"
   aiendpoint="https://dc.applicationinsights.us/v2/track"
   # IngestionEndpoint=https://usgovvirginia-1.in.applicationinsights.azure.us/;AADAudience=https://monitor.azure.us/
   echo "setting telemetry output to the azureusgovernmentcloud instance"
 elif [ "$customEnvironment_lower" == "azurechinacloud" ]; then
-  encodedaikey="ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4"
+  encodedaikey="$APPLICATIONINSIGHTS_AUTH_CHINACLOUD"
   aiendpoint="https://dc.applicationinsights.azure.cn/v2/track"
   # IngestionEndpoint=https://chinanorth3-0.in.applicationinsights.azure.cn/;AADAudience=https://monitor.azure.cn/
   echo "setting telemetry output to the azurechinacloud instance"
 elif [ "$customEnvironment_lower" == "usnat" ]; then
-  encodedaikey="ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw"
+  encodedaikey="$APPLICATIONINSIGHTS_AUTH_USNAT"
   aiendpoint="https://dc.applicationinsights.azure.eaglex.ic.gov/v2/track"
   # IngestionEndpoint: usnateast-0.in.applicationinsights.azure.eaglex.ic.gov
   echo "setting telemetry output to the usnat instance"
 elif [ "$customEnvironment_lower" == "ussec" ]; then
-  encodedaikey="ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl"
+  encodedaikey="$APPLICATIONINSIGHTS_AUTH_USSEC"
   aiendpoint="https://dc.applicationinsights.azure.microsoft.scloud/v2/track"
   # IngestionEndpoint: usseceast-0.in.applicationinsights.azure.microsoft.scloud
   echo "setting telemetry output to the ussec instance"
