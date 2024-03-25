@@ -43,7 +43,7 @@ elif [ "$customEnvironment_lower" == "ussec" ]; then
   echo "setting telemetry output to the ussec instance"
 else
     echo "Unknown customEnvironment: $customEnvironment_lower, setting telemetry output to the default azurepubliccloud instance"
-    encodedaikey="MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
+    encodedaikey="$APPLICATIONINSIGHTS_AUTH_PUBLIC"
 fi
 
 export APPLICATIONINSIGHTS_AUTH=$encodedaikey

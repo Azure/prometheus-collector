@@ -135,7 +135,7 @@ function Set-EnvironmentVariablesAndConfigParser {
         }
         default {
             Write-Host "Unknown customEnvironment: $customEnvironment, setting telemetry output to the default azurepubliccloud instance"
-            $encodedaikey = "MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy"
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_PUBLIC", "process")
             $aiendpoint = $null
         }
     }
