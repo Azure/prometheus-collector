@@ -27,7 +27,7 @@
   "variables": {},
   "resources": [
     {
-      "name": "elasticsearch-alerts",
+      "name": "azmon_elasticsearch_alerts",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
       "apiVersion": "2023-03-01",
       "location": "[parameters('location')]",
