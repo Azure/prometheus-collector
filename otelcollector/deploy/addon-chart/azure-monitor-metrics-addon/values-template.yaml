@@ -48,8 +48,8 @@ AzureMonitorMetrics:
   DsMemoryRequestLinux: 150Mi
   DsCPULimitWindows: 500m
   DsMemoryLimitWindows: 1Gi
-  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator"
-  ImageTagCfgReader: ${IMAGE_TAG}-cfg"
+  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator
+  ImageTagCfgReader: ${IMAGE_TAG}-cfg
   TargetAllocatorEnabled: true
   DeploymentReplicas: 1
   CfgReaderCPULimit: 1
@@ -71,7 +71,7 @@ AzureMonitorMetrics:
     ImageRepository: "/aks/msi/addon-token-adapter"
     ImageTag: "master.230804.1"
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
-    ImageTagWin: "20230120winbeta"
+    ImageTagWin: "master.240102.1"
   ArcExtension: ${ARC_EXTENSION}
   ArcEnableOperator: false
   # Do not change the below settings. They are reserved for Arc Autonomous

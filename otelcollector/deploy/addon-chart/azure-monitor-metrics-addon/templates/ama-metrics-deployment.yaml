@@ -343,3 +343,4 @@ spec:
             secretName: ama-metrics-proxy-cert
             optional: true
         {{- end }}
+        
