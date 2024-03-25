@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/build-fixes
 
 pr:
   autoCancel: true
@@ -171,7 +172,7 @@ jobs:
     LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
-  condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+  condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
   steps:
     - checkout: self
       persistCredentials: true
@@ -196,7 +197,7 @@ jobs:
     LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
   # This is necessary because of: https://github.com/moby/moby/issues/37965
     DOCKER_BUILDKIT: 1
-  condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+  condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
   steps:
     - checkout: self
       persistCredentials: true
@@ -219,7 +220,7 @@ jobs:
   variables:
     WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
     skipComponentGovernanceDetection: true
-  condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+  condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
   steps:
     - powershell: |
         docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
@@ -236,7 +237,7 @@ jobs:
   variables:
     WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
     skipComponentGovernanceDetection: true
-  condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+  condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
   steps:
     - powershell: |
         docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
@@ -363,7 +364,7 @@ jobs:
         EOF
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: Set values in payload.json for signing"
-      condition: eq(variables.IS_MAIN_BRANCH, true)
+      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
     - task: EsrpCodeSigning@3
       displayName: "ESRP CodeSigning for Prometheus"
@@ -401,7 +402,7 @@ jobs:
           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
       workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
-      condition: eq(variables.IS_MAIN_BRANCH, true)
+      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -435,7 +436,7 @@ jobs:
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Ev2: Generate image artifacts"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
@@ -462,7 +463,7 @@ jobs:
 
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: Publish image artifacts"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
@@ -527,7 +528,7 @@ jobs:
         EOF
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
       displayName: "Build: Set values in payload.json for signing"
-      condition: eq(variables.IS_MAIN_BRANCH, true)
+      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
     - task: EsrpCodeSigning@3
       displayName: "ESRP CodeSigning for Prometheus"
@@ -565,7 +566,7 @@ jobs:
           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
       workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
-      condition: eq(variables.IS_MAIN_BRANCH, true)
+      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -591,7 +592,7 @@ jobs:
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
       displayName: "Ev2: Generate image artifacts"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linuxccp'
         DockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
@@ -618,7 +619,7 @@ jobs:
 
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: Publish image artifacts"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
@@ -653,6 +654,8 @@ jobs:
         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
         sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+        docker system prune --all -f
 
         docker buildx create --name dockerbuilder
         docker buildx use dockerbuilder
@@ -711,7 +714,7 @@ jobs:
           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
       workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
-      condition: eq(variables.IS_MAIN_BRANCH, true)
+      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
 - job: Linux_Config_Reader
   displayName: "Build: config reader image"
@@ -787,7 +790,7 @@ jobs:
           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
       workingDirectory: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxcfgreader/"
-      condition: eq(variables.IS_MAIN_BRANCH, true)
+      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
 - job: Windows2019_Prometheus_Collector
   displayName: "Build: windows 2019 prometheus-collector image"
@@ -942,7 +945,7 @@ jobs:
       displayName: "Build: Windows multi-arch manifest"
 
     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
       displayName: "Ev2: generate image artifacts"
       inputs:
         BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
@@ -999,10 +1002,10 @@ jobs:
         oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
       workingDirectory: $(Build.ArtifactStagingDirectory)/windows
       displayName: "Download, install Oras and run oras attach"
-      condition: eq(variables.IS_MAIN_BRANCH, true)
+      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
     - task: PublishBuildArtifacts@1
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
       displayName: "Ev2: publish image artifacts"
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
@@ -1054,14 +1057,14 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     displayName: "Ev2: publish helm chart artifacts"
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
     inputs:
       pathToPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: drop
 
 - job: Deploy_Chart_ARC
   displayName: "Deploy: Arc dev cluster"
-  condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+  condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
   pool:
     name: Azure-Pipelines-CI-Test-EO
   dependsOn:
@@ -1172,7 +1175,7 @@ jobs:
   displayName: "Deploy: AKS dev cluster"
   pool:
     name: Azure-Pipelines-CI-Test-EO
-  condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+  condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   - Linux_Prometheus_Collector
