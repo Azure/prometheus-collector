@@ -6,16 +6,16 @@ Write-Host "Starting File System Watcher for config map updates and DCR/DCE upda
 $Paths = @("C:\etc\config\settings", "C:\etc\config\settings\prometheus")
 
 if ($env:MAC -eq $true) {
-    $Paths = @("C:\etc\config\settings", "C:\etc\config\settings\prometheus", "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension")
+    $Paths = @("C:\etc\config\settings", "C:\etc\config\settings\prometheus") #, "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension")
 }
 
 foreach ($path in $Paths)
 {
     $FileSystemWatcher = New-Object System.IO.FileSystemWatcher
     $FileSystemWatcher.Path = $path
-    if ($path -eq "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension") {
-        $FileSystemWatcher.Filter = "TokenConfig.json"
-    }
+    # if ($path -eq "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension") {
+    #     $FileSystemWatcher.Filter = "TokenConfig.json"
+    # }
     $FileSystemWatcher.IncludeSubdirectories = $true
     $EventName = 'Changed', 'Created', 'Deleted', 'Renamed'
 

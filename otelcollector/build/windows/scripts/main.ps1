@@ -385,10 +385,10 @@ function Start-FileSystemWatcher {
 }
 
 #start Windows AMA
-function Start-MA {
-    Write-Output "Starting MA"
-    Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\genevamonitoringagent\genevamonitoringagent\Monitoring\Agent\MonAgentLauncher.exe" -ArgumentList @("-useenv") }
-}
+# function Start-MA {
+#     Write-Output "Starting MA"
+#     Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\genevamonitoringagent\genevamonitoringagent\Monitoring\Agent\MonAgentLauncher.exe" -ArgumentList @("-useenv") }
+# }
 
 function Start-ME {
     Write-Output "Starting Metrics Extension"
@@ -403,8 +403,9 @@ function Start-ME {
                 Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Debug", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", $me_config_file, $ME_ADDITIONAL_FLAGS) > $null
             }
             else {
-                Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Debug", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", $me_config_file) > $null
+                Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Debug", "-TokenSource", "AMCS", "-DataDirectory", "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", $me_config_file) > $null
                 # /opt/metricextension/MetricsExtension/MetricsExtension.Native.exe -Logger Console -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\ -Input otlp_grpc_prom -ConfigOverridesFilePath '/opt/metricextension/me_ds_win.config'
+                # /usr/sbin/MetricsExtension -Logger File -LogLevel Info -TokenSource AMCS -DataDirectory /etc/metricsextension/config-cache -Input otlp_grpc_prom -ConfigOverrides $meConfigString > /dev/null &
             }
         }
         else {
@@ -434,11 +435,11 @@ if ($env:MAC -eq $true) {
 }
 Start-ME
 # Waiting 60 more seconds since C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension needs to be created
-Start-Sleep 60
+# Start-Sleep 60
 Start-FileSystemWatcher
 
-$epochTimeNow = [int](Get-Date).Subtract([datetime]'1970-01-01T00:00:00Z').TotalSeconds
-Set-Content -Path /opt/microsoft/liveness/azmon-container-start-time $epochTimeNow
+# $epochTimeNow = [int](Get-Date).Subtract([datetime]'1970-01-01T00:00:00Z').TotalSeconds
+# Set-Content -Path /opt/microsoft/liveness/azmon-container-start-time $epochTimeNow
 
 # Notepad.exe | Out-Null
 Write-Output "Starting ping to keep the container running"
