@@ -8,13 +8,13 @@
                 "description": "Cluster name"
             }
         },
-        "actionGroupResourceId": {
+        "actionGroupId": {
             "type": "string",
             "metadata": {
                 "description": "Action Group ResourceId"
             }
         },
-        "azureMonitorWorkspaceResourceId": {
+        "azureMonitorWorkspace": {
             "type": "string",
             "metadata": {
                 "description": "ResourceId of Azure Monitor Workspace (AMW) to associate to"
@@ -34,7 +34,7 @@
             "location": "[parameters('location')]",
             "properties": {
                 "scopes": [
-                    "[parameters('azureMonitorWorkspaceResourceId')]"
+                    "[parameters('azureMonitorWorkspace')]"
                 ],
                 "clusterName": "[parameters('clusterName')]",
                 "interval": "PT1M",
@@ -57,7 +57,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                                "actionGroupId": "[parameters('actionGroupId')]"
                             }
                         ]
                     },
@@ -80,7 +80,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                                "actionGroupId": "[parameters('actionGroupId')]"
                             }
                         ]
                     },
@@ -102,7 +102,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                                "actionGroupId": "[parameters('actionGroupId')]"
                             }
                         ]
                     },
@@ -125,7 +125,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                                "actionGroupId": "[parameters('actionGroupId')]"
                             }
                         ]
                     },
@@ -148,7 +148,7 @@
                         },
                         "actions": [
                             {
-                                "actionGroupId": "[parameters('actionGroupResourceId')]"
+                                "actionGroupId": "[parameters('actionGroupId')]"
                             }
                         ]
                     }

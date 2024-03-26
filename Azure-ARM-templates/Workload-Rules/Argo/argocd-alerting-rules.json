@@ -27,7 +27,7 @@
   "variables": {},
   "resources": [
     {
-      "name": "ArgoCD",
+      "name": "azmon_argocd_alerts",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
       "apiVersion": "2023-03-01",
       "location": "[parameters('location')]",
