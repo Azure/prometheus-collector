@@ -95,6 +95,7 @@ jobs:
         echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
         echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_IMAGE_TAG;isOutput=true]$TARGET_ALLOCATOR_IMAGE_TAG"
+        echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_IMAGE_TAG;isOutput=true]$LINUX_CONFIG_READER_IMAGE_TAG"
         echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_FULL_IMAGE_NAME;isOutput=true]$LINUX_CONFIG_READER_FULL_IMAGE_NAME"
         echo "##vso[task.setvariable variable=LINUX_CCP_FULL_IMAGE_NAME;isOutput=true]$LINUX_CCP_FULL_IMAGE_NAME"
@@ -1179,13 +1180,16 @@ jobs:
   dependsOn:
   - Image_Tags_and_Ev2_Artifacts
   - Linux_Prometheus_Collector
+  - Linux_Config_Reader
+  - Linux_Target_Allocator
   - WindowsMultiArch_Prometheus_Collector
   variables:
     HELM_CHART_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
     HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
     IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
     IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-    HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+    IMAGE_TAG_TARGET_ALLOCATOR: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
+    IMAGE_TAG_CONFIG_READER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.CONFIG_READER_IMAGE_TAG'] ]
     skipComponentGovernanceDetection: true
   steps:
   - checkout: self
@@ -1207,10 +1211,9 @@ jobs:
           do
             sleep 30
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
-            echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
 
             output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-            if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG))
+            if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
             then
               echo "Images are published to mcr"
               exit 0
