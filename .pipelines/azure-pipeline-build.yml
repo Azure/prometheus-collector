@@ -670,6 +670,7 @@ jobs:
         EOF
       workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
       displayName: "Build: build and push target allocator image to dev ACR"
+      timeoutInMinutes: 120
 
     - bash: |
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
