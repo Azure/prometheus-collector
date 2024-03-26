@@ -172,15 +172,33 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			Expect(ok).To(BeTrue(), "result should be of type model.Vector")
 			Expect(vectorResult).NotTo(BeEmpty(), "result should not be empty")
 
-			// Ensure that the current metric is present in the result
+			// Ensure that the current metric is present in the result and has the cluster, job and instance labels
 			found := false
+			no_cluster_label := false
+			no_job_label := false
+			no_instance_label := false
 			for _, sample := range vectorResult {
 				if string(sample.Metric["__name__"]) == metric {
 					found = true
 					break
 				}
+				if val, ok := sample.Metric["cluster"]; !ok || val == "" {
+					no_cluster_label = true
+					break
+				}
+				if val, ok := sample.Metric["job"]; !ok || val == "" {
+					no_job_label = true
+					break
+				}
+				if val, ok := sample.Metric["instance"]; !ok || val == "" {
+					no_instance_label = true
+					break
+				}
 			}
 			Expect(found).To(BeTrue(), fmt.Sprintf("Expected metric %q not found", metric))
+			Expect(no_cluster_label).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have cluster label", metric))
+			Expect(no_job_label).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have job label", metric))
+			Expect(no_instance_label).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have instance label", metric))
 		}
 	})
 
@@ -234,15 +252,33 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			Expect(ok).To(BeTrue(), "result should be of type model.Vector")
 			Expect(vectorResult).NotTo(BeEmpty(), "result should not be empty")
 
-			// Ensure that the current metric is present in the result
+			// Ensure that the current metric is present in the result and has the cluster, job and instance labels
 			found := false
+			no_cluster_label := false
+			no_job_label := false
+			no_instance_label := false
 			for _, sample := range vectorResult {
 				if string(sample.Metric["__name__"]) == metric {
 					found = true
 					break
 				}
+				if val, ok := sample.Metric["cluster"]; !ok || val == "" {
+					no_cluster_label = true
+					break
+				}
+				if val, ok := sample.Metric["job"]; !ok || val == "" {
+					no_job_label = true
+					break
+				}
+				if val, ok := sample.Metric["instance"]; !ok || val == "" {
+					no_instance_label = true
+					break
+				}
 			}
 			Expect(found).To(BeTrue(), fmt.Sprintf("Expected metric %q not found", metric))
+			Expect(no_cluster_label).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have cluster label", metric))
+			Expect(no_job_label).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have job label", metric))
+			Expect(no_instance_label).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have instance label", metric))
 		}
 	})
 
@@ -304,15 +340,33 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			Expect(ok).To(BeTrue(), "result should be of type model.Vector")
 			Expect(vectorResult).NotTo(BeEmpty(), "result should not be empty")
 
-			// Ensure that the current metric is present in the result
+			// Ensure that the current metric is present in the result and has the cluster, job and instance labels
 			found := false
+			no_cluster_label := false
+			no_job_label := false
+			no_instance_label := false
 			for _, sample := range vectorResult {
 				if string(sample.Metric["__name__"]) == metric {
 					found = true
 					break
 				}
+				if val, ok := sample.Metric["cluster"]; !ok || val == "" {
+					no_cluster_label = true
+					break
+				}
+				if val, ok := sample.Metric["job"]; !ok || val == "" {
+					no_job_label = true
+					break
+				}
+				if val, ok := sample.Metric["instance"]; !ok || val == "" {
+					no_instance_label = true
+					break
+				}
 			}
 			Expect(found).To(BeTrue(), fmt.Sprintf("Expected metric %q not found", metric))
+			Expect(no_cluster_label).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have cluster label", metric))
+			Expect(no_job_label).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have job label", metric))
+			Expect(no_instance_label).To(BeFalse(), fmt.Sprintf("Expected metric %q does not have instance label", metric))
 		}
 	})
 })
