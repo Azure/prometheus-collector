@@ -43,3 +43,5 @@ CVE-2024-29018
 # MEDIUM - go vulnerabilities
 # MEDIUM - mariner
 CVE-2023-5678
+# MEDIUM - ruby
+CVE-2024-27281
