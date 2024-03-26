@@ -115,27 +115,23 @@ func CreatePrometheusAPIClient(amwQueryEndpoint, clientId, clientSecret string) 
 /*
  * Example parsing of the instant query response.
  */
-func InstantQuery(api v1.API, query string) (v1.Warnings, interface{}, error) {
+func InstantQuery(api v1.API, query string) (v1.Warnings, error) {
 	result, warnings, err := api.Query(context.Background(), query, time.Now())
 	if err != nil {
-		return warnings, nil, fmt.Errorf("Failed to run query: %s", err.Error())
+		return warnings, fmt.Errorf("Failed to run query: %s", err.Error())
 	}
-	// Ensure there is at least one result
-	if len(result.(model.Vector)) == 0 {
-		return warnings, nil, fmt.Errorf("No data returned for query: %s", query)
+	for _, sample := range result.(model.Vector) {
+		fmt.Printf("Metric: %s\n", sample.Metric)
+		fmt.Printf("Metric Name: %s\n", sample.Metric["__name__"])
+		fmt.Printf("Cluster: %s\n", sample.Metric["cluster"])
+		fmt.Printf("Job: %s\n", sample.Metric["job"])
+		fmt.Printf("Instance: %s\n", sample.Metric["instance"])
+		fmt.Printf("external_label_1: %s\n", sample.Metric["external_label_1"])
+		fmt.Printf("external_label_123: %s\n", sample.Metric["external_label_123"])
+		fmt.Printf("Value: %s\n", sample.Value)
+		fmt.Printf("Timestamp: %s\n", sample.Timestamp)
+		fmt.Printf("Histogram: %s\n", sample.Histogram)
 	}
-	// for _, sample := range result.(model.Vector) {
-	// 	fmt.Printf("Metric: %s\n", sample.Metric)
-	// 	fmt.Printf("Metric Name: %s\n", sample.Metric["__name__"])
-	// 	fmt.Printf("Cluster: %s\n", sample.Metric["cluster"])
-	// 	fmt.Printf("Job: %s\n", sample.Metric["job"])
-	// 	fmt.Printf("Instance: %s\n", sample.Metric["instance"])
-	// 	fmt.Printf("external_label_1: %s\n", sample.Metric["external_label_1"])
-	// 	fmt.Printf("external_label_123: %s\n", sample.Metric["external_label_123"])
-	// 	fmt.Printf("Value: %s\n", sample.Value)
-	// 	fmt.Printf("Timestamp: %s\n", sample.Timestamp)
-	// 	fmt.Printf("Histogram: %s\n", sample.Histogram)
-	// }
 
-	return warnings, result, nil
+	return warnings, nil
 }
