@@ -1,0 +1,243 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "clusterName": {
+      "type": "string",
+      "metadata": {
+        "description": "Cluster name"
+      }
+    },
+    "actionGroupId": {
+      "type": "string",
+      "metadata": {
+        "description": "Action Group ResourceId"
+      }
+    },
+    "azureMonitorWorkspace": {
+      "type": "string",
+      "metadata": {
+        "description": "ResourceId of Azure monitor workspace to associate to"
+      }
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "name": "azmon_elasticsearch_alerts",
+      "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+      "apiVersion": "2023-03-01",
+      "location": "[parameters('location')]",
+      "properties": {
+        "interval": "PT1M",
+        "scopes": [
+          "[parameters('azureMonitorWorkspace')]"
+        ],
+        "clusterName": "[parameters('clusterName')]",
+        "rules": [
+          {
+            "severity": 3,
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            },
+            "actions": [
+              {
+                "actionGroupId": "[parameters('actionGroupId')]"
+              }
+            ],
+            "alert": "ElasticsearchTooFewNodesRunning",
+            "for": "PT5M",
+            "annotations": {
+              "description": "There are only {{ $value }} < 3 ElasticSearch nodes running",
+              "summary": "ElasticSearch running on less than 3 nodes"
+            },
+            "labels": {
+              "severity": "critical"
+            },
+            "expression": "elasticsearch_cluster_health_number_of_nodes < 3"
+          },
+          {
+            "severity": 3,
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            },
+            "actions": [
+              {
+                "actionGroupId": "[parameters('actionGroupId')]"
+              }
+            ],
+            "alert": "ElasticsearchHeapTooHigh",
+            "for": "PT15M",
+            "annotations": {
+              "description": "The heap usage is over 90% for 15m",
+              "summary": "ElasticSearch node {{ $labels.name }} heap usage is high"
+            },
+            "labels": {
+              "severity": "critical"
+            },
+            "expression": "elasticsearch_heap_utilization_percentage > 90"
+          },
+          {
+            "severity": 3,
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            },
+            "actions": [
+              {
+                "actionGroupId": "[parameters('actionGroupId')]"
+              }
+            ],
+            "alert": "ElasticsearchClusterNotHealthy",
+            "for": "PT2M",
+            "annotations": {
+              "message": "Cluster {{ $labels.cluster }} health status has been RED for at least 2m. Cluster does not accept writes, shards may be missing or master node hasn't been elected yet.",
+              "summary": "Cluster health status is RED"
+            },
+            "labels": {
+              "severity": "critical"
+            },
+            "expression": "elasticsearch_red_cluster_status"
+          },
+          {
+            "severity": 3,
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            },
+            "actions": [
+              {
+                "actionGroupId": "[parameters('actionGroupId')]"
+              }
+            ],
+            "alert": "ElasticsearchClusterNotHealthy",
+            "for": "PT20M",
+            "annotations": {
+              "message": "Cluster {{ $labels.cluster }} health status has been YELLOW for at least 20m. Some shard replicas are not allocated.",
+              "summary": "Cluster health status is YELLOW"
+            },
+            "labels": {
+              "severity": "warning"
+            },
+            "expression": "elasticsearch_yellow_cluster_status"
+          },
+          {
+            "severity": 3,
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            },
+            "actions": [
+              {
+                "actionGroupId": "[parameters('actionGroupId')]"
+              }
+            ],
+            "alert": "ElasticsearchNodeDiskWatermarkReached",
+            "for": "PT5M",
+            "annotations": {
+              "message": "Disk Low Watermark Reached at {{ $labels.node }} node in {{ $labels.cluster }} cluster. Shards can not be allocated to this node anymore. You should consider adding more disk to the node.",
+              "summary": "Disk Low Watermark Reached - disk saturation is {{ $value }}%"
+            },
+            "labels": {
+              "severity": "warning"
+            },
+            "expression": "elasticsearch_node_disk_watermark_reached > 85"
+          },
+          {
+            "severity": 3,
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            },
+            "actions": [
+              {
+                "actionGroupId": "[parameters('actionGroupId')]"
+              }
+            ],
+            "alert": "ElasticsearchNodeDiskWatermarkReached",
+            "for": "PT5M",
+            "annotations": {
+              "message": "Disk High Watermark Reached at {{ $labels.node }} node in {{ $labels.cluster }} cluster. Some shards will be re-allocated to different nodes if possible. Make sure more disk space is added to the node or drop old indices allocated to this node.",
+              "summary": "Disk High Watermark Reached - disk saturation is {{ $value }}%"
+            },
+            "labels": {
+              "severity": "critical"
+            },
+            "expression": "elasticsearch_node_disk_watermark_reached > 90"
+          },
+          {
+            "severity": 3,
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            },
+            "actions": [
+              {
+                "actionGroupId": "[parameters('actionGroupId')]"
+              }
+            ],
+            "alert": "ElasticsearchJVMHeapUseHigh",
+            "for": "PT10M",
+            "annotations": {
+              "message": "JVM Heap usage on the node {{ $labels.node }} in {{ $labels.cluster }} cluster is {{ $value }}%.",
+              "summary": "JVM Heap usage on the node is high"
+            },
+            "labels": {
+              "severity": "critical"
+            },
+            "expression": "elasticsearch_heap_utilization_percentage > 75"
+          },
+          {
+            "severity": 3,
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            },
+            "actions": [
+              {
+                "actionGroupId": "[parameters('actionGroupId')]"
+              }
+            ],
+            "alert": "SystemCPUHigh",
+            "for": "PT1M",
+            "annotations": {
+              "message": "System CPU usage on the node {{ $labels.node }} in {{ $labels.cluster }} cluster is {{ $value }}%",
+              "summary": "System CPU usage is high"
+            },
+            "labels": {
+              "severity": "critical"
+            },
+            "expression": "elasticsearch_os_cpu_high > 90"
+          },
+          {
+            "severity": 3,
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            },
+            "actions": [
+              {
+                "actionGroupId": "[parameters('actionGroupId')]"
+              }
+            ],
+            "alert": "ElasticsearchProcessCPUHigh",
+            "for": "PT1M",
+            "annotations": {
+              "message": "ES process CPU usage on the node {{ $labels.node }} in {{ $labels.cluster }} cluster is {{ $value }}%",
+              "summary": "ES process CPU usage is high"
+            },
+            "labels": {
+              "severity": "critical"
+            },
+            "expression": "elasticsearch_process_cpu_high > 90"
+          }
+        ]
+      }
+    }
+  ]
+}
