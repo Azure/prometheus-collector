@@ -124,6 +124,28 @@ var _ = DescribeTable("The Prometheus UI API should return the targets metadata"
 )
 
 /*
+ * Test that the Prometheus UI /metrics endpoiont returns the Prometheus metrics.
+ */
+ var _ = DescribeTable("The Prometheus UI should return the /metrics data",
+ func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string) {
+	pods, err := utils.GetPodsWithLabel(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+	Expect(err).NotTo(HaveOccurred())
+
+	for _, pod := range pods {
+		// Execute the command and capture the output
+			command := []string{"sh", "-c", "curl \"http://localhost:9090/metrics\""}
+			stdout, _, err := utils.ExecCmd(K8sClient, Cfg, pod.Name, containerName, namespace, command)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stdout).NotTo(BeEmpty())
+			Expect(stdout).NotTo(ContainSubstring("404 page not found"))
+			Expect(stdout).To(ContainSubstring("prometheus_target_scrape_pool_targets"))
+	}
+},
+ Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector"),
+ Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector"),
+)
+
+/*
  * Test that the Prometheus UI does not return a 404 for each UI page.
  */
 var _ = DescribeTable("The Prometheus UI should return a 200 for its UI pages",
