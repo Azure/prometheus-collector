@@ -13,7 +13,7 @@
     },
     "Notification": {
       "Email": {
-        "To": "omscontainers@microsoft.com"
+        "To": "ciprometheus@microsoft.com"
       }
     }
   },
@@ -22,6 +22,15 @@
       "name": "PushLinuxAgent",
       "targetType": "ServiceResource",
       "targetName": "PushLinuxAgent",
+      "actions": [
+        "Shell/PushAgentToACR"
+      ],
+      "dependsOn": []
+    },
+    {
+      "name": "PushCCPLinuxAgent",
+      "targetType": "ServiceResource",
+      "targetName": "PushCCPLinuxAgent",
       "actions": [
         "Shell/PushAgentToACR"
       ],
@@ -81,6 +90,7 @@
       ],
       "dependsOn": [
         "PushLinuxAgent",
+        "PushCCPLinuxAgent",
         "PushWindowsAgent",
         "PushKSMChart",
         "PushNEChart"
