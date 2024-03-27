@@ -144,7 +144,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: TestSuite
 metadata:
-  name: e2e-tests
+  name: e2e-tests-nightly
   namespace: testkube
 spec:
   steps:
@@ -162,3 +162,23 @@ spec:
   - stopOnFailure: false
     execute:
     - test: livenessprobe
+  schedule: "0 0 * * *"
+---
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: e2e-tests-merge
+  namespace: testkube
+spec:
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: containerstatus
+    - test: prometheusui
+    - test: operator
+  - stopOnFailure: false
+    execute:
+    - delay: 2m0s
+  - stopOnFailure: false
+    execute:
+    - test: querymetrics

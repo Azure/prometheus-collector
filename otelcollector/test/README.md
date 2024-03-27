@@ -334,7 +334,7 @@ Some highlights are that:
   ```
 
 ## Bootstrap a CI/CD Cluster to Run TestKube Tests
-- Create a new cluster using the [ARM template](./ci/cd) as a starting point with the nodepool type matrix. This template does the following and can be edited to create a private cluster or http(s) proxy cluster:
+- Create a new cluster using the [ARM template](./ci-cd) as a starting point with the nodepool type matrix. This template does the following and can be edited to create a private cluster or http(s) proxy cluster:
   - Creates an AMW in the subscription and resource group the ARM template is deployed in.
   - Creates an AKS cluster in the subscription and resource group the ARM template is deployed in with the following nodepools:
     - AMD64 Ubuntu Linux
@@ -414,12 +414,12 @@ Some highlights are that:
             displayName: "Wait for cluster to be ready"
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite e2e-tests --verbose
+              kubectl testkube run testsuite e2e-tests-merge --verbose
 
               # Get the current id of the test suite now running
-              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests --limit 1 | grep e2e-tests | awk '{print $1}')
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
 
-              # Watch until each test in the test suite has finished
+              # Watch until the all the tests in the test suite finish
               kubectl testkube watch testsuiteexecution $execution_id
 
               # Get the results as a formatted json file
@@ -449,13 +449,12 @@ Some highlights are that:
             displayName: "Run tests"
   ```
 
-
 # Processes
 ## When to Run Each Test
 - During development of a feature or fix, run the e2e tests following the instructions to bootstrap your cluster to run Ginkgo tests.
 - In your PR, use the PR checklist to include results of the e2e tests on your cluster.
-- After merging the PR into main, the new main build will be deployed on the CI/CD clusters. The e2e tests will be run on the cluster through TestKube. The pipeline is locked to deploy a new chart and run tests sequentially for only one merge at a time, so that there is no conflict between PRs merged around the same time.
-- The TestKube tests will also be run nightly.
+- After merging the PR into main, the new main build will be deployed on the CI/CD clusters. The e2e tests will be run on the cluster through TestKube. The pipeline is locked to deploy a new chart and run tests sequentially for only one merge at a time, so that there is no conflict between PRs merged around the same time. The tests in the Testkube test suite `e2e-tests-merge` will be run.
+- The TestKube tests in the test suite `e2e-tests-nightly` will be run every night. This includes longer-running tests such as the liveness probe tests.
 
 ## Creating a New Test or Test Suite
 - Any test added inside a test suite will automatically be picked up to run after merging to main.
