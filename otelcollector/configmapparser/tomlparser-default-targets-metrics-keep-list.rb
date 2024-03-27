@@ -99,7 +99,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubeletRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "kubeletRegex either not specified or not of type string")
     end
 
     corednsRegex = parsedConfig[:coredns]
@@ -113,7 +113,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "corednsRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "corednsRegex either not specified or not of type string")
     end
 
     cadvisorRegex = parsedConfig[:cadvisor]
@@ -127,7 +127,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "cadvisorRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "cadvisorRegex either not specified or not of type string")
     end
 
     kubeproxyRegex = parsedConfig[:kubeproxy]
@@ -141,7 +141,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubeproxyRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "kubeproxyRegex either not specified or not of type string")
     end
 
     apiserverRegex = parsedConfig[:apiserver]
@@ -155,7 +155,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "apiserverRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "apiserverRegex either not specified or not of type string")
     end
 
     kubestateRegex = parsedConfig[:kubestate]
@@ -169,7 +169,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kubestateRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "kubestateRegex either not specified or not of type string")
     end
 
     nodeexporterRegex = parsedConfig[:nodeexporter]
@@ -183,7 +183,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "nodeexporterRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "nodeexporterRegex either not specified or not of type string")
     end
 
     kappiebasicRegex = parsedConfig[:kappiebasic]
@@ -197,7 +197,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "kappiebasicRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "kappiebasicRegex either not specified or not of type string")
     end
 
     networkobservabilityRetinaRegex = parsedConfig[:networkobservabilityRetina]
@@ -211,7 +211,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "networkobservabilityRetinaRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "networkobservabilityRetinaRegex either not specified or not of type string")
     end
 
     networkobservabilityHubbleRegex = parsedConfig[:networkobservabilityHubble]
@@ -225,7 +225,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "networkobservabilityHubbleRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "networkobservabilityHubbleRegex either not specified or not of type string")
     end
 
     networkobservabilityCiliumRegex = parsedConfig[:networkobservabilityCilium]
@@ -239,7 +239,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "networkobservabilityCiliumRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "networkobservabilityCiliumRegex either not specified or not of type string")
     end
 
 
@@ -255,7 +255,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowsexporterRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "windowsexporterRegex either not specified or not of type string")
     end
 
     windowskubeproxyRegex = parsedConfig[:windowskubeproxy]
@@ -269,7 +269,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "windowskubeproxyRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "windowskubeproxyRegex either not specified or not of type string")
     end
 
     podannotationRegex = parsedConfig[:podannotations]
@@ -283,7 +283,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         end
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "podannotationRegex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "podannotationRegex either not specified or not of type string")
     end
   rescue => errorStr
     ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while reading config map settings for default targets metrics keep list - #{errorStr}, using defaults, please check config map for errors")
