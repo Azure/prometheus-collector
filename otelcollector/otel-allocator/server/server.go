@@ -25,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	yaml2 "github.com/ghodss/yaml"
 	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
 	jsoniter "github.com/json-iterator/go"
@@ -33,7 +32,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	promconfig "github.com/prometheus/prometheus/config"
-	"gopkg.in/yaml.v2"
 
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/allocation"
 	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/target"
@@ -111,52 +109,57 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // configurations such that the underlying prometheus marshaling is used. After that, the YAML is converted
 // in to a JSON format for consumers to use.
 func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.ScrapeConfig) error {
-	var configBytes []byte
-	configBytes, err := yaml.Marshal(configs)
+	// var configBytes []byte
+	// configBytes, err := yaml.Marshal(configs)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// var jsonConfig []byte
+	// jsonConfig, err = yaml2.YAMLToJSON(configBytes)
+	// if err != nil {
+	// 	return err
+	// }
+
+	jsonConfigNew, err := json.Marshal(configs)
 	if err != nil {
 		return err
 	}
 
-	var jsonConfig []byte
-	jsonConfig, err = yaml2.YAMLToJSON(configBytes)
-	if err != nil {
-		return err
-	}
+	// var jobToScrapeConfig map[string]interface{}
+	// err = json.Unmarshal(jsonConfig, &jobToScrapeConfig)
+	// if jobToScrapeConfig != nil {
+	// 	for _, scrapeConfig := range jobToScrapeConfig {
+	// 		scrapeConfig := scrapeConfig.(map[string]interface{})
+	// 		if scrapeConfig["relabel_configs"] != nil {
+	// 			relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
+	// 			for _, relabelConfig := range relabelConfigs {
+	// 				relabelConfig := relabelConfig.(map[string]interface{})
+	// 				// Dropping regex key from the map since unmarshalling this on the client(metrics_receiver.go) results in error
+	// 				// because of the bug here - https://github.com/prometheus/prometheus/issues/12534
+	// 				if relabelConfig["action"] == "keepequal" || relabelConfig["action"] == "dropequal" {
+	// 					delete(relabelConfig, "regex")
+	// 				}
+	// 			}
+	// 		}
+	// 		if scrapeConfig["metric_relabel_configs"] != nil {
+	// 			metricRelabelConfigs := scrapeConfig["metric_relabel_configs"].([]interface{})
+	// 			for _, metricRelabelConfig := range metricRelabelConfigs {
+	// 				metricRelabelConfig := metricRelabelConfig.(map[string]interface{})
+	// 				// Dropping regex key from the map since unmarshalling this on the client(metrics_receiver.go) results in error
+	// 				// because of the bug here - https://github.com/prometheus/prometheus/issues/12534
+	// 				if metricRelabelConfig["action"] == "keepequal" || metricRelabelConfig["action"] == "dropequal" {
+	// 					delete(metricRelabelConfig, "regex")
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 
-	var jobToScrapeConfig map[string]interface{}
-	err = json.Unmarshal(jsonConfig, &jobToScrapeConfig)
-	if jobToScrapeConfig != nil {
-		for _, scrapeConfig := range jobToScrapeConfig {
-			scrapeConfig := scrapeConfig.(map[string]interface{})
-			if scrapeConfig["relabel_configs"] != nil {
-				relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
-				for _, relabelConfig := range relabelConfigs {
-					relabelConfig := relabelConfig.(map[string]interface{})
-					// Dropping regex key from the map since unmarshalling this on the client(metrics_receiver.go) results in error
-					// because of the bug here - https://github.com/prometheus/prometheus/issues/12534
-					if relabelConfig["action"] == "keepequal" || relabelConfig["action"] == "dropequal" {
-						delete(relabelConfig, "regex")
-					}
-				}
-			}
-			if scrapeConfig["metric_relabel_configs"] != nil {
-				metricRelabelConfigs := scrapeConfig["metric_relabel_configs"].([]interface{})
-				for _, metricRelabelConfig := range metricRelabelConfigs {
-					metricRelabelConfig := metricRelabelConfig.(map[string]interface{})
-					// Dropping regex key from the map since unmarshalling this on the client(metrics_receiver.go) results in error
-					// because of the bug here - https://github.com/prometheus/prometheus/issues/12534
-					if metricRelabelConfig["action"] == "keepequal" || metricRelabelConfig["action"] == "dropequal" {
-						delete(metricRelabelConfig, "regex")
-					}
-				}
-			}
-		}
-	}
-
-	jsonConfigNew, err := json.Marshal(jobToScrapeConfig)
-	if err != nil {
-		return err
-	}
+	// jsonConfigNew, err := json.Marshal(jobToScrapeConfig)
+	// if err != nil {
+	// 	return err
+	// }
 
 	s.mtx.Lock()
 	s.scrapeConfigResponse = jsonConfigNew
