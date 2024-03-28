@@ -24,8 +24,10 @@ spec:
           ports:
             - containerPort: 2112
               protocol: TCP
+              name: "weather-app"
             - containerPort: 2113
               protocol: TCP
+              name: "untyped-metrics"
       nodeSelector:
           kubernetes.io/os: linux
           architecture: amd64
