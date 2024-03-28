@@ -115,10 +115,10 @@ func CreatePrometheusAPIClient(amwQueryEndpoint, clientId, clientSecret string) 
 /*
  * Example parsing of the instant query response.
  */
-func InstantQuery(api v1.API, query string) (v1.Warnings, error) {
+func InstantQuery(api v1.API, query string) (v1.Warnings, interface{}, error) {
 	result, warnings, err := api.Query(context.Background(), query, time.Now())
 	if err != nil {
-		return warnings, fmt.Errorf("Failed to run query: %s", err.Error())
+		return warnings, nil, fmt.Errorf("Failed to run query: %s", err.Error())
 	}
 	for _, sample := range result.(model.Vector) {
 		fmt.Printf("Metric: %s\n", sample.Metric)
@@ -133,5 +133,5 @@ func InstantQuery(api v1.API, query string) (v1.Warnings, error) {
 		fmt.Printf("Histogram: %s\n", sample.Histogram)
 	}
 
-	return warnings, nil
+	return warnings, result, nil
 }
