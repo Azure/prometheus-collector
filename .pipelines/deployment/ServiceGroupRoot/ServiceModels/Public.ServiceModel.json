@@ -46,6 +46,11 @@
           "RolloutParametersPath": "Parameters\\PrometheusCollector.Linux.Parameters.json"
         },
         {
+          "Name": "PushLinuxCCPAgent",
+          "InstanceOf": "ShellExtension",
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.LinuxCCP.Parameters.json"
+        },
+        {
           "Name": "PushWindowsAgent",
           "InstanceOf": "ShellExtension",
           "RolloutParametersPath": "Parameters\\PrometheusCollector.Windows.Parameters.json"
