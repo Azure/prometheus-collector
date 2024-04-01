@@ -163,7 +163,6 @@ COPY --from=builder /lib/libprotobuf.so.28 /lib/libgrpc++.so.1.42 /lib/libabsl_s
 # fluent-bit dependencies
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 COPY --from=builder /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libcurl.so.4 /lib/libm.so.6 /lib/libz.so.1 /lib/libzstd.so.1 /lib/libsasl2.so.3 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/liblzma.so.5 /lib/liblz4.so.1  /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libgssapi_krb5.so.2 /lib/libresolv.so.2 /lib/libgpg-error.so.0 /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /lib/
-COPY --from=builder /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/liblzma.so.5 /lib/liblz4.so.1 /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libgpg-error.so.0 /lib/
 # telegraf dependencies
 COPY --from=builder /lib/libc.so.6 /lib/
 # mdsd dependencies
