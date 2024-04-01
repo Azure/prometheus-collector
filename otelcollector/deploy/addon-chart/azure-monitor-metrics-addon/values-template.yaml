@@ -48,9 +48,9 @@ AzureMonitorMetrics:
   DsMemoryRequestLinux: 150Mi
   DsCPULimitWindows: 500m
   DsMemoryLimitWindows: 1Gi
-  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator"
-  ImageTagCfgReader: ${IMAGE_TAG}-cfg"
-  TargetAllocatorEnabled: false
+  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator
+  ImageTagCfgReader: ${IMAGE_TAG}-cfg
+  TargetAllocatorEnabled: true
   DeploymentReplicas: 1
   CfgReaderCPULimit: 1
   CfgReaderMemoryLimit: 1Gi
@@ -60,6 +60,9 @@ AzureMonitorMetrics:
   TargetAllocatorMemoryLimit: 8Gi
   TargetAllocatorCPURequest: 10m
   TargetAllocatorMemoryRequest: 50Mi
+  IsAppMonitoringAutoInstrumentationEnabled: false
+  IsAppMonitoringOpenTelemetryMetricsEnabled: false
+  OpenTelemetryMetricsPort: "28333"
   # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
   # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP -
   # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
@@ -68,7 +71,7 @@ AzureMonitorMetrics:
     ImageRepository: "/aks/msi/addon-token-adapter"
     ImageTag: "master.230804.1"
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
-    ImageTagWin: "20230120winbeta"
+    ImageTagWin: "master.240102.1"
   ArcExtension: ${ARC_EXTENSION}
   ArcEnableOperator: false
   # Do not change the below settings. They are reserved for Arc Autonomous

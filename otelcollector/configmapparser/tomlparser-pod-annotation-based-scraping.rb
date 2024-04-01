@@ -43,7 +43,7 @@ def populateSettingValuesFromConfigMap(parsedConfig)
         ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Invalid namespace regex for podannotations")
       end
     else
-      ConfigParseErrorLogger.logError(LOGGING_PREFIX, "podannotations namespace regex either not specified or not of type string")
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "podannotations namespace regex either not specified or not of type string")
     end
   end
 end

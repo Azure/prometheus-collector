@@ -58,10 +58,10 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              {{- if eq .Values.AzureMonitorMetrics.ArcExtension true }}
-              value: "{{ lower .Values.Azure.Cluster.Cloud }}"
-              {{- else if .Values.AzureMonitorMetrics.isArcACluster }}
+              {{- if .Values.AzureMonitorMetrics.isArcACluster }}
               value: "arcautonomous"
+              {{- else if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ lower .Values.Azure.Cluster.Cloud }}"
               {{- else }}
               value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
               {{- end }}
@@ -131,6 +131,12 @@ spec:
               value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
+            - name: APPMONITORING_AUTOINSTRUMENTATION_ENABLED
+              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringAutoInstrumentationEnabled }}"
+            - name: APPMONITORING_OPENTELEMETRYMETRICS_ENABLED
+              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringOpenTelemetryMetricsEnabled }}"
+            - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT
+              value: "{{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}"
           securityContext:
             privileged: false
           volumeMounts:
@@ -398,6 +404,12 @@ spec:
               value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
+            - name: APPMONITORING_AUTOINSTRUMENTATION_ENABLED
+              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringAutoInstrumentationEnabled }}"
+            - name: APPMONITORING_OPENTELEMETRYMETRICS_ENABLED
+              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringOpenTelemetryMetricsEnabled }}"
+            - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT
+              value: "{{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}"
           securityContext:
             privileged: false
           volumeMounts:
