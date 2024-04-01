@@ -53,10 +53,11 @@ stages:
           LINUX_IMAGE_TAG=$SEMVER
           # Truncating to 128 characters as it is required by docker
           LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
-          
+                  
           #Truncating this to 124 to add the cfg suffix
           LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
           LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
+          LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
           LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
 
           #Truncating this to 113 to add the ref app suffices
@@ -98,6 +99,7 @@ stages:
           echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
           echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
           echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_IMAGE_TAG;isOutput=true]$TARGET_ALLOCATOR_IMAGE_TAG"
+          echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_IMAGE_TAG;isOutput=true]$LINUX_CONFIG_READER_IMAGE_TAG"
           echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_FULL_IMAGE_NAME"
           echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_FULL_IMAGE_NAME;isOutput=true]$LINUX_CONFIG_READER_FULL_IMAGE_NAME"
           echo "##vso[task.setvariable variable=LINUX_CCP_FULL_IMAGE_NAME;isOutput=true]$LINUX_CCP_FULL_IMAGE_NAME"
@@ -174,7 +176,7 @@ stages:
       LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         persistCredentials: true
@@ -199,7 +201,7 @@ stages:
       LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         persistCredentials: true
@@ -222,7 +224,7 @@ stages:
     variables:
       WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
       skipComponentGovernanceDetection: true
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - powershell: |
           docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
@@ -239,7 +241,7 @@ stages:
     variables:
       WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
       skipComponentGovernanceDetection: true
-    condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - powershell: |
           docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
@@ -345,7 +347,7 @@ stages:
 
           # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
           sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-            docker system prune --all -f
+          docker system prune --all -f
           docker images -q --filter "dangling=true" | xargs docker rmi
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
@@ -367,7 +369,7 @@ stages:
           EOF
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: Set values in payload.json for signing"
-        condition: eq(variables.IS_MAIN_BRANCH, true)
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
       - task: EsrpCodeSigning@3
         displayName: "ESRP CodeSigning for Prometheus"
@@ -405,7 +407,7 @@ stages:
             -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
         workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
-        condition: eq(variables.IS_MAIN_BRANCH, true)
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -439,7 +441,7 @@ stages:
 
       - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
         displayName: "Ev2: Generate image artifacts"
-        condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         inputs:
           BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
           DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
@@ -622,7 +624,7 @@ stages:
 
       - task: PublishBuildArtifacts@1
         displayName: "Ev2: Publish image artifacts"
-        condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
@@ -658,6 +660,8 @@ stages:
           sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
+          docker system prune --all -f
+
           docker buildx create --name dockerbuilder
           docker buildx use dockerbuilder
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -671,7 +675,6 @@ stages:
           EOF
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
         displayName: "Build: build and push target allocator image to dev ACR"
-        timeoutInMinutes: 120
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -716,7 +719,7 @@ stages:
             -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
         workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
-        condition: eq(variables.IS_MAIN_BRANCH, true)
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
   - job: Linux_Config_Reader
     displayName: "Build: config reader image"
@@ -735,6 +738,7 @@ stages:
           # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
           sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          docker system prune --all -f
 
           docker buildx create --name dockerbuilder
           docker buildx use dockerbuilder
@@ -792,7 +796,7 @@ stages:
             -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
         workingDirectory: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxcfgreader/"
-        condition: eq(variables.IS_MAIN_BRANCH, true)
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
   - job: Windows2019_Prometheus_Collector
     displayName: "Build: windows 2019 prometheus-collector image"
@@ -947,7 +951,7 @@ stages:
         displayName: "Build: Windows multi-arch manifest"
 
       - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-        condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         displayName: "Ev2: generate image artifacts"
         inputs:
           BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
@@ -1004,10 +1008,10 @@ stages:
           oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
         workingDirectory: $(Build.ArtifactStagingDirectory)/windows
         displayName: "Download, install Oras and run oras attach"
-        condition: eq(variables.IS_MAIN_BRANCH, true)
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
       - task: PublishBuildArtifacts@1
-        condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         displayName: "Ev2: publish image artifacts"
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
@@ -1059,7 +1063,7 @@ stages:
 
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: publish helm chart artifacts"
-      condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
@@ -1068,7 +1072,7 @@ stages:
   jobs:
   - deployment: Deploy_Chart_ARC
     displayName: "Deploy: Arc dev cluster"
-    condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(failed('Deploy_Chart_ARC'), eq(variables['System.StageAttempt'], 1)))
+    condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))), or(failed('Deploy_Chart_ARC'), eq(variables['System.StageAttempt'], 1)))
     environment: Prometheus-Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
@@ -1188,7 +1192,9 @@ stages:
       IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
       IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
       HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
-      skipComponentGovernanceDetection: true
+      IMAGE_TAG_TARGET_ALLOCATOR: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
+      IMAGE_TAG_CONFIG_READER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.CONFIG_READER_IMAGE_TAG'] ]
+    skipComponentGovernanceDetection: true
     strategy:
       runOnce:
         deploy:
@@ -1212,9 +1218,8 @@ stages:
                   do
                     sleep 30
                     echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
-                    echo $(MCR_REGISTRY)$(MCR_REPOSITORY_HELM):$(IMAGE_TAG)
                     output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                    if (echo $output | grep $(IMAGE_TAG))
+                    if (echo $output | grep $(IMAGE_TAG) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
                     then
                       echo "Images are published to mcr"
                       exit 0
