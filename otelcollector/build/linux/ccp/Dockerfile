@@ -103,7 +103,6 @@ COPY --from=builder /lib/libprotobuf.so.28 /lib/libgrpc++.so.1.42 /lib/libabsl_s
 # mdsd dependencies
 COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
 COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
-COPY --from=builder /usr/local/lib/libtcmalloc_minimal.so.4 /usr/local/lib/
 
 # debug image
 COPY --from=builder /busybin /busybin
