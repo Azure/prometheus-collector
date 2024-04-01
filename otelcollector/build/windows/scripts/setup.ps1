@@ -31,7 +31,7 @@ Write-Host ('Installing Fluent Bit');
 try {
     # Keep version in sync with linux in setup.sh file
     # $fluentBitUri = 'https://github.com/microsoft/OMS-docker/releases/download/winakslogagent/td-agent-bit-1.4.0-win64.zip'
-    $fluentBitUri = 'https://fluentbit.io/releases/2.0/fluent-bit-2.0.9-win64.zip'
+    $fluentBitUri = 'https://releases.fluentbit.io/2.1/fluent-bit-2.1.10-win64.zip'
     Invoke-WebRequest -Uri $fluentBitUri -OutFile /installation/fluent-bit.zip
     Expand-Archive -Path /installation/fluent-bit.zip -Destination /installation/fluent-bit
     Move-Item -Path /installation/fluent-bit/*/bin/* -Destination /opt/fluent-bit/bin/ -ErrorAction SilentlyContinue
