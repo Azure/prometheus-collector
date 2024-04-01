@@ -82,101 +82,101 @@ RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
 # If wanting to run without distroless, uncomment this line and comment everything after
-#CMD [ "/opt/main.sh" ]
-
-FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
-# Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
-# Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_USGOVERNMENT ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5
-# Below is for ContainerInsightsPrometheusCollector-Mooncake AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4
-# Below is for ContainerInsightsPrometheusCollector-USSec AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
-# Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
-ENV TELEMETRY_DISABLED false
-# Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
-ENV MALLOC_ARENA_MAX=2
-ENV PATH="/busybin:${PATH}"
-ENV OS_TYPE "linux"
-
-# files
-COPY --from=builder /opt /opt
-COPY --from=builder /etc /etc
-COPY --from=builder /busybin /busybin
-COPY --from=builder /static/react /static/react
-COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_internal.config /usr/sbin/
-COPY --from=builder /var/opt/microsoft /var/opt/microsoft
-COPY --from=builder /var/lib/logrotate /var/lib/logrotate
-COPY --from=builder /var/spool/cron /var/spool/cron
-COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
-COPY --from=builder /usr/share/pki/ /usr/share/pki
-
-# executables
-COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
-COPY --from=builder /usr/bin/ruby /usr/bin/ruby
-COPY --from=builder /usr/lib/ruby /usr/lib/ruby
-COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
-COPY --from=builder /usr/bin/bash /usr/bin/bash
-COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
-COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
-COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
-COPY --from=builder /usr/sbin/crond /usr/sbin/crond
-COPY --from=builder /usr/bin/vim /usr/bin/vim
-COPY --from=builder /usr/share/vim /usr/share/vim
-COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
-COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
-COPY --from=builder /usr/bin/gzip /usr/bin/
-COPY --from=builder /usr/bin/curl /usr/bin/
-COPY --from=builder /usr/bin/update-ca-trust /usr/bin
-COPY --from=builder /bin/sh /bin/sh
-COPY --from=builder /usr/bin/p11-kit /usr/bin
-COPY --from=builder /usr/bin/trust /usr/bin
-
-# bash dependencies
-COPY --from=builder /lib/libreadline.so.8 /lib/
-COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
-# inotifywait dependencies
-COPY --from=builder /lib/libinotifytools.so.0 /lib/
-# crond dependencies
-COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre.so.1 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
-# vim dependencies
-COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
-# ruby dependencies
-COPY --from=builder /usr/lib/libruby.so.3.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
-# ruby re2 dependencies
-COPY --from=builder /usr/lib/libre2.so.0a /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
-# metricsextension dependencies
-# libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-COPY --from=builder /lib/libprotobuf.so.28 /lib/libgrpc++.so.1.42 /lib/libabsl_synchronization.so.2206.0.0 /lib/libboost_filesystem.so.1.76.0 /lib/libboost_coroutine.so.1.76.0 /lib/libboost_thread.so.1.76.0 /lib/libcpprest.so.2.10  /lib/libuuid.so.1 /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libz.so.1 /lib64/libgrpc.so.20 /lib/libabsl_raw_hash_set.so.2206.0.0 /lib/libabsl_hash.so.2206.0.0 /lib/libabsl_statusor.so.2206.0.0 /lib/libgpr.so.20 /lib/libupb.so.20 /lib/libabsl_status.so.2206.0.0 /lib/libabsl_time.so.2206.0.0 /lib/libabsl_strings.so.2206.0.0 /lib/libabsl_stacktrace.so.2206.0.0  /lib/libabsl_symbolize.so.2206.0.0 /lib/libabsl_malloc_internal.so.2206.0.0 /lib/libabsl_base.so.2206.0.0 /lib/libabsl_spinlock_wait.so.2206.0.0 /lib/libabsl_raw_logging_internal.so.2206.0.0 /lib/libboost_chrono.so.1.76.0 /lib/libboost_context.so.1.76.0 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libcares.so.2 /lib/libaddress_sorting.so.20 /lib/libre2.so.0a /lib/libabsl_cord.so.2206.0.0 /lib/libabsl_str_format_internal.so.2206.0.0 /lib/libabsl_time_zone.so.2206.0.0 /lib/libabsl_city.so.2206.0.0 /lib/libabsl_low_level_hash.so.2206.0.0 /lib/libabsl_cordz_info.so.2206.0.0 /lib/libabsl_strerror.so.2206.0.0 /lib/libabsl_int128.so.2206.0.0 /lib/libabsl_strings_internal.so.2206.0.0 /lib/libabsl_debugging_internal.so.2206.0.0 /lib/libabsl_demangle_internal.so.2206.0.0 /lib/libbrotlicommon.so.1 /lib/libabsl_cord_internal.so.2206.0.0 /lib/libabsl_cordz_functions.so.2206.0.0 /lib/libabsl_cordz_handle.so.2206.0.0 /lib/libabsl_throw_delegate.so.2206.0.0 /lib/libabsl_exponential_biased.so.2206.0.0 /lib/
-# fluent-bit dependencies
-# libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-COPY --from=builder  /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/liblzma.so.5 /lib/liblz4.so.1 /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libgpg-error.so.0 /lib/
-# telegraf dependencies
-COPY --from=builder /lib/libc.so.6 /lib/
-# mdsd dependencies
-COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
-COPY --from=builder /usr/local/lib/libtcmalloc_minimal.so.4 /usr/local/lib/
-# logrotate dependencies
-COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
-# curl dependencies
-# libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1   /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
-COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
-# sh dependencies
-COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /lib/
-# update-ca-trust dependencies
-COPY --from=builder /usr/lib64/pkcs11 /usr/lib64
-COPY --from=builder /usr/lib/pkcs11 /usr/lib/
-COPY --from=builder /usr/libexec/p11-kit /usr/libexec
-COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/libffi.so.8 /lib/
-COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
-COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
-
-RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
-RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
-RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
-RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
-ENTRYPOINT [ "/bin/bash" ]
 CMD [ "/opt/main.sh" ]
+
+# FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
+# # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+# # Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_USGOVERNMENT ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5
+# # Below is for ContainerInsightsPrometheusCollector-Mooncake AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4
+# # Below is for ContainerInsightsPrometheusCollector-USSec AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
+# # Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
+# ENV TELEMETRY_DISABLED false
+# # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
+# ENV MALLOC_ARENA_MAX=2
+# ENV PATH="/busybin:${PATH}"
+# ENV OS_TYPE "linux"
+
+# # files
+# COPY --from=builder /opt /opt
+# COPY --from=builder /etc /etc
+# COPY --from=builder /busybin /busybin
+# COPY --from=builder /static/react /static/react
+# COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_internal.config /usr/sbin/
+# COPY --from=builder /var/opt/microsoft /var/opt/microsoft
+# COPY --from=builder /var/lib/logrotate /var/lib/logrotate
+# COPY --from=builder /var/spool/cron /var/spool/cron
+# COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
+# COPY --from=builder /usr/share/pki/ /usr/share/pki
+
+# # executables
+# COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
+# COPY --from=builder /usr/bin/ruby /usr/bin/ruby
+# COPY --from=builder /usr/lib/ruby /usr/lib/ruby
+# COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
+# COPY --from=builder /usr/bin/bash /usr/bin/bash
+# COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
+# COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
+# COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
+# COPY --from=builder /usr/sbin/crond /usr/sbin/crond
+# COPY --from=builder /usr/bin/vim /usr/bin/vim
+# COPY --from=builder /usr/share/vim /usr/share/vim
+# COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
+# COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
+# COPY --from=builder /usr/bin/gzip /usr/bin/
+# COPY --from=builder /usr/bin/curl /usr/bin/
+# COPY --from=builder /usr/bin/update-ca-trust /usr/bin
+# COPY --from=builder /bin/sh /bin/sh
+# COPY --from=builder /usr/bin/p11-kit /usr/bin
+# COPY --from=builder /usr/bin/trust /usr/bin
+
+# # bash dependencies
+# COPY --from=builder /lib/libreadline.so.8 /lib/
+# COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
+# # inotifywait dependencies
+# COPY --from=builder /lib/libinotifytools.so.0 /lib/
+# # crond dependencies
+# COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre.so.1 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
+# # vim dependencies
+# COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
+# # ruby dependencies
+# COPY --from=builder /usr/lib/libruby.so.3.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
+# # ruby re2 dependencies
+# COPY --from=builder /usr/lib/libre2.so.0a /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
+# # metricsextension dependencies
+# # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
+# COPY --from=builder /lib/libprotobuf.so.28 /lib/libgrpc++.so.1.42 /lib/libabsl_synchronization.so.2206.0.0 /lib/libboost_filesystem.so.1.76.0 /lib/libboost_coroutine.so.1.76.0 /lib/libboost_thread.so.1.76.0 /lib/libcpprest.so.2.10  /lib/libuuid.so.1 /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libz.so.1 /lib64/libgrpc.so.20 /lib/libabsl_raw_hash_set.so.2206.0.0 /lib/libabsl_hash.so.2206.0.0 /lib/libabsl_statusor.so.2206.0.0 /lib/libgpr.so.20 /lib/libupb.so.20 /lib/libabsl_status.so.2206.0.0 /lib/libabsl_time.so.2206.0.0 /lib/libabsl_strings.so.2206.0.0 /lib/libabsl_stacktrace.so.2206.0.0  /lib/libabsl_symbolize.so.2206.0.0 /lib/libabsl_malloc_internal.so.2206.0.0 /lib/libabsl_base.so.2206.0.0 /lib/libabsl_spinlock_wait.so.2206.0.0 /lib/libabsl_raw_logging_internal.so.2206.0.0 /lib/libboost_chrono.so.1.76.0 /lib/libboost_context.so.1.76.0 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libcares.so.2 /lib/libaddress_sorting.so.20 /lib/libre2.so.0a /lib/libabsl_cord.so.2206.0.0 /lib/libabsl_str_format_internal.so.2206.0.0 /lib/libabsl_time_zone.so.2206.0.0 /lib/libabsl_city.so.2206.0.0 /lib/libabsl_low_level_hash.so.2206.0.0 /lib/libabsl_cordz_info.so.2206.0.0 /lib/libabsl_strerror.so.2206.0.0 /lib/libabsl_int128.so.2206.0.0 /lib/libabsl_strings_internal.so.2206.0.0 /lib/libabsl_debugging_internal.so.2206.0.0 /lib/libabsl_demangle_internal.so.2206.0.0 /lib/libbrotlicommon.so.1 /lib/libabsl_cord_internal.so.2206.0.0 /lib/libabsl_cordz_functions.so.2206.0.0 /lib/libabsl_cordz_handle.so.2206.0.0 /lib/libabsl_throw_delegate.so.2206.0.0 /lib/libabsl_exponential_biased.so.2206.0.0 /lib/
+# # fluent-bit dependencies
+# # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
+# COPY --from=builder  /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/liblzma.so.5 /lib/liblz4.so.1 /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libgpg-error.so.0 /lib/
+# # telegraf dependencies
+# COPY --from=builder /lib/libc.so.6 /lib/
+# # mdsd dependencies
+# COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
+# COPY --from=builder /usr/local/lib/libtcmalloc_minimal.so.4 /usr/local/lib/
+# # logrotate dependencies
+# COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
+# # curl dependencies
+# # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
+# COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1   /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
+# COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
+# # sh dependencies
+# COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /lib/
+# # update-ca-trust dependencies
+# COPY --from=builder /usr/lib64/pkcs11 /usr/lib64
+# COPY --from=builder /usr/lib/pkcs11 /usr/lib/
+# COPY --from=builder /usr/libexec/p11-kit /usr/libexec
+# COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/libffi.so.8 /lib/
+# COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
+# COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
+
+# RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
+# RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
+# RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
+# RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
+# ENTRYPOINT [ "/bin/bash" ]
+# CMD [ "/opt/main.sh" ]
