@@ -150,7 +150,7 @@ COPY --from=builder /usr/lib/libre2.so.0a /usr/lib/libstdc++.so.6 /usr/lib/libgc
 # metricsextension dependencies
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 COPY --from=builder /lib/libboost_filesystem.so.1.76.0 /lib/libboost_coroutine.so.1.76.0 /lib/libboost_thread.so.1.76.0 /lib/libcpprest.so.2.10 /lib/libuuid.so.1 /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libz.so.1 /lib/libboost_chrono.so.1.76.0 /lib/libboost_context.so.1.76.0 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libbrotlicommon.so.1 /lib/
-COPY --from-builder /lib64/libuuid.so.1 /lib64/ld-linux-x86-64.so.2 /lib64
+COPY --from=builder /lib64/libuuid.so.1 /lib64/ld-linux-x86-64.so.2 /lib64
 # fluent-bit dependencies
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 COPY --from=builder  /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/liblzma.so.5 /lib/liblz4.so.1 /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libgpg-error.so.0 /lib/
