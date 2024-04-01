@@ -15,6 +15,7 @@ var _ = Describe("Calling the API server using the Prometheus Operator client", 
   It("should get the pod monitor custom resources", func() {
     podMonitors, err := PromClient.MonitoringV1().PodMonitors("").List(context.Background(), metav1.ListOptions{})
     Expect(err).NotTo(HaveOccurred())
+		Expect(len(podMonitors.Items)).To(BeNumerically(">", 0))
 
     fmt.Printf("Found %d Pod Monitors:\n", len(podMonitors.Items))
     for _, pm := range podMonitors.Items {
@@ -28,6 +29,7 @@ var _ = Describe("Calling the API server using the Prometheus Operator client", 
   It("should get the service monitor custom resources", func() {
     serviceMonitors, err := PromClient.MonitoringV1().ServiceMonitors("").List(context.Background(), metav1.ListOptions{})
     Expect(err).NotTo(HaveOccurred())
+		Expect(len(serviceMonitors.Items)).To(BeNumerically(">", 0))
 
     fmt.Printf("Found %d Service Monitors:\n", len(serviceMonitors.Items))
     for _, sm := range serviceMonitors.Items {

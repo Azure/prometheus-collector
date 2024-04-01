@@ -139,6 +139,17 @@ func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.Scrap
 					}
 				}
 			}
+			if scrapeConfig["metric_relabel_configs"] != nil {
+				metricRelabelConfigs := scrapeConfig["metric_relabel_configs"].([]interface{})
+				for _, metricRelabelConfig := range metricRelabelConfigs {
+					metricRelabelConfig := metricRelabelConfig.(map[string]interface{})
+					// Dropping regex key from the map since unmarshalling this on the client(metrics_receiver.go) results in error
+					// because of the bug here - https://github.com/prometheus/prometheus/issues/12534
+					if metricRelabelConfig["action"] == "keepequal" || metricRelabelConfig["action"] == "dropequal" {
+						delete(metricRelabelConfig, "regex")
+					}
+				}
+			}
 		}
 	}
 
