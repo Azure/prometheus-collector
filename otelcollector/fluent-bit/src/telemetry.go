@@ -437,6 +437,7 @@ func SendContainersCpuMemoryToAppInsightsMetrics() {
 	for ; true; <-ksmTelemetryTicker.C {
 		for podId := 0; podId < len(p.Pods); podId++ {
 			PodRefName := strings.TrimSpace(p.Pods[podId].PodRef.PodRefName)
+			fmt.Printf("PodRefName: %s", PodRefName)
 			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
 				container := p.Pods[podId].Containers[containerId]
 				containerName := strings.TrimSpace(container.Name)
@@ -652,74 +653,77 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 			if DefaultPrometheusConfig != "" {
 				metric.Properties["DefaultPrometheusConfig"] = DefaultPrometheusConfig
 			}
-			if KubeletKeepListRegex != "" {
-				metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
-			}
-			if CoreDNSKeepListRegex != "" {
-				metric.Properties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
-			}
-			if CAdvisorKeepListRegex != "" {
-				metric.Properties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
-			}
-			if KubeProxyKeepListRegex != "" {
-				metric.Properties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
-			}
-			if ApiServerKeepListRegex != "" {
-				metric.Properties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
-			}
-			if KubeStateKeepListRegex != "" {
-				metric.Properties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
-			}
-			if NodeExporterKeepListRegex != "" {
-				metric.Properties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
-			}
-			if WinExporterKeepListRegex != "" {
-				metric.Properties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
-			}
-			if WinKubeProxyKeepListRegex != "" {
-				metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
-			}
-			if PodannotationKeepListRegex != "" {
-				metric.Properties["PodannotationKeepListRegex"] = PodannotationKeepListRegex
-			}
-			if KappieBasicKeepListRegex != "" {
-				metric.Properties["KappieBasicKeepListRegex"] = KappieBasicKeepListRegex
-			}
-			if KubeletScrapeInterval != "" {
-				metric.Properties["KubeletScrapeInterval"] = KubeletScrapeInterval
-			}
-			if CoreDNSScrapeInterval != "" {
-				metric.Properties["CoreDNSScrapeInterval"] = CoreDNSScrapeInterval
-			}
-			if CAdvisorScrapeInterval != "" {
-				metric.Properties["CAdvisorScrapeInterval"] = CAdvisorScrapeInterval
-			}
-			if KubeProxyScrapeInterval != "" {
-				metric.Properties["KubeProxyScrapeInterval"] = KubeProxyScrapeInterval
-			}
-			if ApiServerScrapeInterval != "" {
-				metric.Properties["ApiServerScrapeInterval"] = ApiServerScrapeInterval
-			}
-			if KubeStateScrapeInterval != "" {
-				metric.Properties["KubeStateScrapeInterval"] = KubeStateScrapeInterval
-			}
-			if NodeExporterScrapeInterval != "" {
-				metric.Properties["NodeExporterScrapeInterval"] = NodeExporterScrapeInterval
-			}
-			if WinExporterScrapeInterval != "" {
-				metric.Properties["WinExporterScrapeInterval"] = WinExporterScrapeInterval
-			}
-			if WinKubeProxyScrapeInterval != "" {
-				metric.Properties["WinKubeProxyScrapeInterval"] = WinKubeProxyScrapeInterval
-			}
-			if PromHealthScrapeInterval != "" {
-				metric.Properties["PromHealthScrapeInterval"] = PromHealthScrapeInterval
-			}
-			if PodAnnotationScrapeInterval != "" {
-				metric.Properties["PodAnnotationScrapeInterval"] = PodAnnotationScrapeInterval
-			}
-			if KappieBasicScrapeInterval != "" {
-				metric.Properties["KappieBasicScrapeInterval"] = KappieBasicScrapeInterval
+
+			if os.Getenv(envControllerType) == "ReplicaSet" {
+				if KubeletKeepListRegex != "" {
+					metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
+				}
+				if CoreDNSKeepListRegex != "" {
+					metric.Properties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
+				}
+				if CAdvisorKeepListRegex != "" {
+					metric.Properties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
+				}
+				if KubeProxyKeepListRegex != "" {
+					metric.Properties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
+				}
+				if ApiServerKeepListRegex != "" {
+					metric.Properties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
+				}
+				if KubeStateKeepListRegex != "" {
+					metric.Properties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
+				}
+				if NodeExporterKeepListRegex != "" {
+					metric.Properties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
+				}
+				if WinExporterKeepListRegex != "" {
+					metric.Properties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
+				}
+				if WinKubeProxyKeepListRegex != "" {
+					metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
+				}
+				if PodannotationKeepListRegex != "" {
+					metric.Properties["PodannotationKeepListRegex"] = PodannotationKeepListRegex
+				}
+				if KappieBasicKeepListRegex != "" {
+					metric.Properties["KappieBasicKeepListRegex"] = KappieBasicKeepListRegex
+				}
+				if KubeletScrapeInterval != "" {
+					metric.Properties["KubeletScrapeInterval"] = KubeletScrapeInterval
+				}
+				if CoreDNSScrapeInterval != "" {
+					metric.Properties["CoreDNSScrapeInterval"] = CoreDNSScrapeInterval
+				}
+				if CAdvisorScrapeInterval != "" {
+					metric.Properties["CAdvisorScrapeInterval"] = CAdvisorScrapeInterval
+				}
+				if KubeProxyScrapeInterval != "" {
+					metric.Properties["KubeProxyScrapeInterval"] = KubeProxyScrapeInterval
+				}
+				if ApiServerScrapeInterval != "" {
+					metric.Properties["ApiServerScrapeInterval"] = ApiServerScrapeInterval
+				}
+				if KubeStateScrapeInterval != "" {
+					metric.Properties["KubeStateScrapeInterval"] = KubeStateScrapeInterval
+				}
+				if NodeExporterScrapeInterval != "" {
+					metric.Properties["NodeExporterScrapeInterval"] = NodeExporterScrapeInterval
+				}
+				if WinExporterScrapeInterval != "" {
+					metric.Properties["WinExporterScrapeInterval"] = WinExporterScrapeInterval
+				}
+				if WinKubeProxyScrapeInterval != "" {
+					metric.Properties["WinKubeProxyScrapeInterval"] = WinKubeProxyScrapeInterval
+				}
+				if PromHealthScrapeInterval != "" {
+					metric.Properties["PromHealthScrapeInterval"] = PromHealthScrapeInterval
+				}
+				if PodAnnotationScrapeInterval != "" {
+					metric.Properties["PodAnnotationScrapeInterval"] = PodAnnotationScrapeInterval
+				}
+				if KappieBasicScrapeInterval != "" {
+					metric.Properties["KappieBasicScrapeInterval"] = KappieBasicScrapeInterval
+				}
 			}
 
 			TelemetryClient.Track(metric)
