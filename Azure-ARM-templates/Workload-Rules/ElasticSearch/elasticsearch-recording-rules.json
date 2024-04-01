@@ -1,0 +1,71 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "clusterName": {
+      "type": "string",
+      "metadata": {
+        "description": "Cluster name"
+      }
+    },
+    "azureMonitorWorkspace": {
+      "type": "string",
+      "metadata": {
+        "description": "ResourceId of Azure monitor workspace to associate to"
+      }
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "name": "azmon_elasticsearch_rules",
+      "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+      "apiVersion": "2023-03-01",
+      "location": "[parameters('location')]",
+      "properties": {
+        "interval": "PT1M",
+        "scopes": [
+          "[parameters('azureMonitorWorkspace')]"
+        ],
+        "clusterName": "[parameters('clusterName')]",
+        "rules": [
+          {
+            "record": "elasticsearch_filesystem_data_free_percent",
+            "expression": "100 - elasticsearch_filesystem_data_used_percent"
+          },
+          {
+            "record": "elasticsearch_red_cluster_status",
+            "expression": "sum by (cluster) (elasticsearch_cluster_health_status == 2)"
+          },
+          {
+            "record": "elasticsearch_yellow_cluster_status",
+            "expression": "sum by (cluster) (elasticsearch_cluster_health_status == 1)"
+          },
+          {
+            "record": "elasticsearch_process_cpu_high",
+            "expression": "sum by (cluster, instance, name) (elasticsearch_process_cpu_percent)"
+          },
+          {
+            "record": "elasticsearch_os_cpu_high",
+            "expression": "sum by (cluster, instance, name) (elasticsearch_os_cpu_percent)"
+          },
+          {
+            "record": "elasticsearch_filesystem_data_used_percent",
+            "expression": "sum by (cluster, instance, name) ( 100 * (elasticsearch_filesystem_data_size_bytes - elasticsearch_filesystem_data_free_bytes) / elasticsearch_filesystem_data_size_bytes)"
+          },
+          {
+            "record": "elasticsearch_node_disk_watermark_reached",
+            "expression": "sum by (cluster, instance, name) (round( (1 - (elasticsearch_filesystem_data_available_bytes / elasticsearch_filesystem_data_size_bytes) ) * 100, 0.001))"
+          },
+          {
+            "record": "elasticsearch_heap_utilization_percentage",
+            "expression": "sum by (cluster, instance, name) ( 100 * (elasticsearch_jvm_memory_used_bytes{area=\"heap\"} / elasticsearch_jvm_memory_max_bytes{area=\"heap\"}))"
+          }
+        ]
+      }
+    }
+  ]
+}
