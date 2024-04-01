@@ -38,6 +38,15 @@ COPY ./prometheusreceiver /src/prometheusreceiver
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as configmapparser-builder
+WORKDIR /src
+COPY ../shared/configmapparser.go ../shared/file_utilities.go
+RUN go version
+RUN go mod download
+RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
+RUN go get
+RUN go build -o configmapparser .
+
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
@@ -52,13 +61,14 @@ COPY ./logrotate/prometheus-collector /etc/logrotate.d/
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
-COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
+# COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/collector-config-replicaset.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
+COPY --from=configmapparser-builder --chmod=777 /src/configmapparser $tmpdir/
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
