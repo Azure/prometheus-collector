@@ -55,7 +55,8 @@ RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup-configreader.sh ${TARGETARCH}
 
-FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
+# FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0
 ENV PATH="/busybin:${PATH}"
 ENV OS_TYPE "linux"
 
