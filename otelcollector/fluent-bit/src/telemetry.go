@@ -437,7 +437,6 @@ func SendContainersCpuMemoryToAppInsightsMetrics() {
 	for ; true; <-ksmTelemetryTicker.C {
 		for podId := 0; podId < len(p.Pods); podId++ {
 			podRefName := strings.TrimSpace(p.Pods[podId].PodRef.PodRefName)
-			Log(fmt.Sprintf("PodRefName: %s\n", podRefName))
 			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
 				container := p.Pods[podId].Containers[containerId]
 				containerName := strings.TrimSpace(container.Name)
@@ -479,7 +478,6 @@ func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMet
 
 	TelemetryClient.Track(metricTelemetryItem)
 
-	Log(fmt.Sprintf("PodRefName: %s\n", podRefName))
 	Log(fmt.Sprintf("Sent container CPU and Mem data for %s", cpuMetricName))
 }
 
