@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    # - rashmi/update-tgf-04-24
+    - rashmi/update-tgf-04-24
 
 pr:
   autoCancel: true
