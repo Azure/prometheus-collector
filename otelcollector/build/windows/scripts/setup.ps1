@@ -59,7 +59,7 @@ Write-Host ('Finished Installing Visual C++ Redistributable Package')
 Write-Host ('Installing Telegraf');
 try {
     # Keep version in sync with linux in setup.sh file
-    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.24.2_windows_amd64.zip'
+    $telegrafUri = 'https://dl.influxdata.com/telegraf/releases/telegraf-1.28.5_windows_amd64.zip'
     Invoke-WebRequest -Uri $telegrafUri -OutFile /installation/telegraf.zip
     Expand-Archive -Path /installation/telegraf.zip -Destination /installation/telegraf
     Move-Item -Path /installation/telegraf/*/* -Destination /opt/telegraf/ -ErrorAction SilentlyContinue
@@ -84,7 +84,7 @@ If (Test-Path -Path $gemfile ) {
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
     # $genevamonitoringagentUri='https://github.com/bragi92/helloWorld/releases/download/MA/GenevaMonitoringAgent.46.2.54-jriego2233952464.zip'
-    $genevamonitoringagentUri='https://github.com/Azure/prometheus-collector/releases/download/Promtheus-MA-Windows-3.9.2023/genevamonitoringagent.46.4.1.zip'
+    $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Promtheus-MA-Windows-3.9.2023/genevamonitoringagent.46.4.1.zip'
     Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip
     Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent
     Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction SilentlyContinue
