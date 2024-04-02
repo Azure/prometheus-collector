@@ -24,7 +24,7 @@ spec:
           key: "client-key.pem"
           name: "ama-metrics-mtls-secret"
       insecureSkipVerify: false
-    relabelings:
+  - relabelings:
     - sourceLabels: [__meta_kubernetes_pod_label_app]
       action: keep
       regex: "prometheus-reference-app"

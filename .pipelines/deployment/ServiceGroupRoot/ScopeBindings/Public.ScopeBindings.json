@@ -50,6 +50,10 @@
           "replaceWith": "$(LinuxTag)"
         },
         {
+          "find": "__LINUX_CCP_TAG__",
+          "replaceWith": "$(LinuxCCPTag)"
+        },
+        {
           "find": "__WINDOWS_TAG__",
           "replaceWith": "$(WindowsTag)"
         },

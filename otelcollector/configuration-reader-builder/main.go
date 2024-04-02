@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 
 	"os"
 
@@ -69,6 +70,60 @@ func updateTAConfigFile(configFilePath string) {
 	}
 
 	promScrapeConfig = otelConfig.Receivers.Prometheus.Config
+	// Removing $$ added for regex and replacement in relabel_config and metric_relabel_config added by promconfigvalidator.
+	// The $$ are required by the validator's otel get method, but the TA doesnt do env substitution and hence needs to be removed, else TA crashes.
+	scrapeConfigs := promScrapeConfig["scrape_configs"]
+	if scrapeConfigs != nil {
+		var sc = scrapeConfigs.([]interface{})
+		for _, scrapeConfig := range sc {
+			scrapeConfig := scrapeConfig.(map[interface{}]interface{})
+			if scrapeConfig["relabel_configs"] != nil {
+				relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
+				for _, relabelConfig := range relabelConfigs {
+					relabelConfig := relabelConfig.(map[interface{}]interface{})
+					//replace $$ with $ for regex field
+					if relabelConfig["regex"] != nil {
+						// Adding this check here since regex can be boolean and the conversion will fail
+						if _, isString := relabelConfig["regex"].(string); isString {
+							regexString := relabelConfig["regex"].(string)
+							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+							relabelConfig["regex"] = modifiedRegexString
+						}
+					}
+					//replace $$ with $ for replacement field
+					if relabelConfig["replacement"] != nil {
+						replacement := relabelConfig["replacement"].(string)
+						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+						relabelConfig["replacement"] = modifiedReplacementString
+					}
+				}
+			}
+
+			if scrapeConfig["metric_relabel_configs"] != nil {
+				metricRelabelConfigs := scrapeConfig["metric_relabel_configs"].([]interface{})
+				for _, metricRelabelConfig := range metricRelabelConfigs {
+					metricRelabelConfig := metricRelabelConfig.(map[interface{}]interface{})
+					//replace $$ with $ for regex field
+					if metricRelabelConfig["regex"] != nil {
+						// Adding this check here since regex can be boolean and the conversion will fail
+						if _, isString := metricRelabelConfig["regex"].(string); isString {
+							regexString := metricRelabelConfig["regex"].(string)
+							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
+							metricRelabelConfig["regex"] = modifiedRegexString
+						}
+					}
+
+					//replace $$ with $ for replacement field
+					if metricRelabelConfig["replacement"] != nil {
+						replacement := metricRelabelConfig["replacement"].(string)
+						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
+						metricRelabelConfig["replacement"] = modifiedReplacementString
+					}
+				}
+			}
+		}
+	}
+
 	targetAllocatorConfig := Config{
 		AllocationStrategy: "consistent-hashing",
 		LabelSelector: map[string]string{
