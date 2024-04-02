@@ -436,8 +436,8 @@ func SendContainersCpuMemoryToAppInsightsMetrics() {
 	ksmTelemetryTicker := time.NewTicker(time.Second * time.Duration(ksmAttachedTelemetryIntervalSeconds))
 	for ; true; <-ksmTelemetryTicker.C {
 		for podId := 0; podId < len(p.Pods); podId++ {
-			PodRefName := strings.TrimSpace(p.Pods[podId].PodRef.PodRefName)
-			fmt.Printf("PodRefName: %s", PodRefName)
+			podRefName := strings.TrimSpace(p.Pods[podId].PodRef.PodRefName)
+			Log(fmt.Printf("PodRefName: %s\n", podRefName))
 			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
 				container := p.Pods[podId].Containers[containerId]
 				containerName := strings.TrimSpace(container.Name)
@@ -448,22 +448,22 @@ func SendContainersCpuMemoryToAppInsightsMetrics() {
 					Log(message)
 					continue
 				case "ama-metrics-ksm":
-					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, ksmCpuMemoryTelemetryName, "MemKsmRssBytes", PodRefName)
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, ksmCpuMemoryTelemetryName, "MemKsmRssBytes", podRefName)
 				case "targetallocator":
-					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "taCPUUsage", "taMemRssBytes", PodRefName)
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "taCPUUsage", "taMemRssBytes", podRefName)
 				case "config-reader":
-					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "cnfgRdrCPUUsage", "cnfgRdrMemRssBytes", PodRefName)
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "cnfgRdrCPUUsage", "cnfgRdrMemRssBytes", podRefName)
 				case "addon-token-adapter":
-					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "adnTknAdtrCPUUsage", "adnTknAdtrMemRssBytes", PodRefName)
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "adnTknAdtrCPUUsage", "adnTknAdtrMemRssBytes", podRefName)
 				case "prometheus-collector":
-					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "promColCPUUsage", "promColMemRssBytes", PodRefName)
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "promColCPUUsage", "promColMemRssBytes", podRefName)
 				}
 			}
 		}
 	}
 }
 
-func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMetricName string, memMetricName string, PodRefName string) {
+func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMetricName string, memMetricName string, podRefName string) {
 	cpuUsageNanoCoresLinux := container.Cpu.UsageNanoCores
 	memoryRssBytesLinux := container.Memory.RssBytes
 
@@ -473,10 +473,11 @@ func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMet
 	// Abbreviated properties to save telemetry cost
 	metricTelemetryItem.Properties[memMetricName] = fmt.Sprintf("%d", int(memoryRssBytesLinux))
 	// Adding the actual pod name from Cadvisor output since the podname environment variable points to the pod on which plugin is running
-	metricTelemetryItem.Properties["PodRefName"] = fmt.Sprintf("%s", PodRefName)
+	metricTelemetryItem.Properties["PodRefName"] = fmt.Sprintf("%s", podRefName)
 
 	TelemetryClient.Track(metricTelemetryItem)
 
+	Log(fmt.Printf("PodRefName: %s\n", podRefName))
 	Log(fmt.Sprintf("Sent container CPU and Mem data for %s", cpuMetricName))
 }
 
