@@ -455,6 +455,8 @@ func SendContainersCpuMemoryToAppInsightsMetrics() {
 					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "cnfgRdrCPUUsage", "cnfgRdrMemRssBytes", podRefName)
 				case "addon-token-adapter":
 					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "adnTknAdtrCPUUsage", "adnTknAdtrMemRssBytes", podRefName)
+				case "addon-token-adapter-win":
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "adnTknAdtrCPUUsage", "adnTknAdtrMemRssBytes", podRefName)
 				case "prometheus-collector":
 					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "promColCPUUsage", "promColMemRssBytes", podRefName)
 				}
