@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/fb-upgrade
 
 pr:
   autoCancel: true
