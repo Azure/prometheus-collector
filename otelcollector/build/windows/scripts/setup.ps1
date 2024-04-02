@@ -15,7 +15,7 @@ New-Item -Type Directory -Path /etc/genevamonitoringagent
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/metricsext2-2.2024.328.1744/MdmMetricsExtension.2.2024.328.1744.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2023.224.2214.zip
+    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/metricsext2-2.2024.328.1744/MdmMetricsExtension.2.2024.328.1744.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2024.328.1744.zip
     Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2024.328.1744.zip -Destination /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
