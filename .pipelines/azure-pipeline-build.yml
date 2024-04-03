@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - vishwa-04012024-me-upgrade
 
 pr:
   autoCancel: true
