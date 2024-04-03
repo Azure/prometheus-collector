@@ -52,7 +52,7 @@ mkdir /opt/microsoft/linuxmonagent
 
 # Install telegraf
 echo "Installing telegraf..."
-sudo tdnf install telegraf-1.27.3 -y
+sudo tdnf install telegraf-1.28.5 -y
 sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.txt
 
 # Install fluent-bit
