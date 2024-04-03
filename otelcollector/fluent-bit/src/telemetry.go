@@ -878,7 +878,7 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 
 func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	// Define a regular expression to extract the metric name, metric value and other details
-	var logRegex = regexp.MustCompile(`^(?P<metricName>otelcol_processor_dropped_metric_points|otelcol_receiver_refused_metric_points|otelcol_receiver_accepted_metric_points|otelcol_exporter_sent_metric_points|otelcol_exporter_queue_size|otelcol_exporter_send_failed_metric_points|otelcol_process_memory_rss|otelcol_processor_batch_batch_send_size_bytes_sum|otelcol_processor_batch_batch_send_size_bytes_count)\{[^}]*\}\s+=\s+(?P<metricValue>\d+)$`)
+	var logRegex = regexp.MustCompile(`^(?P<metricName>otelcol_processor_dropped_metric_points|otelcol_receiver_refused_metric_points|otelcol_receiver_accepted_metric_points|otelcol_exporter_sent_metric_points|otelcol_exporter_queue_size|otelcol_exporter_send_failed_metric_points|otelcol_process_memory_rss|otelcol_processor_batch_batch_send_size_bytes_sum|otelcol_processor_batch_batch_send_size_bytes_count|prometheus_sd_http_failures_total|opentelemetry_allocator_targets|opentelemetry_allocator_collectors_discovered)\{[^}]*\}\s+=\s+(?P<metricValue>\d+)$`)
 
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
@@ -889,7 +889,6 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		if len(groupMatches) < 3 {
 			message := fmt.Sprintf("Failed to parse log record: %s", logEntry)
 			Log(message)
-			// SendException(message)
 			continue
 		}
 
@@ -898,7 +897,6 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		if err != nil {
 			message := fmt.Sprintf("Failed to convert metric value to float64: %v", err)
 			Log(message)
-			// SendException(message)
 			continue
 		}
 
