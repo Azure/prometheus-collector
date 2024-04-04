@@ -27,21 +27,17 @@ import (
 	"github.com/prometheus/prometheus/scrape"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 
 	"github.com/gracewehner/prometheusreceiver/internal"
-	// "github.com/prometheus/common/version"
-	// "github.com/prometheus/prometheus/web"
 )
 
 const (
 	defaultGCInterval = 2 * time.Minute
 	gcIntervalDelta   = 1 * time.Minute
-	// Use same settings as Prometheus web server
-	// maxConnections     = 512
-	// readTimeoutMinutes = 10
 )
 
 // pReceiver is the type that provides Prometheus scraper/receiver functionality.
@@ -58,6 +54,7 @@ type pReceiver struct {
 	discoveryManager *discovery.Manager
 	httpClient       *http.Client
 	registerer       prometheus.Registerer
+	apiExtension     extension.Extension
 }
 
 // New creates a new prometheus.Receiver reference.
@@ -90,6 +87,22 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 	if err != nil {
 		r.settings.Logger.Error("Failed to initPrometheusComponents Prometheus components", zap.Error(err))
 		return err
+	}
+
+	prometheusAPIExtensionConf := r.cfg.PrometheusAPIServerExtension
+	if prometheusAPIExtensionConf != nil  && prometheusAPIExtensionConf.Enabled {
+		fmt.Println("Prometheus API Extension enabled")
+		extensions := host.GetExtensions()
+		for id, ext := range extensions {
+			fmt.Printf("Extension ID: %s\n", id.Name())
+			fmt.Printf("%v\n", id.Type() == component.MustNewType("prometheus_api_server_extension"))
+			if id.Type() == component.MustNewType("prometheus_api_server_extension") {
+				r.apiExtension = ext
+				fmt.Printf("apiExtension: %v\n", r.apiExtension)
+				extRegisterer := ext.(interface{ RegisterPrometheusReceiverComponents(*config.Config, *scrape.Manager, prometheus.Registerer) })
+				extRegisterer.RegisterPrometheusReceiverComponents((*config.Config)(baseCfg), r.scrapeManager, r.registerer)
+			}
+		}
 	}
 
 	err = r.applyCfg(baseCfg)
@@ -246,7 +259,16 @@ func (r *pReceiver) applyCfg(cfg *PromConfig) error {
 		discoveryCfg[scrapeConfig.JobName] = scrapeConfig.ServiceDiscoveryConfigs
 		r.settings.Logger.Info("Scrape job added", zap.String("jobName", scrapeConfig.JobName))
 	}
-	return r.discoveryManager.ApplyConfig(discoveryCfg)
+	if err := r.discoveryManager.ApplyConfig(discoveryCfg); err != nil {
+		return err
+	}
+
+	if r.cfg.PrometheusAPIServerExtension != nil && r.apiExtension != nil && r.cfg.PrometheusAPIServerExtension.Enabled {
+		ext := r.apiExtension.(interface{ UpdatePrometheusConfig(*config.Config, *scrape.Manager) })
+		ext.UpdatePrometheusConfig((*config.Config)(cfg), r.scrapeManager)
+	}
+
+	return nil
 }
 
 func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Logger) error {
@@ -254,8 +276,8 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 	if err != nil {
 		return err
 	}
-	r.discoveryManager = discovery.NewManager(ctx, logger, r.registerer, sdMetrics)
 
+	r.discoveryManager = discovery.NewManager(ctx, logger, r.registerer, sdMetrics)
 	go func() {
 		r.settings.Logger.Info("Starting discovery manager")
 		if err = r.discoveryManager.Run(); err != nil && !errors.Is(err, context.Canceled) {
@@ -307,49 +329,6 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 			r.settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(err))
 		}
 	}()
-	// Setup settings and logger and create Prometheus web handler
-	// webOptions := web.Options{
-	// 	ScrapeManager: r.scrapeManager,
-	// 	Context:       ctx,
-	// 	ListenAddress: ":9090",
-	// 	ExternalURL: &url.URL{
-	// 		Scheme: "http",
-	// 		Host:   "localhost:9090",
-	// 		Path:   "",
-	// 	},
-	// 	RoutePrefix: "/",
-	// 	ReadTimeout: time.Minute * readTimeoutMinutes,
-	// 	PageTitle:   "Prometheus Receiver",
-	// 	Version: &web.PrometheusVersion{
-	// 		Version:   version.Version,
-	// 		Revision:  version.Revision,
-	// 		Branch:    version.Branch,
-	// 		BuildUser: version.BuildUser,
-	// 		BuildDate: version.BuildDate,
-	// 		GoVersion: version.GoVersion,
-	// 	},
-	// 	Flags:          make(map[string]string),
-	// 	MaxConnections: maxConnections,
-	// 	IsAgent:        true,
-	// 	Gatherer:       prometheus.DefaultGatherer,
-	// }
-	// go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	// r.webHandler = web.New(go_kit_logger, &webOptions)
-	// listener, err := r.webHandler.Listener()
-	// if err != nil {
-	// 	return err
-	// }
-	// // Pass config and let the web handler know the config is ready.
-	// // These are needed because Prometheus allows reloading the config without restarting.
-	// r.webHandler.ApplyConfig(r.cfg.PrometheusConfig)
-	// r.webHandler.SetReady(true)
-	// // Uses the same context as the discovery and scrape managers for shutting down
-	// go func() {
-	// 	if err := r.webHandler.Run(ctx, listener, ""); err != nil {
-	// 		r.settings.Logger.Error("Web handler failed", zap.Error(err))
-	// 		host.ReportFatalError(err)
-	// 	}
-	// }()
 
 	return nil
 }

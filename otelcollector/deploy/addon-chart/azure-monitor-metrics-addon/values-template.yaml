@@ -72,7 +72,7 @@ AzureMonitorMetrics:
     ImageTag: "master.230804.1"
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
     ImageTagWin: "master.240102.1"
-  ArcExtension: ${ARC_EXTENSION}
+  ArcExtension: false
   ArcEnableOperator: false
   # Do not change the below settings. They are reserved for Arc Autonomous
   isArcACluster: false

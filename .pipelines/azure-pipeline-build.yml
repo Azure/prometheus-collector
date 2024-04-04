@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - rashmi/upgrades-04-24
+    - grace/api-extension
 
 pr:
   autoCancel: true

@@ -1,12 +1,20 @@
 apiVersion: azmonitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: <pod monitor name>
+  name: referenceapp
 spec:
   # The following limits - labelLimit, labelNameLengthLimit and labelValueLengthLimit should exist in the pod monitor CR
   # These ensure that the metrics don't get dropped because labels/labelnames/labelvalues exceed the limits supported by the processing pipeline
   labelLimit: 63
   labelNameLengthLimit: 511
   labelValueLengthLimit: 1023
-  # rest of the pod monitor
-
+  podMetricsEndpoints:
+  - metricRelabelings:
+      - action: keep
+        regex: up
+        sourceLabels:
+          - __name__
+    port: weather-app
+  selector:
+    matchLabels:
+      app: prometheus-reference-app
