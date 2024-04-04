@@ -1,6 +1,6 @@
 module github.com/open-telemetry/opentelemetry-collector-contrib/extension/prometheusapiserverextension
 
-go 1.21.8
+go 1.21
 
 require (
 	github.com/go-kit/kit v0.13.0

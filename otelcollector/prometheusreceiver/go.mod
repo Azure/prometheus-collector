@@ -1,6 +1,6 @@
 module github.com/gracewehner/prometheusreceiver
 
-go 1.21.8
+go 1.21
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/prometheusapiserverextension => ../prometheusapiserverextension
 

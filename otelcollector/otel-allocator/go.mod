@@ -2,8 +2,6 @@ module github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator
 
 go 1.21
 
-toolchain go1.21.3
-
 replace github.com/prometheus-operator/prometheus-operator => ./prometheus-operator
 
 replace github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring => ./prometheus-operator/pkg/apis/monitoring

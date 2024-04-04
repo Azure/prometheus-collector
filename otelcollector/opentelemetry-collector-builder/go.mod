@@ -1,8 +1,6 @@
 module github.com/vishiy/opentelemetry-collector-builder
 
-go 1.21.8
-
-toolchain go1.22.0
+go 1.21
 
 replace github.com/gracewehner/prometheusreceiver => ../prometheusreceiver
 
