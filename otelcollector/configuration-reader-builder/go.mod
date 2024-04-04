@@ -1,6 +1,6 @@
 module github.com/configurationreader
 
-go 1.20
+go 1.21
 
 require (
 	github.com/prometheus/prometheus v0.45.0
