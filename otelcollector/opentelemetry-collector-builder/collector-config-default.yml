@@ -27,6 +27,10 @@ processors:
     - key: instance
       from_attribute: service.instance.id
       action: insert
+extensions:
+  prometheus_api_server_extension:
+    server:
+      endpoint: http://localhost:9090
 receivers:
     prometheus:
       config:
@@ -39,6 +43,7 @@ service:
       receivers: [prometheus]
       exporters: [otlp]
       processors: [batch,resource]
+  extensions: [prometheus_api_server_extension]
   telemetry:
     logs:
       level: warn
