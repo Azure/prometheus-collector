@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - soham/removetelegrafCpuSystemWOTelegraf
 
 pr:
   autoCancel: true
@@ -50,7 +51,7 @@ jobs:
         LINUX_IMAGE_TAG=$SEMVER
         # Truncating to 128 characters as it is required by docker
         LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
-        
+
         #Truncating this to 124 to add the cfg suffix
         LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
         LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
