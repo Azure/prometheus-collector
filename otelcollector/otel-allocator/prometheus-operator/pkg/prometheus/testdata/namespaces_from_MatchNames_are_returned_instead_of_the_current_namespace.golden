@@ -1,8 +1,0 @@
-kubernetes_sd_configs:
-- role: endpoints
-  namespaces:
-    names:
-    - test1
-    - test2
-  attach_metadata:
-    node: true
