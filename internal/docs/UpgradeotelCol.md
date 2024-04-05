@@ -91,7 +91,12 @@ Get latest release version and latest prometheusreceiver code:
 2. git clone https://github.com/open-telemetry/opentelemetry-operator.git
 3. git checkout tags/<tag_name> -b <branch_name>   tag name will be in the format of v0.x.x and branch name is your local branch name. 
 4. Copy the folder otel-allocator
-5. Update Dockerfile with the existing Dockerfile changes accordingly(including prometheus-operators' api group customization for build command)
+5. Update Dockerfile with the existing Dockerfile changes accordingly(Make sure to include prometheus-operators' api group customization for build command like below)
+```
+go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now -s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com' -o main . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now -s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com'
+```
 6. Update main.go to include ARC EULA
 7. Update go.mod file in the otel-allocator folder with the go.mod of the opentelemetry-operator file.
 8. Run go mod tidy from the otel-allocator directory.
+9. Update any dependencies in go.mod of configuration-reader-builder to match versions in go.mod of otel-allocator
+10. Run go mod tidy from configuration-reader-builder directory
