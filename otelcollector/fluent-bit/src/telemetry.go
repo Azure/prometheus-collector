@@ -236,6 +236,10 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["httpproxyenabled"] = os.Getenv("HTTP_PROXY_ENABLED")
 	CommonProperties["tadapterh"] = os.Getenv("tokenadapterHealthyAfterSecs")
 	CommonProperties["tadapterf"] = os.Getenv("tokenadapterUnhealthyAfterSecs")
+	CommonProperties["mip"] = os.Getenv("MINIMAL_INGESTION_PROFILE")
+	CommonProperties["operatormodel"] = os.Getenv("AZMON_OPERATOR_ENABLED")
+	CommonProperties["operatormodelcfgmapsetting"] = os.Getenv("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING")
+	CommonProperties["operatormodelchartsetting"] = os.Getenv("AZMON_OPERATOR_ENABLED_CHART_SETTING")
 
 	isMacMode := os.Getenv("MAC")
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
@@ -898,13 +902,12 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		}
 
 		// Extract the metric value and convert to float
-		metricValue, err := strconv.ParseFloat(groupMatches[2], 64)
+		metricValue, err := strconv.ParseFloat(groupMatches[3], 64)
 		if err != nil {
 			message := fmt.Sprintf("Failed to convert metric value to float64: %v", err)
 			Log(message)
 			continue
 		}
-
 		// Create and send metric
 		metric := appinsights.NewMetricTelemetry(groupMatches[1], metricValue)
 		TelemetryClient.Track(metric)
