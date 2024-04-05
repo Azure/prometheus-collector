@@ -68,9 +68,13 @@ func (e *prometheusUIExtension) Start(_ context.Context, host component.Host) er
 }
 
 func (e *prometheusUIExtension) RegisterPrometheusReceiverComponents(prometheusConfig *config.Config, scrapeManager *scrape.Manager, registerer prometheus.Registerer) error {
-	e.prometheusReceiver.prometheusConfig = prometheusConfig
-	e.prometheusReceiver.scrapeManager = scrapeManager
-	e.prometheusReceiver.registerer = registerer
+	e.prometheusReceiver = &prometheusReceiver{
+		name: "prometheus",
+		port: prometheusUIServerPort,
+		prometheusConfig: prometheusConfig,
+		scrapeManager: scrapeManager,
+		registerer: registerer,
+	}
 
 	o := &web.Options{
 		ScrapeManager: e.prometheusReceiver.scrapeManager,
