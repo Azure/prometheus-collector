@@ -139,6 +139,7 @@ Azure:
             cpu: 20m
             memory: 50Mi
 ClusterDistribution: ""
+CloudEnvironment: "azurepubliccloud"
 prometheus-node-exporter:
   service:
     enabled: true
