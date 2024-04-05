@@ -99,7 +99,7 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 			if id.Type() == component.MustNewType("prometheus_api_server_extension") {
 				r.apiExtension = ext
 				fmt.Printf("apiExtension: %v\n", r.apiExtension)
-				extRegisterer := ext.(interface{ RegisterPrometheusReceiverComponents(*config.Config, *scrape.Manager, prometheus.Registerer) })
+				extRegisterer := r.apiExtension.(interface{ RegisterPrometheusReceiverComponents(*config.Config, *scrape.Manager, prometheus.Registerer) error})
 				extRegisterer.RegisterPrometheusReceiverComponents((*config.Config)(baseCfg), r.scrapeManager, r.registerer)
 			}
 		}
