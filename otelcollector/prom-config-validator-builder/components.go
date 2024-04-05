@@ -12,7 +12,9 @@ import (
 	privatepromreceiver "github.com/gracewehner/prometheusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/prometheusapiserverextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"go.opentelemetry.io/collector/connector"
 	forwardconnector "go.opentelemetry.io/collector/connector/forwardconnector"
@@ -22,7 +24,6 @@ import (
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
 	"go.opentelemetry.io/collector/receiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 )
 
 func components() (otelcol.Factories, error) {
@@ -33,6 +34,7 @@ func components() (otelcol.Factories, error) {
 		pprofextension.NewFactory(),
 		zpagesextension.NewFactory(),
 		healthcheckextension.NewFactory(),
+		prometheusapiserverextension.NewFactory(),
 	)
 	if err != nil {
 		return otelcol.Factories{}, err
