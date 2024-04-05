@@ -12,7 +12,7 @@ import (
 )
 
 type Config struct {
-	LabelSelector      map[string]string      `yaml:"label_selector,omitempty"`
+	CollectorSelector  map[string]string      `yaml:"collector_selector,omitempty"`
 	Config             map[string]interface{} `yaml:"config"`
 	AllocationStrategy string                 `yaml:"allocation_strategy,omitempty"`
 }
