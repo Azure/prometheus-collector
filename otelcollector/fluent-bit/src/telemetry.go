@@ -909,15 +909,15 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 			continue
 		}
 		var jobName string
-		if groupMatches[2] == "opentelemetry_allocator_target" {
+		if groupMatches[1] == "opentelemetry_allocator_targets" {
 			var jobRegex = regexp.MustCompile(`job_name="([^"]+)"`)
-			jobMatches := jobRegex.FindStringSubmatch(groupMatches[3])
+			jobMatches := jobRegex.FindStringSubmatch(groupMatches[2])
 			if len(jobMatches) > 1 {
 				jobName = jobMatches[1]
-				message := fmt.Sprintf("Job name found", jobName)
+				message := fmt.Sprintf("Job name found: %s", jobName)
 				Log(message)
 			} else {
-				message := fmt.Sprintf("Job name not found in", groupMatches[3])
+				message := fmt.Sprintf("Job name not found in %s", groupMatches[2])
 				Log(message)
 				continue
 			}
