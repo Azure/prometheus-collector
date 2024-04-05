@@ -1,5 +1,14 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Pending
+
+  * Update mdsd, MA, MetricsExtension
+    * Linux
+      * mdsd 1.27.4 --> 1.30.3
+      * MetricsExtension 2.2023.928.2134 --> 2.2024.328.1744 
+    * Windows
+      * MA 46.4.1 --> 46.15.4
+      * MetricsExtension 2.2023.224.2214 -> 2.2024.328.1744
 
 ## Release 03-08-2024
 
