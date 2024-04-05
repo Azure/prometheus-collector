@@ -224,7 +224,7 @@ func (c *consistentHashingAllocator) SetTargets(targets map[string]*target.Item)
 		return
 	}
 	c.log.Info("collector(s) found, allocating targets")
-	c.log.Info("targets found", targets, len(c.targetItems))
+	c.log.Info("targets found", "targets", len(c.targetItems))
 	// Check for target changes
 	targetsDiff := diff.Maps(c.targetItems, targets)
 	// If there are any additions or removals
