@@ -908,8 +908,22 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 			Log(message)
 			continue
 		}
+		var jobName string
+		if groupMatches[2] == "opentelemetry_allocator_target" {
+			var jobRegex = regexp.MustCompile(`job_name="([^"]+)"`)
+			jobMatches := jobRegex.FindStringSubmatch(groupMatches[3])
+			if len(jobMatches) > 1 {
+				jobName = jobMatches[1]
+			} else {
+				message := fmt.Sprintf("Job name not found in", groupMatches[3])
+				Log(message)
+				continue
+			}
+		}
+
 		// Create and send metric
 		metric := appinsights.NewMetricTelemetry(groupMatches[1], metricValue)
+		metric.Properties["job_name"] = jobName
 		TelemetryClient.Track(metric)
 		Log(fmt.Sprintf("Sent %s metrics", groupMatches[1]))
 	}
