@@ -126,7 +126,7 @@ func updateTAConfigFile(configFilePath string) {
 
 	targetAllocatorConfig := Config{
 		AllocationStrategy: "consistent-hashing",
-		LabelSelector: map[string]string{
+		CollectorSelector: map[string]string{
 			"rsName":                         "ama-metrics",
 			"kubernetes.azure.com/managedby": "aks",
 		},
