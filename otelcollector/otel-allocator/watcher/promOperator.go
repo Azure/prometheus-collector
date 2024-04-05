@@ -310,13 +310,13 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 
 	if w.resourceSelector != nil {
 		serviceMonitorInstances, err := w.resourceSelector.SelectServiceMonitors(ctx, w.informers[monitoringv1.ServiceMonitorName].ListAllByNamespace)
-		w.logger.Info("sm instances found-", sm, len(serviceMonitorInstances))
+		w.logger.Info("sm instances found-", "sm", len(serviceMonitorInstances))
 		if err != nil {
 			return nil, err
 		}
 
 		podMonitorInstances, err := w.resourceSelector.SelectPodMonitors(ctx, w.informers[monitoringv1.PodMonitorName].ListAllByNamespace)
-		w.logger.Info("pm instances found-", sm, len(podMonitorInstances))
+		w.logger.Info("pm instances found-", "pm", len(podMonitorInstances))
 
 		if err != nil {
 			return nil, err
