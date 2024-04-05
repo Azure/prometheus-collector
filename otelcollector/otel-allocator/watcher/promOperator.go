@@ -82,7 +82,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		},
 	}
 
-	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowWarn())
+	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowDebug())
 	generator, err := prometheus.NewConfigGenerator(promOperatorLogger, prom, true)
 
 	if err != nil {
