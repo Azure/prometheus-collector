@@ -6,6 +6,8 @@ replace github.com/gracewehner/prometheusreceiver => ../prometheusreceiver
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/prometheusapiserverextension => ../prometheusapiserverextension
 
+replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => ../pkgtranslatorprometheus
+
 require (
 	github.com/gracewehner/prometheusreceiver v0.0.0-00010101000000-000000000000
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.97.0
@@ -204,8 +206,8 @@ require (
 	go.opentelemetry.io/collector/confmap/provider/yamlprovider v0.97.0 // indirect
 	go.opentelemetry.io/collector/consumer v0.97.0 // indirect
 	go.opentelemetry.io/collector/extension/auth v0.97.0 // indirect
-	go.opentelemetry.io/collector/featuregate v1.4.0 // indirect
-	go.opentelemetry.io/collector/pdata v1.4.0 // indirect
+	go.opentelemetry.io/collector/featuregate v1.4.1-0.20240327181407-1038b67c85a0 // indirect
+	go.opentelemetry.io/collector/pdata v1.4.1-0.20240327181407-1038b67c85a0 // indirect
 	go.opentelemetry.io/collector/semconv v0.97.0 // indirect
 	go.opentelemetry.io/collector/service v0.97.0 // indirect
 	go.opentelemetry.io/contrib/config v0.4.0 // indirect

@@ -4,6 +4,8 @@ go 1.21
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/prometheusapiserverextension => ../prometheusapiserverextension
 
+replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => ../pkgtranslatorprometheus
+
 require (
 	github.com/go-kit/log v0.2.1
 	github.com/gogo/protobuf v1.3.2
@@ -24,9 +26,9 @@ require (
 	go.opentelemetry.io/collector/consumer v0.97.0
 	go.opentelemetry.io/collector/exporter v0.97.0
 	go.opentelemetry.io/collector/extension v0.97.0
-	go.opentelemetry.io/collector/featuregate v1.4.0
+	go.opentelemetry.io/collector/featuregate v1.4.1-0.20240327181407-1038b67c85a0
 	go.opentelemetry.io/collector/otelcol v0.97.0
-	go.opentelemetry.io/collector/pdata v1.4.0
+	go.opentelemetry.io/collector/pdata v1.4.1-0.20240327181407-1038b67c85a0
 	go.opentelemetry.io/collector/processor v0.97.0
 	go.opentelemetry.io/collector/processor/batchprocessor v0.97.0
 	go.opentelemetry.io/collector/receiver v0.97.0

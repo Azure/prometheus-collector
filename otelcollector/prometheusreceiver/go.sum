@@ -449,8 +449,6 @@ github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.97.0 
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.97.0/go.mod h1:Zsl3xSYy9QFqZ5lTPXqPHSuxz03kUaMw75kvvScE+94=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.97.0 h1:82EcF0nmspeVCZmUpwrMuVAXnMYDOF4gai9eK6fHAwk=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.97.0/go.mod h1:7rCj4V2dKJVsaMNBzY81m4fek1AD2yWCFwzrM3PjSNo=
-github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.97.0 h1:A+ffQzNIuJ4xVZ6ZNtrT8RlkoXlDGCTQOFj5C8KokcE=
-github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.97.0/go.mod h1:fb9Yjx+I1zUG7/mYHl0tXBBFLuIitLDT1HYsjAYAqx4=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.97.0 h1:j+98nNl3RHHan+9ptoZHYcj9d51l5jZwpE3AxJR2OMI=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.97.0/go.mod h1:CXYG7Toolx/SZQTL9qiW0xnGvYoC7XGGASRTr1sNCmA=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.97.0 h1:7JuGYrWcdwMy4/gnlXcmCD6C9FovH2J8hpEsXf2JcnY=
@@ -631,12 +629,12 @@ go.opentelemetry.io/collector/extension/auth v0.97.0 h1:2AYGxSbsi1KC2DOOFbAe7val
 go.opentelemetry.io/collector/extension/auth v0.97.0/go.mod h1:uElLYtzMPA48mu9baxGIH6lHpOn76NLe4mVHnmV+hEY=
 go.opentelemetry.io/collector/extension/zpagesextension v0.97.0 h1:IaZm011+6WKE03TFmDQ7ztp65eu8ngGc026m9KhuhB4=
 go.opentelemetry.io/collector/extension/zpagesextension v0.97.0/go.mod h1:PxR6gK4FEYHc6iGPH7svM9jjFIZo4o/MGGO0l+see0o=
-go.opentelemetry.io/collector/featuregate v1.4.0 h1:RWE9M659C9iuUQc4GzBsndkGHG1jIzIY+nZJWvcKy1M=
-go.opentelemetry.io/collector/featuregate v1.4.0/go.mod h1:w7nUODKxEi3FLf1HslCiE6YWtMtOOrMnSwsDam8Mg9w=
+go.opentelemetry.io/collector/featuregate v1.4.1-0.20240327181407-1038b67c85a0 h1:pZlwb1NvnMxlVU3WqSAz3gckK89T6PzfRhMbybtktn8=
+go.opentelemetry.io/collector/featuregate v1.4.1-0.20240327181407-1038b67c85a0/go.mod h1:w7nUODKxEi3FLf1HslCiE6YWtMtOOrMnSwsDam8Mg9w=
 go.opentelemetry.io/collector/otelcol v0.97.0 h1:xtZOYmdzeu1dSgco0I4yqhSyQ6GrGa7E7TRUlg7KIwI=
 go.opentelemetry.io/collector/otelcol v0.97.0/go.mod h1:mHzwRh3ATXfStF9xsttnJilxpaP+03hhozMn39dP+Jo=
-go.opentelemetry.io/collector/pdata v1.4.0 h1:cA6Pr7Z2V7mE+i7FmYpavX7nefzd6H4CICgW0T9aJX0=
-go.opentelemetry.io/collector/pdata v1.4.0/go.mod h1:0Ttp4wQinhV5oJTd9MjyvUegmZBO9O0nrlh/+EDLw+Q=
+go.opentelemetry.io/collector/pdata v1.4.1-0.20240327181407-1038b67c85a0 h1:ytj0zkWq3pCWCukjLdNgiLZx65lbzJaMIkEhA3w9imw=
+go.opentelemetry.io/collector/pdata v1.4.1-0.20240327181407-1038b67c85a0/go.mod h1:0Ttp4wQinhV5oJTd9MjyvUegmZBO9O0nrlh/+EDLw+Q=
 go.opentelemetry.io/collector/processor v0.97.0 h1:L3R5R7x56LH2inF3sv0ZOsFfulVo8yuIFhO/OgpkCU0=
 go.opentelemetry.io/collector/processor v0.97.0/go.mod h1:OsxBAPQ2fDytAn+yWLdEQ1yjYfl/OIak1AfKGfI8ALs=
 go.opentelemetry.io/collector/processor/batchprocessor v0.97.0 h1:DpC+d8ZQB/Qj5+sODYPpu8a8l0aMtMZEq6pN/3e+5X4=
