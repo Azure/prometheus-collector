@@ -93,3 +93,5 @@ Get latest release version and latest prometheusreceiver code:
 4. Copy the folder otel-allocator
 5. Update Dockerfile with the existing Dockerfile changes accordingly(including prometheus-operators' api group customization for build command)
 6. Update main.go to include ARC EULA
+7. Update go.mod file in the otel-allocator folder with the go.mod of the opentelemetry-operator file.
+8. Run go mod tidy from the otel-allocator directory.
