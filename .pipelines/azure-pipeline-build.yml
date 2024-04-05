@@ -1214,7 +1214,7 @@ jobs:
             echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
 
             output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-            if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
+            if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
             then
               echo "Images are published to mcr"
               exit 0
