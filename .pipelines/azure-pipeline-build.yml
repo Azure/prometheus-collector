@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - soham/removetelegrafCpuSystemWOTelegraf
 
 pr:
   autoCancel: true

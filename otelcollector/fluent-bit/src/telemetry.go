@@ -240,6 +240,8 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["operatormodel"] = os.Getenv("AZMON_OPERATOR_ENABLED")
 	CommonProperties["operatormodelcfgmapsetting"] = os.Getenv("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING")
 	CommonProperties["operatormodelchartsetting"] = os.Getenv("AZMON_OPERATOR_ENABLED_CHART_SETTING")
+	CommonProperties["operatortargetstaimgversion"] = os.Getenv("OPERATOR_TARGETS_TA_IMG_VERSION")
+	CommonProperties["operatortargetscfgreaderimgversion"] = os.Getenv("OPERATOR_TARGETS_CFG_READER_IMG_VERSION")
 
 	isMacMode := os.Getenv("MAC")
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {

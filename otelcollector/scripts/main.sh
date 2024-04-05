@@ -20,7 +20,7 @@ echo_var "CLUSTER" "$CLUSTER"
 customEnvironment_lower=$(echo "$customEnvironment" | tr '[:upper:]' '[:lower:]')
 if [ "$customEnvironment_lower" == "azurepubliccloud" ]; then
   encodedaikey="$APPLICATIONINSIGHTS_AUTH_PUBLIC"
-  echo "setting telemetry output to the default azurepubliccloud instance" 
+  echo "setting telemetry output to the default azurepubliccloud instance"
 elif [ "$customEnvironment_lower" == "azureusgovernmentcloud" ]; then
   encodedaikey="$APPLICATIONINSIGHTS_AUTH_USGOVERNMENT"
   aiendpoint="https://dc.applicationinsights.us/v2/track"
@@ -52,11 +52,6 @@ if [ -n "$aiendpoint" ]; then
     export APPLICATIONINSIGHTS_ENDPOINT="$aiendpoint"
     echo "export APPLICATIONINSIGHTS_ENDPOINT=\"$aiendpoint\"" >> ~/.bashrc
 fi
-# Delete this when telegraf is removed
-aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 -d)
-export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey
-echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc
-source ~/.bashrc
 
 #get controller kind in lowercase, trimmed
 controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
