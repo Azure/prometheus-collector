@@ -8,6 +8,6 @@ import (
 )
 
 type Config struct {
-	PrometheusReceiverName string `mapstructure:"prometheus_receiver_name"`
+	//PrometheusReceiverName string `mapstructure:"prometheus_receiver_name"`
 	Server confighttp.ServerConfig `mapstructure:"server"` // squash ensures fields are correctly decoded in embedded struct
 }
