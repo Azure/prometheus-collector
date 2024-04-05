@@ -31,7 +31,7 @@ spec:
       - name: targetallocator
         args:
         - --enable-prometheus-cr-watcher
-        - --reload-config
+        # - --reload-config
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:

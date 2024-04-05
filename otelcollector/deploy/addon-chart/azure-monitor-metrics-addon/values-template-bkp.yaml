@@ -36,8 +36,8 @@ AzureMonitorMetrics:
       - validatingwebhookconfigurations
       - volumeattachments
   ImageRepository: "/azuremonitor/containerinsights/cidev/prometheus-collector/images"
-  ImageTag: 6.8.6-rashmi-upgrades-04-24-04-04-2024-b774312b
-  ImageTagWin: ${IMAGE_TAG}-win
+  ImageTag: 6.8.6-rashmi-pod-monitor-update-03-20-2024-82ddc690
+  ImageTagWin: 6.8.6-main-03-08-2024-fd4f13cb-win
   RsCPULimit: 7
   RsMemoryLimit: 14Gi
   RsCPURequest: 150m
@@ -48,8 +48,8 @@ AzureMonitorMetrics:
   DsMemoryRequestLinux: 150Mi
   DsCPULimitWindows: 500m
   DsMemoryLimitWindows: 1Gi
-  ImageTagTargetAllocator: 6.8.6-rashmi-upgrades-04-24-04-04-2024-b774312b-targetallocator
-  ImageTagCfgReader: 6.8.6-rashmi-upgrades-04-24-04-04-2024-b774312b-cfg
+  ImageTagTargetAllocator: 6.8.6-rashmi-pod-monitor-update-03-20-2024-82ddc690-targetallocator
+  ImageTagCfgReader: 6.8.6-rashmi-pod-monitor-update-03-20-2024-82ddc690-cfg
   TargetAllocatorEnabled: true
   DeploymentReplicas: 1
   CfgReaderCPULimit: 1
@@ -71,7 +71,7 @@ AzureMonitorMetrics:
     ImageRepository: "/aks/msi/addon-token-adapter"
     ImageTag: "master.230804.1"
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
-    ImageTagWin: "master.240102.1"
+    ImageTagWin: "20230120winbeta"
   ArcExtension: false
   ArcEnableOperator: false
   # Do not change the below settings. They are reserved for Arc Autonomous
@@ -84,8 +84,10 @@ global:
   commonGlobals:
     CloudEnvironment: "azurepubliccloud"
     Region: "westus2"
+    # Region: "eastus"
     Customer:
       AzureResourceID: "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourcegroups/rashmi-operator-cfg/providers/Microsoft.ContainerService/managedClusters/rashmi-operator-cfg"
+      # AzureResourceID: "/subscriptions/0e4773a2-8221-441a-a06f-17db16ab16d4/resourceGroups/rashmi-sharding-1/providers/Microsoft.ContainerService/managedClusters/rashmi-sharding-1"
 
 # For ARC backdoor testing
 Azure:
