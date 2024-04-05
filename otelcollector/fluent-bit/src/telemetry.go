@@ -914,6 +914,8 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 			jobMatches := jobRegex.FindStringSubmatch(groupMatches[3])
 			if len(jobMatches) > 1 {
 				jobName = jobMatches[1]
+				message := fmt.Sprintf("Job name found", jobName)
+				Log(message)
 			} else {
 				message := fmt.Sprintf("Job name not found in", groupMatches[3])
 				Log(message)
@@ -923,7 +925,7 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 		// Create and send metric
 		metric := appinsights.NewMetricTelemetry(groupMatches[1], metricValue)
-		metric.Properties["job_name"] = jobName
+		metric.Properties["job_name"] = fmt.Sprintf("%s", jobName)
 		TelemetryClient.Track(metric)
 		Log(fmt.Sprintf("Sent %s metrics", groupMatches[1]))
 	}
