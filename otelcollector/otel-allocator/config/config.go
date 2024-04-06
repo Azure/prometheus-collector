@@ -120,7 +120,8 @@ func unmarshal(cfg *Config, configFile string) error {
 func CreateDefaultConfig() Config {
 	return Config{
 		AllocationStrategy: DefaultAllocationStrategy,
-		FilterStrategy:     DefaultFilterStrategy,
+		// FilterStrategy:     DefaultFilterStrategy,
+		FilterStrategy: "",
 		PrometheusCR: PrometheusCRConfig{
 			ScrapeInterval: DefaultCRScrapeInterval,
 		},
