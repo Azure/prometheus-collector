@@ -9,10 +9,11 @@ import (
 	"os"
 
 	yaml "gopkg.in/yaml.v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Config struct {
-	CollectorSelector  map[string]string      `yaml:"collector_selector,omitempty"`
+	CollectorSelector  *metav1.LabelSelector  `yaml:"collector_selector,omitempty"`
 	Config             map[string]interface{} `yaml:"config"`
 	AllocationStrategy string                 `yaml:"allocation_strategy,omitempty"`
 }
@@ -126,10 +127,16 @@ func updateTAConfigFile(configFilePath string) {
 
 	targetAllocatorConfig := Config{
 		AllocationStrategy: "consistent-hashing",
-		CollectorSelector: map[string]string{
-			"rsName":                         "ama-metrics",
-			"kubernetes.azure.com/managedby": "aks",
+		CollectorSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"rsName":                         "ama-metrics",
+				"kubernetes.azure.com/managedby": "aks",
+			},
 		},
+		// CollectorSelector: map[string]string{
+		// 	"rsName":                         "ama-metrics",
+		// 	"kubernetes.azure.com/managedby": "aks",
+		// },
 		Config: promScrapeConfig,
 	}
 
