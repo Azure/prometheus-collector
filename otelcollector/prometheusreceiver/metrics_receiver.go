@@ -264,8 +264,8 @@ func (r *pReceiver) applyCfg(cfg *PromConfig) error {
 	}
 
 	if r.cfg.PrometheusAPIServerExtension != nil && r.apiExtension != nil && r.cfg.PrometheusAPIServerExtension.Enabled {
-		ext := r.apiExtension.(interface{ UpdatePrometheusConfig(*config.Config, *scrape.Manager) })
-		ext.UpdatePrometheusConfig((*config.Config)(cfg), r.scrapeManager)
+		ext := r.apiExtension.(interface{ UpdatePrometheusConfig(*config.Config) })
+		ext.UpdatePrometheusConfig((*config.Config)(cfg))
 	}
 
 	return nil
