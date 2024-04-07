@@ -8,15 +8,16 @@ import (
 
 	"os"
 
+	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Config struct {
-	CollectorSelector  *metav1.LabelSelector  `yaml:"collector_selector,omitempty"`
-	Config             map[string]interface{} `yaml:"config"`
-	AllocationStrategy string                 `yaml:"allocation_strategy,omitempty"`
-	PrometheusCR       map[string]interface{} `yaml:"prometheus_cr,omitempty"`
+	CollectorSelector  *metav1.LabelSelector              `yaml:"collector_selector,omitempty"`
+	Config             map[string]interface{}             `yaml:"config"`
+	AllocationStrategy string                             `yaml:"allocation_strategy,omitempty"`
+	PrometheusCR       allocatorconfig.PrometheusCRConfig `yaml:"prometheus_cr,omitempty"`
 }
 
 type OtelConfig struct {
@@ -139,9 +140,13 @@ func updateTAConfigFile(configFilePath string) {
 		// 	"kubernetes.azure.com/managedby": "aks",
 		// },
 		Config: promScrapeConfig,
-		PrometheusCR: map[string]interface{}{
-			"ServiceMonitorSelector": &metav1.LabelSelector{},
-			"PodMonitorSelector":     &metav1.LabelSelector{},
+		// PrometheusCR: map[string]interface{}{
+		// 	"ServiceMonitorSelector": &metav1.LabelSelector{},
+		// 	"PodMonitorSelector":     &metav1.LabelSelector{},
+		// },
+		PrometheusCR: allocatorconfig.PrometheusCRConfig{
+			ServiceMonitorSelector: &metav1.LabelSelector{},
+			PodMonitorSelector:     &metav1.LabelSelector{},
 		},
 	}
 
