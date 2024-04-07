@@ -16,6 +16,7 @@ type Config struct {
 	CollectorSelector  *metav1.LabelSelector  `yaml:"collector_selector,omitempty"`
 	Config             map[string]interface{} `yaml:"config"`
 	AllocationStrategy string                 `yaml:"allocation_strategy,omitempty"`
+	PrometheusCR       map[string]interface{} `yaml:"prometheus_cr,omitempty"`
 }
 
 type OtelConfig struct {
@@ -138,6 +139,10 @@ func updateTAConfigFile(configFilePath string) {
 		// 	"kubernetes.azure.com/managedby": "aks",
 		// },
 		Config: promScrapeConfig,
+		PrometheusCR: map[string]interface{}{
+			"ServiceMonitorSelector": &metav1.LabelSelector{},
+			"PodMonitorSelector":     &metav1.LabelSelector{},
+		},
 	}
 
 	targetAllocatorConfigYaml, _ := yaml.Marshal(targetAllocatorConfig)
