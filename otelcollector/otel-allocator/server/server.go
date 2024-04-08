@@ -124,6 +124,8 @@ func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.Scrap
 
 	fmt.Println("Done unmarshaling")
 	fmt.Println(string(configBytes))
+	s.logger.Info("Done unmarshaling")
+	s.logger.Info(string(configBytes))
 	// var jobToScrapeConfig map[string]interface{}
 	// err = json.Unmarshal(jsonConfig, &jobToScrapeConfig)
 	// if err != nil {
