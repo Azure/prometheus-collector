@@ -136,12 +136,13 @@ func main() {
 	})
 
 	httpSrv := &http.Server{
-		Handler:      withStackTracer(otelhttp.NewHandler(mux, "", spanNameFormatter), logger),
+		Handler:     withStackTracer(otelhttp.NewHandler(mux, "", spanNameFormatter), logger),
 		ReadTimeout: 100000,
 		ErrorLog:    errlog,
 	}
 
-	listener, err := net.Listen("tcp", "0.0.0.0:9090")
+	level.Info(h.logger).Log("msg", "Start listening for connections", "address", ":9090")
+	listener, err := net.Listen("tcp", ":9090")
 	if err != nil {
 		panic(err)
 	}
@@ -173,6 +174,7 @@ func withStackTracer(h http.Handler, l log.Logger) http.Handler {
 				panic(err)
 			}
 		}()
+		level.Error(l).Log("msg", "serving request", "client", r.RemoteAddr, "url", r.URL, "err", err, "stack", buf)
 		h.ServeHTTP(w, r)
 	})
 }
