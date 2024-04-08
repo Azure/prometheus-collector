@@ -135,7 +135,7 @@ func main() {
 		ErrorLog:    errlog,
 	}
 
-	listener, err := net.Listen("tcp", ":9090")
+	listener, err := net.Listen("tcp", "0.0.0.0:9090")
 	if err != nil {
 		panic(err)
 	}
