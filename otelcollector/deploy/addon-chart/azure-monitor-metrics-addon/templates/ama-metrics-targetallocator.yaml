@@ -36,11 +36,11 @@ spec:
         imagePullPolicy: IfNotPresent
         resources:
           limits:
-            cpu: 5
-            memory: 8Gi
+            cpu: {{ .Values.AzureMonitorMetrics.TargetAllocatorCPULimit }}
+            memory: {{ .Values.AzureMonitorMetrics.TargetAllocatorMemoryLimit }}
           requests:
-            cpu: 10m
-            memory: 50Mi
+            cpu: {{ .Values.AzureMonitorMetrics.TargetAllocatorCPURequest }}
+            memory: {{ .Values.AzureMonitorMetrics.TargetAllocatorMemoryRequest }}
         env:
         - name: OTELCOL_NAMESPACE
           value: "kube-system"
@@ -78,11 +78,11 @@ spec:
         imagePullPolicy: IfNotPresent
         resources:
           limits:
-            cpu: 1
-            memory: 1Gi
+            cpu: {{ .Values.AzureMonitorMetrics.CfgReaderCPULimit }}
+            memory: {{ .Values.AzureMonitorMetrics.CfgReaderMemoryLimit }}
           requests:
-            cpu: 1m
-            memory: 10Mi
+            cpu: {{ .Values.AzureMonitorMetrics.CfgReaderCPURequest}}
+            memory: {{ .Values.AzureMonitorMetrics.CfgReaderMemoryRequest }}
         env:
         - name: CLUSTER
           {{- if .Values.AzureMonitorMetrics.ArcExtension }}
@@ -129,10 +129,10 @@ spec:
           value: "19100"
           {{- end }}
         - name: customEnvironment
-          {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-          value: "{{ lower .Values.Azure.Cluster.Cloud }}"
-          {{- else if .Values.AzureMonitorMetrics.isArcACluster }}
+          {{- if .Values.AzureMonitorMetrics.isArcACluster }}
           value: "arcautonomous"
+          {{- else if .Values.AzureMonitorMetrics.ArcExtension }}
+          value: "{{ lower .Values.Azure.Cluster.Cloud }}"
           {{- else }}
           value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
           {{- end }}
@@ -204,16 +204,32 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
+        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
         - operator: "Exists"
-          effect: NoExecute
+          effect: "NoSchedule"
         - operator: "Exists"
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-          effect: NoSchedule
+          effect: "NoExecute"
+        - operator: "Exists"
+          effect: "PreferNoSchedule" 
+        {{- end }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
       volumes:
       - name: settings-vol-config
         configMap:
