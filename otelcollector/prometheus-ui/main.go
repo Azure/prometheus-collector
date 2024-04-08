@@ -1,4 +1,4 @@
-package prometheusui
+package main
 
 import (
 	"bytes"
