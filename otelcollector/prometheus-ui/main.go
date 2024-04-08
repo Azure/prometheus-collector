@@ -84,6 +84,12 @@ func main() {
 	}
 	router.Get("/metrics", promhttp.Handler().ServeHTTP)
 
+	homePage := "/agent"
+	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, path.Join("", homePage), http.StatusFound)
+	})
+
+
 	// The favicon and manifest are bundled as part of the React app, but we want to serve
 	// them on the root.
 	for _, p := range []string{"/favicon.ico", "/manifest.json"} {
