@@ -1,3 +1,4 @@
+PROMETHEUS_VERSION=$(file < PROMETHEUS_VERSION)
 all: otelcollector fluentbitplugin promconfigvalidator targetallocator
 
 .PHONY: otelcollector
@@ -17,3 +18,6 @@ targetallocator:
 
 configurationreader:
 	make -C ../configuration-reader-builder
+
+prometheusui:
+	make -C ../prometheus-ui
