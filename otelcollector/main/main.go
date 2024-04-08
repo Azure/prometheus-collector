@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -21,16 +20,44 @@ func main() {
 	ccpMetricsEnabled := os.Getenv("CCP_METRICS_ENABLED")
 
 	outputFile := "/opt/inotifyoutput.txt"
-	err := monitorInotify(outputFile)
+	err := inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs")
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Check if MODE environment variable is empty
+	mode := os.Getenv("MODE")
+	if mode == "" {
+		mode = "simple"
+	}
+
+	// Print variables
+	echoVar("MODE", mode)
+	echoVar("CONTROLLER_TYPE", os.Getenv("CONTROLLER_TYPE"))
+	echoVar("CLUSTER", os.Getenv("CLUSTER"))
+
+	err := SetupArcEnvironment()
+	if err != nil {
+		echoError(err)
+	}
+
+	// Call setupTelemetry function with custom environment
+	customEnvironment := os.Getenv("CUSTOM_ENVIRONMENT")
+	setupTelemetry(customEnvironment)
+
+	// Get controller type in lowercase and trimmed
+	controllerType := getControllerType()
+	fmt.Println("Controller Type:", controllerType)
+
+	if err := configureEnvironment(); err != nil {
+		fmt.Println("Error configuring environment:", err)
+		os.Exit(1)
 	}
 
 	if ccpMetricsEnabled == "true" {
 		configmapparserforccp()
 	} else {
-		// TODO : Part of Step 1 of ccp merge to main
-		// configmapparser()
+		configmapparser()
 	}
 
 	var meConfigFile string
@@ -209,7 +236,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := os.Stat("/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"); os.IsNotExist(err) {
 		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
-			azmonContainerStartTimeStr, err := ioutil.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
+			azmonContainerStartTimeStr, err := os.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
 			if err != nil {
 				status = http.StatusServiceUnavailable
 				message = "Error reading azmon-container-start-time: " + err.Error()

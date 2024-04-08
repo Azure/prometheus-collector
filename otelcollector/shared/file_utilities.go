@@ -129,7 +129,7 @@ func setEnvVarsFromFile(filename string) error {
 	return nil
 }
 
-func monitorInotify(outputFile string) error {
+func inotify(outputFile string, location1 string, location2 string) error {
 	// Start inotify to watch for changes
 	fmt.Println("Starting inotify for watching config map update")
 
@@ -141,7 +141,8 @@ func monitorInotify(outputFile string) error {
 	// Define the command to start inotify
 	inotifyCommand := exec.Command(
 		"inotifywait",
-		"/etc/config/settings",
+		location1,
+		location2,
 		"--daemon",
 		"--recursive",
 		"--outfile", outputFile,

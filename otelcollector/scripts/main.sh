@@ -125,10 +125,7 @@ if [ $IS_ARC_CLUSTER == "true" ] && [ $HTTP_PROXY_ENABLED == "true" ]; then
   fi
 fi
 
-# source /opt/configmap-parser.sh
-
-# run go binary to parse configmap
-/opt/configmapparser.exe
+source /opt/configmap-parser.sh
 
 #start cron daemon for logrotate
 /usr/sbin/crond -n -s &

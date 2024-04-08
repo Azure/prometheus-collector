@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/pelletier/go-toml"
@@ -64,11 +63,6 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 	configMap["minimalingestionprofile"] = getStringValue(tree.Get("minimalingestionprofile"))
 
 	return configMap
-}
-
-func isValidRegex(input string) bool {
-	_, err := regexp.Compile(input)
-	return err == nil
 }
 
 func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (RegexValues, error) {
