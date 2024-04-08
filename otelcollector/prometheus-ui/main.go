@@ -141,7 +141,7 @@ func main() {
 		ErrorLog:    errlog,
 	}
 
-	level.Info(h.logger).Log("msg", "Start listening for connections", "address", ":9090")
+	level.Info(logger).Log("msg", "Start listening for connections", "address", ":9090")
 	listener, err := net.Listen("tcp", ":9090")
 	if err != nil {
 		panic(err)
@@ -174,7 +174,7 @@ func withStackTracer(h http.Handler, l log.Logger) http.Handler {
 				panic(err)
 			}
 		}()
-		level.Error(l).Log("msg", "serving request", "client", r.RemoteAddr, "url", r.URL, "err", err, "stack", buf)
+		level.Error(l).Log("msg", "serving request", "client", r.RemoteAddr, "url", r.URL)
 		h.ServeHTTP(w, r)
 	})
 }
