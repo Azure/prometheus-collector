@@ -55,7 +55,7 @@ type prometheusReceiver struct {
 const (
 	maxConnections     			= 512
 	readTimeoutMinutes 			= 10
-	prometheusUIServerPort 	= 9090
+	prometheusUIServerPort 	= 9091
 )
 
 func (e *prometheusUIExtension) Start(_ context.Context, host component.Host) error {
@@ -79,10 +79,10 @@ func (e *prometheusUIExtension) RegisterPrometheusReceiverComponents(prometheusC
 	o := &web.Options{
 		ScrapeManager: e.prometheusReceiver.scrapeManager,
 		Context:       e.ctx,
-		ListenAddress: ":9090",
+		ListenAddress: ":9091",
 		ExternalURL: &url.URL{
 			Scheme: "http",
-			Host:   "localhost:9090",
+			Host:   "localhost:9091",
 			Path:   "",
 		},
 		RoutePrefix: "/",

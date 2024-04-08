@@ -51,7 +51,7 @@ var apiRouterPaths = []string{
 }
 
 func main() {
-	router := route.New()
+	router := route.New() //.WithInstrumentation(setPathWithPrefix(""))
 
 	serveReactApp := func(w http.ResponseWriter, r *http.Request) {
 		f, err := Assets.Open("/static/react/index.html")
@@ -104,7 +104,7 @@ func main() {
 
 	// Route API calls to the port that's hosted by the otelcollector
 	// We need a reverse proxy because norm
-	api, err := url.Parse("http://localhost:9090")
+	api, err := url.Parse("http://localhost:9091")
 	if err != nil {
 		panic(err)
 	}
@@ -135,7 +135,7 @@ func main() {
 		ErrorLog:    errlog,
 	}
 
-	listener, err := net.Listen("tcp", ":9091")
+	listener, err := net.Listen("tcp", ":9090")
 	if err != nil {
 		panic(err)
 	}
@@ -149,6 +149,14 @@ func main() {
 	select {
 	case e := <-errCh:
 		fmt.Println(e.Error())
+	}
+}
+
+func setPathWithPrefix(prefix string) func(handlerName string, handler http.HandlerFunc) http.HandlerFunc {
+	return func(handlerName string, handler http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			handler(w, r.WithContext(httputil.ContextWithPath(r.Context(), prefix+r.URL.Path)))
+		}
 	}
 }
 
