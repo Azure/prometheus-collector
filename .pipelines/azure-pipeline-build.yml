@@ -507,6 +507,11 @@ jobs:
         version: '1.21.8'
 
     - bash: |
+        make
+      displayName: "Build: download prometheus-ui react files"
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/prometheus-ui
+
+    - bash: |
         mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
 
         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
