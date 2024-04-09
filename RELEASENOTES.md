@@ -1,14 +1,26 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Pending
+## Release 04-08-2024
 
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Change log -
+  * fix: Fix: For Arc, use a default value CloudEnvironment that customers can change for other clouds- https://github.com/Azure/prometheus-collector/pull/753
+  * Upgrade: fluent-bit from 2.0.9 to 2.1.10 - https://github.com/Azure/prometheus-collector/pull/809
   * Update mdsd, MA, MetricsExtension
     * Linux
       * mdsd 1.27.4 --> 1.30.3
-      * MetricsExtension 2.2023.928.2134 --> 2.2024.328.1744 
+      * MetricsExtension 2.2023.928.2134 --> 2.2024.328.1744
     * Windows
       * MA 46.4.1 --> 46.15.4
       * MetricsExtension 2.2023.224.2214 -> 2.2024.328.1744
+  * Upgrading telegraf from 1.27.3 to 1.28.5 for linux
+  * fix: Change logging from error to info for missing configmap settings to not have errors for older configmaps - https://github.com/Azure/prometheus-collector/pull/804
+  * feat : add support for per cloud AI instance - https://github.com/Azure/prometheus-collector/pull/798
+  * Step 0 : Merge CCP changes to main with a separate image - https://github.com/Azure/prometheus-collector/pull/653
+
 
 ## Release 03-08-2024
 
@@ -17,7 +29,7 @@
 * TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.6-main-03-08-2024-fd4f13cb-targetallocator`
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.6-main-03-08-2024-fd4f13cb-win`
 * Change log -
-  * fix: Fix for yaml unmarshal bug for keepequal/dropequal - https://github.com/Azure/prometheus-collector/pull/753 
+  * fix: Fix for yaml unmarshal bug for keepequal/dropequal - https://github.com/Azure/prometheus-collector/pull/753
   * fix: dollar fix for TA - https://github.com/Azure/prometheus-collector/pull/769
   * ENable operator with CRD support globally - (This will be rolled out once the image roll out is complete)
   * Add new regions for Azure Monitor Workspace ('brazilsoutheast', 'francecentral', 'ukwest', 'koreasouth', 'switzerlandwest', 'japaneast', 'swedencentral', 'canadaeast', 'norwaywest', 'southindia', 'australiaeast', 'swedensouth')
