@@ -43,7 +43,7 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 		go SendCoreCountToAppInsightsMetrics()
 	}
 
-	if strings.ToLower(os.Getenv(envControllerType)) == "daemonset" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+	if strings.ToLower(os.Getenv(envControllerType)) == "daemonset" {
 		go SendContainersCpuMemoryToAppInsightsMetrics()
 	}
 

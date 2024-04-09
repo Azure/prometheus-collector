@@ -254,7 +254,7 @@
                     },
                     {
                         "alert": "New agent version found for prometheus collector",
-                        "expression": "count(count (kube_pod_container_info{image=~\"mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector.*\"})  by (image)) > 2",
+                        "expression": "count(count (kube_pod_container_info{image=~\"mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector.*\"})  by (image)) > 4",
                         "for": "PT60S",
                         "annotations": {
                             "description": "New agent version found for prometheus collector. This alert is only used in near ring regions for prod monitoring clusters"

@@ -436,7 +436,7 @@ func SendContainersCpuMemoryToAppInsightsMetrics() {
 	ksmTelemetryTicker := time.NewTicker(time.Second * time.Duration(ksmAttachedTelemetryIntervalSeconds))
 	for ; true; <-ksmTelemetryTicker.C {
 		for podId := 0; podId < len(p.Pods); podId++ {
-			PodRefName := strings.TrimSpace(p.Pods[podId].PodRef.PodRefName)
+			podRefName := strings.TrimSpace(p.Pods[podId].PodRef.PodRefName)
 			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
 				container := p.Pods[podId].Containers[containerId]
 				containerName := strings.TrimSpace(container.Name)
@@ -447,22 +447,24 @@ func SendContainersCpuMemoryToAppInsightsMetrics() {
 					Log(message)
 					continue
 				case "ama-metrics-ksm":
-					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, ksmCpuMemoryTelemetryName, "MemKsmRssBytes", PodRefName)
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, ksmCpuMemoryTelemetryName, "MemKsmRssBytes", podRefName)
 				case "targetallocator":
-					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "taCPUUsage", "taMemRssBytes", PodRefName)
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "taCPUUsage", "taMemRssBytes", podRefName)
 				case "config-reader":
-					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "cnfgRdrCPUUsage", "cnfgRdrMemRssBytes", PodRefName)
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "cnfgRdrCPUUsage", "cnfgRdrMemRssBytes", podRefName)
 				case "addon-token-adapter":
-					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "adnTknAdtrCPUUsage", "adnTknAdtrMemRssBytes", PodRefName)
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "adnTknAdtrCPUUsage", "adnTknAdtrMemRssBytes", podRefName)
+				case "addon-token-adapter-win":
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "adnTknAdtrCPUUsage", "adnTknAdtrMemRssBytes", podRefName)
 				case "prometheus-collector":
-					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "promColCPUUsage", "promColMemRssBytes", PodRefName)
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "promColCPUUsage", "promColMemRssBytes", podRefName)
 				}
 			}
 		}
 	}
 }
 
-func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMetricName string, memMetricName string, PodRefName string) {
+func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMetricName string, memMetricName string, podRefName string) {
 	cpuUsageNanoCoresLinux := container.Cpu.UsageNanoCores
 	memoryRssBytesLinux := container.Memory.RssBytes
 
@@ -472,7 +474,7 @@ func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMet
 	// Abbreviated properties to save telemetry cost
 	metricTelemetryItem.Properties[memMetricName] = fmt.Sprintf("%d", int(memoryRssBytesLinux))
 	// Adding the actual pod name from Cadvisor output since the podname environment variable points to the pod on which plugin is running
-	metricTelemetryItem.Properties["PodRefName"] = fmt.Sprintf("%s", PodRefName)
+	metricTelemetryItem.Properties["PodRefName"] = fmt.Sprintf("%s", podRefName)
 
 	TelemetryClient.Track(metricTelemetryItem)
 
@@ -652,74 +654,77 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 			if DefaultPrometheusConfig != "" {
 				metric.Properties["DefaultPrometheusConfig"] = DefaultPrometheusConfig
 			}
-			if KubeletKeepListRegex != "" {
-				metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
-			}
-			if CoreDNSKeepListRegex != "" {
-				metric.Properties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
-			}
-			if CAdvisorKeepListRegex != "" {
-				metric.Properties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
-			}
-			if KubeProxyKeepListRegex != "" {
-				metric.Properties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
-			}
-			if ApiServerKeepListRegex != "" {
-				metric.Properties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
-			}
-			if KubeStateKeepListRegex != "" {
-				metric.Properties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
-			}
-			if NodeExporterKeepListRegex != "" {
-				metric.Properties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
-			}
-			if WinExporterKeepListRegex != "" {
-				metric.Properties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
-			}
-			if WinKubeProxyKeepListRegex != "" {
-				metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
-			}
-			if PodannotationKeepListRegex != "" {
-				metric.Properties["PodannotationKeepListRegex"] = PodannotationKeepListRegex
-			}
-			if KappieBasicKeepListRegex != "" {
-				metric.Properties["KappieBasicKeepListRegex"] = KappieBasicKeepListRegex
-			}
-			if KubeletScrapeInterval != "" {
-				metric.Properties["KubeletScrapeInterval"] = KubeletScrapeInterval
-			}
-			if CoreDNSScrapeInterval != "" {
-				metric.Properties["CoreDNSScrapeInterval"] = CoreDNSScrapeInterval
-			}
-			if CAdvisorScrapeInterval != "" {
-				metric.Properties["CAdvisorScrapeInterval"] = CAdvisorScrapeInterval
-			}
-			if KubeProxyScrapeInterval != "" {
-				metric.Properties["KubeProxyScrapeInterval"] = KubeProxyScrapeInterval
-			}
-			if ApiServerScrapeInterval != "" {
-				metric.Properties["ApiServerScrapeInterval"] = ApiServerScrapeInterval
-			}
-			if KubeStateScrapeInterval != "" {
-				metric.Properties["KubeStateScrapeInterval"] = KubeStateScrapeInterval
-			}
-			if NodeExporterScrapeInterval != "" {
-				metric.Properties["NodeExporterScrapeInterval"] = NodeExporterScrapeInterval
-			}
-			if WinExporterScrapeInterval != "" {
-				metric.Properties["WinExporterScrapeInterval"] = WinExporterScrapeInterval
-			}
-			if WinKubeProxyScrapeInterval != "" {
-				metric.Properties["WinKubeProxyScrapeInterval"] = WinKubeProxyScrapeInterval
-			}
-			if PromHealthScrapeInterval != "" {
-				metric.Properties["PromHealthScrapeInterval"] = PromHealthScrapeInterval
-			}
-			if PodAnnotationScrapeInterval != "" {
-				metric.Properties["PodAnnotationScrapeInterval"] = PodAnnotationScrapeInterval
-			}
-			if KappieBasicScrapeInterval != "" {
-				metric.Properties["KappieBasicScrapeInterval"] = KappieBasicScrapeInterval
+
+			if os.Getenv(envControllerType) == "ReplicaSet" {
+				if KubeletKeepListRegex != "" {
+					metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
+				}
+				if CoreDNSKeepListRegex != "" {
+					metric.Properties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
+				}
+				if CAdvisorKeepListRegex != "" {
+					metric.Properties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
+				}
+				if KubeProxyKeepListRegex != "" {
+					metric.Properties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
+				}
+				if ApiServerKeepListRegex != "" {
+					metric.Properties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
+				}
+				if KubeStateKeepListRegex != "" {
+					metric.Properties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
+				}
+				if NodeExporterKeepListRegex != "" {
+					metric.Properties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
+				}
+				if WinExporterKeepListRegex != "" {
+					metric.Properties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
+				}
+				if WinKubeProxyKeepListRegex != "" {
+					metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
+				}
+				if PodannotationKeepListRegex != "" {
+					metric.Properties["PodannotationKeepListRegex"] = PodannotationKeepListRegex
+				}
+				if KappieBasicKeepListRegex != "" {
+					metric.Properties["KappieBasicKeepListRegex"] = KappieBasicKeepListRegex
+				}
+				if KubeletScrapeInterval != "" {
+					metric.Properties["KubeletScrapeInterval"] = KubeletScrapeInterval
+				}
+				if CoreDNSScrapeInterval != "" {
+					metric.Properties["CoreDNSScrapeInterval"] = CoreDNSScrapeInterval
+				}
+				if CAdvisorScrapeInterval != "" {
+					metric.Properties["CAdvisorScrapeInterval"] = CAdvisorScrapeInterval
+				}
+				if KubeProxyScrapeInterval != "" {
+					metric.Properties["KubeProxyScrapeInterval"] = KubeProxyScrapeInterval
+				}
+				if ApiServerScrapeInterval != "" {
+					metric.Properties["ApiServerScrapeInterval"] = ApiServerScrapeInterval
+				}
+				if KubeStateScrapeInterval != "" {
+					metric.Properties["KubeStateScrapeInterval"] = KubeStateScrapeInterval
+				}
+				if NodeExporterScrapeInterval != "" {
+					metric.Properties["NodeExporterScrapeInterval"] = NodeExporterScrapeInterval
+				}
+				if WinExporterScrapeInterval != "" {
+					metric.Properties["WinExporterScrapeInterval"] = WinExporterScrapeInterval
+				}
+				if WinKubeProxyScrapeInterval != "" {
+					metric.Properties["WinKubeProxyScrapeInterval"] = WinKubeProxyScrapeInterval
+				}
+				if PromHealthScrapeInterval != "" {
+					metric.Properties["PromHealthScrapeInterval"] = PromHealthScrapeInterval
+				}
+				if PodAnnotationScrapeInterval != "" {
+					metric.Properties["PodAnnotationScrapeInterval"] = PodAnnotationScrapeInterval
+				}
+				if KappieBasicScrapeInterval != "" {
+					metric.Properties["KappieBasicScrapeInterval"] = KappieBasicScrapeInterval
+				}
 			}
 
 			TelemetryClient.Track(metric)

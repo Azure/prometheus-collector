@@ -1193,7 +1193,7 @@ stages:
       IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
       HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
       IMAGE_TAG_TARGET_ALLOCATOR: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
-      IMAGE_TAG_CONFIG_READER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.CONFIG_READER_IMAGE_TAG'] ]
+      IMAGE_TAG_CONFIG_READER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
     skipComponentGovernanceDetection: true
     strategy:
       runOnce:
@@ -1219,7 +1219,7 @@ stages:
                     sleep 30
                     echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
                     output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                    if (echo $output | grep $(IMAGE_TAG) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
+                    if (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR))) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
                     then
                       echo "Images are published to mcr"
                       exit 0
@@ -1250,8 +1250,8 @@ stages:
               chartType: 'FilePath'
               chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
               releaseName: 'ama-metrics'
-              waitForExecution: false
-              arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+              waitForExecution: false              arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+
   - deployment: Testkube
     displayName: "Test: AKS testkube tests"
     environment: Prometheus-Collector

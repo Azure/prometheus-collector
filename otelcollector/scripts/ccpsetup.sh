@@ -28,7 +28,7 @@ sudo tdnf repolist --refresh
 sudo tdnf install inotify-tools -y
 
 echo "Installing mdsd..."
-sudo tdnf install -y azure-mdsd-1.27.4
+sudo tdnf install -y azure-mdsd-1.30.3
 
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
@@ -36,7 +36,7 @@ mkdir /opt/microsoft/linuxmonagent
 
 # Install ME
 echo "Installing Metrics Extension..."
-sudo tdnf install -y metricsext2-2.2023.928.2134
+sudo tdnf install -y metricsext2-2.2024.328.1744
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # Remove any RPMs downloaded not from Mariner
