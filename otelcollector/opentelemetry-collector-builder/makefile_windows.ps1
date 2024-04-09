@@ -34,6 +34,11 @@ Set-Location prom-config-validator-builder
 .\makefile_windows.ps1
 
 Set-Location ..
+Set-Location prometheus-ui
+
+.\makefile_windows.ps1
+
+Set-Location ..
 Set-Location opentelemetry-collector-builder
 
 Write-Output "FINISHED building promconfigvalidator"
