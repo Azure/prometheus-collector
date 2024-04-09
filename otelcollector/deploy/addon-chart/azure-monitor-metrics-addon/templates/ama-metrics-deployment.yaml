@@ -75,7 +75,7 @@ spec:
               {{- if .Values.AzureMonitorMetrics.isArcACluster }}
               value: "arcautonomous"
               {{- else if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ lower .Values.Azure.Cluster.Cloud }}"
+              value: "{{ lower .Values.CloudEnvironment }}"
               {{- else }}
               value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
               {{- end }}
