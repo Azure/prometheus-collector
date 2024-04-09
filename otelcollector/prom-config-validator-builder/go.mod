@@ -6,6 +6,8 @@ replace github.com/gracewehner/prometheusreceiver => ../prometheusreceiver
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/prometheusapiserverextension => ../prometheusapiserverextension
 
+replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => ../pkgtranslatorprometheus
+
 require (
 	github.com/gracewehner/prometheusreceiver v0.0.0-00010101000000-000000000000
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.97.0

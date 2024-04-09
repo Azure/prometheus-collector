@@ -2,6 +2,8 @@ module github.com/configurationreader
 
 go 1.21
 
+replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => ../pkgtranslatorprometheus
+
 require (
 	github.com/prometheus/prometheus v0.45.0
 	gopkg.in/yaml.v2 v2.4.0
