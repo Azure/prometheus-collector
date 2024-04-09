@@ -926,10 +926,11 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		}
 
 		// Create and send metric
-		metric := appinsights.NewMetricTelemetry(groupMatches[1], metricValue)
+		metricName := "prometheus_" + groupMatches[1]
+		metric := appinsights.NewMetricTelemetry(metricName, metricValue)
 		metric.Properties["job_name"] = fmt.Sprintf("%s", jobName)
 		TelemetryClient.Track(metric)
-		Log(fmt.Sprintf("Sent %s metrics", groupMatches[1]))
+		Log(fmt.Sprintf("Sent %s metrics", metricName))
 	}
 	return output.FLB_OK
 }
@@ -965,14 +966,14 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 
 		if count > 0 {
 			averageCpuUsage := totalCpuUsage / float64(count)
-			metric := appinsights.NewMetricTelemetry("otelcpuUsageAvg", averageCpuUsage)
+			metric := appinsights.NewMetricTelemetry("otelcollector_cpu_usage_050", averageCpuUsage)
 			TelemetryClient.Track(metric)
 			Log("Sent Otel Cpu usage metrics")
 
 			sort.Float64s(cpuUsages)
 			index := int(math.Ceil(0.95 * float64(len(cpuUsages))))
 			percentile95 := cpuUsages[index-1]
-			metric95 := appinsights.NewMetricTelemetry("otelcpuUsage95", percentile95)
+			metric95 := appinsights.NewMetricTelemetry("otelcollector_cpu_usage_095", percentile95)
 			TelemetryClient.Track(metric95)
 			Log("Sent Otel 95th percentile  Cpu usage metrics")
 
@@ -1016,14 +1017,14 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 		if count > 0 {
 			averageCpuUsage := totalCpuUsage / float64(count)
-			metric := appinsights.NewMetricTelemetry("meCpuUsageAvg", averageCpuUsage)
+			metric := appinsights.NewMetricTelemetry("metricsextension_cpu_usage_050", averageCpuUsage)
 			TelemetryClient.Track(metric)
 			Log("Sent ME Average Cpu usage metrics")
 
 			sort.Float64s(cpuUsages)
 			index := int(math.Ceil(0.95 * float64(len(cpuUsages))))
 			percentile95 := cpuUsages[index-1]
-			metric95 := appinsights.NewMetricTelemetry("meCpuUsage95", percentile95)
+			metric95 := appinsights.NewMetricTelemetry("metricsextension_cpu_usage_095", percentile95)
 			TelemetryClient.Track(metric95)
 			Log("Sent ME 95th percentile  Cpu usage metrics")
 
@@ -1073,7 +1074,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 		if count > 0 {
 			averageMemUsage := totalMemUsage / float64(count)
-			metric := appinsights.NewMetricTelemetry("meVMRSSAvg", averageMemUsage)
+			metric := appinsights.NewMetricTelemetry("metricsextension_memory_rss_050", averageMemUsage)
 			TelemetryClient.Track(metric)
 			Log("Sent ME average memory usage metrics")
 
@@ -1081,7 +1082,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 			sort.Float64s(memUsages)
 			index := int(math.Ceil(0.95 * float64(len(memUsages))))
 			percentile95 := memUsages[index-1]
-			metric95 := appinsights.NewMetricTelemetry("meVMRSS95", percentile95)
+			metric95 := appinsights.NewMetricTelemetry("metricsextension_memory_rss_095", percentile95)
 			TelemetryClient.Track(metric95)
 			Log("Sent ME 95th percentile memory usage metrics")
 
@@ -1132,7 +1133,7 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 
 		if count > 0 {
 			averageMemUsage := totalMemUsage / float64(count)
-			metric := appinsights.NewMetricTelemetry("otelcolVMRSSAvg", averageMemUsage)
+			metric := appinsights.NewMetricTelemetry("otelcollector_memory_rss_050", averageMemUsage)
 			TelemetryClient.Track(metric)
 			Log("Sent Otel average memory usage metrics")
 
@@ -1140,7 +1141,7 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 			sort.Float64s(memUsages)
 			index := int(math.Ceil(0.95 * float64(len(memUsages))))
 			percentile95 := memUsages[index-1]
-			metric95 := appinsights.NewMetricTelemetry("otelcolVMRSS95", percentile95)
+			metric95 := appinsights.NewMetricTelemetry("otelcollector_memory_rss_095", percentile95)
 			TelemetryClient.Track(metric95)
 			Log("Sent Otel 95th percentile memory usage metrics")
 
