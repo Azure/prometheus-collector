@@ -28,9 +28,9 @@
       "dependsOn": []
     },
     {
-      "name": "PushCCPLinuxAgent",
+      "name": "PushLinuxCCPAgent",
       "targetType": "ServiceResource",
-      "targetName": "PushCCPLinuxAgent",
+      "targetName": "PushLinuxCCPAgent",
       "actions": [
         "Shell/PushAgentToACR"
       ],
@@ -90,7 +90,7 @@
       ],
       "dependsOn": [
         "PushLinuxAgent",
-        "PushCCPLinuxAgent",
+        "PushLinuxCCPAgent",
         "PushWindowsAgent",
         "PushKSMChart",
         "PushNEChart"
