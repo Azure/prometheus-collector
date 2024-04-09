@@ -4,12 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	stdlog "log"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"path"
 	"runtime"
 	"strconv"
@@ -20,8 +17,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/server"
-	toolkit_web "github.com/prometheus/exporter-toolkit/web"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // Paths that are handled by the React / Reach router that should all be served the main React app's index.html.
@@ -129,34 +124,36 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", router)
 
-	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	errlog := stdlog.New(log.NewStdlibAdapter(level.Error(logger)), "", 0)
-	spanNameFormatter := otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-		return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
-	})
+	http.ListenAndServe(":9090", mux)
 
-	httpSrv := &http.Server{
-		Handler:     withStackTracer(otelhttp.NewHandler(mux, "", spanNameFormatter), logger),
-		ReadTimeout: 100000,
-		ErrorLog:    errlog,
-	}
+	// logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+	// errlog := stdlog.New(log.NewStdlibAdapter(level.Error(logger)), "", 0)
+	// spanNameFormatter := otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+	// 	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+	// })
 
-	level.Info(logger).Log("msg", "Start listening for connections", "address", ":9090")
-	listener, err := net.Listen("tcp", ":9090")
-	if err != nil {
-		panic(err)
-	}
+	// httpSrv := &http.Server{
+	// 	Handler:     withStackTracer(otelhttp.NewHandler(mux, "", spanNameFormatter), logger),
+	// 	ReadTimeout: 100000,
+	// 	ErrorLog:    errlog,
+	// }
 
-	errCh := make(chan error, 1)
-	webconfig := ""
-	go func() {
-	  errCh <- toolkit_web.Serve(listener, httpSrv, &toolkit_web.FlagConfig{WebConfigFile: &webconfig}, logger)
-	}()
+	// level.Info(logger).Log("msg", "Start listening for connections", "address", ":9090")
+	// listener, err := net.Listen("tcp", ":9090")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	select {
-	case e := <-errCh:
-		fmt.Println(e.Error())
-	}
+	// errCh := make(chan error, 1)
+	// webconfig := ""
+	// go func() {
+	//   errCh <- toolkit_web.Serve(listener, httpSrv, &toolkit_web.FlagConfig{WebConfigFile: &webconfig}, logger)
+	// }()
+
+	// select {
+	// case e := <-errCh:
+	// 	fmt.Println(e.Error())
+	// }
 }
 
 // withStackTrace logs the stack trace in case the request panics. The function
