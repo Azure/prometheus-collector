@@ -5,6 +5,7 @@ go 1.21
 toolchain go1.22.0
 
 require (
+	github.com/joho/godotenv v1.5.1
 	github.com/open-telemetry/opentelemetry-operator v0.97.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.29.3
