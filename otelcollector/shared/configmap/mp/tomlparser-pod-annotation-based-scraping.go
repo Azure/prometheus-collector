@@ -8,17 +8,17 @@ import (
 )
 
 const (
-	LOGGING_PREFIX          = "pod-annotation-based-scraping"
-	configMapMountPath      = "/etc/config/settings/pod-annotation-based-scraping"
-	configOutputFilePath    = "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
-	envVariableTemplateName = "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"
+	LOGGING_PREFIX                     = "pod-annotation-based-scraping"
+	configMapMountPathForPodAnnotation = "/etc/config/settings/pod-annotation-based-scraping"
+	configOutputFilePath               = "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
+	envVariableTemplateName            = "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"
 )
 
 var podannotationNamespaceRegex string
 
-func parseConfigMap() error {
+func parseConfigMapForDebugSettings() error {
 	// Check if config map file exists
-	file, err := os.Open(configMapMountPath)
+	file, err := os.Open(configMapMountPathForPodAnnotation)
 	if err != nil {
 		return fmt.Errorf("configmap section not mounted, using defaults")
 	}
