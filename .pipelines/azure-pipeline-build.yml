@@ -1250,7 +1250,8 @@ stages:
               chartType: 'FilePath'
               chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
               releaseName: 'ama-metrics'
-              waitForExecution: false              arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+              waitForExecution: false
+              arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
 
   - deployment: Testkube
     displayName: "Test: AKS testkube tests"
