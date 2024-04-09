@@ -926,7 +926,12 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 		}
 
 		// Create and send metric
-		metricName := "prometheus_" + groupMatches[1]
+		var metricName string
+		if groupMatches[1] == "opentelemetry_allocator_targets" || groupMatches[1] == "opentelemetry_allocator_collectors_discovered" {
+			metricName = "target_allocator_" + groupMatches[1]
+		} else {
+			metricName = "prometheus_" + groupMatches[1]
+		}
 		metric := appinsights.NewMetricTelemetry(metricName, metricValue)
 		metric.Properties["job_name"] = fmt.Sprintf("%s", jobName)
 		TelemetryClient.Track(metric)
