@@ -170,7 +170,7 @@ func (e *prometheusUIExtension) RegisterPrometheusReceiverComponents(prometheusC
 
 	// Run the API server in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L582-L630
 	mux := http.NewServeMux()
-	promHandler := promhttp.HandlerFor(e.prometheusReceiver.registerer.(prometheus.Gatherer), promhttp.HandlerOpts{})
+	promHandler := promhttp.HandlerFor(o.Gatherer, promhttp.HandlerOpts{Registry: o.Registerer})
 	mux.Handle("/metrics", promHandler)
 
 	// This is the path the web package uses, but the router above with no prefix can also be Registered by apiV1 instead.
