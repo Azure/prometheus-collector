@@ -118,6 +118,7 @@ func main() {
 	for _, path := range apiRouterPaths {
 		router.Get(apiPath + path, proxyHandler(proxy))
 	}
+	router.Get("/metrics", proxyHandler(proxy))
 
 	mux := http.NewServeMux()
 	mux.Handle("/", router)
