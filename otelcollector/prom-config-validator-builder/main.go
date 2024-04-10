@@ -25,6 +25,7 @@ type OtelConfig struct {
 		Prometheus struct {
 			Config          interface{} `yaml:"config"`
 			TargetAllocator interface{} `yaml:"target_allocator"`
+			PrometheusAPIServerExtension interface{} `yaml:"prometheus_api_server_extension"`
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
 	Service struct {
