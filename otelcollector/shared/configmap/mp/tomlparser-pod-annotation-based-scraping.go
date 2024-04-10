@@ -16,7 +16,7 @@ const (
 
 var podannotationNamespaceRegex string
 
-func parseConfigMapForDebugSettings() error {
+func parseConfigMapForPodAnnotations() error {
 	// Check if config map file exists
 	file, err := os.Open(configMapMountPathForPodAnnotation)
 	if err != nil {
@@ -71,7 +71,7 @@ func writeConfigToFile() error {
 }
 
 func configurePodAnnotationSettings() error {
-	if err := parseConfigMapForDebugSettings(); err != nil {
+	if err := parseConfigMapForPodAnnotations(); err != nil {
 		return err
 	}
 	if err := writeConfigToFile(); err != nil {

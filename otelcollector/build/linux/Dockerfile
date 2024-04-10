@@ -40,7 +40,7 @@ RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as main-builder
 WORKDIR /src
-COPY ../shared/*.go ../shared/mp/*.go ./main/*.go ./main/go.mod .
+COPY ../shared/*.go ../shared/configmap/mp/*.go ./main/*.go ./main/go.mod .
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y

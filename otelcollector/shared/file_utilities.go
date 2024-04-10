@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func printMdsdVersion() {
+func PrintMdsdVersion() {
 	cmd := exec.Command("mdsd", "--version")
 	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
@@ -19,10 +19,10 @@ func printMdsdVersion() {
 		fmt.Printf("Error getting MDSD version: %v\n", err)
 		return
 	}
-	fmtVar("MDSD_VERSION", string(output))
+	FmtVar("MDSD_VERSION", string(output))
 }
 
-func readVersionFile(filePath string) (string, error) {
+func ReadVersionFile(filePath string) (string, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err
@@ -30,7 +30,7 @@ func readVersionFile(filePath string) (string, error) {
 	return string(content), nil
 }
 
-func fmtVar(name, value string) {
+func FmtVar(name, value string) {
 	fmt.Printf("%s=\"%s\"\n", name, value)
 }
 
@@ -57,7 +57,7 @@ func ReadAndTrim(filename string) (string, error) {
 	return trimmedContent, nil
 }
 
-func exists(path string) bool {
+func Exists(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -138,7 +138,7 @@ func SetEnvVarsFromFile(filename string) error {
 	return nil
 }
 
-func inotify(outputFile string, location1 string, location2 string) error {
+func Inotify(outputFile string, location1 string, location2 string) error {
 	// Start inotify to watch for changes
 	fmt.Println("Starting inotify for watching config map update")
 
@@ -169,7 +169,7 @@ func inotify(outputFile string, location1 string, location2 string) error {
 	return nil
 }
 
-func hasConfigChanged(filePath string) bool {
+func HasConfigChanged(filePath string) bool {
 	if _, err := os.Stat(filePath); err == nil {
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
@@ -182,7 +182,7 @@ func hasConfigChanged(filePath string) bool {
 	return false
 }
 
-func writeTerminationLog(message string) {
+func WriteTerminationLog(message string) {
 	if err := os.WriteFile("/dev/termination-log", []byte(message), fs.FileMode(0644)); err != nil {
 		log.Printf("Error writing to termination log: %v", err)
 	}

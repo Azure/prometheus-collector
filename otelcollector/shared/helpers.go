@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func getControllerType() string {
+func GetControllerType() string {
 	// Get CONTROLLER_TYPE environment variable
 	controllerType := os.Getenv("CONTROLLER_TYPE")
 
@@ -16,7 +16,7 @@ func getControllerType() string {
 	return controllerTypeLower
 }
 
-func isValidRegex(input string) bool {
+func IsValidRegex(input string) bool {
 	_, err := regexp.Compile(input)
 	return err == nil
 }

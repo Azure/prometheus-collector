@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func setupTelemetry(customEnvironment string) {
+func SetupTelemetry(customEnvironment string) {
 	// Convert customEnvironment to lowercase
 	customEnvironmentLower := strings.ToLower(customEnvironment)
 

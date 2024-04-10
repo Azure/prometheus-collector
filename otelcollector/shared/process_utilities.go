@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func isProcessRunning(processName string) bool {
+func IsProcessRunning(processName string) bool {
 	// List all processes in the current process group
 	pid := os.Getpid()
 	processes, err := os.ReadDir("/proc")
@@ -39,7 +39,7 @@ func isProcessRunning(processName string) bool {
 	return false
 }
 
-func startCommand(command string, args ...string) {
+func StartCommand(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
 	// Set environment variables from os.Environ()
@@ -146,7 +146,7 @@ func copyOutputFile(src io.Reader, file *os.File) {
 	}
 }
 
-func startMetricsExtensionWithConfigOverrides(configOverrides string) {
+func StartMetricsExtensionWithConfigOverrides(configOverrides string) {
 	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 
 	// Create a file to store the stdoutput
@@ -196,7 +196,7 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	}
 }
 
-func startMdsd() {
+func StartMdsd() {
 	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-D")
 	// // Create a file to store the stdoutput
 	// mdsd_stdout_file, err := os.Create("mdsd_stdout.log")

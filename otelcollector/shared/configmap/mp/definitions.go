@@ -1,12 +1,20 @@
-package shared
+package configmapsettings
 
 type RegexValues struct {
-	ControlplaneKubeControllerManager string
-	ControlplaneKubeScheduler         string
-	ControlplaneApiserver             string
-	ControlplaneClusterAutoscaler     string
-	ControlplaneEtcd                  string
-	MinimalIngestionProfile           string
+	Kubelet                         string
+	CoreDNS                         string
+	CAdvisor                        string
+	KubeProxy                       string
+	APIServer                       string
+	KubeState                       string
+	NodeExporter                    string
+	KappieBasic                     string
+	NetObservability                string
+	WindowsExporter                 string
+	WindowsKubeProxy                string
+	NetworkObservabilityRetinaRegex string
+	NetworkObservabilityHubbleRegex string
+	MinimalIngestionProfile         string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
@@ -27,6 +35,22 @@ type ConfigProcessor struct {
 	ControlplaneClusterAutoscaler     string
 	ControlplaneEtcd                  string
 	NoDefaultsEnabled                 bool
+
+	Kubelet                    string
+	Coredns                    string
+	Cadvisor                   string
+	Kubeproxy                  string
+	Apiserver                  string
+	Kubestate                  string
+	NodeExporter               string
+	PrometheusCollectorHealth  string
+	PodAnnotation              string
+	Windowsexporter            string
+	Windowskubeproxy           string
+	Kappiebasic                string
+	NetworkObservabilityRetina string
+	NetworkObservabilityHubble string
+	NetworkObservabilityCilium string
 }
 
 // ConfigParser is an interface for parsing configurations.

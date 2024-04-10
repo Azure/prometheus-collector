@@ -54,7 +54,7 @@ func setHTTPProxyEnabled() {
 	os.Setenv("HTTP_PROXY_ENABLED", httpProxyEnabled)
 }
 
-func configureEnvironment() error {
+func ConfigureEnvironment() error {
 	if err := copyCAAnchors(); err != nil {
 		return err
 	}

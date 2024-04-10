@@ -47,7 +47,7 @@ func configmapparserforccp() {
 	// Parse the configmap to set the right environment variables for prometheus collector settings
 	parseConfigAndSetEnvInFile()
 	filename := "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
-	err := SetEnvVarsFromFile(filename)
+	err := shared.SetEnvVarsFromFile(filename)
 	if err != nil {
 		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var: %v\n", err)
 	}
@@ -55,7 +55,7 @@ func configmapparserforccp() {
 	// Parse the settings for default scrape configs
 	tomlparserCCPDefaultScrapeSettings()
 	filename = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
-	err = SetEnvVarsFromFile(filename)
+	err = shared.SetEnvVarsFromFile(filename)
 	if err != nil {
 		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_default_scrape_settings_env_var: %v\n", err)
 	}
