@@ -1,4 +1,4 @@
-package main
+package shared
 
 import (
 	"fmt"
@@ -77,7 +77,7 @@ func startCommand(command string, args ...string) {
 	}()
 }
 
-func startCommandAndWait(command string, args ...string) {
+func StartCommandAndWait(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
 	// Set environment variables from os.Environ()

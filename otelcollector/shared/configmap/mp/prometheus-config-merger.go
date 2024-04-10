@@ -1,4 +1,4 @@
-package main
+package configmapsettings
 
 import (
 	"fmt"
@@ -60,22 +60,22 @@ var mergedDefaultConfigs map[interface{}]interface{}
 func parseConfigMap() string {
 	defer func() {
 		if r := recover(); r != nil {
-			echoError(fmt.Sprintf("Recovered from panic: %v\n", r))
+			EchoError(fmt.Sprintf("Recovered from panic: %v\n", r))
 		}
 	}()
 
 	if _, err := os.Stat(configMapMountPath); os.IsNotExist(err) {
-		echoWarning("Custom prometheus config does not exist, using only default scrape targets if they are enabled")
+		EchoWarning("Custom prometheus config does not exist, using only default scrape targets if they are enabled")
 		return ""
 	}
 
 	config, err := os.ReadFile(configMapMountPath)
 	if err != nil {
-		echoError(fmt.Sprintf("Exception while parsing configmap for prometheus config: %s. Custom prometheus config will not be used. Please check configmap for errors", err))
+		EchoError(fmt.Sprintf("Exception while parsing configmap for prometheus config: %s. Custom prometheus config will not be used. Please check configmap for errors", err))
 		return ""
 	}
 
-	echoVar("Successfully parsed configmap for prometheus config", string(config))
+	shared.EchoVar("Successfully parsed configmap for prometheus config", string(config))
 	return string(config)
 }
 
@@ -782,42 +782,42 @@ func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultCo
 	var mergedConfigYaml string
 
 	if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
-		echoVar("Merging default and custom scrape configs", "")
+		shared.EchoVar("Merging default and custom scrape configs", "")
 		var customPrometheusConfig map[interface{}]interface{}
 		err := yaml.Unmarshal([]byte(customPromConfig), &customPrometheusConfig)
 		if err != nil {
-			echoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
+			EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
 			return
 		}
 
 		mergedConfigs := deepMerge(mergedDefaultConfigs, customPrometheusConfig)
 		mergedConfigYaml, err = yaml.Marshal(mergedConfigs)
 		if err != nil {
-			echoError(fmt.Sprintf("Error marshalling merged configs: %v", err))
+			EchoError(fmt.Sprintf("Error marshalling merged configs: %v", err))
 			return
 		}
 
-		echoVar("Done merging default scrape config(s) with custom prometheus config, writing them to file", "")
+		shared.EchoVar("Done merging default scrape config(s) with custom prometheus config, writing them to file", "")
 	} else {
-		echoWarning("The merged default scrape config is nil or empty, using only custom scrape config")
+		EchoWarning("The merged default scrape config is nil or empty, using only custom scrape config")
 		mergedConfigYaml = customPromConfig
 	}
 
 	err := os.WriteFile(promMergedConfigPath, []byte(mergedConfigYaml), fs.FileMode(0644))
 	if err != nil {
-		echoError(fmt.Sprintf("Error writing merged config to file: %v", err))
+		EchoError(fmt.Sprintf("Error writing merged config to file: %v", err))
 		return
 	}
 }
 
 func setLabelLimitsPerScrape(prometheusConfigString string) string {
 	customConfig := prometheusConfigString
-	echoVar("setLabelLimitsPerScrape()", "")
+	shared.EchoVar("setLabelLimitsPerScrape()", "")
 
 	var limitedCustomConfig map[interface{}]interface{}
 	err := yaml.Unmarshal([]byte(customConfig), &limitedCustomConfig)
 	if err != nil {
-		echoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
+		EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
 		return prometheusConfigString
 	}
 
@@ -831,19 +831,19 @@ func setLabelLimitsPerScrape(prometheusConfigString string) string {
 				scrapeMap["label_value_length_limit"] = 1023
 				echoVar(fmt.Sprintf("Successfully set label limits in custom scrape config for job %s", scrapeMap["job_name"]), "")
 			}
-			echoWarning("Done setting label limits for custom scrape config ...")
+			EchoWarning("Done setting label limits for custom scrape config ...")
 			updatedConfig, err := yaml.Marshal(limitedCustomConfig)
 			if err != nil {
-				echoError(fmt.Sprintf("Error marshalling custom config: %v", err))
+				EchoError(fmt.Sprintf("Error marshalling custom config: %v", err))
 				return prometheusConfigString
 			}
 			return string(updatedConfig)
 		} else {
-			echoWarning("No Jobs found to set label limits while processing custom scrape config")
+			EchoWarning("No Jobs found to set label limits while processing custom scrape config")
 			return prometheusConfigString
 		}
 	} else {
-		echoWarning("Nothing to set for label limits while processing custom scrape config")
+		EchoWarning("Nothing to set for label limits while processing custom scrape config")
 		return prometheusConfigString
 	}
 }

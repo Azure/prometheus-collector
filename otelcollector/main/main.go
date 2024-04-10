@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/kaveesh/prometheus-collector/shared"
 )
 
 func main() {
@@ -33,13 +34,13 @@ func main() {
 	}
 
 	// Print variables
-	echoVar("MODE", mode)
-	echoVar("CONTROLLER_TYPE", os.Getenv("CONTROLLER_TYPE"))
-	echoVar("CLUSTER", os.Getenv("CLUSTER"))
+	shared.EchoVar("MODE", mode)
+	shared.EchoVar("CONTROLLER_TYPE", os.Getenv("CONTROLLER_TYPE"))
+	shared.EchoVar("CLUSTER", os.Getenv("CLUSTER"))
 
 	err = SetupArcEnvironment()
 	if err != nil {
-		echoError(err)
+		EchoError(err)
 	}
 
 	// Call setupTelemetry function with custom environment

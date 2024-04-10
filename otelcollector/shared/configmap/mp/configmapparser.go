@@ -1,4 +1,4 @@
-package main
+package configmapsettings
 
 import (
 	"bufio"
@@ -7,25 +7,27 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/kaveesh/prometheus-collector/shared"
 )
 
 func updateBashrc(lines []string) error {
 	// Open .bashrc file for appending
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("error getting home directory: %v", err)
+		return fmt.Errorf("error getting home directory: %v" + err.Error())
 	}
 	bashrcPath := homeDir + "/.bashrc"
 	f, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("error opening .bashrc file: %v", err)
+		return fmt.Errorf("error opening .bashrc file: %v" + err.Error())
 	}
 	defer f.Close()
 
 	// Append lines to .bashrc
 	for _, line := range lines {
 		if _, err := f.WriteString(line + "\n"); err != nil {
-			return fmt.Errorf("error appending to .bashrc file: %v", err)
+			return fmt.Errorf("error appending to .bashrc file: %v" + err.Error())
 		}
 	}
 
@@ -38,7 +40,7 @@ func updateBashrc(lines []string) error {
 	// Reload .bashrc
 	err = reloadBashrc()
 	if err != nil {
-		return fmt.Errorf("error reloading .bashrc: %v", err)
+		return fmt.Errorf("error reloading .bashrc: %v" + err.Error())
 	}
 
 	return nil
@@ -57,7 +59,7 @@ func reloadBashrc() error {
 	reloadScript := "#!/bin/bash\nsource ~/.bashrc\n"
 	err := os.WriteFile("/tmp/reload_bashrc.sh", []byte(reloadScript), 0744)
 	if err != nil {
-		return fmt.Errorf("error creating reload script: %v", err)
+		return fmt.Errorf("error creating reload script: %v" + err.Error())
 	}
 	defer os.Remove("/tmp/reload_bashrc.sh")
 
@@ -65,7 +67,7 @@ func reloadBashrc() error {
 	cmd := exec.Command("/bin/bash", "-c", "/tmp/reload_bashrc.sh")
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("error reloading .bashrc: %v", err)
+		return fmt.Errorf("error reloading .bashrc: %v" + err.Error())
 	}
 
 	return nil
@@ -79,7 +81,7 @@ func setConfigSchemaVersionEnv() {
 	}
 	content, err := os.ReadFile(schemaVersionFile)
 	if err != nil {
-		echoVar("Error reading schema version file:", err)
+		shared.EchoError("Error reading schema version file:" + err.Error())
 		return
 	}
 	trimmedContent := strings.TrimSpace(string(content))
@@ -92,14 +94,14 @@ func setConfigSchemaVersionEnv() {
 	bashrcPath := os.Getenv("HOME") + "/.bashrc"
 	bashrc, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		echoVar("Error opening .bashrc file:", err)
+		shared.EchoError("Error opening .bashrc file:" + err.Error())
 		return
 	}
 	defer bashrc.Close()
 
 	_, err = fmt.Fprintf(bashrc, "\nexport AZMON_AGENT_CFG_SCHEMA_VERSION=%s", configSchemaVersion)
 	if err != nil {
-		echoVar("Error appending to .bashrc file:", err)
+		shared.EchoError("Error appending to .bashrc file:" + err.Error())
 		return
 	}
 	reloadBashrc()
@@ -113,7 +115,7 @@ func setConfigFileVersionEnv() {
 	}
 	content, err := os.ReadFile(configVersionFile)
 	if err != nil {
-		echoVar("Error reading config version file:", err)
+		shared.EchoError("Error reading config version file:" + err.Error())
 		return
 	}
 	trimmedContent := strings.TrimSpace(string(content))
@@ -127,7 +129,7 @@ func setConfigFileVersionEnv() {
 	bashrcContent := fmt.Sprintf("\nexport AZMON_AGENT_CFG_FILE_VERSION=%s", configFileVersion)
 	err = os.WriteFile(bashrcPath, []byte(bashrcContent), fs.FileMode(0644))
 	if err != nil {
-		echoVar("Error appending to .bashrc file:", err)
+		shared.EchoError("Error appending to .bashrc file:" + err.Error())
 		return
 	}
 	reloadBashrc()
@@ -137,10 +139,10 @@ func parseSettingsForPodAnnotations() {
 	// fmt.Printf("Start Processing - %s\n", LOGGING_PREFIX)
 	fmt.Printf("Start Processing - pod annotations\n")
 	if err := configurePodAnnotationSettings(); err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("Error: %v\n" + err.Error())
 		return
 	}
-	echoVar("Start Processing - pod annotations")
+	fmt.Println("Start Processing - pod annotations")
 }
 
 func parsePrometheusCollectorConfig() {
@@ -162,7 +164,7 @@ func parseDebugModeSettings() {
 }
 
 func handleEnvFileError(filename string) {
-	err := setEnvVarsFromFile(filename)
+	err := shared.SetEnvVarsFromFile(filename)
 	if err != nil {
 		fmt.Printf("Error when setting env for %s: %v\n", filename, err)
 	}
@@ -177,7 +179,7 @@ func cleanAndTruncate(input string) string {
 }
 
 func configmapparser() {
-	setAgentConfigVersionEnv()
+	setConfigFileVersionEnv()
 	setConfigSchemaVersionEnv()
 	parseSettingsForPodAnnotations()
 	parsePrometheusCollectorConfig()
@@ -196,41 +198,41 @@ func configmapparser() {
 	}
 	err := updateBashrc(env_for_update)
 	if err != nil {
-		echoVar("Error updating .bashrc:", err)
+		shared.EchoError("Error updating .bashrc:" + err.Error())
 		return
 	}
 
 	// Running promconfigvalidator if promMergedConfig.yml exists
 	if _, err := os.Stat("/opt/promMergedConfig.yml"); err == nil {
-		if os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG") == "true" || !fileExists("/opt/microsoft/otelcollector/collector-config.yml") {
-			echoVar("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
+		if os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG") == "true" || !shared.FileExists("/opt/microsoft/otelcollector/collector-config.yml") {
+			fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
 			os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
 
-			if fileExists("/opt/defaultsMergedConfig.yml") {
-				echoVar("prom-config-validator::Running validator on just default scrape configs")
-				startCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
-				if !fileExists("/opt/collector-config-with-defaults.yml") {
-					echoVar("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+			if shared.FileExists("/opt/defaultsMergedConfig.yml") {
+				fmt.Println("prom-config-validator::Running validator on just default scrape configs")
+				shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+				if !shared.FileExists("/opt/collector-config-with-defaults.yml") {
+					fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
 				} else {
-					copyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
+					shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
 				}
 			}
 			os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 		} else if _, err := os.Stat("/opt/defaultsMergedConfig.yml"); err == nil {
-			echoVar("prom-config-validator::No custom prometheus config found. Only using default scrape configs")
+			fmt.Println("prom-config-validator::No custom prometheus config found. Only using default scrape configs")
 			cmd := exec.Command("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
 			if err := cmd.Run(); err != nil {
-				echoVar("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+				fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
 			} else {
-				echoVar("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
+				fmt.Println("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
 				if err := os.Link("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml"); err != nil {
-					echoVar("Error copying default config:", err)
+					shared.EchoError("Error copying default config:" + err.Error())
 				}
 			}
 			os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 		} else {
 			// This else block is needed, when there is no custom config mounted as config map or default configs enabled
-			echoVar("prom-config-validator::No custom config via configmap or default scrape configs enabled.")
+			fmt.Println("prom-config-validator::No custom config via configmap or default scrape configs enabled.")
 			os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 		}
 
@@ -239,7 +241,7 @@ func configmapparser() {
 	if _, err := os.Stat("/opt/microsoft/prom_config_validator_env_var"); err == nil {
 		file, err := os.Open("/opt/microsoft/prom_config_validator_env_var")
 		if err != nil {
-			echoVar("Error opening file:", err)
+			shared.EchoError("Error opening file:" + err.Error())
 			return
 		}
 		defer file.Close()
@@ -255,21 +257,21 @@ func configmapparser() {
 			}
 		}
 		if err := scanner.Err(); err != nil {
-			echoVar("Error reading file:", err)
+			shared.EchoError("Error reading file:" + err.Error())
 		}
 
 		cmd := exec.Command("source", "/opt/microsoft/prom_config_validator_env_var")
 		if err := cmd.Run(); err != nil {
-			echoVar("Error sourcing env file:", err)
+			shared.EchoError("Error sourcing env file:" + err.Error())
 			return
 		}
 
 		cmd = exec.Command("source", "~/.bashrc")
 		if err := cmd.Run(); err != nil {
-			echoVar("Error sourcing ~/.bashrc:", err)
+			shared.EchoError("Error sourcing ~/.bashrc:" + err.Error())
 			return
 		}
 	}
 
-	echoVar("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
+	fmt.Println("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
 }

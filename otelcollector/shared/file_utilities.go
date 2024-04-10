@@ -1,11 +1,10 @@
-package main
+package shared
 
 import (
 	"bufio"
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -24,7 +23,7 @@ func printMdsdVersion() {
 }
 
 func readVersionFile(filePath string) (string, error) {
-	content, err := ioutil.ReadFile(filePath)
+	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err
 	}
@@ -35,7 +34,7 @@ func fmtVar(name, value string) {
 	fmt.Printf("%s=\"%s\"\n", name, value)
 }
 
-func existsAndNotEmpty(filename string) bool {
+func ExistsAndNotEmpty(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return false
@@ -49,8 +48,8 @@ func existsAndNotEmpty(filename string) bool {
 	return true
 }
 
-func readAndTrim(filename string) (string, error) {
-	content, err := ioutil.ReadFile(filename)
+func ReadAndTrim(filename string) (string, error) {
+	content, err := os.ReadFile(filename)
 	if err != nil {
 		return "", err
 	}
@@ -68,7 +67,7 @@ func exists(path string) bool {
 	return true
 }
 
-func copyFile(sourcePath, destinationPath string) error {
+func CopyFile(sourcePath, destinationPath string) error {
 	sourceFile, err := os.Open(sourcePath)
 	if err != nil {
 		return err
@@ -89,7 +88,17 @@ func copyFile(sourcePath, destinationPath string) error {
 	return nil
 }
 
-func setEnvVarsFromFile(filename string) error {
+// FileExists checks if a file exists and is not a directory before we
+// try using it to prevent further errors.
+func FileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func SetEnvVarsFromFile(filename string) error {
 	// Check if the file exists
 	_, e := os.Stat(filename)
 	if os.IsNotExist(e) {

@@ -1,4 +1,4 @@
-package main
+package shared
 
 import (
 	"fmt"
@@ -13,16 +13,16 @@ const (
 )
 
 // Echo text in red
-func echoError(msg string) {
+func EchoError(msg string) {
 	fmt.Printf("%s%s%s\n", Red, msg, Color_Off)
 }
 
 // Echo text in yellow
-func echoWarning(msg string) {
+func EchoWarning(msg string) {
 	fmt.Printf("%s%s%s\n", Yellow, msg, Color_Off)
 }
 
 // Echo variable name in Cyan and value in regular color
-func echoVar(name, value string) {
+func EchoVar(name, value string) {
 	fmt.Printf("%s%s%s=%s\n", Cyan, name, Color_Off, value)
 }
