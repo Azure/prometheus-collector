@@ -1190,7 +1190,7 @@ jobs:
     IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
     IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
     IMAGE_TAG_TARGET_ALLOCATOR: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
-    IMAGE_TAG_CONFIG_READER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.CONFIG_READER_IMAGE_TAG'] ]
+    IMAGE_TAG_CONFIG_READER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
     skipComponentGovernanceDetection: true
   steps:
   - checkout: self
