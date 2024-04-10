@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
@@ -110,7 +109,7 @@ func UpdateScrapeIntervalConfig(yamlConfigFile string, scrapeIntervalSetting str
 	fmt.Printf("Updating scrape interval config for %s\n", yamlConfigFile)
 
 	// Read YAML config file
-	data, err := ioutil.ReadFile(yamlConfigFile)
+	data, err := os.ReadFile(yamlConfigFile)
 	if err != nil {
 		fmt.Printf("Error reading config file %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
 		return
@@ -143,7 +142,7 @@ func UpdateScrapeIntervalConfig(yamlConfigFile string, scrapeIntervalSetting str
 		}
 
 		// Write updated YAML back to file
-		err = ioutil.WriteFile(yamlConfigFile, cfgYamlWithScrapeConfig, 0644)
+		err = os.WriteFile(yamlConfigFile, []byte(cfgYamlWithScrapeConfig), fs.FileMode(0644))
 		if err != nil {
 			fmt.Printf("Error writing to file %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
 			return
@@ -153,7 +152,7 @@ func UpdateScrapeIntervalConfig(yamlConfigFile string, scrapeIntervalSetting str
 	}
 }
 
-func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
+func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 	fmt.Printf("Adding keep list regex or minimal ingestion regex for %s\n", yamlConfigFile)
 
 	content, err := os.ReadFile(yamlConfigFile)
@@ -201,7 +200,7 @@ func AppendRelabelConfig(yamlConfigFile string, relabelConfig []interface{}, kee
 	fmt.Printf("Adding relabel config for %s\n", yamlConfigFile)
 
 	// Read YAML config file
-	data, err := ioutil.ReadFile(yamlConfigFile)
+	data, err := os.ReadFile(yamlConfigFile)
 	if err != nil {
 		fmt.Printf("Error reading config file %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
 		return
@@ -236,7 +235,7 @@ func AppendRelabelConfig(yamlConfigFile string, relabelConfig []interface{}, kee
 		}
 
 		// Write updated YAML back to file
-		err = ioutil.WriteFile(yamlConfigFile, cfgYamlWithRelabelConfig, 0644)
+		err = os.WriteFile(yamlConfigFile, []byte(cfgYamlWithRelabelConfig), fs.FileMode(0644))
 		if err != nil {
 			fmt.Printf("Error writing to file %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
 			return
@@ -266,72 +265,396 @@ func populateDefaultPrometheusConfig() {
 		windowsDaemonset = true
 	}
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_KUBE_CONTROLLER_MANAGER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		fmt.Println("Kube Controller Manager enabled.")
-		kubeControllerManagerMetricsKeepListRegex, exists := regexHash["CONTROLPLANE_KUBE_CONTROLLER_MANAGER_KEEP_LIST_REGEX"]
-		if exists && kubeControllerManagerMetricsKeepListRegex != "" {
-			fmt.Printf("Using regex for Kube Controller Manager: %s\n", kubeControllerManagerMetricsKeepListRegex)
-			appendMetricRelabelConfig(controlplaneKubeControllerManagerFile, kubeControllerManagerMetricsKeepListRegex)
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		fmt.Println("Kubelet scraping enabled.")
+		kubeletMetricsKeepListRegex, exists := regexHash["KUBELET_METRICS_KEEP_LIST_REGEX"]
+		kubeletScrapeInterval := intervalHash["KUBELET_SCRAPE_INTERVAL"]
+		if currentControllerType == replicasetControllerType {
+			if !advancedMode {
+				UpdateScrapeIntervalConfig(kubeletDefaultFileRsSimple, kubeletScrapeInterval)
+				if exists && kubeletMetricsKeepListRegex != "" {
+					fmt.Printf("Using regex for Kubelet: %s\n", kubeletMetricsKeepListRegex)
+					AppendMetricRelabelConfig(kubeletDefaultFileRsSimple, kubeletMetricsKeepListRegex)
+				}
+				defaultConfigs = append(defaultConfigs, kubeletDefaultFileRsSimple)
+			} else if windowsDaemonset && sendDSUpMetric {
+				UpdateScrapeIntervalConfig(kubeletDefaultFileRsAdvancedWindowsDaemonset, kubeletScrapeInterval)
+				defaultConfigs = append(defaultConfigs, kubeletDefaultFileRsAdvancedWindowsDaemonset)
+			} else if sendDSUpMetric {
+				UpdateScrapeIntervalConfig(kubeletDefaultFileRsAdvanced, kubeletScrapeInterval)
+				defaultConfigs = append(defaultConfigs, kubeletDefaultFileRsAdvanced)
+			}
+		} else {
+			if advancedMode && (windowsDaemonset || strings.ToLower(os.Getenv("OS_TYPE")) == "linux") {
+				UpdateScrapeIntervalConfig(kubeletDefaultFileDs, kubeletScrapeInterval)
+				if exists && kubeletMetricsKeepListRegex != "" {
+					AppendMetricRelabelConfig(kubeletDefaultFileDs, kubeletMetricsKeepListRegex)
+				}
+				contents, err := os.ReadFile(kubeletDefaultFileDs)
+				if err == nil {
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$OS_TYPE$$", os.Getenv("OS_TYPE")))
+					err = os.WriteFile(kubeletDefaultFileDs, contents, 0644)
+					if err == nil {
+						defaultConfigs = append(defaultConfigs, kubeletDefaultFileDs)
+					}
+				}
+			}
 		}
-		contents, err := os.ReadFile(controlplaneKubeControllerManagerFile)
-		if err == nil {
-			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = os.WriteFile(controlplaneKubeControllerManagerFile, contents, fs.FileMode(0644))
-		}
-		defaultConfigs = append(defaultConfigs, controlplaneKubeControllerManagerFile)
 	}
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_KUBE_SCHEDULER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		controlplaneKubeSchedulerKeepListRegex, exists := regexHash["CONTROLPLANE_KUBE_SCHEDULER_KEEP_LIST_REGEX"]
-		if exists && controlplaneKubeSchedulerKeepListRegex != "" {
-			appendMetricRelabelConfig(controlplaneKubeSchedulerDefaultFile, controlplaneKubeSchedulerKeepListRegex)
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		corednsMetricsKeepListRegex, exists := regexHash["COREDNS_METRICS_KEEP_LIST_REGEX"]
+		corednsScrapeInterval, intervalExists := intervalHash["COREDNS_SCRAPE_INTERVAL"]
+		if intervalExists {
+			UpdateScrapeIntervalConfig(coreDNSDefaultFile, corednsScrapeInterval)
 		}
-		contents, err := os.ReadFile(controlplaneKubeSchedulerDefaultFile)
-		if err == nil {
-			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = os.WriteFile(controlplaneKubeSchedulerDefaultFile, contents, fs.FileMode(0644))
+		if exists && corednsMetricsKeepListRegex != "" {
+			AppendMetricRelabelConfig(coreDNSDefaultFile, corednsMetricsKeepListRegex)
 		}
-		defaultConfigs = append(defaultConfigs, controlplaneKubeSchedulerDefaultFile)
+		defaultConfigs = append(defaultConfigs, coreDNSDefaultFile)
 	}
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_APISERVER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		controlplaneApiserverKeepListRegex, exists := regexHash["CONTROLPLANE_APISERVER_KEEP_LIST_REGEX"]
-		if exists && controlplaneApiserverKeepListRegex != "" {
-			appendMetricRelabelConfig(controlplaneApiserverDefaultFile, controlplaneApiserverKeepListRegex)
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+		cadvisorMetricsKeepListRegex, exists := regexHash["CADVISOR_METRICS_KEEP_LIST_REGEX"]
+		cadvisorScrapeInterval, intervalExists := intervalHash["CADVISOR_SCRAPE_INTERVAL"]
+		if intervalExists {
+			if currentControllerType == replicasetControllerType {
+				if !advancedMode {
+					UpdateScrapeIntervalConfig(cadvisorDefaultFileRsSimple, cadvisorScrapeInterval)
+					if exists && cadvisorMetricsKeepListRegex != "" {
+						AppendMetricRelabelConfig(cadvisorDefaultFileRsSimple, cadvisorMetricsKeepListRegex)
+					}
+					defaultConfigs = append(defaultConfigs, cadvisorDefaultFileRsSimple)
+				} else if sendDSUpMetric {
+					UpdateScrapeIntervalConfig(cadvisorDefaultFileRsAdvanced, cadvisorScrapeInterval)
+					defaultConfigs = append(defaultConfigs, cadvisorDefaultFileRsAdvanced)
+				}
+			} else {
+				if advancedMode && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+					UpdateScrapeIntervalConfig(cadvisorDefaultFileDs, cadvisorScrapeInterval)
+					if exists && cadvisorMetricsKeepListRegex != "" {
+						AppendMetricRelabelConfig(cadvisorDefaultFileDs, cadvisorMetricsKeepListRegex)
+					}
+					contents, err := os.ReadFile(cadvisorDefaultFileDs)
+					if err == nil {
+						contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+						contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+						err = os.WriteFile(cadvisorDefaultFileDs, contents, 0644)
+						if err == nil {
+							defaultConfigs = append(defaultConfigs, cadvisorDefaultFileDs)
+						}
+					}
+				}
+			}
 		}
-		contents, err := os.ReadFile(controlplaneApiserverDefaultFile)
-		if err == nil {
-			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = os.WriteFile(controlplaneApiserverDefaultFile, contents, fs.FileMode(0644))
-		}
-		defaultConfigs = append(defaultConfigs, controlplaneApiserverDefaultFile)
 	}
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_CLUSTER_AUTOSCALER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		controlplaneClusterAutoscalerKeepListRegex, exists := regexHash["CONTROLPLANE_CLUSTER_AUTOSCALER_KEEP_LIST_REGEX"]
-		if exists && controlplaneClusterAutoscalerKeepListRegex != "" {
-			appendMetricRelabelConfig(controlplaneClusterAutoscalerFile, controlplaneClusterAutoscalerKeepListRegex)
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		kubeproxyMetricsKeepListRegex, exists := regexHash["KUBEPROXY_METRICS_KEEP_LIST_REGEX"]
+		kubeproxyScrapeInterval, intervalExists := intervalHash["KUBEPROXY_SCRAPE_INTERVAL"]
+		if intervalExists {
+			UpdateScrapeIntervalConfig(kubeProxyDefaultFile, kubeproxyScrapeInterval)
 		}
-		contents, err := os.ReadFile(controlplaneClusterAutoscalerFile)
-		if err == nil {
-			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = os.WriteFile(controlplaneClusterAutoscalerFile, contents, fs.FileMode(0644))
+		if exists && kubeproxyMetricsKeepListRegex != "" {
+			AppendMetricRelabelConfig(kubeProxyDefaultFile, kubeproxyMetricsKeepListRegex)
 		}
-		defaultConfigs = append(defaultConfigs, controlplaneClusterAutoscalerFile)
+		defaultConfigs = append(defaultConfigs, kubeProxyDefaultFile)
 	}
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_ETCD_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		controlplaneEtcdKeepListRegex, exists := regexHash["CONTROLPLANE_ETCD_KEEP_LIST_REGEX"]
-		if exists && controlplaneEtcdKeepListRegex != "" {
-			appendMetricRelabelConfig(controlplaneEtcdDefaultFile, controlplaneEtcdKeepListRegex)
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		apiserverMetricsKeepListRegex, exists := regexHash["APISERVER_METRICS_KEEP_LIST_REGEX"]
+		apiserverScrapeInterval, intervalExists := intervalHash["APISERVER_SCRAPE_INTERVAL"]
+		if intervalExists {
+			UpdateScrapeIntervalConfig(apiserverDefaultFile, apiserverScrapeInterval)
 		}
-		contents, err := os.ReadFile(controlplaneEtcdDefaultFile)
-		if err == nil {
-			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
-			err = os.WriteFile(controlplaneEtcdDefaultFile, contents, fs.FileMode(0644))
+		if exists && apiserverMetricsKeepListRegex != "" {
+			AppendMetricRelabelConfig(apiserverDefaultFile, apiserverMetricsKeepListRegex)
 		}
-		defaultConfigs = append(defaultConfigs, controlplaneEtcdDefaultFile)
+		defaultConfigs = append(defaultConfigs, apiserverDefaultFile)
 	}
+
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		kubestateMetricsKeepListRegex, exists := regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
+		kubestateScrapeInterval, intervalExists := intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
+		if intervalExists {
+			UpdateScrapeIntervalConfig(kubeStateDefaultFile, kubestateScrapeInterval)
+		}
+		if exists && kubestateMetricsKeepListRegex != "" {
+			AppendMetricRelabelConfig(kubeStateDefaultFile, kubestateMetricsKeepListRegex)
+		}
+		contents, err := os.ReadFile(kubeStateDefaultFile)
+		if err == nil {
+			contents = []byte(strings.ReplaceAll(string(contents), "$$KUBE_STATE_NAME$$", os.Getenv("KUBE_STATE_NAME")))
+			contents = []byte(strings.ReplaceAll(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE")))
+			err = os.WriteFile(kubeStateDefaultFile, contents, 0644)
+			if err == nil {
+				defaultConfigs = append(defaultConfigs, kubeStateDefaultFile)
+			}
+		}
+	}
+
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+    nodeexporterMetricsKeepListRegex, exists := regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
+    nodeexporterScrapeInterval := intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"]
+    if currentControllerType == replicasetControllerType {
+        if advancedMode && sendDSUpMetric {
+            UpdateScrapeIntervalConfig(nodeexporterDefaultFileRsAdvanced, nodeexporterScrapeInterval)
+            contents, err := os.ReadFile(nodeexporterDefaultFileRsAdvanced)
+            if err == nil {
+                contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_EXPORTER_NAME$$", os.Getenv("NODE_EXPORTER_NAME")))
+                contents = []byte(strings.ReplaceAll(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE")))
+                err = os.WriteFile(nodeexporterDefaultFileRsAdvanced, contents, 0644)
+                if err == nil {
+                    defaultConfigs = append(defaultConfigs, nodeexporterDefaultFileRsAdvanced)
+                }
+            }
+        } else if !advancedMode {
+            UpdateScrapeIntervalConfig(nodeexporterDefaultFileRsSimple, nodeexporterScrapeInterval)
+            if exists && nodeexporterMetricsKeepListRegex != "" {
+                AppendMetricRelabelConfig(nodeexporterDefaultFileRsSimple, nodeexporterMetricsKeepListRegex)
+            }
+            contents, err := os.ReadFile(nodeexporterDefaultFileRsSimple)
+            if err == nil {
+                contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_EXPORTER_NAME$$", os.Getenv("NODE_EXPORTER_NAME")))
+                contents = []byte(strings.ReplaceAll(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE")))
+                err = os.WriteFile(nodeexporterDefaultFileRsSimple, contents, 0644)
+                if err == nil {
+                    defaultConfigs = append(defaultConfigs, nodeexporterDefaultFileRsSimple)
+                }
+            }
+        }
+    } else {
+        if advancedMode && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+            UpdateScrapeIntervalConfig(nodeexporterDefaultFileDs, nodeexporterScrapeInterval)
+            if exists && nodeexporterMetricsKeepListRegex != "" {
+                AppendMetricRelabelConfig(nodeexporterDefaultFileDs, nodeexporterMetricsKeepListRegex)
+            }
+            contents, err := os.ReadFile(nodeexporterDefaultFileDs)
+            if err == nil {
+                contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP"))))
+                contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_EXPORTER_TARGETPORT$$", os.Getenv("NODE_EXPORTER_TARGETPORT"))))
+                contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME"))))
+                err = os.WriteFile(nodeexporterDefaultFileDs, contents, 0644)
+                if err == nil {
+                    defaultConfigs = append(defaultConfigs, nodeexporterDefaultFileDs)
+                }
+            }
+        }
+    }
+}
+
+if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+	kappiebasicMetricsKeepListRegex, exists := regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
+	kappiebasicScrapeInterval, intervalExists := intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
+	if currentControllerType != replicasetControllerType {
+			// Do nothing - Kappie is not supported to be scrapped automatically outside ds. 
+			// If needed, the customer can disable this ds target and enable rs scraping through custom config map
+	} else {
+			if advancedMode && strings.ToLower(os.Getenv("MAC")) == "true" {
+					UpdateScrapeIntervalConfig(kappiebasicDefaultFileDs, kappiebasicScrapeInterval)
+					if exists && kappiebasicMetricsKeepListRegex != "" {
+							AppendMetricRelabelConfig(kappiebasicDefaultFileDs, kappiebasicMetricsKeepListRegex)
+					}
+					contents, err := os.ReadFile(kappiebasicDefaultFileDs)
+					if err == nil {
+							contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+							contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+							err = os.WriteFile(kappiebasicDefaultFileDs, contents, 0644)
+							if err == nil {
+									defaultConfigs = append(defaultConfigs, kappiebasicDefaultFileDs)
+							}
+					}
+			}
+	}
+}
+
+if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+	networkobservabilityRetinaMetricsKeepListRegex, exists := regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"]
+	networkobservabilityRetinaScrapeInterval, intervalExists := intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"]
+	if currentControllerType != replicasetControllerType {
+			// Do nothing - Network observability Retina is not supported to be scrapped automatically outside ds. 
+			// If needed, the customer can disable this ds target and enable rs scraping through custom config map
+	} else {
+			if advancedMode && strings.ToLower(os.Getenv("MAC")) == "true" {
+					if intervalExists {
+							UpdateScrapeIntervalConfig(networkobservabilityRetinaDefaultFileDs, networkobservabilityRetinaScrapeInterval)
+					}
+					if exists && networkobservabilityRetinaMetricsKeepListRegex != "" {
+							AppendMetricRelabelConfig(networkobservabilityRetinaDefaultFileDs, networkobservabilityRetinaMetricsKeepListRegex)
+					}
+					contents, err := os.ReadFile(networkobservabilityRetinaDefaultFileDs)
+					if err == nil {
+							contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+							contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+							err = os.WriteFile(networkobservabilityRetinaDefaultFileDs, contents, 0644)
+							if err == nil {
+									defaultConfigs = append(defaultConfigs, networkobservabilityRetinaDefaultFileDs)
+							}
+					}
+			}
+	}
+}
+
+if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+	networkobservabilityHubbleMetricsKeepListRegex, exists := regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"]
+	networkobservabilityHubbleScrapeInterval, intervalExists := intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"]
+	if currentControllerType != replicasetControllerType {
+			// Do nothing - Network observability Hubble is not supported to be scrapped automatically outside ds. 
+			// If needed, the customer can disable this ds target and enable rs scraping through custom config map
+	} else {
+			if advancedMode && strings.ToLower(os.Getenv("MAC")) == "true" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+					if intervalExists {
+							UpdateScrapeIntervalConfig(networkobservabilityHubbleDefaultFileDs, networkobservabilityHubbleScrapeInterval)
+					}
+					if exists && networkobservabilityHubbleMetricsKeepListRegex != "" {
+							AppendMetricRelabelConfig(networkobservabilityHubbleDefaultFileDs, networkobservabilityHubbleMetricsKeepListRegex)
+					}
+					contents, err := os.ReadFile(networkobservabilityHubbleDefaultFileDs)
+					if err == nil {
+							contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+							contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+							err = os.WriteFile(networkobservabilityHubbleDefaultFileDs, contents, 0644)
+							if err == nil {
+									defaultConfigs = append(defaultConfigs, networkobservabilityHubbleDefaultFileDs)
+							}
+					}
+			}
+	}
+}
+
+if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+	networkobservabilityCiliumMetricsKeepListRegex, exists := regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"]
+	networkobservabilityCiliumScrapeInterval, intervalExists := intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"]
+	if currentControllerType != replicasetControllerType {
+			// Do nothing - Network observability Cilium is not supported to be scrapped automatically outside ds. 
+			// If needed, the customer can disable this ds target and enable rs scraping through custom config map
+	} else {
+			if advancedMode && strings.ToLower(os.Getenv("MAC")) == "true" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+					if intervalExists {
+							UpdateScrapeIntervalConfig(networkobservabilityCiliumDefaultFileDs, networkobservabilityCiliumScrapeInterval)
+					}
+					if exists && networkobservabilityCiliumMetricsKeepListRegex != "" {
+							AppendMetricRelabelConfig(networkobservabilityCiliumDefaultFileDs, networkobservabilityCiliumMetricsKeepListRegex)
+					}
+					contents, err := os.ReadFile(networkobservabilityCiliumDefaultFileDs)
+					if err == nil {
+							contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+							contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+							err = os.WriteFile(networkobservabilityCiliumDefaultFileDs, contents, 0644)
+							if err == nil {
+									defaultConfigs = append(defaultConfigs, networkobservabilityCiliumDefaultFileDs)
+							}
+					}
+			}
+	}
+}
+
+if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+	prometheusCollectorHealthInterval, intervalExists := intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
+	if intervalExists {
+			UpdateScrapeIntervalConfig(prometheusCollectorHealthDefaultFile, prometheusCollectorHealthInterval)
+	}
+	defaultConfigs = append(defaultConfigs, prometheusCollectorHealthDefaultFile)
+}
+
+if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+	winexporterMetricsKeepListRegex, exists := regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
+	windowsexporterScrapeInterval, intervalExists := intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"]
+	if currentControllerType == replicasetControllerType && !advancedMode && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+			if intervalExists {
+					UpdateScrapeIntervalConfig(windowsexporterDefaultRsSimpleFile, windowsexporterScrapeInterval)
+			}
+			if exists && winexporterMetricsKeepListRegex != "" {
+					AppendMetricRelabelConfig(windowsexporterDefaultRsSimpleFile, winexporterMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(windowsexporterDefaultRsSimpleFile)
+			if err == nil {
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+					err = os.WriteFile(windowsexporterDefaultRsSimpleFile, contents, 0644)
+					if err == nil {
+							defaultConfigs = append(defaultConfigs, windowsexporterDefaultRsSimpleFile)
+					}
+			}
+	} else if currentControllerType == daemonsetControllerType && advancedMode && windowsDaemonset && strings.ToLower(os.Getenv("OS_TYPE")) == "windows" {
+			if intervalExists {
+					UpdateScrapeIntervalConfig(windowsexporterDefaultDsFile, windowsexporterScrapeInterval)
+			}
+			if exists && winexporterMetricsKeepListRegex != "" {
+					AppendMetricRelabelConfig(windowsexporterDefaultDsFile, winexporterMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(windowsexporterDefaultDsFile)
+			if err == nil {
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+					err = os.WriteFile(windowsexporterDefaultDsFile, contents, 0644)
+					if err == nil {
+							defaultConfigs = append(defaultConfigs, windowsexporterDefaultDsFile)
+					}
+			}
+	}
+}
+
+if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
+	winkubeproxyMetricsKeepListRegex, exists := regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
+	windowskubeproxyScrapeInterval, intervalExists := intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"]
+	if currentControllerType == replicasetControllerType && !advancedMode && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+			if intervalExists {
+					UpdateScrapeIntervalConfig(windowskubeproxyDefaultFileRsSimpleFile, windowskubeproxyScrapeInterval)
+			}
+			if exists && winkubeproxyMetricsKeepListRegex != "" {
+					AppendMetricRelabelConfig(windowskubeproxyDefaultFileRsSimpleFile, winkubeproxyMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(windowskubeproxyDefaultFileRsSimpleFile)
+			if err == nil {
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+					err = os.WriteFile(windowskubeproxyDefaultFileRsSimpleFile, contents, 0644)
+					if err == nil {
+							defaultConfigs = append(defaultConfigs, windowskubeproxyDefaultFileRsSimpleFile)
+					}
+			}
+	} else if currentControllerType == daemonsetControllerType && advancedMode && windowsDaemonset && strings.ToLower(os.Getenv("OS_TYPE")) == "windows" {
+			if intervalExists {
+					UpdateScrapeIntervalConfig(windowskubeproxyDefaultDsFile, windowskubeproxyScrapeInterval)
+			}
+			if exists && winkubeproxyMetricsKeepListRegex != "" {
+					AppendMetricRelabelConfig(windowskubeproxyDefaultDsFile, winkubeproxyMetricsKeepListRegex)
+			}
+			contents, err := os.ReadFile(windowskubeproxyDefaultDsFile)
+			if err == nil {
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+					err = os.WriteFile(windowskubeproxyDefaultDsFile, contents, 0644)
+					if err == nil {
+							defaultConfigs = append(defaultConfigs, windowskubeproxyDefaultDsFile)
+					}
+			}
+	}
+}
+
+if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+	if podannotationNamespacesRegex, exists := os.LookupEnv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"); exists {
+			podannotationMetricsKeepListRegex := regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
+			podannotationScrapeInterval, intervalExists := intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
+			
+			if intervalExists {
+					UpdateScrapeIntervalConfig(podannotationsDefaultFile, podannotationScrapeInterval)
+			}
+			if podannotationMetricsKeepListRegex != "" {
+					AppendMetricRelabelConfig(podannotationsDefaultFile, podannotationMetricsKeepListRegex)
+			}
+			if podannotationNamespacesRegex != "" {
+					relabelConfig := []map[string]interface{}{
+							{"source_labels": []string{"__meta_kubernetes_namespace"}, "action": "keep", "regex": podannotationNamespacesRegex},
+					}
+					AppendRelabelConfig(podannotationsDefaultFile, relabelConfig, podannotationNamespacesRegex)
+			}
+			defaultConfigs = append(defaultConfigs, podannotationsDefaultFile)
+	}
+}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
 	if mergedDefaultConfigs != nil {
@@ -413,6 +736,7 @@ func writeDefaultScrapeTargetsFile() {
 	noDefaultScrapingEnabled := os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED")
 	if noDefaultScrapingEnabled != "" && strings.ToLower(noDefaultScrapingEnabled) == "false" {
 		loadRegexHash()
+		loadIntervalHash()
 		populateDefaultPrometheusConfig()
 		if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
 			fmt.Printf("Starting to merge default prometheus config values in collector template as backup\n")
