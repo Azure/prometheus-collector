@@ -33,12 +33,12 @@ extensions:
       endpoint: http://localhost:9090
 receivers:
     prometheus:
+      prometheus_api_server_extension:
+        enabled: true
       config:
         scrape_configs:
         # scrape_configs must be non-null for collector to start
         - job_name: empty_job
-      prometheus_api_server_extension:
-        enabled: true
 service:
   pipelines:
     metrics:
