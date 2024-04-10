@@ -14,7 +14,6 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/server"
 )
@@ -77,8 +76,7 @@ func main() {
 	for _, p := range reactRouterAgentPaths {
 		router.Get(p, serveReactApp)
 	}
-	router.Get("/metrics", promhttp.Handler().ServeHTTP)
-
+	
 	homePage := "/agent"
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, path.Join("", homePage), http.StatusFound)
