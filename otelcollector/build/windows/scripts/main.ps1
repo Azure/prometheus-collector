@@ -366,7 +366,7 @@ function Start-OTEL-Collector {
     }
     tasklist /fi "imagename eq otelcollector.exe" /fo "table"  | findstr otelcollector
 
-    Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:\opt\prometheusui\prometheusui.exe" }
+    Start-Job -ScriptBlock { Start-Process -NoNewWindow -FilePath "C:opt/microsoft/otelcollector/prometheusui.exe" }
 }
 
 function Set-CertificateForME {

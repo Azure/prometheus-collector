@@ -27,8 +27,14 @@ processors:
     - key: instance
       from_attribute: service.instance.id
       action: insert
+extensions:
+  prometheus_api_server_extension:
+    server:
+      endpoint: http://localhost:9090
 receivers:
     prometheus:
+      prometheus_api_server_extension:
+        enabled: true
       config:
         scrape_configs:
         # scrape_configs must be non-null for collector to start

@@ -35,6 +35,8 @@ extensions:
       endpoint: http://localhost:9090
 receivers:
     prometheus:
+      prometheus_api_server_extension:
+        enabled: true
       config:
 service:
   pipelines:

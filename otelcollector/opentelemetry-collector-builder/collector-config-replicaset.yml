@@ -33,6 +33,8 @@ extensions:
       endpoint: http://localhost:9090
 receivers:
     prometheus:
+      prometheus_api_server_extension:
+        enabled: true
       target_allocator:
         endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
         interval: 30s
