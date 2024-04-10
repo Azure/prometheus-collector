@@ -44,7 +44,6 @@ COPY ../shared/*.go ../shared/configmap/mp/*.go ./main/*.go ./main/go.mod .
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
-RUN go get
 RUN go build -o main .
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
