@@ -87,7 +87,7 @@ COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcolle
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
-COPY --from=main-builder --chmod=777 /src/main $tmpdir/main
+COPY --from=main-builder --chmod=777 /main.exe $tmpdir/main
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
