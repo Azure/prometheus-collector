@@ -46,6 +46,7 @@ RUN mkdir -p ./main/
 # Copy shared go files
 COPY ../shared/*.go ./shared/
 COPY ../shared/configmap/mp/*.go ./shared/configmap/mp/
+COPY ../shared/configmap/ccp/*.go ./shared/configmap/ccp/
 # Copy main go files
 COPY ./main/*.go ./main/
 COPY ./go.mod ./
