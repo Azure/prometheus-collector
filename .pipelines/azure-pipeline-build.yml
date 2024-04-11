@@ -24,7 +24,6 @@ variables:
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
 
-
 stages:
 - stage: Build
   jobs:
