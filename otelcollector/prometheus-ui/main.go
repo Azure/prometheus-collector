@@ -124,35 +124,6 @@ func main() {
 	mux.Handle("/", router)
 
 	http.ListenAndServe(":9090", mux)
-
-	// logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	// errlog := stdlog.New(log.NewStdlibAdapter(level.Error(logger)), "", 0)
-	// spanNameFormatter := otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-	// 	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
-	// })
-
-	// httpSrv := &http.Server{
-	// 	Handler:     withStackTracer(otelhttp.NewHandler(mux, "", spanNameFormatter), logger),
-	// 	ReadTimeout: 100000,
-	// 	ErrorLog:    errlog,
-	// }
-
-	// level.Info(logger).Log("msg", "Start listening for connections", "address", ":9090")
-	// listener, err := net.Listen("tcp", ":9090")
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// errCh := make(chan error, 1)
-	// webconfig := ""
-	// go func() {
-	//   errCh <- toolkit_web.Serve(listener, httpSrv, &toolkit_web.FlagConfig{WebConfigFile: &webconfig}, logger)
-	// }()
-
-	// select {
-	// case e := <-errCh:
-	// 	fmt.Println(e.Error())
-	// }
 }
 
 // withStackTrace logs the stack trace in case the request panics. The function
