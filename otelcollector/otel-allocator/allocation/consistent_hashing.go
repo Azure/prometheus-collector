@@ -161,7 +161,7 @@ func (c *consistentHashingAllocator) handleCollectors(diff diff.Changes[*Collect
 	}
 	// Insert the new collectors
 	for _, i := range diff.Additions() {
-		c.collectors[i.Name] = NewCollector(i.Name)
+		c.collectors[i.Name] = NewCollector(i.Name, i.NodeName)
 		c.consistentHasher.Add(c.collectors[i.Name])
 	}
 
@@ -223,6 +223,8 @@ func (c *consistentHashingAllocator) SetTargets(targets map[string]*target.Item)
 		}
 		return
 	}
+	c.log.Info("collector(s) found, allocating targets")
+	c.log.Info("targets found", "targets", len(c.targetItems))
 	// Check for target changes
 	targetsDiff := diff.Maps(c.targetItems, targets)
 	// If there are any additions or removals

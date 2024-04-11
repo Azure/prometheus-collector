@@ -20,6 +20,7 @@ COPY ./prometheusapiserverextension /src/prometheusapiserverextension
 COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
+# RUN go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . 
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as configuration-reader-builder
 WORKDIR /src
@@ -31,6 +32,7 @@ RUN go mod download
 COPY ./configuration-reader-builder /src/configuration-reader-builder
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o configurationreader . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o configurationreader . ; fi
+# RUN go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o configurationreader . 
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector - configuration reader sidecar"
@@ -110,8 +112,13 @@ COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/lib
 # sh dependencies
 COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /lib/
 
+COPY --from=configuration-reader-builder /src/configuration-reader-builder/configurationreader $tmpdir/
+COPY --from=builder /opt/*.sh $tmpdir/
+
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
-ENTRYPOINT [ "/bin/bash" ]
-CMD [ "/opt/main-configreader.sh" ]
+# ENTRYPOINT [ "/bin/bash" ]
+# CMD [ "/opt/main-configreader.sh" ]
+
+ENTRYPOINT ["./opt/configurationreader"]
