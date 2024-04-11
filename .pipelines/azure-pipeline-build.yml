@@ -468,7 +468,7 @@ stages:
 
       - task: PublishBuildArtifacts@1
         displayName: "Ev2: Publish image artifacts"
-        condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
@@ -533,7 +533,7 @@ stages:
           EOF
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: Set values in payload.json for signing"
-        condition: eq(variables.IS_MAIN_BRANCH, true)
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
       - task: EsrpCodeSigning@3
         displayName: "ESRP CodeSigning for Prometheus"
@@ -571,7 +571,7 @@ stages:
             -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
         workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
-        condition: eq(variables.IS_MAIN_BRANCH, true)
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -597,7 +597,7 @@ stages:
 
       - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
         displayName: "Ev2: Generate image artifacts"
-        condition: and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         inputs:
           BuildDropPath: '$(Build.ArtifactStagingDirectory)/linuxccp'
           DockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
@@ -1192,8 +1192,8 @@ stages:
       IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
       IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
       HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
-      IMAGE_TAG_TARGET_ALLOCATOR: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
-      IMAGE_TAG_CONFIG_READER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+      IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
+      IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
       skipComponentGovernanceDetection: true
     strategy:
       runOnce:
@@ -1219,7 +1219,7 @@ stages:
                     sleep 30
                     echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
                     output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-                    if (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR))) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
+                    if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
                     then
                       echo "Images are published to mcr"
                       exit 0
