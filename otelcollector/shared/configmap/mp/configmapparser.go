@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/kaveesh/prometheus-collector/shared"
+	"prometheus-collector/shared"
 )
 
 func updateBashrc(lines []string) error {
@@ -178,7 +178,7 @@ func cleanAndTruncate(input string) string {
 	return input
 }
 
-func configmapparser() {
+func Configmapparser() {
 	setConfigFileVersionEnv()
 	setConfigSchemaVersionEnv()
 	parseSettingsForPodAnnotations()

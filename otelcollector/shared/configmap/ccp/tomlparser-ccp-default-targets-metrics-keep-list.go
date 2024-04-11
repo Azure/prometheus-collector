@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"prometheus-collector/shared"
 	"strings"
 
 	"github.com/pelletier/go-toml"
@@ -76,22 +77,22 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 	}
 
 	// Validate regex values
-	if regexValues.ControlplaneKubeControllerManager != "" && !isValidRegex(regexValues.ControlplaneKubeControllerManager) {
+	if regexValues.ControlplaneKubeControllerManager != "" && !shared.IsValidRegex(regexValues.ControlplaneKubeControllerManager) {
 		return regexValues, fmt.Errorf("invalid regex for controlplane-kube-controller-manager: %s", regexValues.ControlplaneKubeControllerManager)
 	}
-	if regexValues.ControlplaneKubeScheduler != "" && !isValidRegex(regexValues.ControlplaneKubeScheduler) {
+	if regexValues.ControlplaneKubeScheduler != "" && !shared.IsValidRegex(regexValues.ControlplaneKubeScheduler) {
 		return regexValues, fmt.Errorf("invalid regex for controlplane-kube-scheduler: %s", regexValues.ControlplaneKubeScheduler)
 	}
-	if regexValues.ControlplaneApiserver != "" && !isValidRegex(regexValues.ControlplaneApiserver) {
+	if regexValues.ControlplaneApiserver != "" && !shared.IsValidRegex(regexValues.ControlplaneApiserver) {
 		return regexValues, fmt.Errorf("invalid regex for controlplane-apiserver: %s", regexValues.ControlplaneApiserver)
 	}
-	if regexValues.ControlplaneClusterAutoscaler != "" && !isValidRegex(regexValues.ControlplaneClusterAutoscaler) {
+	if regexValues.ControlplaneClusterAutoscaler != "" && !shared.IsValidRegex(regexValues.ControlplaneClusterAutoscaler) {
 		return regexValues, fmt.Errorf("invalid regex for controlplane-cluster-autoscaler: %s", regexValues.ControlplaneClusterAutoscaler)
 	}
-	if regexValues.ControlplaneEtcd != "" && !isValidRegex(regexValues.ControlplaneEtcd) {
+	if regexValues.ControlplaneEtcd != "" && !shared.IsValidRegex(regexValues.ControlplaneEtcd) {
 		return regexValues, fmt.Errorf("invalid regex for controlplane-etcd: %s", regexValues.ControlplaneEtcd)
 	}
-	if regexValues.MinimalIngestionProfile != "" && !isValidRegex(regexValues.MinimalIngestionProfile) {
+	if regexValues.MinimalIngestionProfile != "" && !shared.IsValidRegex(regexValues.MinimalIngestionProfile) {
 		return regexValues, fmt.Errorf("invalid regex for MinimalIngestionProfile: %s", regexValues.MinimalIngestionProfile)
 	}
 

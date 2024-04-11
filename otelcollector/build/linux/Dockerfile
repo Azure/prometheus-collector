@@ -39,12 +39,20 @@ ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as main-builder
-WORKDIR /src
-COPY ../shared/*.go ../shared/configmap/mp/*.go ./main/*.go ./main/go.mod .
+WORKDIR /
+# Create directories
+RUN mkdir -p ./shared/configmap/mp/
+RUN mkdir -p ./main/
+# Copy shared go files
+COPY ../shared/*.go ./shared/
+COPY ../shared/configmap/mp/*.go ./shared/configmap/mp/
+# Copy main go files
+COPY ./main/*.go ./main/
+COPY ./main/go.mod ./main/
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
-RUN go build -o main .
+RUN go build -o main.exe ./main/main.go
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"

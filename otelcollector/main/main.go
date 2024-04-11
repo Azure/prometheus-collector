@@ -7,22 +7,24 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"prometheus-collector/shared"
+	ccpconfigmapsettings "prometheus-collector/shared/configmap/ccp"
+	configmapsettings "prometheus-collector/shared/configmap/mp"
 	"strconv"
 	"strings"
 	"time"
-	"github.com/kaveesh/prometheus-collector/shared"
 )
 
 func main() {
 	// mac := os.Getenv("MAC")
-	controllerType := os.Getenv("CONTROLLER_TYPE")
+	controllerType := shared.GetControllerType()
 	clusterOverride := os.Getenv("CLUSTER_OVERRIDE")
 	cluster := os.Getenv("CLUSTER")
 	aksRegion := os.Getenv("AKSREGION")
 	ccpMetricsEnabled := os.Getenv("CCP_METRICS_ENABLED")
 
 	outputFile := "/opt/inotifyoutput.txt"
-	err := inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs")
+	err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,28 +40,26 @@ func main() {
 	shared.EchoVar("CONTROLLER_TYPE", os.Getenv("CONTROLLER_TYPE"))
 	shared.EchoVar("CLUSTER", os.Getenv("CLUSTER"))
 
-	err = SetupArcEnvironment()
+	err = shared.SetupArcEnvironment()
 	if err != nil {
-		EchoError(err)
+		shared.EchoError(err.Error())
 	}
 
 	// Call setupTelemetry function with custom environment
 	customEnvironment := os.Getenv("CUSTOM_ENVIRONMENT")
-	setupTelemetry(customEnvironment)
+	shared.SetupTelemetry(customEnvironment)
 
-	// Get controller type in lowercase and trimmed
-	controllerType := getControllerType()
-	fmt.Println("Controller Type:", controllerType)
+	fmt.Println("Controller Type: %s", controllerType)
 
-	if err := configureEnvironment(); err != nil {
+	if err := shared.ConfigureEnvironment(); err != nil {
 		fmt.Println("Error configuring environment:", err)
 		os.Exit(1)
 	}
 
 	if ccpMetricsEnabled == "true" {
-		configmapparserforccp()
+		ccpconfigmapsettings.Configmapparserforccp()
 	} else {
-		configmapparser()
+		configmapsettings.Configmapparser()
 	}
 
 	// Start cron daemon for logrotate
@@ -101,6 +101,7 @@ func main() {
 		}
 	}
 	fmt.Println("meConfigFile:", meConfigFile)
+	fmt.Println("fluentBitConfigFile:", fluentBitConfigFile)
 
 	// Wait for addon-token-adapter to be healthy
 	tokenAdapterWaitSecs := 20
@@ -153,7 +154,7 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if err := addLineToBashrc(line); err != nil {
+		if err := shared.AddLineToBashrc(line); err != nil {
 			fmt.Println("Error adding line to ~/.bashrc:", err)
 			return
 		}
@@ -164,7 +165,7 @@ func main() {
 		return
 	}
 
-	cmd := exec.Command("bash", "-c", "source /etc/mdsd.d/envmdsd")
+	cmd = exec.Command("bash", "-c", "source /etc/mdsd.d/envmdsd")
 	if err := cmd.Run(); err != nil {
 		fmt.Println("Error sourcing envmdsd file:", err)
 		return
@@ -175,10 +176,10 @@ func main() {
 	// ********************************************************************************************************************************************
 	// Need to update startMdsd with correct log files
 	// ********************************************************************************************************************************************
-	startMdsd()
+	shared.StartMdsd()
 
 	// update this to use color coding
-	printMdsdVersion()
+	shared.PrintMdsdVersion()
 
 	fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
 	time.Sleep(30 * time.Second)
@@ -187,22 +188,22 @@ func main() {
 	// Start MetricsExtension with config overrides correctly for overlay pods
 	// ********************************************************************************************************************************************
 	fmt.Println("Starting metricsextension with config overrides")
-	startMetricsExtensionWithConfigOverrides(meConfigFile)
+	shared.StartMetricsExtensionWithConfigOverrides(meConfigFile)
 
 	// Get ME version
-	meVersion, err := readVersionFile("/opt/metricsextversion.txt")
+	meVersion, err := shared.ReadVersionFile("/opt/metricsextversion.txt")
 	if err != nil {
 		fmt.Printf("Error reading ME version file: %v\n", err)
 	} else {
-		fmtVar("ME_VERSION", meVersion)
+		shared.FmtVar("ME_VERSION", meVersion)
 	}
 
 	// Get Golang version
-	golangVersion, err := readVersionFile("/opt/goversion.txt")
+	golangVersion, err := shared.ReadVersionFile("/opt/goversion.txt")
 	if err != nil {
 		fmt.Printf("Error reading Golang version file: %v\n", err)
 	} else {
-		fmtVar("GOLANG_VERSION", golangVersion)
+		shared.FmtVar("GOLANG_VERSION", golangVersion)
 	}
 
 	// Start otelcollector
@@ -222,20 +223,20 @@ func main() {
 	}
 
 	fmt.Println("startCommand otelcollector")
-	startCommand("/opt/microsoft/otelcollector/otelcollector", "--config", collectorConfig)
+	shared.StartCommand("/opt/microsoft/otelcollector/otelcollector", "--config", collectorConfig)
 
 	otelCollectorVersion, err := exec.Command("/opt/microsoft/otelcollector/otelcollector", "--version", "").Output()
 	if err != nil {
 		fmt.Printf("Error getting otelcollector version: %v\n", err)
 	} else {
-		fmtVar("OTELCOLLECTOR_VERSION", string(otelCollectorVersion))
+		shared.FmtVar("OTELCOLLECTOR_VERSION", string(otelCollectorVersion))
 	}
 
-	prometheusVersion, err := readVersionFile("/opt/microsoft/otelcollector/PROMETHEUS_VERSION")
+	prometheusVersion, err := shared.ReadVersionFile("/opt/microsoft/otelcollector/PROMETHEUS_VERSION")
 	if err != nil {
 		fmt.Printf("Error reading Prometheus version file: %v\n", err)
 	} else {
-		fmtVar("PROMETHEUS_VERSION", prometheusVersion)
+		shared.FmtVar("PROMETHEUS_VERSION", prometheusVersion)
 	}
 
 	fmt.Println("starting telegraf")
@@ -296,7 +297,8 @@ func main() {
 		return
 	}
 
-	fmt.Printf("FLUENT_BIT_CONFIG_FILE=%s\n", os.Getenv("FLUENT_BIT_CONFIG_FILE"))fmt.Println("starting telegraf")
+	fmt.Printf("FLUENT_BIT_CONFIG_FILE=%s\n", os.Getenv("FLUENT_BIT_CONFIG_FILE"))
+	fmt.Println("starting telegraf")
 
 	if telemetryDisabled := os.Getenv("TELEMETRY_DISABLED"); telemetryDisabled != "true" {
 		controllerType := os.Getenv("CONTROLLER_TYPE")
@@ -332,14 +334,14 @@ func main() {
 		return
 	}
 
-	logFile, err := os.Create("/opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log")
+	logFile, err = os.Create("/opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log")
 	if err != nil {
 		fmt.Println("Error creating log file:", err)
 		return
 	}
 	logFile.Close()
 
-	fluentBitCmd := exec.Command("fluent-bit", "-c", os.Getenv("FLUENT_BIT_CONFIG_FILE"), "-e", "/opt/fluent-bit/bin/out_appinsights.so")
+	fluentBitCmd = exec.Command("fluent-bit", "-c", os.Getenv("FLUENT_BIT_CONFIG_FILE"), "-e", "/opt/fluent-bit/bin/out_appinsights.so")
 	fluentBitCmd.Stdout = os.Stdout
 	fluentBitCmd.Stderr = os.Stderr
 	if err := fluentBitCmd.Start(); err != nil {
@@ -347,7 +349,7 @@ func main() {
 		return
 	}
 
-	fluentBitVersionCmd := exec.Command("fluent-bit", "--version")
+	fluentBitVersionCmd = exec.Command("fluent-bit", "--version")
 	fluentBitVersionCmd.Stdout = os.Stdout
 	if err := fluentBitVersionCmd.Run(); err != nil {
 		fmt.Println("Error getting fluent-bit version:", err)
@@ -388,7 +390,7 @@ func main() {
 	epochTimeNowReadable := time.Unix(epochTimeNow, 0).Format(time.RFC3339)
 
 	// Writing the epoch time to a file
-	file, err := os.Create("/opt/microsoft/liveness/azmon-container-start-time")
+	file, err = os.Create("/opt/microsoft/liveness/azmon-container-start-time")
 	if err != nil {
 		fmt.Println("Error creating file:", err)
 		return
@@ -444,17 +446,17 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if !isProcessRunning("otelcollector") {
+	if !shared.IsProcessRunning("otelcollector") {
 		status = http.StatusServiceUnavailable
 		message = "OpenTelemetryCollector is not running."
 	}
 
-	if hasConfigChanged("/opt/inotifyoutput.txt") {
+	if shared.HasConfigChanged("/opt/inotifyoutput.txt") {
 		status = http.StatusServiceUnavailable
 		message = "inotifyoutput.txt has been updated - config changed"
 	}
 
-	if hasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
+	if shared.HasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
 		status = http.StatusServiceUnavailable
 		message = "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
 	}
@@ -463,6 +465,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, message)
 	if status != http.StatusOK {
 		fmt.Printf(message)
-		writeTerminationLog(message)
+		shared.WriteTerminationLog(message)
 	}
 }

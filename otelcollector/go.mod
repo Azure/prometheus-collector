@@ -1,4 +1,4 @@
-module github.com/kaveesh/prometheus-collector
+module prometheus-collector
 
 go 1.19
 

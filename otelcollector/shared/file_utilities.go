@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
+	"path/filepath"
 	"strings"
 )
 
@@ -186,4 +188,60 @@ func WriteTerminationLog(message string) {
 	if err := os.WriteFile("/dev/termination-log", []byte(message), fs.FileMode(0644)); err != nil {
 		log.Printf("Error writing to termination log: %v", err)
 	}
+}
+
+func AddLineToBashrc(line string) error {
+	// Get the home directory of the current user
+	currentUser, err := user.Current()
+	if err != nil {
+		return err
+	}
+	homeDir := currentUser.HomeDir
+
+	// Find the .bashrc file path
+	bashrcPath := filepath.Join(homeDir, ".bashrc")
+
+	// Check if the line already exists in .bashrc
+	if exists, err := lineExistsInFile(bashrcPath, line); err != nil {
+		return err
+	} else if exists {
+		return nil // Line already exists, no need to add it again
+	}
+
+	// Open .bashrc file in append mode
+	file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Add the line to .bashrc
+	_, err = file.WriteString(line + "\n")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Function to check if a line exists in a file
+func lineExistsInFile(filePath, line string) (bool, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return false, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if strings.TrimSpace(scanner.Text()) == line {
+			return true, nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return false, err
+	}
+
+	return false, nil
 }
