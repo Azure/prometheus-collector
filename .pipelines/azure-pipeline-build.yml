@@ -1071,7 +1071,7 @@ stages:
   jobs:
   - deployment: Deploy_Chart_ARC
     displayName: "Deploy: Arc dev cluster"
-    condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(failed('Deploy_Chart_ARC'), eq(variables['System.StageAttempt'], 1))))
+    condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_Chart_ARC')), eq(variables['System.StageAttempt'], 1))))
     environment: Prometheus-Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
@@ -1184,7 +1184,7 @@ stages:
     environment: Prometheus-Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(failed('Deploy_AKS_Chart'), eq(variables['System.StageAttempt'], 1)))
+    condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart')), eq(variables['System.StageAttempt'], 1)))
     variables:
       HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
       HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
