@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os/exec"
 	"strings"
+	"time"
 
 	"os"
 
@@ -57,6 +59,7 @@ var RED = "\033[31m"
 var taConfigFilePath = "/ta-configuration/targetallocator.yaml"
 var taConfigUpdated = false
 var taLivenessCounter = 0
+var taLivenessStartTime = time.Time{}
 
 func logFatalError(message string) {
 	// Always log the full message
@@ -182,31 +185,33 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
 	message := "\ntargetallocator is running."
 
-	if taLivenessCounter >= 3 {
-		// Setting this to false after 3 calls to healthhandler to make sure TA container doesnt keep restarting continuosly
-		taConfigUpdated = false
-		taLivenessCounter = 0
-	}
-
 	if taConfigUpdated {
-		status = http.StatusServiceUnavailable
-		message += "targetallocator-config changed"
-		taLivenessCounter++
+		if !taLivenessStartTime.IsZero() {
+			taLivenessStartTime = time.Now()
+		}
+		duration := time.Since(taLivenessStartTime)
+		// Serve the response of ServiceUnavailable for 60s and then reset
+		if duration.Seconds() < 60 {
+			status = http.StatusServiceUnavailable
+			message += "targetallocator-config changed"
+		} else {
+			taConfigUpdated = false
+			taLivenessStartTime = time.Time{}
+		}
 	}
-
-	// 	check_file = os.stat(taRestartTracker).st_size
-
-	// if(check_file == 0) {
-	//     print("The file is empty.")
-	// else:
-	//     print("The file is not empty.")
 
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
 	if status != http.StatusOK {
 		fmt.Printf(message)
+		writeTerminationLog(message)
 	}
+}
 
+func writeTerminationLog(message string) {
+	if err := os.WriteFile("/dev/termination-log", []byte(message), fs.FileMode(0644)); err != nil {
+		log.Printf("Error writing to termination log: %v", err)
+	}
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -222,6 +227,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, message)
 	if status != http.StatusOK {
 		fmt.Printf(message)
+		writeTerminationLog(message)
 	}
 }
 
