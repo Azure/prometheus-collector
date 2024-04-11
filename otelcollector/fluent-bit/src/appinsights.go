@@ -11,10 +11,10 @@ import (
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
-//env variable which has ResourceName for NON-AKS
+// env variable which has ResourceName for NON-AKS
 const ResourceNameEnv = "ACS_RESOURCE_NAME"
 
-//env variable which has container run time name
+// env variable which has container run time name
 const ContainerRuntimeEnv = "CONTAINER_RUNTIME"
 
 var (
