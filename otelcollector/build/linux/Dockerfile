@@ -48,7 +48,8 @@ COPY ../shared/*.go ./shared/
 COPY ../shared/configmap/mp/*.go ./shared/configmap/mp/
 # Copy main go files
 COPY ./main/*.go ./main/
-COPY ./main/go.mod ./main/
+COPY ./go.mod ./
+COPY ./go.sum ./
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
