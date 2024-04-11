@@ -1,35 +1,85 @@
 Here is the shareable screenshare video link for how to upgrade Otel Collector -> https://microsoft-my.sharepoint.com/:v:/p/sohdasgupta/EYk_qxXtMEtGvz7nfK87N70BVrea5psydVKMO2p4PDsVjA?e=UnotGp
 
-Below are details for steps to upgrade Otel Collector.
-
+## OpenTelemetry Collector Update
 Get latest release version and latest prometheusreceiver code:
 1. Check for the latest release here: https://github.com/open-telemetry/opentelemetry-collector-contrib/releases
 2. git clone https://github.com/open-telemetry/opentelemetry-collector-contrib.git
 3. git checkout tags/<tag_name> -b <branch_name>   tag name will be in the format of v0.x.x and branch name is your local branch name. You can name it whatever you want
 
-> **opentelemetry-collector-builder**
+**opentelemetry-collector-builder**
 * update go.mod to new collector version for all components
-update line 18 in main.go with the new collector version
-> **prometheus-receiver**
+* update the `Version` in `main.go`
+* `go.mod`: add the replace directives:
+  ```
+  replace github.com/gracewehner/prometheusreceiver => ../prometheusreceiver
+
+  replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/prometheusapiserverextension => ../prometheusapiserverextension
+  ```
+
+* run `go mod tidy`
+* run `make` to ensure there's no build errors
+
+**prom-config-validator-builder**
+* update `go.mod` to new collector version for all components
+* `go.mod`: add the replace directives:
+  ```
+  replace github.com/gracewehner/prometheusreceiver => ../prometheusreceiver
+
+  replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/prometheusapiserverextension => ../prometheusapiserverextension
+  ```
+* run `go mod tidy`
+* try to build to check for any breaking changes to the interfaces used: run `make`
+
+**prometheus-receiver**
 * copy over new folder
-* go.mod rename module
-go.mod remove replacements at the end
-Find new version of github.com/prometheus/prometheus. Put this version in the file /otelcollector/opentelemetry-collector-builder/PROMETHEUS_VERSION
-* delete testdata directory
-* metrics_receiver.go: rename internal package "github.com/gracewehner/prometheusreceiver/internal"
+* `go.mod`: rename module
+* `go.mod`: remove replacements at the end
+* Find the new version of `github.com/prometheus/prometheus` in the `go.sum`. Put this version in the file `/otelcollector/opentelemetry-collector-builder/PROMETHEUS_VERSION`
+* delete the `testdata` directory
+* `metrics_receiver.go`
+  * rename internal package to `github.com/gracewehner/prometheusreceiver/internal`
+  * add import `"go.opentelemetry.io/collector/extension"`
+  * add `apiExtension extension.Extension` to the `pReceiver` struct
+  * in `newPrometheusReceiver()` change the registerer to be the default: `registerer: prometheus.DefaultRegisterer`
+  * in `Start()` add:
+    ```go
+    prometheusAPIExtensionConf := r.cfg.PrometheusAPIServerExtension
+    if prometheusAPIExtensionConf != nil  && prometheusAPIExtensionConf.Enabled {
+      fmt.Println("Prometheus API Extension enabled")
+      extensions := host.GetExtensions()
+      for id, ext := range extensions {
+        fmt.Printf("Extension ID: %s\n", id.Name())
+        fmt.Printf("%v\n", id.Type() == component.MustNewType("prometheus_api_server_extension"))
+        if id.Type() == component.MustNewType("prometheus_api_server_extension") {
+          r.apiExtension = ext
+          fmt.Printf("apiExtension: %v\n", r.apiExtension)
+          extRegisterer := r.apiExtension.(interface{ RegisterPrometheusReceiverComponents(*config.Config, *scrape.Manager, prometheus.Registerer) error})
+          extRegisterer.RegisterPrometheusReceiverComponents((*config.Config)(baseCfg), r.scrapeManager, r.registerer)
+        }
+      }
+    }
+    ```
+  * change the end of `applyCfg()` to:
+    ```go
+    if err := r.discoveryManager.ApplyConfig(discoveryCfg); err != nil {
+        return err
+    }
+
+    if r.cfg.PrometheusAPIServerExtension != nil && r.apiExtension != nil && r.cfg.PrometheusAPIServerExtension.Enabled {
+      ext := r.apiExtension.(interface{ UpdatePrometheusConfig(*config.Config) })
+      ext.UpdatePrometheusConfig((*config.Config)(cfg))
+    }
+
+    return nil
+    ```
+
+**prometheus-ui**
+* `go.mod`: update `prometheus/common` version to match the `prometheusreceiver`
+
 <!-- * metrics_receiver.go: add webhandler code in initPrometheusComponents() or Start() function
 * metrics_receiver.go: add extra import packages at the top
 * metrics_receiver.go: add constants at the top
 internal/otlp_transaction.go: in Append() function before if len(t.externalLabels) != 0 (currently line 92) add labels = labels.Copy() -->
-prom-config-validator-builder
-* update go.mod to new collector version for all components
-* try to build to check for any breaking changes to the interfaces used: run make
-
-
- ## web handler changes to be added 
-
-**opentelemetry-collector-builder** - 
-go mod tidy
 
 <!-- Code block for web handler (This will be moved to extension)
 ```
@@ -85,7 +135,7 @@ module github.com/gracewehner/prometheusreceiver
     }()
 ``` -->
 
-### TargetAllocator Update
+## TargetAllocator Update
 Get latest release version and latest prometheusreceiver code:
 1. Check for the latest release here: https://github.com/open-telemetry/opentelemetry-operator/releases
 2. git clone https://github.com/open-telemetry/opentelemetry-operator.git
