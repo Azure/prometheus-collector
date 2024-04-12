@@ -24,17 +24,33 @@ func SetupArcEnvironment() error {
 		return fmt.Errorf("error setting environment variable: %w", err)
 	}
 
-	// Append export command to .bashrc file
-	bashrcPath := os.Getenv("HOME") + "/.bashrc"
+	// Get the home directory
+	home := os.Getenv("HOME")
+	if home == "" {
+		return fmt.Errorf("HOME environment variable not set")
+	}
+
+	// Create the path for .bashrc
+	bashrcPath := home + "/.bashrc"
+
+	// Check if .bashrc exists
+	if _, err := os.Stat(bashrcPath); os.IsNotExist(err) {
+		// Create .bashrc file
+		if _, err := os.Create(bashrcPath); err != nil {
+			return fmt.Errorf("error creating .bashrc file: %w", err)
+		}
+	}
+
+	// Open .bashrc file for appending
 	bashrcFile, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("error opening .bashrc file: %w", err)
 	}
 	defer bashrcFile.Close()
 
+	// Append export command to .bashrc file
 	exportCommand := fmt.Sprintf("export IS_ARC_CLUSTER=%s\n", isArcCluster)
-	_, err = bashrcFile.WriteString(exportCommand)
-	if err != nil {
+	if _, err := bashrcFile.WriteString(exportCommand); err != nil {
 		return fmt.Errorf("error writing to .bashrc file: %w", err)
 	}
 

@@ -8,27 +8,19 @@ import (
 	"strings"
 )
 
-func copyCAAnchors() error {
+func copyCAAnchors() {
 	// Copy CA anchors from specified locations
 	locations := []string{"/anchors/ubuntu/*", "/anchors/mariner/*", "/anchors/proxy/*"}
 	for _, loc := range locations {
 		cmd := exec.Command("cp", loc, "/etc/pki/ca-trust/source/anchors")
 		cmd.Stderr = os.Stderr
-		err := cmd.Run()
-		if err != nil {
-			return fmt.Errorf("error copying CA anchors: %w", err)
-		}
+		cmd.Run()
 	}
 
 	// Update CA trust
 	cmd := exec.Command("update-ca-trust")
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
-		return fmt.Errorf("error updating CA trust: %w", err)
-	}
-
-	return nil
+	cmd.Run()
 }
 
 func removeTrailingSlash(envVar string) string {
@@ -55,9 +47,7 @@ func setHTTPProxyEnabled() {
 }
 
 func ConfigureEnvironment() error {
-	if err := copyCAAnchors(); err != nil {
-		return err
-	}
+	copyCAAnchors()
 
 	// Remove trailing '/' character from HTTP_PROXY and HTTPS_PROXY
 	proxyVariables := []string{"http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"}

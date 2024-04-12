@@ -46,7 +46,7 @@ func main() {
 	}
 
 	// Call setupTelemetry function with custom environment
-	customEnvironment := os.Getenv("CUSTOM_ENVIRONMENT")
+	customEnvironment := os.Getenv("customEnvironment")
 	shared.SetupTelemetry(customEnvironment)
 
 	fmt.Println("Controller Type: %s", controllerType)
