@@ -7,6 +7,7 @@ import (
 
 	"io/fs"
 
+	"github.com/pelletier/go-toml"
 	"gopkg.in/yaml.v2"
 )
 
@@ -26,7 +27,10 @@ var (
 func ConfigureDebugModeSettings() {
 	fmt.Println("Start debug-mode Settings Processing")
 
-	configMapSettings := parseConfigMapForDebugSettings()
+	configMapSettings, err := parseConfigMapForDebugSettings()
+	if err != nil {
+		fmt.Fprint(os.Stdout, []any{"Error: %v", err}...)
+	}
 	if configMapSettings != nil {
 		populateSettingValuesFromConfigMap(configMapSettings)
 	}
@@ -91,25 +95,17 @@ func ConfigureDebugModeSettings() {
 	fmt.Println("End debug-mode Settings Processing")
 }
 
-func parseConfigMapForDebugSettings() map[string]interface{} {
-	parsedConfig := make(map[string]interface{})
-	if _, err := os.Stat(configMapDebugMountPath); os.IsNotExist(err) {
-		return nil
+func parseConfigMapForDebugSettings() (map[string]interface{}, error) {
+	if data, err := os.ReadFile(configMapMountPath); err == nil {
+		parsedConfig := make(map[string]interface{})
+		if err := toml.Unmarshal(data, &parsedConfig); err == nil {
+			return parsedConfig, nil
+		} else {
+			return nil, fmt.Errorf("exception while parsing config map for debug mode: %v, using defaults, please check config map for errors\n", err)
+		}
+	} else {
+		return nil, fmt.Errorf("error reading config map file: %v", err)
 	}
-
-	content, err := os.ReadFile(configMapDebugMountPath)
-	if err != nil {
-		fmt.Printf("Exception while parsing config map for debug mode: %s, using defaults, please check config map for errors\n", err)
-		return nil
-	}
-
-	err = yaml.Unmarshal(content, &parsedConfig)
-	if err != nil {
-		fmt.Printf("Exception while parsing config map for debug mode: %s, using defaults, please check config map for errors\n", err)
-		return nil
-	}
-
-	return parsedConfig
 }
 
 func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) {
