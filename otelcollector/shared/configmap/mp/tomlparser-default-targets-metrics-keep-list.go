@@ -12,7 +12,7 @@ import (
 
 var (
 	configMapKeepListMountPath                                          = "/etc/config/settings/default-targets-metrics-keep-list"
-	configSchemaVersion, minimalIngestionProfile                        string
+	configSchemaVersion                                                 string
 	kubeletRegex, coreDNSRegex, cAdvisorRegex, kubeProxyRegex           string
 	apiserverRegex, kubeStateRegex, nodeExporterRegex, kappieBasicRegex string
 	netObservabilityRegex, windowsExporterRegex, windowsKubeProxyRegex  string
@@ -28,9 +28,9 @@ var (
 	kappiebasicRegex_minimal_mac                                        = "kappie.*"
 	networkobservabilityRetinaRegex_minimal_mac                         = "networkobservability.*"
 	networkobservabilityHubbleRegex_minimal_mac                         = "hubble.*"
-	networkobservabilityCiliumRegex_minimal_mac                         = "cilium_drop.*|cilium_forward.*"
-	windowsexporterRegex_minimal_mac                                    = "windows_system_system_up_time|windows_cpu_time_total|windows_memory_available_bytes|windows_os_visible_memory_bytes|windows_memory_cache_bytes|windows_memory_modified_page_list_bytes|windows_memory_standby_cache_core_bytes|windows_memory_standby_cache_normal_priority_bytes|windows_memory_standby_cache_reserve_bytes|windows_memory_swap_page_operations_total|windows_logical_disk_read_seconds_total|windows_logical_disk_write_seconds_total|windows_logical_disk_size_bytes|windows_logical_disk_free_bytes|windows_net_bytes_total|windows_net_packets_received_discarded_total|windows_net_packets_outbound_discarded_total|windows_container_available|windows_container_cpu_usage_seconds_total|windows_container_memory_usage_commit_bytes|windows_container_memory_usage_private_working_set_bytes|windows_container_network_receive_bytes_total|windows_container_network_transmit_bytes_total"
-	windowskubeproxyRegex_minimal_mac                                   = "kubeproxy_sync_proxy_rules_duration_seconds|kubeproxy_sync_proxy_rules_duration_seconds_bucket|kubeproxy_sync_proxy_rules_duration_seconds_sum|kubeproxy_sync_proxy_rules_duration_seconds_count|rest_client_requests_total|rest_client_request_duration_seconds|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines"
+	// networkobservabilityCiliumRegex_minimal_mac                         = "cilium_drop.*|cilium_forward.*"
+	windowsexporterRegex_minimal_mac  = "windows_system_system_up_time|windows_cpu_time_total|windows_memory_available_bytes|windows_os_visible_memory_bytes|windows_memory_cache_bytes|windows_memory_modified_page_list_bytes|windows_memory_standby_cache_core_bytes|windows_memory_standby_cache_normal_priority_bytes|windows_memory_standby_cache_reserve_bytes|windows_memory_swap_page_operations_total|windows_logical_disk_read_seconds_total|windows_logical_disk_write_seconds_total|windows_logical_disk_size_bytes|windows_logical_disk_free_bytes|windows_net_bytes_total|windows_net_packets_received_discarded_total|windows_net_packets_outbound_discarded_total|windows_container_available|windows_container_cpu_usage_seconds_total|windows_container_memory_usage_commit_bytes|windows_container_memory_usage_private_working_set_bytes|windows_container_network_receive_bytes_total|windows_container_network_transmit_bytes_total"
+	windowskubeproxyRegex_minimal_mac = "kubeproxy_sync_proxy_rules_duration_seconds|kubeproxy_sync_proxy_rules_duration_seconds_bucket|kubeproxy_sync_proxy_rules_duration_seconds_sum|kubeproxy_sync_proxy_rules_duration_seconds_count|rest_client_requests_total|rest_client_request_duration_seconds|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines"
 )
 
 // getStringValue checks the type of the value and returns it as a string if possible.
@@ -58,6 +58,10 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 		return nil
 	}
 
+	// Print the content read from the file
+	fmt.Println("Content of the file:")
+	fmt.Println(string(content))
+
 	tree, err := toml.Load(string(content))
 	if err != nil {
 		fmt.Printf("Error parsing TOML: %v\n", err)
@@ -66,18 +70,24 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 
 	configMap := make(map[string]interface{})
 	configMap["kubelet"] = getStringValue(tree.Get("kubelet"))
-	configMap["coreDNS"] = getStringValue(tree.Get("coreDNS"))
-	configMap["cAdvisor"] = getStringValue(tree.Get("cAdvisor"))
-	configMap["kubeProxy"] = getStringValue(tree.Get("kubeProxy"))
+	configMap["coredns"] = getStringValue(tree.Get("coredns"))
+	configMap["cadvisor"] = getStringValue(tree.Get("cadvisor"))
+	configMap["kubeproxy"] = getStringValue(tree.Get("kubeproxy"))
 	configMap["apiserver"] = getStringValue(tree.Get("apiserver"))
-	configMap["kubeState"] = getStringValue(tree.Get("kubeState"))
-	configMap["nodeExporter"] = getStringValue(tree.Get("nodeExporter"))
-	configMap["kappieBasic"] = getStringValue(tree.Get("kappieBasic"))
-	configMap["netObservability"] = getStringValue(tree.Get("netObservability"))
-	configMap["windowsExporter"] = getStringValue(tree.Get("windowsExporter"))
-	configMap["windowsKubeProxy"] = getStringValue(tree.Get("windowsKubeProxy"))
-	configMap["networkobservabilityRetinaRegex_minimal_mac"] = getStringValue(tree.Get("networkobservabilityRetinaRegex_minimal_mac"))
-	configMap["networkobservabilityHubbleRegex_minimal_mac"] = getStringValue(tree.Get("networkobservabilityHubbleRegex_minimal_mac"))
+	configMap["kubestate"] = getStringValue(tree.Get("kubestate"))
+	configMap["nodeexporter"] = getStringValue(tree.Get("nodeexporter"))
+	configMap["kappiebasic"] = getStringValue(tree.Get("kappiebasic"))
+	configMap["windowsexporter"] = getStringValue(tree.Get("windowswxporter"))
+	configMap["windowskubeproxy"] = getStringValue(tree.Get("windowskubeproxy"))
+	configMap["networkobservabilityretinaregex"] = getStringValue(tree.Get("networkobservabilityretinaregex"))
+	configMap["networkobservabilityhubbleregex"] = getStringValue(tree.Get("networkobservabilityhubbleregex"))
+	configMap["minimalingestionprofile"] = getStringValue(tree.Get("minimalingestionprofile"))
+
+	// Print the content of the config map
+	fmt.Println("Content of the config map:")
+	for key, value := range configMap {
+		fmt.Printf("%s: %s\n", key, value)
+	}
 
 	return configMap
 }
@@ -85,20 +95,20 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 func validateRegexValues(regexValues RegexValues) error {
 	// Define a map of field names to their corresponding values
 	fields := map[string]string{
-		"Kubelet":                         regexValues.Kubelet,
-		"CoreDNS":                         regexValues.CoreDNS,
-		"CAdvisor":                        regexValues.CAdvisor,
-		"KubeProxy":                       regexValues.KubeProxy,
-		"APIServer":                       regexValues.APIServer,
-		"KubeState":                       regexValues.KubeState,
-		"NodeExporter":                    regexValues.NodeExporter,
-		"KappieBasic":                     regexValues.KappieBasic,
-		"NetObservability":                regexValues.NetObservability,
-		"WindowsExporter":                 regexValues.WindowsExporter,
-		"WindowsKubeProxy":                regexValues.WindowsKubeProxy,
-		"NetworkObservabilityRetinaRegex": regexValues.NetworkObservabilityRetinaRegex,
-		"NetworkObservabilityHubbleRegex": regexValues.NetworkObservabilityHubbleRegex,
-		"MinimalIngestionProfile":         regexValues.MinimalIngestionProfile,
+		"kubelet":                         regexValues.kubelet,
+		"coredns":                         regexValues.coredns,
+		"cadvisor":                        regexValues.cadvisor,
+		"kubeproxy":                       regexValues.kubeproxy,
+		"apiserver":                       regexValues.apiserver,
+		"kubestate":                       regexValues.kubestate,
+		"nodeexporter":                    regexValues.nodeexporter,
+		"kappiebasic":                     regexValues.kappiebasic,
+		"netobservability":                regexValues.netobservability,
+		"windowsexporter":                 regexValues.windowsexporter,
+		"windowskubeproxy":                regexValues.windowskubeproxy,
+		"networkobservabilityretinaregex": regexValues.networkobservabilityretinaregex,
+		"networkobservabilityhubbleregex": regexValues.networkobservabilityhubbleregex,
+		"minimalingestionprofile":         regexValues.minimalingestionprofile,
 	}
 
 	// Iterate over the fields and validate each regex
@@ -113,20 +123,20 @@ func validateRegexValues(regexValues RegexValues) error {
 
 func populateKeepListFromConfigMap(parsedConfig map[string]interface{}) (RegexValues, error) {
 	regexValues := RegexValues{
-		Kubelet:                         getStringValue(parsedConfig["kubelet"]),
-		CoreDNS:                         getStringValue(parsedConfig["coreDNS"]),
-		CAdvisor:                        getStringValue(parsedConfig["cAdvisor"]),
-		KubeProxy:                       getStringValue(parsedConfig["kubeProxy"]),
-		APIServer:                       getStringValue(parsedConfig["apiserver"]),
-		KubeState:                       getStringValue(parsedConfig["kubeState"]),
-		NodeExporter:                    getStringValue(parsedConfig["nodeExporter"]),
-		KappieBasic:                     getStringValue(parsedConfig["kappieBasic"]),
-		NetObservability:                getStringValue(parsedConfig["netObservability"]),
-		WindowsExporter:                 getStringValue(parsedConfig["windowsExporter"]),
-		WindowsKubeProxy:                getStringValue(parsedConfig["windowsKubeProxy"]),
-		NetworkObservabilityRetinaRegex: getStringValue(parsedConfig["networkobservabilityRetinaRegex_minimal_mac"]),
-		NetworkObservabilityHubbleRegex: getStringValue(parsedConfig["networkobservabilityHubbleRegex_minimal_mac"]),
-		MinimalIngestionProfile:         getStringValue(parsedConfig["minimalingestionprofile"]),
+		kubelet:                         getStringValue(parsedConfig["kubelet"]),
+		coredns:                         getStringValue(parsedConfig["coredns"]),
+		cadvisor:                        getStringValue(parsedConfig["cadvisor"]),
+		kubeproxy:                       getStringValue(parsedConfig["kubeproxy"]),
+		apiserver:                       getStringValue(parsedConfig["apiserver"]),
+		kubestate:                       getStringValue(parsedConfig["kubestate"]),
+		nodeexporter:                    getStringValue(parsedConfig["nodeexporter"]),
+		kappiebasic:                     getStringValue(parsedConfig["kappiebasic"]),
+		netobservability:                getStringValue(parsedConfig["netobservability"]),
+		windowsexporter:                 getStringValue(parsedConfig["windowsexporter"]),
+		windowskubeproxy:                getStringValue(parsedConfig["windowskubeproxy"]),
+		networkobservabilityretinaregex: getStringValue(parsedConfig["networkobservabilityretinaregex"]),
+		networkobservabilityhubbleregex: getStringValue(parsedConfig["networkobservabilityhubbleregex"]),
+		minimalingestionprofile:         getStringValue(parsedConfig["minimalingestionprofile"]),
 	}
 
 	// Validate regex values
@@ -136,37 +146,37 @@ func populateKeepListFromConfigMap(parsedConfig map[string]interface{}) (RegexVa
 
 	// Logging the values being set
 	fmt.Println("Values being set:")
-	fmt.Printf("Kubelet: %s\n", regexValues.Kubelet)
-	fmt.Printf("CoreDNS: %s\n", regexValues.CoreDNS)
-	fmt.Printf("CAdvisor: %s\n", regexValues.CAdvisor)
-	fmt.Printf("KubeProxy: %s\n", regexValues.KubeProxy)
-	fmt.Printf("APIServer: %s\n", regexValues.APIServer)
-	fmt.Printf("KubeState: %s\n", regexValues.KubeState)
-	fmt.Printf("NodeExporter: %s\n", regexValues.NodeExporter)
-	fmt.Printf("KappieBasic: %s\n", regexValues.KappieBasic)
-	fmt.Printf("NetObservability: %s\n", regexValues.NetObservability)
-	fmt.Printf("WindowsExporter: %s\n", regexValues.WindowsExporter)
-	fmt.Printf("WindowsKubeProxy: %s\n", regexValues.WindowsKubeProxy)
-	fmt.Printf("NetworkObservabilityRetinaRegex: %s\n", regexValues.NetworkObservabilityRetinaRegex)
-	fmt.Printf("NetworkObservabilityHubbleRegex: %s\n", regexValues.NetworkObservabilityHubbleRegex)
-	fmt.Printf("MinimalIngestionProfile: %s\n", regexValues.MinimalIngestionProfile)
+	fmt.Printf("kubelet: %s\n", regexValues.kubelet)
+	fmt.Printf("coredns: %s\n", regexValues.coredns)
+	fmt.Printf("cadvisor: %s\n", regexValues.cadvisor)
+	fmt.Printf("kubeproxy: %s\n", regexValues.kubeproxy)
+	fmt.Printf("apiserver: %s\n", regexValues.apiserver)
+	fmt.Printf("kubestate: %s\n", regexValues.kubestate)
+	fmt.Printf("nodeexporter: %s\n", regexValues.nodeexporter)
+	fmt.Printf("kappiebasic: %s\n", regexValues.kappiebasic)
+	fmt.Printf("netobservability: %s\n", regexValues.netobservability)
+	fmt.Printf("windowsexporter: %s\n", regexValues.windowsexporter)
+	fmt.Printf("windowskubeproxy: %s\n", regexValues.windowskubeproxy)
+	fmt.Printf("networkobservabilityretinaregex: %s\n", regexValues.networkobservabilityretinaregex)
+	fmt.Printf("networkobservabilityhubbleregex: %s\n", regexValues.networkobservabilityhubbleregex)
+	fmt.Printf("minimalingestionprofile: %s\n", regexValues.minimalingestionprofile)
 	return regexValues, nil // Return regex values and nil error if everything is valid
 }
 
 func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
-	if regexValues.MinimalIngestionProfile == "true" {
-		kubeletRegex += regexValues.Kubelet + "|" + kubeletRegex_minimal_mac
-		coreDNSRegex += regexValues.CoreDNS + "|" + coreDNSRegex_minimal_mac
-		cAdvisorRegex += regexValues.CAdvisor + "|" + cadvisorRegex_minimal_mac
-		kubeProxyRegex += regexValues.KubeProxy + "|" + kubeproxyRegex_minimal_mac
-		apiserverRegex += regexValues.APIServer + "|" + apiserverRegex_minimal_mac
-		kubeStateRegex += regexValues.KubeState + "|" + kubestateRegex_minimal_mac
-		nodeExporterRegex += regexValues.NodeExporter + "|" + nodeexporterRegex_minimal_mac
-		kappieBasicRegex += regexValues.KappieBasic + "|" + kappiebasicRegex_minimal_mac
-		windowsExporterRegex += regexValues.WindowsExporter + "|" + windowsexporterRegex_minimal_mac
-		windowsKubeProxyRegex += regexValues.WindowsKubeProxy + "|" + windowskubeproxyRegex_minimal_mac
-		networkobservabilityRetinaRegex += regexValues.NetworkObservabilityRetinaRegex + "|" + networkobservabilityRetinaRegex_minimal_mac
-		networkobservabilityHubbleRegex += regexValues.NetworkObservabilityHubbleRegex + "|" + networkobservabilityHubbleRegex_minimal_mac
+	if regexValues.minimalingestionprofile == "true" {
+		kubeletRegex += regexValues.kubelet + "|" + kubeletRegex_minimal_mac
+		coreDNSRegex += regexValues.coredns + "|" + coreDNSRegex_minimal_mac
+		cAdvisorRegex += regexValues.cadvisor + "|" + cadvisorRegex_minimal_mac
+		kubeProxyRegex += regexValues.kubeproxy + "|" + kubeproxyRegex_minimal_mac
+		apiserverRegex += regexValues.apiserver + "|" + apiserverRegex_minimal_mac
+		kubeStateRegex += regexValues.kubestate + "|" + kubestateRegex_minimal_mac
+		nodeExporterRegex += regexValues.nodeexporter + "|" + nodeexporterRegex_minimal_mac
+		kappieBasicRegex += regexValues.kappiebasic + "|" + kappiebasicRegex_minimal_mac
+		windowsExporterRegex += regexValues.windowsexporter + "|" + windowsexporterRegex_minimal_mac
+		windowsKubeProxyRegex += regexValues.windowskubeproxy + "|" + windowskubeproxyRegex_minimal_mac
+		networkobservabilityRetinaRegex += regexValues.networkobservabilityretinaregex + "|" + networkobservabilityRetinaRegex_minimal_mac
+		networkobservabilityHubbleRegex += regexValues.networkobservabilityhubbleregex + "|" + networkobservabilityHubbleRegex_minimal_mac
 
 		// Print the updated regex strings after appending values
 		// Only log this in debug mode
@@ -185,12 +195,12 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		fmt.Println("NetworkObservabilityRetinaRegex:", networkobservabilityRetinaRegex)
 		fmt.Println("NetworkObservabilityHubbleRegex:", networkobservabilityHubbleRegex)
 	} else {
-		fmt.Println("minimalIngestionProfile:", regexValues.MinimalIngestionProfile)
+		fmt.Println("minimalIngestionProfile:", regexValues.minimalingestionprofile)
 	}
 }
 
 func tomlparserTargetsMetricsKeepList() {
-	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+	configSchemaVersion = os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	fmt.Println("Start default-targets-metrics-keep-list Processing")
 
 	var regexValues RegexValues

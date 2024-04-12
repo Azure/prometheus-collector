@@ -30,6 +30,7 @@ func ConfigureDebugModeSettings() {
 	configMapSettings, err := parseConfigMapForDebugSettings()
 	if err != nil {
 		fmt.Fprint(os.Stdout, []any{"Error: %v", err}...)
+		return
 	}
 	if configMapSettings != nil {
 		populateSettingValuesFromConfigMap(configMapSettings)
@@ -92,7 +93,7 @@ func ConfigureDebugModeSettings() {
 		}
 	}
 
-	fmt.Println("End debug-mode Settings Processing")
+	fmt.Println("\nEnd debug-mode Settings Processing")
 }
 
 func parseConfigMapForDebugSettings() (map[string]interface{}, error) {
@@ -101,7 +102,7 @@ func parseConfigMapForDebugSettings() (map[string]interface{}, error) {
 		if err := toml.Unmarshal(data, &parsedConfig); err == nil {
 			return parsedConfig, nil
 		} else {
-			return nil, fmt.Errorf("exception while parsing config map for debug mode: %v, using defaults, please check config map for errors\n", err)
+			return nil, fmt.Errorf("exception while parsing config map for debug mode: %v, using defaults, please check config map for errors", err)
 		}
 	} else {
 		return nil, fmt.Errorf("error reading config map file: %v", err)

@@ -1,20 +1,20 @@
 package configmapsettings
 
 type RegexValues struct {
-	Kubelet                         string
-	CoreDNS                         string
-	CAdvisor                        string
-	KubeProxy                       string
-	APIServer                       string
-	KubeState                       string
-	NodeExporter                    string
-	KappieBasic                     string
-	NetObservability                string
-	WindowsExporter                 string
-	WindowsKubeProxy                string
-	NetworkObservabilityRetinaRegex string
-	NetworkObservabilityHubbleRegex string
-	MinimalIngestionProfile         string
+	kubelet                         string
+	coredns                         string
+	cadvisor                        string
+	kubeproxy                       string
+	apiserver                       string
+	kubestate                       string
+	nodeexporter                    string
+	kappiebasic                     string
+	netobservability                string
+	windowsexporter                 string
+	windowskubeproxy                string
+	networkobservabilityretinaregex string
+	networkobservabilityhubbleregex string
+	minimalingestionprofile         string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
