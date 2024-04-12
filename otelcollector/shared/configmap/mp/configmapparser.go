@@ -139,10 +139,10 @@ func parseSettingsForPodAnnotations() {
 	// fmt.Printf("Start Processing - %s\n", LOGGING_PREFIX)
 	fmt.Printf("Start Processing - pod annotations\n")
 	if err := configurePodAnnotationSettings(); err != nil {
-		fmt.Printf("Error: %v\n" + err.Error())
+		fmt.Printf("Error: %v\n", err)
 		return
 	}
-	fmt.Println("Start Processing - pod annotations")
+	fmt.Println("End Processing - pod annotations")
 }
 
 func parsePrometheusCollectorConfig() {

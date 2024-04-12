@@ -169,7 +169,7 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 }
 
 func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, cp *ConfigProcessor) error {
-	file, err := os.Create(filename)
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("Exception while opening file for writing prometheus-collector config environment variables: %s", err)
 	}

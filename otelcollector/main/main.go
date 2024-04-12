@@ -49,8 +49,6 @@ func main() {
 	customEnvironment := os.Getenv("customEnvironment")
 	shared.SetupTelemetry(customEnvironment)
 
-	fmt.Println("Controller Type: %s", controllerType)
-
 	if err := shared.ConfigureEnvironment(); err != nil {
 		fmt.Println("Error configuring environment:", err)
 		os.Exit(1)

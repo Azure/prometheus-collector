@@ -56,6 +56,7 @@ func isValidRegex(str string) bool {
 }
 
 func writeConfigToFile() error {
+	fmt.Printf("Writing configuration to file: %s\n", configOutputFilePath)
 	file, err := os.Create(configOutputFilePath)
 	if err != nil {
 		return fmt.Errorf("error opening file: %v", err)
