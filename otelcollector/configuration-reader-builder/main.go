@@ -186,7 +186,7 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 	message := "\ntargetallocator is running."
 
 	if taConfigUpdated {
-		if !taLivenessStartTime.IsZero() {
+		if taLivenessStartTime.IsZero() {
 			taLivenessStartTime = time.Now()
 		}
 		duration := time.Since(taLivenessStartTime)
