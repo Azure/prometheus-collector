@@ -46,22 +46,53 @@ func processConfigMap() map[string]string {
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
 		configMapSettings := parseConfigMapForScrapeSettings()
 		if configMapSettings != nil {
-			intervalHash["KUBELET_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("kubelet").(string))
-			intervalHash["COREDNS_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("coredns").(string))
-			intervalHash["CADVISOR_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("cadvisor").(string))
-			intervalHash["KUBEPROXY_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("kubeproxy").(string))
-			intervalHash["APISERVER_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("apiserver").(string))
-			intervalHash["KUBESTATE_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("kubestate").(string))
-			intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("nodeexporter").(string))
-			intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("windowsexporter").(string))
-			intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("windowskubeproxy").(string))
-			intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("prometheuscollectorhealth").(string))
-			intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("podannotations").(string))
-			intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("kappiebasic").(string))
-			intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("networkobservabilityretina").(string))
-			intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("networkobservabilityhubble").(string))
-			intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = checkDuration(configMapSettings.Get("networkobservabilitycilium").(string))
+			if kubeletInterval := configMapSettings.Get("kubelet").(string); kubeletInterval != "" {
+				intervalHash["KUBELET_SCRAPE_INTERVAL"] = checkDuration(kubeletInterval)
+			}
+			if corednsInterval := configMapSettings.Get("coredns").(string); corednsInterval != "" {
+				intervalHash["COREDNS_SCRAPE_INTERVAL"] = checkDuration(corednsInterval)
+			}
+			if cadvisorInterval := configMapSettings.Get("cadvisor").(string); cadvisorInterval != "" {
+				intervalHash["CADVISOR_SCRAPE_INTERVAL"] = checkDuration(cadvisorInterval)
+			}
+			if kubeproxyInterval := configMapSettings.Get("kubeproxy").(string); kubeproxyInterval != "" {
+				intervalHash["KUBEPROXY_SCRAPE_INTERVAL"] = checkDuration(kubeproxyInterval)
+			}
+			if apiserverInterval := configMapSettings.Get("apiserver").(string); apiserverInterval != "" {
+				intervalHash["APISERVER_SCRAPE_INTERVAL"] = checkDuration(apiserverInterval)
+			}
+			if kubestateInterval := configMapSettings.Get("kubestate").(string); kubestateInterval != "" {
+				intervalHash["KUBESTATE_SCRAPE_INTERVAL"] = checkDuration(kubestateInterval)
+			}
+			if nodeexporterInterval := configMapSettings.Get("nodeexporter").(string); nodeexporterInterval != "" {
+				intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"] = checkDuration(nodeexporterInterval)
+			}
+			if windowsexporterInterval := configMapSettings.Get("windowsexporter").(string); windowsexporterInterval != "" {
+				intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"] = checkDuration(windowsexporterInterval)
+			}
+			if windowskubeproxyInterval := configMapSettings.Get("windowskubeproxy").(string); windowskubeproxyInterval != "" {
+				intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = checkDuration(windowskubeproxyInterval)
+			}
+			if prometheusCollectorInterval := configMapSettings.Get("prometheuscollectorhealth").(string); prometheusCollectorInterval != "" {
+				intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = checkDuration(prometheusCollectorInterval)
+			}
+			if podAnnotationInterval := configMapSettings.Get("podannotations").(string); podAnnotationInterval != "" {
+				intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = checkDuration(podAnnotationInterval)
+			}
+			if kappieBasicInterval := configMapSettings.Get("kappiebasic").(string); kappieBasicInterval != "" {
+				intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = checkDuration(kappieBasicInterval)
+			}
+			if networkObservabilityRetinaInterval := configMapSettings.Get("networkobservabilityretina").(string); networkObservabilityRetinaInterval != "" {
+				intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = checkDuration(networkObservabilityRetinaInterval)
+			}
+			if networkObservabilityHubbleInterval := configMapSettings.Get("networkobservabilityhubble").(string); networkObservabilityHubbleInterval != "" {
+				intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = checkDuration(networkObservabilityHubbleInterval)
+			}
+			if networkObservabilityCiliumInterval := configMapSettings.Get("networkobservabilitycilium").(string); networkObservabilityCiliumInterval != "" {
+				intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = checkDuration(networkObservabilityCiliumInterval)
+			}
 		}
+
 	} else {
 		if _, err := os.Stat(configMapScrapeIntervalMountPath); err == nil {
 			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
