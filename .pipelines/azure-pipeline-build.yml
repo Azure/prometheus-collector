@@ -24,1228 +24,1309 @@ variables:
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
 
-jobs:
-- job: Image_Tags_and_Ev2_Artifacts
-  displayName: "Build: Set image tags and publish Ev2 artifacts"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  variables:
-    skipComponentGovernanceDetection: true
-  steps:
-    - checkout: self
-      submodules: true
-    - bash: |
-        if [ $(IS_PR) == "True" ]; then
-          BRANCH_NAME=$(System.PullRequest.SourceBranch)
-        else
-          BRANCH_NAME=$(Build.SourceBranch)
-          BRANCH_NAME=${BRANCH_NAME#refs/heads/}
-        fi
-        BRANCH_NAME=$(echo $BRANCH_NAME | tr / - | tr . - | tr _ - | cut -c1-90)
-        COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
-        DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
-        VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
-        SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
-
-        LINUX_IMAGE_TAG=$SEMVER
-        # Truncating to 128 characters as it is required by docker
-        LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
-        
-        #Truncating this to 124 to add the cfg suffix
-        LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
-        LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
-        LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
-
-        #Truncating this to 113 to add the ref app suffices
-        LINUX_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-113)
-        LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
-        LINUX_REF_APP_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-python
-
-        # Truncating to 115 characters as it is required by docker (4 characters used in -win and 9 characters used in -ltsc2019/-ltsc2022)
-        WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-115)
-        WINDOWS_IMAGE_TAG=$WINDOWS_IMAGE_TAG_PREFIX-win
-
-
-        #Truncating this to 112 characters to add the targetallocator suffix
-        TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-112)
-        TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
-
-        #Truncating this to 113 to add the ref app suffices
-        WIN_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-107)
-        WIN_REF_APP_GOLANG_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-golang
-        WIN_REF_APP_PYTHON_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-python
-
-        # Truncating to 119 characters as it is required by docker (9 characters used in -ltsc2019/-ltsc2022)
-        WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
-        WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
-
-        LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
-        TARGET_ALLOCATOR_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_IMAGE_TAG
-        LINUX_CONFIG_READER_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CONFIG_READER_IMAGE_TAG
-        LINUX_CCP_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CCP_IMAGE_TAG
-        WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
-        HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
-        ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$ARC_HELM_CHART_NAME:$SEMVER
-        LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
-        LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_PYTHON_IMAGE_TAG
-        WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
-        WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_PYTHON_IMAGE_TAG
-
-        echo "##vso[build.updatebuildnumber]$SEMVER"
-        echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
-        echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
-        echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_IMAGE_TAG;isOutput=true]$TARGET_ALLOCATOR_IMAGE_TAG"
-        echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_IMAGE_TAG;isOutput=true]$LINUX_CONFIG_READER_IMAGE_TAG"
-        echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_FULL_IMAGE_NAME"
-        echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_FULL_IMAGE_NAME;isOutput=true]$LINUX_CONFIG_READER_FULL_IMAGE_NAME"
-        echo "##vso[task.setvariable variable=LINUX_CCP_FULL_IMAGE_NAME;isOutput=true]$LINUX_CCP_FULL_IMAGE_NAME"
-        echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
-        echo "##vso[task.setvariable variable=LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME"
-        echo "##vso[task.setvariable variable=LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME"
-        echo "##vso[task.setvariable variable=WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME"
-        echo "##vso[task.setvariable variable=WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME"
-        echo "##vso[task.setvariable variable=WINDOWS_IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
-        echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2019_BASE_IMAGE_VERSION"
-        echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2022_BASE_IMAGE_VERSION"
-        echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
-        echo "##vso[task.setvariable variable=ARC_HELM_CHART_NAME;isOutput=true]$ARC_HELM_CHART_NAME"
-        echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
-        echo "##vso[task.setvariable variable=ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$ARC_HELM_FULL_IMAGE_NAME"
-      displayName: 'Build: set image registry, repo, and tags'
-      name: setup
-
-    - bash: |
-        cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts
-        cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
-        cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics-arc -r
-        export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
-        export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
-        export HELM_SEMVER=$SETUP_SEMVER
-        export IMAGE_TAG=$SETUP_SEMVER
-        export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
-        env
-
-        envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
-        export ARC_EXTENSION=true
-        export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
-        envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
-        tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-arc
-
-        cd $(Build.ArtifactStagingDirectory)
-        cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
-        export HELM_CHART_NAME="ama-metrics"
-        export ARC_EXTENSION=false
-        export AKS_REGION="westeurope"
-        export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu"
-        envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
-      displayName: 'Ev2: package artifacts.tar.gz for prod release'
-
-    - bash: |
-        cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
-        tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
-      displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
-
-    - task: CredScan@3
-      displayName: "SDL : Run credscan"
-
-    - task: CopyFiles@2
-      displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
-      inputs:
-        SourceFolder: "$(Build.SourcesDirectory)/.pipelines/deployment"
-        Contents: |
-          **/*
-        TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
-
-    - task: PublishBuildArtifacts@1
-      displayName: "Ev2: publish Ev2 deployment artifacts"
-      inputs:
-        pathToPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: drop
-
-- job: Linux_Golang_Reference_App
-  displayName: "Build: linux golang reference app image"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  dependsOn: Image_Tags_and_Ev2_Artifacts
-  variables:
-    skipComponentGovernanceDetection: true
-    LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
-  # This is necessary because of: https://github.com/moby/moby/issues/37965
-    DOCKER_BUILDKIT: 1
-  condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-  steps:
-    - checkout: self
-      persistCredentials: true
-    - bash: |
-        mkdir -p $(Build.ArtifactStagingDirectory)/refappgolanglinux
-
-        docker buildx create --name dockerbuilder
-        docker buildx use dockerbuilder
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
-        docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
-      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
-      displayName: "Build: build and push reference app golang linux image to dev ACR"
-
-- job: Linux_Python_Reference_App
-  displayName: "Build: linux python reference app image"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  dependsOn: Image_Tags_and_Ev2_Artifacts
-  variables:
-    skipComponentGovernanceDetection: true
-    LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
-  # This is necessary because of: https://github.com/moby/moby/issues/37965
-    DOCKER_BUILDKIT: 1
-  condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-  steps:
-    - checkout: self
-      persistCredentials: true
-    - bash: |
-        mkdir -p $(Build.ArtifactStagingDirectory)/refapppythonlinux
-
-        docker buildx create --name dockerbuilder
-        docker buildx use dockerbuilder
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
-        docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)
-      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-      displayName: "Build: build and push reference app python linux image to dev ACR"
-
-- job: Golang_Windows_Reference_App
-  displayName: "Build: windows golang reference app image"
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-  dependsOn: Image_Tags_and_Ev2_Artifacts
-  variables:
-    WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
-    skipComponentGovernanceDetection: true
-  condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-  steps:
-    - powershell: |
-        docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker push $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
-      displayName: "Build: build and push reference app golang windows image to dev ACR"
-      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
-
-- job: Windows_Python_Reference_App
-  displayName: "Build: windows python reference app image"
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-  dependsOn: Image_Tags_and_Ev2_Artifacts
-  variables:
-    WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
-    skipComponentGovernanceDetection: true
-  condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-  steps:
-    - powershell: |
-        docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
-      displayName: "Build: build and push reference app python windows image to dev ACR"
-      workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-
-- job: SDL_Policheck_Scan
-  displayName: "SDL: policheck scanning"
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-  variables:
-    skipComponentGovernanceDetection: true
-  steps:
-    - checkout: self
-      submodules: true
-
-    - task: PoliCheck@2
-      displayName: "SDL : Run PoliCheck"
-      inputs:
-        targetType: 'F'
-        targetArgument: '$(Build.SourcesDirectory)'
-
-- job: SDL_Binary_Scan
-  displayName: "SDL: linux binary scanning"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  variables:
-    skipComponentGovernanceDetection: true
-  steps:
-    - checkout: self
-      submodules: true
-
-    - task: CodeQL3000Init@0
-      displayName: 'SDL: init codeql'
-
-    - task: GoTool@0
-      displayName: "Build: specify golang version"
-      inputs:
-        version: '1.21.5'
-
-    - bash: |
-        sudo apt-get install build-essential -y
-        make
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "SDL: build otelcollector, promconfigvalidator, targetallocator, and fluent-bit plugin for scanning"
-      retryCountOnTaskFailure: 1
-
-    - task: BinSkim@4
-      displayName: 'SDL: run binskim'
-      inputs:
-        InputType: 'CommandLine'
-        arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
-      retryCountOnTaskFailure: 1
-
-    - task: Gosec@1
-      displayName: 'SDL: run gosec'
-      inputs:
-        targetPattern: 'gosecPattern'
-        targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
-      retryCountOnTaskFailure: 1
-
-    - bash: |
-        wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
-        unzip DevSkim_linux_0.6.9.zip
-        chmod 775 DevSkim_linux_0.6.9/devskim
-        ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
-      displayName: 'SDL: run devskim'
-      workingDirectory: $(Build.SourcesDirectory)
-      retryCountOnTaskFailure: 1
-
-    - bash: |
-        sudo gem install brakeman -v 5.4.1
-        brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
-      displayName: 'SDL: run brakeman'
-      retryCountOnTaskFailure: 1
-
-- job: Linux_Prometheus_Collector
-  displayName: "Build: linux prometheus-collector image"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  dependsOn: Image_Tags_and_Ev2_Artifacts
-  variables:
-    LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
-  # This is necessary because of: https://github.com/moby/moby/issues/37965
-    DOCKER_BUILDKIT: 1
-  steps:
-    - checkout: self
-      submodules: true
-
-    - task: CodeQL3000Init@0
-      displayName: 'SDL: init codeql'
-
-    - task: GoTool@0
-      displayName: "Build: specify golang version"
-      inputs:
-        version: '1.20'
-
-    - bash: |
-        mkdir -p $(Build.ArtifactStagingDirectory)/linux
-
-        # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
-        sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-        docker system prune --all -f
-        docker images -q --filter "dangling=true" | xargs docker rmi
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
-        docker buildx create --name dockerbuilder
-        docker buildx use dockerbuilder
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
-        docker pull $(LINUX_FULL_IMAGE_NAME)
-        docker system prune --all -f
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build and push image to dev ACR"
-
-    - bash: |
-        MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-        DIGEST=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-        SIZE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-        cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
-        {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-        EOF
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: Set values in payload.json for signing"
-      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
-
-    - task: EsrpCodeSigning@3
-      displayName: "ESRP CodeSigning for Prometheus"
-      inputs:
-        ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
-        FolderPath: $(Build.ArtifactStagingDirectory)/linux/
-        Pattern: "*.json"
-        signConfigType: inlineSignParams
-        inlineOperation: |
-          [
-            {
-                "keyCode": "CP-469451",
-                "operationSetCode": "NotaryCoseSign",
-                "parameters": [
-                  {
-                    "parameterName": "CoseFlags",
-                    "parameterValue": "chainunprotected"
-                  }
-                ],
-                "toolName": "sign",
-                "toolVersion": "1.0"
-            }
-          ]
-
-    - bash: |
-        set -euxo pipefail
-        curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
-        mkdir -p oras-install/
-        tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
-        sudo mv oras-install/oras /usr/local/bin/
-        rm -rf oras_1.0.0_*.tar.gz oras-install/
-        oras attach $(LINUX_FULL_IMAGE_NAME) \
-          --artifact-type 'application/vnd.cncf.notary.signature' \
-          ./payload.json:application/cose \
-          -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-      workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
-      displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
-      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
-
-    - bash: |
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
-        if [ $? -ne 0 ]; then
-          exit 1
-        fi
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
-        if [ $? -ne 0 ]; then
-          exit 1
-        fi
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
-        if [ $? -ne 0 ]; then
-          exit 1
-        fi
-      workingDirectory: $(Build.SourcesDirectory)
-      displayName: "Build: run trivy scan"
-
-    - task: CodeQL3000Finalize@0
-      displayName: 'SDL: run codeql'
-
-    - task: ComponentGovernanceComponentDetection@0
-      displayName: "SDL: run component governance"
-      inputs:
-        scanType: 'Register'
-        verbosity: 'Verbose'
-        dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
-        alertWarningLevel: 'High'
-        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
-        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
-
-    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      displayName: "Ev2: Generate image artifacts"
-      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-      inputs:
-        BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
-        DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
-
-    - task: SdtReport@2
-      displayName: 'SDL: generate report'
-      inputs:
-        GdnExportAllTools: false
-        GdnExportGdnToolBinSkim: true
-        GdnExportGdnToolBinSkimSeverity: 'Note'
-        GdnExportGdnToolGosec: true
-        GdnExportGdnToolGosecSeverity: 'Note'
-        GdnExportGdnToolSemmle: true
-        GdnExportGdnToolSemmleSeverity: 'Note'
-
-    - task: PublishSecurityAnalysisLogs@3
-      displayName: 'SDL: publish report'
-      inputs:
-        ArtifactName: 'CodeAnalysisLogs'
-        ArtifactType: 'Container'
-        PublishProcessedResults: true
-        AllTools: true
-        ToolLogsNotFoundAction: 'Standard'
-
-    - task: PublishBuildArtifacts@1
-      displayName: "Ev2: Publish image artifacts"
-      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-      inputs:
-        pathToPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: drop
-
-    - task: PostAnalysis@2
-      displayName: 'SDL: Post-Build Analysis'
-      inputs:
-        GdnBreakAllTools: false
-        GdnBreakGdnToolBinSkim: true
-        GdnBreakGdnToolBinSkimSeverity: 'Warning'
-        GdnBreakGdnToolGosec: true
-        GdnBreakGdnToolGosecSeverity: 'Warning'
-        GdnBreakGdnToolSemmle: true
-        GdnBreakGdnToolSemmleSeverity: 'Warning'
-
-- job: Linux_CCP_Prometheus_Collector
-  displayName: "Build: linux CCP prometheus-collector image"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  dependsOn: Image_Tags_and_Ev2_Artifacts
-  variables:
-    LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
-  # This is necessary because of: https://github.com/moby/moby/issues/37965
-    DOCKER_BUILDKIT: 1
-  steps:
-    - checkout: self
-      submodules: true
-
-    - task: CodeQL3000Init@0
-      displayName: 'SDL: init codeql'
-
-    - task: GoTool@0
-      displayName: "Build: specify golang version"
-      inputs:
-        version: '1.20'
-
-    - bash: |
-        mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
-
-        # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
-        sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-        docker system prune --volumes -y
-        docker system prune --all -f
-        docker images -q --filter "dangling=true" | xargs docker rmi
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
-        docker buildx create --name dockerbuilder
-        docker buildx use dockerbuilder
-        docker buildx build . --platform=linux/amd64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
-        docker pull $(LINUX_CCP_FULL_IMAGE_NAME)
-        docker system prune --all -f
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build and push CCP image to dev ACR"
-
-    - bash: |
-        MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-        DIGEST=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-        SIZE=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-        cat <<EOF >>$(Build.ArtifactStagingDirectory)/linuxccp/payload.json
-        {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-        EOF
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: Set values in payload.json for signing"
-      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
-
-    - task: EsrpCodeSigning@3
-      displayName: "ESRP CodeSigning for Prometheus"
-      inputs:
-        ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
-        FolderPath: $(Build.ArtifactStagingDirectory)/linuxccp/
-        Pattern: "*.json"
-        signConfigType: inlineSignParams
-        inlineOperation: |
-          [
-            {
-                "keyCode": "CP-469451",
-                "operationSetCode": "NotaryCoseSign",
-                "parameters": [
-                  {
-                    "parameterName": "CoseFlags",
-                    "parameterValue": "chainunprotected"
-                  }
-                ],
-                "toolName": "sign",
-                "toolVersion": "1.0"
-            }
-          ]
-
-    - bash: |
-        set -euxo pipefail
-        curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
-        mkdir -p oras-install/
-        tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
-        sudo mv oras-install/oras /usr/local/bin/
-        rm -rf oras_1.0.0_*.tar.gz oras-install/
-        oras attach $(LINUX_CCP_FULL_IMAGE_NAME) \
-          --artifact-type 'application/vnd.cncf.notary.signature' \
-          ./payload.json:application/cose \
-          -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-      workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
-      displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
-      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
-
-    - bash: |
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CCP_FULL_IMAGE_NAME)
-        if [ $? -ne 0 ]; then
-          exit 1
-        fi
-      workingDirectory: $(Build.SourcesDirectory)
-      displayName: "Build: run trivy scan"
-
-    - task: CodeQL3000Finalize@0
-      displayName: 'SDL: run codeql'
-
-    - task: ComponentGovernanceComponentDetection@0
-      displayName: "SDL: run component governance"
-      inputs:
-        scanType: 'Register'
-        verbosity: 'Verbose'
-        dockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
-        alertWarningLevel: 'High'
-        sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
-        ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
-
-    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      displayName: "Ev2: Generate image artifacts"
-      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-      inputs:
-        BuildDropPath: '$(Build.ArtifactStagingDirectory)/linuxccp'
-        DockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
-
-    - task: SdtReport@2
-      displayName: 'SDL: generate report'
-      inputs:
-        GdnExportAllTools: false
-        GdnExportGdnToolBinSkim: true
-        GdnExportGdnToolBinSkimSeverity: 'Note'
-        GdnExportGdnToolGosec: true
-        GdnExportGdnToolGosecSeverity: 'Note'
-        GdnExportGdnToolSemmle: true
-        GdnExportGdnToolSemmleSeverity: 'Note'
-
-    - task: PublishSecurityAnalysisLogs@3
-      displayName: 'SDL: publish report'
-      inputs:
-        ArtifactName: 'CodeAnalysisLogs'
-        ArtifactType: 'Container'
-        PublishProcessedResults: true
-        AllTools: true
-        ToolLogsNotFoundAction: 'Standard'
-
-    - task: PublishBuildArtifacts@1
-      displayName: "Ev2: Publish image artifacts"
-      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-      inputs:
-        pathToPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: drop
-
-    - task: PostAnalysis@2
-      displayName: 'SDL: Post-Build Analysis'
-      inputs:
-        GdnBreakAllTools: false
-        GdnBreakGdnToolBinSkim: true
-        GdnBreakGdnToolBinSkimSeverity: 'Warning'
-        GdnBreakGdnToolGosec: true
-        GdnBreakGdnToolGosecSeverity: 'Warning'
-        GdnBreakGdnToolSemmle: true
-        GdnBreakGdnToolSemmleSeverity: 'Warning'
-
-- job: Linux_Target_Allocator
-  displayName: "Build: target allocator image"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  dependsOn: Image_Tags_and_Ev2_Artifacts
-  variables:
-    TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-  # This is necessary because of: https://github.com/moby/moby/issues/37965
-    DOCKER_BUILDKIT: 1
-    skipComponentGovernanceDetection: true
-  steps:
-    - checkout: self
-      persistCredentials: true
-    - bash: |
-        mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
-
-        # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
-        sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
-        docker system prune --all -f
-
-        docker buildx create --name dockerbuilder
-        docker buildx use dockerbuilder
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
-        docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-        MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-        DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-        SIZE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-        cat <<EOF >>$(Build.ArtifactStagingDirectory)/targetallocator/payload.json
-        {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-        EOF
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
-      displayName: "Build: build and push target allocator image to dev ACR"
-      timeoutInMinutes: 120
-
-    - bash: |
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-      workingDirectory: $(Build.SourcesDirectory)
-      displayName: "Build: run trivy scan"
-
-
-    - task: EsrpCodeSigning@3
-      displayName: "ESRP CodeSigning for TargetAllocator"
-      inputs:
-        ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
-        FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
-        Pattern: "*.json"
-        signConfigType: inlineSignParams
-        inlineOperation: |
-          [
-            {
-                "keyCode": "CP-469451",
-                "operationSetCode": "NotaryCoseSign",
-                "parameters": [
-                  {
-                    "parameterName": "CoseFlags",
-                    "parameterValue": "chainunprotected"
-                  }
-                ],
-                "toolName": "sign",
-                "toolVersion": "1.0"
-            }
-          ]
-
-    - bash: |
-        set -euxo pipefail
-        curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
-        mkdir -p oras-install/
-        tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
-        sudo mv oras-install/oras /usr/local/bin/
-        rm -rf oras_1.0.0_*.tar.gz oras-install/
-        oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
-          --artifact-type 'application/vnd.cncf.notary.signature' \
-          ./payload.json:application/cose \
-          -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-      workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
-      displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
-      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
-
-- job: Linux_Config_Reader
-  displayName: "Build: config reader image"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  dependsOn: Image_Tags_and_Ev2_Artifacts
-  variables:
-    LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
-  # This is necessary because of: https://github.com/moby/moby/issues/37965
-    DOCKER_BUILDKIT: 1
-    skipComponentGovernanceDetection: true
-  steps:
-    - bash: |
-        mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
-
-        # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
-        sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-        docker system prune --all -f
-
-        docker buildx create --name dockerbuilder
-        docker buildx use dockerbuilder
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
-        docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
-        MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-        DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-        SIZE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-        cat <<EOF >>$(Build.ArtifactStagingDirectory)/linuxcfgreader/payload.json
-        {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-        EOF
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build and push configuration reader image to dev ACR"
-
-    - bash: |
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-        trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
-      workingDirectory: $(Build.SourcesDirectory)
-      displayName: "Build: run trivy scan"
-
-    - task: EsrpCodeSigning@3
-      displayName: "ESRP CodeSigning for Config Reader"
-      inputs:
-        ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
-        FolderPath: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
-        Pattern: "*.json"
-        signConfigType: inlineSignParams
-        inlineOperation: |
-          [
-            {
-                "keyCode": "CP-469451",
-                "operationSetCode": "NotaryCoseSign",
-                "parameters": [
-                  {
-                    "parameterName": "CoseFlags",
-                    "parameterValue": "chainunprotected"
-                  }
-                ],
-                "toolName": "sign",
-                "toolVersion": "1.0"
-            }
-          ]
-
-    - bash: |
-        set -euxo pipefail
-        curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
-        mkdir -p oras-install/
-        tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
-        sudo mv oras-install/oras /usr/local/bin/
-        rm -rf oras_1.0.0_*.tar.gz oras-install/
-        oras attach $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) \
-          --artifact-type 'application/vnd.cncf.notary.signature' \
-          ./payload.json:application/cose \
-          -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-      workingDirectory: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
-      displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxcfgreader/"
-      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
-
-- job: Windows2019_Prometheus_Collector
-  displayName: "Build: windows 2019 prometheus-collector image"
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-  timeoutInMinutes: 120
-  dependsOn:
-  - Image_Tags_and_Ev2_Artifacts
-  variables:
-    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
-    skipComponentGovernanceDetection: true
-  steps:
-    - task: GoTool@0
-      displayName: "Build: specify golang version"
-      inputs:
-        version: '1.20'
-
-    - powershell: |
-        ./makefile_windows.ps1
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
-
-    - powershell: |
-        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build WS2019 image"
-      retryCountOnTaskFailure: 2
-
-    - powershell: |
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
-      displayName: "Build: push image to dev ACR"
-
-- job: Windows2022_Prometheus_Collector
-  displayName: "Build: windows 2022 prometheus-collector image"
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-  timeoutInMinutes: 120
-  dependsOn:
-  - Image_Tags_and_Ev2_Artifacts
-  variables:
-    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
-    skipComponentGovernanceDetection: true
-  steps:
-    - task: GoTool@0
-      displayName: "Build: specify golang version"
-      inputs:
-        version: '1.20'
-
-    - powershell: |
-        ./makefile_windows.ps1
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-      displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
-
-    - powershell: |
-        docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: build WS2022 image"
-      retryCountOnTaskFailure: 2
-
-    - powershell: |
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-      displayName: "Build: push image to dev ACR"
-
-- job: WindowsMultiArch_Prometheus_Collector
-  displayName: "Build: windows multi-arch prometheus-collector image"
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-  timeoutInMinutes: 120
-  dependsOn:
-  - Image_Tags_and_Ev2_Artifacts
-  - Windows2019_Prometheus_Collector
-  - Windows2022_Prometheus_Collector
-  variables:
-    WINDOWS_IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-    WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
-    WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
-    WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
-    skipComponentGovernanceDetection: true
-  steps:
-    - task: GoTool@0
-      displayName: "Build: specify golang version"
-      inputs:
-        version: '1.20'
-
-    - bash: |
-        export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
-        export ACR_REPOSITORY_WITHOUT_SLASH="${ACR_REPOSITORY_VAR:1}"
-
-        export WINDOWS_2019_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
-        if [ $? -ne 0 ]; then
-          echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION). Checking if MCR image is published."
-          IMAGES_ARE_PUBLISHED=0
-          for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-            do
-              output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-              if (echo $output | grep $WINDOWS_2019_TAG)
-              then
-                echo "Images are published to mcr"
-                IMAGES_ARE_PUBLISHED=1
-                break
-              fi
-              sleep 30
-            done
-          if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
-            echo "Images are not published to mcr within the timeout"
-            exit 1
+stages:
+- stage: Build
+  jobs:
+  - job: Image_Tags_and_Ev2_Artifacts
+    displayName: "Build: Set image tags and publish Ev2 artifacts"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    variables:
+      skipComponentGovernanceDetection: true
+    steps:
+      - checkout: self
+        submodules: true
+      - bash: |
+          if [ $(IS_PR) == "True" ]; then
+            BRANCH_NAME=$(System.PullRequest.SourceBranch)
+          else
+            BRANCH_NAME=$(Build.SourceBranch)
+            BRANCH_NAME=${BRANCH_NAME#refs/heads/}
           fi
+          BRANCH_NAME=$(echo $BRANCH_NAME | tr / - | tr . - | tr _ - | cut -c1-90)
+          COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
+          DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
+          VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
+          SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
 
-          az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2019_TAG)
-        fi
+          LINUX_IMAGE_TAG=$SEMVER
+          # Truncating to 128 characters as it is required by docker
+          LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
+                  
+          #Truncating this to 124 to add the cfg suffix
+          LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
+          LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
+          LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
+          LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
 
-        export WINDOWS_2022_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2022_BASE_IMAGE_VERSION)"
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-        if [ $? -ne 0 ]; then
-          echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION). Checking if MCR image is published."
-          IMAGES_ARE_PUBLISHED=0
-          for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-            do
-              output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-              if (echo $output | grep $WINDOWS_2022_TAG)
-              then
-                echo "Images are published to mcr"
-                IMAGES_ARE_PUBLISHED=1
-                break
-              fi
-              sleep 30
-            done
-          if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
-            echo "Images are not published to mcr within the timeout"
-            exit 1
-          fi
+          #Truncating this to 113 to add the ref app suffices
+          LINUX_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-113)
+          LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
+          LINUX_REF_APP_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-python
 
-          az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2022_TAG)
-        fi
-      displayName: "Build: ensure images are present in ACR"
-      retryCountOnTaskFailure: 3
+          # Truncating to 115 characters as it is required by docker (4 characters used in -win and 9 characters used in -ltsc2019/-ltsc2022)
+          WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-115)
+          WINDOWS_IMAGE_TAG=$WINDOWS_IMAGE_TAG_PREFIX-win
 
-    - powershell: |
-        New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
-        @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
-        docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-        docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
-        docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
-      workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-      displayName: "Build: Windows multi-arch manifest"
 
-    - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-      displayName: "Ev2: generate image artifacts"
-      inputs:
-        BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
-        DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
+          #Truncating this to 112 characters to add the targetallocator suffix
+          TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-112)
+          TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
 
-    - powershell: |
-        $output = docker manifest inspect -v $(WINDOWS_FULL_IMAGE_NAME) | ConvertFrom-Json
-        $firstManifest = $output[0]
-        $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
-        $DIGEST = $firstManifest.Descriptor.digest
-        $SIZE = $firstManifest.Descriptor.size
-        $payload = @{
-            targetArtifact = @{
-                mediaType = $MEDIA_TYPE
-                digest = $DIGEST
-                size = $SIZE
-            }
-        } | ConvertTo-Json
+          #Truncating this to 113 to add the ref app suffices
+          WIN_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-107)
+          WIN_REF_APP_GOLANG_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-golang
+          WIN_REF_APP_PYTHON_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-python
 
-        $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/windows/payload.json"
-      workingDirectory: $(Build.ArtifactStagingDirectory)/windows
-      displayName: "Build the payload json file"
+          # Truncating to 119 characters as it is required by docker (9 characters used in -ltsc2019/-ltsc2022)
+          WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
+          WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
 
-    - task: EsrpCodeSigning@3
-      displayName: 'ESRP CodeSigning for Prometheus'
-      inputs:
-        ConnectedServiceName: 'ESRPServiceConnectionForPrometheusImages'
-        FolderPath: '$(Build.ArtifactStagingDirectory)/windows'
-        Pattern: '*.json'
-        signConfigType: inlineSignParams
-        inlineOperation: |
-          [
-            {
-                "keyCode": "CP-469451",
-                "operationSetCode": "NotaryCoseSign",
-                "parameters": [
-                  {
-                    "parameterName": "CoseFlags",
-                    "parameterValue": "chainunprotected"
-                  }
-                ],
-                "toolName": "sign",
-                "toolVersion": "1.0"
-            }
-          ]
+          LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
+          TARGET_ALLOCATOR_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_IMAGE_TAG
+          LINUX_CONFIG_READER_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CONFIG_READER_IMAGE_TAG
+          LINUX_CCP_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CCP_IMAGE_TAG
+          WINDOWS_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WINDOWS_IMAGE_TAG
+          HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$HELM_CHART_NAME:$SEMVER
+          ARC_HELM_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY_HELM/$ARC_HELM_CHART_NAME:$SEMVER
+          LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_GOLANG_IMAGE_TAG
+          LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_PYTHON_IMAGE_TAG
+          WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
+          WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_PYTHON_IMAGE_TAG
 
-    - powershell: |
-        curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
-        $currentDirectory = Get-Location
-        Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
-        New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
-        Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
-        $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
-        oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
-      workingDirectory: $(Build.ArtifactStagingDirectory)/windows
-      displayName: "Download, install Oras and run oras attach"
-      condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+          echo "##vso[build.updatebuildnumber]$SEMVER"
+          echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
+          echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_IMAGE_TAG;isOutput=true]$TARGET_ALLOCATOR_IMAGE_TAG"
+          echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_IMAGE_TAG;isOutput=true]$LINUX_CONFIG_READER_IMAGE_TAG"
+          echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_FULL_IMAGE_NAME;isOutput=true]$LINUX_CONFIG_READER_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=LINUX_CCP_FULL_IMAGE_NAME;isOutput=true]$LINUX_CCP_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=WINDOWS_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=WINDOWS_IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
+          echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2019_BASE_IMAGE_VERSION"
+          echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2022_BASE_IMAGE_VERSION"
+          echo "##vso[task.setvariable variable=HELM_CHART_NAME;isOutput=true]$HELM_CHART_NAME"
+          echo "##vso[task.setvariable variable=ARC_HELM_CHART_NAME;isOutput=true]$ARC_HELM_CHART_NAME"
+          echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$ARC_HELM_FULL_IMAGE_NAME"
+        displayName: 'Build: set image registry, repo, and tags'
+        name: setup
 
-    - task: PublishBuildArtifacts@1
-      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-      displayName: "Ev2: publish image artifacts"
-      inputs:
-        pathToPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: drop
+      - bash: |
+          cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts
+          cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
+          cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics-arc -r
+          export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
+          export MCR_REPOSITORY_HELM_DEPENDENCIES='/azuremonitor/containerinsights/ciprod'
+          export HELM_SEMVER=$SETUP_SEMVER
+          export IMAGE_TAG=$SETUP_SEMVER
+          export IMAGE_TAG_WINDOWS=$SETUP_WINDOWS_IMAGE_TAG
+          env
 
-- job: Arc_Helm_Chart
-  displayName: "Package: Arc helm chart"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  dependsOn:
-  - Image_Tags_and_Ev2_Artifacts
-  - Linux_Prometheus_Collector
-  variables:
-    HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-    IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-    IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-    ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
-    ARC_EXTENSION: true
-    skipComponentGovernanceDetection: true
-  steps:
-  - task: HelmInstaller@1
-    displayName: 'Build: install Helm version'
-    inputs:
-      helmVersionToInstall: 3.12.3
+          envsubst < prometheus-collector/Chart-template.yaml > prometheus-collector/Chart.yaml && envsubst < prometheus-collector/values-template.yaml > prometheus-collector/values.yaml
+          export ARC_EXTENSION=true
+          export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
+          envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
+          tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-arc
 
-  - bash: |
-      export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
-      envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-      helm version
-    displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
+          cd $(Build.ArtifactStagingDirectory)
+          cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
+          export HELM_CHART_NAME="ama-metrics"
+          export ARC_EXTENSION=false
+          export AKS_REGION="westeurope"
+          export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu"
+          envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
+        displayName: 'Ev2: package artifacts.tar.gz for prod release'
 
-  - bash: |
-      helm dep update
-    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-    displayName: "Build: update helm dependencies"
+      - bash: |
+          cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
+          tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
+        displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
 
-  - bash: |
-      helm package ./azure-monitor-metrics-addon/
-    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-    displayName: "Build: package helm chart"
+      - task: CredScan@3
+        displayName: "SDL : Run credscan"
 
-  - bash: |
-      helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-      helm push $(ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
-      mkdir -p $(Build.ArtifactStagingDirectory)/arc-chart
-      echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
-    workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
-    displayName: "Build: push helm chart to dev ACR"
+      - task: CopyFiles@2
+        displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
+        inputs:
+          SourceFolder: "$(Build.SourcesDirectory)/.pipelines/deployment"
+          Contents: |
+            **/*
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
 
-  - task: PublishBuildArtifacts@1
-    displayName: "Ev2: publish helm chart artifacts"
-    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-    inputs:
-      pathToPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: drop
+      - task: PublishBuildArtifacts@1
+        displayName: "Ev2: publish Ev2 deployment artifacts"
+        inputs:
+          pathToPublish: '$(Build.ArtifactStagingDirectory)'
+          artifactName: drop
 
-- job: Deploy_Chart_ARC
-  displayName: "Deploy: Arc dev cluster"
-  condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  dependsOn:
-  - Image_Tags_and_Ev2_Artifacts
-  - Arc_Helm_Chart
-  variables:
-    HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-    skipComponentGovernanceDetection: true
-  steps:
-  - bash: |
-      # Create JSON request body
-      cat <<EOF > "request.json"
-        {
-          "artifactEndpoints": [
+  - job: Linux_Golang_Reference_App
+    displayName: "Build: linux golang reference app image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      skipComponentGovernanceDetection: true
+      LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+    steps:
+      - checkout: self
+        persistCredentials: true
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/refappgolanglinux
+
+          docker buildx create --name dockerbuilder
+          docker buildx use dockerbuilder
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
+          docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+        displayName: "Build: build and push reference app golang linux image to dev ACR"
+
+  - job: Linux_Python_Reference_App
+    displayName: "Build: linux python reference app image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      skipComponentGovernanceDetection: true
+      LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+    steps:
+      - checkout: self
+        persistCredentials: true
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/refapppythonlinux
+
+          docker buildx create --name dockerbuilder
+          docker buildx use dockerbuilder
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
+          docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+        displayName: "Build: build and push reference app python linux image to dev ACR"
+
+  - job: Golang_Windows_Reference_App
+    displayName: "Build: windows golang reference app image"
+    pool:
+      name: Azure-Pipelines-Windows-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
+      skipComponentGovernanceDetection: true
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+    steps:
+      - powershell: |
+          docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker push $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+        displayName: "Build: build and push reference app golang windows image to dev ACR"
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+
+  - job: Windows_Python_Reference_App
+    displayName: "Build: windows python reference app image"
+    pool:
+      name: Azure-Pipelines-Windows-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+      skipComponentGovernanceDetection: true
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+    steps:
+      - powershell: |
+          docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+        displayName: "Build: build and push reference app python windows image to dev ACR"
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+
+  - job: SDL_Policheck_Scan
+    displayName: "SDL: policheck scanning"
+    pool:
+      name: Azure-Pipelines-Windows-CI-Test-EO
+    variables:
+      skipComponentGovernanceDetection: true
+    steps:
+      - checkout: self
+        submodules: true
+
+      - task: PoliCheck@2
+        displayName: "SDL : Run PoliCheck"
+        inputs:
+          targetType: 'F'
+          targetArgument: '$(Build.SourcesDirectory)'
+
+
+  - job: SDL_Binary_Scan
+    displayName: "SDL: linux binary scanning"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    variables:
+      skipComponentGovernanceDetection: true
+    steps:
+      - checkout: self
+        submodules: true
+
+      - task: CodeQL3000Init@0
+        displayName: 'SDL: init codeql'
+
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: '1.21.5'
+
+      - bash: |
+          sudo apt-get install build-essential -y
+          make
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+        displayName: "SDL: build otelcollector, promconfigvalidator, targetallocator, and fluent-bit plugin for scanning"
+        retryCountOnTaskFailure: 1
+
+      - task: BinSkim@4
+        displayName: 'SDL: run binskim'
+        inputs:
+          InputType: 'CommandLine'
+          arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+        retryCountOnTaskFailure: 1
+
+      - task: Gosec@1
+        displayName: 'SDL: run gosec'
+        inputs:
+          targetPattern: 'gosecPattern'
+          targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
+        retryCountOnTaskFailure: 1
+
+      - bash: |
+          wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
+          unzip DevSkim_linux_0.6.9.zip
+          chmod 775 DevSkim_linux_0.6.9/devskim
+          ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
+        displayName: 'SDL: run devskim'
+        workingDirectory: $(Build.SourcesDirectory)
+        retryCountOnTaskFailure: 1
+
+      - bash: |
+          sudo gem install brakeman -v 5.4.1
+          brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
+        displayName: 'SDL: run brakeman'
+        retryCountOnTaskFailure: 1
+
+  - job: Linux_Prometheus_Collector
+    displayName: "Build: linux prometheus-collector image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+    steps:
+      - checkout: self
+        submodules: true
+
+      - task: CodeQL3000Init@0
+        displayName: 'SDL: init codeql'
+
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: '1.20'
+
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/linux
+
+          # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+          sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+          docker system prune --all -f
+          docker images -q --filter "dangling=true" | xargs docker rmi
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+          docker buildx create --name dockerbuilder
+          docker buildx use dockerbuilder
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
+          docker pull $(LINUX_FULL_IMAGE_NAME)
+          docker system prune --all -f
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: "Build: build and push image to dev ACR"
+
+      - bash: |
+          MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+          DIGEST=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+          SIZE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+          cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
+          {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+          EOF
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: "Build: Set values in payload.json for signing"
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+
+      - task: EsrpCodeSigning@3
+        displayName: "ESRP CodeSigning for Prometheus"
+        inputs:
+          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
+          FolderPath: $(Build.ArtifactStagingDirectory)/linux/
+          Pattern: "*.json"
+          signConfigType: inlineSignParams
+          inlineOperation: |
+            [
               {
-                  "Regions": [
-                      "westcentralus"
+                  "keyCode": "CP-469451",
+                  "operationSetCode": "NotaryCoseSign",
+                  "parameters": [
+                    {
+                      "parameterName": "CoseFlags",
+                      "parameterValue": "chainunprotected"
+                    }
                   ],
-                  "Releasetrains": [
-                      "pipeline"
-                  ],
-                  "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/cidev/ama-metrics-arc",
-                  "ExtensionUpdateFrequencyInMinutes": 5,
-                  "IsCustomerHidden": true,
-                  "ReadyforRollout": true,
-                  "RollbackVersion": null,
-                  "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
+                  "toolName": "sign",
+                  "toolVersion": "1.0"
               }
-          ]
-        }
-      EOF
+            ]
 
-      # Send Request
-      SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
-      RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85"
-      SPN_CLIENT_ID="9a4c55e9-576a-450a-88bd-53bd634db38d"
-      SPN_TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
-      METHOD="PUT"
+      - bash: |
+          set -euxo pipefail
+          curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+          mkdir -p oras-install/
+          tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+          sudo mv oras-install/oras /usr/local/bin/
+          rm -rf oras_1.0.0_*.tar.gz oras-install/
+          oras attach $(LINUX_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.cncf.notary.signature' \
+            ./payload.json:application/cose \
+            -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+        workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
+        displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
-      echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER, SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
+      - bash: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
+          if [ $? -ne 0 ]; then
+            exit 1
+          fi
+          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
+          if [ $? -ne 0 ]; then
+            exit 1
+          fi
+          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
+          if [ $? -ne 0 ]; then
+            exit 1
+          fi
+        workingDirectory: $(Build.SourcesDirectory)
+        displayName: "Build: run trivy scan"
 
-      # MSI is not supported
-      echo "Login cli using spn"
-      az login --service-principal --username=$SPN_CLIENT_ID --password=$(ARC_SPN_SECRET) --tenant=$SPN_TENANT_ID
-      if [ $? -eq 0 ]; then
-        echo "Logged in successfully with spn"
-      else
-        echo "-e error failed to login to az with managed identity credentials"
-        exit 1
-      fi
+      - task: CodeQL3000Finalize@0
+        displayName: 'SDL: run codeql'
 
-      ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
-      if [ $? -eq 0 ]; then
-        echo "get access token from resource:$RESOURCE_AUDIENCE successfully."
-      else
-        echo "-e error get access token from resource:$RESOURCE_AUDIENCE failed."
-        exit 1
-      fi
-      ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '"' | tr -d '"\r\n')
+      - task: ComponentGovernanceComponentDetection@0
+        displayName: "SDL: run component governance"
+        inputs:
+          scanType: 'Register'
+          verbosity: 'Verbose'
+          dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
+          alertWarningLevel: 'High'
+          sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+          ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
 
-      ARC_API_URL="https://eastus2euap.dp.kubernetesconfiguration.azure.com"
-      EXTENSION_NAME="microsoft.azuremonitor.containers.metrics"
-      API_VERSION="2021-05-01"
+      - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+        displayName: "Ev2: Generate image artifacts"
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        inputs:
+          BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
+          DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
 
-      echo "start send request"
-      az rest --method $METHOD --headers "{\"Authorization\": \"Bearer $ACCESS_TOKEN\", \"Content-Type\": \"application/json\"}" --body @request.json --uri $ARC_API_URL/subscriptions/$SUBSCRIPTION/extensionTypeRegistrations/$EXTENSION_NAME/versions/$HELM_SEMVER?api-version=$API_VERSION
-      if [ $? -eq 0 ]; then
-        echo "arc extension registered successfully"
-      else
-        echo "-e error failed to register arc extension"
-        exit 1
-      fi
-    displayName: "Deploy: Release to dev release train"
+      - task: SdtReport@2
+        displayName: 'SDL: generate report'
+        inputs:
+          GdnExportAllTools: false
+          GdnExportGdnToolBinSkim: true
+          GdnExportGdnToolBinSkimSeverity: 'Note'
+          GdnExportGdnToolGosec: true
+          GdnExportGdnToolGosecSeverity: 'Note'
+          GdnExportGdnToolSemmle: true
+          GdnExportGdnToolSemmleSeverity: 'Note'
 
-  - task: AzureCLI@2
-    displayName: "Deploy: wait for ci-dev-arc-wcus cluster to be ready"
-    inputs:
-      azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-          do
-            state=$(az k8s-extension show --name azuremonitor-metrics --cluster-name ci-dev-arc-wcus --resource-group ci-dev-arc-wcus --cluster-type connectedClusters | jq -r '.provisioningState')
-            # We want to wait in case the status is 'Creating' or 'Updating' because of another PR merged shortly before the current one.
-            if [ "$state" = "Succeeded" ] || [ "$state" = "Failed" ]
-            then
-              echo "Cluster is ready to install extension"
-              exit 0
+      - task: PublishSecurityAnalysisLogs@3
+        displayName: 'SDL: publish report'
+        inputs:
+          ArtifactName: 'CodeAnalysisLogs'
+          ArtifactType: 'Container'
+          PublishProcessedResults: true
+          AllTools: true
+          ToolLogsNotFoundAction: 'Standard'
+
+      - task: PublishBuildArtifacts@1
+        displayName: "Ev2: Publish image artifacts"
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        inputs:
+          pathToPublish: '$(Build.ArtifactStagingDirectory)'
+          artifactName: drop
+
+      - task: PostAnalysis@2
+        displayName: 'SDL: Post-Build Analysis'
+        inputs:
+          GdnBreakAllTools: false
+          GdnBreakGdnToolBinSkim: true
+          GdnBreakGdnToolBinSkimSeverity: 'Warning'
+          GdnBreakGdnToolGosec: true
+          GdnBreakGdnToolGosecSeverity: 'Warning'
+          GdnBreakGdnToolSemmle: true
+          GdnBreakGdnToolSemmleSeverity: 'Warning'
+
+  - job: Linux_CCP_Prometheus_Collector
+    displayName: "Build: linux CCP prometheus-collector image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+    steps:
+      - checkout: self
+        submodules: true
+
+      - task: CodeQL3000Init@0
+        displayName: 'SDL: init codeql'
+
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: '1.20'
+
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
+
+          # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+          sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+          docker system prune --volumes -y
+          docker system prune --all -f
+          docker images -q --filter "dangling=true" | xargs docker rmi
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+          docker buildx create --name dockerbuilder
+          docker buildx use dockerbuilder
+          docker buildx build . --platform=linux/amd64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
+          docker pull $(LINUX_CCP_FULL_IMAGE_NAME)
+          docker system prune --all -f
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: "Build: build and push CCP image to dev ACR"
+
+      - bash: |
+          MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+          DIGEST=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+          SIZE=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+          cat <<EOF >>$(Build.ArtifactStagingDirectory)/linuxccp/payload.json
+          {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+          EOF
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: "Build: Set values in payload.json for signing"
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+
+      - task: EsrpCodeSigning@3
+        displayName: "ESRP CodeSigning for Prometheus"
+        inputs:
+          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
+          FolderPath: $(Build.ArtifactStagingDirectory)/linuxccp/
+          Pattern: "*.json"
+          signConfigType: inlineSignParams
+          inlineOperation: |
+            [
+              {
+                  "keyCode": "CP-469451",
+                  "operationSetCode": "NotaryCoseSign",
+                  "parameters": [
+                    {
+                      "parameterName": "CoseFlags",
+                      "parameterValue": "chainunprotected"
+                    }
+                  ],
+                  "toolName": "sign",
+                  "toolVersion": "1.0"
+              }
+            ]
+
+      - bash: |
+          set -euxo pipefail
+          curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+          mkdir -p oras-install/
+          tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+          sudo mv oras-install/oras /usr/local/bin/
+          rm -rf oras_1.0.0_*.tar.gz oras-install/
+          oras attach $(LINUX_CCP_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.cncf.notary.signature' \
+            ./payload.json:application/cose \
+            -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+        workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
+        displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+
+      - bash: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CCP_FULL_IMAGE_NAME)
+          if [ $? -ne 0 ]; then
+            exit 1
+          fi
+        workingDirectory: $(Build.SourcesDirectory)
+        displayName: "Build: run trivy scan"
+
+      - task: CodeQL3000Finalize@0
+        displayName: 'SDL: run codeql'
+
+      - task: ComponentGovernanceComponentDetection@0
+        displayName: "SDL: run component governance"
+        inputs:
+          scanType: 'Register'
+          verbosity: 'Verbose'
+          dockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
+          alertWarningLevel: 'High'
+          sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+          ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
+
+      - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+        displayName: "Ev2: Generate image artifacts"
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        inputs:
+          BuildDropPath: '$(Build.ArtifactStagingDirectory)/linuxccp'
+          DockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
+
+      - task: SdtReport@2
+        displayName: 'SDL: generate report'
+        inputs:
+          GdnExportAllTools: false
+          GdnExportGdnToolBinSkim: true
+          GdnExportGdnToolBinSkimSeverity: 'Note'
+          GdnExportGdnToolGosec: true
+          GdnExportGdnToolGosecSeverity: 'Note'
+          GdnExportGdnToolSemmle: true
+          GdnExportGdnToolSemmleSeverity: 'Note'
+
+      - task: PublishSecurityAnalysisLogs@3
+        displayName: 'SDL: publish report'
+        inputs:
+          ArtifactName: 'CodeAnalysisLogs'
+          ArtifactType: 'Container'
+          PublishProcessedResults: true
+          AllTools: true
+          ToolLogsNotFoundAction: 'Standard'
+
+      - task: PublishBuildArtifacts@1
+        displayName: "Ev2: Publish image artifacts"
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        inputs:
+          pathToPublish: '$(Build.ArtifactStagingDirectory)'
+          artifactName: drop
+
+      - task: PostAnalysis@2
+        displayName: 'SDL: Post-Build Analysis'
+        inputs:
+          GdnBreakAllTools: false
+          GdnBreakGdnToolBinSkim: true
+          GdnBreakGdnToolBinSkimSeverity: 'Warning'
+          GdnBreakGdnToolGosec: true
+          GdnBreakGdnToolGosecSeverity: 'Warning'
+          GdnBreakGdnToolSemmle: true
+          GdnBreakGdnToolSemmleSeverity: 'Warning'
+
+  - job: Linux_Target_Allocator
+    displayName: "Build: target allocator image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+      skipComponentGovernanceDetection: true
+    steps:
+      - checkout: self
+        persistCredentials: true
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+
+          # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+          sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+          docker system prune --all -f
+
+          docker buildx create --name dockerbuilder
+          docker buildx use dockerbuilder
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
+          docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+          MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+          DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+          SIZE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+          cat <<EOF >>$(Build.ArtifactStagingDirectory)/targetallocator/payload.json
+          {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+          EOF
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
+        displayName: "Build: build and push target allocator image to dev ACR"
+
+      - bash: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+        workingDirectory: $(Build.SourcesDirectory)
+        displayName: "Build: run trivy scan"
+
+
+      - task: EsrpCodeSigning@3
+        displayName: "ESRP CodeSigning for TargetAllocator"
+        inputs:
+          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
+          FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
+          Pattern: "*.json"
+          signConfigType: inlineSignParams
+          inlineOperation: |
+            [
+              {
+                  "keyCode": "CP-469451",
+                  "operationSetCode": "NotaryCoseSign",
+                  "parameters": [
+                    {
+                      "parameterName": "CoseFlags",
+                      "parameterValue": "chainunprotected"
+                    }
+                  ],
+                  "toolName": "sign",
+                  "toolVersion": "1.0"
+              }
+            ]
+
+      - bash: |
+          set -euxo pipefail
+          curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+          mkdir -p oras-install/
+          tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+          sudo mv oras-install/oras /usr/local/bin/
+          rm -rf oras_1.0.0_*.tar.gz oras-install/
+          oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.cncf.notary.signature' \
+            ./payload.json:application/cose \
+            -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+        workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
+        displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+
+  - job: Linux_Config_Reader
+    displayName: "Build: config reader image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+      skipComponentGovernanceDetection: true
+    steps:
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
+
+          # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+          sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          docker system prune --all -f
+
+          docker buildx create --name dockerbuilder
+          docker buildx use dockerbuilder
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
+          docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
+          MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+          DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+          SIZE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+          cat <<EOF >>$(Build.ArtifactStagingDirectory)/linuxcfgreader/payload.json
+          {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+          EOF
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: "Build: build and push configuration reader image to dev ACR"
+
+      - bash: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
+        workingDirectory: $(Build.SourcesDirectory)
+        displayName: "Build: run trivy scan"
+
+      - task: EsrpCodeSigning@3
+        displayName: "ESRP CodeSigning for Config Reader"
+        inputs:
+          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
+          FolderPath: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
+          Pattern: "*.json"
+          signConfigType: inlineSignParams
+          inlineOperation: |
+            [
+              {
+                  "keyCode": "CP-469451",
+                  "operationSetCode": "NotaryCoseSign",
+                  "parameters": [
+                    {
+                      "parameterName": "CoseFlags",
+                      "parameterValue": "chainunprotected"
+                    }
+                  ],
+                  "toolName": "sign",
+                  "toolVersion": "1.0"
+              }
+            ]
+
+      - bash: |
+          set -euxo pipefail
+          curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+          mkdir -p oras-install/
+          tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+          sudo mv oras-install/oras /usr/local/bin/
+          rm -rf oras_1.0.0_*.tar.gz oras-install/
+          oras attach $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.cncf.notary.signature' \
+            ./payload.json:application/cose \
+            -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+        workingDirectory: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
+        displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxcfgreader/"
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+
+  - job: Windows2019_Prometheus_Collector
+    displayName: "Build: windows 2019 prometheus-collector image"
+    pool:
+      name: Azure-Pipelines-Windows-CI-Test-EO
+    timeoutInMinutes: 120
+    dependsOn:
+    - Image_Tags_and_Ev2_Artifacts
+    variables:
+      WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+      WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
+      skipComponentGovernanceDetection: true
+    steps:
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: '1.20'
+
+      - powershell: |
+          ./makefile_windows.ps1
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+        displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+
+      - powershell: |
+          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: "Build: build WS2019 image"
+        retryCountOnTaskFailure: 2
+
+      - powershell: |
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+        displayName: "Build: push image to dev ACR"
+
+  - job: Windows2022_Prometheus_Collector
+    displayName: "Build: windows 2022 prometheus-collector image"
+    pool:
+      name: Azure-Pipelines-Windows-CI-Test-EO
+    timeoutInMinutes: 120
+    dependsOn:
+    - Image_Tags_and_Ev2_Artifacts
+    variables:
+      WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+      WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+      skipComponentGovernanceDetection: true
+    steps:
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: '1.20'
+
+      - powershell: |
+          ./makefile_windows.ps1
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+        displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
+
+      - powershell: |
+          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: "Build: build WS2022 image"
+        retryCountOnTaskFailure: 2
+
+      - powershell: |
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+        displayName: "Build: push image to dev ACR"
+
+  - job: WindowsMultiArch_Prometheus_Collector
+    displayName: "Build: windows multi-arch prometheus-collector image"
+    pool:
+      name: Azure-Pipelines-Windows-CI-Test-EO
+    timeoutInMinutes: 120
+    dependsOn:
+    - Image_Tags_and_Ev2_Artifacts
+    - Windows2019_Prometheus_Collector
+    - Windows2022_Prometheus_Collector
+    variables:
+      WINDOWS_IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
+      WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
+      WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
+      skipComponentGovernanceDetection: true
+    steps:
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: '1.20'
+
+      - bash: |
+          export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
+          export ACR_REPOSITORY_WITHOUT_SLASH="${ACR_REPOSITORY_VAR:1}"
+
+          export WINDOWS_2019_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2019_BASE_IMAGE_VERSION)"
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+          if [ $? -ne 0 ]; then
+            echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION). Checking if MCR image is published."
+            IMAGES_ARE_PUBLISHED=0
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+              do
+                output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                if (echo $output | grep $WINDOWS_2019_TAG)
+                then
+                  echo "Images are published to mcr"
+                  IMAGES_ARE_PUBLISHED=1
+                  break
+                fi
+                sleep 30
+              done
+            if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
+              echo "Images are not published to mcr within the timeout"
+              exit 1
             fi
-            sleep 30
-          done
-          echo "Cluster is installing a different version of the extension"
-          exit 1
-      retryCountOnTaskFailure: 5
 
-  - task: AzureCLI@2
-    displayName: "Deploy: ci-dev-arc-wcus cluster"
-    inputs:
-      azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        az config set extension.use_dynamic_install=yes_without_prompt
-        az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
+            az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2019_TAG)
+          fi
 
-- job: Deploy_AKS_Chart
-  displayName: "Deploy: AKS dev cluster"
-  pool:
-    name: Azure-Pipelines-CI-Test-EO
-  condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-  dependsOn:
-  - Image_Tags_and_Ev2_Artifacts
-  - Linux_Prometheus_Collector
-  - Linux_Config_Reader
-  - Linux_Target_Allocator
-  - WindowsMultiArch_Prometheus_Collector
-  variables:
-    HELM_CHART_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
-    HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-    IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-    IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-    IMAGE_TAG_TARGET_ALLOCATOR: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
-    IMAGE_TAG_CONFIG_READER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
-    skipComponentGovernanceDetection: true
-  steps:
-  - checkout: self
-    submodules: true
-    persistCredentials: true
-
-  - bash: |
-      git config --global user.name "AzureDevOps Agent"
-      git tag "v$(HELM_SEMVER)"
-      git push origin "v$(HELM_SEMVER)"
-    displayName: Tag commit with semver
-
-  - task: HelmInstaller@1
-    displayName: Install Helm version
-    inputs:
-      helmVersionToInstall: 3.12.3
-  - bash: |
-      for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-          do
-            sleep 30
-            echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
-
-            output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
-            if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
-            then
-              echo "Images are published to mcr"
-              exit 0
+          export WINDOWS_2022_TAG="$(WINDOWS_IMAGE_TAG)-$(WINDOWS_2022_BASE_IMAGE_VERSION)"
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+          if [ $? -ne 0 ]; then
+            echo "Failed to pull $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION). Checking if MCR image is published."
+            IMAGES_ARE_PUBLISHED=0
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+              do
+                output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                if (echo $output | grep $WINDOWS_2022_TAG)
+                then
+                  echo "Images are published to mcr"
+                  IMAGES_ARE_PUBLISHED=1
+                  break
+                fi
+                sleep 30
+              done
+            if [ IMAGES_ARE_PUBLISHED -eq 0 ]; then
+              echo "Images are not published to mcr within the timeout"
+              exit 1
             fi
-          done
-          echo "Images are not published to mcr within the timeout"
-          exit 1
-    displayName: "Check images are pushed to dev MCR"
-    retryCountOnTaskFailure: 5
 
-  - bash: |
-      export AKS_REGION="eastus"
-      export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
-      export ARC_EXTENSION="false"
-      envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
-      ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-      cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
-      helm dependency update
-    displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
+            az acr import --name $(ACR_REGISTRY) --source $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG) --image $(ACR_REPOSITORY_WITHOUT_SLASH):$(WINDOWS_2022_TAG)
+          fi
+        displayName: "Build: ensure images are present in ACR"
+        retryCountOnTaskFailure: 3
 
-  - task: HelmDeploy@0
-    displayName: "Deploy: ci-dev-aks-mac-eus cluster"
-    inputs:
-      connectionType: 'Azure Resource Manager'
-      azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-      azureResourceGroup: 'ci-dev-aks-mac-eus-rg'
-      kubernetesCluster: 'ci-dev-aks-mac-eus'
-      namespace: 'default'
-      command: 'upgrade'
-      chartType: 'FilePath'
-      chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
-      releaseName: 'ama-metrics'
-      waitForExecution: false
-      arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+      - powershell: |
+          New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "windows" -ItemType "directory"
+          @{"image.name"="$(WINDOWS_FULL_IMAGE_NAME)"} | ConvertTo-Json -Compress | Out-File -Encoding ascii $(Build.ArtifactStagingDirectory)/windows/metadata.json
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker manifest create $(WINDOWS_FULL_IMAGE_NAME) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+          docker manifest push $(WINDOWS_FULL_IMAGE_NAME)
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: "Build: Windows multi-arch manifest"
+
+      - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        displayName: "Ev2: generate image artifacts"
+        inputs:
+          BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
+          DockerImagesToScan: '$(WINDOWS_FULL_IMAGE_NAME)'
+
+      - powershell: |
+          $output = docker manifest inspect -v $(WINDOWS_FULL_IMAGE_NAME) | ConvertFrom-Json
+          $firstManifest = $output[0]
+          $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
+          $DIGEST = $firstManifest.Descriptor.digest
+          $SIZE = $firstManifest.Descriptor.size
+          $payload = @{
+              targetArtifact = @{
+                  mediaType = $MEDIA_TYPE
+                  digest = $DIGEST
+                  size = $SIZE
+              }
+          } | ConvertTo-Json
+
+          $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/windows/payload.json"
+        workingDirectory: $(Build.ArtifactStagingDirectory)/windows
+        displayName: "Build the payload json file"
+
+      - task: EsrpCodeSigning@3
+        displayName: 'ESRP CodeSigning for Prometheus'
+        inputs:
+          ConnectedServiceName: 'ESRPServiceConnectionForPrometheusImages'
+          FolderPath: '$(Build.ArtifactStagingDirectory)/windows'
+          Pattern: '*.json'
+          signConfigType: inlineSignParams
+          inlineOperation: |
+            [
+              {
+                  "keyCode": "CP-469451",
+                  "operationSetCode": "NotaryCoseSign",
+                  "parameters": [
+                    {
+                      "parameterName": "CoseFlags",
+                      "parameterValue": "chainunprotected"
+                    }
+                  ],
+                  "toolName": "sign",
+                  "toolVersion": "1.0"
+              }
+            ]
+
+      - powershell: |
+          curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
+          $currentDirectory = Get-Location
+          Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
+          New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
+          Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
+          $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
+          oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
+        workingDirectory: $(Build.ArtifactStagingDirectory)/windows
+        displayName: "Download, install Oras and run oras attach"
+        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+
+      - task: PublishBuildArtifacts@1
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        displayName: "Ev2: publish image artifacts"
+        inputs:
+          pathToPublish: '$(Build.ArtifactStagingDirectory)'
+          artifactName: drop
+
+  - job: Arc_Helm_Chart
+    displayName: "Package: Arc helm chart"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn:
+    - Image_Tags_and_Ev2_Artifacts
+    - Linux_Prometheus_Collector
+    variables:
+      HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      ARC_HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_HELM_FULL_IMAGE_NAME'] ]
+      ARC_EXTENSION: true
+      skipComponentGovernanceDetection: true
+    steps:
+    - task: HelmInstaller@1
+      displayName: 'Build: install Helm version'
+      inputs:
+        helmVersionToInstall: 3.12.3
+
+    - bash: |
+        export HELM_CHART_NAME=$ARC_HELM_CHART_NAME
+        envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+        helm version
+      displayName: "Build: substitute chart version in Chart.yaml and values.yaml"
+
+    - bash: |
+        helm dep update
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+      displayName: "Build: update helm dependencies"
+
+    - bash: |
+        helm package ./azure-monitor-metrics-addon/
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
+      displayName: "Build: package helm chart"
+
+    - bash: |
+        helm registry login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+        helm push $(ARC_HELM_CHART_NAME)-$(HELM_SEMVER).tgz oci://$(ACR_REGISTRY)$(ACR_REPOSITORY_HELM)
+        mkdir -p $(Build.ArtifactStagingDirectory)/arc-chart
+        echo {\"image.name\":\"$(ARC_HELM_FULL_IMAGE_NAME)\"} > $(Build.ArtifactStagingDirectory)/arc-chart/metadata.json
+      workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/
+      displayName: "Build: push helm chart to dev ACR"
+
+    - task: PublishBuildArtifacts@1
+      displayName: "Ev2: publish helm chart artifacts"
+      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: drop
+
+- stage: Deploy
+  jobs:
+  - deployment: Deploy_Chart_ARC
+    displayName: "Deploy: Arc dev cluster"
+    condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(failed('Deploy_Chart_ARC'), eq(variables['System.StageAttempt'], 1))))
+    environment: Prometheus-Collector
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    variables:
+      HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      skipComponentGovernanceDetection: true
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - bash: |
+              # Create JSON request body
+              cat <<EOF > "request.json"
+                {
+                  "artifactEndpoints": [
+                      {
+                          "Regions": [
+                              "westcentralus"
+                          ],
+                          "Releasetrains": [
+                              "pipeline"
+                          ],
+                          "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/cidev/ama-metrics-arc",
+                          "ExtensionUpdateFrequencyInMinutes": 5,
+                          "IsCustomerHidden": true,
+                          "ReadyforRollout": true,
+                          "RollbackVersion": null,
+                          "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
+                      }
+                  ]
+                }
+              EOF
+
+              # Send Request
+              SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
+              RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85"
+              SPN_CLIENT_ID="9a4c55e9-576a-450a-88bd-53bd634db38d"
+              SPN_TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
+              METHOD="PUT"
+
+              echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER, SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
+
+              # MSI is not supported
+              echo "Login cli using spn"
+              az login --service-principal --username=$SPN_CLIENT_ID --password=$(ARC_SPN_SECRET) --tenant=$SPN_TENANT_ID
+              if [ $? -eq 0 ]; then
+                echo "Logged in successfully with spn"
+              else
+                echo "-e error failed to login to az with managed identity credentials"
+                exit 1
+              fi
+
+              ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
+              if [ $? -eq 0 ]; then
+                echo "get access token from resource:$RESOURCE_AUDIENCE successfully."
+              else
+                echo "-e error get access token from resource:$RESOURCE_AUDIENCE failed."
+                exit 1
+              fi
+              ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '"' | tr -d '"\r\n')
+
+              ARC_API_URL="https://eastus2euap.dp.kubernetesconfiguration.azure.com"
+              EXTENSION_NAME="microsoft.azuremonitor.containers.metrics"
+              API_VERSION="2021-05-01"
+
+              echo "start send request"
+              az rest --method $METHOD --headers "{\"Authorization\": \"Bearer $ACCESS_TOKEN\", \"Content-Type\": \"application/json\"}" --body @request.json --uri $ARC_API_URL/subscriptions/$SUBSCRIPTION/extensionTypeRegistrations/$EXTENSION_NAME/versions/$HELM_SEMVER?api-version=$API_VERSION
+              if [ $? -eq 0 ]; then
+                echo "arc extension registered successfully"
+              else
+                echo "-e error failed to register arc extension"
+                exit 1
+              fi
+            displayName: "Deploy: Release to dev release train"
+
+          - task: AzureCLI@2
+            displayName: "Deploy: wait for ci-dev-arc-wcus cluster to be ready"
+            inputs:
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                  do
+                    state=$(az k8s-extension show --name azuremonitor-metrics --cluster-name ci-dev-arc-wcus --resource-group ci-dev-arc-wcus --cluster-type connectedClusters | jq -r '.provisioningState')
+                    # We want to wait in case the status is 'Creating' or 'Updating' because of another PR merged shortly before the current one.
+                    if [ "$state" = "Succeeded" ] || [ "$state" = "Failed" ]
+                    then
+                      echo "Cluster is ready to install extension"
+                      exit 0
+                    fi
+                    sleep 30
+                  done
+                  echo "Cluster is installing a different version of the extension"
+                  exit 1
+              retryCountOnTaskFailure: 5
+
+          - task: AzureCLI@2
+            displayName: "Deploy: ci-dev-arc-wcus cluster"
+            inputs:
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az config set extension.use_dynamic_install=yes_without_prompt
+                az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
+
+  - deployment: Deploy_AKS_Chart
+    displayName: "Deploy: AKS dev cluster"
+    environment: Prometheus-Collector
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(failed('Deploy_AKS_Chart'), eq(variables['System.StageAttempt'], 1)))
+    variables:
+      HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+      HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+      IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
+      IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+      skipComponentGovernanceDetection: true
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            submodules: true
+            persistCredentials: true
+
+          - bash: |
+              git config --global user.name "AzureDevOps Agent"
+              git tag "v$(HELM_SEMVER)"
+              git push origin "v$(HELM_SEMVER)"
+            displayName: Tag commit with semver
+
+          - task: HelmInstaller@1
+            displayName: Install Helm version
+            inputs:
+              helmVersionToInstall: 3.12.3
+          - bash: |
+              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                  do
+                    sleep 30
+                    echo $(MCR_REGISTRY)$(MCR_REPOSITORY):$(IMAGE_TAG_WINDOWS)
+                    output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                    if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
+                    then
+                      echo "Images are published to mcr"
+                      exit 0
+                    fi
+                  done
+                  echo "Images are not published to mcr within the timeout"
+                  exit 1
+            displayName: "Check images are pushed to dev MCR"
+            retryCountOnTaskFailure: 5
+          - bash: |
+              export AKS_REGION="eastus"
+              export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
+              export ARC_EXTENSION="false"
+              envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+              ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+              cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+              helm dependency update
+            displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
+          - task: HelmDeploy@0
+            displayName: "Deploy: ci-dev-aks-mac-eus cluster"
+            inputs:
+              connectionType: 'Azure Resource Manager'
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              azureResourceGroup: 'ci-dev-aks-mac-eus-rg'
+              kubernetesCluster: 'ci-dev-aks-mac-eus'
+              namespace: 'default'
+              command: 'upgrade'
+              chartType: 'FilePath'
+              chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+              releaseName: 'ama-metrics'
+              waitForExecution: false
+              arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+
+  - deployment: Testkube
+    displayName: "Test: AKS testkube tests"
+    environment: Prometheus-Collector
+    dependsOn: Deploy_AKS_Chart
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+    variables:
+      HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+      HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+      skipComponentGovernanceDetection: true
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - bash: |
+              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
+              sudo apt-get update
+              sudo apt-get install -y testkube
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install testkube CLI"
+
+          - task: AzureCLI@1
+            displayName: Get kubeconfig
+            inputs:
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az aks get-credentials -g ci-dev-aks-mac-eus-rg -n ci-dev-aks-mac-eus'
+          
+          - bash: |
+              kubectl apply -f ./testkube
+              kubectl apply -f ./test-cluster-yamls
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+            displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
+
+          - bash: |
+              sleep 180
+            displayName: "Wait for cluster to be ready"
+
+          - bash: |
+              # Run the full test suite
+              kubectl testkube run testsuite e2e-tests-merge --verbose
+
+              # Get the current id of the test suite now running
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
+
+              # Watch until the all the tests in the test suite finish
+              kubectl testkube watch testsuiteexecution $execution_id
+
+              # Get the results as a formatted json file
+              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
+
+              # For any test that has failed, print out the Ginkgo logs
+              if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
+
+                # Get each test name and id that failed
+                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
+                  testName=$(echo $line | cut -d ' ' -f 1)
+                  id=$(echo $line | cut -d ' ' -f 2)
+                  echo "Test $testName failed. Test ID: $id"
+
+                  # Get the Ginkgo logs of the test
+                  kubectl testkube get execution $id > out 2>error.log
+
+                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
+                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
+                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+                done
+
+                # Explicitly fail the ADO task since at least one test failed
+                exit 1
+              fi
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Run tests"
