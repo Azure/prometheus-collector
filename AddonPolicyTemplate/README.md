@@ -1,6 +1,6 @@
 You can create the policy definition using a command like :
 
-```az policy definition create --name "Prometheus Metrics addon" --display-name "Prometheus Metrics addon" --mode Indexed --metadata version=1.0.0 category=Kubernetes --rules .\AddonPolicyMetricsProfile.rules.json --params .\AddonPolicyMetricsProfile.parameters.json```
+```az policy definition create --name "Prometheus Metrics addon" --display-name "Prometheus Metrics addon" --mode Indexed --metadata version=1.0.0 category=Kubernetes --rules ./AddonPolicyMetricsProfile.rules.json --params ./AddonPolicyMetricsProfile.parameters.json```
 
 **NOTE**
 
