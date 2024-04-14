@@ -185,24 +185,38 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
 	message := "\ntargetallocator is running."
 
-	if taConfigUpdated {
-		if taLivenessStartTime.IsZero() {
-			taLivenessStartTime = time.Now()
-		}
-		duration := time.Since(taLivenessStartTime)
-		// Serve the response of ServiceUnavailable for 60s and then reset
-		if duration.Seconds() < 60 {
-			status = http.StatusServiceUnavailable
-			message += "targetallocator-config changed"
-		} else {
-			taConfigUpdated = false
-			taLivenessStartTime = time.Time{}
-		}
-	}
+	resp, _ := http.Get("http://localhost:8080/metrics")
+	// if err != nil {
+	// 	fmt.Printf("Error making http request to get metrics from TA", err)
+	// }
 
-	w.WriteHeader(status)
-	fmt.Fprintln(w, message)
-	if status != http.StatusOK {
+	if resp != nil && resp.StatusCode == http.StatusOK {
+		if taConfigUpdated {
+			if taLivenessStartTime.IsZero() {
+				taLivenessStartTime = time.Now()
+			}
+			duration := time.Since(taLivenessStartTime)
+			// Serve the response of ServiceUnavailable for 60s and then reset
+			if duration.Seconds() < 60 {
+				status = http.StatusServiceUnavailable
+				message += "targetallocator-config changed"
+			} else {
+				taConfigUpdated = false
+				taLivenessStartTime = time.Time{}
+			}
+		}
+
+		w.WriteHeader(status)
+		fmt.Fprintln(w, message)
+		if status != http.StatusOK {
+			fmt.Printf(message)
+			writeTerminationLog(message)
+		}
+	} else {
+		message = "\ncall to get TA metrics failed"
+		status = http.StatusServiceUnavailable
+		w.WriteHeader(status)
+		fmt.Fprintln(w, message)
 		fmt.Printf(message)
 		writeTerminationLog(message)
 	}
