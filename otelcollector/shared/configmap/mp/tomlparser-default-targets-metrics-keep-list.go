@@ -79,8 +79,9 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 	configMap["kappiebasic"] = getStringValue(tree.Get("kappiebasic"))
 	configMap["windowsexporter"] = getStringValue(tree.Get("windowsexporter"))
 	configMap["windowskubeproxy"] = getStringValue(tree.Get("windowskubeproxy"))
-	configMap["networkobservabilityretinaregex"] = getStringValue(tree.Get("networkobservabilityretinaregex"))
-	configMap["networkobservabilityhubbleregex"] = getStringValue(tree.Get("networkobservabilityhubbleregex"))
+	configMap["networkobservabilityRetina"] = getStringValue(tree.Get("networkobservabilityRetina"))
+	configMap["networkobservabilityHubble"] = getStringValue(tree.Get("networkobservabilityHubble"))
+	configMap["networkobservabilityCilium"] = getStringValue(tree.Get("networkobservabilityCilium"))
 	configMap["minimalingestionprofile"] = getStringValue(tree.Get("minimalingestionprofile"))
 
 	// Print the content of the config map
