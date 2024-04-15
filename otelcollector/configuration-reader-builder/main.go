@@ -15,6 +15,7 @@ type Config struct {
 	LabelSelector      map[string]string      `yaml:"label_selector,omitempty"`
 	Config             map[string]interface{} `yaml:"config"`
 	AllocationStrategy string                 `yaml:"allocation_strategy,omitempty"`
+	FilterStrategy     string                 `yaml:"filter_strategy,omitempty"`
 }
 
 type OtelConfig struct {
@@ -126,6 +127,7 @@ func updateTAConfigFile(configFilePath string) {
 
 	targetAllocatorConfig := Config{
 		AllocationStrategy: "consistent-hashing",
+		FilterStrategy:     "relabel-config",
 		LabelSelector: map[string]string{
 			"rsName":                         "ama-metrics",
 			"kubernetes.azure.com/managedby": "aks",
