@@ -163,18 +163,8 @@ func main() {
 		return
 	}
 
-	cmd = exec.Command("bash", "-c", "source /etc/mdsd.d/envmdsd")
-	if err := cmd.Run(); err != nil {
-		fmt.Println("Error sourcing envmdsd file:", err)
-		return
-	}
-
-	fmt.Println("Env variables from envmdsd file set successfully.")
 	fmt.Println("Starting MDSD")
-	// ********************************************************************************************************************************************
-	// Need to update startMdsd with correct log files
-	// ********************************************************************************************************************************************
-	shared.StartMdsd()
+	shared.StartMdsdForOverlay()
 
 	// update this to use color coding
 	shared.PrintMdsdVersion()
@@ -212,10 +202,18 @@ func main() {
 
 	if controllerType == "replicaset" && azmonOperatorEnabled == "true" {
 		fmt.Println("Starting otelcollector in replicaset with Target allocator settings")
-		collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-replicaset.yml"
+		if ccpMetricsEnabled == "true" {
+			collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-replicaset.yml"
+		} else {
+			collectorConfig = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
+		}
 	} else if azmonUseDefaultPrometheusConfig == "true" {
 		fmt.Println("Starting otelcollector with only default scrape configs enabled")
-		collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
+		if ccpMetricsEnabled == "true" {
+			collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
+		} else {
+			collectorConfig = "/opt/microsoft/otelcollector/collector-config-default.yml"
+		}
 	} else {
 		collectorConfig = "/opt/microsoft/otelcollector/collector-config.yml"
 	}

@@ -196,6 +196,24 @@ func StartMetricsExtensionWithConfigOverrides(configOverrides string) {
 	}
 }
 
+func StartMdsdForOverlay() {
+	mdsdLog := os.Getenv("MDSD_LOG")
+	if mdsdLog == "" {
+		fmt.Println("MDSD_LOG environment variable is not set")
+		return
+	}
+
+	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-e", mdsdLog+"/mdsd.err", "-w", mdsdLog+"/mdsd.warn", "-o", mdsdLog+"/mdsd.info", "-q", mdsdLog+"/mdsd.qos")
+	// Redirect stderr to /dev/null
+	cmd.Stderr = nil
+	// Start the command
+	err := cmd.Start()
+	if err != nil {
+		fmt.Printf("Error starting mdsd: %v\n", err)
+		return
+	}
+}
+
 func StartMdsd() {
 	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-D")
 	// // Create a file to store the stdoutput

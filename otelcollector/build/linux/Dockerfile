@@ -125,6 +125,14 @@ ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAw
 ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
 # Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
+# Set environment variables for mdsd
+ENV MDSD_LOG="/opt/microsoft/linuxmonagent"
+ENV SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
+ENV MDSD_FLUENT_SOCKET_PORT="28230"
+ENV ENABLE_MCS="true"
+ENV MONITORING_USE_GENEVA_CONFIG_SERVICE="false"
+ENV MDSD_USE_LOCAL_PERSISTENCY="false"
+ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
 ENV TELEMETRY_DISABLED false
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
 ENV MALLOC_ARENA_MAX=2
