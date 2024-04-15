@@ -65,7 +65,9 @@ func newPrometheusReceiver(set receiver.CreateSettings, cfg *Config, next consum
 		settings:            set,
 		configLoaded:        make(chan struct{}),
 		targetAllocatorStop: make(chan struct{}),
-		registerer:          prometheus.DefaultRegisterer,
+		registerer: prometheus.WrapRegistererWith(
+			prometheus.Labels{"receiver": set.ID.String()},
+			prometheus.DefaultRegisterer),
 	}
 	return pr
 }
@@ -87,18 +89,15 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 		return err
 	}
 
-	prometheusAPIExtensionConf := r.cfg.PrometheusAPIServerExtension
-	if prometheusAPIExtensionConf != nil  && prometheusAPIExtensionConf.Enabled {
+	prometheusAPIServerExtensionConf := r.cfg.PrometheusAPIServerExtension
+	if prometheusAPIServerExtensionConf != nil  && prometheusAPIServerExtensionConf.Enabled {
 		fmt.Println("Prometheus API Extension enabled")
 		extensions := host.GetExtensions()
 		for id, ext := range extensions {
-			fmt.Printf("Extension ID: %s\n", id.Name())
-			fmt.Printf("%v\n", id.Type() == component.MustNewType("prometheus_api_server_extension"))
-			if id.Type() == component.MustNewType("prometheus_api_server_extension") {
+			if id.Type() == component.MustNewType("prometheus_api_server") {
 				r.apiExtension = ext
-				fmt.Printf("apiExtension: %v\n", r.apiExtension)
-				extRegisterer := r.apiExtension.(interface{ RegisterPrometheusReceiverComponents(*config.Config, *scrape.Manager, prometheus.Registerer) error})
-				extRegisterer.RegisterPrometheusReceiverComponents((*config.Config)(baseCfg), r.scrapeManager, r.registerer)
+				extRegisterer := ext.(interface{ RegisterPrometheusReceiverComponents(string, string, *config.Config, *scrape.Manager, prometheus.Registerer) error })
+				extRegisterer.RegisterPrometheusReceiverComponents(r.settings.ID.Name(), prometheusAPIServerExtensionConf.Endpoint, (*config.Config)(baseCfg), r.scrapeManager, r.registerer)
 			}
 		}
 	}
@@ -262,8 +261,8 @@ func (r *pReceiver) applyCfg(cfg *PromConfig) error {
 	}
 
 	if r.cfg.PrometheusAPIServerExtension != nil && r.apiExtension != nil && r.cfg.PrometheusAPIServerExtension.Enabled {
-		ext := r.apiExtension.(interface{ UpdatePrometheusConfig(*config.Config) })
-		ext.UpdatePrometheusConfig((*config.Config)(cfg))
+		ext := r.apiExtension.(interface{ UpdatePrometheusConfig(string, *config.Config ) })
+		ext.UpdatePrometheusConfig(r.settings.ID.Name(), (*config.Config)(cfg) )
 	}
 
 	return nil

@@ -1,4 +1,4 @@
-type: prometheus_api_server_extension
+type: prometheus_api_server
 
 status:
   class: extension
