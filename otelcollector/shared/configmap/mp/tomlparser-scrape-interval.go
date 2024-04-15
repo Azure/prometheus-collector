@@ -82,13 +82,13 @@ func processConfigMap() map[string]string {
 			if kappieBasicInterval := configMapSettings.Get("kappiebasic").(string); kappieBasicInterval != "" {
 				intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = checkDuration(kappieBasicInterval)
 			}
-			if networkObservabilityRetinaInterval := configMapSettings.Get("networkobservabilityretina").(string); networkObservabilityRetinaInterval != "" {
+			if networkObservabilityRetinaInterval := configMapSettings.Get("networkobservabilityRetina").(string); networkObservabilityRetinaInterval != "" {
 				intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = checkDuration(networkObservabilityRetinaInterval)
 			}
-			if networkObservabilityHubbleInterval := configMapSettings.Get("networkobservabilityhubble").(string); networkObservabilityHubbleInterval != "" {
+			if networkObservabilityHubbleInterval := configMapSettings.Get("networkobservabilityHubble").(string); networkObservabilityHubbleInterval != "" {
 				intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = checkDuration(networkObservabilityHubbleInterval)
 			}
-			if networkObservabilityCiliumInterval := configMapSettings.Get("networkobservabilitycilium").(string); networkObservabilityCiliumInterval != "" {
+			if networkObservabilityCiliumInterval := configMapSettings.Get("networkobservabilityCilium").(string); networkObservabilityCiliumInterval != "" {
 				intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = checkDuration(networkObservabilityCiliumInterval)
 			}
 		}
