@@ -70,14 +70,12 @@ func StartCommandWithOutputFile(command string, args []string, outputFile string
 
 	// Create goroutines to continuously read and write stdout and stderr
 	go func() {
-		defer file.Close()
 		if _, err := io.Copy(file, stdout); err != nil {
 			fmt.Printf("Error copying stdout to file: %v\n", err)
 		}
 	}()
 
 	go func() {
-		defer file.Close()
 		if _, err := io.Copy(file, stderr); err != nil {
 			fmt.Printf("Error copying stderr to file: %v\n", err)
 		}
