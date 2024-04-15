@@ -232,35 +232,6 @@ func main() {
 		shared.FmtVar("PROMETHEUS_VERSION", prometheusVersion)
 	}
 
-	fmt.Println("starting telegraf")
-
-	if telemetryDisabled := os.Getenv("TELEMETRY_DISABLED"); telemetryDisabled != "true" {
-		controllerType := os.Getenv("CONTROLLER_TYPE")
-		azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
-
-		var telegrafConfig string
-
-		switch {
-		case controllerType == "ReplicaSet" && azmonOperatorEnabled == "true":
-			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector-ta-enabled.conf"
-		case controllerType == "ReplicaSet":
-			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector.conf"
-		default:
-			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector-ds.conf"
-		}
-
-		telegrafCmd := exec.Command("/usr/bin/telegraf", "--config", telegrafConfig)
-		telegrafCmd.Stdout = os.Stdout
-		telegrafCmd.Stderr = os.Stderr
-		if err := telegrafCmd.Start(); err != nil {
-			fmt.Println("Error starting telegraf:", err)
-			return
-		}
-
-		telegrafVersion, _ := os.ReadFile("/opt/telegrafversion.txt")
-		fmt.Printf("TELEGRAF_VERSION=%s\n", string(telegrafVersion))
-	}
-
 	fmt.Println("starting fluent-bit")
 
 	if err := os.Mkdir("/opt/microsoft/fluent-bit", 0755); err != nil && !os.IsExist(err) {
@@ -319,37 +290,6 @@ func main() {
 		telegrafVersion, _ := os.ReadFile("/opt/telegrafversion.txt")
 		fmt.Printf("TELEGRAF_VERSION=%s\n", string(telegrafVersion))
 	}
-
-	fmt.Println("starting fluent-bit")
-
-	if err := os.Mkdir("/opt/microsoft/fluent-bit", 0755); err != nil && !os.IsExist(err) {
-		fmt.Println("Error creating directory:", err)
-		return
-	}
-
-	logFile, err = os.Create("/opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log")
-	if err != nil {
-		fmt.Println("Error creating log file:", err)
-		return
-	}
-	logFile.Close()
-
-	fluentBitCmd = exec.Command("fluent-bit", "-c", os.Getenv("FLUENT_BIT_CONFIG_FILE"), "-e", "/opt/fluent-bit/bin/out_appinsights.so")
-	fluentBitCmd.Stdout = os.Stdout
-	fluentBitCmd.Stderr = os.Stderr
-	if err := fluentBitCmd.Start(); err != nil {
-		fmt.Println("Error starting fluent-bit:", err)
-		return
-	}
-
-	fluentBitVersionCmd = exec.Command("fluent-bit", "--version")
-	fluentBitVersionCmd.Stdout = os.Stdout
-	if err := fluentBitVersionCmd.Run(); err != nil {
-		fmt.Println("Error getting fluent-bit version:", err)
-		return
-	}
-
-	fmt.Printf("FLUENT_BIT_CONFIG_FILE=%s\n", os.Getenv("FLUENT_BIT_CONFIG_FILE"))
 
 	// Start inotify to watch for changes
 	fmt.Println("Starting inotify for watching mdsd config update")
