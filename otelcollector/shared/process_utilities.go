@@ -146,6 +146,16 @@ func copyOutputFile(src io.Reader, file *os.File) {
 	}
 }
 
+func StartMetricsExtensionForOverlay(meConfigFile string) {
+	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+	// Start the command
+	err := cmd.Start()
+	if err != nil {
+		fmt.Printf("Error starting MetricsExtension: %v\n", err)
+		return
+	}
+}
+
 func StartMetricsExtensionWithConfigOverrides(configOverrides string) {
 	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 

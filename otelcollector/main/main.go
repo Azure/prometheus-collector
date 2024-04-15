@@ -172,11 +172,8 @@ func main() {
 	fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
 	time.Sleep(30 * time.Second)
 
-	// ********************************************************************************************************************************************
-	// Start MetricsExtension with config overrides correctly for overlay pods
-	// ********************************************************************************************************************************************
 	fmt.Println("Starting metricsextension with config overrides")
-	shared.StartMetricsExtensionWithConfigOverrides(meConfigFile)
+	shared.StartMetricsExtensionForOverlay(meConfigFile)
 
 	// Get ME version
 	meVersion, err := shared.ReadVersionFile("/opt/metricsextversion.txt")
