@@ -44,7 +44,6 @@ const (
 	windowsKubeProxyDefaultFileRsSimpleFile      = defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsSimple.yml"
 	windowsKubeProxyDefaultDsFile                = defaultPromConfigPathPrefix + "windowskubeproxyDefaultDs.yml"
 	podAnnotationsDefaultFile                    = defaultPromConfigPathPrefix + "podannotationsDefault.yml"
-	windowsKubeProxyDefaultRsAdvancedFile        = defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
 	kappieBasicDefaultFileDs                     = defaultPromConfigPathPrefix + "kappieBasicDefaultDs.yml"
 	networkObservabilityRetinaDefaultFileDs      = defaultPromConfigPathPrefix + "networkobservabilityRetinaDefaultDs.yml"
 	networkObservabilityHubbleDefaultFileDs      = defaultPromConfigPathPrefix + "networkobservabilityHubbleDefaultDs.yml"
@@ -774,8 +773,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 		nodeExporterDefaultFileRsSimple, nodeExporterDefaultFileRsAdvanced, nodeExporterDefaultFileDs,
 		prometheusCollectorHealthDefaultFile, windowsExporterDefaultRsSimpleFile, windowsExporterDefaultDsFile,
 		windowsKubeProxyDefaultFileRsSimpleFile, windowsKubeProxyDefaultDsFile, podAnnotationsDefaultFile,
-		windowsKubeProxyDefaultRsAdvancedFile, kappieBasicDefaultFileDs,
-		networkObservabilityRetinaDefaultFileDs, networkObservabilityHubbleDefaultFileDs,
+		kappieBasicDefaultFileDs, networkObservabilityRetinaDefaultFileDs, networkObservabilityHubbleDefaultFileDs,
 		networkObservabilityCiliumDefaultFileDs,
 	}
 

@@ -216,7 +216,7 @@ func main() {
 	}
 
 	fmt.Println("startCommand otelcollector")
-	shared.StartCommand("/opt/microsoft/otelcollector/otelcollector", "--config", collectorConfig)
+	shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 
 	otelCollectorVersion, err := exec.Command("/opt/microsoft/otelcollector/otelcollector", "--version", "").Output()
 	if err != nil {

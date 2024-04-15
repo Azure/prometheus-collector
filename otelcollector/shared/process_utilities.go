@@ -39,6 +39,53 @@ func IsProcessRunning(processName string) bool {
 	return false
 }
 
+func StartCommandWithOutputFile(command string, args []string, outputFile string) error {
+	cmd := exec.Command(command, args...)
+
+	// Set environment variables from os.Environ()
+	cmd.Env = append(os.Environ())
+
+	// Create file to write stdout and stderr
+	file, err := os.Create(outputFile)
+	if err != nil {
+		return fmt.Errorf("error creating output file: %v", err)
+	}
+	defer file.Close()
+
+	// Create pipes to capture stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("error creating stdout pipe: %v", err)
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("error creating stderr pipe: %v", err)
+	}
+
+	// Start the command
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("error starting command: %v", err)
+	}
+
+	// Create goroutines to continuously read and write stdout and stderr
+	go func() {
+		defer file.Close()
+		if _, err := io.Copy(file, stdout); err != nil {
+			fmt.Printf("Error copying stdout to file: %v\n", err)
+		}
+	}()
+
+	go func() {
+		defer file.Close()
+		if _, err := io.Copy(file, stderr); err != nil {
+			fmt.Printf("Error copying stderr to file: %v\n", err)
+		}
+	}()
+
+	return nil
+}
+
 func StartCommand(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
