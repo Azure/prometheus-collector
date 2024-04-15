@@ -76,10 +76,12 @@ spec:
             path: /health-ta
             port: 8081
           initialDelaySeconds: 60
-          periodSeconds: 3
+          timeoutSeconds: 5
+          periodSeconds: 15
+          failureThreshold: 3
       - name: config-reader
-        #image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
-        image: "docker.io/"
+        image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
+        # image: "docker.io/rashmichandrashekarms/ta:cfg-reader-liveness-1"
         imagePullPolicy: IfNotPresent
         resources:
           limits:
