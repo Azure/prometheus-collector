@@ -1,0 +1,151 @@
+AzureMonitorMetrics:
+  KubeStateMetrics:
+# Uncomment the below 2 settings if you want to pass in the labels and/or annotations
+    #MetricLabelsAllowlist: "testlabel=[.*]"
+    #MetricAnnotationsAllowList: ""
+    ImageRepository: "/oss/kubernetes/kube-state-metrics"
+# Kube-state-metrics ImageTag - 2.9.2, corresponds to chart version - 5.10.1
+    ImageTag: "v2.9.2"
+    Collectors:
+      - certificatesigningrequests
+      - configmaps
+      - cronjobs
+      - daemonsets
+      - deployments
+      - endpoints
+      - horizontalpodautoscalers
+      - ingresses
+      - jobs
+      - leases
+      - limitranges
+      - mutatingwebhookconfigurations
+      - namespaces
+      - networkpolicies
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - poddisruptionbudgets
+      - pods
+      - replicasets
+      - replicationcontrollers
+      - resourcequotas
+      - secrets
+      - services
+      - statefulsets
+      - storageclasses
+      - validatingwebhookconfigurations
+      - volumeattachments
+  ImageRepository: ${MCR_REPOSITORY}
+  ImageTag: ${IMAGE_TAG}
+  ImageTagWin: ${IMAGE_TAG}-win
+  RsCPULimit: 7
+  RsMemoryLimit: 14Gi
+  RsCPURequest: 150m
+  RsMemoryRequest: 500Mi
+  DsCPULimitLinux: 200m
+  DsMemoryLimitLinux: 1Gi
+  DsCPURequestLinux: 50m
+  DsMemoryRequestLinux: 150Mi
+  DsCPULimitWindows: 500m
+  DsMemoryLimitWindows: 1Gi
+  ImageTagTargetAllocator: ${IMAGE_TAG}-targetallocator
+  ImageTagCfgReader: ${IMAGE_TAG}-cfg
+  TargetAllocatorEnabled: true
+  DeploymentReplicas: 1
+  CfgReaderCPULimit: 1
+  CfgReaderMemoryLimit: 1Gi
+  CfgReaderCPURequest: 1m
+  CfgReaderMemoryRequest: 10Mi
+  TargetAllocatorCPULimit: 5
+  TargetAllocatorMemoryLimit: 8Gi
+  TargetAllocatorCPURequest: 10m
+  TargetAllocatorMemoryRequest: 50Mi
+  IsAppMonitoringAutoInstrumentationEnabled: false
+  IsAppMonitoringOpenTelemetryMetricsEnabled: false
+  OpenTelemetryMetricsPort: "28333"
+  # The below 2 settings are not Azure Monitor Metrics adapter chart. They are substituted in a different manner.
+  # Please update these with the latest ones from here so that you get the image that is currently deployed by the AKS RP -
+  # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
+  # ImageTag: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/kube-control-plane/templates/_images.tpl&version=GBrashmi/prom-addon-arm64&line=530&lineEnd=530&lineStartColumn=28&lineEndColumn=53&lineStyle=plain&_a=contents
+  AddonTokenAdapter:
+    ImageRepository: "/aks/msi/addon-token-adapter"
+    ImageTag: "master.230804.1"
+    ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
+    ImageTagWin: "master.240102.1"
+  ArcExtension: ${ARC_EXTENSION}
+  ArcEnableOperator: false
+  # Do not change the below settings. They are reserved for Arc Autonomous
+  isArcACluster: false
+  arcAutonomousSettings:
+    customRegionalEndpoint: ""
+    customGlobalEndpoint: ""
+    customResourceEndpoint: ""
+global:
+  commonGlobals:
+    CloudEnvironment: "azurepubliccloud"
+    Region: "${AKS_REGION}"
+    Customer:
+      AzureResourceID: ${AKS_RESOURCE_ID}
+
+# For ARC backdoor testing
+Azure:
+  Extension:
+    Name: azuremonitor-metrics
+  Cluster:
+    ResourceId: "${ARC_RESOURCE_ID}"
+    Region: "${ARC_REGION}"
+    Cloud: "azurepubliccloud"
+    Distribution: ""
+  proxySettings:
+    isProxyEnabled: "false"
+    httpProxy: ""
+    httpsProxy: ""
+    noProxy: ""
+    proxyCert: ""
+  Identity:
+      MSIAdapterYaml: |-
+        - name: EXTENSION_ARMID
+          value: ${ARC_RESOURCE_ID}/providers/Microsoft.KubernetesConfiguration/extensions/azuremonitor-metrics
+        - name: EXTENSION_NAME
+          value: azuremonitor-metrics
+        - name: CLUSTER_IDENTITY
+          value: "false"
+        - name: CLUSTER_TYPE
+          value:  ConnectedClusters
+        - name: MANAGED_IDENTITY_AUTH
+          value: "true"
+        - name: TEST_MODE
+          value: "false"
+        - name: TEST_FILE
+          value: "/data/token"
+        image: "mcr.microsoft.com/azurearck8s/msi-adapter:1.0.4"
+        securityContext:
+          capabilities:
+            add:
+              - NET_ADMIN
+              - NET_RAW
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9999
+            scheme: "HTTP"
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        resources:
+          limits:
+            cpu: 50m
+            memory: 100Mi
+          requests:
+            cpu: 20m
+            memory: 50Mi
+ClusterDistribution: ""
+CloudEnvironment: "azurepubliccloud"
+prometheus-node-exporter:
+  service:
+    enabled: true
+    port: 9110
+    targetPort: 9110
+  image:
+    registry: mcr.microsoft.com
+    repository: oss/prometheus/node-exporter
+tolerationsOnlyForControlPlane: false
