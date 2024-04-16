@@ -168,6 +168,7 @@ func updateTAConfigFile(configFilePath string) {
 
 	log.Println("Updated file - targetallocator.yaml for the TargetAllocator to pick up new config changes")
 	taConfigUpdated = true
+	taLivenessStartTime = time.Now()
 }
 
 func hasConfigChanged(filePath string) bool {
@@ -191,17 +192,19 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 
 	// if resp != nil && resp.StatusCode == http.StatusOK {
 	if taConfigUpdated {
-		if taLivenessStartTime.IsZero() {
-			taLivenessStartTime = time.Now()
-		}
-		duration := time.Since(taLivenessStartTime)
-		// Serve the response of ServiceUnavailable for 60s and then reset
-		if duration.Seconds() < 60 {
-			status = http.StatusServiceUnavailable
-			message += "targetallocator-config changed"
-		} else {
-			taConfigUpdated = false
-			taLivenessStartTime = time.Time{}
+		// if taLivenessStartTime.IsZero() {
+		// 	taLivenessStartTime = time.Now()
+		// }
+		if !taLivenessStartTime.IsZero() {
+			duration := time.Since(taLivenessStartTime)
+			// Serve the response of ServiceUnavailable for 60s and then reset
+			if duration.Seconds() < 60 {
+				status = http.StatusServiceUnavailable
+				message += "targetallocator-config changed"
+			} else {
+				taConfigUpdated = false
+				taLivenessStartTime = time.Time{}
+			}
 		}
 	}
 
