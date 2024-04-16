@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - sohambugfixmultipleaioutputs
 
 pr:
   autoCancel: true
@@ -52,7 +53,7 @@ stages:
           LINUX_IMAGE_TAG=$SEMVER
           # Truncating to 128 characters as it is required by docker
           LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
-                  
+
           #Truncating this to 124 to add the cfg suffix
           LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
           LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
@@ -1284,7 +1285,7 @@ stages:
               azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
               scriptLocation: 'inlineScript'
               inlineScript: 'az aks get-credentials -g ci-dev-aks-mac-eus-rg -n ci-dev-aks-mac-eus'
-          
+
           - bash: |
               kubectl apply -f ./testkube
               kubectl apply -f ./test-cluster-yamls
