@@ -17,7 +17,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-
 	"fmt"
 	"net/http"
 	"net/http/pprof"
@@ -108,25 +107,16 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-// UpdateScrapeConfigResponse updates the scrape config response. The target allocator first marshals these
-// configurations such that the underlying prometheus marshaling is used. After that, the YAML is converted
-// in to a JSON format for consumers to use.
-func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.ScrapeConfig) error {
-	var configBytes []byte
-	configBytes, err := yaml.Marshal(configs)
-	if err != nil {
-		return err
-	}
-	var jsonConfig []byte
-	jsonConfig, err = yaml2.YAMLToJSON(configBytes)
-	if err != nil {
-		return err
-	}
-
+// RemoveRegexFromRelabelAction is needed specifically for keepequal/dropequal actions because even though the user doesn't specify the
+// regex field for these actions the unmarshalling implementations of prometheus adds back the default regex fields
+// which in turn causes the receiver to error out since the unmarshaling of the json response doesn't expect anything in the regex fields
+// for these actions. Adding this as a fix until the original issue with prometheus unmarshaling is fixed -
+// https://github.com/prometheus/prometheus/issues/12534
+func RemoveRegexFromRelabelAction(jsonConfig []byte) ([]byte, error) {
 	var jobToScrapeConfig map[string]interface{}
-	err = json.Unmarshal(jsonConfig, &jobToScrapeConfig)
+	err := json.Unmarshal(jsonConfig, &jobToScrapeConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, scrapeConfig := range jobToScrapeConfig {
 		scrapeConfig := scrapeConfig.(map[string]interface{})
@@ -155,6 +145,28 @@ func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.Scrap
 	}
 
 	jsonConfigNew, err := json.Marshal(jobToScrapeConfig)
+	if err != nil {
+		return nil, err
+	}
+	return jsonConfigNew, nil
+}
+
+// UpdateScrapeConfigResponse updates the scrape config response. The target allocator first marshals these
+// configurations such that the underlying prometheus marshaling is used. After that, the YAML is converted
+// in to a JSON format for consumers to use.
+func (s *Server) UpdateScrapeConfigResponse(configs map[string]*promconfig.ScrapeConfig) error {
+	var configBytes []byte
+	configBytes, err := yaml.Marshal(configs)
+	if err != nil {
+		return err
+	}
+	var jsonConfig []byte
+	jsonConfig, err = yaml2.YAMLToJSON(configBytes)
+	if err != nil {
+		return err
+	}
+
+	jsonConfigNew, err := RemoveRegexFromRelabelAction(jsonConfig)
 	if err != nil {
 		return err
 	}

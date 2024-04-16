@@ -121,7 +121,6 @@ func CreateDefaultConfig() Config {
 	return Config{
 		AllocationStrategy: DefaultAllocationStrategy,
 		FilterStrategy:     DefaultFilterStrategy,
-		// FilterStrategy: "",
 		PrometheusCR: PrometheusCRConfig{
 			ScrapeInterval: DefaultCRScrapeInterval,
 		},

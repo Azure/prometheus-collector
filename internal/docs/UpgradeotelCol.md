@@ -6,7 +6,7 @@ Get latest release version and latest prometheusreceiver code:
 2. git clone https://github.com/open-telemetry/opentelemetry-collector-contrib.git
 3. git checkout tags/<tag_name> -b <branch_name>   tag name will be in the format of v0.x.x and branch name is your local branch name. You can name it whatever you want
 
-**opentelemetry-collector-builder**
+### opentelemetry-collector-builder
 * update go.mod to new collector version for all components
 * update the `Version` in `main.go`
 * `go.mod`: add the replace directives:
@@ -30,8 +30,17 @@ Get latest release version and latest prometheusreceiver code:
 * run `go mod tidy`
 * try to build to check for any breaking changes to the interfaces used: run `make`
 
-**prometheus-receiver**
+### prometheus-receiver
 * copy over new folder
+* delete testdata directory
+* metrics_receiver.go: rename internal package "github.com/gracewehner/prometheusreceiver/internal"
+* factory.go: rename internal package "github.com/gracewehner/prometheusreceiver/internal/metadata"
+### go.mod 
+* rename module
+* remove replacements at the end
+### Prometheus version
+Find new version of github.com/prometheus/prometheus. Put this version in the file /otelcollector/opentelemetry-collector-builder/PROMETHEUS_VERSION
+
 * `go.mod`: rename module
 * `go.mod`: remove replacements at the end
 * Find the new version of `github.com/prometheus/prometheus` in the `go.sum`. Put this version in the file `/otelcollector/opentelemetry-collector-builder/PROMETHEUS_VERSION`
@@ -80,6 +89,22 @@ Get latest release version and latest prometheusreceiver code:
 * metrics_receiver.go: add extra import packages at the top
 * metrics_receiver.go: add constants at the top
 internal/otlp_transaction.go: in Append() function before if len(t.externalLabels) != 0 (currently line 92) add labels = labels.Copy() -->
+### prom-config-validator-builder
+* update go.mod to new collector version for all components
+* copy the second block of go.mod from the latest of go.mod of opentelemetry-collector-builder 
+* try to build to check for any breaking changes to the interfaces used: 
+* Run - go mod tidy
+* Run - make
+
+
+### web handler changes to be added 
+
+### opentelemetry-collector-builder - 
+* go mod tidy
+* make
+
+### Update golang versions
+* Update go versions in the dockerfiles for build to use the same version in the above components
 
 <!-- Code block for web handler (This will be moved to extension)
 ```
@@ -137,7 +162,7 @@ module github.com/gracewehner/prometheusreceiver
 
 ## TargetAllocator Update
 Get latest release version and latest prometheusreceiver code:
-1. Check for the latest release here: https://github.com/open-telemetry/opentelemetry-operator/releases
+1. Check for the latest release here: https://github.com/open-telemetry/opentelemetry-operator/releases (Pick the same version as opentelemetry-collector)
 2. git clone https://github.com/open-telemetry/opentelemetry-operator.git
 3. git checkout tags/<tag_name> -b <branch_name>   tag name will be in the format of v0.x.x and branch name is your local branch name. 
 4. Copy the folder otel-allocator
@@ -145,8 +170,10 @@ Get latest release version and latest prometheusreceiver code:
 ```
 go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now -s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com' -o main . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now -s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com'
 ```
-6. Update main.go to include ARC EULA
+6. Update main.go to include ARC EULA (lines 69-73)
 7. Update go.mod file in the otel-allocator folder with the go.mod of the opentelemetry-operator file.
-8. Run go mod tidy from the otel-allocator directory.
-9. Update any dependencies in go.mod of configuration-reader-builder to match versions in go.mod of otel-allocator
-10. Run go mod tidy from configuration-reader-builder directory
+8. Run go mod tidy from the otel-allocator directory and then run make.
+
+### Configuration Reader Builder
+1. Update the version of operator in go.mod of configuration-reader-builder to match versions in go.mod of otel-allocator
+2. Run go mod tidy from configuration-reader-builder directory and then run make

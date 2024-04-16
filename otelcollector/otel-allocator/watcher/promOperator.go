@@ -82,7 +82,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		},
 	}
 
-	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowDebug())
+	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowWarn())
 	generator, err := prometheus.NewConfigGenerator(promOperatorLogger, prom, true)
 
 	if err != nil {
@@ -310,14 +310,11 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 
 	if w.resourceSelector != nil {
 		serviceMonitorInstances, err := w.resourceSelector.SelectServiceMonitors(ctx, w.informers[monitoringv1.ServiceMonitorName].ListAllByNamespace)
-		w.logger.Info("sm instances found-", "sm", len(serviceMonitorInstances))
 		if err != nil {
 			return nil, err
 		}
 
 		podMonitorInstances, err := w.resourceSelector.SelectPodMonitors(ctx, w.informers[monitoringv1.PodMonitorName].ListAllByNamespace)
-		w.logger.Info("pm instances found-", "pm", len(podMonitorInstances))
-
 		if err != nil {
 			return nil, err
 		}
