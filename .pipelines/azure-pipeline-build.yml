@@ -1302,7 +1302,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
 
           - bash: |
-              sleep 180
+              sleep 240
 
               exit 0
             displayName: "Wait for cluster to be ready"
