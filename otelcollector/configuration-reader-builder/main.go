@@ -23,6 +23,7 @@ type Config struct {
 	Config             map[string]interface{}             `yaml:"config"`
 	AllocationStrategy string                             `yaml:"allocation_strategy,omitempty"`
 	PrometheusCR       allocatorconfig.PrometheusCRConfig `yaml:"prometheus_cr,omitempty"`
+	FilterStrategy     string                             `yaml:"filter_strategy,omitempty"`
 }
 
 type OtelConfig struct {
@@ -137,6 +138,7 @@ func updateTAConfigFile(configFilePath string) {
 
 	targetAllocatorConfig := Config{
 		AllocationStrategy: "consistent-hashing",
+		FilterStrategy:     "relabel-config",
 		CollectorSelector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				"rsName":                         "ama-metrics",
