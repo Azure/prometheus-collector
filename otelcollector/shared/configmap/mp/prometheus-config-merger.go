@@ -152,19 +152,17 @@ func UpdateScrapeIntervalConfig(yamlConfigFile string, scrapeIntervalSetting str
 	}
 }
 
-func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
+func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
 	fmt.Printf("Adding keep list regex or minimal ingestion regex for %s\n", yamlConfigFile)
 
 	content, err := os.ReadFile(yamlConfigFile)
 	if err != nil {
-		fmt.Printf("Error reading config file %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
-		return
+		return fmt.Errorf("error reading config file %s: %v. The keep list regex will not be used", yamlConfigFile, err)
 	}
 
 	var config map[string]interface{}
 	if err := yaml.Unmarshal(content, &config); err != nil {
-		fmt.Printf("Error unmarshalling YAML for %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
-		return
+		return fmt.Errorf("error unmarshalling YAML for %s: %v. The keep list regex will not be used", yamlConfigFile, err)
 	}
 
 	keepListMetricRelabelConfig := map[string]interface{}{
@@ -175,25 +173,41 @@ func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
 		for _, scfg := range scrapeConfigs {
-			if scfgMap, ok := scfg.(map[string]interface{}); ok {
-				if metricRelabelCfgs, ok := scfgMap["metric_relabel_configs"].([]interface{}); ok {
-					scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
-				} else {
-					scfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
+			// Check if the type of scfg is a map with interface{} keys and values
+			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
+				// Convert scfgMap to map[string]interface{}
+				stringScfgMap := make(map[string]interface{})
+				for k, v := range scfgMap {
+					if key, ok := k.(string); ok {
+						stringScfgMap[key] = v
+					} else {
+						return fmt.Errorf("encountered non-string key in scrape config map: %v", k)
+					}
 				}
+				if metricRelabelCfgs, ok := stringScfgMap["metric_relabel_configs"].([]interface{}); ok {
+					stringScfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
+				} else {
+					stringScfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
+				}
+
+				// Convert back to map[interface{}]interface{} for yaml.Marshal
+				interfaceScfgMap := make(map[interface{}]interface{})
+				for k, v := range stringScfgMap {
+					interfaceScfgMap[k] = v
+				}
+				config["scrape_configs"] = []interface{}{interfaceScfgMap}
 			}
 		}
-
 		if cfgYamlWithMetricRelabelConfig, err := yaml.Marshal(config); err == nil {
-			if err := os.WriteFile(yamlConfigFile, []byte(cfgYamlWithMetricRelabelConfig), fs.FileMode(0644)); err != nil {
-				fmt.Printf("Error writing to file %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
+			if err := os.WriteFile(yamlConfigFile, []byte(cfgYamlWithMetricRelabelConfig), os.ModePerm); err != nil {
+				return fmt.Errorf("error writing to file %s: %v. The keep list regex will not be used", yamlConfigFile, err)
 			}
 		} else {
-			fmt.Printf("Error marshalling YAML for %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
+			return fmt.Errorf("error marshalling YAML for %s: %v. The keep list regex will not be used", yamlConfigFile, err)
 		}
-	} else {
-		fmt.Printf("No 'scrape_configs' found in the YAML. The keep list regex will not be used.\n")
 	}
+
+	return nil
 }
 
 func AppendRelabelConfig(yamlConfigFile string, relabelConfig []map[string]interface{}, keepRegex string) {
@@ -381,6 +395,10 @@ func populateDefaultPrometheusConfig() {
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
 		kubestateMetricsKeepListRegex, exists := regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
 		kubestateScrapeInterval, intervalExists := intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
+
+		fmt.Println("KUBESTATE_METRICS_KEEP_LIST_REGEX:", kubestateMetricsKeepListRegex, "Exists:", exists)
+		fmt.Println("KUBESTATE_SCRAPE_INTERVAL:", kubestateScrapeInterval, "Exists:", intervalExists)
+
 		if intervalExists {
 			UpdateScrapeIntervalConfig(kubeStateDefaultFile, kubestateScrapeInterval)
 		}

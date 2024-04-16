@@ -170,14 +170,6 @@ func handleEnvFileError(filename string) {
 	}
 }
 
-func cleanAndTruncate(input string) string {
-	input = strings.ReplaceAll(input, " ", "")
-	if len(input) >= 10 {
-		input = input[:10]
-	}
-	return input
-}
-
 func Configmapparser() {
 	setConfigFileVersionEnv()
 	setConfigSchemaVersionEnv()
