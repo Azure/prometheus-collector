@@ -7,29 +7,37 @@ Get latest release version and latest prometheusreceiver code:
 2. git clone https://github.com/open-telemetry/opentelemetry-collector-contrib.git
 3. git checkout tags/<tag_name> -b <branch_name>   tag name will be in the format of v0.x.x and branch name is your local branch name. You can name it whatever you want
 
-> **opentelemetry-collector-builder**
+### opentelemetry-collector-builder
 * update go.mod to new collector version for all components
-update line 18 in main.go with the new collector version
-> **prometheus-receiver**
+* update line 18 in main.go with the new collector version
+### prometheus-receiver
 * copy over new folder
-* go.mod rename module
-go.mod remove replacements at the end
-Find new version of github.com/prometheus/prometheus. Put this version in the file /otelcollector/opentelemetry-collector-builder/PROMETHEUS_VERSION
 * delete testdata directory
 * metrics_receiver.go: rename internal package "github.com/gracewehner/prometheusreceiver/internal"
+* factory.go: rename internal package "github.com/gracewehner/prometheusreceiver/internal/metadata"
+### go.mod 
+* rename module
+* remove replacements at the end
+### Prometheus version
+Find new version of github.com/prometheus/prometheus. Put this version in the file /otelcollector/opentelemetry-collector-builder/PROMETHEUS_VERSION
+
 <!-- * metrics_receiver.go: add webhandler code in initPrometheusComponents() or Start() function
 * metrics_receiver.go: add extra import packages at the top
 * metrics_receiver.go: add constants at the top
 internal/otlp_transaction.go: in Append() function before if len(t.externalLabels) != 0 (currently line 92) add labels = labels.Copy() -->
-prom-config-validator-builder
+### prom-config-validator-builder
 * update go.mod to new collector version for all components
-* try to build to check for any breaking changes to the interfaces used: run make
+* copy the second block of go.mod from the latest of go.mod of opentelemetry-collector-builder 
+* try to build to check for any breaking changes to the interfaces used: 
+* Run - go mod tidy
+* Run - make
 
 
- ## web handler changes to be added 
+### web handler changes to be added 
 
-**opentelemetry-collector-builder** - 
-go mod tidy
+### opentelemetry-collector-builder - 
+* go mod tidy
+* make
 
 <!-- Code block for web handler (This will be moved to extension)
 ```
