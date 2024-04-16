@@ -205,20 +205,22 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.WriteHeader(status)
-	fmt.Fprintln(w, message)
 	if status != http.StatusOK {
 		fmt.Printf(message)
-		writeTerminationLog(message)
+		currentTime := time.Now()
+		fmt.Println("Current Time in String: ", currentTime.String())
+		// writeTerminationLog(message)
 	}
+	w.WriteHeader(status)
+	fmt.Fprintln(w, message)
 	// }
 	//else {
 	// 	message = "\ncall to get TA metrics failed"
 	// 	status = http.StatusServiceUnavailable
+	// 	fmt.Printf(message)
 	// 	w.WriteHeader(status)
 	// 	fmt.Fprintln(w, message)
-	// 	fmt.Printf(message)
-	// 	writeTerminationLog(message)
+	// 	//writeTerminationLog(message)
 	// }
 }
 
