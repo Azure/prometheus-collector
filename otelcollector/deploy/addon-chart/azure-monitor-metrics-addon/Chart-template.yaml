@@ -27,3 +27,4 @@ dependencies:
   version: "4.26.0"
   repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
   condition: AzureMonitorMetrics.ArcExtension
+  

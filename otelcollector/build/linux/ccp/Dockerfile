@@ -29,13 +29,22 @@ ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as ccpmain-builder
-WORKDIR /main
-COPY ../shared/*.go ./main/go.mod ./main/*.go .
+WORKDIR /
+# Create directories
+RUN mkdir -p ./shared/configmap/mp/
+RUN mkdir -p ./main/
+# Copy shared go files
+COPY ../shared/*.go ./shared/
+COPY ../shared/configmap/mp/*.go ./shared/configmap/mp/
+COPY ../shared/configmap/ccp/*.go ./shared/configmap/ccp/
+# Copy main go files
+COPY ./main/*.go ./main/
+COPY ./go.mod ./
+COPY ./go.sum ./
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
-RUN go get
-RUN go build -o ccpmain .
+RUN go build -o ccpmain.exe ./main/main.go
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 ENV OS_TYPE "linux"
@@ -57,7 +66,7 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
-COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/main/
+COPY --from=ccpmain-builder --chmod=777 /ccpmain.exe $tmpdir/main/
 COPY ./react /static/react
 
 ARG TARGETARCH
