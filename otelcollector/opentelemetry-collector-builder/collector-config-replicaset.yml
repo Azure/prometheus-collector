@@ -28,13 +28,12 @@ processors:
       from_attribute: service.instance.id
       action: insert
 extensions:
-  prometheus_api_server_extension:
-    server:
-      endpoint: http://localhost:9090
+  prometheus_api_server:
 receivers:
     prometheus:
       prometheus_api_server_extension:
         enabled: true
+        endpoint: :9091
       target_allocator:
         endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
         interval: 30s
@@ -45,7 +44,7 @@ service:
       receivers: [prometheus]
       exporters: [otlp]
       processors: [batch,resource]
-  extensions: [prometheus_api_server_extension]
+  extensions: [prometheus_api_server]
   telemetry:
     logs:
       level: warn

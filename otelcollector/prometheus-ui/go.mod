@@ -4,7 +4,7 @@ go 1.21.8
 
 require (
 	github.com/go-kit/kit v0.13.0
-	github.com/prometheus/common v0.52.2
+	github.com/prometheus/common v0.51.1
 	github.com/prometheus/common/assets v0.2.0
 )
 
