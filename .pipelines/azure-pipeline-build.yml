@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - rashmi/upgrades/04-24
+    - rashmi/upgrades-04-24
 
 pr:
   autoCancel: true
@@ -340,7 +340,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.20'
+          version: '1.21.5'
 
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
@@ -503,7 +503,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.20'
+          version: '1.21.5'
 
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
@@ -813,7 +813,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.20'
+          version: '1.21.5'
 
       - powershell: |
           ./makefile_windows.ps1
@@ -846,7 +846,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.20'
+          version: '1.21.5'
 
       - powershell: |
           ./makefile_windows.ps1
@@ -883,7 +883,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.20'
+          version: '1.21.5'
 
       - bash: |
           export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
