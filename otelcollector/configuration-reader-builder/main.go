@@ -188,8 +188,7 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
 	message := "\ntargetallocator is running."
 
-	resp, _ := http.Get("http://localhost:8081/metrics")
-	// resp, _ := http.Get("http://localhost:8080/metrics")
+	resp, _ := http.Get("http://localhost:8080/metrics")
 
 	if resp != nil && resp.StatusCode == http.StatusOK {
 		if taConfigUpdated {
