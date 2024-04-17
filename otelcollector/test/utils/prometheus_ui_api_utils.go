@@ -40,7 +40,7 @@ type PrometheusConfigData struct {
 /*
  * Exec into the container in a pod with the specified namespace and label and curl the Prometheus UI with the specified path.
  */
-func QueryPromUIFromPod(clientset *kubernetes.Clientset, cfg *rest.Config, namespace string, labelKey string, labelValue string, containerName string, queryPath string, result *APIResponse) (error) {
+func QueryPromUIFromPod(clientset *kubernetes.Clientset, cfg *rest.Config, namespace string, labelKey string, labelValue string, containerName string, queryPath string, isLinux bool, result *APIResponse) (error) {
   pods, err := GetPodsWithLabel(clientset, namespace, labelKey, labelValue)
   if err != nil {
     return err
@@ -48,7 +48,12 @@ func QueryPromUIFromPod(clientset *kubernetes.Clientset, cfg *rest.Config, names
 
   for _, pod := range pods {
     // Execute the command and capture the output
-    command := []string{"sh", "-c", fmt.Sprintf("curl \"http://localhost:9090%s\"", queryPath)}
+		var command []string
+		if isLinux {
+			command = []string{"sh", "-c", fmt.Sprintf("curl \"http://localhost:9090%s\"", queryPath)}
+		} else {
+			command = []string{"powershell", "-c", fmt.Sprintf("(curl \"http://localhost:9090%s\" %s).Content", queryPath, "-UseBasicParsing")}
+		}
     stdout, _, err := ExecCmd(clientset, cfg, pod.Name, containerName, namespace, command)
     if err != nil {
       return err
