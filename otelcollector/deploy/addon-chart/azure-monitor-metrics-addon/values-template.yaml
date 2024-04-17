@@ -49,7 +49,7 @@ AzureMonitorMetrics:
   DsCPULimitWindows: 500m
   DsMemoryLimitWindows: 1Gi
   ImageTagTargetAllocator: 6.8.6-rashmi-upgrades-04-24-04-16-2024-5f1da5f6-targetallocator
-  ImageTagCfgReader: 6.8.6-rashmi-upgrades-04-24-04-16-2024-5f1da5f6-cfg
+  ImageTagCfgReader: 6.8.7-rashmi-upgrades-04-24-04-16-2024-e6c0220f-cfg
   TargetAllocatorEnabled: true
   DeploymentReplicas: 1
   CfgReaderCPULimit: 1
