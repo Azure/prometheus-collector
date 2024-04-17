@@ -1,49 +1,4 @@
 param azureMonitorWorkspaceResourceId string
-
-@allowed([
-  'eastus2euap',
-  'northcentralus',
-  'eastus',
-  'australiacentral',
-  'australiasoutheast',
-  'brazilsouth',
-  'canadacentral',
-  'centralindia',
-  'centralus',
-  'eastasia',
-  'eastus2',
-  'northeurope',
-  'norwayeast',
-  'southafricanorth',
-  'southcentralus',
-  'southeastasia',
-  'uaenorth',
-  'uksouth',
-  'westcentralus',
-  'westeurope',
-  'westus',
-  'westus2',
-  'francesouth',
-  'germanywestcentral',
-  'israelcentral',
-  'italynorth',
-  'japanwest',
-  'koreacentral',
-  'switzerlandnorth',
-  'brazilsoutheast',
-  'francecentral',
-  'ukwest',
-  'koreasouth',
-  'switzerlandwest',
-  'japaneast',
-  'swedencentral',
-  'canadaeast',
-  'norwaywest',
-  'southindia',
-  'australiaeast',
-  'swedensouth',
-  'usgovvirginia'
-])
 param azureMonitorWorkspaceLocation string
 param clusterResourceId string
 param clusterLocation string
@@ -474,12 +429,12 @@ resource nodeAndKubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/
 resource grafanaResourceId_8 'Microsoft.Dashboard/grafana@2022-08-01' = {
   name: split(grafanaResourceId, '/')[8]
   sku: {
-    name: grafanaSku
+    name: 'Standard'
   }
   identity: {
     type: 'SystemAssigned'
   }
-  location: grafanaLocation
+  location: 'southcentralus'
   properties: {
     grafanaIntegrations: {
       azureMonitorWorkspaceIntegrations: [
@@ -501,12 +456,4 @@ resource selfRoleAssignmentGrafana 'Microsoft.Authorization/roleAssignments@2022
   }
 }
 
-// Provide Grafana access to the AMW instance
-module roleAssignmentGrafanaAMW './nested_grafana_amw_role_assignment.bicep' = {
-  name: roleNameGuid
-  scope: resourceGroup(split(azureMonitorWorkspaceResourceId, '/')[2], split(azureMonitorWorkspaceResourceId, '/')[4])
-  params: {
-    azureMonitorWorkspaceSubscriptionId: azureMonitorWorkspaceSubscriptionId
-    grafanaPrincipalId: reference(grafanaResourceId_8.id, '2022-08-01', 'Full').identity.principalId
-  }
-}
+
