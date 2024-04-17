@@ -429,12 +429,12 @@ resource nodeAndKubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/
 resource grafanaResourceId_8 'Microsoft.Dashboard/grafana@2022-08-01' = {
   name: split(grafanaResourceId, '/')[8]
   sku: {
-    name: 'Standard'
+    name: grafanaSku
   }
   identity: {
     type: 'SystemAssigned'
   }
-  location: 'southcentralus'
+  location: grafanaLocation
   properties: {
     grafanaIntegrations: {
       azureMonitorWorkspaceIntegrations: [
@@ -456,4 +456,13 @@ resource selfRoleAssignmentGrafana 'Microsoft.Authorization/roleAssignments@2022
   }
 }
 
+// Provide Grafana access to the AMW instance
+module roleAssignmentGrafanaAMW './nested_grafana_amw_role_assignment.bicep' = {
+  name: roleNameGuid
+  scope: resourceGroup(split(azureMonitorWorkspaceResourceId, '/')[2], split(azureMonitorWorkspaceResourceId, '/')[4])
+  params: {
+    azureMonitorWorkspaceSubscriptionId: azureMonitorWorkspaceSubscriptionId
+    grafanaPrincipalId: reference(grafanaResourceId_8.id, '2022-08-01', 'Full').identity.principalId
+  }
+}
 
