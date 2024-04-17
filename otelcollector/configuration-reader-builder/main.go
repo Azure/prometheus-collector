@@ -188,43 +188,42 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
 	message := "\ntargetallocator is running."
 
-	// resp, _ := http.Get("http://localhost:8080/metrics")
+	resp, _ := http.Get("http://localhost:8080/metrics")
 
-	// if resp != nil && resp.StatusCode == http.StatusOK {
-	if taConfigUpdated {
-		// if taLivenessStartTime.IsZero() {
-		// 	taLivenessStartTime = time.Now()
-		// }
-		if !taLivenessStartTime.IsZero() {
-			duration := time.Since(taLivenessStartTime)
-			// Serve the response of ServiceUnavailable for 60s and then reset
-			if duration.Seconds() < 60 {
-				status = http.StatusServiceUnavailable
-				message += "targetallocator-config changed"
-			} else {
-				taConfigUpdated = false
-				taLivenessStartTime = time.Time{}
+	if resp != nil && resp.StatusCode == http.StatusOK {
+		if taConfigUpdated {
+			// if taLivenessStartTime.IsZero() {
+			// 	taLivenessStartTime = time.Now()
+			// }
+			if !taLivenessStartTime.IsZero() {
+				duration := time.Since(taLivenessStartTime)
+				// Serve the response of ServiceUnavailable for 60s and then reset
+				if duration.Seconds() < 60 {
+					status = http.StatusServiceUnavailable
+					message += "targetallocator-config changed"
+				} else {
+					taConfigUpdated = false
+					taLivenessStartTime = time.Time{}
+				}
 			}
 		}
-	}
 
-	if status != http.StatusOK {
+		if status != http.StatusOK {
+			fmt.Printf(message)
+			currentTime := time.Now()
+			fmt.Println("Current Time in String: ", currentTime.String())
+			// writeTerminationLog(message)
+		}
+		w.WriteHeader(status)
+		fmt.Fprintln(w, message)
+	} else {
+		message = "\ncall to get TA metrics failed"
+		status = http.StatusServiceUnavailable
 		fmt.Printf(message)
-		currentTime := time.Now()
-		fmt.Println("Current Time in String: ", currentTime.String())
-		// writeTerminationLog(message)
+		w.WriteHeader(status)
+		fmt.Fprintln(w, message)
+		//writeTerminationLog(message)
 	}
-	w.WriteHeader(status)
-	fmt.Fprintln(w, message)
-	// }
-	//else {
-	// 	message = "\ncall to get TA metrics failed"
-	// 	status = http.StatusServiceUnavailable
-	// 	fmt.Printf(message)
-	// 	w.WriteHeader(status)
-	// 	fmt.Fprintln(w, message)
-	// 	//writeTerminationLog(message)
-	// }
 }
 
 func writeTerminationLog(message string) {
