@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"prometheus-collector/shared"
+
+	// "prometheus-collector/shared"
+	"github.com/prometheus-collector/shared"
+
 	"strings"
 
 	"github.com/pelletier/go-toml"

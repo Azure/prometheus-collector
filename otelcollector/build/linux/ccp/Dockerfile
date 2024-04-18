@@ -34,13 +34,14 @@ WORKDIR /
 RUN mkdir -p ./shared/configmap/mp/
 RUN mkdir -p ./main/
 # Copy shared go files
-COPY ../shared/*.go ./shared/
-COPY ../shared/configmap/mp/*.go ./shared/configmap/mp/
-COPY ../shared/configmap/ccp/*.go ./shared/configmap/ccp/
+COPY ../shared/*.go ./main/shared/
+COPY ../shared/configmap/mp/*.go ./main/shared/configmap/mp/
+COPY ../shared/configmap/ccp/*.go ./main/shared/configmap/ccp/
 # Copy main go files
 COPY ./main/*.go ./main/
-COPY ./go.mod ./
-COPY ./go.sum ./
+COPY ./go.mod ./main/
+COPY ./go.sum ./main/
+WORKDIR /main
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
