@@ -40,6 +40,31 @@ func IsProcessRunning(processName string) bool {
 	return false
 }
 
+// SetEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
+// and sources the file to apply changes immediately.
+func SetEnvAndSourceBashrc(key, value string) error {
+	// Open the .bashrc file for appending
+	file, err := os.OpenFile("~/.bashrc", os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open .bashrc file: %v", err)
+	}
+	defer file.Close()
+
+	// Write the export statement to the .bashrc file
+	_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
+	if err != nil {
+		return fmt.Errorf("failed to write to .bashrc file: %v", err)
+	}
+
+	// Source the .bashrc file
+	cmd := exec.Command("bash", "-c", "source ~/.bashrc")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to source .bashrc: %v", err)
+	}
+
+	return nil
+}
+
 func StartCommandWithOutputFile(command string, args []string, outputFile string) error {
 	cmd := exec.Command(command, args...)
 

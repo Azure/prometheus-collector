@@ -2,7 +2,6 @@ package ccpconfigmapsettings
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"prometheus-collector/shared"
@@ -25,7 +24,7 @@ func Configmapparserforccp() {
 			configVersion = configVersion[:10]
 		}
 		// Set the environment variable
-		os.Setenv("AZMON_AGENT_CFG_FILE_VERSION", configVersion)
+		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_FILE_VERSION", configVersion)
 	}
 
 	// Set agent config file version
@@ -41,7 +40,7 @@ func Configmapparserforccp() {
 			configSchemaVersion = configSchemaVersion[:10]
 		}
 		// Set the environment variable
-		os.Setenv("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion)
+		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion)
 	}
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings
@@ -65,11 +64,11 @@ func Configmapparserforccp() {
 
 	prometheusCcpConfigMerger()
 
-	os.Setenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
-	os.Setenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")
+	shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
+	shared.SetEnvAndSourceBashrc("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")
 
 	// No need to merge custom prometheus config, only merging in the default configs
-	os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
+	shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 	shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
 	if !shared.Exists("/opt/ccp-collector-config-with-defaults.yml") {
 		fmt.Printf("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
