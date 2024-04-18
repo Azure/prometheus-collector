@@ -195,39 +195,46 @@ func Configmapparser() {
 	}
 
 	// Running promconfigvalidator if promMergedConfig.yml exists
-	if _, err := os.Stat("/opt/promMergedConfig.yml"); err == nil {
-		if os.Getenv("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG") == "true" || !shared.FileExists("/opt/microsoft/otelcollector/collector-config.yml") {
-			fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
-			shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
-
-			if shared.FileExists("/opt/defaultsMergedConfig.yml") {
-				fmt.Println("prom-config-validator::Running validator on just default scrape configs")
-				shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
-				if !shared.FileExists("/opt/collector-config-with-defaults.yml") {
-					fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
-				} else {
-					shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
+	if shared.FileExists("/opt/promMergedConfig.yml") {
+		if !shared.FileExists("/opt/microsoft/otelcollector/collector-config.yml") {
+			cmd := exec.Command("/opt/promconfigvalidator",
+				"--config", "/opt/promMergedConfig.yml",
+				"--output", "/opt/microsoft/otelcollector/collector-config.yml",
+				"--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml",
+			)
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
+				shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
+				if shared.FileExists("/opt/defaultsMergedConfig.yml") {
+					fmt.Println("prom-config-validator::Running validator on just default scrape configs")
+					shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+					if !shared.FileExists("/opt/collector-config-with-defaults.yml") {
+						fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+					} else {
+						shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
+					}
 				}
+				shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
+				os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 			}
-			shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
-		} else if _, err := os.Stat("/opt/defaultsMergedConfig.yml"); err == nil {
-			fmt.Println("prom-config-validator::No custom prometheus config found. Only using default scrape configs")
-			cmd := exec.Command("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
-			if err := cmd.Run(); err != nil {
-				fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
-			} else {
-				fmt.Println("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
-				if err := os.Link("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml"); err != nil {
-					shared.EchoError("Error copying default config:" + err.Error())
-				}
-			}
-			shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
-		} else {
-			// This else block is needed, when there is no custom config mounted as config map or default configs enabled
-			fmt.Println("prom-config-validator::No custom config via configmap or default scrape configs enabled.")
-			shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 		}
-
+	} else if _, err := os.Stat("/opt/defaultsMergedConfig.yml"); err == nil {
+		fmt.Println("prom-config-validator::No custom prometheus config found. Only using default scrape configs")
+		cmd := exec.Command("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+		if err := cmd.Run(); err != nil {
+			fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+		} else {
+			fmt.Println("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
+			if err := os.Link("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml"); err != nil {
+				shared.EchoError("Error copying default config:" + err.Error())
+			}
+		}
+		shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
+	} else {
+		// This else block is needed, when there is no custom config mounted as config map or default configs enabled
+		fmt.Println("prom-config-validator::No custom config via configmap or default scrape configs enabled.")
+		shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 	}
 
 	if _, err := os.Stat("/opt/microsoft/prom_config_validator_env_var"); err == nil {

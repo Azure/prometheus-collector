@@ -932,10 +932,11 @@ func prometheusConfigMerger() {
 		// Set label limits for every custom scrape job, before merging the default & custom config
 		labellimitedconfigString := setLabelLimitsPerScrape(modifiedPrometheusConfigString)
 		mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString, mergedDefaultConfigs)
+		fmt.Println("Done Merging Default and Custom Prometheus Config")
 	} else {
 		setDefaultFileScrapeInterval("30s")
 		writeDefaultScrapeTargetsFile()
+		fmt.Println("Done Writing Default Prometheus Config")
 	}
 
-	fmt.Println("Done Merging Default and Custom Prometheus Config")
 }
