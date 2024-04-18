@@ -12,6 +12,7 @@ import (
 	// ccpconfigmapsettings "prometheus-collector/shared/configmap/ccp"
 	// configmapsettings "prometheus-collector/shared/configmap/mp"
 	shared "github.com/prometheus-collector/shared"
+	ccpconfigmapsettings "github.com/prometheus-collector/shared/configmap/ccp"
 	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
 
 	"strconv"
