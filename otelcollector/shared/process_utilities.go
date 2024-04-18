@@ -62,6 +62,12 @@ func SetEnvAndSourceBashrc(key, value string) error {
 		return fmt.Errorf("failed to source .bashrc: %v", err)
 	}
 
+	// Set the environment variable
+	err = os.Setenv(key, value)
+	if err != nil {
+		return fmt.Errorf("failed to set environment variable: %v", err)
+	}
+
 	return nil
 }
 

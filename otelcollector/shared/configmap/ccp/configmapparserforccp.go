@@ -2,6 +2,7 @@ package ccpconfigmapsettings
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"prometheus-collector/shared"
@@ -69,6 +70,7 @@ func Configmapparserforccp() {
 
 	// No need to merge custom prometheus config, only merging in the default configs
 	shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
+	os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 	shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
 	if !shared.Exists("/opt/ccp-collector-config-with-defaults.yml") {
 		fmt.Printf("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
