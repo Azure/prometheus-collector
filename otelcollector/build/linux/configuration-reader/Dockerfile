@@ -21,6 +21,7 @@ WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 COPY ./configuration-reader-builder/go.mod ./configuration-reader-builder/go.sum ./configuration-reader-builder/
 RUN go version > goversion.txt
+COPY ./shared /src/shared
 WORKDIR /src/configuration-reader-builder
 RUN go mod download
 COPY ./configuration-reader-builder /src/configuration-reader-builder
