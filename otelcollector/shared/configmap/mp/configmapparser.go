@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"prometheus-collector/shared"
+	"github.com/prometheus-collector/shared"
 )
 
 func updateBashrc(lines []string) error {

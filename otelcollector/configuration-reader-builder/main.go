@@ -12,7 +12,9 @@ import (
 
 	"os"
 
-	"github.com/joho/godotenv"
+	shared "github.com/prometheus-collector/shared"
+	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
+
 	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -293,6 +295,7 @@ func startCommandAndWait(command string, args ...string) {
 }
 
 func main() {
+	shared.EchoError("Error")
 
 	_, err := os.Create("/opt/inotifyoutput.txt")
 	// inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
@@ -318,12 +321,13 @@ func main() {
 		log.Fatalf("Error starting inotify process for config reader's liveness probe: %v\n", err)
 	}
 
-	startCommandAndWait("/bin/sh", "/opt/configmap-parser.sh")
+	// startCommandAndWait("/bin/sh", "/opt/configmap-parser.sh")
 
-	err = godotenv.Load("/opt/envvars.env")
-	if err != nil {
-		fmt.Println("error loading env vars from envvars.env - %v", err)
-	}
+	// err = godotenv.Load("/opt/envvars.env")
+	// if err != nil {
+	// 	fmt.Println("error loading env vars from envvars.env - %v", err)
+	// }
+	configmapsettings.Configmapparser()
 	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
 		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
 			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")

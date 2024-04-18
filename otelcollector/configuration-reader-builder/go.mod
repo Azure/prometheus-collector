@@ -1,12 +1,15 @@
 module github.com/configurationreader
 
-go 1.21
+go 1.22.0
 
-toolchain go1.22.0
+replace github.com/prometheus-collector/shared => ../shared
+
+replace github.com/prometheus-collector/shared/configmap/mp => ../shared/configmap/mp
 
 require (
-	github.com/joho/godotenv v1.5.1
 	github.com/open-telemetry/opentelemetry-operator v0.98.0
+	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
+	github.com/prometheus-collector/shared/configmap/mp v0.0.0-00010101000000-000000000000
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.29.3
 )
@@ -101,6 +104,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/ovh/go-ovh v1.4.3 // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.19.0 // indirect
