@@ -32,11 +32,16 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/gracewehner/prometheusreceiver/internal"
+	"github.com/prometheus/common/version"
+	"github.com/prometheus/prometheus/web"
 )
 
 const (
 	defaultGCInterval = 2 * time.Minute
 	gcIntervalDelta   = 1 * time.Minute
+	// Use same settings as Prometheus web server
+	maxConnections     = 512
+	readTimeoutMinutes = 10
 )
 
 // pReceiver is the type that provides Prometheus scraper/receiver functionality.
@@ -54,6 +59,7 @@ type pReceiver struct {
 	httpClient        *http.Client
 	registerer        prometheus.Registerer
 	unregisterMetrics func()
+	webHandler        *web.Handler
 }
 
 // New creates a new prometheus.Receiver reference.
@@ -82,7 +88,7 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 	// add scrape configs defined by the collector configs
 	baseCfg := r.cfg.PrometheusConfig
 
-	err := r.initPrometheusComponents(discoveryCtx, logger)
+	err := r.initPrometheusComponents(discoveryCtx, host, logger)
 	if err != nil {
 		r.settings.Logger.Error("Failed to initPrometheusComponents Prometheus components", zap.Error(err))
 		return err
@@ -252,7 +258,7 @@ func (r *pReceiver) applyCfg(cfg *PromConfig) error {
 	return r.discoveryManager.ApplyConfig(discoveryCfg)
 }
 
-func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Logger) error {
+func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component.Host, logger log.Logger) error {
 	// Some SD mechanisms use the "refresh" package, which has its own metrics.
 	refreshSdMetrics := discovery.NewRefreshMetrics(r.registerer)
 
@@ -327,6 +333,50 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 		if err := r.scrapeManager.Run(r.discoveryManager.SyncCh()); err != nil {
 			r.settings.Logger.Error("Scrape manager failed", zap.Error(err))
 			r.settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(err))
+		}
+	}()
+
+	// Setup settings and logger and create Prometheus web handler
+	webOptions := web.Options{
+		ScrapeManager: r.scrapeManager,
+		Context:       ctx,
+		ListenAddress: ":9090",
+		ExternalURL: &url.URL{
+			Scheme: "http",
+			Host:   "localhost:9090",
+			Path:   "",
+		},
+		RoutePrefix: "/",
+		ReadTimeout: time.Minute * readTimeoutMinutes,
+		PageTitle:   "Prometheus Receiver",
+		Version: &web.PrometheusVersion{
+			Version:   version.Version,
+			Revision:  version.Revision,
+			Branch:    version.Branch,
+			BuildUser: version.BuildUser,
+			BuildDate: version.BuildDate,
+			GoVersion: version.GoVersion,
+		},
+		Flags:          make(map[string]string),
+		MaxConnections: maxConnections,
+		IsAgent:        true,
+		Gatherer:       prometheus.DefaultGatherer,
+	}
+	go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+	r.webHandler = web.New(go_kit_logger, &webOptions)
+	listener, err := r.webHandler.Listener()
+	if err != nil {
+		return err
+	}
+	// Pass config and let the web handler know the config is ready.
+	// These are needed because Prometheus allows reloading the config without restarting.
+	r.webHandler.ApplyConfig(r.cfg.PrometheusConfig)
+	r.webHandler.SetReady(true)
+	// Uses the same context as the discovery and scrape managers for shutting down
+	go func() {
+		if err := r.webHandler.Run(ctx, listener, ""); err != nil {
+			r.settings.Logger.Error("Web handler failed", zap.Error(err))
+			host.ReportFatalError(err)
 		}
 	}()
 	return nil
