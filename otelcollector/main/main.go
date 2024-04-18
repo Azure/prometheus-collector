@@ -246,7 +246,7 @@ func main() {
 	}
 	logFile.Close()
 
-	fluentBitCmd := exec.Command("fluent-bit", "-c", os.Getenv("FLUENT_BIT_CONFIG_FILE"), "-e", "/opt/fluent-bit/bin/out_appinsights.so")
+	fluentBitCmd := exec.Command("fluent-bit", "-c", fluentBitConfigFile, "-e", "/opt/fluent-bit/bin/out_appinsights.so")
 	fluentBitCmd.Stdout = os.Stdout
 	fluentBitCmd.Stderr = os.Stderr
 	if err := fluentBitCmd.Start(); err != nil {
@@ -261,7 +261,6 @@ func main() {
 		return
 	}
 
-	fmt.Printf("FLUENT_BIT_CONFIG_FILE=%s\n", os.Getenv("FLUENT_BIT_CONFIG_FILE"))
 	fmt.Println("starting telegraf")
 
 	if telemetryDisabled := os.Getenv("TELEMETRY_DISABLED"); telemetryDisabled != "true" {

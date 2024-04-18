@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 func IsProcessRunning(processName string) bool {
@@ -50,7 +51,6 @@ func StartCommandWithOutputFile(command string, args []string, outputFile string
 	if err != nil {
 		return fmt.Errorf("error creating output file: %v", err)
 	}
-	defer file.Close()
 
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
@@ -68,17 +68,29 @@ func StartCommandWithOutputFile(command string, args []string, outputFile string
 		return fmt.Errorf("error starting command: %v", err)
 	}
 
+	// Create a wait group to wait for goroutines
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	// Create goroutines to continuously read and write stdout and stderr
 	go func() {
+		defer wg.Done()
 		if _, err := io.Copy(file, stdout); err != nil {
 			fmt.Printf("Error copying stdout to file: %v\n", err)
 		}
 	}()
 
 	go func() {
+		defer wg.Done()
 		if _, err := io.Copy(file, stderr); err != nil {
 			fmt.Printf("Error copying stderr to file: %v\n", err)
 		}
+	}()
+
+	// Wait for both goroutines to finish before closing the file
+	go func() {
+		wg.Wait()
+		file.Close()
 	}()
 
 	return nil
