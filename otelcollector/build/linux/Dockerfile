@@ -50,7 +50,9 @@ COPY ./shared/go.sum ./main/shared/
 COPY ../shared/configmap/mp/*.go ./main/shared/configmap/mp/
 COPY ../shared/configmap/ccp/*.go ./main/shared/configmap/ccp/
 COPY ./shared/configmap/mp/go.mod ./main/shared/configmap/mp/
-COPY ./shared/configmap/mp/go.sum ./main/shared/configmap/ccp/
+COPY ./shared/configmap/mp/go.sum ./main/shared/configmap/mp/
+COPY ./shared/configmap/ccp/go.mod ./main/shared/configmap/ccp/
+COPY ./shared/configmap/ccp/go.sum ./main/shared/configmap/ccp/
 # Copy main go files
 COPY ./main/*.go ./main/
 COPY ./go.mod ./main/
