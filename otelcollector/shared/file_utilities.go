@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -24,7 +23,7 @@ func printMdsdVersion() {
 }
 
 func readVersionFile(filePath string) (string, error) {
-	content, err := ioutil.ReadFile(filePath)
+	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err
 	}
@@ -32,7 +31,7 @@ func readVersionFile(filePath string) (string, error) {
 }
 
 func fmtVar(name, value string) {
-	fmt.Printf("%s=\"%s\"\n", name, value)
+	fmt.Printf("%s=\"%s\"\n", name, strings.TrimRight(value, "\n\r"))
 }
 
 func existsAndNotEmpty(filename string) bool {
@@ -50,7 +49,7 @@ func existsAndNotEmpty(filename string) bool {
 }
 
 func readAndTrim(filename string) (string, error) {
-	content, err := ioutil.ReadFile(filename)
+	content, err := os.ReadFile(filename)
 	if err != nil {
 		return "", err
 	}

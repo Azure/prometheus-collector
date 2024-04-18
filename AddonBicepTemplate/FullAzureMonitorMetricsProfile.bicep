@@ -1,49 +1,4 @@
 param azureMonitorWorkspaceResourceId string
-
-@allowed([
-  'eastus2euap',
-  'northcentralus',
-  'eastus',
-  'australiacentral',
-  'australiasoutheast',
-  'brazilsouth',
-  'canadacentral',
-  'centralindia',
-  'centralus',
-  'eastasia',
-  'eastus2',
-  'northeurope',
-  'norwayeast',
-  'southafricanorth',
-  'southcentralus',
-  'southeastasia',
-  'uaenorth',
-  'uksouth',
-  'westcentralus',
-  'westeurope',
-  'westus',
-  'westus2',
-  'francesouth',
-  'germanywestcentral',
-  'israelcentral',
-  'italynorth',
-  'japanwest',
-  'koreacentral',
-  'switzerlandnorth',
-  'brazilsoutheast',
-  'francecentral',
-  'ukwest',
-  'koreasouth',
-  'switzerlandwest',
-  'japaneast',
-  'swedencentral',
-  'canadaeast',
-  'norwaywest',
-  'southindia',
-  'australiaeast',
-  'swedensouth',
-  'usgovvirginia'
-])
 param azureMonitorWorkspaceLocation string
 param clusterResourceId string
 param clusterLocation string
@@ -510,3 +465,4 @@ module roleAssignmentGrafanaAMW './nested_grafana_amw_role_assignment.bicep' = {
     grafanaPrincipalId: reference(grafanaResourceId_8.id, '2022-08-01', 'Full').identity.principalId
   }
 }
+
