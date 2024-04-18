@@ -210,7 +210,6 @@ func Configmapparser() {
 				}
 			}
 			shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
-			os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 		} else if _, err := os.Stat("/opt/defaultsMergedConfig.yml"); err == nil {
 			fmt.Println("prom-config-validator::No custom prometheus config found. Only using default scrape configs")
 			cmd := exec.Command("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
@@ -223,12 +222,10 @@ func Configmapparser() {
 				}
 			}
 			shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
-			os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 		} else {
 			// This else block is needed, when there is no custom config mounted as config map or default configs enabled
 			fmt.Println("prom-config-validator::No custom config via configmap or default scrape configs enabled.")
 			shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
-			os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 		}
 
 	}
