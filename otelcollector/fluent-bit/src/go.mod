@@ -2,8 +2,6 @@ module Docker-Provider/source/plugins/go/src
 
 go 1.21
 
-toolchain go1.22.0
-
 require (
 	github.com/fluent/fluent-bit-go v0.0.0-20230731091245-a7a013e2473c
 	github.com/microsoft/ApplicationInsights-Go v0.4.4

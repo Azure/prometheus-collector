@@ -10,8 +10,6 @@ retract v1.51.0
 
 // replace github.com/prometheus-operator/prometheus-operator/pkg/client => ./prometheus-operator/pkg/client
 
-retract v1.51.0
-
 require (
 	github.com/buraksezer/consistent v0.10.0
 	github.com/cespare/xxhash/v2 v2.3.0

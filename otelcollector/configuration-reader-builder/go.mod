@@ -1,6 +1,6 @@
 module github.com/configurationreader
 
-go 1.22.0
+go 1.21
 
 replace github.com/prometheus-collector/shared => ../shared
 
