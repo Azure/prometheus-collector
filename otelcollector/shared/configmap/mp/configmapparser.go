@@ -193,9 +193,7 @@ func Configmapparser() {
 			fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
 		} else {
 			fmt.Println("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
-			if err := os.Link("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml"); err != nil {
-				shared.EchoError("Error copying default config:" + err.Error())
-			}
+			shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
 		}
 		shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 	} else {
