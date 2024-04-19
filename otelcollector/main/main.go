@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"net/http"
@@ -139,29 +138,6 @@ func main() {
 
 	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 	time.Sleep(10 * time.Second)
-
-	fmt.Println("Setting env variables from envmdsd file for MDSD")
-
-	file, err := os.Open("/etc/mdsd.d/envmdsd")
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if err := shared.AddLineToBashrc(line); err != nil {
-			fmt.Println("Error adding line to ~/.bashrc:", err)
-			return
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Println("Error scanning file:", err)
-		return
-	}
 
 	fmt.Println("Starting MDSD")
 	shared.StartMdsdForOverlay()
