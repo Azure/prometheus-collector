@@ -67,14 +67,14 @@ spec:
         volumeMounts:
         - mountPath: /conf
           name: ta-config-shared
-        # livenessProbe:
-        #   httpGet:
-        #     path: /metrics
-        #     port: 8080
         livenessProbe:
           httpGet:
-            path: /health-ta
-            port: 8081
+            path: /metrics
+            port: 8080
+        # livenessProbe:
+        #   httpGet:
+        #     path: /health-ta
+        #     port: 8081
           initialDelaySeconds: 60
           timeoutSeconds: 5
           periodSeconds: 15
@@ -158,24 +158,24 @@ spec:
             readOnly: true
           - mountPath: /ta-configuration
             name: ta-config-shared
-        # livenessProbe:
-        #   exec:
-        #     command:
-        #       - /bin/bash
-        #       - -c
-        #       - /opt/microsoft/liveness/livenessprobe-configreader.sh
-        #   initialDelaySeconds: 60
-        #   periodSeconds: 15
-        #   timeoutSeconds: 5
-        #   failureThreshold: 3
         livenessProbe:
-          httpGet:
-            path: /health
-            port: 8081
+          exec:
+            command:
+              - /bin/bash
+              - -c
+              - /opt/microsoft/liveness/livenessprobe-configreader.sh
           initialDelaySeconds: 60
           periodSeconds: 15
           timeoutSeconds: 5
           failureThreshold: 3
+        # livenessProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 8081
+        #   initialDelaySeconds: 60
+        #   periodSeconds: 15
+        #   timeoutSeconds: 5
+        #   failureThreshold: 3
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
