@@ -126,11 +126,7 @@ func SetEnvVarsFromFile(filename string) error {
 		key := parts[0]
 		value := parts[1]
 
-		// Set the environment variable
-		err := os.Setenv(key, value)
-		if err != nil {
-			return err
-		}
+		SetEnvAndSourceBashrc(key, value)
 	}
 
 	if err := scanner.Err(); err != nil {
