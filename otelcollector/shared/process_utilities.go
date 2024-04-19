@@ -3,9 +3,9 @@ package shared
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -43,8 +43,15 @@ func IsProcessRunning(processName string) bool {
 // SetEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
 // and sources the file to apply changes immediately.
 func SetEnvAndSourceBashrc(key, value string) error {
+	// Get user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user's home directory: %v", err)
+	}
+
 	// Open the .bashrc file for appending
-	file, err := os.OpenFile("~/.bashrc", os.O_APPEND|os.O_WRONLY, 0644)
+	bashrcPath := filepath.Join(homeDir, ".bashrc")
+	file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open .bashrc file: %v", err)
 	}
@@ -57,7 +64,7 @@ func SetEnvAndSourceBashrc(key, value string) error {
 	}
 
 	// Source the .bashrc file
-	cmd := exec.Command("bash", "-c", "source ~/.bashrc")
+	cmd := exec.Command("bash", "-c", "source "+bashrcPath)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to source .bashrc: %v", err)
 	}
@@ -155,12 +162,12 @@ func StartCommand(command string, args ...string) {
 
 	// Create goroutines to capture and print stdout and stderr
 	go func() {
-		stdoutBytes, _ := ioutil.ReadAll(stdout)
+		stdoutBytes, _ := io.ReadAll(io.Reader(stdout))
 		fmt.Print(string(stdoutBytes))
 	}()
 
 	go func() {
-		stderrBytes, _ := ioutil.ReadAll(stderr)
+		stderrBytes, _ := io.ReadAll(io.Reader(stderr))
 		fmt.Print(string(stderrBytes))
 	}()
 }
@@ -192,12 +199,12 @@ func StartCommandAndWait(command string, args ...string) {
 
 	// Create goroutines to capture and print stdout and stderr
 	go func() {
-		stdoutBytes, _ := ioutil.ReadAll(stdout)
+		stdoutBytes, _ := io.ReadAll(io.Reader(stdout))
 		fmt.Print(string(stdoutBytes))
 	}()
 
 	go func() {
-		stderrBytes, _ := ioutil.ReadAll(stderr)
+		stderrBytes, _ := io.ReadAll(io.Reader(stderr))
 		fmt.Print(string(stderrBytes))
 	}()
 

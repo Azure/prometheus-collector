@@ -117,6 +117,8 @@ func parseSettingsForPodAnnotations() {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
+	filename := "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
+	handleEnvFileError(filename)
 	fmt.Println("End Processing - pod annotations")
 }
 

@@ -922,7 +922,6 @@ func prometheusConfigMerger() {
 	mergedDefaultConfigs = make(map[interface{}]interface{}) // Initialize mergedDefaultConfigs
 	setDefaultFileScrapeInterval("30s")
 	mergedDefaultConfigs = writeDefaultScrapeTargetsFile()
-	fmt.Println("Done creating default targets file")
 
 	prometheusConfigMap := parseConfigMap()
 
