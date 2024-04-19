@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"prometheus-collector/otelcollector/test/utils"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -146,6 +147,9 @@ var _ = DescribeTable("The Prometheus UI API should return the targets metadata"
  */
  var _ = DescribeTable("The Prometheus UI should return the /metrics data",
  func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
+
+	time.Sleep(60 * time.Second)
+
 	pods, err := utils.GetPodsWithLabel(K8sClient, namespace, controllerLabelName, controllerLabelValue)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -163,6 +167,8 @@ var _ = DescribeTable("The Prometheus UI API should return the targets metadata"
 		Expect(stdout).NotTo(ContainSubstring("404 page not found"))
 		Expect(stdout).To(ContainSubstring("prometheus_target_scrape_pool_targets"))
 	}
+	
+	return
 },
  Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true),
  Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true),
@@ -174,6 +180,8 @@ var _ = DescribeTable("The Prometheus UI API should return the targets metadata"
  */
 var _ = DescribeTable("The Prometheus UI should return a 200 for its UI pages",
   func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, uiPaths []string) {
+
+		time.Sleep(60 * time.Second)
     pods, err := utils.GetPodsWithLabel(K8sClient, namespace, controllerLabelName, controllerLabelValue)
     Expect(err).NotTo(HaveOccurred())
   
@@ -191,9 +199,11 @@ var _ = DescribeTable("The Prometheus UI should return a 200 for its UI pages",
         Expect(stdout).NotTo(BeEmpty())
         Expect(stdout).NotTo(ContainSubstring("404 page not found"))
       }
+
+			return
     }
   },
-  Entry("when called inside the ama-metrics replica pod for /agent", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true,
+  Entry("when called inside the ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true,
     []string{
       "/agent",
       "/config",
@@ -201,7 +211,7 @@ var _ = DescribeTable("The Prometheus UI should return a 200 for its UI pages",
       "/service-discovery",
     },
   ),
-  Entry("when called inside the ama-metrics-node pod for /agent", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true,
+  Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true,
     []string{
       "/agent",
       "/config",
@@ -209,7 +219,7 @@ var _ = DescribeTable("The Prometheus UI should return a 200 for its UI pages",
       "/service-discovery",
     },
   ),
-	Entry("when called inside the ama-metrics-win-node pod for /agent", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false,
+	Entry("when called inside the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false,
 		[]string{
 			"/agent",
 			"/config",
