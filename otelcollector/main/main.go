@@ -65,12 +65,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	windowsDaemonset := false
-	// Get if windowsdaemonset is enabled or not (i.e., WINMODE env = advanced or not...)
-	winMode := strings.TrimSpace(strings.ToLower(os.Getenv("WINMODE")))
-	if winMode == "advanced" {
-		windowsDaemonset = true
-	}
 
 	var meConfigFile string
 	var fluentBitConfigFile string
@@ -82,7 +76,7 @@ func main() {
 		} else {
 			meConfigFile = "/usr/sbin/me.config"
 		}
-	} else if windowsDaemonset == false {
+	} else if os.Getenv("OS_TYPE") != "windows" {
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit.conf"
 		if clusterOverride == "true" {
 			meConfigFile = "/usr/sbin/me_ds_internal.config"
@@ -92,9 +86,9 @@ func main() {
 	} else {
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-windows.conf"
 		if clusterOverride == "true" {
-			meConfigFile = "/usr/sbin/me_ds_internal.config"
+			meConfigFile = "/usr/sbin/me_ds_internal_win.config"
 		} else {
-			meConfigFile = "/usr/sbin/me_ds.config"
+			meConfigFile = "/usr/sbin/me_ds_win.config"
 		}
 	}
 	fmt.Println("meConfigFile:", meConfigFile)
