@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"path/filepath"
-	"time"
 
 	"k8s.io/client-go/rest"
 
@@ -39,9 +38,6 @@ func SetupKubernetesClient() (*kubernetes.Clientset, *rest.Config, error) {
       return nil, nil, err
     }
   }
-	cfg.Timeout = 30 * time.Second
-	cfg.QPS = 300
-	cfg.Burst = 400
   
   client, err := kubernetes.NewForConfig(cfg)
   if err != nil {
