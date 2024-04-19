@@ -88,7 +88,7 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 	// add scrape configs defined by the collector configs
 	baseCfg := r.cfg.PrometheusConfig
 
-	err := r.initPrometheusComponents(discoveryCtx, host, logger)
+	err := r.initPrometheusComponents(discoveryCtx, logger)
 	if err != nil {
 		r.settings.Logger.Error("Failed to initPrometheusComponents Prometheus components", zap.Error(err))
 		return err
@@ -258,7 +258,7 @@ func (r *pReceiver) applyCfg(cfg *PromConfig) error {
 	return r.discoveryManager.ApplyConfig(discoveryCfg)
 }
 
-func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component.Host, logger log.Logger) error {
+func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Logger) error {
 	// Some SD mechanisms use the "refresh" package, which has its own metrics.
 	refreshSdMetrics := discovery.NewRefreshMetrics(r.registerer)
 
@@ -370,13 +370,13 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 	}
 	// Pass config and let the web handler know the config is ready.
 	// These are needed because Prometheus allows reloading the config without restarting.
-	r.webHandler.ApplyConfig(r.cfg.PrometheusConfig)
+	r.webHandler.ApplyConfig((*config.Config)(r.cfg.PrometheusConfig))
 	r.webHandler.SetReady(true)
 	// Uses the same context as the discovery and scrape managers for shutting down
 	go func() {
 		if err := r.webHandler.Run(ctx, listener, ""); err != nil {
 			r.settings.Logger.Error("Web handler failed", zap.Error(err))
-			host.ReportFatalError(err)
+			r.settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(err))
 		}
 	}()
 	return nil
