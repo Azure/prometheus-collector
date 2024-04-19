@@ -124,11 +124,11 @@ func main() {
 
 	// Set environment variables
 	os.Setenv("ME_CONFIG_FILE", meConfigFile)
-	os.Setenv("customResourceId", cluster)
+	shared.SetEnvAndSourceBashrc("customResourceId", cluster)
 
 	trimmedRegion := strings.ReplaceAll(aksRegion, " ", "")
 	trimmedRegion = strings.ToLower(trimmedRegion)
-	os.Setenv("customRegion", trimmedRegion)
+	shared.SetEnvAndSourceBashrc("customRegion", trimmedRegion)
 
 	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 	time.Sleep(10 * time.Second)
