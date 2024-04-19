@@ -3,7 +3,6 @@ package configmapsettings
 import (
 	"bufio"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"strings"
@@ -90,21 +89,6 @@ func setConfigSchemaVersionEnv() {
 		configSchemaVersion = configSchemaVersion[:10]
 	}
 	shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion)
-
-	bashrcPath := os.Getenv("HOME") + "/.bashrc"
-	bashrc, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		shared.EchoError("Error opening .bashrc file:" + err.Error())
-		return
-	}
-	defer bashrc.Close()
-
-	_, err = fmt.Fprintf(bashrc, "\nexport AZMON_AGENT_CFG_SCHEMA_VERSION=%s", configSchemaVersion)
-	if err != nil {
-		shared.EchoError("Error appending to .bashrc file:" + err.Error())
-		return
-	}
-	reloadBashrc()
 }
 
 func setConfigFileVersionEnv() {
@@ -124,15 +108,6 @@ func setConfigFileVersionEnv() {
 		configFileVersion = configFileVersion[:10]
 	}
 	shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion)
-
-	bashrcPath := os.Getenv("HOME") + "/.bashrc"
-	bashrcContent := fmt.Sprintf("\nexport AZMON_AGENT_CFG_FILE_VERSION=%s", configFileVersion)
-	err = os.WriteFile(bashrcPath, []byte(bashrcContent), fs.FileMode(0644))
-	if err != nil {
-		shared.EchoError("Error appending to .bashrc file:" + err.Error())
-		return
-	}
-	reloadBashrc()
 }
 
 func parseSettingsForPodAnnotations() {
@@ -184,15 +159,6 @@ func Configmapparser() {
 
 	shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
 	shared.SetEnvAndSourceBashrc("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")
-	env_for_update := []string{
-		"export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false",
-		"export CONFIG_VALIDATOR_RUNNING_IN_AGENT=true",
-	}
-	err := updateBashrc(env_for_update)
-	if err != nil {
-		shared.EchoError("Error updating .bashrc:" + err.Error())
-		return
-	}
 
 	// Running promconfigvalidator if promMergedConfig.yml exists
 	if shared.FileExists("/opt/promMergedConfig.yml") {
@@ -202,7 +168,7 @@ func Configmapparser() {
 				"--output", "/opt/microsoft/otelcollector/collector-config.yml",
 				"--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml",
 			)
-			err = cmd.Run()
+			err := cmd.Run()
 			if err != nil {
 				fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
 				shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
@@ -216,7 +182,6 @@ func Configmapparser() {
 					}
 				}
 				shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
-				os.Setenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true")
 			}
 		}
 	} else if _, err := os.Stat("/opt/defaultsMergedConfig.yml"); err == nil {
