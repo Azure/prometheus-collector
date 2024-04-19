@@ -298,7 +298,7 @@ func main() {
 	epochTimeNowReadable := time.Unix(epochTimeNow, 0).Format(time.RFC3339)
 
 	// Writing the epoch time to a file
-	file, err = os.Create("/opt/microsoft/liveness/azmon-container-start-time")
+	file, err := os.Create("/opt/microsoft/liveness/azmon-container-start-time")
 	if err != nil {
 		fmt.Println("Error creating file:", err)
 		return
