@@ -1,7 +1,8 @@
-// ISC license
-// Copyright (c) 2014, Frank Rosquin
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-// Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+// Copying the ISC license from the original package - https://github.com/cnf/structhash?tab=ISC-1-ov-file
+// Copyright (c) 2014, Frank Rosquin
 
 // THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR
@@ -108,15 +109,14 @@ func dataSetup() *First {
 }
 
 func TestHash(t *testing.T) {
-	v1Hash := "v1_e8e67581aee36d7237603381a9cbd9fc"
-	v2Hash := "v2_5e51490d7c24c4b7a9e63c04f55734eb"
+	v1Hash := "v1_125bd93b268ce6c52d312ed253aa423e3b12b6a01068487b5b33f9b80be386f8"
+	v2Hash := "v2_3933803c20fe1603bf75951fce065ba00815e24df68afdbee3667a9b80b8f4e8"
 
 	data := dataSetup()
 	v1, err := Hash(data, 1)
 	if err != nil {
 		t.Error(err)
 	}
-	// fmt.Println(string(Dump(data, 1)))
 	if v1 != v1Hash {
 		t.Errorf("%s is not %s", v1, v1Hash)
 	}
@@ -124,18 +124,17 @@ func TestHash(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	// fmt.Println(string(Dump(data, 2)))
 	if v2 != v2Hash {
 		t.Errorf("%s is not %s", v2, v2Hash)
 	}
 
-	v1md5 := fmt.Sprintf("v1_%x", Md5(data, 1))
-	if v1md5 != v1Hash {
-		t.Errorf("%s is not %s", v1md5, v1Hash[3:])
+	v1sha2 := fmt.Sprintf("v1_%x", Sha2(data, 1))
+	if v1sha2 != v1Hash {
+		t.Errorf("%s is not %s", v1sha2, v1Hash[3:])
 	}
-	v2md5 := fmt.Sprintf("v2_%x", Md5(data, 2))
-	if v2md5 != v2Hash {
-		t.Errorf("%s is not %s", v2md5, v2Hash[3:])
+	v2sha2 := fmt.Sprintf("v2_%x", Sha2(data, 2))
+	if v2sha2 != v2Hash {
+		t.Errorf("%s is not %s", v2sha2, v2Hash[3:])
 	}
 }
 
@@ -145,21 +144,21 @@ func TestTags(t *testing.T) {
 	t2 := Tags2{"foo", "bar"}
 	t3 := Tags3{"bar"}
 
-	t1_dump := string(Dump(t1, 1))
-	t1x_dump := string(Dump(t1x, 1))
-	if t1_dump != t1x_dump {
-		t.Errorf("%s is not %s", t1_dump, t1x_dump)
+	t1Dump := string(Dump(t1, 1))
+	t1xDump := string(Dump(t1x, 1))
+	if t1Dump != t1xDump {
+		t.Errorf("%s is not %s", t1Dump, t1xDump)
 	}
 
-	t2_dump := string(Dump(t2, 1))
-	if t1_dump != t2_dump {
-		t.Errorf("%s is not %s", t1_dump, t2_dump)
+	t2Dump := string(Dump(t2, 1))
+	if t1Dump != t2Dump {
+		t.Errorf("%s is not %s", t1Dump, t2Dump)
 	}
 
-	t1v3_dump := string(Dump(t1, 3))
-	t3v3_dump := string(Dump(t3, 3))
-	if t1v3_dump != t3v3_dump {
-		t.Errorf("%s is not %s", t1v3_dump, t3v3_dump)
+	t1v3Dump := string(Dump(t1, 3))
+	t3v3Dump := string(Dump(t3, 3))
+	if t1v3Dump != t3v3Dump {
+		t.Errorf("%s is not %s", t1v3Dump, t3v3Dump)
 	}
 }
 
@@ -180,15 +179,15 @@ func TestNils(t *testing.T) {
 		Slice: make([]string, 0),
 	}
 
-	s1_dump := string(Dump(s1, 1))
-	s2_dump := string(Dump(s2, 1))
-	if s1_dump != s2_dump {
-		t.Errorf("%s is not %s", s1_dump, s2_dump)
+	s1Dump := string(Dump(s1, 1))
+	s2Dump := string(Dump(s2, 1))
+	if s1Dump != s2Dump {
+		t.Errorf("%s is not %s", s1Dump, s2Dump)
 	}
 }
 
 func TestUnexportedFields(t *testing.T) {
-	v1Hash := "v1_750efb7c919caf87f2ab0d119650c87d"
+	v1Hash := "v1_254758689a97ac1cd9c48a317e65ad6851a88ecba4f045247ba4c9766e8c745e"
 	data := unexportedTags{
 		foo: "foo",
 		bar: "bar",
@@ -203,7 +202,7 @@ func TestUnexportedFields(t *testing.T) {
 	if v1 != v1Hash {
 		t.Errorf("%s is not %s", v1, v1Hash)
 	}
-	v1md5 := fmt.Sprintf("v1_%x", Md5(data, 1))
+	v1md5 := fmt.Sprintf("v1_%x", Sha2(data, 1))
 	if v1md5 != v1Hash {
 		t.Errorf("%s is not %s", v1md5, v1Hash[3:])
 	}
