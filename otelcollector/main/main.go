@@ -87,14 +87,14 @@ func main() {
 		if clusterOverride == "true" {
 			meConfigFile = "/usr/sbin/me_ds_internal.config"
 		} else {
-			meConfigFile = "/usr/sbin/me_ds_.config"
+			meConfigFile = "/usr/sbin/me_ds.config"
 		}
 	} else {
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-windows.conf"
 		if clusterOverride == "true" {
 			meConfigFile = "/usr/sbin/me_ds_internal.config"
 		} else {
-			meConfigFile = "/usr/sbin/me_ds_.config"
+			meConfigFile = "/usr/sbin/me_ds.config"
 		}
 	}
 	fmt.Println("meConfigFile:", meConfigFile)
