@@ -920,9 +920,6 @@ func setGlobalScrapeConfigInDefaultFilesIfExists(configString string) string {
 
 func prometheusConfigMerger() {
 	mergedDefaultConfigs = make(map[interface{}]interface{}) // Initialize mergedDefaultConfigs
-	setDefaultFileScrapeInterval("30s")
-	mergedDefaultConfigs = writeDefaultScrapeTargetsFile()
-
 	prometheusConfigMap := parseConfigMap()
 
 	if len(prometheusConfigMap) > 0 {
