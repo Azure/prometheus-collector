@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - nina/ccp-metrics
 
 pr:
   autoCancel: true
