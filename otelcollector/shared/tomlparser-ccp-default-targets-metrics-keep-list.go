@@ -6,6 +6,9 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/pelletier/go-toml"
+	"gopkg.in/yaml.v2"
 )
 
 var (
