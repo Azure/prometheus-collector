@@ -4,5 +4,15 @@
     label_limit: 63
     label_name_length_limit: 511
     label_value_length_limit: 1023
-    static_configs:
-    - targets: ['127.0.0.1:2234']
+    kubernetes_sd_configs:
+    - role: pod
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_label_rsName]
+      action: keep
+      regex: "ama-metrics"
+    - source_labels: [__meta_kubernetes_pod_container_name]
+      action: keep
+      regex: "prometheus-collector"
+    - source_labels: [__meta_kubernetes_pod_container_port_number]
+      action: keep
+      regex: "2234"
