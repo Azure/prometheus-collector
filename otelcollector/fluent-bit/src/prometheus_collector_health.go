@@ -2,8 +2,8 @@ package main
 
 import (
 	"math"
-	"os"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -81,9 +81,8 @@ var (
 
 const (
 	prometheusCollectorHealthInterval = 60
-	prometheusCollectorHealthPort = ":2234"
+	prometheusCollectorHealthPort     = ":2234"
 )
-
 
 // Expose Prometheus metrics about the health of the agent
 func ExposePrometheusCollectorHealthMetrics() {
@@ -102,7 +101,7 @@ func ExposePrometheusCollectorHealthMetrics() {
 	go func() {
 		TimeseriesVolumeTicker = time.NewTicker(time.Second * time.Duration(prometheusCollectorHealthInterval))
 		lastTickerStart := time.Now()
-		
+
 		for ; true; <-TimeseriesVolumeTicker.C {
 			elapsed := time.Since(lastTickerStart)
 			timePassedInMinutes := (float64(elapsed) / float64(time.Second)) / float64(prometheusCollectorHealthInterval)
@@ -112,10 +111,16 @@ func ExposePrometheusCollectorHealthMetrics() {
 			timeseriesSentRate := math.Round(TimeseriesSentTotal / timePassedInMinutes)
 			bytesSentRate := math.Round(BytesSentTotal / timePassedInMinutes)
 
-			timeseriesReceivedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(timeseriesReceivedRate)
-			timeseriesSentMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(timeseriesSentRate)
-			bytesSentMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Set(bytesSentRate)
-		
+			if CommonProperties["controllertype"] == "ReplicaSet" {
+				timeseriesReceivedMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "pod_name": CommonProperties["podname"], "controller_type": CommonProperties["controllertype"]}).Set(timeseriesReceivedRate)
+				timeseriesSentMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "pod_name": CommonProperties["podname"], "controller_type": CommonProperties["controllertype"]}).Set(timeseriesSentRate)
+				bytesSentMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "pod_name": CommonProperties["podname"], "controller_type": CommonProperties["controllertype"]}).Set(bytesSentRate)
+			} else {
+				timeseriesReceivedMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "controller_type": CommonProperties["controllertype"]}).Set(timeseriesReceivedRate)
+				timeseriesSentMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "controller_type": CommonProperties["controllertype"]}).Set(timeseriesSentRate)
+				bytesSentMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "controller_type": CommonProperties["controllertype"]}).Set(bytesSentRate)
+			}
+
 			TimeseriesReceivedTotal = 0.0
 			TimeseriesSentTotal = 0.0
 			BytesSentTotal = 0.0
@@ -127,10 +132,10 @@ func ExposePrometheusCollectorHealthMetrics() {
 				isInvalidCustomConfig = 1
 				invalidConfigErrorString = os.Getenv("INVALID_CONFIG_FATAL_ERROR")
 			}
-			invalidCustomConfigMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"], "error":invalidConfigErrorString}).Set(float64(isInvalidCustomConfig))
-		
+			invalidCustomConfigMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "controller_type": CommonProperties["controllertype"], "error": invalidConfigErrorString}).Set(float64(isInvalidCustomConfig))
+
 			ExportingFailedMutex.Lock()
-			exportingFailedMetric.With(prometheus.Labels{"computer":CommonProperties["computer"], "release":CommonProperties["helmreleasename"], "controller_type":CommonProperties["controllertype"]}).Add(float64(OtelCollectorExportingFailedCount))
+			exportingFailedMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "controller_type": CommonProperties["controllertype"]}).Add(float64(OtelCollectorExportingFailedCount))
 			OtelCollectorExportingFailedCount = 0
 			ExportingFailedMutex.Unlock()
 
