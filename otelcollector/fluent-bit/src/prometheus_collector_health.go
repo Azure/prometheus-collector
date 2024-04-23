@@ -39,7 +39,7 @@ var (
 			Name: "timeseries_received_per_minute",
 			Help: "Number of timeseries to be sent to storage",
 		},
-		[]string{"computer", "release", "controller_type"},
+		[]string{"computer", "pod_name", "controller_type"},
 	)
 
 	// timeseriesSentMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
@@ -48,7 +48,7 @@ var (
 			Name: "timeseries_sent_per_minute",
 			Help: "Number of timeseries sent to storage",
 		},
-		[]string{"computer", "release", "controller_type"},
+		[]string{"computer", "pod_name", "controller_type"},
 	)
 
 	// bytesSentMetric is the Prometheus metric measuring the number of timeseries scraped in a minute
@@ -57,7 +57,7 @@ var (
 			Name: "bytes_sent_per_minute",
 			Help: "Number of bytes of timeseries sent to storage",
 		},
-		[]string{"computer", "release", "controller_type"},
+		[]string{"computer", "pod_name", "controller_type"},
 	)
 
 	// invalidCustomConfigMetric is true if the config provided failed validation and false otherwise
@@ -66,7 +66,7 @@ var (
 			Name: "invalid_custom_prometheus_config",
 			Help: "If an invalid custom prometheus config was given or not",
 		},
-		[]string{"computer", "release", "controller_type", "error"},
+		[]string{"computer", "controller_type", "error"},
 	)
 
 	// exportingFailedMetric counts the number of times the otelcollector was unable to export to ME
@@ -75,7 +75,7 @@ var (
 			Name: "exporting_metrics_failed",
 			Help: "If exporting metrics failed or not",
 		},
-		[]string{"computer", "release", "controller_type"},
+		[]string{"computer", "controller_type"},
 	)
 )
 
@@ -116,9 +116,9 @@ func ExposePrometheusCollectorHealthMetrics() {
 				timeseriesSentMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "pod_name": CommonProperties["podname"], "controller_type": CommonProperties["controllertype"]}).Set(timeseriesSentRate)
 				bytesSentMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "pod_name": CommonProperties["podname"], "controller_type": CommonProperties["controllertype"]}).Set(bytesSentRate)
 			} else {
-				timeseriesReceivedMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "controller_type": CommonProperties["controllertype"]}).Set(timeseriesReceivedRate)
-				timeseriesSentMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "controller_type": CommonProperties["controllertype"]}).Set(timeseriesSentRate)
-				bytesSentMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "controller_type": CommonProperties["controllertype"]}).Set(bytesSentRate)
+				timeseriesReceivedMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "pod_name": "", "controller_type": CommonProperties["controllertype"]}).Set(timeseriesReceivedRate)
+				timeseriesSentMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "pod_name": "", "controller_type": CommonProperties["controllertype"]}).Set(timeseriesSentRate)
+				bytesSentMetric.With(prometheus.Labels{"computer": CommonProperties["computer"], "pod_name": "", "controller_type": CommonProperties["controllertype"]}).Set(bytesSentRate)
 			}
 
 			TimeseriesReceivedTotal = 0.0
