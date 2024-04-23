@@ -11,6 +11,8 @@ var(
     // KSM
     "ended with: an error on the server",
     "Objects listed",
+		// Target allocator
+		"client connection lost",
   }
 )
 
