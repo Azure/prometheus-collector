@@ -169,11 +169,9 @@ spec:
               readOnly: true
             {{- end }}
           livenessProbe:
-            exec:
-              command:
-                - /bin/bash
-                - -c
-                - /opt/microsoft/liveness/livenessprobe.sh
+            httpGet:
+              path: /health
+              port: 8080
             initialDelaySeconds: 60
             periodSeconds: 15
             timeoutSeconds: 5

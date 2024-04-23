@@ -236,35 +236,6 @@ func main() {
 		return
 	}
 
-	fmt.Println("starting telegraf")
-
-	if telemetryDisabled := os.Getenv("TELEMETRY_DISABLED"); telemetryDisabled != "true" {
-		controllerType := os.Getenv("CONTROLLER_TYPE")
-		azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
-
-		var telegrafConfig string
-
-		switch {
-		case controllerType == "ReplicaSet" && azmonOperatorEnabled == "true":
-			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector-ta-enabled.conf"
-		case controllerType == "ReplicaSet":
-			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector.conf"
-		default:
-			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector-ds.conf"
-		}
-
-		telegrafCmd := exec.Command("/usr/bin/telegraf", "--config", telegrafConfig)
-		telegrafCmd.Stdout = os.Stdout
-		telegrafCmd.Stderr = os.Stderr
-		if err := telegrafCmd.Start(); err != nil {
-			fmt.Println("Error starting telegraf:", err)
-			return
-		}
-
-		telegrafVersion, _ := os.ReadFile("/opt/telegrafversion.txt")
-		fmt.Printf("TELEGRAF_VERSION=%s\n", string(telegrafVersion))
-	}
-
 	// Start inotify to watch for changes
 	fmt.Println("Starting inotify for watching mdsd config update")
 
