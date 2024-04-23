@@ -165,6 +165,14 @@ stages:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
 
+      - task: AntiMalware@4
+        displayName: 'Run MpCmdRun.exe'
+        inputs:
+          InputType: Basic
+          ScanType: CustomScan
+          FileDirPath: '$(Build.ArtifactStagingDirectory)'
+          DisableRemediation: false
+
   - job: Linux_Golang_Reference_App
     displayName: "Build: linux golang reference app image"
     pool:
@@ -297,6 +305,27 @@ stages:
           InputType: 'CommandLine'
           arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
         retryCountOnTaskFailure: 1
+
+      - task: ESLint@1
+        displayName: 'Run ESLint'
+        inputs:
+          Configuration: required
+          EnableExclusions: true
+          ExclusionsFilePath: .eslintignore
+          ExclusionPatterns: |
+          *.d.ts
+          *.spec.js
+          *.spec.jsx
+          *.spec.ts
+          *.spec.tsx
+        retryCountOnTaskFailure: 1 
+              
+      - task: Armory@2
+        displayName: 'Run ARMory'
+        inputs:
+          toolVersion: Latest
+          targetDirectory: '$(Build.SourcesDirectory)'
+        retryCountOnTaskFailure: 1   
 
       - task: Gosec@1
         displayName: 'SDL: run gosec'
@@ -475,6 +504,14 @@ stages:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
 
+      - task: AntiMalware@4
+        displayName: 'Run MpCmdRun.exe'
+        inputs:
+          InputType: Basic
+          ScanType: CustomScan
+          FileDirPath: '$(Build.ArtifactStagingDirectory)'
+          DisableRemediation: false
+
       - task: PostAnalysis@2
         displayName: 'SDL: Post-Build Analysis'
         inputs:
@@ -633,6 +670,14 @@ stages:
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
+
+      - task: AntiMalware@4
+        displayName: 'Run MpCmdRun.exe'
+        inputs:
+          InputType: Basic
+          ScanType: CustomScan
+          FileDirPath: '$(Build.ArtifactStagingDirectory)'
+          DisableRemediation: false
 
       - task: PostAnalysis@2
         displayName: 'SDL: Post-Build Analysis'
@@ -1031,6 +1076,14 @@ stages:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
 
+      - task: AntiMalware@4
+        displayName: 'Run MpCmdRun.exe'
+        inputs:
+          InputType: Basic
+          ScanType: CustomScan
+          FileDirPath: '$(Build.ArtifactStagingDirectory)'
+          DisableRemediation: false
+
   - job: Arc_Helm_Chart
     displayName: "Package: Arc helm chart"
     pool:
@@ -1081,6 +1134,14 @@ stages:
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
+
+    - task: AntiMalware@4
+      displayName: 'Run MpCmdRun.exe'
+      inputs:
+        InputType: Basic
+        ScanType: CustomScan
+        FileDirPath: '$(Build.ArtifactStagingDirectory)'
+        DisableRemediation: false
 
 - stage: Deploy
   jobs:
