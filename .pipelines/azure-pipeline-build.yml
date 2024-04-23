@@ -311,14 +311,7 @@ stages:
         displayName: 'Run ESLint'
         inputs:
           Configuration: required
-          EnableExclusions: true
-          ExclusionsFilePath: .eslintignore
-          ExclusionPatterns: |
-          *.d.ts
-          *.spec.js
-          *.spec.jsx
-          *.spec.ts
-          *.spec.tsx
+          EnableExclusions: false
         retryCountOnTaskFailure: 1 
 
       - task: Armory@2
