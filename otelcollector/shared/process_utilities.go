@@ -3,10 +3,11 @@ package shared
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
 )
 
 func IsProcessRunning(processName string) bool {
@@ -39,6 +40,44 @@ func IsProcessRunning(processName string) bool {
 	return false
 }
 
+// SetEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
+// and sources the file to apply changes immediately.
+func SetEnvAndSourceBashrc(key, value string) error {
+	// Get user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user's home directory: %v", err)
+	}
+
+	// Open the .bashrc file for appending
+	bashrcPath := filepath.Join(homeDir, ".bashrc")
+	file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open .bashrc file: %v", err)
+	}
+	defer file.Close()
+
+	// Write the export statement to the .bashrc file
+	_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
+	if err != nil {
+		return fmt.Errorf("failed to write to .bashrc file: %v", err)
+	}
+
+	// Source the .bashrc file
+	cmd := exec.Command("bash", "-c", "source "+bashrcPath)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to source .bashrc: %v", err)
+	}
+
+	// Set the environment variable
+	err = os.Setenv(key, value)
+	if err != nil {
+		return fmt.Errorf("failed to set environment variable: %v", err)
+	}
+
+	return nil
+}
+
 func StartCommandWithOutputFile(command string, args []string, outputFile string) error {
 	cmd := exec.Command(command, args...)
 
@@ -50,7 +89,6 @@ func StartCommandWithOutputFile(command string, args []string, outputFile string
 	if err != nil {
 		return fmt.Errorf("error creating output file: %v", err)
 	}
-	defer file.Close()
 
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
@@ -68,17 +106,29 @@ func StartCommandWithOutputFile(command string, args []string, outputFile string
 		return fmt.Errorf("error starting command: %v", err)
 	}
 
+	// Create a wait group to wait for goroutines
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	// Create goroutines to continuously read and write stdout and stderr
 	go func() {
+		defer wg.Done()
 		if _, err := io.Copy(file, stdout); err != nil {
 			fmt.Printf("Error copying stdout to file: %v\n", err)
 		}
 	}()
 
 	go func() {
+		defer wg.Done()
 		if _, err := io.Copy(file, stderr); err != nil {
 			fmt.Printf("Error copying stderr to file: %v\n", err)
 		}
+	}()
+
+	// Wait for both goroutines to finish before closing the file
+	go func() {
+		wg.Wait()
+		file.Close()
 	}()
 
 	return nil
@@ -112,12 +162,12 @@ func StartCommand(command string, args ...string) {
 
 	// Create goroutines to capture and print stdout and stderr
 	go func() {
-		stdoutBytes, _ := ioutil.ReadAll(stdout)
+		stdoutBytes, _ := io.ReadAll(io.Reader(stdout))
 		fmt.Print(string(stdoutBytes))
 	}()
 
 	go func() {
-		stderrBytes, _ := ioutil.ReadAll(stderr)
+		stderrBytes, _ := io.ReadAll(io.Reader(stderr))
 		fmt.Print(string(stderrBytes))
 	}()
 }
@@ -149,12 +199,12 @@ func StartCommandAndWait(command string, args ...string) {
 
 	// Create goroutines to capture and print stdout and stderr
 	go func() {
-		stdoutBytes, _ := ioutil.ReadAll(stdout)
+		stdoutBytes, _ := io.ReadAll(io.Reader(stdout))
 		fmt.Print(string(stdoutBytes))
 	}()
 
 	go func() {
-		stderrBytes, _ := ioutil.ReadAll(stderr)
+		stderrBytes, _ := io.ReadAll(io.Reader(stderr))
 		fmt.Print(string(stderrBytes))
 	}()
 
@@ -193,6 +243,8 @@ func copyOutputFile(src io.Reader, file *os.File) {
 
 func StartMetricsExtensionForOverlay(meConfigFile string) {
 	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+	// Set environment variables from os.Environ()
+	cmd.Env = append(os.Environ())
 	// Start the command
 	err := cmd.Start()
 	if err != nil {

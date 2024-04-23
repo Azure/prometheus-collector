@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"net/http"
@@ -71,12 +70,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	windowsDaemonset := false
-	// Get if windowsdaemonset is enabled or not (i.e., WINMODE env = advanced or not...)
-	winMode := strings.TrimSpace(strings.ToLower(os.Getenv("WINMODE")))
-	if winMode == "advanced" {
-		windowsDaemonset = true
-	}
 
 	var meConfigFile string
 	var fluentBitConfigFile string
@@ -88,19 +81,19 @@ func main() {
 		} else {
 			meConfigFile = "/usr/sbin/me.config"
 		}
-	} else if windowsDaemonset == false {
+	} else if os.Getenv("OS_TYPE") != "windows" {
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit.conf"
 		if clusterOverride == "true" {
 			meConfigFile = "/usr/sbin/me_ds_internal.config"
 		} else {
-			meConfigFile = "/usr/sbin/me_ds_.config"
+			meConfigFile = "/usr/sbin/me_ds.config"
 		}
 	} else {
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-windows.conf"
 		if clusterOverride == "true" {
-			meConfigFile = "/usr/sbin/me_ds_internal.config"
+			meConfigFile = "/usr/sbin/me_ds_internal_win.config"
 		} else {
-			meConfigFile = "/usr/sbin/me_ds_.config"
+			meConfigFile = "/usr/sbin/me_ds_win.config"
 		}
 	}
 	fmt.Println("meConfigFile:", meConfigFile)
@@ -136,37 +129,14 @@ func main() {
 
 	// Set environment variables
 	os.Setenv("ME_CONFIG_FILE", meConfigFile)
-	os.Setenv("customResourceId", cluster)
+	shared.SetEnvAndSourceBashrc("customResourceId", cluster)
 
 	trimmedRegion := strings.ReplaceAll(aksRegion, " ", "")
 	trimmedRegion = strings.ToLower(trimmedRegion)
-	os.Setenv("customRegion", trimmedRegion)
+	shared.SetEnvAndSourceBashrc("customRegion", trimmedRegion)
 
 	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 	time.Sleep(10 * time.Second)
-
-	fmt.Println("Setting env variables from envmdsd file for MDSD")
-
-	file, err := os.Open("/etc/mdsd.d/envmdsd")
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if err := shared.AddLineToBashrc(line); err != nil {
-			fmt.Println("Error adding line to ~/.bashrc:", err)
-			return
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Println("Error scanning file:", err)
-		return
-	}
 
 	fmt.Println("Starting MDSD")
 	shared.StartMdsdForOverlay()
@@ -251,7 +221,7 @@ func main() {
 	}
 	logFile.Close()
 
-	fluentBitCmd := exec.Command("fluent-bit", "-c", os.Getenv("FLUENT_BIT_CONFIG_FILE"), "-e", "/opt/fluent-bit/bin/out_appinsights.so")
+	fluentBitCmd := exec.Command("fluent-bit", "-c", fluentBitConfigFile, "-e", "/opt/fluent-bit/bin/out_appinsights.so")
 	fluentBitCmd.Stdout = os.Stdout
 	fluentBitCmd.Stderr = os.Stderr
 	if err := fluentBitCmd.Start(); err != nil {
@@ -266,7 +236,6 @@ func main() {
 		return
 	}
 
-	fmt.Printf("FLUENT_BIT_CONFIG_FILE=%s\n", os.Getenv("FLUENT_BIT_CONFIG_FILE"))
 	fmt.Println("starting telegraf")
 
 	if telemetryDisabled := os.Getenv("TELEMETRY_DISABLED"); telemetryDisabled != "true" {
@@ -328,7 +297,7 @@ func main() {
 	epochTimeNowReadable := time.Unix(epochTimeNow, 0).Format(time.RFC3339)
 
 	// Writing the epoch time to a file
-	file, err = os.Create("/opt/microsoft/liveness/azmon-container-start-time")
+	file, err := os.Create("/opt/microsoft/liveness/azmon-container-start-time")
 	if err != nil {
 		fmt.Println("Error creating file:", err)
 		return

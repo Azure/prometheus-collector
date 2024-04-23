@@ -60,28 +60,20 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedConfig map[s
 	}
 }
 
-func (fcw *FileConfigWriter) WriteConfigToFile(filename string) error {
+func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *ConfigProcessor) error {
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("exception while opening file for writing prometheus-collector config environment variables: %s", err)
 	}
 	defer file.Close()
-
-	if osType := os.Getenv("OS_TYPE"); osType != "" && strings.ToLower(osType) == "linux" {
-		file.WriteString(fmt.Sprintf("export AZMON_DEFAULT_METRIC_ACCOUNT_NAME=%s\n", fcw.ConfigProcessor.DefaultMetricAccountName))
-		file.WriteString(fmt.Sprintf("export AZMON_CLUSTER_LABEL=%s\n", fcw.ConfigProcessor.ClusterLabel))
-		file.WriteString(fmt.Sprintf("export AZMON_CLUSTER_ALIAS=%s\n", fcw.ConfigProcessor.ClusterAlias))
-		file.WriteString(fmt.Sprintf("export AZMON_OPERATOR_ENABLED_CHART_SETTING=%s\n", fcw.ConfigProcessor.IsOperatorEnabledChartSetting))
-		if fcw.ConfigProcessor.IsOperatorEnabled != "" && len(fcw.ConfigProcessor.IsOperatorEnabled) > 0 {
-			file.WriteString(fmt.Sprintf("export AZMON_OPERATOR_ENABLED=%s\n", fcw.ConfigProcessor.IsOperatorEnabled))
-			file.WriteString(fmt.Sprintf("export AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=%s\n", fcw.ConfigProcessor.IsOperatorEnabled))
-		}
-	} else {
-		file.WriteString(fmt.Sprintf("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=%s\n", fcw.ConfigProcessor.DefaultMetricAccountName))
-		file.WriteString(fmt.Sprintf("AZMON_CLUSTER_LABEL=%s\n", fcw.ConfigProcessor.ClusterLabel))
-		file.WriteString(fmt.Sprintf("AZMON_CLUSTER_ALIAS=%s\n", fcw.ConfigProcessor.ClusterAlias))
+	file.WriteString(fmt.Sprintf("AZMON_DEFAULT_METRIC_ACCOUNT_NAME=%s\n", configParser.DefaultMetricAccountName))
+	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_LABEL=%s\n", configParser.ClusterLabel))
+	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_ALIAS=%s\n", configParser.ClusterAlias))
+	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CHART_SETTING=%s\n", configParser.IsOperatorEnabledChartSetting))
+	if configParser.IsOperatorEnabled != "" && len(configParser.IsOperatorEnabled) > 0 {
+		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED=%s\n", configParser.IsOperatorEnabled))
+		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=%s\n", configParser.IsOperatorEnabled))
 	}
-
 	return nil
 }
 func (c *Configurator) Configure() {
@@ -115,7 +107,7 @@ func (c *Configurator) Configure() {
 	fmt.Printf("AZMON_CLUSTER_ALIAS: '%s'\n", c.ConfigParser.ClusterAlias)
 	fmt.Printf("AZMON_CLUSTER_LABEL: %s\n", c.ConfigParser.ClusterLabel)
 
-	err := c.ConfigWriter.WriteConfigToFile(c.ConfigFilePath)
+	err := c.ConfigWriter.WriteConfigToFile(c.ConfigFilePath, c.ConfigParser)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		return
