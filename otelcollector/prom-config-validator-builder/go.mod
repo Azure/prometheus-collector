@@ -3,6 +3,7 @@ module github.com/rashmy/prom-config-validator-builder
 go 1.21
 
 replace github.com/gracewehner/prometheusreceiver => ../prometheusreceiver
+replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => ../pkgtranslatorprometheus
 
 require (
 	github.com/gracewehner/prometheusreceiver v0.0.0-00010101000000-000000000000
