@@ -5,10 +5,11 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"prometheus-collector/shared"
 	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/prometheus-collector/shared"
 
 	"gopkg.in/yaml.v2"
 )

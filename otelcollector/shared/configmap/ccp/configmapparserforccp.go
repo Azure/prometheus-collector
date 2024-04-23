@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"prometheus-collector/shared"
+	// "prometheus-collector/shared"
+	"github.com/prometheus-collector/shared"
 )
 
 func Configmapparserforccp() {

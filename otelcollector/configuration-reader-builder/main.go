@@ -1,20 +1,31 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	"io/fs"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"os/exec"
 	"strings"
+	"time"
 
 	"os"
 
+	shared "github.com/prometheus-collector/shared"
+	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
+
+	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 	yaml "gopkg.in/yaml.v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Config struct {
-	LabelSelector      map[string]string      `yaml:"label_selector,omitempty"`
-	Config             map[string]interface{} `yaml:"config"`
-	AllocationStrategy string                 `yaml:"allocation_strategy,omitempty"`
+	CollectorSelector  *metav1.LabelSelector              `yaml:"collector_selector,omitempty"`
+	Config             map[string]interface{}             `yaml:"config"`
+	AllocationStrategy string                             `yaml:"allocation_strategy,omitempty"`
+	PrometheusCR       allocatorconfig.PrometheusCRConfig `yaml:"prometheus_cr,omitempty"`
+	FilterStrategy     string                             `yaml:"filter_strategy,omitempty"`
 }
 
 type OtelConfig struct {
@@ -49,6 +60,9 @@ var RESET = "\033[0m"
 var RED = "\033[31m"
 
 var taConfigFilePath = "/ta-configuration/targetallocator.yaml"
+var taConfigUpdated = false
+var taLivenessCounter = 0
+var taLivenessStartTime = time.Time{}
 
 func logFatalError(message string) {
 	// Always log the full message
@@ -126,11 +140,26 @@ func updateTAConfigFile(configFilePath string) {
 
 	targetAllocatorConfig := Config{
 		AllocationStrategy: "consistent-hashing",
-		LabelSelector: map[string]string{
-			"rsName":                         "ama-metrics",
-			"kubernetes.azure.com/managedby": "aks",
+		FilterStrategy:     "relabel-config",
+		CollectorSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"rsName":                         "ama-metrics",
+				"kubernetes.azure.com/managedby": "aks",
+			},
 		},
+		// CollectorSelector: map[string]string{
+		// 	"rsName":                         "ama-metrics",
+		// 	"kubernetes.azure.com/managedby": "aks",
+		// },
 		Config: promScrapeConfig,
+		// PrometheusCR: map[string]interface{}{
+		// 	"ServiceMonitorSelector": &metav1.LabelSelector{},
+		// 	"PodMonitorSelector":     &metav1.LabelSelector{},
+		// },
+		PrometheusCR: allocatorconfig.PrometheusCRConfig{
+			ServiceMonitorSelector: &metav1.LabelSelector{},
+			PodMonitorSelector:     &metav1.LabelSelector{},
+		},
 	}
 
 	targetAllocatorConfigYaml, _ := yaml.Marshal(targetAllocatorConfig)
@@ -140,11 +169,181 @@ func updateTAConfigFile(configFilePath string) {
 	}
 
 	log.Println("Updated file - targetallocator.yaml for the TargetAllocator to pick up new config changes")
+	taConfigUpdated = true
+	taLivenessStartTime = time.Now()
+}
+
+func hasConfigChanged(filePath string) bool {
+	if _, err := os.Stat(filePath); err == nil {
+		fileInfo, err := os.Stat(filePath)
+		if err != nil {
+			fmt.Println("Error getting file info:", err)
+			os.Exit(1)
+		}
+
+		return fileInfo.Size() > 0
+	}
+	return false
+}
+
+func taHealthHandler(w http.ResponseWriter, r *http.Request) {
+	status := http.StatusOK
+	message := "\ntargetallocator is running."
+
+	resp, _ := http.Get("http://localhost:8080/metrics")
+
+	if resp != nil && resp.StatusCode == http.StatusOK {
+		if taConfigUpdated {
+			// if taLivenessStartTime.IsZero() {
+			// 	taLivenessStartTime = time.Now()
+			// }
+			if !taLivenessStartTime.IsZero() {
+				duration := time.Since(taLivenessStartTime)
+				// Serve the response of ServiceUnavailable for 60s and then reset
+				if duration.Seconds() < 60 {
+					status = http.StatusServiceUnavailable
+					message += "targetallocator-config changed"
+				} else {
+					taConfigUpdated = false
+					taLivenessStartTime = time.Time{}
+				}
+			}
+		}
+
+		if status != http.StatusOK {
+			fmt.Printf(message)
+			currentTime := time.Now()
+			fmt.Println("Current Time in String: ", currentTime.String())
+			// writeTerminationLog(message)
+		}
+		w.WriteHeader(status)
+		fmt.Fprintln(w, message)
+	} else {
+		message = "\ncall to get TA metrics failed"
+		status = http.StatusServiceUnavailable
+		fmt.Printf(message)
+		w.WriteHeader(status)
+		fmt.Fprintln(w, message)
+		//writeTerminationLog(message)
+	}
+}
+
+func writeTerminationLog(message string) {
+	if err := os.WriteFile("/dev/termination-log", []byte(message), fs.FileMode(0644)); err != nil {
+		log.Printf("Error writing to termination log: %v", err)
+	}
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	status := http.StatusOK
+	message := "\nconfig-reader is running."
+
+	if hasConfigChanged("/opt/inotifyoutput.txt") {
+		status = http.StatusServiceUnavailable
+		message += "\ninotifyoutput.txt has been updated - config-reader-config changed"
+	}
+
+	w.WriteHeader(status)
+	fmt.Fprintln(w, message)
+	if status != http.StatusOK {
+		fmt.Printf(message)
+		writeTerminationLog(message)
+	}
+}
+
+func startCommandAndWait(command string, args ...string) {
+	cmd := exec.Command(command, args...)
+
+	// Set environment variables from os.Environ()
+	cmd.Env = append(os.Environ())
+	// Create pipes to capture stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Printf("Error creating stdout pipe: %v\n", err)
+		return
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		fmt.Printf("Error creating stderr pipe: %v\n", err)
+		return
+	}
+
+	// Start the command
+	err = cmd.Start()
+	if err != nil {
+		fmt.Printf("Error starting command: %v\n", err)
+		return
+	}
+
+	// Create goroutines to capture and print stdout and stderr
+	go func() {
+		stdoutBytes, _ := ioutil.ReadAll(stdout)
+		fmt.Print(string(stdoutBytes))
+	}()
+
+	go func() {
+		stderrBytes, _ := ioutil.ReadAll(stderr)
+		fmt.Print(string(stderrBytes))
+	}()
+
+	// Wait for the command to finish
+	err = cmd.Wait()
+	if err != nil {
+		fmt.Printf("Error waiting for command: %v\n", err)
+	}
 }
 
 func main() {
-	configFilePtr := flag.String("config", "", "Config file to read")
-	flag.Parse()
-	otelConfigFilePath := *configFilePtr
-	updateTAConfigFile(otelConfigFilePath)
+	shared.EchoError("Error")
+
+	_, err := os.Create("/opt/inotifyoutput.txt")
+	// inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
+	if err != nil {
+		log.Fatalf("Error creating output file: %v\n", err)
+	}
+
+	// Define the command to start inotify for config reader's liveness probe
+	inotifyCommandCfg := exec.Command(
+		"inotifywait",
+		"/etc/config/settings",
+		"--daemon",
+		"--recursive",
+		"--outfile", "/opt/inotifyoutput.txt",
+		"--event", "create,delete",
+		"--format", "%e : %T",
+		"--timefmt", "+%s",
+	)
+
+	// Start the inotify process
+	err = inotifyCommandCfg.Start()
+	if err != nil {
+		log.Fatalf("Error starting inotify process for config reader's liveness probe: %v\n", err)
+	}
+
+	// startCommandAndWait("/bin/sh", "/opt/configmap-parser.sh")
+
+	// err = godotenv.Load("/opt/envvars.env")
+	// if err != nil {
+	// 	fmt.Println("error loading env vars from envvars.env - %v", err)
+	// }
+	configmapsettings.Configmapparser()
+	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
+			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+		}
+	} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
+		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
+	} else {
+		log.Println("No configs found via configmap, not running config reader")
+	}
+
+	http.HandleFunc("/health", healthHandler)
+	http.HandleFunc("/health-ta", taHealthHandler)
+	http.ListenAndServe(":8081", nil)
+
+	// configFilePtr := flag.String("config", "", "Config file to read")
+	// flag.Parse()
+	// otelConfigFilePath := *configFilePtr
+	// updateTAConfigFile(otelConfigFilePath)
 }

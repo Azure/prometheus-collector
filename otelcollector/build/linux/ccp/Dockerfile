@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.20 as otelcollector-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as otelcollector-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 RUN go version > goversion.txt
@@ -13,7 +13,7 @@ COPY ./prometheusreceiver /src/prometheusreceiver
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.20 as prom-config-validator-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as prom-config-validator-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 COPY ./prom-config-validator-builder/go.mod ./prom-config-validator-builder/go.sum ./prom-config-validator-builder/
@@ -28,23 +28,30 @@ COPY ./prometheusreceiver /src/prometheusreceiver
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as ccpmain-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as ccpmain-builder
 WORKDIR /
 # Create directories
 RUN mkdir -p ./shared/configmap/mp/
 RUN mkdir -p ./main/
 # Copy shared go files
-COPY ../shared/*.go ./shared/
-COPY ../shared/configmap/mp/*.go ./shared/configmap/mp/
-COPY ../shared/configmap/ccp/*.go ./shared/configmap/ccp/
+COPY ../shared/*.go ./main/shared/
+COPY ./shared/go.mod ./main/shared/
+COPY ./shared/go.sum ./main/shared/
+COPY ../shared/configmap/mp/*.go ./main/shared/configmap/mp/
+COPY ../shared/configmap/ccp/*.go ./main/shared/configmap/ccp/
+COPY ./shared/configmap/mp/go.mod ./main/shared/configmap/mp/
+COPY ./shared/configmap/mp/go.sum ./main/shared/configmap/mp/
+COPY ./shared/configmap/ccp/go.mod ./main/shared/configmap/ccp/
+COPY ./shared/configmap/ccp/go.sum ./main/shared/configmap/ccp/
 # Copy main go files
 COPY ./main/*.go ./main/
-COPY ./go.mod ./
-COPY ./go.sum ./
+COPY ./go.mod ./main/
+COPY ./go.sum ./main/
+WORKDIR /main
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
-RUN go build -o ccpmain.exe ./main/main.go
+RUN go build -o ccpmain.exe ./main.go
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 ENV OS_TYPE "linux"
@@ -66,7 +73,7 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
-COPY --from=ccpmain-builder --chmod=777 /ccpmain.exe $tmpdir/main/
+COPY --from=ccpmain-builder --chmod=777 /main/ccpmain.exe $tmpdir/main/
 COPY ./react /static/react
 
 ARG TARGETARCH
