@@ -49,7 +49,7 @@ AzureMonitorMetrics:
   DsCPULimitWindows: 500m
   DsMemoryLimitWindows: 1Gi
   ImageTagTargetAllocator: 6.8.7-rashmi-test-fix-colcontrib-04-19-2024-143cfbca-targetallocator
-  ImageTagCfgReader: 6.8.7-rashmi-test-fix-colcontrib-04-19-2024-143cfbca-cfg
+  ImageTagCfgReader: 6.8.7-rashmi-prometheus-health-04-22-2024-a00e42fb-cfg
   TargetAllocatorEnabled: true
   DeploymentReplicas: 1
   CfgReaderCPULimit: 1
