@@ -36,7 +36,7 @@ AzureMonitorMetrics:
       - validatingwebhookconfigurations
       - volumeattachments
   ImageRepository: "/azuremonitor/containerinsights/cidev/prometheus-collector/images"
-  ImageTag: 6.8.7-rashmi-test-fix-colcontrib-04-19-2024-143cfbca
+  ImageTag: 6.8.7-rashmi-prometheus-health-04-22-2024-43dcc05c
   ImageTagWin: 6.8.7-rashmi-test-fix-colcontrib-04-19-2024-143cfbca-win
   RsCPULimit: 7
   RsMemoryLimit: 14Gi
