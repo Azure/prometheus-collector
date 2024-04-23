@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - SdlScans
 
 pr:
   autoCancel: true
@@ -165,14 +164,6 @@ stages:
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
-
-      - task: AntiMalware@4
-        displayName: 'Run MpCmdRun.exe'
-        inputs:
-          InputType: Basic
-          ScanType: CustomScan
-          FileDirPath: '$(Build.ArtifactStagingDirectory)'
-          DisableRemediation: false
 
   - job: Linux_Golang_Reference_App
     displayName: "Build: linux golang reference app image"
@@ -495,14 +486,6 @@ stages:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
 
-      - task: AntiMalware@4
-        displayName: 'Run MpCmdRun.exe'
-        inputs:
-          InputType: Basic
-          ScanType: CustomScan
-          FileDirPath: '$(Build.ArtifactStagingDirectory)'
-          DisableRemediation: false
-
       - task: PostAnalysis@2
         displayName: 'SDL: Post-Build Analysis'
         inputs:
@@ -658,14 +641,6 @@ stages:
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
-
-      - task: AntiMalware@4
-        displayName: 'Run MpCmdRun.exe'
-        inputs:
-          InputType: Basic
-          ScanType: CustomScan
-          FileDirPath: '$(Build.ArtifactStagingDirectory)'
-          DisableRemediation: false
 
       - task: PostAnalysis@2
         displayName: 'SDL: Post-Build Analysis'
@@ -1114,13 +1089,6 @@ stages:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
 
-    - task: AntiMalware@4
-      displayName: 'Run MpCmdRun.exe'
-      inputs:
-        InputType: Basic
-        ScanType: CustomScan
-        FileDirPath: '$(Build.ArtifactStagingDirectory)'
-        DisableRemediation: false
 - stage: Deploy
   jobs:
   - deployment: Deploy_Chart_ARC
