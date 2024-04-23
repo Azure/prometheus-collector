@@ -1031,9 +1031,7 @@ stages:
           Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
           $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
           oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
-          oras attach $(WINDOWS_FULL_IMAGE_NAME) \
-            --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
+          oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
         workingDirectory: $(Build.ArtifactStagingDirectory)/windows
         displayName: "Download, install Oras and run oras attach"
         condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
