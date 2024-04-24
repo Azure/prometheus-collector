@@ -454,13 +454,16 @@ var (
 func untypedHandler(w http.ResponseWriter, r *http.Request) {
 	user, pass, ok := r.BasicAuth()
 	if user == "rashmi" && pass == "pwd" && ok {
-		fmt.Fprintf(w, "untyped_metric{label_0=\"label-value\"} 0")
+		fmt.Fprintf(w, "rashmi_untyped_metric{label_0=\"label-value\"} 0")
 		fmt.Fprintf(w, "\n")
-		fmt.Fprintf(w, "untyped_metric{label_1=\"label-value\"} 1")
+		fmt.Fprintf(w, "rashmi_untyped_metric{label_1=\"label-value\"} 1")
 	} else {
 		w.Header().Set("WWW-Authenticate", `Basic realm="api"`)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	}
+	// fmt.Fprintf(w, "untyped_metric{label_0=\"label-value\"} 0")
+	// fmt.Fprintf(w, "\n")
+	// fmt.Fprintf(w, "untyped_metric{label_1=\"label-value\"} 1")
 }
 
 // func basicHandler(w http.ResponseWriter, req *http.Request) {
@@ -510,7 +513,7 @@ func main() {
 			log.Printf("HTTP server failed to start: %v", r)
 		}
 	}()
-
+	http.ListenAndServe(":2112", weatherServer)
 	// Run main server for weather app metrics
 	// err := http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
 	// if err != nil {
