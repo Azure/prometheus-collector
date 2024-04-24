@@ -457,6 +457,18 @@ func untypedHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "untyped_metric{label_1=\"label-value\"} 1")
 }
 
+func basicHandler(w http.ResponseWriter, req *http.Request) {
+	user, pass, ok := req.BasicAuth()
+	if user == "rashmi" && pass == "pwd" && ok {
+		fmt.Fprintf(w, "rashmi_untyped_metric{label_0=\"label-value\"} 0")
+		fmt.Fprintf(w, "\n")
+		fmt.Fprintf(w, "rashmi_untyped_metric{label_1=\"label-value\"} 1")
+	} else {
+		w.Header().Set("WWW-Authenticate", `Basic realm="api"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	}
+}
+
 func main() {
 
 	// certFile := "/etc/prometheus/certs/client-cert.pem"
@@ -478,10 +490,16 @@ func main() {
 	untypedServer.HandleFunc("/metrics", untypedHandler)
 	weatherServer := http.NewServeMux()
 	weatherServer.Handle("/metrics", promhttp.Handler())
+	basicServer := http.NewServeMux()
+	basicServer.HandleFunc("/metrics", basicHandler)
 
 	// Run server for metrics without a type
 	go func() {
 		http.ListenAndServe(":2113", untypedServer)
+	}()
+
+	go func() {
+		http.ListenAndServe(":2118", basicServer)
 	}()
 
 	defer func() {
