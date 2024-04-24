@@ -298,6 +298,20 @@ stages:
           arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
         retryCountOnTaskFailure: 1
 
+      - task: ESLint@1
+        displayName: 'Run ESLint'
+        inputs:
+          Configuration: required
+          EnableExclusions: false
+        retryCountOnTaskFailure: 1 
+
+      - task: Armory@2
+        displayName: 'Run ARMory'
+        inputs:
+          toolVersion: Latest
+          targetDirectory: '$(Build.SourcesDirectory)'
+        retryCountOnTaskFailure: 1   
+
       - task: Gosec@1
         displayName: 'SDL: run gosec'
         inputs:
@@ -1017,9 +1031,7 @@ stages:
           Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
           $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
           oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
-          oras attach $(WINDOWS_FULL_IMAGE_NAME) \
-            --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
+          oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
         workingDirectory: $(Build.ArtifactStagingDirectory)/windows
         displayName: "Download, install Oras and run oras attach"
         condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
@@ -1030,6 +1042,14 @@ stages:
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
+
+      - task: AntiMalware@4
+        displayName: 'Run MpCmdRun.exe'
+        inputs:
+          InputType: Basic
+          ScanType: CustomScan
+          FileDirPath: '$(Build.ArtifactStagingDirectory)'
+          DisableRemediation: false
 
   - job: Arc_Helm_Chart
     displayName: "Package: Arc helm chart"
