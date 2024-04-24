@@ -496,9 +496,6 @@ func main() {
 	// Run server for metrics without a type
 	go func() {
 		http.ListenAndServe(":2113", untypedServer)
-	}()
-
-	go func() {
 		http.ListenAndServe(":2118", basicServer)
 	}()
 
