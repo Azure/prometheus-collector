@@ -1,5 +1,28 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 04-25-2024
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Change log -
+  * fix: update to use older proxy setup for mdsd in aks - https://github.com/Azure/prometheus-collector/pull/864
+  * add remaining sdl scans similar to onebranch default - https://github.com/Azure/prometheus-collector/pull/858
+  * Add life cycle metadata to container image - https://github.com/Azure/prometheus-collector/pull/842
+  * [fix] Fix the fluent bit error when collector health is enabled - https://github.com/Azure/prometheus-collector/pull/841
+  * Test
+    * add Windows tests for Prometheus Target UX - https://github.com/Azure/prometheus-collector/pull/839
+    * small fixes to CRs and running tests - https://github.com/Azure/prometheus-collector/pull/835
+  * Various build fixes
+    * https://github.com/Azure/prometheus-collector/pull/834
+    * https://github.com/Azure/prometheus-collector/pull/831
+    * https://github.com/Azure/prometheus-collector/pull/827
+  * fix (ccp) : Relabel host for Control Plane Metrics - (https://github.com/Azure/prometheus-collector/pull/833)
+  * Adding filter strategy - https://github.com/Azure/prometheus-collector/pull/832/files
+  * fix: set hubble minimal ingestion profile - https://github.com/Azure/prometheus-collector/pull/829
+  * [fix] Minor fix in onboarding templates - https://github.com/Azure/prometheus-collector/pull/828
+
 ## Release 04-08-2024
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.7-main-04-09-2024-82adbf97`
