@@ -91,7 +91,7 @@ if [ "$HTTP_PROXY" != "" ]; then
 fi
 echo "export HTTP_PROXY_ENABLED=$HTTP_PROXY_ENABLED" >> ~/.bashrc
 
-if [ $IS_ARC_CLUSTER == "true" ] && [ $HTTP_PROXY_ENABLED == "true" ]; then
+if [ $HTTP_PROXY_ENABLED == "true" ]; then
   proxyprotocol="$(echo $HTTPS_PROXY | grep :// | sed -e's,^\(.*://\).*,\1,g')"
   proxyprotocol=$(echo $proxyprotocol | tr "[:upper:]" "[:lower:]")
   if [ "$proxyprotocol" != "http://" -a "$proxyprotocol" != "https://" ]; then
