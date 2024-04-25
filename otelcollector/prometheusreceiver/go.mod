@@ -2,6 +2,8 @@ module github.com/gracewehner/prometheusreceiver
 
 go 1.21
 
+replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => ../pkgtranslatorprometheus
+
 require (
 	github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08
 	github.com/go-kit/log v0.2.1
