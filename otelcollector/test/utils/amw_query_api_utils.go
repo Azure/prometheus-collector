@@ -2,13 +2,11 @@ package utils
 
 import (
 	"context"
-	"encoding/json"
-	"io/ioutil"
 	"net/http"
-	"net/url"
-	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -32,46 +30,56 @@ type TokenResponse struct {
 /*
  * Get the access token to the AMW query API
  */
-func GetQueryAccessToken(clientID, clientSecret string) (string, error) {
-	if clientID == "" || clientSecret == "" {
-		return "", fmt.Errorf("Client ID or Client Secret is empty")
-	}
-
-	apiUrl := "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/oauth2/token"
-	data := url.Values{}
-	data.Set("grant_type", "client_credentials")
-	data.Set("client_id", clientID)
-	data.Set("client_secret", clientSecret)
-	data.Set("resource", "https://prometheus.monitor.azure.com")
-
-	client := &http.Client{}
-	r, err := http.NewRequest(http.MethodPost, apiUrl, strings.NewReader(data.Encode()))
+func GetQueryAccessToken() (string, error) {
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		return "", fmt.Errorf("Failed create request for authorization token: %s", err.Error())
+		fmt.Printf(err.Error())
 	}
-	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := client.Do(r)
+	opts := policy.TokenRequestOptions{
+		Scopes: []string{"https://prometheus.monitor.azure.com"},
+	}
+	accessToken, err := cred.GetToken(context.Background(), opts)
 	if err != nil {
-		return "", fmt.Errorf("Failed to request authorization token: %s", err.Error())
+		fmt.Printf(err.Error())
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("Failed to read body of auth token response: %s", err.Error())
-	}
+	return accessToken.Token, nil
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Request for token returned status code: %s. Error Message: %s\n", resp.StatusCode, string(body))
-	}
 
-	var tokenResponse TokenResponse
-	err = json.Unmarshal([]byte(body), &tokenResponse)
-	if err != nil {
-		return "", fmt.Errorf("Failed to unmarshal the token response: %s", err.Error())
-	}
+	// apiUrl := "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/oauth2/token"
+	// data := url.Values{}
+	// // data.Set("grant_type", "client_credentials")
+	// // data.Set("client_id", clientID)
+	// // data.Set("client_secret", clientSecret)
+	// data.Set("resource", "https://prometheus.monitor.azure.com")
 
-	return tokenResponse.AccessToken, nil
+	// client := &http.Client{}
+	// r, err := http.NewRequest(http.MethodPost, apiUrl, strings.NewReader(data.Encode()))
+	// if err != nil {
+	// 	return "", fmt.Errorf("Failed create request for authorization token: %s", err.Error())
+	// }
+	// r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	// resp, err := client.Do(r)
+	// if err != nil {
+	// 	return "", fmt.Errorf("Failed to request authorization token: %s", err.Error())
+	// }
+	// defer resp.Body.Close()
+	// body, err := ioutil.ReadAll(resp.Body)
+	// if err != nil {
+	// 	return "", fmt.Errorf("Failed to read body of auth token response: %s", err.Error())
+	// }
+
+	// if resp.StatusCode != http.StatusOK {
+	// 	return "", fmt.Errorf("Request for token returned status code: %s. Error Message: %s\n", resp.StatusCode, string(body))
+	// }
+
+	// var tokenResponse TokenResponse
+	// err = json.Unmarshal([]byte(body), &tokenResponse)
+	// if err != nil {
+	// 	return "", fmt.Errorf("Failed to unmarshal the token response: %s", err.Error())
+	// }
+
+	// return tokenResponse.AccessToken, nil
 }
 
 /*
@@ -93,8 +101,8 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 /*
  * Create a Prometheus API client to use with the Managed Prometheus AMW Query API.
  */
-func CreatePrometheusAPIClient(amwQueryEndpoint, clientId, clientSecret string) (v1.API, error) {
-	token, err := GetQueryAccessToken(clientId, clientSecret)
+func CreatePrometheusAPIClient(amwQueryEndpoint string) (v1.API, error) {
+	token, err := GetQueryAccessToken()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get query access token: %s", err.Error())
 	}
