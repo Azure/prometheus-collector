@@ -31,16 +31,20 @@ type TokenResponse struct {
  * Get the access token to the AMW query API
  */
 func GetQueryAccessToken() (string, error) {
-	cred, err := azidentity.NewDefaultAzureCredential(nil)
+	cred, err := azidentity.NewManagedIdentityCredential(
+		&azidentity.ManagedIdentityCredentialOptions{
+			ID: azidentity.ClientID("f23a70be-ecc5-4b03-9f41-a849952ca4c8"),
+		},
+	)
 	if err != nil {
-		fmt.Printf(err.Error())
+		fmt.Printf("failed to create identity credential: %s", err.Error())
 	}
 	opts := policy.TokenRequestOptions{
 		Scopes: []string{"https://prometheus.monitor.azure.com"},
 	}
 	accessToken, err := cred.GetToken(context.Background(), opts)
 	if err != nil {
-		fmt.Printf(err.Error())
+		fmt.Printf("failed to get accesstoken: %s", err.Error())
 	}
 	return accessToken.Token, nil
 
