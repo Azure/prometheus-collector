@@ -33,7 +33,7 @@ type TokenResponse struct {
 func GetQueryAccessToken() (string, error) {
 	cred, err := azidentity.NewManagedIdentityCredential(
 		&azidentity.ManagedIdentityCredentialOptions{
-			ID: azidentity.ClientID("232dd4b9-668c-40fd-a3ec-b47062cd9bd6"),
+			ID: azidentity.ClientID("21263a36-8751-4ae7-aaac-75a2d6444868"),
 		},
 	)
 	if err != nil {
