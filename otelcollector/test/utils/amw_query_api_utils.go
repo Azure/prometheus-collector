@@ -9,7 +9,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/prometheus/common/model"
 
 	"fmt"
 )
@@ -31,10 +30,10 @@ type TokenResponse struct {
  * Get the access token to the AMW query API
  */
 func GetQueryAccessToken() (string, error) {
-	cred, err := azidentity.NewManagedIdentityCredential(
-		&azidentity.ManagedIdentityCredentialOptions{
-			ID: azidentity.ClientID("c7f895bb-c4f6-45af-be82-2273a424e237"),
-		},
+	cred, err := azidentity.NewDefaultAzureCredential(nil,
+		// &azidentity.ManagedIdentityCredentialOptions{
+		// 	ID: azidentity.ClientID("c7f895bb-c4f6-45af-be82-2273a424e237"),
+		// },
 	)
 	if err != nil {
 		fmt.Printf("failed to create identity credential: %s", err.Error())
@@ -132,18 +131,18 @@ func InstantQuery(api v1.API, query string) (v1.Warnings, interface{}, error) {
 	if err != nil {
 		return warnings, nil, fmt.Errorf("Failed to run query: %s", err.Error())
 	}
-	for _, sample := range result.(model.Vector) {
-		fmt.Printf("Metric: %s\n", sample.Metric)
-		fmt.Printf("Metric Name: %s\n", sample.Metric["__name__"])
-		fmt.Printf("Cluster: %s\n", sample.Metric["cluster"])
-		fmt.Printf("Job: %s\n", sample.Metric["job"])
-		fmt.Printf("Instance: %s\n", sample.Metric["instance"])
-		fmt.Printf("external_label_1: %s\n", sample.Metric["external_label_1"])
-		fmt.Printf("external_label_123: %s\n", sample.Metric["external_label_123"])
-		fmt.Printf("Value: %s\n", sample.Value)
-		fmt.Printf("Timestamp: %s\n", sample.Timestamp)
-		fmt.Printf("Histogram: %s\n", sample.Histogram)
-	}
+	// for _, sample := range result.(model.Vector) {
+	// 	// fmt.Printf("Metric: %s\n", sample.Metric)
+	// 	// fmt.Printf("Metric Name: %s\n", sample.Metric["__name__"])
+	// 	// fmt.Printf("Cluster: %s\n", sample.Metric["cluster"])
+	// 	// fmt.Printf("Job: %s\n", sample.Metric["job"])
+	// 	// fmt.Printf("Instance: %s\n", sample.Metric["instance"])
+	// 	// fmt.Printf("external_label_1: %s\n", sample.Metric["external_label_1"])
+	// 	// fmt.Printf("external_label_123: %s\n", sample.Metric["external_label_123"])
+	// 	// fmt.Printf("Value: %s\n", sample.Value)
+	// 	// fmt.Printf("Timestamp: %s\n", sample.Timestamp)
+	// 	// fmt.Printf("Histogram: %s\n", sample.Histogram)
+	// }
 
 	return warnings, result, nil
 }
