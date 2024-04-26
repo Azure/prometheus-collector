@@ -1309,7 +1309,12 @@ stages:
               inlineScript: 'az aks get-credentials -g ci-dev-aks-mac-eus-rg -n ci-dev-aks-mac-eus'
           
           - bash: |
-              kubectl apply -f ./testkube
+              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com"
+              export AZURE_CLIENT_ID="c7f895bb-c4f6-45af-be82-2273a424e237"
+
+              envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
+              kubectl apply -f ./testkube/api-server-permissions.yaml
+              kubectl apply -f ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
               kubectl apply -f ./test-cluster-yamls
 
               exit 0
@@ -1317,7 +1322,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
 
           - bash: |
-              sleep 240
+              sleep 300
 
               exit 0
             displayName: "Wait for cluster to be ready"
