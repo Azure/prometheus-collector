@@ -30,59 +30,21 @@ type TokenResponse struct {
  * Get the access token to the AMW query API
  */
 func GetQueryAccessToken() (string, error) {
-	cred, err := azidentity.NewDefaultAzureCredential(nil,
-		// &azidentity.ManagedIdentityCredentialOptions{
-		// 	ID: azidentity.ClientID("c7f895bb-c4f6-45af-be82-2273a424e237"),
-		// },
-	)
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		fmt.Printf("failed to create identity credential: %s", err.Error())
+		return "", fmt.Errorf("Failed to create identity credential: %s", err.Error())
 	}
+
 	opts := policy.TokenRequestOptions{
 		Scopes: []string{"https://prometheus.monitor.azure.com"},
 	}
+
 	accessToken, err := cred.GetToken(context.Background(), opts)
 	if err != nil {
-		fmt.Printf("failed to get accesstoken: %s", err.Error())
+		return "", fmt.Errorf("failed to get accesstoken: %s", err.Error())
 	}
+
 	return accessToken.Token, nil
-
-
-	// apiUrl := "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/oauth2/token"
-	// data := url.Values{}
-	// // data.Set("grant_type", "client_credentials")
-	// // data.Set("client_id", clientID)
-	// // data.Set("client_secret", clientSecret)
-	// data.Set("resource", "https://prometheus.monitor.azure.com")
-
-	// client := &http.Client{}
-	// r, err := http.NewRequest(http.MethodPost, apiUrl, strings.NewReader(data.Encode()))
-	// if err != nil {
-	// 	return "", fmt.Errorf("Failed create request for authorization token: %s", err.Error())
-	// }
-	// r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	// resp, err := client.Do(r)
-	// if err != nil {
-	// 	return "", fmt.Errorf("Failed to request authorization token: %s", err.Error())
-	// }
-	// defer resp.Body.Close()
-	// body, err := ioutil.ReadAll(resp.Body)
-	// if err != nil {
-	// 	return "", fmt.Errorf("Failed to read body of auth token response: %s", err.Error())
-	// }
-
-	// if resp.StatusCode != http.StatusOK {
-	// 	return "", fmt.Errorf("Request for token returned status code: %s. Error Message: %s\n", resp.StatusCode, string(body))
-	// }
-
-	// var tokenResponse TokenResponse
-	// err = json.Unmarshal([]byte(body), &tokenResponse)
-	// if err != nil {
-	// 	return "", fmt.Errorf("Failed to unmarshal the token response: %s", err.Error())
-	// }
-
-	// return tokenResponse.AccessToken, nil
 }
 
 /*
@@ -131,18 +93,6 @@ func InstantQuery(api v1.API, query string) (v1.Warnings, interface{}, error) {
 	if err != nil {
 		return warnings, nil, fmt.Errorf("Failed to run query: %s", err.Error())
 	}
-	// for _, sample := range result.(model.Vector) {
-	// 	// fmt.Printf("Metric: %s\n", sample.Metric)
-	// 	// fmt.Printf("Metric Name: %s\n", sample.Metric["__name__"])
-	// 	// fmt.Printf("Cluster: %s\n", sample.Metric["cluster"])
-	// 	// fmt.Printf("Job: %s\n", sample.Metric["job"])
-	// 	// fmt.Printf("Instance: %s\n", sample.Metric["instance"])
-	// 	// fmt.Printf("external_label_1: %s\n", sample.Metric["external_label_1"])
-	// 	// fmt.Printf("external_label_123: %s\n", sample.Metric["external_label_123"])
-	// 	// fmt.Printf("Value: %s\n", sample.Value)
-	// 	// fmt.Printf("Timestamp: %s\n", sample.Timestamp)
-	// 	// fmt.Printf("Histogram: %s\n", sample.Histogram)
-	// }
 
 	return warnings, result, nil
 }
