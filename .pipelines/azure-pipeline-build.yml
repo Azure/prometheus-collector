@@ -8,7 +8,6 @@ pr:
   branches:
     include:
     - main
-    - rashmi/namespace-selector
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
