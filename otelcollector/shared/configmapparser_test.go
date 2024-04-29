@@ -1,11 +1,12 @@
 package shared
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const settingsTestDir = "../test/configmapparser/settings"

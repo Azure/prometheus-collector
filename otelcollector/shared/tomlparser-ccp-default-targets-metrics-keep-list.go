@@ -24,7 +24,7 @@ var (
 	controlplaneEtcdMinMac                                                 = "etcd_server_has_leader|rest_client_requests_total|etcd_mvcc_db_total_size_in_bytes|etcd_mvcc_db_total_size_in_use_in_bytes|etcd_server_slow_read_indexes_total|etcd_server_slow_apply_total|etcd_network_client_grpc_sent_bytes_total|etcd_server_heartbeat_send_failures_total"
 )
 
-// getStringValue checks the type of the value and returns it as a string if possible. TEST
+// getStringValue checks the type of the value and returns it as a string if possible.
 func getStringValue(value interface{}) string {
 	switch v := value.(type) {
 	case string:
