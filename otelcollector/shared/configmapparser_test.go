@@ -37,6 +37,7 @@ func TestConfigmapParserForCCP_WhenSettingsAreValid_PrometheusConfigIsSuccessful
 	assert.Contains(t, generatedConfig, "job_name: controlplane-etcd")
 	// bug: minimalingestionprofile=true but it doesn't add the default metrics list
 	assert.Contains(t, generatedConfig, controlplaneApiserverMinMac)
+	assert.Contains(t, generatedConfig, controlplaneEtcdMinMac)
 }
 
 func loadSettings(t *testing.T, testDir string) {
