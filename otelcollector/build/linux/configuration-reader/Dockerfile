@@ -4,6 +4,9 @@ WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 COPY ./prom-config-validator-builder/go.mod ./prom-config-validator-builder/go.sum ./prom-config-validator-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
+COPY ./pkgtranslatorprometheus/go.mod ./pkgtranslatorprometheus/go.sum ./pkgtranslatorprometheus/
+WORKDIR /src/pkgtranslatorprometheus
+RUN go mod download
 WORKDIR /src/prometheusreceiver
 RUN go version
 RUN go mod download
@@ -11,6 +14,7 @@ WORKDIR /src/prom-config-validator-builder
 RUN go mod download
 COPY ./prom-config-validator-builder /src/prom-config-validator-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
+COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 # RUN go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . 
