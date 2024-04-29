@@ -1,4 +1,4 @@
-package main
+package shared
 
 type RegexValues struct {
 	ControlplaneKubeControllerManager string

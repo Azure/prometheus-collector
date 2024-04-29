@@ -1,4 +1,4 @@
-package main
+package shared
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func configmapparserforccp() {
+func ConfigmapParserForCCP() {
 	fmt.Printf("in configmapparserforccp")
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"

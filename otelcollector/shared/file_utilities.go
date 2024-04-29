@@ -1,4 +1,4 @@
-package main
+package shared
 
 import (
 	"bufio"
@@ -8,10 +8,20 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
-func printMdsdVersion() {
+func getPath(file string) string {
+	if os.Getenv("GO_ENV") == "test" {
+		dir := filepath.Join(".", file)
+		return dir
+	}
+
+	return file
+}
+
+func PrintMdsdVersion() {
 	cmd := exec.Command("mdsd", "--version")
 	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
@@ -19,10 +29,11 @@ func printMdsdVersion() {
 		fmt.Printf("Error getting MDSD version: %v\n", err)
 		return
 	}
-	fmtVar("MDSD_VERSION", string(output))
+
+	FmtVar("MDSD_VERSION", string(output))
 }
 
-func readVersionFile(filePath string) (string, error) {
+func ReadVersionFile(filePath string) (string, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err
@@ -30,12 +41,12 @@ func readVersionFile(filePath string) (string, error) {
 	return string(content), nil
 }
 
-func fmtVar(name, value string) {
+func FmtVar(name, value string) {
 	fmt.Printf("%s=\"%s\"\n", name, strings.TrimRight(value, "\n\r"))
 }
 
 func existsAndNotEmpty(filename string) bool {
-	info, err := os.Stat(filename)
+	info, err := os.Stat(getPath(filename))
 	if os.IsNotExist(err) {
 		return false
 	}
@@ -49,7 +60,7 @@ func existsAndNotEmpty(filename string) bool {
 }
 
 func readAndTrim(filename string) (string, error) {
-	content, err := os.ReadFile(filename)
+	content, err := os.ReadFile(getPath(filename))
 	if err != nil {
 		return "", err
 	}
@@ -58,7 +69,7 @@ func readAndTrim(filename string) (string, error) {
 }
 
 func exists(path string) bool {
-	_, err := os.Stat(path)
+	_, err := os.Stat(getPath(path))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false
@@ -68,13 +79,13 @@ func exists(path string) bool {
 }
 
 func copyFile(sourcePath, destinationPath string) error {
-	sourceFile, err := os.Open(sourcePath)
+	sourceFile, err := os.Open(getPath(sourcePath))
 	if err != nil {
 		return err
 	}
 	defer sourceFile.Close()
 
-	destinationFile, err := os.Create(destinationPath)
+	destinationFile, err := os.Create(getPath(destinationPath))
 	if err != nil {
 		return err
 	}
@@ -88,8 +99,9 @@ func copyFile(sourcePath, destinationPath string) error {
 	return nil
 }
 
-func setEnvVarsFromFile(filename string) error {
+func setEnvVarsFromFile(filePath string) error {
 	// Check if the file exists
+	filename := getPath(filePath)
 	_, e := os.Stat(filename)
 	if os.IsNotExist(e) {
 		return fmt.Errorf("File does not exist: %s", filename)
@@ -128,7 +140,7 @@ func setEnvVarsFromFile(filename string) error {
 	return nil
 }
 
-func monitorInotify(outputFile string) error {
+func MonitorInotify(outputFile string) error {
 	// Start inotify to watch for changes
 	fmt.Println("Starting inotify for watching config map update")
 
@@ -158,7 +170,7 @@ func monitorInotify(outputFile string) error {
 	return nil
 }
 
-func hasConfigChanged(filePath string) bool {
+func HasConfigChanged(filePath string) bool {
 	if _, err := os.Stat(filePath); err == nil {
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
@@ -171,7 +183,7 @@ func hasConfigChanged(filePath string) bool {
 	return false
 }
 
-func writeTerminationLog(message string) {
+func WriteTerminationLog(message string) {
 	if err := os.WriteFile("/dev/termination-log", []byte(message), fs.FileMode(0644)); err != nil {
 		log.Printf("Error writing to termination log: %v", err)
 	}

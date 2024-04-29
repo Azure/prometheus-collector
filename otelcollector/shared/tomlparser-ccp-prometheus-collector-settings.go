@@ -1,4 +1,4 @@
-package main
+package shared
 
 import (
 	"fmt"
@@ -118,10 +118,10 @@ func (c *Configurator) Configure() {
 
 func parseConfigAndSetEnvInFile() {
 	configurator := &Configurator{
-		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/prometheus-collector-settings"},
+		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: getPath("/etc/config/settings/prometheus-collector-settings")},
 		ConfigParser:   &ConfigProcessor{},
 		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
-		ConfigFilePath: "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var",
+		ConfigFilePath: getPath("/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"),
 	}
 
 	configurator.Configure()

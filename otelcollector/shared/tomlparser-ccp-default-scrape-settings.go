@@ -1,4 +1,4 @@
-package main
+package shared
 
 import (
 	"fmt"
@@ -151,9 +151,9 @@ func (c *Configurator) ConfigureDefaultScrapeSettings() {
 
 func tomlparserCCPDefaultScrapeSettings() {
 	configurator := &Configurator{
-		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/default-scrape-settings-enabled"},
+		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: getPath("/etc/config/settings/default-scrape-settings-enabled")},
 		ConfigWriter:   &FileConfigWriter{Config: map[string]string{}},
-		ConfigFilePath: "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var",
+		ConfigFilePath: getPath("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"),
 		ConfigParser:   &ConfigProcessor{},
 	}
 

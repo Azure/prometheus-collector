@@ -1,4 +1,4 @@
-package main
+package shared
 
 import (
 	"fmt"
@@ -38,12 +38,13 @@ func getStringValue(value interface{}) string {
 }
 
 func parseConfigMapForKeepListRegex() map[string]interface{} {
-	if _, err := os.Stat(configMapMountPath); os.IsNotExist(err) {
+	configMapPath := getPath(configMapMountPath)
+	if _, err := os.Stat(configMapPath); os.IsNotExist(err) {
 		fmt.Println("configmap prometheus-collector-configmap for default-targets-metrics-keep-list not mounted, using defaults")
 		return nil
 	}
 
-	content, err := os.ReadFile(configMapMountPath)
+	content, err := os.ReadFile(configMapPath)
 	if err != nil {
 		fmt.Printf("Exception while parsing config map for default-targets-metrics-keep-list: %v, using defaults, please check config map for errors\n", err)
 		return nil
@@ -150,7 +151,7 @@ func tomlparserCCPTargetsMetricsKeepList() {
 			}
 		}
 	} else {
-		if _, err := os.Stat(configMapMountPath); err == nil {
+		if _, err := os.Stat(getPath(configMapMountPath)); err == nil {
 			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
 		}
 	}
@@ -172,7 +173,7 @@ func tomlparserCCPTargetsMetricsKeepList() {
 		return
 	}
 
-	err = os.WriteFile("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash", []byte(out), fs.FileMode(0644))
+	err = os.WriteFile(getPath("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"), []byte(out), fs.FileMode(0644))
 	if err != nil {
 		fmt.Printf("Exception while writing to file: %v\n", err)
 		return
