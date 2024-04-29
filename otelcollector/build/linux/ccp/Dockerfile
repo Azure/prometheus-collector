@@ -29,9 +29,14 @@ ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as ccpmain-builder
-WORKDIR /main
-COPY ../shared/*.go ./main/go.mod ./main/*.go .
+WORKDIR /src
+COPY ./shared/go.mod ./shared/go.sum ./shared/
+WORKDIR /src/shared
 RUN go version
+RUN go mod download
+COPY ./shared /src/shared
+WORKDIR /main/
+COPY ./main/go.mod ./main/*.go .
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 RUN go get
