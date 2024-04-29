@@ -187,6 +187,14 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
           docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
+          curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+          mkdir -p oras-install/
+          tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+          sudo mv oras-install/oras /usr/local/bin/
+          rm -rf oras_1.0.0_*.tar.gz oras-install/
+          oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
+            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"  
         workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
         displayName: "Build: build and push reference app golang linux image to dev ACR"
 
@@ -212,6 +220,14 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
           docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)
+          curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+          mkdir -p oras-install/
+          tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+          sudo mv oras-install/oras /usr/local/bin/
+          rm -rf oras_1.0.0_*.tar.gz oras-install/
+          oras attach $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
+            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"  
         workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
         displayName: "Build: build and push reference app python linux image to dev ACR"
 
@@ -229,6 +245,14 @@ stages:
           docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker push $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+          docker pull $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+          curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
+          $currentDirectory = Get-Location
+          Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
+          New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
+          Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
+          $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
+          oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")" 
         displayName: "Build: build and push reference app golang windows image to dev ACR"
         workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
 
@@ -246,6 +270,14 @@ stages:
           docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+          docker pull $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+          curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
+          $currentDirectory = Get-Location
+          Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
+          New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
+          Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
+          $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
+          oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")" 
         displayName: "Build: build and push reference app python windows image to dev ACR"
         workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
 
