@@ -71,7 +71,7 @@ func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
 		for _, scfg := range scrapeConfigs {
-			if scfgMap, ok := scfg.(map[string]interface{}); ok {
+			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
 				if metricRelabelCfgs, ok := scfgMap["metric_relabel_configs"].([]interface{}); ok {
 					scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
 				} else {

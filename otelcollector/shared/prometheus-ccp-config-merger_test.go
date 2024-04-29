@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// test prometheusCcpConfigMerger method
 func TestMergeYAML_WithMultipleJobsEnabled_ThenMergedConfigIsComplete(t *testing.T) {
 	// Arrange
 	mergedDefaultConfigs := make(map[interface{}]interface{})
