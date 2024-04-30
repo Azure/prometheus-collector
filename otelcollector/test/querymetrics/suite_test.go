@@ -35,15 +35,9 @@ var _ = BeforeSuite(func() {
 
   amwQueryEndpoint := os.Getenv("AMW_QUERY_ENDPOINT")
   Expect(amwQueryEndpoint).NotTo(BeEmpty())
-  clientID := os.Getenv("QUERY_ACCESS_CLIENT_ID")
-  Expect(clientID).NotTo(BeEmpty())
-  clientSecret := os.Getenv("QUERY_ACCESS_CLIENT_SECRET")
-  Expect(clientSecret).NotTo(BeEmpty())
   
   PrometheusQueryClient, err = utils.CreatePrometheusAPIClient(
     amwQueryEndpoint,
-    clientID,
-    clientSecret,
   )
   Expect(err).NotTo(HaveOccurred())
   Expect(PrometheusQueryClient).NotTo(BeNil())

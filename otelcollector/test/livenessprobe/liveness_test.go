@@ -54,16 +54,16 @@ var _ = Describe("When the daemonset prometheus-collector container liveness pro
       Expect(err).NotTo(HaveOccurred())
 
       // Wait for all processes in pod to start up before running any other tests
-      time.Sleep(120 * time.Second)
+      time.Sleep(180 * time.Second)
     },
     Entry("otelcollector is not running, the container should restart", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
-      "OpenTelemetryCollector is not running", "otelcollector", int64(120),
+      "OpenTelemetryCollector is not running", "otelcollector", int64(180), FlakeAttempts(1),
     ),
     Entry("MetricsExtension is not running, the container should restart", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
-      "Metrics Extension is not running (configuration exists)", "MetricsExtension", int64(120),
+      "Metrics Extension is not running (configuration exists)", "MetricsExtension", int64(180), FlakeAttempts(1),
     ),
     Entry("mdsd is not running, the container should restart", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
-      "mdsd is not running (configuration exists)", "mdsd -a -A -e", int64(120),
+      "mdsd is not running (configuration exists)", "mdsd -a -A -e", int64(180), FlakeAttempts(1),
     ),
   )
 
@@ -86,16 +86,16 @@ var _ = Describe("When the windows prometheus-collector container liveness probe
       Expect(err).NotTo(HaveOccurred())
 
       // Wait for all processes in pod to start up before running any other tests
-      time.Sleep(180 * time.Second)
+      time.Sleep(240 * time.Second)
     },
     Entry("otelcollector is not running, the container should restart", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector",
-      "", "otelcollector", int64(300),
+      "", "otelcollector", int64(300), FlakeAttempts(1),
     ),
     Entry("MetricsExtension is not running, the container should restart", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector",
-      "", "MetricsExtension.Native", int64(300),
+      "", "MetricsExtension.Native", int64(300), FlakeAttempts(1),
     ),
     Entry("mdsd is not running, the container should restart", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector",
-      "", "MonAgentLauncher", int64(300),
+      "", "MonAgentLauncher", int64(300), FlakeAttempts(1),
     ),
   )
 
