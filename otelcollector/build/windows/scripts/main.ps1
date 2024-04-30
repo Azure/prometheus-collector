@@ -61,16 +61,59 @@ function Set-EnvironmentVariablesAndConfigParser {
     [System.Environment]::SetEnvironmentVariable("ENABLE_MCS", "true", "Machine")
     [System.Environment]::SetEnvironmentVariable("MDSD_USE_LOCAL_PERSISTENCY", "false", "Process")
     [System.Environment]::SetEnvironmentVariable("MDSD_USE_LOCAL_PERSISTENCY", "false", "Machine")
-    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Process")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $env:AKSREGION, "Process")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $env:CLUSTER, "Process")
     [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $env:CLUSTER, "Process")
     [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Process")
-    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Machine")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $env:AKSREGION, "Machine")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $env:CLUSTER, "Machine")
     [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $env:CLUSTER, "Machine")
     [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Machine")
+
+
+    $mcs_endpoint = "https://monitor.azure.com/"
+    $mcs_globalendpoint = "https://global.handler.control.monitor.azure.com"
+    $customEnvironment = [System.Environment]::GetEnvironmentVariable("customEnvironment", "process").ToLower()
+
+    switch ($customEnvironment) {
+        "azurepubliccloud" {
+            if ($env:AKSREGION.ToLower() -eq "eastus2euap" -or $env:AKSREGION.ToLower() -eq "centraluseuap") {
+                $mcs_globalendpoint = "https://global.handler.canary.control.monitor.azure.com"
+                $mcs_endpoint = "https://monitor.azure.com/"
+            }
+            else {
+                $mcs_endpoint = "https://monitor.azure.com/"
+                $mcs_globalendpoint = "https://global.handler.control.monitor.azure.com"
+            }
+        }
+        "azureusgovernmentcloud" {
+            $mcs_globalendpoint = "https://global.handler.control.monitor.azure.us"
+            $mcs_endpoint = "https://monitor.azure.us/"
+        }
+        "azurechinacloud" {
+            $mcs_globalendpoint = "https://global.handler.control.monitor.azure.cn"
+            $mcs_endpoint = "https://monitor.azure.cn/"
+        }
+        "usnat" {
+            $mcs_globalendpoint = "https://global.handler.control.monitor.azure.eaglex.ic.gov"
+            $mcs_endpoint = "https://monitor.azure.eaglex.ic.gov/"
+        }
+        "ussec" {
+            $mcs_globalendpoint = "https://global.handler.control.monitor.azure.microsoft.scloud"
+            $mcs_endpoint = "https://monitor.azure.microsoft.scloud/"
+        }
+        default {
+            Write-Host "Unknown customEnvironment: $customEnvironment, setting mcs endpoint to default azurepubliccloud values"
+            $mcs_endpoint = "https://monitor.azure.com/"
+            $mcs_globalendpoint = "https://global.handler.control.monitor.azure.com"
+        }
+    }   
+
+    [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", $mcs_endpoint, "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", $mcs_globalendpoint, "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", $mcs_endpoint, "Machine")
+    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", $mcs_globalendpoint, "Machine")
+
     ############### Environment variables for MA {End} ###############
 
     if ([string]::IsNullOrEmpty($env:MODE)) {
@@ -106,7 +149,6 @@ function Set-EnvironmentVariablesAndConfigParser {
         [System.Environment]::SetEnvironmentVariable("AZMON_AGENT_CFG_FILE_VERSION", $config_file_version, "Machine")
     }
 
-    $customEnvironment = [System.Environment]::GetEnvironmentVariable("customEnvironment", "process").ToLower()
     switch ($customEnvironment) {
         "azurepubliccloud" {
             $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_PUBLIC", "process")
