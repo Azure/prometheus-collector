@@ -1,5 +1,14 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 04-30-2024
+
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Change log -
+  * perf: add namespace selector to default jobs to improve perf - https://github.com/Azure/prometheus-collector/pull/867
+
 ## Release 04-25-2024
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
@@ -22,6 +31,7 @@
   * Adding filter strategy - https://github.com/Azure/prometheus-collector/pull/832/files
   * fix: set hubble minimal ingestion profile - https://github.com/Azure/prometheus-collector/pull/829
   * [fix] Minor fix in onboarding templates - https://github.com/Azure/prometheus-collector/pull/828
+  * Remove telegraf for telemetry and only use fluent-bit
 
 ## Release 04-08-2024
 
