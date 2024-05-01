@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - esrpUpdateSvcConnection
 
 pr:
   autoCancel: true
@@ -416,10 +417,14 @@ stages:
         displayName: "Build: Set values in payload.json for signing"
         condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
-      - task: EsrpCodeSigning@3
-        displayName: "ESRP CodeSigning for Prometheus"
+      - task: EsrpCodeSigning@5
         inputs:
-          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPPrometheusKVProdCert'
+          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
           FolderPath: $(Build.ArtifactStagingDirectory)/linux/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -583,11 +588,15 @@ stages:
         displayName: "Build: Set values in payload.json for signing"
         condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
 
-      - task: EsrpCodeSigning@3
-        displayName: "ESRP CodeSigning for Prometheus"
+      - task: EsrpCodeSigning@5
         inputs:
-          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
-          FolderPath: $(Build.ArtifactStagingDirectory)/linuxccp/
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPPrometheusKVProdCert'
+          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          FolderPath: $(Build.ArtifactStagingDirectory)/linux/
           Pattern: "*.json"
           signConfigType: inlineSignParams
           inlineOperation: |
@@ -733,12 +742,15 @@ stages:
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
 
-
-      - task: EsrpCodeSigning@3
-        displayName: "ESRP CodeSigning for TargetAllocator"
+      - task: EsrpCodeSigning@5
         inputs:
-          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
-          FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPPrometheusKVProdCert'
+          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          FolderPath: $(Build.ArtifactStagingDirectory)/linux/
           Pattern: "*.json"
           signConfigType: inlineSignParams
           inlineOperation: |
@@ -814,11 +826,15 @@ stages:
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
 
-      - task: EsrpCodeSigning@3
-        displayName: "ESRP CodeSigning for Config Reader"
+      - task: EsrpCodeSigning@5
         inputs:
-          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
-          FolderPath: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPPrometheusKVProdCert'
+          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          FolderPath: $(Build.ArtifactStagingDirectory)/linux/
           Pattern: "*.json"
           signConfigType: inlineSignParams
           inlineOperation: |
@@ -1032,12 +1048,16 @@ stages:
         workingDirectory: $(Build.ArtifactStagingDirectory)/windows
         displayName: "Build the payload json file"
 
-      - task: EsrpCodeSigning@3
-        displayName: 'ESRP CodeSigning for Prometheus'
+      - task: EsrpCodeSigning@5
         inputs:
-          ConnectedServiceName: 'ESRPServiceConnectionForPrometheusImages'
-          FolderPath: '$(Build.ArtifactStagingDirectory)/windows'
-          Pattern: '*.json'
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPPrometheusKVProdCert'
+          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          FolderPath: $(Build.ArtifactStagingDirectory)/linux/
+          Pattern: "*.json"
           signConfigType: inlineSignParams
           inlineOperation: |
             [
