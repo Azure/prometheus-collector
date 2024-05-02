@@ -37,69 +37,53 @@ func checkDuration(duration string) string {
 	return duration
 }
 
+func getConfigStringValue(configMapSettings *toml.Tree, key string) string {
+	if configMapSettings == nil {
+		return ""
+	}
+	valueInterface := configMapSettings.Get(key)
+	if valueInterface == nil {
+		return ""
+	}
+	value, ok := valueInterface.(string)
+	if !ok {
+		return ""
+	}
+	return value
+}
+
 func processConfigMap() map[string]string {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
-	fmt.Println("Start default-targets-scrape-interval-settings Processing")
+	fmt.Println("Start default-targets-scrape-interval-settings")
 
 	intervalHash := make(map[string]string)
 
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
 		configMapSettings := parseConfigMapForScrapeSettings()
 		if configMapSettings != nil {
-			if kubeletInterval := configMapSettings.Get("kubelet").(string); kubeletInterval != "" {
-				intervalHash["KUBELET_SCRAPE_INTERVAL"] = checkDuration(kubeletInterval)
-			}
-			if corednsInterval := configMapSettings.Get("coredns").(string); corednsInterval != "" {
-				intervalHash["COREDNS_SCRAPE_INTERVAL"] = checkDuration(corednsInterval)
-			}
-			if cadvisorInterval := configMapSettings.Get("cadvisor").(string); cadvisorInterval != "" {
-				intervalHash["CADVISOR_SCRAPE_INTERVAL"] = checkDuration(cadvisorInterval)
-			}
-			if kubeproxyInterval := configMapSettings.Get("kubeproxy").(string); kubeproxyInterval != "" {
-				intervalHash["KUBEPROXY_SCRAPE_INTERVAL"] = checkDuration(kubeproxyInterval)
-			}
-			if apiserverInterval := configMapSettings.Get("apiserver").(string); apiserverInterval != "" {
-				intervalHash["APISERVER_SCRAPE_INTERVAL"] = checkDuration(apiserverInterval)
-			}
-			if kubestateInterval := configMapSettings.Get("kubestate").(string); kubestateInterval != "" {
-				intervalHash["KUBESTATE_SCRAPE_INTERVAL"] = checkDuration(kubestateInterval)
-			}
-			if nodeexporterInterval := configMapSettings.Get("nodeexporter").(string); nodeexporterInterval != "" {
-				intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"] = checkDuration(nodeexporterInterval)
-			}
-			if windowsexporterInterval := configMapSettings.Get("windowsexporter").(string); windowsexporterInterval != "" {
-				intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"] = checkDuration(windowsexporterInterval)
-			}
-			if windowskubeproxyInterval := configMapSettings.Get("windowskubeproxy").(string); windowskubeproxyInterval != "" {
-				intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = checkDuration(windowskubeproxyInterval)
-			}
-			if prometheusCollectorInterval := configMapSettings.Get("prometheuscollectorhealth").(string); prometheusCollectorInterval != "" {
-				intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = checkDuration(prometheusCollectorInterval)
-			}
-			if podAnnotationInterval := configMapSettings.Get("podannotations").(string); podAnnotationInterval != "" {
-				intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = checkDuration(podAnnotationInterval)
-			}
-			if kappieBasicInterval := configMapSettings.Get("kappiebasic").(string); kappieBasicInterval != "" {
-				intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = checkDuration(kappieBasicInterval)
-			}
-			if networkObservabilityRetinaInterval := configMapSettings.Get("networkobservabilityRetina").(string); networkObservabilityRetinaInterval != "" {
-				intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = checkDuration(networkObservabilityRetinaInterval)
-			}
-			if networkObservabilityHubbleInterval := configMapSettings.Get("networkobservabilityHubble").(string); networkObservabilityHubbleInterval != "" {
-				intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = checkDuration(networkObservabilityHubbleInterval)
-			}
-			if networkObservabilityCiliumInterval := configMapSettings.Get("networkobservabilityCilium").(string); networkObservabilityCiliumInterval != "" {
-				intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = checkDuration(networkObservabilityCiliumInterval)
-			}
+			intervalHash["KUBELET_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "kubelet"))
+			intervalHash["COREDNS_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "coredns"))
+			intervalHash["CADVISOR_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "cadvisor"))
+			intervalHash["KUBEPROXY_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "kubeproxy"))
+			intervalHash["APISERVER_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "apiserver"))
+			intervalHash["KUBESTATE_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "kubestate"))
+			intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "nodeexporter"))
+			intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "windowsexporter"))
+			intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "windowskubeproxy"))
+			intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "prometheuscollectorhealth"))
+			intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "podannotations"))
+			intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "kappiebasic"))
+			intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityRetina"))
+			intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityHubble"))
+			intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityCilium"))
 		}
-
 	} else {
 		if _, err := os.Stat(configMapScrapeIntervalMountPath); err == nil {
 			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
 		}
 	}
 
-	fmt.Println("End default-targets-scrape-interval-settings Processing")
+	fmt.Println("End default-targets-scrape-interval-settings")
 	return intervalHash
 }
 
