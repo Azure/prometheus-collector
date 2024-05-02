@@ -307,6 +307,62 @@ func CheckIfAllContainersAreRunning(clientset *kubernetes.Clientset, namespace, 
 }
 
 /*
+ * Check that pods are scheduled in all the nodes. If a node has no schduled pod on it, return an error.
+ */
+func CheckIfAllPodsScheduleOnNodes(clientset *kubernetes.Clientset, namespace, labelKey string, labelValue string) error {
+
+	// Get list of all nodes
+	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+
+	if err != nil {
+		return errors.New(fmt.Sprintf("Error getting nodes with the specified labels: %v", err))
+	}
+
+	for _, node := range nodes.Items {
+
+		// Get list of pods scheduled on this node
+		pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+			FieldSelector: "spec.nodeName=" + node.Name,
+		})
+
+		if err != nil || pods == nil || len(pods.Items) == 0 {
+			return errors.New(fmt.Sprintf("Error getting pods on node %s:", node.Name))
+		}
+	}
+
+	return nil
+}
+
+/*
+ * Check that pods are scheduled in all the Fips nodes. If a Fips node has no schduled pod on it, return an error.
+ */
+func CheckIfAllFipsPodsScheduleOnNodes(clientset *kubernetes.Clientset, namespace, labelKey string, labelValue string) error {
+
+	// Get list of all nodes
+	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+
+	if err != nil {
+		return errors.New(fmt.Sprintf("Error getting nodes with the specified labels: %v", err))
+	}
+
+	for _, node := range nodes.Items {
+		if value, ok := node.Labels["agentpool"]; ok && value == "fipslin" {
+
+			// Get list of pods scheduled on this node
+			pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+				FieldSelector: "spec.nodeName=" + node.Name,
+			})
+
+			if err != nil || pods == nil || len(pods.Items) == 0 {
+				return errors.New(fmt.Sprintf("Error getting pods on node %s:", node.Name))
+			}
+		}
+	}
+
+	return nil
+}
+
+/*
  * Update an unused field in configmap with a random value to cause a configmap update event.
  */
 func GetAndUpdateConfigMap(clientset *kubernetes.Clientset, configMapName, configMapNamespace string) error {

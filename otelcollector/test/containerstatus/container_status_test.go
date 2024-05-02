@@ -20,10 +20,54 @@ var _ = DescribeTable("The containers should be running",
 	},
 	Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics"),
 	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node"),
+	Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics", Label(utils.ARM64Label)),
+	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", Label(utils.ARM64Label)),
 	Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.WindowsLabel)),
 	Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
 	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel)),
 	Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
+)
+
+/*
+ * For each of the pods that we deploy in our chart, ensure that all nodes have been used to schedule these pods.
+ * The replicaset, daemonset, and kube-state-metrics are always deployed.
+ * The operator-targets and node-exporter workloads are checked if the 'operator' or 'arc-extension' label is included in the test run.
+ * The label and values are provided to get a list of pods only with that label.
+ */
+var _ = DescribeTable("The pods should be scheduled in all nodes",
+	func(namespace string, controllerLabelName string, controllerLabelValue string) {
+		err := utils.CheckIfAllPodsScheduleOnNodes(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+		Expect(err).NotTo(HaveOccurred())
+	},
+	Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics"),
+	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node"),
+	Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics", Label(utils.ARM64Label)),
+	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", Label(utils.ARM64Label)),
+	Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.WindowsLabel)),
+	Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
+	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel)),
+	Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
+)
+
+/*
+ * For each of the DS pods that we deploy in our chart, ensure that all Fips nodes have been used to schedule these pods.
+ * The replicaset, daemonset, and kube-state-metrics are always deployed.
+ * The operator-targets and node-exporter workloads are checked if the 'operator' or 'arc-extension' label is included in the test run.
+ * The label and values are provided to get a list of pods only with that label.
+ */
+var _ = DescribeTable("The pods should be scheduled in all Fips nodes",
+	func(namespace string, controllerLabelName string, controllerLabelValue string) {
+		err := utils.CheckIfAllFipsPodsScheduleOnNodes(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+		Expect(err).NotTo(HaveOccurred())
+	},
+	Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics", Label(utils.FIPSLabel)),
+	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", Label(utils.FIPSLabel)),
+	Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics", Label(utils.ARM64Label), Label(utils.FIPSLabel)),
+	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", Label(utils.ARM64Label), Label(utils.FIPSLabel)),
+	Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.WindowsLabel), Label(utils.FIPSLabel)),
+	Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm", Label(utils.FIPSLabel)),
+	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel), Label(utils.FIPSLabel)),
+	Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel), Label(utils.FIPSLabel)),
 )
 
 /*
@@ -95,6 +139,8 @@ var _ = DescribeTable("The container logs should not contain errors",
 	},
 	Entry("when checking the ama-metrics replica pods", "kube-system", "rsName", "ama-metrics"),
 	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node"),
+	Entry("when checking the ama-metrics replica pods", "kube-system", "rsName", "ama-metrics", Label(utils.ARM64Label)),
+	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", Label(utils.ARM64Label)),
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.WindowsLabel)),
 	Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
 	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel)),
