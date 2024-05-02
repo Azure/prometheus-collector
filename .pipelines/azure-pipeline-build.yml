@@ -415,7 +415,7 @@ stages:
           EOF
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: Set values in payload.json for signing"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
       - task: EsrpCodeSigning@3
         displayName: "ESRP CodeSigning for Prometheus"
@@ -582,7 +582,7 @@ stages:
           EOF
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: Set values in payload.json for signing"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
       - task: EsrpCodeSigning@3
         displayName: "ESRP CodeSigning for Prometheus"
