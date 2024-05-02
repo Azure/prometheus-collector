@@ -455,7 +455,7 @@ stages:
             --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
         workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -622,7 +622,7 @@ stages:
             --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"            
         workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -773,7 +773,7 @@ stages:
             --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"                
         workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
   - job: Linux_Config_Reader
     displayName: "Build: config reader image"
@@ -853,7 +853,7 @@ stages:
             --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"              
         workingDirectory: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxcfgreader/"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
   - job: Windows2019_Prometheus_Collector
     displayName: "Build: windows 2019 prometheus-collector image"
@@ -1066,7 +1066,7 @@ stages:
           oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
         workingDirectory: $(Build.ArtifactStagingDirectory)/windows
         displayName: "Download, install Oras and run oras attach"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
       - task: PublishBuildArtifacts@1
         condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
