@@ -53,6 +53,7 @@
 - `windows`: Tests that should only run on clusters that have Windows nodes.
 - `arm64`: Tests that should only run on clusters taht have ARM64 nodes.
 - `linux-daemonset-custom-config`: Tests that should only run on clusters that have the ama-metrics-config-node configmap.
+- `fips`: Tests that should only run on clusters taht have FIPS nodes.
 
 # File Directory Structure
 ```
