@@ -309,7 +309,7 @@ stages:
           AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
           AuthAKVName: 'ESRPPrometheusKVProd'
           AuthCertName: 'ESRPReqPrometheusProdCert'
-          AuthSignCertName: '$(ESRP_AUTH_SIGN_CERT)'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
           FolderPath: '$(Build.ArtifactStagingDirectory)/linux/'
           Pattern: '*.json'
           signConfigType: 'inlineSignParams'
