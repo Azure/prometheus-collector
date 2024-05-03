@@ -43,7 +43,6 @@ func IsProcessRunning(processName string) bool {
 // SetEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
 // and sources the file to apply changes immediately.
 func SetEnvAndSourceBashrc(key, value string) error {
-	fmt.Printf("SetEnvAndSourceBashrc: Setting ENV Variable %s=%s\n", key, value)
 	// Get user's home directory
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -86,10 +85,6 @@ func SetEnvAndSourceBashrc(key, value string) error {
 	if err != nil {
 		return fmt.Errorf("failed to set environment variable: %v", err)
 	}
-
-	// Print the environment variable value
-	fmt.Printf("SetEnvAndSourceBashrc: Print ENV Variable value after setting them\n")
-	fmt.Printf("%s=%s\n", key, value)
 
 	return nil
 }

@@ -89,9 +89,6 @@ func setConfigSchemaVersionEnv() {
 		configSchemaVersion = configSchemaVersion[:10]
 	}
 	shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion)
-
-	fmt.Printf("configSchemaVersion is %s\n", configSchemaVersion)
-	fmt.Printf("Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
 }
 
 func setConfigFileVersionEnv() {
@@ -110,7 +107,6 @@ func setConfigFileVersionEnv() {
 	if len(configFileVersion) > 10 {
 		configFileVersion = configFileVersion[:10]
 	}
-	fmt.Printf("configFileVersion is %s\n", configFileVersion)
 	shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion)
 }
 

@@ -2,8 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - kaveesh/test
-    # - rashmi/upgrades-04-24
+    - rashmi/upgrades-04-24
 
 pr:
   autoCancel: true
