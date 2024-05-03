@@ -210,8 +210,8 @@ stages:
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
           AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
           AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPReqPrometheusProdCert'
-          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: ESRPReqPrometheusProdCert      
           FolderPath: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -230,6 +230,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - bash: |
           set -euxo pipefail
@@ -292,8 +296,8 @@ stages:
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
           AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
           AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPReqPrometheusProdCert'
-          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'      
           FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonlinux/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -312,6 +316,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - bash: |
           set -euxo pipefail
@@ -376,8 +384,8 @@ stages:
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
           AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
           AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPReqPrometheusProdCert'
-          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
           FolderPath: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -396,6 +404,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - powershell: |
           curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
@@ -455,8 +467,8 @@ stages:
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
           AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
           AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPReqPrometheusProdCert'
-          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
           FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -475,6 +487,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - powershell: |
           curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
@@ -627,15 +643,15 @@ stages:
       - task: EsrpCodeSigning@5
         displayName: "ESRP CodeSigning for Prometheus"
         inputs:
-          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
-          AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPReqPrometheusProdCert'
-          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
-          FolderPath: $(Build.ArtifactStagingDirectory)/linux/
-          Pattern: "*.json"
-          signConfigType: inlineSignParams
+          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
+          AuthAKVName: 'ESRPPrometheusKVProd'
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: '$(Build.ArtifactStagingDirectory)/linux/'
+          Pattern: '*.json'
+          signConfigType: 'inlineSignParams'
           inlineOperation: |
             [
               {
@@ -651,6 +667,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5'  
 
       - bash: |
           set -euxo pipefail
@@ -803,8 +823,8 @@ stages:
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
           AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
           AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPReqPrometheusProdCert'
-          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
           FolderPath: $(Build.ArtifactStagingDirectory)/linux/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -823,6 +843,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - bash: |
           set -euxo pipefail
@@ -959,8 +983,8 @@ stages:
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
           AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
           AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPReqPrometheusProdCert'
-          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName:    'ESRPReqPrometheusProdCert'
           FolderPath: $(Build.ArtifactStagingDirectory)/linux/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -979,6 +1003,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - bash: |
           set -euxo pipefail
@@ -1045,8 +1073,8 @@ stages:
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
           AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
           AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPReqPrometheusProdCert'
-          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
           FolderPath: $(Build.ArtifactStagingDirectory)/linux/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -1065,6 +1093,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - bash: |
           set -euxo pipefail
@@ -1269,8 +1301,8 @@ stages:
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
           AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
           AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPReqPrometheusProdCert'
-          AuthSignCertName: $(ESRP_AUTH_SIGN_CERT)       
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
           FolderPath: $(Build.ArtifactStagingDirectory)/windows/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -1289,6 +1321,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - powershell: |
           curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
