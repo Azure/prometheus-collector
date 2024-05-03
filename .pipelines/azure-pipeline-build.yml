@@ -203,7 +203,7 @@ stages:
         condition: succeeded()
 
       - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus"
+        displayName: "ESRP CodeSigning for Prometheus Golang Linux Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
@@ -289,7 +289,7 @@ stages:
         condition: succeeded()
 
       - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus"
+        displayName: "ESRP CodeSigning for Prometheus Python Linux Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
@@ -377,7 +377,7 @@ stages:
         condition: succeeded()
 
       - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus"
+        displayName: "ESRP CodeSigning for Prometheus Golang Windows Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
@@ -460,7 +460,7 @@ stages:
         condition: succeeded()
 
       - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus"
+        displayName: "ESRP CodeSigning for Prometheus Python Windows Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
@@ -640,7 +640,7 @@ stages:
         condition: succeeded()
 
       - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus"
+        displayName: "ESRP CodeSigning for Prometheus Linux"
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
@@ -816,7 +816,7 @@ stages:
         condition: succeeded()
 
       - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus"
+        displayName: "ESRP CodeSigning for Prometheus Linux CCP"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
@@ -976,7 +976,7 @@ stages:
         displayName: "Build: run trivy scan"
 
       - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus"
+        displayName: "ESRP CodeSigning for TargetAllocator"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
@@ -1066,7 +1066,7 @@ stages:
         displayName: "Build: run trivy scan"
 
       - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus"
+        displayName: "ESRP CodeSigning for Config Reader"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
@@ -1294,7 +1294,7 @@ stages:
         condition: succeeded()
 
       - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus"
+        displayName: "ESRP CodeSigning for Windows Multi-Arch Prometheus"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
           AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
