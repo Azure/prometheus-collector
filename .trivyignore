@@ -7,12 +7,20 @@
 # =========== HIGH ================
 # HIGH - otelcollector
 GHSA-fr2g-9hjm-wr23
+CVE-2023-29403
+CVE-2023-45283
 # HIGH - promconfigvalidator
 # HIGH - go vulnerabilities
 CVE-2023-39325
 
 # =========== MEDIUM ================
 # MEDIUM - otelcollector
+CVE-2023-29406
+CVE-2023-29409
+CVE-2023-39318
+CVE-2023-39319
+CVE-2023-39326
+CVE-2023-45284
 CVE-2023-45288
 CVE-2023-48795
 CVE-2024-24557
