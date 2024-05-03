@@ -49,8 +49,19 @@ func SetEnvAndSourceBashrc(key, value string) error {
 		return fmt.Errorf("failed to get user's home directory: %v", err)
 	}
 
-	// Open the .bashrc file for appending
+	// Construct the path to .bashrc
 	bashrcPath := filepath.Join(homeDir, ".bashrc")
+
+	// Check if .bashrc exists, if not, create it
+	if _, err := os.Stat(bashrcPath); os.IsNotExist(err) {
+		file, err := os.Create(bashrcPath)
+		if err != nil {
+			return fmt.Errorf("failed to create .bashrc file: %v", err)
+		}
+		defer file.Close()
+	}
+
+	// Open the .bashrc file for appending
 	file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open .bashrc file: %v", err)

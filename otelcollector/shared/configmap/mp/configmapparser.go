@@ -150,6 +150,7 @@ func handleEnvFileError(filename string) {
 func Configmapparser() {
 	setConfigFileVersionEnv()
 	setConfigSchemaVersionEnv()
+	fmt.Printf("Configmapparser:Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
 	parseSettingsForPodAnnotations()
 	parsePrometheusCollectorConfig()
 	parseDefaultScrapeSettings()
