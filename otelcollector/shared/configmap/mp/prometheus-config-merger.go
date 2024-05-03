@@ -127,7 +127,7 @@ func UpdateScrapeIntervalConfig(yamlConfigFile string, scrapeIntervalSetting str
 	// Update scrape interval config
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
 		for _, scfg := range scrapeConfigs {
-			if scfgMap, ok := scfg.(map[string]interface{}); ok {
+			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
 				if scrapeInterval, exists := scfgMap["scrape_interval"]; exists {
 					fmt.Printf("scrapeInterval %s\n", scrapeInterval)
 					scfgMap["scrape_interval"] = scrapeIntervalSetting
@@ -232,7 +232,7 @@ func AppendRelabelConfig(yamlConfigFile string, relabelConfig []map[string]inter
 	// Append relabel config for keep list to each scrape config
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
 		for _, scfg := range scrapeConfigs {
-			if scfgMap, ok := scfg.(map[string]interface{}); ok {
+			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
 				relabelCfgs, exists := scfgMap["relabel_configs"]
 				if !exists {
 					scfgMap["relabel_configs"] = relabelConfig
