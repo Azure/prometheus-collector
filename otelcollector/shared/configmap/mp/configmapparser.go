@@ -89,6 +89,8 @@ func setConfigSchemaVersionEnv() {
 		configSchemaVersion = configSchemaVersion[:10]
 	}
 	shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion)
+
+	fmt.Printf("Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
 }
 
 func setConfigFileVersionEnv() {
@@ -150,6 +152,7 @@ func handleEnvFileError(filename string) {
 func Configmapparser() {
 	setConfigFileVersionEnv()
 	setConfigSchemaVersionEnv()
+	fmt.Printf("Configmapparser:Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
 	parseSettingsForPodAnnotations()
 	parsePrometheusCollectorConfig()
 	parseDefaultScrapeSettings()

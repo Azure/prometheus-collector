@@ -75,6 +75,10 @@ func SetEnvAndSourceBashrc(key, value string) error {
 		return fmt.Errorf("failed to set environment variable: %v", err)
 	}
 
+	// Print the environment variable value
+	fmt.Printf("SetEnvAndSourceBashrc:Print ENV Variable value after setting them")
+	fmt.Printf("%s=%s\n", key, value)
+
 	return nil
 }
 
