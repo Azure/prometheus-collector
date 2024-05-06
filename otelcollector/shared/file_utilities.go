@@ -2,6 +2,7 @@ package shared
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/fs"
@@ -240,4 +241,23 @@ func lineExistsInFile(filePath, line string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func ModifyConfigFile(configFile string, pid int) error {
+	// Read the contents of the config file
+	content, err := os.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("error reading config file: %v", err)
+	}
+
+	// Replace ${OTEL_PID} with the actual PID
+	replacedContent := bytes.ReplaceAll(content, []byte("${OTEL_PID}"), []byte(fmt.Sprintf("%d", pid)))
+
+	// Write the modified content back to the config file
+	err = os.WriteFile(configFile, replacedContent, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing to config file: %v", err)
+	}
+
+	return nil
 }
