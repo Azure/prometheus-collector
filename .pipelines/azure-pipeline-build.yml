@@ -178,6 +178,7 @@ stages:
     steps:
       - checkout: self
         persistCredentials: true
+      
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/refappgolanglinux
 
@@ -186,16 +187,69 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
           docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+        displayName: "Build: build and push reference app golang linux image to dev ACR"
+
+      - bash: |
+          MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+          DIGEST=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+          SIZE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+          cat <<EOF >>$(Build.ArtifactStagingDirectory)/refappgolanglinux/payload.json
+          {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+          EOF
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+        displayName: "Build: Set values in payload.json for signing"
+        condition: succeeded()
+
+      - task: EsrpCodeSigning@5
+        displayName: "ESRP CodeSigning for Prometheus Golang Linux Reference App"
+        inputs:
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: ESRPReqPrometheusProdCert      
+          FolderPath: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
+          Pattern: "*.json"
+          signConfigType: inlineSignParams
+          inlineOperation: |
+            [
+              {
+                  "keyCode": "CP-469451",
+                  "operationSetCode": "NotaryCoseSign",
+                  "parameters": [
+                    {
+                      "parameterName": "CoseFlags",
+                      "parameterValue": "chainunprotected"
+                    }
+                  ],
+                  "toolName": "sign",
+                  "toolVersion": "1.0"
+              }
+            ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
+
+      - bash: |
+          set -euxo pipefail
           curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
           mkdir -p oras-install/
           tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
           sudo mv oras-install/oras /usr/local/bin/
           rm -rf oras_1.0.0_*.tar.gz oras-install/
           oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.cncf.notary.signature' \
+            ./payload.json:application/cose \
+            -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+          oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
             --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"  
-        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
-        displayName: "Build: build and push reference app golang linux image to dev ACR"
+            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
+        workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
+        displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/refappgolanglinux/"
+        condition: succeeded()          
 
   - job: Linux_Python_Reference_App
     displayName: "Build: linux python reference app image"
@@ -218,17 +272,70 @@ stages:
           docker buildx use dockerbuilder
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
-          docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)
+          docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)  
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+        displayName: "Build: build and push reference app python linux image to dev ACR"
+
+      - bash: |
+          MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+          DIGEST=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+          SIZE=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+          cat <<EOF >>$(Build.ArtifactStagingDirectory)/refapppythonlinux/payload.json
+          {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+          EOF
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+        displayName: "Build: Set values in payload.json for signing"
+        condition: succeeded()
+
+      - task: EsrpCodeSigning@5
+        displayName: "ESRP CodeSigning for Prometheus Python Linux Reference App"
+        inputs:
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'      
+          FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonlinux/
+          Pattern: "*.json"
+          signConfigType: inlineSignParams
+          inlineOperation: |
+            [
+              {
+                  "keyCode": "CP-469451",
+                  "operationSetCode": "NotaryCoseSign",
+                  "parameters": [
+                    {
+                      "parameterName": "CoseFlags",
+                      "parameterValue": "chainunprotected"
+                    }
+                  ],
+                  "toolName": "sign",
+                  "toolVersion": "1.0"
+              }
+            ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
+
+      - bash: |
+          set -euxo pipefail
           curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
           mkdir -p oras-install/
           tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
           sudo mv oras-install/oras /usr/local/bin/
           rm -rf oras_1.0.0_*.tar.gz oras-install/
           oras attach $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.cncf.notary.signature' \
+            ./payload.json:application/cose \
+            -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+          oras attach $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) \
             --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"  
-        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-        displayName: "Build: build and push reference app python linux image to dev ACR"
+            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
+        workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonlinux/
+        displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/refapppythonlinux/"
+        condition: succeeded()          
 
   - job: Golang_Windows_Reference_App
     displayName: "Build: windows golang reference app image"
@@ -241,19 +348,77 @@ stages:
     condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - powershell: |
+          New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refappgolangwindows" -ItemType "directory"
           docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker push $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
           docker pull $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+        displayName: "Build: build and push reference app golang windows image to dev ACR"
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+
+      - powershell: |
+          $output = docker manifest inspect -v $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) | ConvertFrom-Json
+          $firstManifest = $output[0]
+          $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
+          $DIGEST = $firstManifest.Descriptor.digest
+          $SIZE = $firstManifest.Descriptor.size
+          $payload = @{
+              targetArtifact = @{
+                  mediaType = $MEDIA_TYPE
+                  digest = $DIGEST
+                  size = $SIZE
+              }
+          } | ConvertTo-Json
+
+          $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/refappgolangwindows/payload.json"
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+        displayName: "Build the payload json file"
+        condition: succeeded()
+
+      - task: EsrpCodeSigning@5
+        displayName: "ESRP CodeSigning for Prometheus Golang Windows Reference App"
+        inputs:
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
+          Pattern: "*.json"
+          signConfigType: inlineSignParams
+          inlineOperation: |
+            [
+              {
+                  "keyCode": "CP-469451",
+                  "operationSetCode": "NotaryCoseSign",
+                  "parameters": [
+                    {
+                      "parameterName": "CoseFlags",
+                      "parameterValue": "chainunprotected"
+                    }
+                  ],
+                  "toolName": "sign",
+                  "toolVersion": "1.0"
+              }
+            ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
+
+      - powershell: |
           curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
           $currentDirectory = Get-Location
           Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
           New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
           Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
           $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
-          oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")" 
-        displayName: "Build: build and push reference app golang windows image to dev ACR"
-        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+          oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
+          oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
+        workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
+        displayName: "Download, install Oras and run oras attach"
+        condition: succeeded()
 
   - job: Windows_Python_Reference_App
     displayName: "Build: windows python reference app image"
@@ -266,19 +431,77 @@ stages:
     condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - powershell: |
+          New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refapppythonwindows" -ItemType "directory"
           docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
           docker pull $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+        displayName: "Build: build and push reference app python windows image to dev ACR"
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+
+      - powershell: |
+          $output = docker manifest inspect -v $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) | ConvertFrom-Json
+          $firstManifest = $output[0]
+          $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
+          $DIGEST = $firstManifest.Descriptor.digest
+          $SIZE = $firstManifest.Descriptor.size
+          $payload = @{
+              targetArtifact = @{
+                  mediaType = $MEDIA_TYPE
+                  digest = $DIGEST
+                  size = $SIZE
+              }
+          } | ConvertTo-Json
+
+          $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/refapppythonwindows/payload.json"
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+        displayName: "Build the payload json file"
+        condition: succeeded()
+
+      - task: EsrpCodeSigning@5
+        displayName: "ESRP CodeSigning for Prometheus Python Windows Reference App"
+        inputs:
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
+          Pattern: "*.json"
+          signConfigType: inlineSignParams
+          inlineOperation: |
+            [
+              {
+                  "keyCode": "CP-469451",
+                  "operationSetCode": "NotaryCoseSign",
+                  "parameters": [
+                    {
+                      "parameterName": "CoseFlags",
+                      "parameterValue": "chainunprotected"
+                    }
+                  ],
+                  "toolName": "sign",
+                  "toolVersion": "1.0"
+              }
+            ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
+
+      - powershell: |
           curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
           $currentDirectory = Get-Location
           Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
           New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
           Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
           $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
-          oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")" 
-        displayName: "Build: build and push reference app python windows image to dev ACR"
-        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+          oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
+          oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
+        workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
+        displayName: "Download, install Oras and run oras attach"
+        condition: succeeded()        
 
   - job: SDL_Policheck_Scan
     displayName: "SDL: policheck scanning"
@@ -413,15 +636,20 @@ stages:
           EOF
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: Set values in payload.json for signing"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
-      - task: EsrpCodeSigning@3
-        displayName: "ESRP CodeSigning for Prometheus"
+      - task: EsrpCodeSigning@5
+        displayName: "ESRP CodeSigning for Prometheus Linux"
         inputs:
-          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
-          FolderPath: $(Build.ArtifactStagingDirectory)/linux/
-          Pattern: "*.json"
-          signConfigType: inlineSignParams
+          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
+          AuthAKVName: 'ESRPPrometheusKVProd'
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: '$(Build.ArtifactStagingDirectory)/linux/'
+          Pattern: '*.json'
+          signConfigType: 'inlineSignParams'
           inlineOperation: |
             [
               {
@@ -437,6 +665,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5'  
 
       - bash: |
           set -euxo pipefail
@@ -454,7 +686,7 @@ stages:
             --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
         workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -580,12 +812,17 @@ stages:
           EOF
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: Set values in payload.json for signing"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
-      - task: EsrpCodeSigning@3
-        displayName: "ESRP CodeSigning for Prometheus"
+      - task: EsrpCodeSigning@5
+        displayName: "ESRP CodeSigning for Prometheus Linux CCP"
         inputs:
-          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
           FolderPath: $(Build.ArtifactStagingDirectory)/linuxccp/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -604,6 +841,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - bash: |
           set -euxo pipefail
@@ -621,7 +862,7 @@ stages:
             --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"            
         workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -725,6 +966,7 @@ stages:
           EOF
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
         displayName: "Build: build and push target allocator image to dev ACR"
+        condition: succeeded()
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -732,11 +974,15 @@ stages:
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
 
-
-      - task: EsrpCodeSigning@3
+      - task: EsrpCodeSigning@5
         displayName: "ESRP CodeSigning for TargetAllocator"
         inputs:
-          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName:    'ESRPReqPrometheusProdCert'
           FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -755,6 +1001,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - bash: |
           set -euxo pipefail
@@ -772,7 +1022,7 @@ stages:
             --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"                
         workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
   - job: Linux_Config_Reader
     displayName: "Build: config reader image"
@@ -806,6 +1056,7 @@ stages:
           EOF
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build and push configuration reader image to dev ACR"
+        condition: succeeded()
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
@@ -813,10 +1064,15 @@ stages:
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
 
-      - task: EsrpCodeSigning@3
+      - task: EsrpCodeSigning@5
         displayName: "ESRP CodeSigning for Config Reader"
         inputs:
-          ConnectedServiceName: "ESRPServiceConnectionForPrometheusImages"
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
           FolderPath: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
           Pattern: "*.json"
           signConfigType: inlineSignParams
@@ -835,6 +1091,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - bash: |
           set -euxo pipefail
@@ -852,7 +1112,7 @@ stages:
             --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"              
         workingDirectory: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxcfgreader/"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
   - job: Windows2019_Prometheus_Collector
     displayName: "Build: windows 2019 prometheus-collector image"
@@ -1030,13 +1290,19 @@ stages:
           $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/windows/payload.json"
         workingDirectory: $(Build.ArtifactStagingDirectory)/windows
         displayName: "Build the payload json file"
+        condition: succeeded()
 
-      - task: EsrpCodeSigning@3
-        displayName: 'ESRP CodeSigning for Prometheus'
+      - task: EsrpCodeSigning@5
+        displayName: "ESRP CodeSigning for Windows Multi-Arch Prometheus"
         inputs:
-          ConnectedServiceName: 'ESRPServiceConnectionForPrometheusImages'
-          FolderPath: '$(Build.ArtifactStagingDirectory)/windows'
-          Pattern: '*.json'
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: $(Build.ArtifactStagingDirectory)/windows/
+          Pattern: "*.json"
           signConfigType: inlineSignParams
           inlineOperation: |
             [
@@ -1053,6 +1319,10 @@ stages:
                   "toolVersion": "1.0"
               }
             ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - powershell: |
           curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
@@ -1065,7 +1335,7 @@ stages:
           oras attach $(WINDOWS_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
         workingDirectory: $(Build.ArtifactStagingDirectory)/windows
         displayName: "Download, install Oras and run oras attach"
-        condition: and(succeeded(), eq(variables.IS_MAIN_BRANCH, true))
+        condition: succeeded()
 
       - task: PublishBuildArtifacts@1
         condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
