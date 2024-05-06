@@ -825,7 +825,7 @@ stages:
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
-          FolderPath: $(Build.ArtifactStagingDirectory)/linux/
+          FolderPath: $(Build.ArtifactStagingDirectory)/linuxccp/
           Pattern: "*.json"
           signConfigType: inlineSignParams
           inlineOperation: |
@@ -985,7 +985,7 @@ stages:
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName:    'ESRPReqPrometheusProdCert'
-          FolderPath: $(Build.ArtifactStagingDirectory)/linux/
+          FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
           Pattern: "*.json"
           signConfigType: inlineSignParams
           inlineOperation: |
@@ -1075,7 +1075,7 @@ stages:
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
-          FolderPath: $(Build.ArtifactStagingDirectory)/linux/
+          FolderPath: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
           Pattern: "*.json"
           signConfigType: inlineSignParams
           inlineOperation: |
