@@ -3,6 +3,7 @@ trigger:
     include:
     - main
     - rashmi/upgrades-04-24
+    
 pr:
   autoCancel: true
   branches:
