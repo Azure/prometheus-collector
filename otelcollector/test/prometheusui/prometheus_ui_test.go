@@ -181,7 +181,7 @@ var _ = DescribeTable("The Prometheus UI API should return the targets metadata"
 var _ = DescribeTable("The Prometheus UI should return a 200 for its UI pages",
   func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, uiPaths []string) {
 
-		time.Sleep(60 * time.Second)
+		time.Sleep(90 * time.Second)
     pods, err := utils.GetPodsWithLabel(K8sClient, namespace, controllerLabelName, controllerLabelValue)
     Expect(err).NotTo(HaveOccurred())
   
