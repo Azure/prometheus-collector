@@ -148,7 +148,17 @@ func main() {
 	time.Sleep(30 * time.Second)
 
 	fmt.Println("Starting metricsextension with config overrides")
-	shared.StartMetricsExtensionForOverlay(meConfigFile)
+	ME_PID, err := shared.StartMetricsExtensionForOverlay(meConfigFile)
+	if err != nil {
+		fmt.Printf("Error starting MetricsExtension: %v\n", err)
+		return
+	}
+
+	// Modify fluentBitConfigFile using OTEL_PID
+	err = shared.ModifyConfigFile(fluentBitConfigFile, ME_PID, "${ME_PID}")
+	if err != nil {
+		fmt.Printf("Error modifying config file: %v\n", err)
+	}
 
 	// Get ME version
 	meVersion, err := shared.ReadVersionFile("/opt/metricsextversion.txt")
@@ -191,7 +201,18 @@ func main() {
 	}
 
 	fmt.Println("startCommand otelcollector")
-	shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+	OTEL_PID, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+	if err != nil {
+		fmt.Printf("Error starting command: %v\n", err)
+		return
+	}
+	fmt.Printf("OTEL_PID: %d\n", OTEL_PID)
+
+	// Modify fluentBitConfigFile using OTEL_PID
+	err = shared.ModifyConfigFile(fluentBitConfigFile, OTEL_PID, "${OTEL_PID}")
+	if err != nil {
+		fmt.Printf("Error modifying config file: %v\n", err)
+	}
 
 	otelCollectorVersion, err := exec.Command("/opt/microsoft/otelcollector/otelcollector", "--version", "").Output()
 	if err != nil {

@@ -89,7 +89,7 @@ func SetEnvAndSourceBashrc(key, value string) error {
 	return nil
 }
 
-func StartCommandWithOutputFile(command string, args []string, outputFile string) error {
+func StartCommandWithOutputFile(command string, args []string, outputFile string) (int, error) {
 	cmd := exec.Command(command, args...)
 
 	// Set environment variables from os.Environ()
@@ -98,23 +98,23 @@ func StartCommandWithOutputFile(command string, args []string, outputFile string
 	// Create file to write stdout and stderr
 	file, err := os.Create(outputFile)
 	if err != nil {
-		return fmt.Errorf("error creating output file: %v", err)
+		return 0, fmt.Errorf("error creating output file: %v", err)
 	}
 
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stdout pipe: %v", err)
+		return 0, fmt.Errorf("error creating stdout pipe: %v", err)
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stderr pipe: %v", err)
+		return 0, fmt.Errorf("error creating stderr pipe: %v", err)
 	}
 
 	// Start the command
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("error starting command: %v", err)
+		return 0, fmt.Errorf("error starting command: %v", err)
 	}
 
 	// Create a wait group to wait for goroutines
@@ -142,9 +142,11 @@ func StartCommandWithOutputFile(command string, args []string, outputFile string
 		file.Close()
 	}()
 
-	return nil
-}
+	// Get the PID of the started process
+	process_pid := cmd.Process.Pid
 
+	return process_pid, nil
+}
 func StartCommand(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
@@ -252,16 +254,16 @@ func copyOutputFile(src io.Reader, file *os.File) {
 	}
 }
 
-func StartMetricsExtensionForOverlay(meConfigFile string) {
+func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
 	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
 	// Set environment variables from os.Environ()
 	cmd.Env = append(os.Environ())
 	// Start the command
 	err := cmd.Start()
 	if err != nil {
-		fmt.Printf("Error starting MetricsExtension: %v\n", err)
-		return
+		return 0, fmt.Errorf("error starting MetricsExtension: %v", err)
 	}
+	return cmd.Process.Pid, nil
 }
 
 func StartMetricsExtensionWithConfigOverrides(configOverrides string) {

@@ -10,68 +10,6 @@ import (
 	"github.com/prometheus-collector/shared"
 )
 
-func updateBashrc(lines []string) error {
-	// Open .bashrc file for appending
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("error getting home directory: %v" + err.Error())
-	}
-	bashrcPath := homeDir + "/.bashrc"
-	f, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("error opening .bashrc file: %v" + err.Error())
-	}
-	defer f.Close()
-
-	// Append lines to .bashrc
-	for _, line := range lines {
-		if _, err := f.WriteString(line + "\n"); err != nil {
-			return fmt.Errorf("error appending to .bashrc file: %v" + err.Error())
-		}
-	}
-
-	// Export the variables
-	for _, line := range lines {
-		parts := splitLine(line)
-		os.Setenv(parts[0], parts[1])
-	}
-
-	// Reload .bashrc
-	err = reloadBashrc()
-	if err != nil {
-		return fmt.Errorf("error reloading .bashrc: %v" + err.Error())
-	}
-
-	return nil
-}
-
-func splitLine(line string) []string {
-	parts := strings.SplitN(line, "=", 2)
-	if len(parts) != 2 {
-		return []string{}
-	}
-	return parts
-}
-
-func reloadBashrc() error {
-	// Write a shell script to reload .bashrc
-	reloadScript := "#!/bin/bash\nsource ~/.bashrc\n"
-	err := os.WriteFile("/tmp/reload_bashrc.sh", []byte(reloadScript), 0744)
-	if err != nil {
-		return fmt.Errorf("error creating reload script: %v" + err.Error())
-	}
-	defer os.Remove("/tmp/reload_bashrc.sh")
-
-	// Execute the reload script
-	cmd := exec.Command("/bin/bash", "-c", "/tmp/reload_bashrc.sh")
-	err = cmd.Run()
-	if err != nil {
-		return fmt.Errorf("error reloading .bashrc: %v" + err.Error())
-	}
-
-	return nil
-}
-
 func setConfigSchemaVersionEnv() {
 	schemaVersionFile := "/etc/config/settings/schema-version"
 	fileInfo, err := os.Stat(schemaVersionFile)
@@ -150,7 +88,6 @@ func handleEnvFileError(filename string) {
 func Configmapparser() {
 	setConfigFileVersionEnv()
 	setConfigSchemaVersionEnv()
-	fmt.Printf("Configmapparser:Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
 	parseSettingsForPodAnnotations()
 	parsePrometheusCollectorConfig()
 	parseDefaultScrapeSettings()
@@ -158,7 +95,15 @@ func Configmapparser() {
 
 	tomlparserTargetsMetricsKeepList()
 	tomlparserScrapeInterval()
-	prometheusConfigMerger()
+
+	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
+	containerType := os.Getenv("CONTAINER_TYPE")
+
+	if azmonOperatorEnabled == "true" || containerType == "ConfigReaderSidecar" {
+		prometheusConfigMerger(true)
+	} else {
+		prometheusConfigMerger(false)
+	}
 
 	shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false")
 	shared.SetEnvAndSourceBashrc("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true")
@@ -211,6 +156,14 @@ func Configmapparser() {
 		}
 		defer file.Close()
 
+		// Create or truncate envvars.env file
+		envFile, err := os.Create("/opt/envvars.env")
+		if err != nil {
+			shared.EchoError("Error creating env file:" + err.Error())
+			return
+		}
+		defer envFile.Close()
+
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -219,24 +172,30 @@ func Configmapparser() {
 				key := parts[0]
 				value := parts[1]
 				os.Setenv(key, value)
+
+				// Write to envvars.env
+				fmt.Fprintf(envFile, "%s=%s\n", key, value)
 			}
 		}
 		if err := scanner.Err(); err != nil {
 			shared.EchoError("Error reading file:" + err.Error())
+			return
 		}
 
+		// Source prom_config_validator_env_var
 		cmd := exec.Command("source", "/opt/microsoft/prom_config_validator_env_var")
 		if err := cmd.Run(); err != nil {
 			shared.EchoError("Error sourcing env file:" + err.Error())
 			return
 		}
 
-		cmd = exec.Command("source", "~/.bashrc")
+		// Source envvars.env
+		cmd = exec.Command("source", "/opt/envvars.env")
 		if err := cmd.Run(); err != nil {
-			shared.EchoError("Error sourcing ~/.bashrc:" + err.Error())
+			fmt.Println("Error sourcing envvars.env:" + err.Error())
 			return
 		}
 	}
 
-	fmt.Println("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
+	fmt.Printf("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
 }
