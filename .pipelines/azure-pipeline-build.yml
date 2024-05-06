@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - rashmi/upgrades-04-24
+    - kaveesh/fix_operator_merger
 
 pr:
   autoCancel: true
