@@ -243,15 +243,15 @@ func lineExistsInFile(filePath, line string) (bool, error) {
 	return false, nil
 }
 
-func ModifyConfigFile(configFile string, pid int) error {
+func ModifyConfigFile(configFile string, pid int, placeholder string) error {
 	// Read the contents of the config file
 	content, err := os.ReadFile(configFile)
 	if err != nil {
 		return fmt.Errorf("error reading config file: %v", err)
 	}
 
-	// Replace ${OTEL_PID} with the actual PID
-	replacedContent := bytes.ReplaceAll(content, []byte("${OTEL_PID}"), []byte(fmt.Sprintf("%d", pid)))
+	// Replace placeholder with the actual PID
+	replacedContent := bytes.ReplaceAll(content, []byte(placeholder), []byte(fmt.Sprintf("%d", pid)))
 
 	// Write the modified content back to the config file
 	err = os.WriteFile(configFile, replacedContent, 0644)

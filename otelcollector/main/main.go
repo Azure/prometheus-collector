@@ -155,7 +155,7 @@ func main() {
 	}
 
 	// Modify fluentBitConfigFile using OTEL_PID
-	err = shared.ModifyConfigFile(fluentBitConfigFile, ME_PID)
+	err = shared.ModifyConfigFile(fluentBitConfigFile, ME_PID, "${ME_PID}")
 	if err != nil {
 		fmt.Printf("Error modifying config file: %v\n", err)
 	}
@@ -209,7 +209,7 @@ func main() {
 	fmt.Printf("OTEL_PID: %d\n", OTEL_PID)
 
 	// Modify fluentBitConfigFile using OTEL_PID
-	err = shared.ModifyConfigFile(fluentBitConfigFile, OTEL_PID)
+	err = shared.ModifyConfigFile(fluentBitConfigFile, OTEL_PID, "${OTEL_PID}")
 	if err != nil {
 		fmt.Printf("Error modifying config file: %v\n", err)
 	}
