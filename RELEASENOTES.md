@@ -2,14 +2,15 @@
 
 ## Release 05-03-2024
 
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-05-06-2024-079dabbc`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-05-06-2024-079dabbc-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-05-06-2024-079dabbc-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-05-06-2024-079dabbc-cfg`
 * Change log -
   * fix: update to use older proxy setup for mdsd in aks - https://github.com/Azure/prometheus-collector/pull/864
   * add remaining sdl scans similar to onebranch default - https://github.com/Azure/prometheus-collector/pull/858
   * Add life cycle metadata to container image - https://github.com/Azure/prometheus-collector/pull/842
+  * Migrate to ESRP version 5 from version 3
   * [fix] Fix the fluent bit error when collector health is enabled - https://github.com/Azure/prometheus-collector/pull/841
   * Test
     * add Windows tests for Prometheus Target UX - https://github.com/Azure/prometheus-collector/pull/839
