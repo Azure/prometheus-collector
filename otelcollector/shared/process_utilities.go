@@ -128,11 +128,6 @@ func startCommandAndWait(command string, args ...string) {
 	}
 }
 
-func main() {
-	// Example usage
-	startCommandAndWait("ls", "-l")
-}
-
 func copyOutputMulti(src io.Reader, dest io.Writer, file *os.File) {
 	// Create a multi-writer to write to both the file and os.Stdout/os.Stderr
 	multiWriter := io.MultiWriter(dest, file)
