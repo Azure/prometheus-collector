@@ -1,5 +1,9 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Pending
+* Change log -
+  * fix: ccp metrics missing cluster value
+
 ## Release 05-03-2024
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-05-06-2024-079dabbc`
