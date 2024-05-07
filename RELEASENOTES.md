@@ -1,24 +1,16 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Release 04-30-2024
+## Release 05-03-2024
 
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Change log -
-  * perf: add namespace selector to default jobs to improve perf - https://github.com/Azure/prometheus-collector/pull/867
-
-## Release 04-25-2024
-
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-05-06-2024-079dabbc`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-05-06-2024-079dabbc-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-05-06-2024-079dabbc-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-05-06-2024-079dabbc-cfg`
 * Change log -
   * fix: update to use older proxy setup for mdsd in aks - https://github.com/Azure/prometheus-collector/pull/864
   * add remaining sdl scans similar to onebranch default - https://github.com/Azure/prometheus-collector/pull/858
   * Add life cycle metadata to container image - https://github.com/Azure/prometheus-collector/pull/842
+  * Migrate to ESRP version 5 from version 3
   * [fix] Fix the fluent bit error when collector health is enabled - https://github.com/Azure/prometheus-collector/pull/841
   * Test
     * add Windows tests for Prometheus Target UX - https://github.com/Azure/prometheus-collector/pull/839
@@ -32,6 +24,9 @@
   * fix: set hubble minimal ingestion profile - https://github.com/Azure/prometheus-collector/pull/829
   * [fix] Minor fix in onboarding templates - https://github.com/Azure/prometheus-collector/pull/828
   * Remove telegraf for telemetry and only use fluent-bit
+  * perf: add namespace selector to default jobs to improve perf - https://github.com/Azure/prometheus-collector/pull/867
+  * set hubble minimal ingestion profile - https://github.com/Azure/prometheus-collector/pull/860
+  * Upgrade Metrics Extension (Linux & windows) from metricsext2-2.2024.328.1744 --> metricsext2-2.2024.419.1535 (This fixes the HDInsights bug (OOM) on flint clusters)
 
 ## Release 04-08-2024
 
