@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -165,13 +166,6 @@ func setEnvVarsFromFile(filename string) error {
 
 		setEnvAndSourceBashrc(key, value)
 	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 	if err := scanner.Err(); err != nil {
 		return err
