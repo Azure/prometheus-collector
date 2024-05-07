@@ -1,58 +1,58 @@
-# scrape_configs:
-#   - job_name: prometheus_ref_app_apiserver
-#     scheme: http
-#     scrape_interval: $$SCRAPE_INTERVAL$$
-#     kubernetes_sd_configs:
-#     - role: pod
-#     relabel_configs:
-#     - source_labels: [__meta_kubernetes_pod_label_app]
-#       action: keep
-#       regex: "prometheus-reference-app"
 scrape_configs:
-- job_name: controlplane-apiserver
-  scrape_interval: $$SCRAPE_INTERVAL$$
-  label_limit: 63
-  label_name_length_limit: 511
-  label_value_length_limit: 1023
-  kubernetes_sd_configs:
-    - role: endpoints
-      namespaces:
-        names:
-          - $$POD_NAMESPACE$$
-  scheme: https
-  tls_config:
-    ca_file: /etc/kubernetes/secrets/ca.pem
-    cert_file: /etc/kubernetes/secrets/client.pem
-    key_file: /etc/kubernetes/secrets/client-key.pem
-    insecure_skip_verify: true
-  relabel_configs:
-    - source_labels:
-        - __meta_kubernetes_pod_label_k8s_app
-        - __meta_kubernetes_pod_container_name
+  - job_name: prometheus_ref_app_apiserver
+    scheme: http
+    scrape_interval: $$SCRAPE_INTERVAL$$
+    kubernetes_sd_configs:
+    - role: pod
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_label_app]
       action: keep
-      regex: kube-apiserver;kube-apiserver
-    - source_labels: [ __meta_kubernetes_pod_name ]
-      regex: (.*)
-      target_label: instance
-      action: replace
-  metric_relabel_configs:
-    # Generate host alias
-    - source_labels: [ host ]
-      action: hashmod
-      regex: (.+)
-      modulus: 10000000000000000000 # take last 19 digits of the MD5 hash. (Prom won't let us take more than this)
-      target_label: hostalias
-    - source_labels: [ host ]
-      regex: ^(localhost|\[::1\]):443$
-      target_label: hostalias
-      replacement: kube-apiserver
-    # Replace the host with hostalias
-    - source_labels: [ hostalias, host ]
-      regex: ^(.+);(.+)$
-      action: replace
-      target_label: host
-    - source_labels: [ __name__ ]
-      action: drop
-      regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
-    - action: labeldrop
-      regex: hostalias
+      regex: "prometheus-reference-app"
+# scrape_configs:
+# - job_name: controlplane-apiserver
+#   scrape_interval: $$SCRAPE_INTERVAL$$
+#   label_limit: 63
+#   label_name_length_limit: 511
+#   label_value_length_limit: 1023
+#   kubernetes_sd_configs:
+#     - role: endpoints
+#       namespaces:
+#         names:
+#           - $$POD_NAMESPACE$$
+#   scheme: https
+#   tls_config:
+#     ca_file: /etc/kubernetes/secrets/ca.pem
+#     cert_file: /etc/kubernetes/secrets/client.pem
+#     key_file: /etc/kubernetes/secrets/client-key.pem
+#     insecure_skip_verify: true
+#   relabel_configs:
+#     - source_labels:
+#         - __meta_kubernetes_pod_label_k8s_app
+#         - __meta_kubernetes_pod_container_name
+#       action: keep
+#       regex: kube-apiserver;kube-apiserver
+#     - source_labels: [ __meta_kubernetes_pod_name ]
+#       regex: (.*)
+#       target_label: instance
+#       action: replace
+#   metric_relabel_configs:
+#     # Generate host alias
+#     - source_labels: [ host ]
+#       action: hashmod
+#       regex: (.+)
+#       modulus: 10000000000000000000 # take last 19 digits of the MD5 hash. (Prom won't let us take more than this)
+#       target_label: hostalias
+#     - source_labels: [ host ]
+#       regex: ^(localhost|\[::1\]):443$
+#       target_label: hostalias
+#       replacement: kube-apiserver
+#     # Replace the host with hostalias
+#     - source_labels: [ hostalias, host ]
+#       regex: ^(.+);(.+)$
+#       action: replace
+#       target_label: host
+#     - source_labels: [ __name__ ]
+#       action: drop
+#       regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
+#     - action: labeldrop
+#       regex: hostalias
