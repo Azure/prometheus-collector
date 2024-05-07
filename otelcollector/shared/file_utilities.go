@@ -88,6 +88,55 @@ func copyFile(sourcePath, destinationPath string) error {
 	return nil
 }
 
+// setEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
+// and sources the file to apply changes immediately.
+func setEnvAndSourceBashrc(key, value string) error {
+	// Get user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user's home directory: %v", err)
+	}
+
+	// Construct the path to .bashrc
+	bashrcPath := filepath.Join(homeDir, ".bashrc")
+
+	// Check if .bashrc exists, if not, create it
+	if _, err := os.Stat(bashrcPath); os.IsNotExist(err) {
+		file, err := os.Create(bashrcPath)
+		if err != nil {
+			return fmt.Errorf("failed to create .bashrc file: %v", err)
+		}
+		defer file.Close()
+	}
+
+	// Open the .bashrc file for appending
+	file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open .bashrc file: %v", err)
+	}
+	defer file.Close()
+
+	// Write the export statement to the .bashrc file
+	_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
+	if err != nil {
+		return fmt.Errorf("failed to write to .bashrc file: %v", err)
+	}
+
+	// Source the .bashrc file
+	cmd := exec.Command("bash", "-c", "source "+bashrcPath)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to source .bashrc: %v", err)
+	}
+
+	// Set the environment variable
+	err = os.Setenv(key, value)
+	if err != nil {
+		return fmt.Errorf("failed to set environment variable: %v", err)
+	}
+
+	return nil
+}
+
 func setEnvVarsFromFile(filename string) error {
 	// Check if the file exists
 	_, e := os.Stat(filename)
@@ -114,7 +163,7 @@ func setEnvVarsFromFile(filename string) error {
 		key := parts[0]
 		value := parts[1]
 
-		SetEnvAndSourceBashrc(key, value)
+		setEnvAndSourceBashrc(key, value)
 	}
 
 	if err := scanner.Err(); err != nil {
