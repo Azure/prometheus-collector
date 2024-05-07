@@ -78,10 +78,18 @@ func startCommand(command string, args ...string) {
 }
 
 func startCommandAndWait(command string, args ...string) {
+	// Print current environment variables
+	fmt.Println("Current Environment Variables:")
+	for _, env := range os.Environ() {
+		fmt.Println(env)
+	}
+	fmt.Println()
+
 	cmd := exec.Command(command, args...)
 
 	// Set environment variables from os.Environ()
 	cmd.Env = append(os.Environ())
+
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -118,6 +126,11 @@ func startCommandAndWait(command string, args ...string) {
 	if err != nil {
 		fmt.Printf("Error waiting for command: %v\n", err)
 	}
+}
+
+func main() {
+	// Example usage
+	startCommandAndWait("ls", "-l")
 }
 
 func copyOutputMulti(src io.Reader, dest io.Writer, file *os.File) {
