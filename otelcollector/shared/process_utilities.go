@@ -78,13 +78,6 @@ func startCommand(command string, args ...string) {
 }
 
 func startCommandAndWait(command string, args ...string) {
-	// Print current environment variables
-	fmt.Println("Current Environment Variables:")
-	for _, env := range os.Environ() {
-		fmt.Println(env)
-	}
-	fmt.Println()
-
 	cmd := exec.Command(command, args...)
 
 	// Set environment variables from os.Environ()
