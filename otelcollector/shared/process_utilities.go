@@ -82,6 +82,7 @@ func startCommandAndWait(command string, args ...string) {
 
 	// Set environment variables from os.Environ()
 	cmd.Env = append(os.Environ())
+
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
