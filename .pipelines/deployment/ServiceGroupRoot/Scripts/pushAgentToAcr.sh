@@ -65,7 +65,18 @@ fi
 
 PROD_ACR_REPOSITORY_WITHOUT_SLASH="${PROD_ACR_REPOSITORY:1}"
 echo "Pushing ${PROD_ACR_REPOSITORY_WITHOUT_SLASH}:${IMAGE_TAG} to ${ACR_REGISTRY}"
-az acr import --name $ACR_REGISTRY --source ${MCR_REGISTRY}${DEV_MCR_REPOSITORY}:${IMAGE_TAG} --image ${PROD_ACR_REPOSITORY_WITHOUT_SLASH}:${IMAGE_TAG}
+
+# Login to ACR and get the access token
+LOGIN_INFO=$(az acr login -n $ACR_REGISTRY --expose-token)
+TOKEN=$(echo $LOGIN_INFO | jq -r '.accessToken')
+
+# Define the source and destination image paths
+SOURCE_IMAGE_FULL_PATH=${MCR_REGISTRY}${DEV_MCR_REPOSITORY}:${IMAGE_TAG}
+AGENT_IMAGE_FULL_PATH=${PROD_ACR_REPOSITORY_WITHOUT_SLASH}:${IMAGE_TAG}
+
+# Use oras to copy the image
+oras copy -r $SOURCE_IMAGE_FULL_PATH $ACR_REGISTRY/$AGENT_IMAGE_FULL_PATH --to-password $TOKEN
+
 if [ $? -eq 0 ]; then
   echo "Retagged and pushed image successfully"
 else
