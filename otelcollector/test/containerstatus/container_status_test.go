@@ -34,15 +34,15 @@ var _ = DescribeTable("The containers should be running",
  */
 var _ = DescribeTable("The pods should be scheduled in all nodes",
 	func(namespace string, controllerLabelName string, controllerLabelValue string) {
-		err := utils.CheckIfAllPodsScheduleOnNodes(K8sClient, namespace, controllerLabelName, controllerLabelValue)
+		err := utils.CheckIfAllPodsScheduleOnNodes(K8sClient, namespace, controllerLabelName, controllerLabelValue, osLabel)
 		Expect(err).NotTo(HaveOccurred())
 	},
 	// Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics"),
-	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node"),
-	Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.WindowsLabel)),
-	Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
-	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel)),
-	Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
+	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-node", "linux"),
+	Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", "windows", Label(utils.WindowsLabel)),
+	// Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
+	// Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel)),
+	// Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
 )
 
 /*

@@ -309,7 +309,7 @@ func CheckIfAllContainersAreRunning(clientset *kubernetes.Clientset, namespace, 
 /*
  * Check that pods with the specified namespace and label value are scheduled in all the nodes. If a node has no schduled pod on it, return an error.
  */
-func CheckIfAllPodsScheduleOnNodes(clientset *kubernetes.Clientset, namespace, labelKey string, labelValue string) error {
+func CheckIfAllPodsScheduleOnNodes(clientset *kubernetes.Clientset, namespace, platform string, labelKey string, labelValue string, osLabel string) error {
 
 	// Get list of all nodes
 	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
@@ -319,7 +319,7 @@ func CheckIfAllPodsScheduleOnNodes(clientset *kubernetes.Clientset, namespace, l
 	}
 
 	for _, node := range nodes.Items {
-
+		if (node)
 		// Get list of pods scheduled on this node
 		pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 			FieldSelector: "spec.nodeName=" + node.Name,
