@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: prometheus-reference-app-golang
-          image: gracepromacr.azurecr.io/prometheus-reference-app:golang-082521
+          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-golang
           env:
             - name: RUN_PERF_TEST
               value: "false"
@@ -25,20 +25,26 @@ spec:
           ports:
             - containerPort: 2112
               protocol: TCP
+              name: "weather-app"
             - containerPort: 2113
               protocol: TCP
+              name: "untyped-metrics"
         - name: prometheus-reference-app-python
-          image: gracepromacr.azurecr.io/prometheus-reference-app:python-082521
+          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-python
           ports:
           - containerPort: 2114
             protocol: TCP
+            name: "python-client"
       nodeSelector:
           kubernetes.io/os: linux
+          kubernetes.io/arch: amd64
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: prometheus-reference-service
+  labels:
+    app: prometheus-reference-app
 spec:
   selector:
     app: prometheus-reference-app

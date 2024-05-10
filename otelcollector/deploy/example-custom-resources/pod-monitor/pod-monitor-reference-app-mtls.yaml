@@ -1,0 +1,34 @@
+apiVersion: azmonitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: prometheus-reference-app-job
+spec:
+  labelLimit: 63
+  labelNameLengthLimit: 511
+  labelValueLengthLimit: 1023
+  selector:
+    matchLabels:
+      app: prometheus-reference-app
+  podMetricsEndpoints:
+  - scheme: https
+    tlsConfig:
+      ca:
+        secret:
+          key: "client-cert.pem"
+          name: "ama-metrics-mtls-secret"
+      cert:
+        secret:
+          key: "client-cert.pem"
+          name: "ama-metrics-mtls-secret"
+      keySecret:
+          key: "client-key.pem"
+          name: "ama-metrics-mtls-secret"
+      insecureSkipVerify: false
+  - relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: "prometheus-reference-app"
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      action: replace
+      regex: ('$$NODE_NAME$$')
+      targetLabel: instance

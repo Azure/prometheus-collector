@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/component: ama-metrics
     app.kubernetes.io/name: ama-metrics-ksm
     app.kubernetes.io/part-of: ama-metrics-ksm
-    app.kubernetes.io/version: 2.8.1
+    app.kubernetes.io/version: 2.9.2
     helm.sh/chart: azure-monitor-metrics-addon-0.1.0
   name: ama-metrics-ksm
 roleRef:

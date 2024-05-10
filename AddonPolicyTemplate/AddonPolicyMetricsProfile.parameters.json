@@ -8,6 +8,7 @@
     },
     "azureMonitorWorkspaceLocation": {
       "type": "string",
+      "defaultValue": "",
       "metadata": {
         "displayName": "Location of the existing Azure Monitor Workspace",
         "description": "Location of the existing Azure Monitor Workspace"
@@ -15,16 +16,18 @@
     },
     "metricLabelsAllowlist": {
       "type": "string",
+      "defaultValue": "",
       "metadata": {
-        "displayName": "comma-separated list of additional Kubernetes label keys",
-        "description": "comma-separated list of additional Kubernetes label keys"
+        "displayName": "Comma-separated list of additional Kubernetes label keys",
+        "description": "Comma-separated list of additional Kubernetes label keys that will be used in the resource' labels metric. By default the metric contains only name and namespace labels. To include additional labels provide a list of resource names in their plural form and Kubernetes label keys you would like to allow for them (Example: 'namespaces=[k8s-label-1,k8s-label-n,...],pods=[app],...)'. A single '*' can be provided per resource instead to allow any labels, but that has severe performance implications (Example: 'pods=[*]'). Additionally, an asterisk (*) can be provided as a key, which will resolve to all resources, i.e., assuming '--resources=deployments,pods', '*=[*]' will resolve to 'deployments=[*],pods=[*]'"
       }
     },
     "metricAnnotationsAllowList": {
       "type": "string",
+      "defaultValue": "",
       "metadata": {
-        "displayName": "comma-separated list of Kubernetes annotations keys",
-        "description": "comma-separated list of Kubernetes annotations keys"
+        "displayName": "Comma-separated list of Kubernetes annotations keys",
+        "description": "Comma-separated list of Kubernetes annotations keys that will be used in the resource' annotations metric. By default no annotations are collected. To include additional annotations provide a list of resource names in their plural form and Kubernetes annotation keys you would like to allow for them (Example: 'namespaces=[kubernetes.io/team,...],pods=[kubernetes.io/team],...)'. A single '*' can be provided per resource instead to allow any annotations, but that has severe performance implications (Example: 'pods=[*]')"
       }
     },
     "enableWindowsRecordingRules": {

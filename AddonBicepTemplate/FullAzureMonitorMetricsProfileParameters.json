@@ -3,7 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "azureMonitorWorkspaceResourceId": {
-      "value": "/subscriptions/{sub_id}/resourceGroups/{rg_name}/providers/microsoft.monitor/accounts/{cluster_name}"
+      "value": "/subscriptions/{sub_id}/resourceGroups/{rg_name}/providers/microsoft.monitor/accounts/{amw_name}"
     },
     "azureMonitorWorkspaceLocation": {
       "value": "{amwLocation}"
@@ -31,6 +31,9 @@
     },
     "grafanaSku": {
       "value": "Standard"
+    },
+    "grafanaAdminObjectId": {
+      "value": "{grafanaAdminObjectId}"
     }
   }
 }

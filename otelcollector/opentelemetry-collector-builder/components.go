@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
 	"go.opentelemetry.io/collector/receiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 )
 
 func components() (otelcol.Factories, error) {
@@ -31,6 +32,7 @@ func components() (otelcol.Factories, error) {
 	factories.Extensions, err = extension.MakeFactoryMap(
 		pprofextension.NewFactory(),
 		zpagesextension.NewFactory(),
+		healthcheckextension.NewFactory(),
 	)
 	if err != nil {
 		return otelcol.Factories{}, err

@@ -22,7 +22,7 @@ jobs:
       - name: Set-MCR-HELM-CHART-Repository-Root
         run: echo "MCR_REPOSITORY_ROOT=mcr.microsoft.com/azuremonitor/containerinsights/cidev/" >> $GITHUB_ENV
       - name: Checkout-code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Lint-HELM-Chart
         run: helm lint ./otelcollector/deploy/dependentcharts/${{ github.event.inputs.dependentHelmChartName }}/
       - name: Run-trivy-scanner-on-HELM-chart-fs
@@ -37,6 +37,6 @@ jobs:
       - name: Package-HELM-chart
         run: cd ./otelcollector/deploy/dependentcharts/ && rm -f ./${{ github.event.inputs.dependentHelmChartName }}/*.md && helm package ./${{ github.event.inputs.dependentHelmChartName }}/
       - name: Login-to-ACR-thru-Helm
-        run: helm registry login containerinsightsprod.azurecr.io --username ${{ secrets.RCA_PS_DI }} --password ${{ secrets.RCA_PS_CES }}
+        run: echo ${{ secrets.MANAGED_PROM_SERVICE_PRINCIPAL_PASSWORD }} | helm registry login --username ${{ secrets.MANAGED_PROM_SERVICE_PRINCIPAL_OBJECT_ID }} --password-stdin containerinsightsprod.azurecr.io
       - name: Publish-Helm-chart-to-ACR
         run: cd ./otelcollector/deploy/dependentcharts/ && helm push ${{ github.event.inputs.dependentHelmChartName }}-*.tgz oci://${{ env.ACR_REGISTRY }}${{ env.ACR_REPOSITORY_HELM }}

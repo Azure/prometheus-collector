@@ -220,7 +220,7 @@ local utils = import 'lib/utils.libsonnet';
       local slack = 'observability';
       local specialAlerts = {
         KubePodCrashLooping: { slack_channel: slack },
-        KubePodNotReady: { slack_channel: slack },
+        KubePodNotReadyByController: { slack_channel: slack },
       };
 
       local addExtraAnnotations(rule) = rule {

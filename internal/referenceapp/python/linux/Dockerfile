@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.8-slim-buster
+FROM mcr.microsoft.com/mirror/docker/library/python:3.8-slim
 
 # Move to working directory /build
 WORKDIR /build

@@ -46,14 +46,24 @@
           "RolloutParametersPath": "Parameters\\PrometheusCollector.Linux.Parameters.json"
         },
         {
+          "Name": "PushLinuxCCPAgent",
+          "InstanceOf": "ShellExtension",
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.LinuxCCP.Parameters.json"
+        },
+        {
           "Name": "PushWindowsAgent",
           "InstanceOf": "ShellExtension",
           "RolloutParametersPath": "Parameters\\PrometheusCollector.Windows.Parameters.json"
         },
         {
-          "Name": "Push1PHelmChart",
+          "Name": "PushTargetAllocator",
           "InstanceOf": "ShellExtension",
-          "RolloutParametersPath": "Parameters\\PrometheusCollector.Chart.Parameters.json"
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.TargetAllocator.Parameters.json"
+        },
+        {
+          "Name": "PushConfigReader",
+          "InstanceOf": "ShellExtension",
+          "RolloutParametersPath": "Parameters\\PrometheusCollector.ConfigReader.Parameters.json"
         },
         {
           "Name": "PushARCHelmChart",

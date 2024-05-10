@@ -24,10 +24,27 @@ rules:
     verbs: ["list", "get", "watch"]
   - apiGroups: [""]
     resources: ["secrets"]
-    resourceNames: ["aad-msi-auth-token"]
+    resourceNames: ["aad-msi-auth-token", "ama-metrics-mtls-secret"]
     verbs: ["get", "watch"]
   - nonResourceURLs: ["/metrics"]
     verbs: ["get"]
   - apiGroups: ["clusterconfig.azure.com"]
     resources: ["azureclusteridentityrequests", "azureclusteridentityrequests/status"]
     verbs: ["get", "update", "list", "create"]
+{{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
+  - apiGroups:
+    - azmonitoring.coreos.com
+    resources:
+    - servicemonitors
+    - podmonitors
+    verbs:
+    - '*'
+  - apiGroups:
+    - discovery.k8s.io
+    resources:
+    - endpointslices
+    verbs:
+    - list
+    - watch
+    - get
+{{- end }}

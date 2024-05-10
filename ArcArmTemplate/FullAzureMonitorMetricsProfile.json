@@ -7,21 +7,7 @@
     },
     "azureMonitorWorkspaceLocation": {
       "type": "string",
-      "defaultValue": "",
-      "allowedValues": [
-        "eastus2euap",
-        "centraluseuap",
-        "centralus",
-        "eastus",
-        "eastus2",
-        "northeurope",
-        "southcentralus",
-        "southeastasia",
-        "uksouth",
-        "westeurope",
-        "westus",
-        "westus2"
-      ]
+      "defaultValue": ""
     },
     "clusterResourceId": {
       "type": "string",
@@ -71,7 +57,7 @@
     "nodeRecordingRuleGroup": "NodeRecordingRulesRuleGroup-",
     "nodeRecordingRuleGroupName": "[concat(variables('nodeRecordingRuleGroup'), variables('clusterName'))]",
     "nodeRecordingRuleGroupDescription": "Node Recording Rules RuleGroup",
-    "kubernetesRecordingRuleGroup": "KubernetesReccordingRulesRuleGroup-",
+    "kubernetesRecordingRuleGroup": "KubernetesRecordingRulesRuleGroup-",
     "kubernetesRecordingRuleGroupName": "[concat(variables('kubernetesRecordingRuleGroup'), variables('clusterName'))]",
     "kubernetesRecordingRuleGroupDescription": "Kubernetes Recording Rules RuleGroup",
     "version": " - 0.1"
@@ -217,7 +203,7 @@
                 "configurationProtectedSettings": {
                 },
                 "autoUpgradeMinorVersion": true,
-                "releaseTrain": "Dev",
+                "releaseTrain": "Stable",
                 "scope": {
                   "Cluster": {
                     "releaseNamespace": "kube-system"

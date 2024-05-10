@@ -43,11 +43,11 @@
               severity: 'warning',
             },
             annotations: {
-              description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state for longer than 15 minutes.',
-              summary: 'Pod has been in a non-ready state for more than 15 minutes.',
+              description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state by controller for longer than 15 minutes.',
+              summary: 'Pod has been in a non-ready state by controller for more than 15 minutes.',
             },
             'for': '15m',
-            alert: 'KubePodNotReady',
+            alert: 'KubePodNotReadyByController',
           },
           {
             expr: |||

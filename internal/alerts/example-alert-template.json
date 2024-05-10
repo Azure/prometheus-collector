@@ -1,0 +1,277 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "variables": {},
+    "resources": [
+        {
+            "name": "containerinsights_dev_mac_eus_alerts",
+            "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+            "apiVersion": "2023-03-01",
+            "location": "eastus",
+            "properties": {
+                "description": "rule group for cluster ci-dev-aks-mac-eus in MAC: ci-dev-aks-eus-mac",
+                "scopes": [
+                    "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/microsoft.monitor/accounts/ci-dev-aks-eus-mac",
+                    "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
+                ],
+                "enabled": true,
+                "clusterName": "ci-dev-aks-mac-eus",
+                "rules": [
+                    {
+                        "alert": "Amd64 metric missing in cluster ci-dev-aks-mac-eus",
+                        "expression": "absent(node_uname_info{machine=\"x86_64\"}) == 1 or node_uname_info{machine=\"x86_64\"} == 0",
+                        "for": "PT30M",
+                        "annotations": {
+                            "description": "Amd64 metric missing in cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "up metric missing for target = node in cluster ci-dev-aks-mac-eus",
+                        "expression": "absent_over_time(up{job=\"node\"}[30m]) == 1 or count(up{job=\"node\"} == 1) == 0",
+                        "for": "PT30M",
+                        "annotations": {
+                            "description": "up metric is not flowing for target = node in cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "up metric missing for target = kubelet in cluster ci-dev-aks-mac-eus",
+                        "expression": "absent_over_time(up{job=\"kubelet\"}[30m]) == 1 or count(up{job=\"kubelet\"} == 1) == 0",
+                        "for": "PT30M",
+                        "annotations": {
+                            "description": "up metric is not flowing for target = kubelet in cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "up metric missing for target = windows-exporter in cluster ci-dev-aks-mac-eus",
+                        "expression": "absent_over_time(up{job=\"windows-exporter\"}[30m]) == 1 or count(up{job=\"windows-exporter\"} == 1) == 0",
+                        "for": "PT30M",
+                        "annotations": {
+                            "description": "up metric is not flowing for target = windows-exporter in cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "up metric missing for target = kube-proxy in cluster ci-dev-aks-mac-eus",
+                        "expression": "absent_over_time(up{job=\"kube-proxy\"}[30m]) == 1 or count(up{job=\"kube-proxy\"} == 1) == 0",
+                        "for": "PT30M",
+                        "annotations": {
+                            "description": "up metric is not flowing for target = kube-proxy in cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "up metric missing for target = kube-apiserver in cluster ci-dev-aks-mac-eus",
+                        "expression": "absent_over_time(up{job=\"kube-apiserver\"}[30m]) == 1 or count(up{job=\"kube-apiserver\"} == 1) == 0",
+                        "for": "PT30M",
+                        "annotations": {
+                            "description": "up metric is not flowing for target = kube-apiserver in cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "up metric missing for target = kube-proxy-windows in cluster ci-dev-aks-mac-eus",
+                        "expression": "absent_over_time(up{job=\"kube-proxy-windows\"}[30m]) == 1 or count(up{job=\"kube-proxy-windows\"} == 1) == 0",
+                        "for": "PT30M",
+                        "annotations": {
+                            "description": "up metric is not flowing for target = kube-proxy-windows in cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "up metric missing for target = kube-state-metrics in cluster ci-dev-aks-mac-eus",
+                        "expression": "absent_over_time(up{job=\"kube-state-metrics\"}[30m]) == 1 or count(up{job=\"kube-state-metrics\"} == 1) == 0",
+                        "for": "PT30M",
+                        "annotations": {
+                            "description": "up metric is not flowing for target = kube-state-metrics in cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "up metric missing for target = cadvisor in cluster ci-dev-aks-mac-eus",
+                        "expression": "absent_over_time(up{job=\"cadvisor\"}[30m]) == 1 or count(up{job=\"cadvisor\"} == 1) == 0",
+                        "for": "PT30M",
+                        "annotations": {
+                            "description": "up metric is not flowing for target = cadvisor in cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "up metric missing for target = kube-dns in cluster ci-dev-aks-mac-eus",
+                        "expression": "absent_over_time(up{job=\"kube-dns\"}[30m]) == 1 or count(up{job=\"kube-dns\"} == 1) == 0",
+                        "for": "PT30M",
+                        "annotations": {
+                            "description": "up metric is not flowing for target = kube-dns in cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "CPU usage % greater than 75 for prometheus-collector containers on cluster ci-dev-aks-mac-eus",
+                        "expression": "sum(sum by (cluster, namespace, pod, container) ( rate(container_cpu_usage_seconds_total{job=\"cadvisor\", image!=\"\", namespace=\"kube-system\", container=\"prometheus-collector\"}[5m]) ) * on (cluster, namespace, pod) group_left(node) topk by (cluster, namespace, pod) ( 1, max by(cluster, namespace, pod, node) (kube_pod_info{node!=\"\", namespace=\"kube-system\"}) )) by (container, pod) *100 > 75",
+                        "for": "PT3M",
+                        "annotations": {
+                            "description": "CPU usage greater than 75% for prometheus-collector on cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "Memory usage % greater than 75 for prometheus-collector containers on cluster ci-dev-aks-mac-eus",
+                        "expression": "(sum(container_memory_working_set_bytes{namespace=\"kube-system\", container=\"prometheus-collector\", image!=\"\"}) by (container, pod) / sum(kube_pod_container_resource_limits{namespace=\"kube-system\", container=\"prometheus-collector\", resource=\"memory\"}) by (container, pod)) > 75",
+                        "for": "PT3M",
+                        "annotations": {
+                            "description": "Memory usage greater than 75% for prometheus-collector containers on cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "Custom job metric missing for target = prometheus_ref_app in cluster ci-dev-aks-mac-eus",
+                        "expression": "absent_over_time(myapp_rainfall_histogram_sum[30m]) == 1 or count(myapp_rainfall_histogram_sum == 1) == 0",
+                        "for": "PT30M",
+                        "annotations": {
+                            "description": "Custom job metric missing for target = prometheus_ref_app in cluster ci-dev-aks-mac-eus"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    },
+                    {
+                        "alert": "New agent version found for prometheus collector",
+                        "expression": "count(count (kube_pod_container_info{image=~\"mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector.*\"})  by (image)) > 4",
+                        "for": "PT60S",
+                        "annotations": {
+                            "description": "New agent version found for prometheus collector. This alert is only used in near ring regions for prod monitoring clusters"
+                        },
+                        "severity": 4,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                                "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

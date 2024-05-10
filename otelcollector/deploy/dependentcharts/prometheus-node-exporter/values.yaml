@@ -2,14 +2,21 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 image:
-  repository: mcr.microsoft.com/oss/prometheus/node-exporter
+  registry: quay.io
+  repository: prometheus/node-exporter
   # Overrides the image tag whose default is {{ printf "v%s" .Chart.AppVersion }}
-  tag: "v1.5.0"
+  tag: ""
   pullPolicy: IfNotPresent
-  sha: ""
+  digest: ""
 
 imagePullSecrets: []
 # - name: "image-pull-secret"
+nameOverride: ""
+fullnameOverride: ""
+
+# Number of old history to retain to allow rollback
+# Default Kubernetes value is set to 10
+revisionHistoryLimit: 10
 
 global:
   # To help compatibility with other charts which use global.imagePullSecrets.
@@ -35,7 +42,7 @@ kubeRBACProxy:
   image:
     registry: quay.io
     repository: brancz/kube-rbac-proxy
-    tag: v0.14.0
+    tag: v0.15.0
     sha: ""
     pullPolicy: IfNotPresent
 
@@ -48,6 +55,13 @@ kubeRBACProxy:
   ## Allows overrides and additional options compared to (Pod) securityContext
   ## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
   containerSecurityContext: {}
+
+  # Specify the port used for the Node exporter container (upstream port)
+  port: 8100
+  # Specify the name of the container port
+  portName: http
+  # Configure a hostPort. If true, hostPort will be enabled in the container and set to service.port.
+  enableHostPort: false
 
   resources: {}
     # We usually recommend not to specify default resources and to leave this as a conscious
@@ -62,6 +76,7 @@ kubeRBACProxy:
   #  memory: 32Mi
 
 service:
+  enabled: true
   type: ClusterIP
   port: 9100
   targetPort: 9100
@@ -70,6 +85,16 @@ service:
   listenOnAllInterfaces: true
   annotations:
     prometheus.io/scrape: "true"
+  ipDualStack:
+    enabled: false
+    ipFamilies: ["IPv6", "IPv4"]
+    ipFamilyPolicy: "PreferDualStack"
+
+# Set a NetworkPolicy with:
+# ingress only on service.port
+# no egress permitted
+networkPolicy:
+  enabled: false
 
 # Additional environment variables that will be passed to the daemonset
 env: {}
@@ -100,6 +125,11 @@ prometheus:
     ## Override serviceMonitor selector
     ##
     selectorOverride: {}
+
+    ## Attach node metadata to discovered targets. Requires Prometheus v2.35.0 and above.
+    ##
+    attachMetadata:
+      node: false
 
     relabelings: []
     metricRelabelings: []
@@ -252,7 +282,8 @@ securityContext:
   runAsNonRoot: true
   runAsUser: 65534
 
-containerSecurityContext: {}
+containerSecurityContext:
+  readOnlyRootFilesystem: true
   # capabilities:
   #   add:
   #   - SYS_TIME
@@ -326,9 +357,9 @@ dnsConfig: {}
 
 ## Assign a nodeSelector if operating a hybrid cluster
 ##
-nodeSelector: {}
-#   beta.kubernetes.io/arch: amd64
-#   beta.kubernetes.io/os: linux
+nodeSelector:
+  kubernetes.io/os: linux
+  #  kubernetes.io/arch: amd64
 
 tolerations:
   - effect: NoSchedule
@@ -417,8 +448,17 @@ readinessProbe:
 # Enable vertical pod autoscaler support for prometheus-node-exporter
 verticalPodAutoscaler:
   enabled: false
+
+  # Recommender responsible for generating recommendation for the object.
+  # List should be empty (then the default recommender will generate the recommendation)
+  # or contain exactly one recommender.
+  # recommenders:
+  # - name: custom-recommender-performance
+
   # List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory
   controlledResources: []
+  # Specifies which resource values should be controlled: RequestsOnly or RequestsAndLimits.
+  # controlledValues: RequestsAndLimits
 
   # Define the max allowed resources for the pod
   maxAllowed: {}
@@ -430,6 +470,21 @@ verticalPodAutoscaler:
   # memory: 100Mi
 
   # updatePolicy:
+    # Specifies minimal number of replicas which need to be alive for VPA Updater to attempt pod eviction
+    # minReplicas: 1
     # Specifies whether recommended updates are applied when a Pod is started and whether recommended updates
     # are applied during the life of a Pod. Possible values are "Off", "Initial", "Recreate", and "Auto".
     # updateMode: Auto
+
+# Extra manifests to deploy as an array
+extraManifests: []
+  # - |
+  #   apiVersion: v1
+  #   kind: ConfigMap
+  #   metadata:
+  #     name: prometheus-extra
+  #   data:
+  #     extra-data: "value"
+
+# Override version of app, required if image.tag is defined and does not follow semver
+version: ""

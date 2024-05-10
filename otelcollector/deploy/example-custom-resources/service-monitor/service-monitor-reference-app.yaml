@@ -1,0 +1,22 @@
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-reference-app-monitor
+spec:
+  selector:
+    matchLabels:
+      app: prometheus-reference-app
+  endpoints:
+    - port: weather-app
+      interval: 30s
+      path: /metrics
+      scheme: http
+    - port: untyped-metrics
+      interval: 30s
+      path: /metrics
+      scheme: http
+    - port: python-client
+      interval: 30s
+      path: /metrics
+      scheme: http
+    

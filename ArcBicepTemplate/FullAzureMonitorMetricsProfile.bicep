@@ -1,19 +1,4 @@
 param azureMonitorWorkspaceResourceId string
-
-@allowed([
-  'eastus2euap'
-  'centraluseuap'
-  'centralus'
-  'eastus'
-  'eastus2'
-  'northeurope'
-  'southcentralus'
-  'southeastasia'
-  'uksouth'
-  'westeurope'
-  'westus'
-  'westus2'
-])
 param azureMonitorWorkspaceLocation string
 
 @description('Resource Id of the Azure Arc Connected Cluster')
@@ -38,7 +23,7 @@ var dcraName = 'MSProm-${clusterLocation}-${clusterName}'
 var nodeRecordingRuleGroup_var = 'NodeRecordingRulesRuleGroup-'
 var nodeRecordingRuleGroupName = concat(nodeRecordingRuleGroup_var, clusterName)
 var nodeRecordingRuleGroupDescription = 'Node Recording Rules RuleGroup'
-var kubernetesRecordingRuleGroup_var = 'KubernetesReccordingRulesRuleGroup-'
+var kubernetesRecordingRuleGroup_var = 'KubernetesRecordingRulesRuleGroup-'
 var kubernetesRecordingRuleGroupName = concat(kubernetesRecordingRuleGroup_var, clusterName)
 var kubernetesRecordingRuleGroupDescription = 'Kubernetes Recording Rules RuleGroup'
 var version = ' - 0.1'

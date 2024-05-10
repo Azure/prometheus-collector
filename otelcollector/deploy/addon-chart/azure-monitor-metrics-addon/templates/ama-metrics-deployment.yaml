@@ -5,8 +5,13 @@ metadata:
   namespace: kube-system
   labels:
     component: ama-metrics
+    kubernetes.azure.com/managedby: aks
 spec:
+  {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+  replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
+  {{- else}}
   replicas: 1
+  {{- end }}
   revisionHistoryLimit: 2
   paused: false
   selector:
@@ -32,11 +37,11 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 7
-              memory: 14Gi
+              cpu: {{ .Values.AzureMonitorMetrics.RsCPULimit }}
+              memory: {{ .Values.AzureMonitorMetrics.RsMemoryLimit }}
             requests:
-              cpu: 150m
-              memory: 500Mi
+              cpu: {{ .Values.AzureMonitorMetrics.RsCPURequest }}
+              memory: {{ .Values.AzureMonitorMetrics.RsMemoryRequest }}
           {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
           envFrom:
             - secretRef:
@@ -60,11 +65,17 @@ spec:
               value: "true"
             - name: AZMON_COLLECT_ENV
               value: "false"
+            - name: AZMON_OPERATOR_ENABLED
+            {{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
+              value: "true"
+            {{- else }}
+              value: "false"
+            {{- end }}
             - name: customEnvironment
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ lower .Values.Azure.Cluster.Cloud }}"
-              {{- else if .Values.AzureMonitorMetrics.isArcACluster }}
+              {{- if .Values.AzureMonitorMetrics.isArcACluster }}
               value: "arcautonomous"
+              {{- else if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ lower .Values.CloudEnvironment }}"
               {{- else }}
               value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
               {{- end }}
@@ -124,22 +135,30 @@ spec:
               value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
             - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
-              value: {{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
+              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}"
                 {{-  end  }}
                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
             - name: KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST
-              value: {{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
+              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}"
                 {{-  end  }}
               {{-  end  }}
             {{-  end  }}
+            {{- if .Values.AzureMonitorMetrics }}
+              {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+            - name: OPERATOR_TARGETS_TA_IMG_VERSION
+              value: "{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+            - name: OPERATOR_TARGETS_CFG_READER_IMG_VERSION
+              value: "{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
+              {{-  end  }}
+            {{-  end  }}
             - name: NODE_EXPORTER_VERSION
-              value: "v1.5.0" # Replace this with the version shipped by default
+              value: "v1.6.0" # Replace this with the version shipped by default
             - name: AGENT_VERSION
               value: {{ .Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE
               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: WINMODE
-              value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
           securityContext:
@@ -147,6 +166,9 @@ spec:
           volumeMounts:
             - mountPath: /etc/config/settings
               name: settings-vol-config
+              readOnly: true
+            - mountPath: /etc/prometheus/certs
+              name: ama-metrics-tls-secret-volume
               readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
@@ -160,9 +182,11 @@ spec:
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
+            {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
             - mountPath: /anchors/ubuntu
               name: anchors-ubuntu
               readOnly: true
+            {{- end }}
             {{- if .Values.AzureMonitorMetrics.ArcExtension }}
             - mountPath: /anchors/proxy
               name: ama-metrics-proxy-cert
@@ -258,16 +282,32 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
+        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
         - operator: "Exists"
-          effect: NoExecute
+          effect: "NoSchedule"
         - operator: "Exists"
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-          effect: NoSchedule
+          effect: "NoExecute"
+        - operator: "Exists"
+          effect: "PreferNoSchedule" 
+        {{- end }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
       volumes:
         - name: settings-vol-config
           configMap:
@@ -287,13 +327,20 @@ spec:
           hostPath:
             path: /etc/pki/ca-trust/anchors/
             type: DirectoryOrCreate
+        - name: ama-metrics-tls-secret-volume
+          secret:
+            secretName: ama-metrics-mtls-secret
+            optional: true
+        {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
         - name: anchors-ubuntu
           hostPath:
             path: /usr/local/share/ca-certificates/
             type: DirectoryOrCreate
+        {{- end }}
         {{- if .Values.AzureMonitorMetrics.ArcExtension }}
         - name: ama-metrics-proxy-cert
           secret:
             secretName: ama-metrics-proxy-cert
             optional: true
         {{- end }}
+        

@@ -1,0 +1,74 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "variables": {},
+    "resources": [
+        {
+           "name": "testalertsRuleGroup",
+           "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+           "apiVersion": "2023-03-01",
+           "location": "switzerlandnorth",
+           "properties": {
+                "description": "Rule group that will fire alert always on a non-existent metric, and an existent metric. update full workspace id & full cluster id in the scope below, update location to be the same as AMW region above. also enable cluster name to contains only cluster name for yuour cluster (this should match value in the metric's cluster dimension). if you want email for the alert, update action group id below. the default one below emails our team - ciprometheus",
+                "scopes": [
+                    "/subscriptions/8f6da2d9-ff10-4800-9239-c7e0e8b3407f/resourceGroups/regiontests-switzerlandnorth/providers/Microsoft.ContainerService/managedClusters/regiontests-switzerlandnorth",
+                    "/subscriptions/8f6da2d9-ff10-4800-9239-c7e0e8b3407f/resourceGroups/regiontests-switzerlandnorth/providers/microsoft.monitor/accounts/regiontests-switzerlandnorth"
+                ],
+                "enabled": true,
+                "clusterName": "regiontests-switzerlandnorth",
+                "interval": "PT1M",
+                "rules": [
+                        {
+                        "alert": "test-alert-on-nonexistent-prom-metric-alert",
+                        "expression": "absent(up{job=\"non-existent-job\"}) == 1",
+                        "for": "PT5M",
+                        "labels": {
+                            "team": "ciprometheus"
+                        },
+                        "annotations": {
+                            "description": "test alert on a non existent metric",
+                            "runbook_url": "https://www.bing.com",
+                            "summary": "test alert on a non existent metric"
+                        },
+                        "enabled": true,
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                               "actionGroupID": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/cimonitoring/providers/microsoft.insights/actiongroups/ciprometheus-email-AG"
+                            }
+                        ]
+                    },
+                     {
+                        "alert": "test-alert-on-existent-prom-metric-alert",
+                        "expression": "count(up) != 0",
+                        "for": "PT5M",
+                        "labels": {
+                            "team": "ciprometheus"
+                        },
+                        "annotations": {
+                            "description": "test alert on a non existent metric",
+                            "runbook_url": "https://www.microsoft.com",
+                            "summary": "test alert on an existent metric"
+                        },
+                        "enabled": true,
+                        "severity": 3,
+                        "resolveConfiguration": {
+                            "autoResolved": true,
+                            "timeToResolve": "PT10M"
+                        },
+                        "actions": [
+                            {
+                               "actionGroupID": "/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/cimonitoring/providers/microsoft.insights/actiongroups/ciprometheus-email-AG"
+                            }
+                        ]
+                     }
+                ]
+            }
+        }
+    ]
+} 

@@ -7,21 +7,7 @@
     },
     "azureMonitorWorkspaceLocation": {
       "type": "string",
-      "defaultValue": "",
-      "allowedValues": [
-        "eastus2euap",
-        "centraluseuap",
-        "centralus",
-        "eastus",
-        "eastus2",
-        "northeurope",
-        "southcentralus",
-        "southeastasia",
-        "uksouth",
-        "westeurope",
-        "westus",
-        "westus2"
-      ]
+      "defaultValue": ""
     },
     "clusterResourceId": {
       "type": "string"
@@ -45,7 +31,8 @@
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          "[parameters('azureMonitorWorkspaceResourceId')]",
+          "[parameters('clusterResourceId')]"
         ],
         "enabled": true,
         "clusterName": "[variables('clusterName')]",
@@ -122,7 +109,8 @@
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          "[parameters('azureMonitorWorkspaceResourceId')]",
+          "[parameters('clusterResourceId')]"
         ],
         "enabled": true,
         "clusterName": "[variables('clusterName')]",

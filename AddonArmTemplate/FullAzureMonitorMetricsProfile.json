@@ -7,21 +7,7 @@
     },
     "azureMonitorWorkspaceLocation": {
       "type": "string",
-      "defaultValue": "",
-      "allowedValues": [
-        "eastus2euap",
-        "centraluseuap",
-        "centralus",
-        "eastus",
-        "eastus2",
-        "northeurope",
-        "southcentralus",
-        "southeastasia",
-        "uksouth",
-        "westeurope",
-        "westus",
-        "westus2"
-      ]
+      "defaultValue": ""
     },
     "clusterResourceId": {
       "type": "string"
@@ -37,7 +23,7 @@
       "type": "string",
       "defaultValue": ""
     },
-    "enableWindowsRecordingRules" : {
+    "enableWindowsRecordingRules": {
       "type": "bool",
       "defaultValue": false
     },
@@ -72,7 +58,7 @@
     "nodeRecordingRuleGroup": "NodeRecordingRulesRuleGroup-",
     "nodeRecordingRuleGroupName": "[concat(variables('nodeRecordingRuleGroup'), variables('clusterName'))]",
     "nodeRecordingRuleGroupDescription": "Node Recording Rules RuleGroup",
-    "kubernetesRecordingRuleGroup": "KubernetesReccordingRulesRuleGroup-",
+    "kubernetesRecordingRuleGroup": "KubernetesRecordingRulesRuleGroup-",
     "kubernetesRecordingRuleGroupName": "[concat(variables('kubernetesRecordingRuleGroup'), variables('clusterName'))]",
     "kubernetesRecordingRuleGroupDescription": "Kubernetes Recording Rules RuleGroup",
     "nodeRecordingRuleGroupWin": "NodeRecordingRulesRuleGroup-Win-",
@@ -101,15 +87,21 @@
         "dataCollectionEndpointId": "[resourceId('Microsoft.Insights/dataCollectionEndpoints/', variables('dceName'))]",
         "dataFlows": [
           {
-            "destinations": [ "MonitoringAccount1" ],
-            "streams": [ "Microsoft-PrometheusMetrics" ]
+            "destinations": [
+              "MonitoringAccount1"
+            ],
+            "streams": [
+              "Microsoft-PrometheusMetrics"
+            ]
           }
         ],
         "dataSources": {
           "prometheusForwarder": [
             {
               "name": "PrometheusDataSource",
-              "streams": [ "Microsoft-PrometheusMetrics" ],
+              "streams": [
+                "Microsoft-PrometheusMetrics"
+              ],
               "labelIncludeFilter": {}
             }
           ]
@@ -210,7 +202,8 @@
       "properties": {
         "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          "[parameters('azureMonitorWorkspaceResourceId')]",
+          "[parameters('clusterResourceId')]"
         ],
         "clusterName": "[variables('clusterName')]",
         "interval": "PT1M",
@@ -270,7 +263,8 @@
       "properties": {
         "description": "[concat(variables('kubernetesRecordingRuleGroupDescription'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          "[parameters('azureMonitorWorkspaceResourceId')]",
+          "[parameters('clusterResourceId')]"
         ],
         "clusterName": "[variables('clusterName')]",
         "interval": "PT1M",
@@ -374,7 +368,8 @@
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          "[parameters('azureMonitorWorkspaceResourceId')]",
+          "[parameters('clusterResourceId')]"
         ],
         "enabled": "[parameters('enableWindowsRecordingRules')]",
         "clusterName": "[variables('clusterName')]",
@@ -451,7 +446,8 @@
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
         "scopes": [
-          "[parameters('azureMonitorWorkspaceResourceId')]"
+          "[parameters('azureMonitorWorkspaceResourceId')]",
+          "[parameters('clusterResourceId')]"
         ],
         "enabled": "[parameters('enableWindowsRecordingRules')]",
         "clusterName": "[variables('clusterName')]",
@@ -534,8 +530,8 @@
       "name": "[parameters('roleNameGuid')]",
       "scope": "[parameters('azureMonitorWorkspaceResourceId')]",
       "properties": {
-          "roleDefinitionId": "[concat('/subscriptions/', variables('azureMonitorWorkspaceSubscriptionId'), '/providers/Microsoft.Authorization/roleDefinitions/', 'b0d8363b-8ddd-447d-831f-62ca05bff136')]",
-          "principalId": "[reference(resourceId('Microsoft.Dashboard/grafana', split(parameters('grafanaResourceId'),'/')[8]), '2022-08-01', 'Full').identity.principalId]"
+        "roleDefinitionId": "[concat('/subscriptions/', variables('azureMonitorWorkspaceSubscriptionId'), '/providers/Microsoft.Authorization/roleDefinitions/', 'b0d8363b-8ddd-447d-831f-62ca05bff136')]",
+        "principalId": "[reference(resourceId('Microsoft.Dashboard/grafana', split(parameters('grafanaResourceId'),'/')[8]), '2022-08-01', 'Full').identity.principalId]"
       }
     },
     {

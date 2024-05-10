@@ -1,32 +1,29 @@
-### **This wiki contains links of all the resources related to alerts and dashboards of the CI CD clusters**
+### **This wiki contains links of all the resources related to alerts and dashboards of the CI CD and prod monitoring near ring clusters**
 
-**Links to all AKS clusters used in CI CD**
+Below is the linking of the AKS cluster to Azure Monitor Workspace to Grafana for cicd and prod monitoring clusters:
 
-Below are the links to all the AKS clusters used in CI CD.
-We have 2 dev clusters and 2 prod clusters.
+ci/cd clusters (cluster --> amw --> grafana)
+============================================
 
-* ci-prod-aks-eus - [link](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-eus/overview)
+[AKS]
+dev=[ci-dev-aks-mac-eus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus/overview) --> [ci-dev-aks-eus-mac](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/microsoft.monitor/accounts/ci-dev-aks-eus-mac/resourceOverviewId) --> [cicd-graf-metrics-wcus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/Microsoft.Dashboard/grafana/cicd-graf-metrics-wcus/overview)
 
-* ci-prod-aks-mac-weu - [link](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu/overview)
+prod=[ci-prod-aks-mac-weu](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/Microsoft.ContainerService/managedClusters/ci-prod-aks-mac-weu/overview) --> [ci-prod-aks-weu-mac](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-aks-mac-weu-rg/providers/microsoft.monitor/accounts/ci-prod-aks-weu-mac/resourceOverviewId) --> [cicd-graf-metrics-wcus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/Microsoft.Dashboard/grafana/cicd-graf-metrics-wcus/overview)
 
-* ci-dev-aks-mac-eus - [link](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus/overview)
+[ARC]
+dev=[ci-dev-arc-wcus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-arc-wcus/providers/Microsoft.ContainerService/managedClusters/ci-dev-arc-wcus/overview) --> [ci-dev-arc-amw](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-arc-wcus/providers/microsoft.monitor/accounts/ci-dev-arc-amw/resourceOverviewId) --> [cicd-graf-metrics-wcus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/Microsoft.Dashboard/grafana/cicd-graf-metrics-wcus/overview)
 
-* ci-dev-aks-wcus - [link](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-wcus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-wcus/overview)
+prod=[ci-prod-arc-wcus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/Microsoft.ContainerService/managedClusters/ci-prod-arc-wcus/overview)--> [ci-prod-arc-wcus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/microsoft.monitor/accounts/ci-prod-arc-wcus/resourceOverviewId) --> [cicd-graf-metrics-wcus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-prod-arc-wcus/providers/Microsoft.Dashboard/grafana/cicd-graf-metrics-wcus/overview)
 
-**Links of Grafana Instances**  
-* ci-prod-aks-eus - [link](https://ci-prod-aks-eus-graf-dueya5aadyd2ghef.eus.grafana.azure.com)
+canary/prod monitoring clusters (cluster --> amw -->grafana)
+===========================================================
 
-* ci-prod-aks-mac-weu - [link](https://ci-prod-aks-weu-graf-fffvdrhqgkg6dxgm.weu.grafana.azure.com)
+[monitoring-metrics-prod-aks-eus2euap](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-prod-aks/providers/Microsoft.ContainerService/managedClusters/monitoring-metrics-prod-aks-eus2euap/overview) --> [monitoring-metrics-amw-eus2euap](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-amw/providers/microsoft.monitor/accounts/monitoring-metrics-amw-eus2euap/resourceOverviewId) --> [monitoring-grafana-metrics-westus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-prod-aks/providers/microsoft.dashboard/grafana/mon-graf-metric-westus/overview)
+[monitoring-metrics-prod-aks-wcus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-prod-aks/providers/Microsoft.ContainerService/managedClusters/monitoring-metrics-prod-aks-wcus/overview) --> [monitoring-metrics-amw-wcus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-amw/providers/microsoft.monitor/accounts/monitoring-metrics-amw-wcus/resourceOverviewId) --> [monitoring-grafana-metrics-westus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-prod-aks/providers/microsoft.dashboard/grafana/mon-graf-metric-westus/overview)
 
-* ci-dev-aks-mac-eus - [link](https://ci-dev-aks-eus-graf-aje3bpf7d3ctc9h6.eus.grafana.azure.com)
 
-* ci-dev-aks-wcus - [link](https://ci-dev-aks-wcus-graf-acfcb0a6emefghgn.wcus.grafana.azure.com)
+**Dashboard for CI CD and prod monitoring clusters**
 
-**Dashboard fo CI CD alerts** 
-* ci-prod-aks-eus - [link](https://ci-prod-aks-eus-graf-dueya5aadyd2ghef.eus.grafana.azure.com/d/dmzAODN4k/cpu-and-memory-utilization-k-s-m-replicaset-and-daemonset?orgId=1)
+* CICD - [link](https://cicd-graf-metrics-wcus-dkechtfecuadeuaw.wcus.grafana.azure.com/d/gp9556IVy/cpu-and-memory-utilization-k-s-m-replicaset-and-daemonset?orgId=1)
 
-* ci-prod-aks-mac-weu - [link](https://ci-prod-aks-weu-graf-fffvdrhqgkg6dxgm.weu.grafana.azure.com/d/gp9556IVz/cpu-and-memory-utilization-k-s-m-replicaset-and-daemonset?orgId=1)
-
-* ci-dev-aks-mac-eus - [link](https://ci-dev-aks-eus-graf-aje3bpf7d3ctc9h6.eus.grafana.azure.com/d/gp9556IVz/cpu-and-memory-utilization-k-s-m-replicaset-and-daemonset?orgId=1&from=1667414623523&to=1667457823523)
-
-* ci-dev-aks-wcus - [link](https://ci-dev-aks-wcus-graf-acfcb0a6emefghgn.wcus.grafana.azure.com/d/dmzAODN4k/cpu-and-memory-utilization-k-s-m-replicaset-and-daemonset?orgId=1)
+* Prod near ring - [link](https://mon-graf-metric-westus-f5hvdcaxc3hjdcdm.wus.grafana.azure.com/d/gp9556IVy/cpu-and-memory-utilization-k-s-m-replicaset-and-daemonset?orgId=1)

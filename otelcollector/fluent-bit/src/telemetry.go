@@ -9,13 +9,15 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
@@ -27,24 +29,22 @@ import (
 )
 
 type meMetricsProcessedCount struct {
-	DimBytesProcessedCount	float64
-	DimBytesSentToPubCount float64
-	DimMetricsSentToPubCount	float64
-	Value	float64
+	DimBytesProcessedCount   float64
+	DimBytesSentToPubCount   float64
+	DimMetricsSentToPubCount float64
+	Value                    float64
 }
 
 type meMetricsReceivedCount struct {
-	Value	float64
+	Value float64
 }
-
-
 
 var (
 	// CommonProperties indicates the dimensions that are sent with every event/metric
 	CommonProperties map[string]string
 	// TelemetryClient is the client used to send the telemetry
 	TelemetryClient appinsights.TelemetryClient
-	// Invalid Prometheus config validation environemnt variable used for telemetry
+	// Invalid Prometheus config validation environment variable used for telemetry
 	InvalidCustomPrometheusConfig string
 	// Default Collector config
 	DefaultPrometheusConfig string
@@ -66,6 +66,34 @@ var (
 	WinExporterKeepListRegex string
 	// Windows KubeProxy metrics keep list regex
 	WinKubeProxyKeepListRegex string
+	// Pod Annotation metrics keep list regex
+	PodannotationKeepListRegex string
+	// Kappie Basic metrics keep list regex
+	KappieBasicKeepListRegex string
+	// Kubelet scrape interval
+	KubeletScrapeInterval string
+	// CoreDNS scrape interval
+	CoreDNSScrapeInterval string
+	// CAdvisor scrape interval
+	CAdvisorScrapeInterval string
+	// KubeProxy scrape interval
+	KubeProxyScrapeInterval string
+	// API Server scrape interval
+	ApiServerScrapeInterval string
+	// KubeState scrape interval
+	KubeStateScrapeInterval string
+	// Node Exporter scrape interval
+	NodeExporterScrapeInterval string
+	// Windows Exporter scrape interval
+	WinExporterScrapeInterval string
+	// Windows KubeProxy scrape interval
+	WinKubeProxyScrapeInterval string
+	// PrometheusCollector Health scrape interval
+	PromHealthScrapeInterval string
+	// Pod Annotation scrape interval
+	PodAnnotationScrapeInterval string
+	// Kappie Basic scrape interval
+	KappieBasicScrapeInterval string
 	// meMetricsProcessedCount map, which holds references to metrics per metric account
 	meMetricsProcessedCountMap = make(map[string]*meMetricsProcessedCount)
 	// meMetricsProcessedCountMapMutex -- used for reading & writing locks on meMetricsProcessedCountMap
@@ -79,7 +107,8 @@ var (
 const (
 	coresAttachedTelemetryIntervalSeconds = 600
 	ksmAttachedTelemetryIntervalSeconds   = 600
-	meMetricsTelemetryIntervalSeconds	  = 300
+	meMetricsTelemetryIntervalSeconds     = 300
+	meOtelCpuMemoryUsageIntervalSeconds   = 300
 	coresAttachedTelemetryName            = "ClusterCoreCapacity"
 	linuxCpuCapacityTelemetryName         = "LiCapacity"
 	linuxNodeCountTelemetryName           = "LiNodeCnt"
@@ -105,6 +134,8 @@ const (
 	envComputerName                       = "NODE_NAME"
 	envDefaultMetricAccountName           = "AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
 	envPodName                            = "POD_NAME"
+	envContainerCpuLimit                  = "CONTAINER_CPU_LIMIT"
+	envContainerMemoryLimit               = "CONTAINER_MEMORY_LIMIT"
 	envTelemetryOffSwitch                 = "DISABLE_TELEMETRY"
 	envNamespace                          = "POD_NAMESPACE"
 	envHelmReleaseName                    = "HELM_RELEASE_NAME"
@@ -116,8 +147,14 @@ const (
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
 	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
+	meMemRssScrapeTag                     = "procai.metricsextension.memvmrss.scrape"
+	otelcolMemRssScrapeTag                = "procai.otelcollector.memvmrss.scrape"
+	otelcolCpuScrapeTag                   = "cpu.otel"
+	meCpuScrapeTag                        = "cpu.metricsextension"
+	promScrapeTag                         = "promscrape.scrape"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
+	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
 	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 )
 
@@ -169,6 +206,42 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["podname"] = os.Getenv(envPodName)
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
+	CommonProperties["containercpulimit"] = os.Getenv(envContainerCpuLimit)
+	CommonProperties["containermemorylimit"] = os.Getenv(envContainerMemoryLimit)
+	CommonProperties["defaultscrapekubelet"] = os.Getenv("AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapecoreDns"] = os.Getenv("AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapecadvisor"] = os.Getenv("AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapekubeproxy"] = os.Getenv("AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapeapiserver"] = os.Getenv("AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapekubestate"] = os.Getenv("AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenodeexporter"] = os.Getenv("AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapecollectorhealth"] = os.Getenv("AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapewindowsexporter"] = os.Getenv("AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapewindowskubeproxy"] = os.Getenv("AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapepodannotations"] = os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED")
+	CommonProperties["podannotationns"] = os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX")
+	CommonProperties["defaultscrapekappiebasic"] = os.Getenv("AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenetworkobservabilityRetina"] = os.Getenv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenetworkobservabilityHubble"] = os.Getenv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenetworkobservabilityCilium"] = os.Getenv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED")
+	CommonProperties["nodeexportertargetport"] = os.Getenv("NODE_EXPORTER_TARGETPORT")
+	CommonProperties["nodeexportername"] = os.Getenv("NODE_EXPORTER_NAME")
+	CommonProperties["kubestatename"] = os.Getenv("KUBE_STATE_NAME")
+	CommonProperties["kubestateversion"] = os.Getenv("KUBE_STATE_VERSION")
+	CommonProperties["nodeexporterversion"] = os.Getenv("NODE_EXPORTER_VERSION")
+	CommonProperties["akvauth"] = os.Getenv("AKVAUTH")
+	CommonProperties["debugmodeenabled"] = os.Getenv("DEBUG_MODE_ENABLED")
+	CommonProperties["kubestatemetriclabelsallowlist"] = os.Getenv("KUBE_STATE_METRIC_LABELS_ALLOWLIST")
+	CommonProperties["kubestatemetricannotationsallowlist"] = os.Getenv("KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST")
+	CommonProperties["httpproxyenabled"] = os.Getenv("HTTP_PROXY_ENABLED")
+	CommonProperties["tadapterh"] = os.Getenv("tokenadapterHealthyAfterSecs")
+	CommonProperties["tadapterf"] = os.Getenv("tokenadapterUnhealthyAfterSecs")
+	CommonProperties["mip"] = os.Getenv("MINIMAL_INGESTION_PROFILE")
+	CommonProperties["operatormodel"] = os.Getenv("AZMON_OPERATOR_ENABLED")
+	CommonProperties["operatormodelcfgmapsetting"] = os.Getenv("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING")
+	CommonProperties["operatormodelchartsetting"] = os.Getenv("AZMON_OPERATOR_ENABLED_CHART_SETTING")
+	CommonProperties["operatortargetstaimgversion"] = os.Getenv("OPERATOR_TARGETS_TA_IMG_VERSION")
+	CommonProperties["operatortargetscfgreaderimgversion"] = os.Getenv("OPERATOR_TARGETS_CFG_READER_IMG_VERSION")
 
 	isMacMode := os.Getenv("MAC")
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
@@ -261,6 +334,34 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			NodeExporterKeepListRegex = regexHash["NODEEXPORTER_METRICS_KEEP_LIST_REGEX"]
 			WinExporterKeepListRegex = regexHash["WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX"]
 			WinKubeProxyKeepListRegex = regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
+			PodannotationKeepListRegex = regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
+			KappieBasicKeepListRegex = regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
+		}
+	}
+
+	// Reading scrape interval hash file for telemetry
+	intervalFileContents, err := ioutil.ReadFile(intervalHashFilePath)
+	if err != nil {
+		Log("Error while opening interval hash file - %v\n", err)
+	} else {
+		Log("Successfully read interval hash file contents for telemetry\n")
+		var intervalHash map[string]string
+		err = yaml.Unmarshal([]byte(intervalFileContents), &intervalHash)
+		if err != nil {
+			Log("Error while unmarshalling interval hash file - %v\n", err)
+		} else {
+			KubeletScrapeInterval = intervalHash["KUBELET_SCRAPE_INTERVAL"]
+			CoreDNSScrapeInterval = intervalHash["COREDNS_SCRAPE_INTERVAL"]
+			CAdvisorScrapeInterval = intervalHash["CADVISOR_SCRAPE_INTERVAL"]
+			KubeProxyScrapeInterval = intervalHash["KUBEPROXY_SCRAPE_INTERVAL"]
+			ApiServerScrapeInterval = intervalHash["APISERVER_SCRAPE_INTERVAL"]
+			KubeStateScrapeInterval = intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
+			NodeExporterScrapeInterval = intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"]
+			WinExporterScrapeInterval = intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"]
+			WinKubeProxyScrapeInterval = intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"]
+			PromHealthScrapeInterval = intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
+			PodAnnotationScrapeInterval = intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
+			KappieBasicScrapeInterval = intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
 		}
 	}
 
@@ -280,12 +381,12 @@ func SendCoreCountToAppInsightsMetrics() {
 
 	coreCountTelemetryTicker := time.NewTicker(time.Second * time.Duration(coresAttachedTelemetryIntervalSeconds))
 	for ; true; <-coreCountTelemetryTicker.C {
-		telemetryProperties := map[string]int64 {
+		telemetryProperties := map[string]int64{
 			windowsCpuCapacityTelemetryName: 0,
-			windowsNodeCountTelemetryName: 0,
-			virtualNodeCountTelemetryName: 0,
-			arm64CpuCapacityTelemetryName: 0,
-			arm64NodeCountTelemetryName: 0,
+			windowsNodeCountTelemetryName:   0,
+			virtualNodeCountTelemetryName:   0,
+			arm64CpuCapacityTelemetryName:   0,
+			arm64NodeCountTelemetryName:     0,
 		}
 
 		nodeList, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
@@ -302,10 +403,10 @@ func SendCoreCountToAppInsightsMetrics() {
 			if node.Labels == nil {
 				SendException(fmt.Sprintf("Labels are missing for the node: %s when getting core capacity", node.Name))
 			} else if node.Labels["type"] == "virtual-kubelet" {
-					// Do not add core capacity total for virtual nodes as this could be extremely large
-					// Just count how many virtual nodes exist
-					telemetryProperties[virtualNodeCountTelemetryName] += 1
-					continue
+				// Do not add core capacity total for virtual nodes as this could be extremely large
+				// Just count how many virtual nodes exist
+				telemetryProperties[virtualNodeCountTelemetryName] += 1
+				continue
 			} else {
 				osLabel = node.Labels["kubernetes.io/os"]
 				archLabel = node.Labels["kubernetes.io/arch"]
@@ -351,20 +452,24 @@ func SendCoreCountToAppInsightsMetrics() {
 // Struct for getting relevant fields from JSON object obtained from cadvisor endpoint
 type CadvisorJson struct {
 	Pods []struct {
-		Containers []struct {
-			Name string `json:"name"`
-			Cpu  struct {
-				UsageNanoCores float64 `json:"usageNanoCores"`
-			} `json:"cpu"`
-			Memory struct {
-				RssBytes float64 `json:"rssBytes"`
-			} `json:"memory"`
-		} `json:"containers"`
+		PodRef struct {
+			PodRefName string `json:"name"`
+		} `json:"podRef"`
+		Containers []Container `json:"containers"`
 	} `json:"pods"`
 }
+type Container struct {
+	Name string `json:"name"`
+	Cpu  struct {
+		UsageNanoCores float64 `json:"usageNanoCores"`
+	} `json:"cpu"`
+	Memory struct {
+		RssBytes float64 `json:"rssBytes"`
+	} `json:"memory"`
+}
 
-// Send Cpu and Memory Usage for Kube state metrics to Application Insights periodically
-func SendKsmCpuMemoryToAppInsightsMetrics() {
+// Send Cpu and Memory Usage for our containers to Application Insights periodically
+func SendContainersCpuMemoryToAppInsightsMetrics() {
 
 	var p CadvisorJson
 	err := json.Unmarshal(retrieveKsmData(), &p)
@@ -376,31 +481,50 @@ func SendKsmCpuMemoryToAppInsightsMetrics() {
 
 	ksmTelemetryTicker := time.NewTicker(time.Second * time.Duration(ksmAttachedTelemetryIntervalSeconds))
 	for ; true; <-ksmTelemetryTicker.C {
-		cpuKsmUsageNanoCoresLinux := float64(0)
-		memoryKsmRssBytesLinux := float64(0)
-
 		for podId := 0; podId < len(p.Pods); podId++ {
+			podRefName := strings.TrimSpace(p.Pods[podId].PodRef.PodRefName)
 			for containerId := 0; containerId < len(p.Pods[podId].Containers); containerId++ {
-				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "" {
+				container := p.Pods[podId].Containers[containerId]
+				containerName := strings.TrimSpace(container.Name)
+
+				switch containerName {
+				case "":
 					message := fmt.Sprintf("Container name is missing")
 					Log(message)
 					continue
-				}
-				if strings.TrimSpace(p.Pods[podId].Containers[containerId].Name) == "ama-metrics-ksm" {
-					cpuKsmUsageNanoCoresLinux += p.Pods[podId].Containers[containerId].Cpu.UsageNanoCores
-					memoryKsmRssBytesLinux += p.Pods[podId].Containers[containerId].Memory.RssBytes
+				case "ama-metrics-ksm":
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, ksmCpuMemoryTelemetryName, "MemKsmRssBytes", podRefName)
+				case "targetallocator":
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "taCPUUsage", "taMemRssBytes", podRefName)
+				case "config-reader":
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "cnfgRdrCPUUsage", "cnfgRdrMemRssBytes", podRefName)
+				case "addon-token-adapter":
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "adnTknAdtrCPUUsage", "adnTknAdtrMemRssBytes", podRefName)
+				case "addon-token-adapter-win":
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "adnTknAdtrCPUUsage", "adnTknAdtrMemRssBytes", podRefName)
+				case "prometheus-collector":
+					GetAndSendContainerCPUandMemoryFromCadvisorJSON(container, "promColCPUUsage", "promColMemRssBytes", podRefName)
 				}
 			}
 		}
-		// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
-		metricTelemetryItem := appinsights.NewMetricTelemetry(ksmCpuMemoryTelemetryName, cpuKsmUsageNanoCoresLinux)
-
-		// Abbreviated properties to save telemetry cost
-		metricTelemetryItem.Properties["MemKsmRssBytesLinux"] = fmt.Sprintf("%d", memoryKsmRssBytesLinux)
-
-		TelemetryClient.Track(metricTelemetryItem)
 	}
+}
 
+func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMetricName string, memMetricName string, podRefName string) {
+	cpuUsageNanoCoresLinux := container.Cpu.UsageNanoCores
+	memoryRssBytesLinux := container.Memory.RssBytes
+
+	// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
+	metricTelemetryItem := appinsights.NewMetricTelemetry(cpuMetricName, cpuUsageNanoCoresLinux)
+
+	// Abbreviated properties to save telemetry cost
+	metricTelemetryItem.Properties[memMetricName] = fmt.Sprintf("%d", int(memoryRssBytesLinux))
+	// Adding the actual pod name from Cadvisor output since the podname environment variable points to the pod on which plugin is running
+	metricTelemetryItem.Properties["PodRefName"] = fmt.Sprintf("%s", podRefName)
+
+	TelemetryClient.Track(metricTelemetryItem)
+
+	Log(fmt.Sprintf("Sent container CPU and Mem data for %s", cpuMetricName))
 }
 
 // Retrieve the JSON payload of Kube state metrics from Cadvisor endpoint
@@ -466,12 +590,13 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 	for _, record := range records {
 		var logEntry = ""
 
-		// Logs have different parsed formats depending on if they're from otelcollector or metricsextension
+		// Logs have different parsed formats depending on if they're from otelcollector or container logs
 		if tag == fluentbitOtelCollectorLogsTag {
 			logEntry = fmt.Sprintf("%s %s", ToString(record["caller"]), ToString(record["msg"]))
-		} else if tag == fluentbitContainerLogsTag {
+		} else {
 			logEntry = ToString(record["log"])
 		}
+
 		logLines = append(logLines, logEntry)
 	}
 
@@ -493,21 +618,21 @@ func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 			if err == nil {
 
 				metricsAccountName := groupMatches[3]
-				
+
 				bytesProcessedCount, e := strconv.ParseFloat(groupMatches[5], 64)
-				if e != nil{
+				if e != nil {
 					bytesProcessedCount = 0.0
 				}
-			
-				metricsSentToPubCount,e := strconv.ParseFloat(groupMatches[6], 64)
+
+				metricsSentToPubCount, e := strconv.ParseFloat(groupMatches[6], 64)
 				if e != nil {
 					metricsSentToPubCount = 0.0
 				}
-				bytesSentToPubCount,e := strconv.ParseFloat(groupMatches[7], 64)
+				bytesSentToPubCount, e := strconv.ParseFloat(groupMatches[7], 64)
 				if e != nil {
 					bytesSentToPubCount = 0.0
 				}
-				
+
 				//update map
 				meMetricsProcessedCountMapMutex.Lock()
 
@@ -520,12 +645,12 @@ func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 					ref.Value += metricsProcessedCount
 
 				} else {
-					m := &meMetricsProcessedCount { 
-													DimBytesProcessedCount: bytesProcessedCount,
-													DimBytesSentToPubCount: bytesSentToPubCount,
-													DimMetricsSentToPubCount: metricsSentToPubCount,
-													Value: metricsProcessedCount, 
-												  }
+					m := &meMetricsProcessedCount{
+						DimBytesProcessedCount:   bytesProcessedCount,
+						DimBytesSentToPubCount:   bytesSentToPubCount,
+						DimMetricsSentToPubCount: metricsSentToPubCount,
+						Value:                    metricsProcessedCount,
+					}
 					meMetricsProcessedCountMap[metricsAccountName] = m
 				}
 				meMetricsProcessedCountMapMutex.Unlock()
@@ -562,12 +687,12 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 	for ; true; <-ticker.C {
 
 		meMetricsProcessedCountMapMutex.Lock()
-		for k,v := range meMetricsProcessedCountMap {
+		for k, v := range meMetricsProcessedCountMap {
 			metric := appinsights.NewMetricTelemetry("meMetricsProcessedCount", v.Value)
 			metric.Properties["metricsAccountName"] = k
-			metric.Properties["bytesProcessedCount"] = fmt.Sprintf("%.2f",v.DimBytesProcessedCount)
-			metric.Properties["metricsSentToPubCount"] = fmt.Sprintf("%.2f",v.DimMetricsSentToPubCount)
-			metric.Properties["bytesSentToPubCount"] = fmt.Sprintf("%.2f",v.DimBytesSentToPubCount)
+			metric.Properties["bytesProcessedCount"] = fmt.Sprintf("%.2f", v.DimBytesProcessedCount)
+			metric.Properties["metricsSentToPubCount"] = fmt.Sprintf("%.2f", v.DimMetricsSentToPubCount)
+			metric.Properties["bytesSentToPubCount"] = fmt.Sprintf("%.2f", v.DimBytesSentToPubCount)
 
 			if InvalidCustomPrometheusConfig != "" {
 				metric.Properties["InvalidCustomPrometheusConfig"] = InvalidCustomPrometheusConfig
@@ -575,34 +700,79 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 			if DefaultPrometheusConfig != "" {
 				metric.Properties["DefaultPrometheusConfig"] = DefaultPrometheusConfig
 			}
-			if KubeletKeepListRegex != "" {
-				metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
+
+			if os.Getenv(envControllerType) == "ReplicaSet" {
+				if KubeletKeepListRegex != "" {
+					metric.Properties["KubeletKeepListRegex"] = KubeletKeepListRegex
+				}
+				if CoreDNSKeepListRegex != "" {
+					metric.Properties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
+				}
+				if CAdvisorKeepListRegex != "" {
+					metric.Properties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
+				}
+				if KubeProxyKeepListRegex != "" {
+					metric.Properties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
+				}
+				if ApiServerKeepListRegex != "" {
+					metric.Properties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
+				}
+				if KubeStateKeepListRegex != "" {
+					metric.Properties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
+				}
+				if NodeExporterKeepListRegex != "" {
+					metric.Properties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
+				}
+				if WinExporterKeepListRegex != "" {
+					metric.Properties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
+				}
+				if WinKubeProxyKeepListRegex != "" {
+					metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
+				}
+				if PodannotationKeepListRegex != "" {
+					metric.Properties["PodannotationKeepListRegex"] = PodannotationKeepListRegex
+				}
+				if KappieBasicKeepListRegex != "" {
+					metric.Properties["KappieBasicKeepListRegex"] = KappieBasicKeepListRegex
+				}
+				if KubeletScrapeInterval != "" {
+					metric.Properties["KubeletScrapeInterval"] = KubeletScrapeInterval
+				}
+				if CoreDNSScrapeInterval != "" {
+					metric.Properties["CoreDNSScrapeInterval"] = CoreDNSScrapeInterval
+				}
+				if CAdvisorScrapeInterval != "" {
+					metric.Properties["CAdvisorScrapeInterval"] = CAdvisorScrapeInterval
+				}
+				if KubeProxyScrapeInterval != "" {
+					metric.Properties["KubeProxyScrapeInterval"] = KubeProxyScrapeInterval
+				}
+				if ApiServerScrapeInterval != "" {
+					metric.Properties["ApiServerScrapeInterval"] = ApiServerScrapeInterval
+				}
+				if KubeStateScrapeInterval != "" {
+					metric.Properties["KubeStateScrapeInterval"] = KubeStateScrapeInterval
+				}
+				if NodeExporterScrapeInterval != "" {
+					metric.Properties["NodeExporterScrapeInterval"] = NodeExporterScrapeInterval
+				}
+				if WinExporterScrapeInterval != "" {
+					metric.Properties["WinExporterScrapeInterval"] = WinExporterScrapeInterval
+				}
+				if WinKubeProxyScrapeInterval != "" {
+					metric.Properties["WinKubeProxyScrapeInterval"] = WinKubeProxyScrapeInterval
+				}
+				if PromHealthScrapeInterval != "" {
+					metric.Properties["PromHealthScrapeInterval"] = PromHealthScrapeInterval
+				}
+				if PodAnnotationScrapeInterval != "" {
+					metric.Properties["PodAnnotationScrapeInterval"] = PodAnnotationScrapeInterval
+				}
+				if KappieBasicScrapeInterval != "" {
+					metric.Properties["KappieBasicScrapeInterval"] = KappieBasicScrapeInterval
+				}
 			}
-			if CoreDNSKeepListRegex != "" {
-				metric.Properties["CoreDNSKeepListRegex"] = CoreDNSKeepListRegex
-			}
-			if CAdvisorKeepListRegex != "" {
-				metric.Properties["CAdvisorKeepListRegex"] = CAdvisorKeepListRegex
-			}
-			if KubeProxyKeepListRegex != "" {
-				metric.Properties["KubeProxyKeepListRegex"] = KubeProxyKeepListRegex
-			}
-			if ApiServerKeepListRegex != "" {
-				metric.Properties["ApiServerKeepListRegex"] = ApiServerKeepListRegex
-			}
-			if KubeStateKeepListRegex != "" {
-				metric.Properties["KubeStateKeepListRegex"] = KubeStateKeepListRegex
-			}
-			if NodeExporterKeepListRegex != "" {
-				metric.Properties["NodeExporterKeepListRegex"] = NodeExporterKeepListRegex
-			}
-			if WinExporterKeepListRegex != "" {
-				metric.Properties["WinExporterKeepListRegex"] = WinExporterKeepListRegex
-			}
-			if WinKubeProxyKeepListRegex != "" {
-				metric.Properties["WinKubeProxyKeepListRegex"] = WinKubeProxyKeepListRegex
-			}
-			
+
 			TelemetryClient.Track(metric)
 
 		}
@@ -667,18 +837,19 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 					ref.Value += metricsReceivedCount
 
 				} else {
-					m := &meMetricsReceivedCount { 
-													Value: metricsReceivedCount, 
-												  }
+					m := &meMetricsReceivedCount{
+						Value: metricsReceivedCount,
+					}
 					meMetricsReceivedCountMap["na"] = m
 				}
 				meMetricsReceivedCountMapMutex.Unlock()
-				
+
 				// Add to the total that PublishTimeseriesVolume() uses
 				if strings.ToLower(os.Getenv(envPrometheusCollectorHealth)) == "true" {
 					TimeseriesVolumeMutex.Lock()
 					TimeseriesReceivedTotal += metricsReceivedCount
 					TimeseriesVolumeMutex.Unlock()
+
 				}
 
 			}
@@ -713,5 +884,277 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 		OtelCollectorExportingFailedCount += 1
 		ExportingFailedMutex.Unlock()
 	}
+	return output.FLB_OK
+}
+
+func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	// Define a regular expression to extract the metric name, metric value and other details
+	var logRegex = regexp.MustCompile(`^(?P<metricName>otelcol_processor_dropped_metric_points|otelcol_receiver_refused_metric_points|otelcol_receiver_accepted_metric_points|otelcol_exporter_sent_metric_points|otelcol_exporter_queue_size|otelcol_exporter_send_failed_metric_points|otelcol_process_memory_rss|otelcol_processor_batch_batch_send_size_bytes_sum|otelcol_processor_batch_batch_send_size_bytes_count|prometheus_sd_http_failures_total|opentelemetry_allocator_targets|opentelemetry_allocator_collectors_discovered)(\{[^}]*\})?\s+=\s+(?P<metricValue>\d+)$`)
+
+	for _, record := range records {
+		var logEntry = ToString(record["message"])
+		Log(logEntry)
+
+		groupMatches := logRegex.FindStringSubmatch(logEntry)
+
+		if len(groupMatches) < 3 {
+			message := fmt.Sprintf("Failed to parse log record: %s", logEntry)
+			Log(message)
+			continue
+		}
+
+		// Extract the metric value and convert to float
+		metricValue, err := strconv.ParseFloat(groupMatches[3], 64)
+		if err != nil {
+			message := fmt.Sprintf("Failed to convert metric value to float64: %v", err)
+			Log(message)
+			continue
+		}
+		var jobName string
+		if groupMatches[1] == "opentelemetry_allocator_targets" {
+			var jobRegex = regexp.MustCompile(`job_name="([^"]+)"`)
+			jobMatches := jobRegex.FindStringSubmatch(groupMatches[2])
+			if len(jobMatches) > 1 {
+				jobName = jobMatches[1]
+				message := fmt.Sprintf("Job name found: %s", jobName)
+				Log(message)
+			} else {
+				message := fmt.Sprintf("Job name not found in %s", groupMatches[2])
+				Log(message)
+				continue
+			}
+		}
+
+		// Create and send metric
+		var metricName string
+		if groupMatches[1] == "opentelemetry_allocator_targets" || groupMatches[1] == "opentelemetry_allocator_collectors_discovered" {
+			metricName = "target_allocator_" + groupMatches[1]
+		} else {
+			metricName = "prometheus_" + groupMatches[1]
+		}
+		metric := appinsights.NewMetricTelemetry(metricName, metricValue)
+		metric.Properties["job_name"] = fmt.Sprintf("%s", jobName)
+		TelemetryClient.Track(metric)
+		Log(fmt.Sprintf("Sent %s metrics", metricName))
+	}
+	return output.FLB_OK
+}
+
+func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	var totalCpuUsage float64
+	var count int
+	var cpuUsages []float64
+
+	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
+	deadline := time.Now().Add(duration)
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop() // This will stop the ticker when the function returns
+
+	for ; time.Now().Before(deadline); <-ticker.C {
+		for _, record := range records {
+			var logEntry = ToString(record["message"])
+			Log(logEntry)
+
+			otelcpuUsage, err := strconv.ParseFloat(logEntry, 64)
+			if err != nil {
+				message := fmt.Sprintf("Failed to parse otelcpuUsage as float64: %v", err)
+				Log(message)
+				SendException(message)
+				continue
+			}
+
+			totalCpuUsage += otelcpuUsage
+			count++
+			cpuUsages = append(cpuUsages, otelcpuUsage)
+		}
+
+		if count > 0 {
+			averageCpuUsage := totalCpuUsage / float64(count)
+			metric := appinsights.NewMetricTelemetry("otelcollector_cpu_usage_050", averageCpuUsage)
+			TelemetryClient.Track(metric)
+			Log("Sent Otel Cpu usage metrics")
+
+			sort.Float64s(cpuUsages)
+			index := int(math.Ceil(0.95 * float64(len(cpuUsages))))
+			percentile95 := cpuUsages[index-1]
+			metric95 := appinsights.NewMetricTelemetry("otelcollector_cpu_usage_095", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent Otel 95th percentile  Cpu usage metrics")
+
+			totalCpuUsage = 0
+			count = 0
+			cpuUsages = []float64{}
+		}
+	}
+
+	return output.FLB_OK
+}
+
+func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	var totalCpuUsage float64
+	var count int
+	var cpuUsages []float64
+
+	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
+	deadline := time.Now().Add(duration)
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop() // This will stop the ticker when the function returns
+
+	for ; time.Now().Before(deadline); <-ticker.C {
+		for _, record := range records {
+			var logEntry = ToString(record["message"])
+			Log(logEntry)
+
+			meCpuUsage, err := strconv.ParseFloat(logEntry, 64)
+			if err != nil {
+				message := fmt.Sprintf("Failed to parse meCpuUsage as float64: %v", err)
+				Log(message)
+				SendException(message)
+				continue
+			}
+
+			totalCpuUsage += meCpuUsage
+			count++
+			cpuUsages = append(cpuUsages, meCpuUsage)
+		}
+
+		if count > 0 {
+			averageCpuUsage := totalCpuUsage / float64(count)
+			metric := appinsights.NewMetricTelemetry("metricsextension_cpu_usage_050", averageCpuUsage)
+			TelemetryClient.Track(metric)
+			Log("Sent ME Average Cpu usage metrics")
+
+			sort.Float64s(cpuUsages)
+			index := int(math.Ceil(0.95 * float64(len(cpuUsages))))
+			percentile95 := cpuUsages[index-1]
+			metric95 := appinsights.NewMetricTelemetry("metricsextension_cpu_usage_095", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent ME 95th percentile  Cpu usage metrics")
+
+			totalCpuUsage = 0
+			count = 0
+			cpuUsages = []float64{}
+		}
+	}
+
+	return output.FLB_OK
+}
+
+func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	var totalMemUsage float64
+	var count int
+	var memUsages []float64
+
+	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
+	deadline := time.Now().Add(duration)
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for ; time.Now().Before(deadline); <-ticker.C {
+		for _, record := range records {
+			var logEntry = ToString(record["message"])
+			Log(logEntry)
+
+			// Define a regular expression to extract mem.VmRSS value
+			var memVmrssRegex = regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
+			groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
+			if len(groupMatches) > 1 {
+				// Convert mem.VmRSS value to float64
+				memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
+				if err != nil {
+					message := fmt.Sprintf("Failed to convert mem.VmRSS to float64: %v", err)
+					Log(message)
+					SendException(message)
+					continue
+				}
+
+				totalMemUsage += memVmrssFloat
+				count++
+				memUsages = append(memUsages, memVmrssFloat)
+			}
+		}
+
+		if count > 0 {
+			averageMemUsage := totalMemUsage / float64(count)
+			metric := appinsights.NewMetricTelemetry("metricsextension_memory_rss_050", averageMemUsage)
+			TelemetryClient.Track(metric)
+			Log("Sent ME average memory usage metrics")
+
+			// Calculate 95th percentile
+			sort.Float64s(memUsages)
+			index := int(math.Ceil(0.95 * float64(len(memUsages))))
+			percentile95 := memUsages[index-1]
+			metric95 := appinsights.NewMetricTelemetry("metricsextension_memory_rss_095", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent ME 95th percentile memory usage metrics")
+
+			totalMemUsage = 0
+			count = 0
+			memUsages = []float64{}
+		}
+	}
+
+	return output.FLB_OK
+}
+
+func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	var totalMemUsage float64
+	var count int
+	var memUsages []float64
+
+	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
+	deadline := time.Now().Add(duration)
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop() // This will stop the ticker when the function returns
+
+	for ; time.Now().Before(deadline); <-ticker.C {
+		for _, record := range records {
+			var logEntry = ToString(record["message"])
+			Log(logEntry)
+
+			// Define a regular expression to extract mem.VmRSS value
+			var memVmrssRegex = regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
+			groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
+
+			if len(groupMatches) > 1 {
+				// Convert mem.VmRSS value to float64
+				memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
+				if err != nil {
+					message := fmt.Sprintf("Failed to convert mem.VmRSS to float64: %v", err)
+					Log(message)
+					SendException(message)
+					continue
+				}
+
+				totalMemUsage += memVmrssFloat
+				count++
+				memUsages = append(memUsages, memVmrssFloat)
+			}
+		}
+
+		if count > 0 {
+			averageMemUsage := totalMemUsage / float64(count)
+			metric := appinsights.NewMetricTelemetry("otelcollector_memory_rss_050", averageMemUsage)
+			TelemetryClient.Track(metric)
+			Log("Sent Otel average memory usage metrics")
+
+			// Calculate 95th percentile
+			sort.Float64s(memUsages)
+			index := int(math.Ceil(0.95 * float64(len(memUsages))))
+			percentile95 := memUsages[index-1]
+			metric95 := appinsights.NewMetricTelemetry("otelcollector_memory_rss_095", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent Otel 95th percentile memory usage metrics")
+
+			totalMemUsage = 0
+			count = 0
+			memUsages = []float64{}
+		}
+	}
+
 	return output.FLB_OK
 }

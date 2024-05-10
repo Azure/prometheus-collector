@@ -1,42 +1,14 @@
 #!/bin/bash
 
-# Colors for Logging
-Color_Off='\033[0m'
-Red='\033[0;31m'
-Green='\033[0;32m'
-Yellow='\033[0;33m'
-Cyan='\033[0;36m'
-
-# Echo text in red
-echo_error () {
-  echo -e "${Red}$1${Color_Off}"
-}
-
-# Echo text in yellow
-echo_warning () {
-  echo -e "${Yellow}$1${Color_Off}"
-}
-
-# Echo variable name in Cyan and value in regular color
-echo_var () {
-  echo -e "${Cyan}$1${Color_Off}=$2"
-}
+# Run logging utility
+source /opt/logger.sh
 
 #Run inotify as a daemon to track changes to the mounted configmap.
 touch /opt/inotifyoutput.txt
-inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
+inotifywait /etc/config/settings /etc/prometheus/certs --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 
-export IS_ARC_CLUSTER="false"
-CLUSTER_nocase=$(echo $CLUSTER | tr "[:upper:]" "[:lower:]")
-if [[ $CLUSTER_nocase =~ "connectedclusters" ]]; then
-  export IS_ARC_CLUSTER="true"
-fi
-echo "export IS_ARC_CLUSTER=$IS_ARC_CLUSTER" >> ~/.bashrc
-
-# EULA statement is required for Arc extension
-if [ "$IS_ARC_CLUSTER" == "true" ]; then
-  echo "MICROSOFT SOFTWARE LICENSE TERMS\n\nMICROSOFT Azure Arc-enabled Kubernetes\n\nThis software is licensed to you as part of your or your company's subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/"
-fi
+# Run ARC EULA utility
+source /opt/arc-eula.sh
 
 if [ -z $MODE ]; then
   MODE="simple"
@@ -44,6 +16,45 @@ fi
 echo_var "MODE" "$MODE"
 echo_var "CONTROLLER_TYPE" "$CONTROLLER_TYPE"
 echo_var "CLUSTER" "$CLUSTER"
+
+customEnvironment_lower=$(echo "$customEnvironment" | tr '[:upper:]' '[:lower:]')
+if [ "$customEnvironment_lower" == "azurepubliccloud" ]; then
+  encodedaikey="$APPLICATIONINSIGHTS_AUTH_PUBLIC"
+  echo "setting telemetry output to the default azurepubliccloud instance"
+elif [ "$customEnvironment_lower" == "azureusgovernmentcloud" ]; then
+  encodedaikey="$APPLICATIONINSIGHTS_AUTH_USGOVERNMENT"
+  aiendpoint="https://dc.applicationinsights.us/v2/track"
+  # IngestionEndpoint=https://usgovvirginia-1.in.applicationinsights.azure.us/;AADAudience=https://monitor.azure.us/
+  echo "setting telemetry output to the azureusgovernmentcloud instance"
+elif [ "$customEnvironment_lower" == "azurechinacloud" ]; then
+  encodedaikey="$APPLICATIONINSIGHTS_AUTH_CHINACLOUD"
+  aiendpoint="https://dc.applicationinsights.azure.cn/v2/track"
+  # IngestionEndpoint=https://chinanorth3-0.in.applicationinsights.azure.cn/;AADAudience=https://monitor.azure.cn/
+  echo "setting telemetry output to the azurechinacloud instance"
+elif [ "$customEnvironment_lower" == "usnat" ]; then
+  encodedaikey="$APPLICATIONINSIGHTS_AUTH_USNAT"
+  aiendpoint="https://dc.applicationinsights.azure.eaglex.ic.gov/v2/track"
+  # IngestionEndpoint: usnateast-0.in.applicationinsights.azure.eaglex.ic.gov
+  echo "setting telemetry output to the usnat instance"
+elif [ "$customEnvironment_lower" == "ussec" ]; then
+  encodedaikey="$APPLICATIONINSIGHTS_AUTH_USSEC"
+  aiendpoint="https://dc.applicationinsights.azure.microsoft.scloud/v2/track"
+  # IngestionEndpoint: usseceast-0.in.applicationinsights.azure.microsoft.scloud
+  echo "setting telemetry output to the ussec instance"
+else
+    echo "Unknown customEnvironment: $customEnvironment_lower, setting telemetry output to the default azurepubliccloud instance"
+    encodedaikey="$APPLICATIONINSIGHTS_AUTH_PUBLIC"
+fi
+
+export APPLICATIONINSIGHTS_AUTH=$encodedaikey
+echo "export APPLICATIONINSIGHTS_AUTH=$encodedaikey" >> ~/.bashrc
+if [ -n "$aiendpoint" ]; then
+    export APPLICATIONINSIGHTS_ENDPOINT="$aiendpoint"
+    echo "export APPLICATIONINSIGHTS_ENDPOINT=\"$aiendpoint\"" >> ~/.bashrc
+fi
+
+#get controller kind in lowercase, trimmed
+controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
 
 # If using a trusted CA for HTTP Proxy, copy this over from the node and install
 cp /anchors/ubuntu/* /etc/pki/ca-trust/source/anchors 2>/dev/null
@@ -66,6 +77,12 @@ if [ "$HTTPS_PROXY" != "" ] && [ "${HTTPS_PROXY: -1}" == "/" ]; then
   export HTTPS_PROXY=${HTTPS_PROXY::-1}
 fi
 
+# Add our target-allocator service to the no_proxy env variable
+export NO_PROXY=$NO_PROXY,ama-metrics-operator-targets.kube-system.svc.cluster.local
+echo "export NO_PROXY=$NO_PROXY" >> ~/.bashrc
+export no_proxy=$no_proxy,ama-metrics-operator-targets.kube-system.svc.cluster.local
+echo "export no_proxy=$no_proxy" >> ~/.bashrc
+
 # If HTTP Proxy is enabled, HTTP_PROXY will always have a value.
 # HTTPS_PROXY will be set to same value as HTTP_PROXY if not specified.
 export HTTP_PROXY_ENABLED="false"
@@ -74,7 +91,7 @@ if [ "$HTTP_PROXY" != "" ]; then
 fi
 echo "export HTTP_PROXY_ENABLED=$HTTP_PROXY_ENABLED" >> ~/.bashrc
 
-if [ $IS_ARC_CLUSTER == "true" ] && [ $HTTP_PROXY_ENABLED == "true" ]; then
+if [ $HTTP_PROXY_ENABLED == "true" ]; then
   proxyprotocol="$(echo $HTTPS_PROXY | grep :// | sed -e's,^\(.*://\).*,\1,g')"
   proxyprotocol=$(echo $proxyprotocol | tr "[:upper:]" "[:lower:]")
   if [ "$proxyprotocol" != "http://" -a "$proxyprotocol" != "https://" ]; then
@@ -103,146 +120,12 @@ if [ $IS_ARC_CLUSTER == "true" ] && [ $HTTP_PROXY_ENABLED == "true" ]; then
   fi
 fi
 
-#set agent config schema version
-if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
-      #trim
-      config_schema_version="$(cat /etc/config/settings/schema-version | xargs)"
-      #remove all spaces
-      config_schema_version="${config_schema_version//[[:space:]]/}"
-      #take first 10 characters
-      config_schema_version="$(echo $config_schema_version| cut -c1-10)"
-
-      export AZMON_AGENT_CFG_SCHEMA_VERSION=$config_schema_version
-      echo "export AZMON_AGENT_CFG_SCHEMA_VERSION=$config_schema_version" >> ~/.bashrc
-      source ~/.bashrc
-fi
-
-#set agent config file version
-if [  -e "/etc/config/settings/config-version" ] && [  -s "/etc/config/settings/config-version" ]; then
-      #trim
-      config_file_version="$(cat /etc/config/settings/config-version | xargs)"
-      #remove all spaces
-      config_file_version="${config_file_version//[[:space:]]/}"
-      #take first 10 characters
-      config_file_version="$(echo $config_file_version| cut -c1-10)"
-
-      export AZMON_AGENT_CFG_FILE_VERSION=$config_file_version
-      echo "export AZMON_AGENT_CFG_FILE_VERSION=$config_file_version" >> ~/.bashrc
-      source ~/.bashrc
-fi
-
-aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 -d)	
-export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey	
-echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc	
-source ~/.bashrc
-
-# Parse the settings for pod annotations
-ruby /opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb
-if [ -e "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping" ]; then
-      cat /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping | while read line; do
-            echo $line >> ~/.bashrc
-      done
-      source /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping
-      source ~/.bashrc
-fi
-
-# Parse the configmap to set the right environment variables for prometheus collector settings
-ruby /opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb
-cat /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var | while read line; do
-      echo $line >> ~/.bashrc
-done
-source /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var
-source ~/.bashrc
-
-# Parse the settings for default scrape configs
-ruby /opt/microsoft/configmapparser/tomlparser-default-scrape-settings.rb
-if [ -e "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var" ]; then
-      cat /opt/microsoft/configmapparser/config_default_scrape_settings_env_var | while read line; do
-            echo $line >> ~/.bashrc
-      done
-      source /opt/microsoft/configmapparser/config_default_scrape_settings_env_var
-      source ~/.bashrc
-fi
-
-# Parse the settings for debug mode
-ruby /opt/microsoft/configmapparser/tomlparser-debug-mode.rb
-if [ -e "/opt/microsoft/configmapparser/config_debug_mode_env_var" ]; then
-      cat /opt/microsoft/configmapparser/config_debug_mode_env_var | while read line; do
-            echo $line >> ~/.bashrc
-      done
-      source /opt/microsoft/configmapparser/config_debug_mode_env_var
-      source ~/.bashrc
-fi
-
-# Parse the settings for default targets metrics keep list config
-ruby /opt/microsoft/configmapparser/tomlparser-default-targets-metrics-keep-list.rb
-
-# Parse the settings for default-targets-scrape-interval-settings config
-ruby /opt/microsoft/configmapparser/tomlparser-scrape-interval.rb
-
-# Merge default and custom prometheus config
-ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
-
-echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false" >> ~/.bashrc
-export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false
-echo "export CONFIG_VALIDATOR_RUNNING_IN_AGENT=true" >> ~/.bashrc
-export CONFIG_VALIDATOR_RUNNING_IN_AGENT=true
-if [ -e "/opt/promMergedConfig.yml" ]; then
-      # promconfigvalidator validates by generating an otel config and running through receiver's config load and validate method
-      /opt/promconfigvalidator --config "/opt/promMergedConfig.yml" --output "/opt/microsoft/otelcollector/collector-config.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
-      if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
-            # Use default config if specified config is invalid
-            echo_error "prom-config-validator::Prometheus custom config validation failed. The custom config will not be used"
-            echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-            export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
-            if [ -e "/opt/defaultsMergedConfig.yml" ]; then
-                  echo_error "prom-config-validator::Running validator on just default scrape configs"
-                  /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
-                  if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
-                        echo_error "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used"
-                  else
-                        cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
-                  fi
-            fi 
-            echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-            export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
-      fi
-elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
-      echo_warning "prom-config-validator::No custom prometheus config found. Only using default scrape configs"
-      /opt/promconfigvalidator --config "/opt/defaultsMergedConfig.yml" --output "/opt/collector-config-with-defaults.yml" --otelTemplate "/opt/microsoft/otelcollector/collector-config-template.yml"
-      if [ $? -ne 0 ] || [ ! -e "/opt/collector-config-with-defaults.yml" ]; then
-            echo_error "prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used"
-      else
-            echo "prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config"
-            cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
-      fi
-      echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-      export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
-
-else
-      # This else block is needed, when there is no custom config mounted as config map or default configs enabled
-      echo_error "prom-config-validator::No custom config or default scrape configs enabled. No scrape configs will be used"
-      echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
-      export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
-fi
-
-# Set the environment variables from the prom-config-validator
-if [ -e "/opt/microsoft/prom_config_validator_env_var" ]; then
-      cat /opt/microsoft/prom_config_validator_env_var | while read line; do
-            echo $line >> ~/.bashrc
-      done
-      source /opt/microsoft/prom_config_validator_env_var
-      source ~/.bashrc
-fi
-
-source ~/.bashrc
-echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"
+source /opt/configmap-parser.sh
 
 #start cron daemon for logrotate
 /usr/sbin/crond -n -s &
 
-#get controller kind in lowercase, trimmed
-controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
+
 if [ $controllerType = "replicaset" ]; then
    fluentBitConfigFile="/opt/fluent-bit/fluent-bit.conf"
    if [ "$CLUSTER_OVERRIDE" = "true" ]; then
@@ -265,17 +148,17 @@ if [ "${MAC}" == "true" ]; then
       waitedSecsSoFar=1
       while true; do
             if [ $waitedSecsSoFar -gt $tokenAdapterWaitsecs ]; then
-                  wget -T 2 -S http://localhost:9999/healthz 2>&1
+                  wget -T 2 -S http://localhost:9999/healthz -Y off 2>&1
                   echo "giving up waiting for token adapter to become healthy after $waitedSecsSoFar secs"
                   # log telemetry about failure after waiting for waitedSecsSoFar and break
                   echo "export tokenadapterUnhealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
                   break
             else
                   echo "checking health of token adapter after $waitedSecsSoFar secs"
-                  tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
+                  tokenAdapterResult=$(wget -T 2 -S http://localhost:9999/healthz -Y off 2>&1| grep HTTP/|awk '{print $2}'| grep 200)
             fi
             if [ ! -z $tokenAdapterResult ]; then
-                        echo "found token adapter to be healthy after $waitedSecsSoFar secs" 
+                        echo "found token adapter to be healthy after $waitedSecsSoFar secs"
                         # log telemetry about success after waiting for waitedSecsSoFar and break
                         echo "export tokenadapterHealthyAfterSecs=$waitedSecsSoFar" >>~/.bashrc
                         break
@@ -287,7 +170,7 @@ if [ "${MAC}" == "true" ]; then
       #end wait for addon-token-adapter to be healthy
 fi
 
-export ME_CONFIG_FILE=$meConfigFile	
+export ME_CONFIG_FILE=$meConfigFile
 export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile
 echo "export ME_CONFIG_FILE=$meConfigFile" >> ~/.bashrc
 echo "export FLUENT_BIT_CONFIG_FILE=$fluentBitConfigFile" >> ~/.bashrc
@@ -336,7 +219,7 @@ if [ "${MAC}" != "true" ]; then
       source ~/.bashrc
 
       echo_var "AKV_FILES" "$AZMON_METRIC_ACCOUNTS_AKV_FILES"
-      
+
       echo "Starting metricsextension"
       # will need to rotate the entire log location
       # will need to remove accountname fetching from env
@@ -367,7 +250,7 @@ else
       # Use options -T 0x1 or -T 0xFFFF for debug logging
       mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 
-      # Running mdsd --version can't be captured into a variable unlike telegraf and otelcollector, have to run after printing the string
+      # Running mdsd --version can't be captured into a variable unlike otelcollector, have to run after printing the string
       echo -n -e "${Cyan}MDSD_VERSION${Color_Off}="; mdsd --version
 
       echo "Waiting for 30s for MDSD to get the config and put them in place for ME"
@@ -379,7 +262,9 @@ else
       echo "Starting metricsextension"
       /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc_prom -ConfigOverrides $meConfigString > /dev/null &
 fi
-
+ME_PID=$!
+echo_var "ME_PID" "$ME_PID"
+sed -i "s/\${ME_PID}/$ME_PID/" $fluentBitConfigFile
 # Get ME version
 ME_VERSION=`cat /opt/metricsextversion.txt`
 echo_var "ME_VERSION" "$ME_VERSION"
@@ -393,32 +278,36 @@ GOLANG_VERSION=`cat /opt/goversion.txt`
 echo_var "GOLANG_VERSION" "$GOLANG_VERSION"
 
 # Start otelcollector
-if [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
-      echo_warning "Starting otelcollector with only default scrape configs enabled"
+if [ $controllerType = "replicaset" ] && [ "${AZMON_OPERATOR_ENABLED}" == "true" ]; then
+      echo_warning "Starting otelcollector in replicaset with Target allocator settings"
+      /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-replicaset.yml &> /opt/microsoft/otelcollector/collector-log.txt &
+elif [ "$AZMON_USE_DEFAULT_PROMETHEUS_CONFIG" = "true" ]; then
+      # Commenting this out since config can be applied via CRD
+      # echo_warning "Starting otelcollector with only default scrape configs enabled"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config-default.yml &> /opt/microsoft/otelcollector/collector-log.txt &
 else
       echo "Starting otelcollector"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
+OTEL_PID=$!
+echo_var "OTEL_PID" "$OTEL_PID"
+sed -i "s/\${OTEL_PID}/$OTEL_PID/" $fluentBitConfigFile
 OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version`
 echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
 PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
 echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
-echo "starting telegraf"
-if [ "$TELEMETRY_DISABLED" != "true" ]; then
-  /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
-  TELEGRAF_VERSION=`cat /opt/telegrafversion.txt`
-  echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
-fi
-
 echo "starting fluent-bit"
 mkdir /opt/microsoft/fluent-bit
 touch /opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log
+
+
 fluent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
+
 FLUENT_BIT_VERSION=`fluent-bit --version`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
+
 
 if [ "${MAC}" == "true" ]; then
   # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.

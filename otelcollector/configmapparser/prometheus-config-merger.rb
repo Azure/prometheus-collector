@@ -42,6 +42,9 @@ LOGGING_PREFIX = "prometheus-config-merger"
 @podannotationsDefaultFile = @defaultPromConfigPathPrefix + "podannotationsDefault.yml"
 @windowskubeproxyDefaultRsAdvancedFile = @defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsAdvanced.yml"
 @kappiebasicDefaultFileDs = @defaultPromConfigPathPrefix + "kappieBasicDefaultDs.yml"
+@networkobservabilityRetinaDefaultFileDs = @defaultPromConfigPathPrefix + "networkobservabilityRetinaDefaultDs.yml"
+@networkobservabilityHubbleDefaultFileDs = @defaultPromConfigPathPrefix + "networkobservabilityHubbleDefaultDs.yml"
+@networkobservabilityCiliumDefaultFileDs = @defaultPromConfigPathPrefix + "networkobservabilityCiliumDefaultDs.yml"
 
 def parseConfigMap
   begin
@@ -335,6 +338,67 @@ def populateDefaultPrometheusConfig
       end
     end
 
+    if !ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED"].downcase == "true"
+      networkobservabilityRetinaMetricsKeepListRegex = @regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"]
+      networkobservabilityRetinaScrapeInterval = @intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"]
+      if currentControllerType == @replicasetControllerType
+        #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
+      else #networkobservabilityRetina scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
+        if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" #&& ENV["OS_TYPE"].downcase == "linux"
+          UpdateScrapeIntervalConfig(@networkobservabilityRetinaDefaultFileDs, networkobservabilityRetinaScrapeInterval)
+          if !networkobservabilityRetinaMetricsKeepListRegex.nil? && !networkobservabilityRetinaMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@networkobservabilityRetinaDefaultFileDs, networkobservabilityRetinaMetricsKeepListRegex)
+          end
+          contents = File.read(@networkobservabilityRetinaDefaultFileDs)
+          contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+          File.open(@networkobservabilityRetinaDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@networkobservabilityRetinaDefaultFileDs)
+        end
+      end
+    end
+
+    if !ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED"].downcase == "true"
+      networkobservabilityHubbleMetricsKeepListRegex = @regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"]
+      networkobservabilityHubbleScrapeInterval = @intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"]
+      if currentControllerType == @replicasetControllerType
+        #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
+      else #networkobservabilityHubble scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
+        if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" && ENV["OS_TYPE"].downcase == "linux"
+          UpdateScrapeIntervalConfig(@networkobservabilityHubbleDefaultFileDs, networkobservabilityHubbleScrapeInterval)
+          if !networkobservabilityHubbleMetricsKeepListRegex.nil? && !networkobservabilityHubbleMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@networkobservabilityHubbleDefaultFileDs, networkobservabilityHubbleMetricsKeepListRegex)
+          end
+          contents = File.read(@networkobservabilityHubbleDefaultFileDs)
+          contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+          File.open(@networkobservabilityHubbleDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@networkobservabilityHubbleDefaultFileDs)
+        end
+      end
+    end
+
+    if !ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED"].downcase == "true"
+      networkobservabilityCiliumMetricsKeepListRegex = @regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"]
+      networkobservabilityCiliumScrapeInterval = @intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"]
+      if currentControllerType == @replicasetControllerType
+        #do nothing -- kappie is not supported to be scrapped automatically outside ds. if needed, customer can disable this ds target, and enable rs scraping thru custom config map
+      else #networkobservabilityCilium scraping will be turned ON by default only when in MAC/addon mode (for both windows & linux)
+        if advancedMode == true  && !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true" && ENV["OS_TYPE"].downcase == "linux"
+          UpdateScrapeIntervalConfig(@networkobservabilityCiliumDefaultFileDs, networkobservabilityCiliumScrapeInterval)
+          if !networkobservabilityCiliumMetricsKeepListRegex.nil? && !networkobservabilityCiliumMetricsKeepListRegex.empty?
+            AppendMetricRelabelConfig(@networkobservabilityCiliumDefaultFileDs, networkobservabilityCiliumMetricsKeepListRegex)
+          end
+          contents = File.read(@networkobservabilityCiliumDefaultFileDs)
+          contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+          File.open(@networkobservabilityCiliumDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@networkobservabilityCiliumDefaultFileDs)
+        end
+      end
+    end
+
+
     # Collector health config should be enabled or disabled for both replicaset and daemonset
     if !ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].nil? && ENV["AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED"].downcase == "true"
       prometheusCollectorHealthInterval = @intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
@@ -365,14 +429,6 @@ def populateDefaultPrometheusConfig
         contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
         File.open(@windowsexporterDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowsexporterDefaultDsFile)
-
-        # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
-        UpdateScrapeIntervalConfig(@windowsexporterDefaultRsSimpleFile, windowsexporterScrapeInterval)
-        if !winexporterMetricsKeepListRegex.nil? && !winexporterMetricsKeepListRegex.empty?
-          AppendMetricRelabelConfig(@windowsexporterDefaultRsSimpleFile, winexporterMetricsKeepListRegex)
-        end
-        defaultConfigs.push(@windowsexporterDefaultRsSimpleFile)
       end
     end
 
@@ -399,14 +455,6 @@ def populateDefaultPrometheusConfig
         contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
         File.open(@windowskubeproxyDefaultDsFile, "w") { |file| file.puts contents }
         defaultConfigs.push(@windowskubeproxyDefaultDsFile)
-
-        # If advanced mode is enabled, but not the windows daemonset, scrape windows kubelet from the replicaset as if it's simple mode
-      elsif currentControllerType == @replicasetControllerType && advancedMode == true && windowsDaemonset == false && ENV["OS_TYPE"].downcase == "linux"
-        UpdateScrapeIntervalConfig(@windowskubeproxyDefaultFileRsSimpleFile, windowskubeproxyScrapeInterval)
-        if !winkubeproxyMetricsKeepListRegex.nil? && !winkubeproxyMetricsKeepListRegex.empty?
-          AppendMetricRelabelConfig(@windowskubeproxyDefaultFileRsSimpleFile, winkubeproxyMetricsKeepListRegex)
-        end
-        defaultConfigs.push(@windowskubeproxyDefaultFileRsSimpleFile)
       end
     end
 
@@ -530,7 +578,7 @@ def setDefaultFileScrapeInterval(scrapeInterval)
     @corednsDefaultFile, @cadvisorDefaultFileRsSimple, @cadvisorDefaultFileRsAdvanced, @cadvisorDefaultFileDs, @kubeproxyDefaultFile,
     @apiserverDefaultFile, @kubestateDefaultFile, @nodeexporterDefaultFileRsSimple, @nodeexporterDefaultFileRsAdvanced, @nodeexporterDefaultFileDs,
     @prometheusCollectorHealthDefaultFile, @windowsexporterDefaultRsSimpleFile, @windowsexporterDefaultDsFile,
-    @windowskubeproxyDefaultFileRsSimpleFile, @windowskubeproxyDefaultDsFile
+    @windowskubeproxyDefaultFileRsSimpleFile, @windowskubeproxyDefaultDsFile, @podannotationsDefaultFile
   ]
 
   defaultFilesArray.each { |currentFile|

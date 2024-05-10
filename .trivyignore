@@ -1,29 +1,61 @@
 # Check for HIGH/CRITICAL & MEDIUM CVEs. HIGH/CRITICAL to be fixed asap, MEDIUM is best effort
 # ignore these CVEs, but continue scanning to catch other vulns. Note : this will ignore these cves globally
 
-# CRITICAL/HIGH
-# Ruby GEM
-CVE-2021-33621
-# node-exporter
-CVE-2021-38561
-CVE-2021-44716
-CVE-2022-21698
-CVE-2022-27191
-# opt/telegraf/telegraf
-CVE-2022-23471
-CVE-2023-25153
-CVE-2023-25173
+# =========== CRITICAL ================
+# none
 
-# MEDIUM
-# opt/telegraf/telegraf
-CVE-2019-3826
-# kube-state-metrics
-CVE-2022-41723
-# opt/microsoft/otelcollector/otelcollector
-# opt/promconfigvalidator
-# opt/telegraf/telegraf
-# kube-state-metrics
-# bin/node_exporter
-CVE-2022-41717
-CVE-2022-46146
-CVE-2022-41721
+# =========== HIGH ================
+# HIGH - otelcollector
+GHSA-fr2g-9hjm-wr23
+CVE-2023-29403
+CVE-2023-45283
+# HIGH - promconfigvalidator
+# HIGH - go vulnerabilities
+CVE-2023-39325
+
+# =========== MEDIUM ================
+# MEDIUM - otelcollector
+CVE-2023-29406
+CVE-2023-29409
+CVE-2023-39318
+CVE-2023-39319
+CVE-2023-39326
+CVE-2023-45284
+CVE-2023-45288
+CVE-2023-48795
+CVE-2024-24557
+CVE-2020-8559
+CVE-2023-45289
+CVE-2023-45290
+CVE-2024-24783
+CVE-2024-24784
+CVE-2024-24785
+# MEDIUM - promconfigvalidator
+CVE-2023-48795
+CVE-2024-24786
+CVE-2024-24557
+CVE-2024-27281
+CVE-2020-8559
+# MEDIUM - go vulnerabilities
+CVE-2023-3978
+CVE-2023-44487
+CVE-2023-45283
+CVE-2023-45287
+CVE-2023-39318
+CVE-2023-39319
+CVE-2023-39326
+CVE-2023-45284
+# MEDIUM - mariner
+CVE-2023-5678
+# MEDIUM - ruby
+CVE-2024-27281
+# MEDIUM - KSM
+CVE-2023-29406
+CVE-2023-29409
+CVE-2023-39318
+CVE-2023-39319
+CVE-2023-39326
+CVE-2023-45284
+# HIGH - KSM
+CVE-2023-45283
+CVE-2023-29403

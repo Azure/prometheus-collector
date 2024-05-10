@@ -8,10 +8,16 @@
                 "description": "Cluster name"
             }
         },
+        "clusterResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "Cluster Resource Id"
+            }
+        },
         "azureMonitorWorkspaceResourceId": {
             "type": "string",
             "metadata": {
-                "description": "ResourceId of Monitoring Account (MAC) to associate to"
+                "description": "ResourceId of Azure Monitor Workspace (AMW) to associate to"
             }
         },
         "location": {
@@ -23,7 +29,7 @@
         "nodeRecordingRuleGroup": "NodeRecordingRulesRuleGroup-",
         "nodeRecordingRuleGroupName": "[concat(variables('nodeRecordingRuleGroup'), parameters('clusterName'))]",
         "nodeRecordingRuleGroupDescription": "Node Recording Rules RuleGroup",
-        "kubernetesRecordingRuleGroup": "KubernetesReccordingRulesRuleGroup-",
+        "kubernetesRecordingRuleGroup": "KubernetesRecordingRulesRuleGroup-",
         "kubernetesRecordingRuleGroupName": "[concat(variables('kubernetesRecordingRuleGroup'), parameters('clusterName'))]",
         "kubernetesRecordingRuleGroupDescription": "Kubernetes Recording Rules RuleGroup",
         "nodeRecordingRuleGroupWin": "NodeRecordingRulesRuleGroup-Win-",
@@ -41,7 +47,10 @@
             "location": "[parameters('location')]",
             "properties": {
                 "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
-                "scopes": [ "[parameters('azureMonitorWorkspaceResourceId')]" ],
+                "scopes": [
+                    "[parameters('azureMonitorWorkspaceResourceId')]",
+                    "[parameters('clusterResourceId')]"
+                ],
                 "enabled": true,
                 "clusterName": "[parameters('clusterName')]",
                 "interval": "PT1M",

@@ -1,0 +1,15 @@
+scrape_configs:
+  - job_name: prometheus_ref_app
+    scheme: https
+    scrape_interval: 60s
+    tls_config:
+      ca_file: /etc/prometheus/certs/client-cert.pem
+      cert_file: /etc/prometheus/certs/client-cert.pem
+      key_file: /etc/prometheus/certs/client-key.pem
+      insecure_skip_verify: false
+    kubernetes_sd_configs:
+    - role: pod
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: keep
+      regex: "prometheus-reference-app"

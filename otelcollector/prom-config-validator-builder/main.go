@@ -20,13 +20,16 @@ import (
 type OtelConfig struct {
 	Exporters  interface{} `yaml:"exporters"`
 	Processors interface{} `yaml:"processors"`
+	Extensions interface{} `yaml:"extensions"`
 	Receivers  struct {
 		Prometheus struct {
-			Config interface{} `yaml:"config"`
+			Config          interface{} `yaml:"config"`
+			TargetAllocator interface{} `yaml:"target_allocator"`
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
 	Service struct {
-		Pipelines struct {
+		Extensions interface{} `yaml:"extensions"`
+		Pipelines  struct {
 			Metrics struct {
 				Exporters  interface{} `yaml:"exporters"`
 				Processors interface{} `yaml:"processors"`
@@ -35,8 +38,9 @@ type OtelConfig struct {
 		} `yaml:"pipelines"`
 		Telemetry struct {
 			Logs struct {
-				Level    interface{} `yaml:"level"`
-				Encoding interface{} `yaml:"encoding"`
+				Level    	 interface{} `yaml:"level"`
+				Encoding 	 interface{} `yaml:"encoding"`
+				OutputPaths  []string `yaml:"output_paths"`
 			} `yaml:"logs"`
 		} `yaml:"telemetry"`
 	} `yaml:"service"`
@@ -121,6 +125,9 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 							regexString := relabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
 							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							// Doing the below since we dont want to substitute $ with $$ for env variables NODE_NAME and NODE_IP.
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
 							relabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -129,6 +136,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						replacement := relabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
 						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
 						relabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
@@ -145,6 +154,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 							regexString := metricRelabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
 							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
 							metricRelabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -154,6 +165,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						replacement := metricRelabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
 						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
 				}

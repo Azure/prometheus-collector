@@ -668,15 +668,15 @@ tests:
     values: '1+0x20'
   alert_rule_test:
   - eval_time: 15m
-    alertname: KubePodNotReady
+    alertname: KubePodNotReadyByController
     exp_alerts:
     - exp_labels:
         namespace: ns1
         pod: pod-ds-7cc77d965f-cgsdv
         severity: warning
       exp_annotations:
-        summary: "Pod has been in a non-ready state for more than 15 minutes."
-        description: "Pod ns1/pod-ds-7cc77d965f-cgsdv has been in a non-ready state for longer than 15 minutes."
+        summary: "Pod has been in a non-ready state by controller for more than 15 minutes."
+        description: "Pod ns1/pod-ds-7cc77d965f-cgsdv has been in a non-ready state by controller for longer than 15 minutes."
         runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready"
 
 - interval: 1m
@@ -1113,7 +1113,7 @@ tests:
         runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodcrashlooping"
         summary: "Pod is crash looping."
   - eval_time: 20m
-    alertname: KubePodCrashLooping   # alert fired for a period of 5 minutes after resolution because the alert looks back at the last 5 minutes of data and the range vector doesn't take stale samples into account 
+    alertname: KubePodCrashLooping   # alert fired for a period of 5 minutes after resolution because the alert looks back at the last 5 minutes of data and the range vector doesn't take stale samples into account
     exp_alerts:
       - exp_labels:
           severity: "warning"

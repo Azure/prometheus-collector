@@ -1,6 +1,5 @@
 param variables_clusterName string
 param clusterLocation string
-param clusterResourceId string
 param metricLabelsAllowlist string
 param metricAnnotationsAllowList string
 
@@ -8,8 +7,6 @@ resource variables_cluster 'Microsoft.ContainerService/managedClusters@2023-01-0
   name: variables_clusterName
   location: clusterLocation
   properties: {
-    mode: 'Incremental'
-    id: clusterResourceId
     azureMonitorProfile: {
       metrics: {
         enabled: true

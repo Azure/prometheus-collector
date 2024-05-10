@@ -30,25 +30,25 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 200m
-              memory: 1Gi
+              cpu: {{ .Values.AzureMonitorMetrics.DsCPULimitLinux }}
+              memory: {{ .Values.AzureMonitorMetrics.DsMemoryLimitLinux }}
             requests:
-              cpu: 75m
-              memory: 150Mi
-          {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
+              cpu: {{ .Values.AzureMonitorMetrics.DsCPURequestLinux }}
+              memory: {{ .Values.AzureMonitorMetrics.DsMemoryRequestLinux }}
+          {{- if and (eq .Values.AzureMonitorMetrics.ArcExtension true) (.Values.Azure.proxySettings.isProxyEnabled) }}
           envFrom:
             - secretRef:
                 name: ama-metrics-proxy-config
           {{- end }}
           env:
             - name: CLUSTER
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              {{- if eq .Values.AzureMonitorMetrics.ArcExtension true }}
               value: "{{ .Values.Azure.Cluster.ResourceId }}"
               {{- else }}
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
               {{- end }}
             - name: AKSREGION
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              {{- if eq .Values.AzureMonitorMetrics.ArcExtension true }}
               value: "{{ .Values.Azure.Cluster.Region }}"
               {{- else }}
               value: "{{ .Values.global.commonGlobals.Region }}"
@@ -58,16 +58,16 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: customEnvironment
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ lower .Values.Azure.Cluster.Cloud }}"
-              {{- else if .Values.AzureMonitorMetrics.isArcACluster }}
+              {{- if .Values.AzureMonitorMetrics.isArcACluster }}
               value: "arcautonomous"
+              {{- else if .Values.AzureMonitorMetrics.ArcExtension }}
+              value: "{{ lower .Values.CloudEnvironment }}"
               {{- else }}
               value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
               {{- end }}
             - name: OMS_TLD
               value: "opinsights.azure.com"
-            {{- if .Values.AzureMonitorMetrics.isArcACluster }}
+            {{- if eq .Values.AzureMonitorMetrics.isArcACluster true }}
             - name: customRegionalEndpoint
               value: {{ required "customRegionalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
             - name: customGlobalEndpoint
@@ -110,7 +110,7 @@ spec:
             - name: NODE_EXPORTER_NAME
               value: "" # Replace this with the node exporter shipped out of box with AKS
             - name: NODE_EXPORTER_TARGETPORT
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+              {{- if eq .Values.AzureMonitorMetrics.ArcExtension true }}
               value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
               {{- else }}
               value: "19100"
@@ -122,20 +122,29 @@ spec:
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
-              value: "v1.5.0" # Replace this with the version shipped by default
+              value: "v1.6.0" # Replace this with the version shipped by default
             - name: AGENT_VERSION
               value: {{ .Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE
               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: WINMODE
-              value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
+            - name: APPMONITORING_AUTOINSTRUMENTATION_ENABLED
+              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringAutoInstrumentationEnabled }}"
+            - name: APPMONITORING_OPENTELEMETRYMETRICS_ENABLED
+              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringOpenTelemetryMetricsEnabled }}"
+            - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT
+              value: "{{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}"
           securityContext:
             privileged: false
           volumeMounts:
             - mountPath: /etc/config/settings
               name: settings-vol-config
+              readOnly: true
+            - mountPath: /etc/prometheus/certs
+              name: ama-metrics-tls-secret-volume
               readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
@@ -149,14 +158,16 @@ spec:
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
+            {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
             - mountPath: /anchors/ubuntu
               name: anchors-ubuntu
               readOnly: true
-            {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+            {{- end }}
+            {{- if eq .Values.AzureMonitorMetrics.ArcExtension true }}
             - mountPath: /anchors/proxy
               name: ama-metrics-proxy-cert
               readOnly: true
-            {{- end}}
+            {{- end }}
           livenessProbe:
             exec:
               command:
@@ -167,7 +178,7 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
-        {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+        {{- if eq .Values.AzureMonitorMetrics.ArcExtension true }}
         - name: arc-msi-adapter
           imagePullPolicy: IfNotPresent
           env:
@@ -231,20 +242,40 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
+        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
         - operator: "Exists"
-          effect: NoExecute
+          effect: "NoSchedule"
         - operator: "Exists"
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-          effect: NoSchedule
+          effect: "NoExecute"
+        - operator: "Exists"
+          effect: "PreferNoSchedule" 
+        {{- end }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
       volumes:
         - name: settings-vol-config
           configMap:
             name: ama-metrics-settings-configmap
+            optional: true
+        - name: ama-metrics-tls-secret-volume
+          secret:
+            secretName: ama-metrics-mtls-secret
             optional: true
         - name: prometheus-config-vol
           configMap:
@@ -260,10 +291,12 @@ spec:
           hostPath:
             path: /etc/pki/ca-trust/anchors/
             type: DirectoryOrCreate
+        {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
         - name: anchors-ubuntu
           hostPath:
             path: /usr/local/share/ca-certificates/
             type: DirectoryOrCreate
+        {{- end }}
         {{- if .Values.AzureMonitorMetrics.ArcExtension }}
         - name: ama-metrics-proxy-cert
           secret:
@@ -304,11 +337,8 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 500m
-              memory: 1Gi
-            requests:
-              cpu: 500m
-              memory: 500Mi
+              cpu:  {{ .Values.AzureMonitorMetrics.DsCPULimitWindows }}
+              memory: {{ .Values.AzureMonitorMetrics.DsMemoryLimitWindows }}
           env:
             - name: CLUSTER
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
@@ -365,7 +395,7 @@ spec:
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
-              value: "v1.5.0" # Replace this with the version shipped by default
+              value: "v1.6.0" # Replace this with the version shipped by default
             - name: AGENT_VERSION
               value: {{ .Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE
@@ -374,6 +404,12 @@ spec:
               value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
+            - name: APPMONITORING_AUTOINSTRUMENTATION_ENABLED
+              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringAutoInstrumentationEnabled }}"
+            - name: APPMONITORING_OPENTELEMETRYMETRICS_ENABLED
+              value: "{{ .Values.AzureMonitorMetrics.IsAppMonitoringOpenTelemetryMetricsEnabled }}"
+            - name: APPMONITORING_OPENTELEMETRYMETRICS_PORT
+              value: "{{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}"
           securityContext:
             privileged: false
           volumeMounts:
@@ -382,6 +418,9 @@ spec:
               readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
+              readOnly: true
+            - mountPath: /etc/prometheus/certs
+              name: ama-metrics-tls-secret-volume
               readOnly: true
             - name: host-log-containers
               readOnly: true
@@ -395,9 +434,9 @@ spec:
                 - cmd
                 - /c
                 - C:\opt\microsoft\scripts\livenessprobe.cmd
-            periodSeconds: 15
+            periodSeconds: 60
             initialDelaySeconds: 300
-            timeoutSeconds: 15
+            timeoutSeconds: 60
             failureThreshold: 3
         - name: addon-token-adapter-win
           command:
@@ -458,6 +497,10 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
+        - name: ama-metrics-tls-secret-volume
+          secret:
+            secretName: ama-metrics-mtls-secret
+            optional: true
         - name: host-log-pods
           hostPath:
             path: /var/log/pods

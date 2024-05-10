@@ -44,27 +44,22 @@ echo "Installing mdsd..."
 # fi
 
 # Install this way once moving to the Mariner published RPMs:
-sudo tdnf install -y azure-mdsd-1.23.5
+sudo tdnf install -y azure-mdsd-1.30.3
 
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
 mkdir /opt/microsoft/linuxmonagent
 
-# Install telegraf
-echo "Installing telegraf..."
-sudo tdnf install telegraf-1.25.2 -y
-sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.txt
-
 # Install fluent-bit
 echo "Installing fluent-bit..."
-sudo tdnf install fluent-bit-2.0.9 -y
+sudo tdnf install fluent-bit-2.1.10 -y
 
 # Setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Install ME
 echo "Installing Metrics Extension..."
-sudo tdnf install -y metricsext2-2.2023.224.2214
+sudo tdnf install -y metricsext2-2.2024.419.1535
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
@@ -73,5 +68,3 @@ sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversi
 # Remove any RPMs downloaded not from Mariner
 rm -f $TMPDIR/metricsext2*.rpm
 rm -f $TMPDIR/azure-mdsd*.rpm
-# Remove mdsd's telegraf
-rm /usr/sbin/telegraf

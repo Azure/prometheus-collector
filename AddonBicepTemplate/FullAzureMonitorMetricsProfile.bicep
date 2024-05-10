@@ -1,19 +1,4 @@
 param azureMonitorWorkspaceResourceId string
-
-@allowed([
-  'eastus2euap'
-  'centraluseuap'
-  'centralus'
-  'eastus'
-  'eastus2'
-  'northeurope'
-  'southcentralus'
-  'southeastasia'
-  'uksouth'
-  'westeurope'
-  'westus'
-  'westus2'
-])
 param azureMonitorWorkspaceLocation string
 param clusterResourceId string
 param clusterLocation string
@@ -23,6 +8,7 @@ param enableWindowsRecordingRules bool
 param grafanaResourceId string
 param grafanaLocation string
 param grafanaSku string
+param grafanaAdminObjectId string
 
 @description('A new GUID used to identify the role assignment')
 param roleNameGuid string = newGuid()
@@ -34,16 +20,16 @@ var clusterName = split(clusterResourceId, '/')[8]
 var dceName = 'MSProm-${azureMonitorWorkspaceLocation}-${clusterName}'
 var dcrName = 'MSProm-${azureMonitorWorkspaceLocation}-${clusterName}'
 var dcraName = 'MSProm-${clusterLocation}-${clusterName}'
-var nodeRecordingRuleGroup_var = 'NodeRecordingRulesRuleGroup-'
-var nodeRecordingRuleGroupName = concat(nodeRecordingRuleGroup_var, clusterName)
+var nodeRecordingRuleGroupPrefix = 'NodeRecordingRulesRuleGroup-'
+var nodeRecordingRuleGroupName = '${nodeRecordingRuleGroupPrefix}${clusterName}'
 var nodeRecordingRuleGroupDescription = 'Node Recording Rules RuleGroup'
-var kubernetesRecordingRuleGroup_var = 'KubernetesReccordingRulesRuleGroup-'
-var kubernetesRecordingRuleGroupName = concat(kubernetesRecordingRuleGroup_var, clusterName)
+var kubernetesRecordingRuleGrouPrefix = 'KubernetesRecordingRulesRuleGroup-'
+var kubernetesRecordingRuleGroupName = '${kubernetesRecordingRuleGrouPrefix}${clusterName}'
 var kubernetesRecordingRuleGroupDescription = 'Kubernetes Recording Rules RuleGroup'
 var nodeRecordingRuleGroupWin = 'NodeRecordingRulesRuleGroup-Win-'
 var nodeAndKubernetesRecordingRuleGroupWin = 'NodeAndKubernetesRecordingRulesRuleGroup-Win-'
-var nodeRecordingRuleGroupNameWin_var = concat(nodeRecordingRuleGroupWin, clusterName)
-var nodeAndKubernetesRecordingRuleGroupWin_var = concat(nodeAndKubernetesRecordingRuleGroupWin, clusterName)
+var nodeRecordingRuleGroupNameWinName = '${nodeRecordingRuleGroupWin}${clusterName}'
+var nodeAndKubernetesRecordingRuleGroupWinName = '${nodeAndKubernetesRecordingRuleGroupWin}${clusterName}'
 var RecordingRuleGroupDescriptionWin = 'Recording Rules RuleGroup for Win'
 var version = ' - 0.1'
 
@@ -116,7 +102,6 @@ module azuremonitormetrics_profile_clusterResourceId './nested_azuremonitormetri
   params: {
     variables_clusterName: clusterName
     clusterLocation: clusterLocation
-    clusterResourceId: clusterResourceId
     metricLabelsAllowlist: metricLabelsAllowlist
     metricAnnotationsAllowList: metricAnnotationsAllowList
   }
@@ -129,10 +114,8 @@ resource nodeRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRuleGroups
   name: nodeRecordingRuleGroupName
   location: azureMonitorWorkspaceLocation
   properties: {
-    description: concat(nodeRecordingRuleGroupDescription, version)
-    scopes: [
-      azureMonitorWorkspaceResourceId
-    ]
+    description: '${nodeRecordingRuleGroupDescription}${version}'
+    scopes: [azureMonitorWorkspaceResourceId,clusterResourceId]
     enabled: true
     clusterName: clusterName
     interval: 'PT1M'
@@ -189,10 +172,8 @@ resource kubernetesRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRule
   name: kubernetesRecordingRuleGroupName
   location: azureMonitorWorkspaceLocation
   properties: {
-    description: concat(kubernetesRecordingRuleGroupDescription, version)
-    scopes: [
-      azureMonitorWorkspaceResourceId
-    ]
+    description: '${kubernetesRecordingRuleGroupDescription}${version}'
+    scopes: [azureMonitorWorkspaceResourceId,clusterResourceId]
     enabled: true
     clusterName: clusterName
     interval: 'PT1M'
@@ -290,13 +271,11 @@ resource kubernetesRecordingRuleGroup 'Microsoft.AlertsManagement/prometheusRule
 }
 
 resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01' = {
-  name: nodeRecordingRuleGroupNameWin_var
+  name: nodeRecordingRuleGroupNameWinName
   location: azureMonitorWorkspaceLocation
   properties: {
-    description: concat(RecordingRuleGroupDescriptionWin, version)
-    scopes: [
-      azureMonitorWorkspaceResourceId
-    ]
+    description: '${RecordingRuleGroupDescriptionWin}${version}'
+    scopes: [azureMonitorWorkspaceResourceId,clusterResourceId]
     enabled: enableWindowsRecordingRules
     clusterName: clusterName
     interval: 'PT1M'
@@ -366,13 +345,11 @@ resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRul
 }
 
 resource nodeAndKubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRuleGroups@2023-03-01' = {
-  name: nodeAndKubernetesRecordingRuleGroupWin_var
+  name: nodeAndKubernetesRecordingRuleGroupWinName
   location: azureMonitorWorkspaceLocation
   properties: {
-    description: concat(RecordingRuleGroupDescriptionWin, version)
-    scopes: [
-      azureMonitorWorkspaceResourceId
-    ]
+    description: '${RecordingRuleGroupDescriptionWin}${version}'
+    scopes: [azureMonitorWorkspaceResourceId,clusterResourceId]
     enabled: enableWindowsRecordingRules
     clusterName: clusterName
     interval: 'PT1M'
@@ -449,18 +426,13 @@ resource nodeAndKubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/
   }
 }
 
-resource roleNameGuid_resource 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: roleNameGuid
-  properties: {
-    roleDefinitionId: '/subscriptions/${azureMonitorWorkspaceSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/b0d8363b-8ddd-447d-831f-62ca05bff136'
-    principalId: reference(grafanaResourceId_8.id, '2022-08-01', 'Full').identity.principalId
-  }
-}
-
 resource grafanaResourceId_8 'Microsoft.Dashboard/grafana@2022-08-01' = {
   name: split(grafanaResourceId, '/')[8]
   sku: {
     name: grafanaSku
+  }
+  identity: {
+    type: 'SystemAssigned'
   }
   location: grafanaLocation
   properties: {
@@ -473,3 +445,24 @@ resource grafanaResourceId_8 'Microsoft.Dashboard/grafana@2022-08-01' = {
     }
   }
 }
+
+// Add user's as Grafana Admin for the Grafana instance
+resource selfRoleAssignmentGrafana 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: roleNameGuid
+  scope: grafanaResourceId_8
+  properties: {
+    roleDefinitionId: '/subscriptions/${azureMonitorWorkspaceSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/22926164-76b3-42b3-bc55-97df8dab3e41'
+    principalId: grafanaAdminObjectId
+  }
+}
+
+// Provide Grafana access to the AMW instance
+module roleAssignmentGrafanaAMW './nested_grafana_amw_role_assignment.bicep' = {
+  name: roleNameGuid
+  scope: resourceGroup(split(azureMonitorWorkspaceResourceId, '/')[2], split(azureMonitorWorkspaceResourceId, '/')[4])
+  params: {
+    azureMonitorWorkspaceSubscriptionId: azureMonitorWorkspaceSubscriptionId
+    grafanaPrincipalId: reference(grafanaResourceId_8.id, '2022-08-01', 'Full').identity.principalId
+  }
+}
+

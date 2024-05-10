@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: prometheus-reference-app
+spec:
+  selector:
+    matchLabels:
+      app: prometheus-reference-app
+  template:
+    metadata:
+      labels:
+        app: prometheus-reference-app
+    spec:
+      containers:
+        - name: prometheus-reference-app-golang
+          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.8.1-testTLS-11-10-2023-afd40f4c-ref-app-golang
+          env:
+            - name: RUN_PERF_TEST
+              value: "false"
+            - name: SCRAPE_INTERVAL
+              value: "15"
+            - name: METRIC_COUNT
+              value: "125000"
+          ports:
+            - containerPort: 2112
+              protocol: TCP
+              name: "weather-app"
+            - containerPort: 2113
+              protocol: TCP
+              name: "untyped-metrics"
+      nodeSelector:
+          kubernetes.io/os: linux
+          architecture: amd64
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-reference-service
+  labels:
+    app: prometheus-reference-app
+spec:
+  selector:
+    app: prometheus-reference-app
+  ports:
+    - name: "weather-app"
+      protocol: TCP
+      port: 2112
+      targetPort: 2112
+    - name: "untyped-metrics"
+      protocol: TCP
+      port: 2113
+      targetPort: 2113
+    - name: "python-client"
+      protocol: TCP
+      port: 2114
+      targetPort: 2114

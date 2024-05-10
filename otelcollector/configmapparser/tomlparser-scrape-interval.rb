@@ -27,6 +27,9 @@ MATCHER = /^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]
 @prometheusCollectorHealthInterval = "30s"
 @podannotationScrapeInterval = "30s"
 @kappiebasicScrapeInterval = "30s"
+@networkobservabilityRetinaScrapeInterval = "30s"
+@networkobservabilityHubbleScrapeInterval = "30s"
+@networkobservabilityCiliumScrapeInterval = "30s"
 
 # Use parser to parse the configmap toml file to a ruby structure
 def parseConfigMap
@@ -208,6 +211,54 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       ConfigParseErrorLogger.log(LOGGING_PREFIX, "kappiebasicScrapeInterval override not specified in configmap")
     end
 
+    networkobservabilityRetinaScrapeInterval = parsedConfig[:networkobservabilityRetina]
+    if !networkobservabilityRetinaScrapeInterval.nil?
+      matched = MATCHER.match(networkobservabilityRetinaScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        networkobservabilityRetinaScrapeInterval = "30s"
+        @networkobservabilityRetinaScrapeInterval = networkobservabilityRetinaScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for networkobservabilityRetina")
+      else
+        @networkobservabilityRetinaScrapeInterval = networkobservabilityRetinaScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for networkobservabilityRetinaScrapeInterval")
+      end
+    else
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "networkobservabilityRetinaScrapeInterval override not specified in configmap")
+    end
+
+    networkobservabilityHubbleScrapeInterval = parsedConfig[:networkobservabilityHubble]
+    if !networkobservabilityHubbleScrapeInterval.nil?
+      matched = MATCHER.match(networkobservabilityHubbleScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        networkobservabilityHubbleScrapeInterval = "30s"
+        @networkobservabilityHubbleScrapeInterval = networkobservabilityHubbleScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for networkobservabilityRetina")
+      else
+        @networkobservabilityHubbleScrapeInterval = networkobservabilityHubbleScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for networkobservabilityHubbleScrapeInterval")
+      end
+    else
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "networkobservabilityHubbleScrapeInterval override not specified in configmap")
+    end
+
+    networkobservabilityCiliumScrapeInterval = parsedConfig[:networkobservabilityCilium]
+    if !networkobservabilityCiliumScrapeInterval.nil?
+      matched = MATCHER.match(networkobservabilityCiliumScrapeInterval)
+      if !matched
+        # set default scrape interval to 30s if its not in the proper format
+        networkobservabilityCiliumScrapeInterval = "30s"
+        @networkobservabilityCiliumScrapeInterval = networkobservabilityCiliumScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Incorrect regex pattern for duration, set default scrape interval to 30s for networkobservabilityCilium")
+      else
+        @networkobservabilityCiliumScrapeInterval = networkobservabilityCiliumScrapeInterval
+        ConfigParseErrorLogger.log(LOGGING_PREFIX, "Using configmap scrape settings for networkobservabilityCiliumScrapeInterval")
+      end
+    else
+      ConfigParseErrorLogger.log(LOGGING_PREFIX, "networkobservabilityCiliumScrapeInterval override not specified in configmap")
+    end    
+
     prometheusCollectorHealthInterval = parsedConfig[:prometheuscollectorhealth]
     if !prometheusCollectorHealthInterval.nil?
       matched = MATCHER.match(prometheusCollectorHealthInterval)
@@ -270,6 +321,10 @@ intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = @windowskubeproxyScrapeInterv
 intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = @prometheusCollectorHealthInterval
 intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = @podannotationScrapeInterval
 intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = @kappiebasicScrapeInterval
+intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = @networkobservabilityRetinaScrapeInterval
+intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = @networkobservabilityHubbleScrapeInterval
+intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = @networkobservabilityCiliumScrapeInterval
+
 
 if !file.nil?
   # Close file after writing scrape interval list hash

@@ -36,12 +36,18 @@ Values.yaml has some settings that need to be replaced, that are specific to you
 Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
 ImageTag: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/kube-control-plane/templates/_images.tpl&version=GBrashmi/prom-addon-arm64&line=530&lineEnd=530&lineStartColumn=28&lineEndColumn=53&lineStyle=plain&_a=contents
 
-### **Step 5: Install Helm chart**
+
+### **Step 5: Test out with Operator mode turned on**
+
+This is an interim step needed until the operator changes roll out globally to make sure the changes work well with the new mode.
+The value TargetAllocatorEnabled is set to false by default, this needs to be set to true to test out with the operator mode turned on.
+
+### **Step 6: Install Helm chart**
 ```
 helm install ama-metrics azure-monitor-metrics-addon/ --values azure-monitor-metrics-addon/values.yaml
 ```
 
-### **Step 6: Uninstall helm chart**
+### **Step 7: Uninstall helm chart**
 ```
 helm uninstall ama-metrics
 ```

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: win-prometheus-reference-app-golang
-          image: docker.io/gracewehner/win-prometheus-reference-app:golang
+          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-win-ref-app-golang
           resources:
             limits:
               cpu: 2
@@ -32,7 +32,7 @@ spec:
             - containerPort: 2113
               protocol: TCP
         - name: win-prometheus-reference-app-python
-          image: docker.io/gracewehner/win-prometheus-reference-app:python
+          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-win-ref-app-python
           resources:
             limits:
               cpu: 200m

@@ -13,6 +13,7 @@ spec:
   selector:
     matchLabels:
       {{- include "prometheus-node-exporter.selectorLabels" . | nindent 6 }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   {{- with .Values.updateStrategy }}
   updateStrategy:
     {{- toYaml . | nindent 4 }}
@@ -40,7 +41,7 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "prometheus-node-exporter.serviceAccountName" . }}
       containers:
-        {{- $servicePort := ternary 8100 .Values.service.port .Values.kubeRBACProxy.enabled }}
+        {{- $servicePort := ternary .Values.kubeRBACProxy.port .Values.service.port .Values.kubeRBACProxy.enabled }}
         - name: node-exporter
           image: {{ include "prometheus-node-exporter.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -49,7 +50,7 @@ spec:
             - --path.sysfs=/host/sys
             {{- if .Values.hostRootFsMount.enabled }}
             - --path.rootfs=/host/root
-            {{- if semverCompare ">=1.4.0" (default .Chart.AppVersion .Values.image.tag) }}
+            {{- if semverCompare ">=1.4.0" (coalesce .Values.version .Values.image.tag .Chart.AppVersion) }}
             - --path.udev.data=/host/root/run/udev/data
             {{- end }}
             {{- end }}
@@ -63,7 +64,9 @@ spec:
           {{- end }}
           env:
             - name: HOST_IP
-              {{- if .Values.service.listenOnAllInterfaces }}
+              {{- if .Values.kubeRBACProxy.enabled }}
+              value: 127.0.0.1
+              {{- else if .Values.service.listenOnAllInterfaces }}
               value: 0.0.0.0
               {{- else }}
               valueFrom:
@@ -84,6 +87,9 @@ spec:
           livenessProbe:
             failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
             httpGet:
+              {{- if .Values.kubeRBACProxy.enabled }}
+              host: 127.0.0.1
+              {{- end }}
               httpHeaders:
               {{- range $_, $header := .Values.livenessProbe.httpGet.httpHeaders }}
               - name: {{ $header.name }}
@@ -99,6 +105,9 @@ spec:
           readinessProbe:
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
             httpGet:
+              {{- if .Values.kubeRBACProxy.enabled }}
+              host: 127.0.0.1
+              {{- end }}
               httpHeaders:
               {{- range $_, $header := .Values.readinessProbe.httpGet.httpHeaders }}
               - name: {{ $header.name }}
@@ -191,7 +200,10 @@ spec:
           {{- end }}
           ports:
             - containerPort: {{ .Values.service.port}}
-              name: "http"
+              name: {{ .Values.kubeRBACProxy.portName }}
+              {{- if .Values.kubeRBACProxy.enableHostPort }}
+              hostPort: {{ .Values.service.port }}
+              {{- end }}
             - containerPort: 8888
               name: "http-healthz"
           readinessProbe:

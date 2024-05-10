@@ -22,6 +22,9 @@ LOGGING_PREFIX = "default-scrape-settings"
 @windowsexporterEnabled = false
 @windowskubeproxyEnabled = false
 @kappiebasicEnabled = true
+@networkobservabilityRetinaEnabled = true
+@networkobservabilityHubbleEnabled = true
+@networkobservabilityCiliumEnabled = true
 @noDefaultsEnabled = false
 @sendDSUpMetric = false
 
@@ -93,6 +96,18 @@ def populateSettingValuesFromConfigMap(parsedConfig)
       @kappiebasicEnabled = parsedConfig[:kappiebasic]
       puts "config::Using configmap scrape settings for kappiebasic: #{@kappiebasicEnabled}"
     end
+    if !parsedConfig[:networkobservabilityRetina].nil?
+      @networkobservabilityRetinaEnabled = parsedConfig[:networkobservabilityRetina]
+      puts "config::Using configmap scrape settings for networkobservabilityRetina: #{@networkobservabilityRetinaEnabled}"
+    end
+    if !parsedConfig[:networkobservabilityHubble].nil?
+      @networkobservabilityHubbleEnabled = parsedConfig[:networkobservabilityHubble]
+      puts "config::Using configmap scrape settings for networkobservabilityHubble: #{@networkobservabilityHubbleEnabled}"
+    end
+    if !parsedConfig[:networkobservabilityCilium].nil?
+      @networkobservabilityCiliumEnabled = parsedConfig[:networkobservabilityCilium]
+      puts "config::Using configmap scrape settings for networkobservabilityCilium: #{@networkobservabilityCiliumEnabled}"
+    end
 
     windowsDaemonset = false
     if ENV["WINMODE"].nil? && ENV["WINMODE"].strip.downcase == "advanced"
@@ -128,7 +143,7 @@ end
 ConfigParseErrorLogger.logSection(LOGGING_PREFIX, "Start default-scrape-settings Processing")
 # set default targets for MAC mode
 if !ENV['MAC'].nil? && !ENV['MAC'].empty? && ENV['MAC'].strip.downcase == "true"
-  ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "MAC mode is enabled. Only enabling targets kubestate,cadvisor,kubelet,kappiebasic & nodeexporter for linux before config map processing....")
+  ConfigParseErrorLogger.logWarning(LOGGING_PREFIX, "MAC mode is enabled. Only enabling targets kubestate,cadvisor,kubelet,kappiebasic,networkobservabilityRetina,networkobservabilityHubble,networkobservabilityCilium & nodeexporter for linux before config map processing....")
   
   @corednsEnabled = false
   @kubeproxyEnabled = false
@@ -168,6 +183,9 @@ if !file.nil?
   file.write($export + "AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=#{@windowsexporterEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=#{@windowskubeproxyEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED=#{@kappiebasicEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED=#{@networkobservabilityRetinaEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED=#{@networkobservabilityHubbleEnabled}\n")
+  file.write($export + "AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED=#{@networkobservabilityCiliumEnabled}\n")
   file.write($export + "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=#{@podannotationEnabled}\n")
   # Close file after writing all metric collection setting environment variables
   file.close

@@ -1,4 +1,4 @@
-all: otelcollector fluentbitplugin promconfigvalidator
+all: otelcollector fluentbitplugin promconfigvalidator targetallocator
 
 .PHONY: otelcollector
 otelcollector:
@@ -11,3 +11,9 @@ fluentbitplugin:
 
 promconfigvalidator:
 	make -C ../prom-config-validator-builder
+
+targetallocator:
+	make -C ../otel-allocator
+
+configurationreader:
+	make -C ../configuration-reader-builder

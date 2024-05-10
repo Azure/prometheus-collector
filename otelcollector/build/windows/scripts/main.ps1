@@ -1,5 +1,5 @@
 #setting it to replicaset by default
-$me_config_file = '/opt/metricextension/me_ds.config'
+$me_config_file = '/opt/metricextension/me_ds_win.config'
 
 function Set-EnvironmentVariablesAndConfigParser {
     # Set windows 2019 or 2022 version (Microsoft Windows Server 2019 Datacenter or Microsoft Windows Server 2022 Datacenter)
@@ -42,13 +42,11 @@ function Set-EnvironmentVariablesAndConfigParser {
 
     ############### Environment variables for MA {Start} ###############
     [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Process")
-    [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Process")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Process")
     [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Process")
     [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Process")
     [System.Environment]::SetEnvironmentVariable("MONITORING_IDENTITY", "use_ip_address", "Process")
     [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", "Machine")
-    [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", "https://monitor.azure.com/", "Machine")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_OsType", "Windows", "Machine")
     [System.Environment]::SetEnvironmentVariable("MONITORING_VERSION", "2.0", "Machine")
     [System.Environment]::SetEnvironmentVariable("MONITORING_ROLE", "cloudAgentRoleIdentity", "Machine")
@@ -61,16 +59,59 @@ function Set-EnvironmentVariablesAndConfigParser {
     [System.Environment]::SetEnvironmentVariable("ENABLE_MCS", "true", "Machine")
     [System.Environment]::SetEnvironmentVariable("MDSD_USE_LOCAL_PERSISTENCY", "false", "Process")
     [System.Environment]::SetEnvironmentVariable("MDSD_USE_LOCAL_PERSISTENCY", "false", "Machine")
-    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Process")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $env:AKSREGION, "Process")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $env:CLUSTER, "Process")
     [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $env:CLUSTER, "Process")
     [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Process")
-    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", "https://global.handler.control.monitor.azure.com", "Machine")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_Location", $env:AKSREGION, "Machine")
     [System.Environment]::SetEnvironmentVariable("MA_RoleEnvironment_ResourceId", $env:CLUSTER, "Machine")
     [System.Environment]::SetEnvironmentVariable("MCS_CUSTOM_RESOURCE_ID", $env:CLUSTER, "Machine")
     [System.Environment]::SetEnvironmentVariable("customRegion", $env:AKSREGION, "Machine")
+
+
+    $mcs_endpoint = "https://monitor.azure.com/"
+    $mcs_globalendpoint = "https://global.handler.control.monitor.azure.com"
+    $customEnvironment = [System.Environment]::GetEnvironmentVariable("customEnvironment", "process").ToLower()
+
+    switch ($customEnvironment) {
+        "azurepubliccloud" {
+            if ($env:AKSREGION.ToLower() -eq "eastus2euap" -or $env:AKSREGION.ToLower() -eq "centraluseuap") {
+                $mcs_globalendpoint = "https://global.handler.canary.control.monitor.azure.com"
+                $mcs_endpoint = "https://monitor.azure.com/"
+            }
+            else {
+                $mcs_endpoint = "https://monitor.azure.com/"
+                $mcs_globalendpoint = "https://global.handler.control.monitor.azure.com"
+            }
+        }
+        "azureusgovernmentcloud" {
+            $mcs_globalendpoint = "https://global.handler.control.monitor.azure.us"
+            $mcs_endpoint = "https://monitor.azure.us/"
+        }
+        "azurechinacloud" {
+            $mcs_globalendpoint = "https://global.handler.control.monitor.azure.cn"
+            $mcs_endpoint = "https://monitor.azure.cn/"
+        }
+        "usnat" {
+            $mcs_globalendpoint = "https://global.handler.control.monitor.azure.eaglex.ic.gov"
+            $mcs_endpoint = "https://monitor.azure.eaglex.ic.gov/"
+        }
+        "ussec" {
+            $mcs_globalendpoint = "https://global.handler.control.monitor.azure.microsoft.scloud"
+            $mcs_endpoint = "https://monitor.azure.microsoft.scloud/"
+        }
+        default {
+            Write-Host "Unknown customEnvironment: $customEnvironment, setting mcs endpoint to default azurepubliccloud values"
+            $mcs_endpoint = "https://monitor.azure.com/"
+            $mcs_globalendpoint = "https://global.handler.control.monitor.azure.com"
+        }
+    }   
+
+    [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", $mcs_endpoint, "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", $mcs_globalendpoint, "Process")
+    [System.Environment]::SetEnvironmentVariable("MCS_AZURE_RESOURCE_ENDPOINT", $mcs_endpoint, "Machine")
+    [System.Environment]::SetEnvironmentVariable("MCS_GLOBAL_ENDPOINT", $mcs_globalendpoint, "Machine")
+
     ############### Environment variables for MA {End} ###############
 
     if ([string]::IsNullOrEmpty($env:MODE)) {
@@ -106,45 +147,50 @@ function Set-EnvironmentVariablesAndConfigParser {
         [System.Environment]::SetEnvironmentVariable("AZMON_AGENT_CFG_FILE_VERSION", $config_file_version, "Machine")
     }
 
-    # Need to do this before the SA fetch for AI key for airgapped clouds so that it is not overwritten with defaults.
-    $appInsightsAuth = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH", "process")
-    if (![string]::IsNullOrEmpty($appInsightsAuth)) {
-        [System.Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH", $appInsightsAuth, "machine")
-    }
-    else {
-        Write-Host "Failed to set environment variable APPLICATIONINSIGHTS_AUTH for target 'machine' since it is either null or empty"
+    switch ($customEnvironment) {
+        "azurepubliccloud" {
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_PUBLIC", "process")
+            $aiendpoint = $null
+            Write-Host "setting telemetry output to the default azurepubliccloud instance"
+        }
+        "azureusgovernmentcloud" {
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_USGOVERNMENT", "process")
+            $aiendpoint = "https://dc.applicationinsights.us/v2/track"
+            Write-Host "setting telemetry output to the azureusgovernmentcloud instance"
+        }
+        "azurechinacloud" {
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_CHINACLOUD", "process")
+            $aiendpoint = "https://dc.applicationinsights.azure.cn/v2/track"
+            Write-Host "setting telemetry output to the azurechinacloud instance"
+        }
+        "usnat" {
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_USNAT", "process")
+            $aiendpoint = "https://dc.applicationinsights.azure.eaglex.ic.gov/v2/track"
+            Write-Host "setting telemetry output to the usnat instance"
+        }
+        "ussec" {
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_USSEC", "process")
+            $aiendpoint = "https://dc.applicationinsights.azure.microsoft.scloud/v2/track"
+            Write-Host "setting telemetry output to the ussec instance"
+        }
+        default {
+            Write-Host "Unknown customEnvironment: $customEnvironment, setting telemetry output to the default azurepubliccloud instance"
+            $encodedaikey = [System.Environment]::GetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH_PUBLIC", "process")
+            $aiendpoint = $null
+        }
     }
 
+    [Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH", $encodedaikey, "Process")
+    [Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_AUTH", $encodedaikey, "Machine")
+    if ($null -ne $aiendpoint) {
+        [Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_ENDPOINT", $aiendpoint, "Process")
+        [Environment]::SetEnvironmentVariable("APPLICATIONINSIGHTS_ENDPOINT", $aiendpoint, "Machine")
+    }
+    
+    # Delete this when telegraf is removed
     $aiKeyDecoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:APPLICATIONINSIGHTS_AUTH))
     [System.Environment]::SetEnvironmentVariable("TELEMETRY_APPLICATIONINSIGHTS_KEY", $aiKeyDecoded, "Process")
     [System.Environment]::SetEnvironmentVariable("TELEMETRY_APPLICATIONINSIGHTS_KEY", $aiKeyDecoded, "Machine")
-
-    # Kaveesh TODO : airgapped cloud app insights key
-    # # Check if the instrumentation key needs to be fetched from a storage account (as in airgapped clouds)
-    # if [ ${#APPLICATIONINSIGHTS_AUTH_URL} -ge 1 ]; then  # (check if APPLICATIONINSIGHTS_AUTH_URL has length >=1)
-    #       for BACKOFF in {1..4}; do
-    #             KEY=$(curl -sS $APPLICATIONINSIGHTS_AUTH_URL )
-    #             # there's no easy way to get the HTTP status code from curl, so just check if the result is well formatted
-    #             if [[ $KEY =~ ^[A-Za-z0-9=]+$ ]]; then
-    #                   break
-    #             else
-    #                   sleep $((2**$BACKOFF / 4))  # (exponential backoff)
-    #             fi
-    #       done
-
-    #       # validate that the retrieved data is an instrumentation key
-    #       if [[ $KEY =~ ^[A-Za-z0-9=]+$ ]]; then
-    #             export APPLICATIONINSIGHTS_AUTH=$(echo $KEY)
-    #             echo "export APPLICATIONINSIGHTS_AUTH=$APPLICATIONINSIGHTS_AUTH" >> ~/.bashrc
-    #             echo "Using cloud-specific instrumentation key"
-    #       else
-    #             # no ikey can be retrieved. Disable telemetry and continue
-    #             export DISABLE_TELEMETRY=true
-    #             echo "export DISABLE_TELEMETRY=true" >> ~/.bashrc
-    #             echo "Could not get cloud-specific instrumentation key (network error?). Disabling telemetry"
-    #       fi
-    # fi
-
 
     # run config parser
     ruby /opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb
@@ -273,10 +319,10 @@ function Set-EnvironmentVariablesAndConfigParser {
     }
     else {
         if ($cluster_override -eq "true") {
-            $meConfigFile = "/opt/metricextension/me_ds_internal.config"
+            $meConfigFile = "/opt/metricextension/me_ds_internal_win.config"
         }
         else {
-            $meConfigFile = "/opt/metricextension/me_ds.config"
+            $meConfigFile = "/opt/metricextension/me_ds_win.config"
         }
     }
     [System.Environment]::SetEnvironmentVariable("ME_CONFIG_FILE", $meConfigFile, "Process")
@@ -404,7 +450,7 @@ function Start-ME {
             }
             else {
                 Start-Process -NoNewWindow -FilePath "/opt/metricextension/MetricsExtension/MetricsExtension.Native.exe" -ArgumentList @("-Logger", "File", "-LogLevel", "Debug", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", $me_config_file) > $null
-                # /opt/metricextension/MetricsExtension/MetricsExtension.Native.exe -Logger Console -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\ -Input otlp_grpc_prom -ConfigOverridesFilePath '/opt/metricextension/me_ds.config'
+                # /opt/metricextension/MetricsExtension/MetricsExtension.Native.exe -Logger Console -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\ -Input otlp_grpc_prom -ConfigOverridesFilePath '/opt/metricextension/me_ds_win.config'
             }
         }
         else {
