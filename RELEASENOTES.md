@@ -1,5 +1,13 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 05-07-2024 (CCP release only)
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.11-main-6.8.11-main-05-07-2024-fcfa51bd`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.11-main-6.8.11-main-05-07-2024-fcfa51bd-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.11-main-6.8.11-main-05-07-2024-fcfa51bd-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.11-main-6.8.11-main-05-07-2024-fcfa51bd-cfg`
+* Change log -
+  * fix: ccp metrics missing cluster value
+
 ## Release 05-03-2024
 
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.10-main-05-06-2024-079dabbc`
