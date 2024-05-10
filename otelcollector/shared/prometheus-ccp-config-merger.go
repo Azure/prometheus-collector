@@ -66,10 +66,12 @@ func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
 		for _, scfg := range scrapeConfigs {
-			if scfgMap, ok := scfg.(map[string]interface{}); ok {
+			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
 				if metricRelabelCfgs, ok := scfgMap["metric_relabel_configs"].([]interface{}); ok {
+					fmt.Println("Appending metric relabel config to existing metric relabel configs")
 					scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
 				} else {
+					fmt.Println("Creating new metric relabel configs")
 					scfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
 				}
 			}
@@ -78,6 +80,8 @@ func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 		if cfgYamlWithMetricRelabelConfig, err := yaml.Marshal(config); err == nil {
 			if err := os.WriteFile(yamlConfigFile, []byte(cfgYamlWithMetricRelabelConfig), fs.FileMode(0644)); err != nil {
 				fmt.Printf("Error writing to file %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
+			} else {
+				fmt.Printf("Successfully wrote to file %s\n", yamlConfigFile)
 			}
 		} else {
 			fmt.Printf("Error marshalling YAML for %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
