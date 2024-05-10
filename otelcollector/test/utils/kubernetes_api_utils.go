@@ -307,7 +307,7 @@ func CheckIfAllContainersAreRunning(clientset *kubernetes.Clientset, namespace, 
 }
 
 /*
- * Check that pods are scheduled in all the nodes. If a node has no schduled pod on it, return an error.
+ * Check that pods with the specified namespace and label value are scheduled in all the nodes. If a node has no schduled pod on it, return an error.
  */
 func CheckIfAllPodsScheduleOnNodes(clientset *kubernetes.Clientset, namespace, labelKey string, labelValue string) error {
 
@@ -323,6 +323,7 @@ func CheckIfAllPodsScheduleOnNodes(clientset *kubernetes.Clientset, namespace, l
 		// Get list of pods scheduled on this node
 		pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 			FieldSelector: "spec.nodeName=" + node.Name,
+			LabelSelector: labelKey + "=" + labelValue,
 		})
 
 		if err != nil || pods == nil || len(pods.Items) == 0 {
@@ -334,7 +335,7 @@ func CheckIfAllPodsScheduleOnNodes(clientset *kubernetes.Clientset, namespace, l
 }
 
 /*
- * Check that pods are scheduled in all the Fips nodes. If a Fips node has no schduled pod on it, return an error.
+ * Check that pods with the specified namespace and label value are scheduled in all the Fips nodes. If a Fips node has no schduled pod on it, return an error.
  */
 func CheckIfAllFipsPodsScheduleOnNodes(clientset *kubernetes.Clientset, namespace, labelKey string, labelValue string) error {
 
@@ -346,11 +347,42 @@ func CheckIfAllFipsPodsScheduleOnNodes(clientset *kubernetes.Clientset, namespac
 	}
 
 	for _, node := range nodes.Items {
-		if value, ok := node.Labels["agentpool"]; ok && value == "fipslin" {
+		if value, ok := node.Labels["kubernetes.azure.com/fips_enabled"]; ok && value == "true" {
 
 			// Get list of pods scheduled on this node
 			pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 				FieldSelector: "spec.nodeName=" + node.Name,
+				LabelSelector: labelKey + "=" + labelValue,
+			})
+
+			if err != nil || pods == nil || len(pods.Items) == 0 {
+				return errors.New(fmt.Sprintf("Error getting pods on node %s:", node.Name))
+			}
+		}
+	}
+
+	return nil
+}
+
+/*
+ * Check that pods with the specified namespace and label value are scheduled in all the Arm64 nodes. If the node has no schduled pod on it, return an error.
+ */
+func CheckIfAllArm64PodsScheduleOnNodes(clientset *kubernetes.Clientset, namespace, labelKey string, labelValue string) error {
+
+	// Get list of all nodes
+	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+
+	if err != nil {
+		return errors.New(fmt.Sprintf("Error getting nodes with the specified labels: %v", err))
+	}
+
+	for _, node := range nodes.Items {
+		if value, ok := node.Labels["kubernetes.io/arch"]; ok && value == "arm64" {
+
+			// Get list of pods scheduled on this node
+			pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+				FieldSelector: "spec.nodeName=" + node.Name,
+				LabelSelector: labelKey + "=" + labelValue,
 			})
 
 			if err != nil || pods == nil || len(pods.Items) == 0 {
