@@ -44,6 +44,10 @@ func loadRegexHash() {
 }
 
 func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
+	appendMetricRelabelConfigWithExclusions(yamlConfigFile, keepListRegex, "")
+}
+
+func appendMetricRelabelConfigWithExclusions(yamlConfigFile, keepListRegex, dropListRegex string) {
 	fmt.Printf("Adding keep list regex or minimal ingestion regex for %s\n", yamlConfigFile)
 
 	content, err := os.ReadFile(yamlConfigFile)
@@ -68,7 +72,16 @@ func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 		for _, scfg := range scrapeConfigs {
 			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
 				if metricRelabelCfgs, ok := scfgMap["metric_relabel_configs"].([]interface{}); ok {
-					scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
+					if (dropListRegex == "") {
+						scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
+					} else {
+						dropListMetricRelabelConfig := map[string]interface{}{
+							"source_labels": []interface{}{"__name__"},
+							"action":        "drop",
+							"regex":         dropListRegex,
+						}
+						scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig, dropListMetricRelabelConfig)
+					}
 				} else {
 					scfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
 				}
@@ -123,8 +136,9 @@ func populateDefaultPrometheusConfig() {
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_APISERVER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
 		controlplaneApiserverKeepListRegex, exists := regexHash["CONTROLPLANE_APISERVER_KEEP_LIST_REGEX"]
+		controlplaneApiserverDropListRegex, exists := regexHash["CONTROLPLANE_APISERVER_DROP_LIST_REGEX"]
 		if exists && controlplaneApiserverKeepListRegex != "" {
-			appendMetricRelabelConfig(controlplaneApiserverDefaultFile, controlplaneApiserverKeepListRegex)
+			appendMetricRelabelConfigWithExclusions(controlplaneApiserverDefaultFile, controlplaneApiserverKeepListRegex, controlplaneApiserverDropListRegex)
 		}
 		contents, err := os.ReadFile(controlplaneApiserverDefaultFile)
 		if err == nil {
