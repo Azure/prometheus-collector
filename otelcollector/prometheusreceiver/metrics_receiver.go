@@ -12,9 +12,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"regexp"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/cnf/structhash"
 	"github.com/go-kit/log"
@@ -59,6 +61,7 @@ type pReceiver struct {
 	httpClient        *http.Client
 	registerer        prometheus.Registerer
 	unregisterMetrics func()
+	skipOffsetting    bool // for testing only
 	webHandler        *web.Handler
 }
 
@@ -102,7 +105,7 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 
 	allocConf := r.cfg.TargetAllocator
 	if allocConf != nil {
-		r.httpClient, err = r.cfg.TargetAllocator.ToClientContext(ctx, host, r.settings.TelemetrySettings)
+		r.httpClient, err = r.cfg.TargetAllocator.ToClient(ctx, host, r.settings.TelemetrySettings)
 		if err != nil {
 			r.settings.Logger.Error("Failed to create http client", zap.Error(err))
 			return err
@@ -305,13 +308,24 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 		return err
 	}
 
-	scrapeManager, err := scrape.NewManager(&scrape.Options{
+	opts := &scrape.Options{
 		PassMetadataInContext: true,
 		ExtraMetrics:          r.cfg.ReportExtraScrapeMetrics,
 		HTTPClientOptions: []commonconfig.HTTPClientOption{
 			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
 		},
-	}, logger, store, r.registerer)
+	}
+
+	// for testing only
+	if r.skipOffsetting {
+		optsValue := reflect.ValueOf(opts).Elem()
+		field := optsValue.FieldByName("skipOffsetting")
+		reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).
+			Elem().
+			Set(reflect.ValueOf(true))
+	}
+
+	scrapeManager, err := scrape.NewManager(opts, logger, store, r.registerer)
 	if err != nil {
 		return err
 	}
@@ -379,6 +393,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 			r.settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(err))
 		}
 	}()
+
 	return nil
 }
 
