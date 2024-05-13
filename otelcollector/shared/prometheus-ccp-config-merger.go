@@ -47,7 +47,7 @@ func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 	appendMetricRelabelConfigWithExclusions(yamlConfigFile, keepListRegex, "")
 }
 
-func appendMetricRelabelConfigWithExclusions(yamlConfigFile, keepListRegex, dropListRegex string) {
+func appendMetricRelabelConfigWithExclusions(yamlConfigFile, keepListRegex, minListRegex, dropListRegex string) {
 	fmt.Printf("Adding keep list regex or minimal ingestion regex for %s\n", yamlConfigFile)
 
 	content, err := os.ReadFile(yamlConfigFile)
@@ -75,12 +75,17 @@ func appendMetricRelabelConfigWithExclusions(yamlConfigFile, keepListRegex, drop
 					if (dropListRegex == "") {
 						scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
 					} else {
+						minListMetricRelabelConfig := map[string]interface{}{
+							"source_labels": []interface{}{"__name__"},
+							"action":        "keep",
+							"regex":         minListRegex,
+						}
 						dropListMetricRelabelConfig := map[string]interface{}{
 							"source_labels": []interface{}{"__name__"},
 							"action":        "drop",
 							"regex":         dropListRegex,
 						}
-						scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig, dropListMetricRelabelConfig)
+						scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, minListMetricRelabelConfig, dropListMetricRelabelConfig, keepListMetricRelabelConfig)
 					}
 				} else {
 					scfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
@@ -136,9 +141,10 @@ func populateDefaultPrometheusConfig() {
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_APISERVER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
 		controlplaneApiserverKeepListRegex, exists := regexHash["CONTROLPLANE_APISERVER_KEEP_LIST_REGEX"]
-		controlplaneApiserverDropListRegex, exists := regexHash["CONTROLPLANE_APISERVER_DROP_LIST_REGEX"]
 		if exists && controlplaneApiserverKeepListRegex != "" {
-			appendMetricRelabelConfigWithExclusions(controlplaneApiserverDefaultFile, controlplaneApiserverKeepListRegex, controlplaneApiserverDropListRegex)
+			controlplaneApiserverDropListRegex, exists := regexHash["CONTROLPLANE_APISERVER_DROP_LIST_REGEX"]
+			controlplaneApiserverMinimalListRegex, exists := regexHash["CONTROLPLANE_APISERVER_MIN_LIST_REGEX"]
+			appendMetricRelabelConfigWithExclusions(controlplaneApiserverDefaultFile, controlplaneApiserverKeepListRegex, controlplaneApiserverMinimalListRegex, controlplaneApiserverDropListRegex)
 		}
 		contents, err := os.ReadFile(controlplaneApiserverDefaultFile)
 		if err == nil {
