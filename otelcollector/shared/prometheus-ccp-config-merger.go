@@ -88,7 +88,7 @@ func appendMetricRelabelConfigWithExclusions(yamlConfigFile, keepListRegex, minL
 						if keepListRegex == "" {
 							scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, minListMetricRelabelConfig, dropListMetricRelabelConfig)
 						} else {
-							scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, minListMetricRelabelConfig, dropListMetricRelabelConfig, keepListMetricRelabelConfig)
+							scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig, dropListMetricRelabelConfig, minListMetricRelabelConfig)
 						}
 					}
 				} else {
