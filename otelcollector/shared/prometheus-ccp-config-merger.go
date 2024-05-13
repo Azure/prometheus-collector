@@ -44,7 +44,7 @@ func loadRegexHash() {
 }
 
 func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
-	appendMetricRelabelConfigWithExclusions(yamlConfigFile, keepListRegex, "")
+	appendMetricRelabelConfigWithExclusions(yamlConfigFile, keepListRegex, "", "")
 }
 
 func appendMetricRelabelConfigWithExclusions(yamlConfigFile, keepListRegex, minListRegex, dropListRegex string) {
