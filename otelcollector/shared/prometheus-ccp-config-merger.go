@@ -140,10 +140,10 @@ func populateDefaultPrometheusConfig() {
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_APISERVER_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		controlplaneApiserverKeepListRegex, exists := regexHash["CONTROLPLANE_APISERVER_KEEP_LIST_REGEX"]
-		if exists && controlplaneApiserverKeepListRegex != "" {
+		controlplaneApiserverMinimalListRegex, exists := regexHash["CONTROLPLANE_APISERVER_MIN_LIST_REGEX"]
+		if exists && controlplaneApiserverMinimalListRegex != "" {
 			controlplaneApiserverDropListRegex, _ := regexHash["CONTROLPLANE_APISERVER_DROP_LIST_REGEX"]
-			controlplaneApiserverMinimalListRegex, _ := regexHash["CONTROLPLANE_APISERVER_MIN_LIST_REGEX"]
+			controlplaneApiserverKeepListRegex, _ := regexHash["CONTROLPLANE_APISERVER_KEEP_LIST_REGEX"]
 			appendMetricRelabelConfigWithExclusions(controlplaneApiserverDefaultFile, controlplaneApiserverKeepListRegex, controlplaneApiserverMinimalListRegex, controlplaneApiserverDropListRegex)
 		}
 		contents, err := os.ReadFile(controlplaneApiserverDefaultFile)
