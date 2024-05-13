@@ -6,6 +6,9 @@
     label_value_length_limit: 1023
     kubernetes_sd_configs:
     - role: pod
+      namespaces:
+        names:
+          - kube-system
     relabel_configs:
     - action: keep
       source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]

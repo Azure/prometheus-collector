@@ -19,7 +19,9 @@ Get latest release version and latest prometheusreceiver code:
     * rename module to github.com/gracewehner/prometheusreceiver
     * remove replacements at the end
     * add at the top - 
+```
     replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => ../pkgtranslatorprometheus
+```
 ### Prometheus version
 Find new version of github.com/prometheus/prometheus. Put this version in the file /otelcollector/opentelemetry-collector-builder/PROMETHEUS_VERSION
 
@@ -29,9 +31,11 @@ Find new version of github.com/prometheus/prometheus. Put this version in the fi
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/web"
 * metrics_receiver.go: add constants at the top
+```
 		// Use same settings as Prometheus web server
 		maxConnections     = 512
 		readTimeoutMinutes = 10
+```
 * metrics_receiver.go: In **type pReceiver struct** - add 
 ```
 webHandler        *web.Handler

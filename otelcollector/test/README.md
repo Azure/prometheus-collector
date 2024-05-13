@@ -21,6 +21,12 @@
     - ama-metrics-ksm replicaset
     - ama-metrics-targets-operator replicaset `label=operator`
     - prometheus-node-exporter daemonset `label=arc-extension`
+  - All Daemonset pods are scheduled in all the nodes. Nodes include:
+    - FIPS
+    - ARM64  
+  - All Daemonset pods have all containers running in all nodes. Nodes include:
+    - FIPS
+    - ARM64
 - Liveness Probe
   - When processes aren't running on the `prometheus-collector` replicaset container, the container should restart. Processes include:
     - otelcollector
@@ -53,6 +59,7 @@
 - `windows`: Tests that should only run on clusters that have Windows nodes.
 - `arm64`: Tests that should only run on clusters taht have ARM64 nodes.
 - `linux-daemonset-custom-config`: Tests that should only run on clusters that have the ama-metrics-config-node configmap.
+- `fips`: Tests that should only run on clusters taht have FIPS nodes.
 
 # File Directory Structure
 ```
@@ -119,28 +126,12 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
   - [Pod and Service Monitor CRs](./test-cluster-yamls/customresources)
 
 ### Setup
-- Get the full resource ID of your AMW and run the following command to get a service principal to allow query access to your AMW:
-
-  ```
-  az ad sp create-for-rbac --name <myAMWQuerySP> --role "Monitoring Data Reader" --scopes <AMW resource ID>
-  ```
-
-- The JSON output should be similar to below. Save the `appId` as the Client ID and the `password` as the Client Secret.
-
-  ```
-  {
-    "appId": "myAMWQuerySP",
-    "displayName": "myAMWQuerySP",
-    "password": "myServicePrincipalPassword",
-    "tenant": "myTentantId"
-  }
-  ```
-
 - Get the query endpoint for your AMW by following [these instructions](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/prometheus-api-promql#query-endpoint).
 - Setup your devbox environment by ensuring the following:
   - Kubectl access is pointed to your cluster.
   - You have cloned this repo and your current directory is pointed to the root.
   - You are connected to the corpnet VPN.
+  - You have run `az login` from the terminal you will be running the tests in.
 
 ## Running the Tests
 - Run the commands below by replacing the placeholders with the SP Client ID, SP Secret, and the AMW query endpoint:
@@ -150,10 +141,10 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
 
   cd otelcollector/test
 
-  AMW_QUERY_ENDPOINT="<query endpoint>" QUERY_ACCESS_CLIENT_ID="<client ID>" QUERY_ACCESS_CLIENT_SECRET="<client secret>" \
+  AMW_QUERY_ENDPOINT="<query endpoint>" \
   ginkgo -p -r --keep-going --label-filter='!/./' -ldflags="-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com" 
   ```
-- `AMW_QUERY_ENDPOINT`, `QUERY_ACCESS_CLIENT_ID`, and `QUERY_ACCESS_CLIENT_SECRET` give access to query from the AMW connected to the cluster.
+- `AMW_QUERY_ENDPOINT` points to the query API of the AMW connected to the cluster.
 - `-ldflags="-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com"` allows use of the Prometheus Operator client package to get info about PodMonitors and ServiceMonitors under our group name instead of the OSS Prometheus group.
 - You can customize which tests are run with `--label-filter`:
   - `--label-filter='!/./` is an expression that runs all tests that don't have a label.
@@ -359,11 +350,12 @@ Some highlights are that:
   cd ./testkube
   kubectl apply -f testkube-test-crs.yaml
   ```
+- Get the full resource ID of your AMW and a the client ID of an AKS cluster managed identity. Run the following command to allow query access from the cluster:
+
+  ```
+  az role assignment create --assignee <client ID>  --role "Monitoring Data Reader" --scope <AMW resource ID>
+  ```
 - The file `testkube-test-crs.yaml` will also be applied through the build pipeline for every merge to main right before the tests are run. This is so that any updates can be checked in, consistent between CI/CD clusters, and applied to all clusters at once.
-- Create the kubernetes secret with the AMW access through the TestKube UI:
-  - Go to the test `Settings` -> `Variables & Secrets` -> `Add a new variable` -> `Secret`.
-  - Insert the values for `AMW_QUERY_ENDPOINT`, `QUERY_ACCESS_CLIENT_ID`, `QUERY_ACCESS_TOKEN_SECRET`.
-  - TestKube will create a secret named `testkube/<test-name>-testvars` with these fields as keys and values.
 - Add to the `Deploy_AKS_Chart` job in the pipeline yaml to deploy the chart to another cluster. Replace the `azureResourceGroup` and `kubernetesCluster` with the corresponding values.
   ```
   - task: HelmDeploy@0
@@ -408,7 +400,19 @@ Some highlights are that:
             inputs:
               azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
               scriptLocation: 'inlineScript'
-              inlineScript: 'az aks get-credentials -g cluster-resource-group -n cluster-name'
+              inlineScript: 'az aks get-credentials -g cluster-resource-group -n cluster-name'  
+          - bash: |
+              export AMW_QUERY_ENDPOINT="<amw query endpoint>"
+              export AZURE_CLIENT_ID="<cluster managed identity client ID>"
+
+              envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-<cluster name>.yaml
+              kubectl apply -f ./testkube/api-server-permissions.yaml
+              kubectl apply -f ./testkube/testkube-test-crs-<cluster name>.yaml
+              kubectl apply -f ./test-cluster-yamls
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+            displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
           - bash: |
               sleep 120
             displayName: "Wait for cluster to be ready"

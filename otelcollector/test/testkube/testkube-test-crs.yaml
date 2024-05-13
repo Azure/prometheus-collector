@@ -18,7 +18,7 @@ spec:
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,operator,linux-daemonset-custom-config)"
+      - "!(arc-extension,linux-daemonset-custom-config)"
       - "./containerstatus"
     executePostRunScriptBeforeScraping: false
 ---
@@ -42,7 +42,7 @@ spec:
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,operator,linux-daemonset-custom-config)"
+      - "!(arc-extension,linux-daemonset-custom-config)"
       - "./livenessprobe"
     executePostRunScriptBeforeScraping: false
 ---
@@ -66,7 +66,7 @@ spec:
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,operator,linux-daemonset-custom-config)"
+      - "!(arc-extension,linux-daemonset-custom-config)"
       - "./prometheusui"
     executePostRunScriptBeforeScraping: false
 ---
@@ -89,9 +89,8 @@ spec:
       path: otelcollector/test
   executionRequest:
     args:
-      - "--label-filter"
-      - "!(arc-extension,operator,linux-daemonset-custom-config)"
-      - "-ldflags=\"-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com\""
+      - "--ldflags"
+      - "-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com"
       - "./operator"
     executePostRunScriptBeforeScraping: false
 ---
@@ -113,33 +112,18 @@ spec:
       branch: main
       path: otelcollector/test
   executionRequest:
-    args:
-      - "--label-filter"
-      - "!(arc-extension,operator,linux-daemonset-custom-config)"
-      - "./querymetrics"
-    executePostRunScriptBeforeScraping: false
     variables:
       AMW_QUERY_ENDPOINT:
         name: AMW_QUERY_ENDPOINT
-        type: secret
-        valueFrom:
-          secretKeyRef:
-            name: e2e-testvars
-            key: AMW_QUERY_ENDPOINT
-      QUERY_ACCESS_CLIENT_ID:
-        name: QUERY_ACCESS_CLIENT_ID
-        type: secret
-        valueFrom:
-          secretKeyRef:
-            name: e2e-testvars
-            key: QUERY_ACCESS_CLIENT_ID
-      QUERY_ACCESS_TOKEN_SECRET:
-        name: QUERY_ACCESS_CLIENT_SECRET
-        type: secret
-        valueFrom:
-          secretKeyRef:
-            name: e2e-testvars
-            key: QUERY_ACCESS_CLIENT_SECRET
+        value: "$AMW_QUERY_ENDPOINT"
+        type: basic
+      AZURE_CLIENT_ID:
+        name: AZURE_CLIENT_ID
+        value: "$AZURE_CLIENT_ID"
+        type: basic
+    args:
+      - "./querymetrics"
+    executePostRunScriptBeforeScraping: false
 ---
 apiVersion: tests.testkube.io/v3
 kind: TestSuite
@@ -162,7 +146,7 @@ spec:
   - stopOnFailure: false
     execute:
     - test: livenessprobe
-  schedule: "0 0 * * *"
+  schedule: "0 7 * * *"
 ---
 apiVersion: tests.testkube.io/v3
 kind: TestSuite

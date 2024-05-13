@@ -1,5 +1,6 @@
 package utils
 
+
 var(
   // Slices can't be constants
   LogLineErrorsToExclude = [...]string{
@@ -11,13 +12,16 @@ var(
     // KSM
     "ended with: an error on the server",
     "Objects listed",
+    // Target allocator
+    "client connection lost",
   }
 )
 
-const(
-  OperatorLabel = "operator"
-  ArcExtensionLabel = "arc-extension"
-  WindowsLabel = "windows"
-  ARM64Label = "arm64"
-  LinuxDaemonsetCustomConfig = "linux-daemonset-custom-config"
+const (
+	OperatorLabel              = "operator"
+	ArcExtensionLabel          = "arc-extension"
+	WindowsLabel               = "windows"
+	ARM64Label                 = "arm64"
+	FIPSLabel                  = "fips"
+	LinuxDaemonsetCustomConfig = "linux-daemonset-custom-config"
 )
