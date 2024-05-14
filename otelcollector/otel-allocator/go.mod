@@ -23,8 +23,8 @@ require (
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.72.0
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.72.0
 	github.com/prometheus/client_golang v1.19.0
-	github.com/prometheus/common v0.52.2
-	github.com/prometheus/prometheus v0.51.1
+	github.com/prometheus/common v0.53.0
+	github.com/prometheus/prometheus v0.51.2
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -33,7 +33,7 @@ require (
 	k8s.io/apimachinery v0.29.3
 	k8s.io/client-go v0.29.3
 	k8s.io/klog/v2 v2.120.1
-	sigs.k8s.io/controller-runtime v0.17.2
+	sigs.k8s.io/controller-runtime v0.17.3
 )
 
 require (
@@ -169,10 +169,11 @@ require (
 	go.mongodb.org/mongo-driver v1.14.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
-	go.opentelemetry.io/otel v1.25.0 // indirect
-	go.opentelemetry.io/otel/metric v1.25.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.25.0 // indirect
-	go.opentelemetry.io/otel/trace v1.25.0 // indirect
+	go.opentelemetry.io/otel v1.26.0 // indirect
+	go.opentelemetry.io/otel/metric v1.26.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.26.0 // indirect
+	go.opentelemetry.io/otel/trace v1.26.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.2.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
@@ -184,7 +185,7 @@ require (
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
@@ -194,7 +195,7 @@ require (
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240304212257-790db918fca8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
-	google.golang.org/grpc v1.63.0 // indirect
+	google.golang.org/grpc v1.63.2 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

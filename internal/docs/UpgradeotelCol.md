@@ -40,7 +40,7 @@ Find new version of github.com/prometheus/prometheus. Put this version in the fi
 ```
 webHandler        *web.Handler
 ```
-internal/otlp_transaction.go: in Append() function before if len(t.externalLabels) != 0 (currently line 92) add labels = labels.Copy()
+<!-- internal/otlp_transaction.go: in Append() function before if len(t.externalLabels) != 0 (currently line 92) add labels = labels.Copy() -->
 
 ### strusthash changes 
 * Refer to the previous version and make changes or if changes are merged just take latest from collector-contrib repo
