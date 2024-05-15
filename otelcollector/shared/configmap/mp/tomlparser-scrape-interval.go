@@ -31,7 +31,7 @@ func parseConfigMapForScrapeSettings() *toml.Tree {
 }
 
 func checkDuration(duration string) string {
-	if !MATCHER.MatchString(duration) {
+	if !MATCHER.MatchString(duration) || duration == "" {
 		return defaultScrapeInterval
 	}
 	return duration
