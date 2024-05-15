@@ -162,7 +162,6 @@ func tomlparserCCPTargetsMetricsKeepList() {
 		"CONTROLPLANE_KUBE_CONTROLLER_MANAGER_KEEP_LIST_REGEX": controlplaneKubeControllerManagerRegex,
 		"CONTROLPLANE_KUBE_SCHEDULER_KEEP_LIST_REGEX":          controlplaneKubeSchedulerRegex,
 		"CONTROLPLANE_APISERVER_KEEP_LIST_REGEX":               controlplaneApiserverRegex,
-		"CONTROLPLANE_APISERVER_MIN_LIST_REGEX":                controlplaneApiserverMinMac,
 		"CONTROLPLANE_CLUSTER_AUTOSCALER_KEEP_LIST_REGEX":      controlplaneClusterAutoscalerRegex,
 		"CONTROLPLANE_ETCD_KEEP_LIST_REGEX":                    controlplaneEtcdRegex,
 	}
