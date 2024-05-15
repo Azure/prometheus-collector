@@ -116,7 +116,7 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 	if regexValues.MinimalIngestionProfile == "true" {
 		controlplaneKubeControllerManagerRegex += regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
 		controlplaneKubeSchedulerRegex += regexValues.ControlplaneKubeScheduler + "|" + controlplaneKubeSchedulerMinMac
-		controlplaneApiserverRegex += regexValues.ControlplaneApiserver
+		controlplaneApiserverRegex += regexValues.ControlplaneApiserver + "|" + controlplaneApiserverMinMac
 		controlplaneClusterAutoscalerRegex += regexValues.ControlplaneClusterAutoscaler + "|" + controlplaneClusterAutoscalerMinMac
 		controlplaneEtcdRegex += regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
 
