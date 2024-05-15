@@ -58,10 +58,6 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 		return nil
 	}
 
-	// Print the content read from the file
-	fmt.Println("Content of the file:")
-	fmt.Println(string(content))
-
 	tree, err := toml.Load(string(content))
 	if err != nil {
 		fmt.Printf("Error parsing TOML: %v\n", err)
@@ -181,20 +177,20 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 
 		// Print the updated regex strings after appending values
 		// Only log this in debug mode
-		fmt.Println("Updated Regex Strings After Appending:")
-		fmt.Println("KubeletRegex:", kubeletRegex)
-		fmt.Println("CoreDNSRegex:", coreDNSRegex)
-		fmt.Println("CAdvisorRegex:", cAdvisorRegex)
-		fmt.Println("KubeProxyRegex:", kubeProxyRegex)
-		fmt.Println("APIServerRegex:", apiserverRegex)
-		fmt.Println("KubeStateRegex:", kubeStateRegex)
-		fmt.Println("NodeExporterRegex:", nodeExporterRegex)
-		fmt.Println("KappieBasicRegex:", kappieBasicRegex)
-		fmt.Println("WindowsExporterRegex:", windowsExporterRegex)
-		fmt.Println("WindowsKubeProxyRegex:", windowsKubeProxyRegex)
-		fmt.Println("NetworkObservabilityRetinaRegex:", networkobservabilityRetinaRegex)
-		fmt.Println("NetworkObservabilityRetinaRegex:", networkobservabilityRetinaRegex)
-		fmt.Println("NetworkObservabilityCiliumRegex:", networkobservabilityCiliumRegex)
+		// fmt.Println("Updated Regex Strings After Appending:")
+		// fmt.Println("KubeletRegex:", kubeletRegex)
+		// fmt.Println("CoreDNSRegex:", coreDNSRegex)
+		// fmt.Println("CAdvisorRegex:", cAdvisorRegex)
+		// fmt.Println("KubeProxyRegex:", kubeProxyRegex)
+		// fmt.Println("APIServerRegex:", apiserverRegex)
+		// fmt.Println("KubeStateRegex:", kubeStateRegex)
+		// fmt.Println("NodeExporterRegex:", nodeExporterRegex)
+		// fmt.Println("KappieBasicRegex:", kappieBasicRegex)
+		// fmt.Println("WindowsExporterRegex:", windowsExporterRegex)
+		// fmt.Println("WindowsKubeProxyRegex:", windowsKubeProxyRegex)
+		// fmt.Println("NetworkObservabilityRetinaRegex:", networkobservabilityRetinaRegex)
+		// fmt.Println("NetworkObservabilityRetinaRegex:", networkobservabilityRetinaRegex)
+		// fmt.Println("NetworkObservabilityCiliumRegex:", networkobservabilityCiliumRegex)
 	} else {
 		fmt.Println("minimalIngestionProfile:", regexValues.minimalingestionprofile)
 	}

@@ -26,3 +26,8 @@ func EchoWarning(msg string) {
 func EchoVar(name, value string) {
 	fmt.Printf("%s%s%s=%s\n", Cyan, name, Color_Off, value)
 }
+
+// Echo variable name in Cyan and value in regular color
+func EchoStr(name string) {
+	fmt.Printf("%s%s%s\n", Cyan, name, Color_Off)
+}

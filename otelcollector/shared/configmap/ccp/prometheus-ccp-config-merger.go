@@ -161,9 +161,9 @@ func populateDefaultPrometheusConfig() {
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
-	if mergedDefaultConfigs != nil {
-		fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
-	}
+	// if mergedDefaultConfigs != nil {
+	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
+	// }
 }
 
 func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]interface{} {

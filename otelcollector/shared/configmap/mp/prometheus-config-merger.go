@@ -77,7 +77,7 @@ func parseConfigMap() string {
 		return ""
 	}
 
-	shared.EchoVar("Successfully parsed configmap for prometheus config", string(config))
+	// shared.EchoVar("Successfully parsed configmap for prometheus config", string(config))
 	return string(config)
 }
 
@@ -296,7 +296,6 @@ func populateDefaultPrometheusConfig() {
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
-		fmt.Println("Kubelet scraping enabled.")
 		kubeletMetricsKeepListRegex, exists := regexHash["KUBELET_METRICS_KEEP_LIST_REGEX"]
 		kubeletScrapeInterval := intervalHash["KUBELET_SCRAPE_INTERVAL"]
 		if currentControllerType == replicasetControllerType {
@@ -408,9 +407,6 @@ func populateDefaultPrometheusConfig() {
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
 		kubestateMetricsKeepListRegex, exists := regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
 		kubestateScrapeInterval, intervalExists := intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
-
-		fmt.Println("KUBESTATE_METRICS_KEEP_LIST_REGEX:", kubestateMetricsKeepListRegex, "Exists:", exists)
-		fmt.Println("KUBESTATE_SCRAPE_INTERVAL:", kubestateScrapeInterval, "Exists:", intervalExists)
 
 		if intervalExists {
 			UpdateScrapeIntervalConfig(kubeStateDefaultFile, kubestateScrapeInterval)
@@ -692,9 +688,9 @@ func populateDefaultPrometheusConfig() {
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
-	if mergedDefaultConfigs != nil {
-		fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
-	}
+	// if mergedDefaultConfigs != nil {
+	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
+	// }
 }
 
 func populateDefaultPrometheusConfigWithOperator() {
@@ -729,7 +725,6 @@ func populateDefaultPrometheusConfigWithOperator() {
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
-		fmt.Println("Kubelet scraping enabled.")
 		kubeletMetricsKeepListRegex, exists := regexHash["KUBELET_METRICS_KEEP_LIST_REGEX"]
 		kubeletScrapeInterval := intervalHash["KUBELET_SCRAPE_INTERVAL"]
 		if isConfigReaderSidecar() || currentControllerType == replicasetControllerType {
@@ -841,9 +836,6 @@ func populateDefaultPrometheusConfigWithOperator() {
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && (isConfigReaderSidecar() || currentControllerType == replicasetControllerType) {
 		kubestateMetricsKeepListRegex, exists := regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
 		kubestateScrapeInterval, intervalExists := intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
-
-		fmt.Println("KUBESTATE_METRICS_KEEP_LIST_REGEX:", kubestateMetricsKeepListRegex, "Exists:", exists)
-		fmt.Println("KUBESTATE_SCRAPE_INTERVAL:", kubestateScrapeInterval, "Exists:", intervalExists)
 
 		if intervalExists {
 			UpdateScrapeIntervalConfig(kubeStateDefaultFile, kubestateScrapeInterval)
@@ -1127,9 +1119,9 @@ func populateDefaultPrometheusConfigWithOperator() {
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
-	if mergedDefaultConfigs != nil {
-		fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
-	}
+	// if mergedDefaultConfigs != nil {
+	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
+	// }
 }
 
 func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]interface{} {
@@ -1268,7 +1260,7 @@ func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultCo
 	var mergedConfigYaml []byte
 
 	if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
-		shared.EchoVar("Merging default and custom scrape configs", "")
+		shared.EchoStr("Merging default and custom scrape configs")
 		var customPrometheusConfig map[interface{}]interface{}
 		err := yaml.Unmarshal([]byte(customPromConfig), &customPrometheusConfig)
 		if err != nil {
@@ -1283,7 +1275,7 @@ func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultCo
 			return
 		}
 
-		shared.EchoVar("Done merging default scrape config(s) with custom prometheus config, writing them to file", "")
+		shared.EchoStr("Done merging default scrape config(s) with custom prometheus config, writing them to file")
 	} else {
 		shared.EchoWarning("The merged default scrape config is nil or empty, using only custom scrape config")
 		mergedConfigYaml = []byte(customPromConfig)
@@ -1298,7 +1290,6 @@ func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultCo
 
 func setLabelLimitsPerScrape(prometheusConfigString string) string {
 	customConfig := prometheusConfigString
-	shared.EchoVar("setLabelLimitsPerScrape()", "")
 
 	var limitedCustomConfig map[interface{}]interface{}
 	err := yaml.Unmarshal([]byte(customConfig), &limitedCustomConfig)
