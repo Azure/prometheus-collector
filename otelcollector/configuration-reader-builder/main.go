@@ -338,9 +338,14 @@ func main() {
 		log.Println("No configs found via configmap, not running config reader")
 	}
 
+	log.Println("Adding handlers")
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/health-ta", taHealthHandler)
+	log.Println("Done adding handlers")
+
+	log.Println("Starting server")
 	http.ListenAndServe(":8081", nil)
+	log.Println("Started server")
 
 	// configFilePtr := flag.String("config", "", "Config file to read")
 	// flag.Parse()
