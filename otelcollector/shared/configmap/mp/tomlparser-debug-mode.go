@@ -24,13 +24,12 @@ var (
 // ConfigureDebugModeSettings reads debug mode settings from a config map,
 // sets default values if necessary, writes environment variables to a file,
 // and modifies a YAML configuration file based on debug mode settings.
-func ConfigureDebugModeSettings() {
+func ConfigureDebugModeSettings() error {
 	fmt.Println("Start debug-mode Settings Processing")
 
 	configMapSettings, err := parseConfigMapForDebugSettings()
 	if err != nil {
-		fmt.Fprint(os.Stdout, []any{"Error: %v", err}...)
-		return
+		return fmt.Errorf("Error: %v", err)
 	}
 	if configMapSettings != nil {
 		populateSettingValuesFromConfigMap(configMapSettings)
@@ -45,8 +44,7 @@ func ConfigureDebugModeSettings() {
 
 	file, err := os.Create("/opt/microsoft/configmapparser/config_debug_mode_env_var")
 	if err != nil {
-		fmt.Printf("Exception while opening file for writing prometheus-collector config environment variables: %s\n", err)
-		return
+		return fmt.Errorf("Exception while opening file for writing prometheus-collector config environment variables: %v\n", err)
 	}
 	defer file.Close()
 
@@ -63,14 +61,12 @@ func ConfigureDebugModeSettings() {
 			var config map[string]interface{}
 			content, err := os.ReadFile(replicaSetCollectorConfig)
 			if err != nil {
-				fmt.Printf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %s\n", err)
-				return
+				return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
 			}
 
 			err = yaml.Unmarshal(content, &config)
 			if err != nil {
-				fmt.Printf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %s\n", err)
-				return
+				return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
 			}
 
 			if config != nil {
@@ -79,14 +75,12 @@ func ConfigureDebugModeSettings() {
 
 				cfgYamlWithDebugModeSettings, err := yaml.Marshal(config)
 				if err != nil {
-					fmt.Printf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %s\n", err)
-					return
+					return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
 				}
 
 				err = os.WriteFile(replicaSetCollectorConfig, []byte(cfgYamlWithDebugModeSettings), fs.FileMode(0644))
 				if err != nil {
-					fmt.Printf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %s\n", err)
-					return
+					return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
 				}
 			}
 			fmt.Println("Done setting otlp in the exporter metrics for service pipeline.")
@@ -94,10 +88,18 @@ func ConfigureDebugModeSettings() {
 	}
 
 	fmt.Println("\nEnd debug-mode Settings Processing")
+	return nil
 }
 
 func parseConfigMapForDebugSettings() (map[string]interface{}, error) {
-	if data, err := os.ReadFile(configMapMountPath); err == nil {
+	// Check if config map file exists
+	file, err := os.Open(configMapDebugMountPath)
+	if err != nil {
+		return nil, fmt.Errorf("configmap section not mounted, using defaults")
+	}
+	defer file.Close()
+
+	if data, err := os.ReadFile(configMapDebugMountPath); err == nil {
 		parsedConfig := make(map[string]interface{})
 		if err := toml.Unmarshal(data, &parsedConfig); err == nil {
 			return parsedConfig, nil

@@ -73,7 +73,10 @@ func parseDefaultScrapeSettings() {
 }
 
 func parseDebugModeSettings() {
-	ConfigureDebugModeSettings()
+	if err := ConfigureDebugModeSettings(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
 	filename := "/opt/microsoft/configmapparser/config_debug_mode_env_var"
 	handleEnvFileError(filename)
 }
