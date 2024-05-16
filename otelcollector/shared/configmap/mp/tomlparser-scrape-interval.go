@@ -78,8 +78,22 @@ func processConfigMap() map[string]string {
 			intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityCilium"))
 		}
 	} else {
-		if _, err := os.Stat(configMapScrapeIntervalMountPath); err == nil {
+		if _, err := os.Stat(configMapScrapeIntervalMountPath); err != nil {
 			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
+		}
+		// Set each value in intervalHash to "30s"
+		keys := []string{
+			"KUBELET_SCRAPE_INTERVAL", "COREDNS_SCRAPE_INTERVAL", "CADVISOR_SCRAPE_INTERVAL",
+			"KUBEPROXY_SCRAPE_INTERVAL", "APISERVER_SCRAPE_INTERVAL", "KUBESTATE_SCRAPE_INTERVAL",
+			"NODEEXPORTER_SCRAPE_INTERVAL", "WINDOWSEXPORTER_SCRAPE_INTERVAL",
+			"WINDOWSKUBEPROXY_SCRAPE_INTERVAL", "PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL",
+			"POD_ANNOTATION_SCRAPE_INTERVAL", "KAPPIEBASIC_SCRAPE_INTERVAL",
+			"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL", "NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL",
+			"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL",
+		}
+		fmt.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
+		for _, key := range keys {
+			intervalHash[key] = defaultScrapeInterval
 		}
 	}
 
