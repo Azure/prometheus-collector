@@ -140,10 +140,8 @@ func UpdateScrapeIntervalConfig(yamlConfigFile string, scrapeIntervalSetting str
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
 		for _, scfg := range scrapeConfigs {
 			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
-				if scrapeInterval, exists := scfgMap["scrape_interval"]; exists {
-					fmt.Printf("scrapeInterval %s\n", scrapeInterval)
-					scfgMap["scrape_interval"] = scrapeIntervalSetting
-				}
+				fmt.Printf("scrapeInterval %s\n", scrapeIntervalSetting)
+				scfgMap["scrape_interval"] = scrapeIntervalSetting
 			}
 		}
 
