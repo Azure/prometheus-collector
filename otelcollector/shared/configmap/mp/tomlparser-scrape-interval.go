@@ -78,8 +78,8 @@ func processConfigMap() map[string]string {
 			intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityCilium"))
 		}
 	} else {
-		if _, err := os.Stat(configMapScrapeIntervalMountPath); err != nil {
-			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
+		if _, err := os.Stat(configMapScrapeIntervalMountPath); os.IsNotExist(err) {
+			fmt.Printf("configmap prometheus-collector-configmap for default-targets-scrape-interval-settings not mounted, using defaults")
 		}
 		// Set each value in intervalHash to "30s"
 		keys := []string{

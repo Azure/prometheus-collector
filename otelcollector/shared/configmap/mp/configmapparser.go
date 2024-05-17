@@ -52,7 +52,7 @@ func parseSettingsForPodAnnotations() {
 	// fmt.Printf("Start Processing - %s\n", LOGGING_PREFIX)
 	fmt.Printf("Start Processing - pod annotations\n")
 	if err := configurePodAnnotationSettings(); err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("%v\n", err)
 		return
 	}
 	filename := "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
@@ -74,7 +74,7 @@ func parseDefaultScrapeSettings() {
 
 func parseDebugModeSettings() {
 	if err := ConfigureDebugModeSettings(); err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("%v\n", err)
 		return
 	}
 	filename := "/opt/microsoft/configmapparser/config_debug_mode_env_var"

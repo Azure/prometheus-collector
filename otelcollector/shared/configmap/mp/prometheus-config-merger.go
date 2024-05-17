@@ -421,7 +421,6 @@ func populateDefaultPrometheusConfig() {
 				defaultConfigs = append(defaultConfigs, kubeStateDefaultFile)
 			}
 		}
-		shared.EchoWarning("Done adding KubeState metrics to default configs.")
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
@@ -850,7 +849,6 @@ func populateDefaultPrometheusConfigWithOperator() {
 				defaultConfigs = append(defaultConfigs, kubeStateDefaultFile)
 			}
 		}
-		shared.EchoWarning("Done adding KubeState metrics to default configs.")
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {

@@ -3,8 +3,10 @@ package shared
 import (
 	"encoding/base64"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -12,9 +14,24 @@ func copyCAAnchors() {
 	// Copy CA anchors from specified locations
 	locations := []string{"/anchors/ubuntu/*", "/anchors/mariner/*", "/anchors/proxy/*"}
 	for _, loc := range locations {
-		cmd := exec.Command("cp", loc, "/etc/pki/ca-trust/source/anchors")
-		cmd.Stderr = os.Stderr
-		cmd.Run()
+		matches, err := filepath.Glob(loc)
+		if err != nil {
+			log.Printf("Error matching pattern %s: %v", loc, err)
+			continue
+		}
+		for _, match := range matches {
+			if _, err := os.Stat(match); err == nil {
+				cmd := exec.Command("cp", match, "/etc/pki/ca-trust/source/anchors")
+				cmd.Stderr = os.Stderr
+				if err := cmd.Run(); err != nil {
+					log.Printf("Error copying %s: %v", match, err)
+				}
+			} else if os.IsNotExist(err) {
+				log.Printf("File %s does not exist", match)
+			} else {
+				log.Printf("Error checking file %s: %v", match, err)
+			}
+		}
 	}
 
 	// Update CA trust
