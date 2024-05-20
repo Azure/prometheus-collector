@@ -29,6 +29,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	err = shared.SetupArcEnvironment()
+	if err != nil {
+		shared.EchoError(err.Error())
+	}
+
 	// Check if MODE environment variable is empty
 	mode := os.Getenv("MODE")
 	if mode == "" {
@@ -39,11 +44,6 @@ func main() {
 	shared.EchoVar("MODE", mode)
 	shared.EchoVar("CONTROLLER_TYPE", os.Getenv("CONTROLLER_TYPE"))
 	shared.EchoVar("CLUSTER", os.Getenv("CLUSTER"))
-
-	err = shared.SetupArcEnvironment()
-	if err != nil {
-		shared.EchoError(err.Error())
-	}
 
 	// Call setupTelemetry function with custom environment
 	customEnvironment := os.Getenv("customEnvironment")

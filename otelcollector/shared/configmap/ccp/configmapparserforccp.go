@@ -13,7 +13,7 @@ func Configmapparserforccp() {
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"
 	// Set agent config schema version
-	if shared.ExistsAndNotEmpty("/etc/config/settings/schema-version") {
+	if shared.ExistsAndNotEmpty(configSchemaPath) {
 		configVersion, err := shared.ReadAndTrim(configVersionPath)
 		if err != nil {
 			fmt.Println("Error reading config version file:", err)
@@ -29,7 +29,7 @@ func Configmapparserforccp() {
 	}
 
 	// Set agent config file version
-	if shared.ExistsAndNotEmpty("/etc/config/settings/config-version") {
+	if shared.ExistsAndNotEmpty(configVersionPath) {
 		configSchemaVersion, err := shared.ReadAndTrim(configSchemaPath)
 		if err != nil {
 			fmt.Println("Error reading config schema version file:", err)
