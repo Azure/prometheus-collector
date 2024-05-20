@@ -200,7 +200,6 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 
 		if status != http.StatusOK {
 			fmt.Printf(message)
-			currentTime := time.Now()
 		}
 		w.WriteHeader(status)
 		fmt.Fprintln(w, message)
