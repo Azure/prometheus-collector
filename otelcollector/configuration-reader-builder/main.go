@@ -12,7 +12,6 @@ import (
 
 	"os"
 
-	shared "github.com/prometheus-collector/shared"
 	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
 
 	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
@@ -147,15 +146,7 @@ func updateTAConfigFile(configFilePath string) {
 				"kubernetes.azure.com/managedby": "aks",
 			},
 		},
-		// CollectorSelector: map[string]string{
-		// 	"rsName":                         "ama-metrics",
-		// 	"kubernetes.azure.com/managedby": "aks",
-		// },
 		Config: promScrapeConfig,
-		// PrometheusCR: map[string]interface{}{
-		// 	"ServiceMonitorSelector": &metav1.LabelSelector{},
-		// 	"PodMonitorSelector":     &metav1.LabelSelector{},
-		// },
 		PrometheusCR: allocatorconfig.PrometheusCRConfig{
 			ServiceMonitorSelector: &metav1.LabelSelector{},
 			PodMonitorSelector:     &metav1.LabelSelector{},
@@ -194,9 +185,6 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 
 	if resp != nil && resp.StatusCode == http.StatusOK {
 		if taConfigUpdated {
-			// if taLivenessStartTime.IsZero() {
-			// 	taLivenessStartTime = time.Now()
-			// }
 			if !taLivenessStartTime.IsZero() {
 				duration := time.Since(taLivenessStartTime)
 				// Serve the response of ServiceUnavailable for 60s and then reset
@@ -213,8 +201,6 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 		if status != http.StatusOK {
 			fmt.Printf(message)
 			currentTime := time.Now()
-			fmt.Println("Current Time in String: ", currentTime.String())
-			// writeTerminationLog(message)
 		}
 		w.WriteHeader(status)
 		fmt.Fprintln(w, message)
@@ -224,7 +210,6 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf(message)
 		w.WriteHeader(status)
 		fmt.Fprintln(w, message)
-		//writeTerminationLog(message)
 	}
 }
 
@@ -295,10 +280,7 @@ func startCommandAndWait(command string, args ...string) {
 }
 
 func main() {
-	shared.EchoError("Error")
-
 	_, err := os.Create("/opt/inotifyoutput.txt")
-	// inotifywait /etc/config/settings --daemon --recursive --outfile "/opt/inotifyoutput.txt" --event create,delete --format '%e : %T' --timefmt '+%s'
 	if err != nil {
 		log.Fatalf("Error creating output file: %v\n", err)
 	}
@@ -321,12 +303,6 @@ func main() {
 		log.Fatalf("Error starting inotify process for config reader's liveness probe: %v\n", err)
 	}
 
-	// startCommandAndWait("/bin/sh", "/opt/configmap-parser.sh")
-
-	// err = godotenv.Load("/opt/envvars.env")
-	// if err != nil {
-	// 	fmt.Println("error loading env vars from envvars.env - %v", err)
-	// }
 	configmapsettings.Configmapparser()
 	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
 		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
@@ -338,17 +314,9 @@ func main() {
 		log.Println("No configs found via configmap, not running config reader")
 	}
 
-	log.Println("Adding handlers")
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/health-ta", taHealthHandler)
-	log.Println("Done adding handlers")
 
-	log.Println("Starting server")
 	http.ListenAndServe(":8081", nil)
-	log.Println("Started server")
 
-	// configFilePtr := flag.String("config", "", "Config file to read")
-	// flag.Parse()
-	// otelConfigFilePath := *configFilePtr
-	// updateTAConfigFile(otelConfigFilePath)
 }

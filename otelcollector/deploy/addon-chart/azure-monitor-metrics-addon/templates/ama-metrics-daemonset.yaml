@@ -27,6 +27,7 @@ spec:
       containers:
         - name: prometheus-collector
           image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
+          # image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.8.11-rashmi-upgrades-04-24-05-13-2024-9cabda9d"
           imagePullPolicy: IfNotPresent
           resources:
             limits:

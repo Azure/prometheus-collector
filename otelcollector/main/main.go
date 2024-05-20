@@ -7,9 +7,6 @@ import (
 	"os"
 	"os/exec"
 
-	// "prometheus-collector/shared"
-	// ccpconfigmapsettings "prometheus-collector/shared/configmap/ccp"
-	// configmapsettings "prometheus-collector/shared/configmap/mp"
 	shared "github.com/prometheus-collector/shared"
 	ccpconfigmapsettings "github.com/prometheus-collector/shared/configmap/ccp"
 	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
@@ -20,7 +17,6 @@ import (
 )
 
 func main() {
-	// mac := os.Getenv("MAC")
 	controllerType := shared.GetControllerType()
 	clusterOverride := os.Getenv("CLUSTER_OVERRIDE")
 	cluster := os.Getenv("CLUSTER")
@@ -314,7 +310,6 @@ func main() {
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
 	message := "prometheuscollector is running."
-	// macMode := os.Getenv("MAC") == "true"
 
 	if _, err := os.Stat("/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"); os.IsNotExist(err) {
 		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {

@@ -31,7 +31,6 @@ spec:
       - name: targetallocator
         args:
         - --enable-prometheus-cr-watcher
-        # - --reload-config
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:
@@ -67,10 +66,6 @@ spec:
         volumeMounts:
         - mountPath: /conf
           name: ta-config-shared
-        # livenessProbe:
-        #   httpGet:
-        #     path: /metrics
-        #     port: 8080
         livenessProbe:
           httpGet:
             path: /health-ta
@@ -81,7 +76,6 @@ spec:
           failureThreshold: 3
       - name: config-reader
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
-        # image: "docker.io/rashmichandrashekarms/ta:cfg-reader-liveness-1"
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -158,16 +152,6 @@ spec:
             readOnly: true
           - mountPath: /ta-configuration
             name: ta-config-shared
-        # livenessProbe:
-        #   exec:
-        #     command:
-        #       - /bin/bash
-        #       - -c
-        #       - /opt/microsoft/liveness/livenessprobe-configreader.sh
-        #   initialDelaySeconds: 60
-        #   periodSeconds: 15
-        #   timeoutSeconds: 5
-        #   failureThreshold: 3
         livenessProbe:
           httpGet:
             path: /health

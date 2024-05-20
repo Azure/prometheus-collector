@@ -1,7 +1,6 @@
 #!/bin/bash
 
 #set agent config schema version
-touch /opt/envvars.env
 if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/schema-version" ]; then
       #trim
       config_schema_version="$(cat /etc/config/settings/schema-version | xargs)"
@@ -11,8 +10,8 @@ if [  -e "/etc/config/settings/schema-version" ] && [  -s "/etc/config/settings/
       config_schema_version="$(echo $config_schema_version| cut -c1-10)"
 
       export AZMON_AGENT_CFG_SCHEMA_VERSION=$config_schema_version
-      echo "export AZMON_AGENT_CFG_SCHEMA_VERSION=$config_schema_version" >> /opt/envvars.env
-      source /opt/envvars.env
+      echo "export AZMON_AGENT_CFG_SCHEMA_VERSION=$config_schema_version" >> ~/.bashrc
+      source ~/.bashrc
 fi
 
 #set agent config file version
@@ -25,46 +24,46 @@ if [  -e "/etc/config/settings/config-version" ] && [  -s "/etc/config/settings/
       config_file_version="$(echo $config_file_version| cut -c1-10)"
 
       export AZMON_AGENT_CFG_FILE_VERSION=$config_file_version
-      echo "export AZMON_AGENT_CFG_FILE_VERSION=$config_file_version" >> /opt/envvars.env
-      source /opt/envvars.env
+      echo "export AZMON_AGENT_CFG_FILE_VERSION=$config_file_version" >> ~/.bashrc
+      source ~/.bashrc
 fi
 
 # Parse the settings for pod annotations
 ruby /opt/microsoft/configmapparser/tomlparser-pod-annotation-based-scraping.rb
 if [ -e "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping" ]; then
       cat /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping | while read line; do
-            echo $line >> /opt/envvars.env
+            echo $line >> ~/.bashrc
       done
       source /opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping
-      source /opt/envvars.env
+      source ~/.bashrc
 fi
 
 # Parse the configmap to set the right environment variables for prometheus collector settings
 ruby /opt/microsoft/configmapparser/tomlparser-prometheus-collector-settings.rb
 cat /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var | while read line; do
-      echo $line >> /opt/envvars.env
+      echo $line >> ~/.bashrc
 done
 source /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var
-source /opt/envvars.env
+source ~/.bashrc
 
 # Parse the settings for default scrape configs
 ruby /opt/microsoft/configmapparser/tomlparser-default-scrape-settings.rb
 if [ -e "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var" ]; then
       cat /opt/microsoft/configmapparser/config_default_scrape_settings_env_var | while read line; do
-            echo $line >> /opt/envvars.env
+            echo $line >> ~/.bashrc
       done
       source /opt/microsoft/configmapparser/config_default_scrape_settings_env_var
-      source /opt/envvars.env
+      source ~/.bashrc
 fi
 
 # Parse the settings for debug mode
 ruby /opt/microsoft/configmapparser/tomlparser-debug-mode.rb
 if [ -e "/opt/microsoft/configmapparser/config_debug_mode_env_var" ]; then
       cat /opt/microsoft/configmapparser/config_debug_mode_env_var | while read line; do
-            echo $line >> /opt/envvars.env
+            echo $line >> ~/.bashrc
       done
       source /opt/microsoft/configmapparser/config_debug_mode_env_var
-      source /opt/envvars.env
+      source ~/.bashrc
 fi
 
 # Parse the settings for default targets metrics keep list config
@@ -80,9 +79,9 @@ else
       ruby /opt/microsoft/configmapparser/prometheus-config-merger.rb
 fi
 
-echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false" >> /opt/envvars.env
+echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false" >> ~/.bashrc
 export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=false
-echo "export CONFIG_VALIDATOR_RUNNING_IN_AGENT=true" >> /opt/envvars.env
+echo "export CONFIG_VALIDATOR_RUNNING_IN_AGENT=true" >> ~/.bashrc
 export CONFIG_VALIDATOR_RUNNING_IN_AGENT=true
 if [ -e "/opt/promMergedConfig.yml" ]; then
       # promconfigvalidator validates by generating an otel config and running through receiver's config load and validate method
@@ -90,7 +89,7 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
       if [ $? -ne 0 ] || [ ! -e "/opt/microsoft/otelcollector/collector-config.yml" ]; then
             # Use default config if specified config is invalid
             echo_error "prom-config-validator::Prometheus custom config validation failed. The custom config will not be used"
-            echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> /opt/envvars.env
+            echo "export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG=true
             if [ -e "/opt/defaultsMergedConfig.yml" ]; then
                   echo_error "prom-config-validator::Running validator on just default scrape configs"
@@ -101,7 +100,7 @@ if [ -e "/opt/promMergedConfig.yml" ]; then
                         cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
                   fi
             fi 
-            echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> /opt/envvars.env
+            echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
             export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
       fi
 elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
@@ -113,24 +112,24 @@ elif [ -e "/opt/defaultsMergedConfig.yml" ]; then
             echo "prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config"
             cp "/opt/collector-config-with-defaults.yml" "/opt/microsoft/otelcollector/collector-config-default.yml"
       fi
-      echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> /opt/envvars.env
+      echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 
 else
       # This else block is needed, when there is no custom config mounted as config map or default configs enabled
       echo_error "prom-config-validator::No custom config via configmap or default scrape configs enabled."
-      echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> /opt/envvars.env
+      echo "export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true" >> ~/.bashrc
       export AZMON_USE_DEFAULT_PROMETHEUS_CONFIG=true
 fi
 
 # Set the environment variables from the prom-config-validator
 if [ -e "/opt/microsoft/prom_config_validator_env_var" ]; then
       cat /opt/microsoft/prom_config_validator_env_var | while read line; do
-            echo $line >> /opt/envvars.env
+            echo $line >> ~/.bashrc
       done
       source /opt/microsoft/prom_config_validator_env_var
-      source /opt/envvars.env
+      source ~/.bashrc
 fi
 
-source /opt/envvars.env
+source ~/.bashrc
 echo "prom-config-validator::Use default prometheus config: ${AZMON_USE_DEFAULT_PROMETHEUS_CONFIG}"

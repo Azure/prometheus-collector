@@ -17,8 +17,8 @@ data:
     apiserver = false
     kubestate = true
     nodeexporter = true
-    windowsexporter = true
-    windowskubeproxy = true
+    windowsexporter = false
+    windowskubeproxy = false
     kappiebasic = true
     networkobservabilityRetina = true
     networkobservabilityHubble = true
