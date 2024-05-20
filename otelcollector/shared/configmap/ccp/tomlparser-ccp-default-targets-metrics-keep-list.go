@@ -16,13 +16,13 @@ import (
 
 var (
 	configMapMountPath                                                     = "/etc/config/settings/default-targets-metrics-keep-list"
-	configSchemaVersion, minimalIngestionProfile                           string
+	configSchemaVersion                                                    string
 	controlplaneApiserverRegex, controlplaneClusterAutoscalerRegex         string
 	controlplaneKubeSchedulerRegex, controlplaneKubeControllerManagerRegex string
 	controlplaneEtcdRegex                                                  string
 	controlplaneKubeControllerManagerMinMac                                = "rest_client_request_duration_seconds|rest_client_requests_total|workqueue_depth"
 	controlplaneKubeSchedulerMinMac                                        = "scheduler_pending_pods|scheduler_unschedulable_pods|scheduler_pod_scheduling_attempts|scheduler_queue_incoming_pods_total|scheduler_preemption_attempts_total|scheduler_preemption_victims|scheduler_scheduling_attempt_duration_seconds|scheduler_schedule_attempts_total|scheduler_pod_scheduling_duration_seconds"
-	controlplaneApiserverMinMac                                            = "apiserver_request_total|apiserver_cache_list_fetched_objects_total|apiserver_cache_list_returned_objects_total|apiserver_flowcontrol_demand_seats_average|apiserver_flowcontrol_current_limit_seats|apiserver_request_sli_duration_seconds_bucket|apiserver_request_sli_duration_seconds_count|apiserver_request_sli_duration_seconds_sum|process_start_time_seconds|apiserver_request_duration_seconds_bucket|apiserver_request_duration_seconds_count|apiserver_request_duration_seconds_sum|apiserver_storage_list_fetched_objects_total|apiserver_storage_list_returned_objects_total|apiserver_current_inflight_requests"
+	controlplaneApiserverMinMac                                            = "apiserver_request_total|apiserver_cache_list_fetched_objects_total|apiserver_cache_list_returned_objects_total|apiserver_flowcontrol_demand_seats_average|apiserver_flowcontrol_current_limit_seats|apiserver_request_sli_duration_seconds_count|apiserver_request_sli_duration_seconds_sum|process_start_time_seconds|apiserver_request_duration_seconds_count|apiserver_request_duration_seconds_sum|apiserver_storage_list_fetched_objects_total|apiserver_storage_list_returned_objects_total|apiserver_current_inflight_requests"
 	controlplaneClusterAutoscalerMinMac                                    = "rest_client_requests_total|cluster_autoscaler_((last_activity|cluster_safe_to_autoscale|scale_down_in_cooldown|scaled_up_nodes_total|unneeded_nodes_count|unschedulable_pods_count|nodes_count))|cloudprovider_azure_api_request_(errors|duration_seconds_(bucket|count))"
 	controlplaneEtcdMinMac                                                 = "etcd_server_has_leader|rest_client_requests_total|etcd_mvcc_db_total_size_in_bytes|etcd_mvcc_db_total_size_in_use_in_bytes|etcd_server_slow_read_indexes_total|etcd_server_slow_apply_total|etcd_network_client_grpc_sent_bytes_total|etcd_server_heartbeat_send_failures_total"
 )
@@ -64,7 +64,6 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 	configMap["controlplane-apiserver"] = getStringValue(tree.Get("controlplane-apiserver"))
 	configMap["controlplane-cluster-autoscaler"] = getStringValue(tree.Get("controlplane-cluster-autoscaler"))
 	configMap["controlplane-etcd"] = getStringValue(tree.Get("controlplane-etcd"))
-	configMap["minimalingestionprofile"] = getStringValue(tree.Get("minimalingestionprofile"))
 
 	return configMap
 }
@@ -76,7 +75,6 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 		ControlplaneApiserver:             getStringValue(parsedConfig["controlplane-apiserver"]),
 		ControlplaneClusterAutoscaler:     getStringValue(parsedConfig["controlplane-cluster-autoscaler"]),
 		ControlplaneEtcd:                  getStringValue(parsedConfig["controlplane-etcd"]),
-		MinimalIngestionProfile:           getStringValue(parsedConfig["minimalingestionprofile"]),
 	}
 
 	// Validate regex values
@@ -95,40 +93,33 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 	if regexValues.ControlplaneEtcd != "" && !shared.IsValidRegex(regexValues.ControlplaneEtcd) {
 		return regexValues, fmt.Errorf("invalid regex for controlplane-etcd: %s", regexValues.ControlplaneEtcd)
 	}
-	if regexValues.MinimalIngestionProfile != "" && !shared.IsValidRegex(regexValues.MinimalIngestionProfile) {
-		return regexValues, fmt.Errorf("invalid regex for MinimalIngestionProfile: %s", regexValues.MinimalIngestionProfile)
-	}
 
 	// Logging the values being set
-	fmt.Printf("controlplaneKubeControllerManagerRegex: %s\n", regexValues.ControlplaneKubeControllerManager)
-	fmt.Printf("controlplaneKubeSchedulerRegex: %s\n", regexValues.ControlplaneKubeScheduler)
-	fmt.Printf("controlplaneApiserverRegex: %s\n", regexValues.ControlplaneApiserver)
-	fmt.Printf("controlplaneClusterAutoscalerRegex: %s\n", regexValues.ControlplaneClusterAutoscaler)
-	fmt.Printf("controlplaneEtcdRegex: %s\n", regexValues.ControlplaneEtcd)
-	fmt.Printf("minimalIngestionProfile: %s\n", regexValues.MinimalIngestionProfile)
+	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneKubeControllerManagerRegex: %s\n", regexValues.ControlplaneKubeControllerManager)
+	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneKubeSchedulerRegex: %s\n", regexValues.ControlplaneKubeScheduler)
+	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneApiserverRegex: %s\n", regexValues.ControlplaneApiserver)
+	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneClusterAutoscalerRegex: %s\n", regexValues.ControlplaneClusterAutoscaler)
+	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneEtcdRegex: %s\n", regexValues.ControlplaneEtcd)
 
 	return regexValues, nil // Return regex values and nil error if everything is valid
 }
 
 func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
-	if regexValues.MinimalIngestionProfile == "true" {
-		controlplaneKubeControllerManagerRegex += regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
-		controlplaneKubeSchedulerRegex += regexValues.ControlplaneKubeScheduler + "|" + controlplaneKubeSchedulerMinMac
-		controlplaneApiserverRegex += regexValues.ControlplaneApiserver + "|" + controlplaneApiserverMinMac
-		controlplaneClusterAutoscalerRegex += regexValues.ControlplaneClusterAutoscaler + "|" + controlplaneClusterAutoscalerMinMac
-		controlplaneEtcdRegex += regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
+	controlplaneKubeControllerManagerRegex += regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
+	controlplaneKubeSchedulerRegex += regexValues.ControlplaneKubeScheduler + "|" + controlplaneKubeSchedulerMinMac
+	controlplaneApiserverRegex += regexValues.ControlplaneApiserver + "|" + controlplaneApiserverMinMac
+	controlplaneClusterAutoscalerRegex += regexValues.ControlplaneClusterAutoscaler + "|" + controlplaneClusterAutoscalerMinMac
+	controlplaneEtcdRegex += regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
 
-		// Print the updated regex strings after appending values
-		// Only log this in debug mode
-		// fmt.Println("Updated Regex Strings After Appending:")
-		// fmt.Println("ControlplaneKubeControllerManagerRegex:", controlplaneKubeControllerManagerRegex)
-		// fmt.Println("ControlplaneKubeSchedulerRegex:", controlplaneKubeSchedulerRegex)
-		// fmt.Println("ControlplaneApiserverRegex:", controlplaneApiserverRegex)
-		// fmt.Println("ControlplaneClusterAutoscalerRegex:", controlplaneClusterAutoscalerRegex)
-		// fmt.Println("ControlplaneEtcdRegex:", controlplaneEtcdRegex)
-	} else {
-		fmt.Println("minimalIngestionProfile:", regexValues.MinimalIngestionProfile)
-	}
+	// Print the updated regex strings after appending values
+	// Only log this in debug mode
+	// fmt.Println("Updated Regex Strings After Appending:")
+	// fmt.Println("ControlplaneKubeControllerManagerRegex:", controlplaneKubeControllerManagerRegex)
+	// fmt.Println("ControlplaneKubeSchedulerRegex:", controlplaneKubeSchedulerRegex)
+	// fmt.Println("ControlplaneApiserverRegex:", controlplaneApiserverRegex)
+	// fmt.Println("ControlplaneClusterAutoscalerRegex:", controlplaneClusterAutoscalerRegex)
+	// fmt.Println("ControlplaneEtcdRegex:", controlplaneEtcdRegex)
+
 }
 
 func tomlparserCCPTargetsMetricsKeepList() {

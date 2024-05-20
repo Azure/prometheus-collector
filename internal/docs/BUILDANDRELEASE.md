@@ -89,4 +89,5 @@ https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/toolkit/ve
     - To generate snapshots(required when you update the image and/or chart) –
         - [Re-Render Test Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-adapter-charts&version=GBmaster&_a=contents&anchor=re-render-test-snapshots)
         - [Re-Render Addon Chart Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-charts/README.md&version=GBmaster&_a=contents)
+- **PR 6**: Toggle Monitoring clusters for Control Plane image. Link to similar PR [here](https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp/pullrequest/10083525?_a=files)
 - **Arc**: Start Arc release to Canary regions. The new version will be automatically deployed to each region batch every 24 hours.
