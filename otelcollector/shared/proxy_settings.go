@@ -51,8 +51,8 @@ func addNoProxy(target string) {
 	noProxy := os.Getenv("NO_PROXY")
 	noProxy = strings.TrimSpace(noProxy)
 	noProxy += "," + target
-	os.Setenv("NO_PROXY", noProxy)
-	os.Setenv("no_proxy", noProxy)
+	SetEnvAndSourceBashrc("NO_PROXY", noProxy)
+	SetEnvAndSourceBashrc("no_proxy", noProxy)
 }
 
 func setHTTPProxyEnabled() {
@@ -60,7 +60,7 @@ func setHTTPProxyEnabled() {
 	if os.Getenv("HTTP_PROXY") != "" {
 		httpProxyEnabled = "true"
 	}
-	os.Setenv("HTTP_PROXY_ENABLED", httpProxyEnabled)
+	SetEnvAndSourceBashrc("HTTP_PROXY_ENABLED", httpProxyEnabled)
 }
 
 func ConfigureEnvironment() error {
@@ -69,7 +69,7 @@ func ConfigureEnvironment() error {
 	// Remove trailing '/' character from HTTP_PROXY and HTTPS_PROXY
 	proxyVariables := []string{"http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"}
 	for _, v := range proxyVariables {
-		os.Setenv(v, removeTrailingSlash(os.Getenv(v)))
+		SetEnvAndSourceBashrc(v, removeTrailingSlash(os.Getenv(v)))
 	}
 
 	addNoProxy("ama-metrics-operator-targets.kube-system.svc.cluster.local")
@@ -92,11 +92,11 @@ func ConfigureEnvironment() error {
 		password := base64.StdEncoding.EncodeToString([]byte(strings.SplitN(urlParts[0], ":", 2)[1]))
 		os.WriteFile("/opt/microsoft/proxy_password", []byte(password), 0644)
 
-		os.Setenv("MDSD_PROXY_MODE", "application")
-		os.Setenv("MDSD_PROXY_ADDRESS", os.Getenv("HTTPS_PROXY"))
+		SetEnvAndSourceBashrc("MDSD_PROXY_MODE", "application")
+		SetEnvAndSourceBashrc("MDSD_PROXY_ADDRESS", os.Getenv("HTTPS_PROXY"))
 		if user := strings.SplitN(urlParts[0], ":", 2)[0]; user != "" {
-			os.Setenv("MDSD_PROXY_USERNAME", user)
-			os.Setenv("MDSD_PROXY_PASSWORD_FILE", "/opt/microsoft/proxy_password")
+			SetEnvAndSourceBashrc("MDSD_PROXY_USERNAME", user)
+			SetEnvAndSourceBashrc("MDSD_PROXY_PASSWORD_FILE", "/opt/microsoft/proxy_password")
 		}
 	}
 
