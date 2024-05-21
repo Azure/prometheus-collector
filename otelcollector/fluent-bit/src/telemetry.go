@@ -999,8 +999,8 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	// duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
 	// deadline := time.Now().Add(duration)
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop() // This will stop the ticker when the function returns
+	// ticker := time.NewTicker(time.Second)
+	// defer ticker.Stop() // This will stop the ticker when the function returns
 
 	// for ; time.Now().Before(deadline); <-ticker.C {
 	for _, record := range records {
@@ -1050,8 +1050,8 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 	// duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
 	// deadline := time.Now().Add(duration)
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	// ticker := time.NewTicker(time.Second)
+	// defer ticker.Stop()
 
 	// for ; time.Now().Before(deadline); <-ticker.C {
 	for _, record := range records {
