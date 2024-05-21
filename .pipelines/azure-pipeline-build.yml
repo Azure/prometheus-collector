@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/arc-msi-release
 pr:
   autoCancel: true
   branches:
@@ -1407,7 +1408,7 @@ stages:
   jobs:
   - deployment: Deploy_Chart_ARC
     displayName: "Deploy: Arc dev cluster"
-    condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_Chart_ARC')), eq(variables['System.StageAttempt'], 1))))
+    #condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_Chart_ARC')), eq(variables['System.StageAttempt'], 1))))
     environment: Prometheus-Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
@@ -1418,69 +1419,71 @@ stages:
       runOnce:
         deploy:
           steps:
-          - bash: |
-              # Create JSON request body
-              cat <<EOF > "request.json"
-                {
-                  "artifactEndpoints": [
-                      {
-                          "Regions": [
-                              "westcentralus"
-                          ],
-                          "Releasetrains": [
-                              "pipeline"
-                          ],
-                          "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/cidev/ama-metrics-arc",
-                          "ExtensionUpdateFrequencyInMinutes": 5,
-                          "IsCustomerHidden": true,
-                          "ReadyforRollout": true,
-                          "RollbackVersion": null,
-                          "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
-                      }
-                  ]
-                }
-              EOF
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'prometheus-arc-dev-release-mi'
+              scriptType: 'batch'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                # Create JSON request body
+                cat <<EOF > "request.json"
+                  {
+                    "artifactEndpoints": [
+                        {
+                            "Regions": [
+                                "westcentralus"
+                            ],
+                            "Releasetrains": [
+                                "pipeline"
+                            ],
+                            "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/cidev/ama-metrics-arc",
+                            "ExtensionUpdateFrequencyInMinutes": 5,
+                            "IsCustomerHidden": true,
+                            "ReadyforRollout": true,
+                            "RollbackVersion": null,
+                            "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
+                        }
+                    ]
+                  }
+                EOF
 
-              # Send Request
-              SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
-              RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85"
-              SPN_CLIENT_ID="9a4c55e9-576a-450a-88bd-53bd634db38d"
-              SPN_TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
-              METHOD="PUT"
+                # Send Request
+                SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
+                RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85"
+                METHOD="PUT"
 
-              echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER, SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
+                echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER"
 
-              # MSI is not supported
-              echo "Login cli using spn"
-              az login --service-principal --username=$SPN_CLIENT_ID --password=$(ARC_SPN_SECRET) --tenant=$SPN_TENANT_ID
-              if [ $? -eq 0 ]; then
-                echo "Logged in successfully with spn"
-              else
-                echo "-e error failed to login to az with managed identity credentials"
-                exit 1
-              fi
+                echo "Login cli using MSI"
+                az login --managed-identity
+                if [ $? -eq 0 ]; then
+                  echo "Logged in successfully with MSI"
+                else
+                  echo "-e error failed to login to az with managed identity credentials"
+                  exit 1
+                fi
 
-              ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
-              if [ $? -eq 0 ]; then
-                echo "get access token from resource:$RESOURCE_AUDIENCE successfully."
-              else
-                echo "-e error get access token from resource:$RESOURCE_AUDIENCE failed."
-                exit 1
-              fi
-              ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '"' | tr -d '"\r\n')
+                ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
+                if [ $? -eq 0 ]; then
+                  echo "get access token from resource:$RESOURCE_AUDIENCE successfully."
+                else
+                  echo "-e error get access token from resource:$RESOURCE_AUDIENCE failed."
+                  exit 1
+                fi
+                ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '"' | tr -d '"\r\n')
 
-              ARC_API_URL="https://eastus2euap.dp.kubernetesconfiguration.azure.com"
-              EXTENSION_NAME="microsoft.azuremonitor.containers.metrics"
-              API_VERSION="2021-05-01"
+                ARC_API_URL="https://eastus2euap.dp.kubernetesconfiguration.azure.com"
+                EXTENSION_NAME="microsoft.azuremonitor.containers.metrics"
+                API_VERSION="2021-05-01"
 
-              echo "start send request"
-              az rest --method $METHOD --headers "{\"Authorization\": \"Bearer $ACCESS_TOKEN\", \"Content-Type\": \"application/json\"}" --body @request.json --uri $ARC_API_URL/subscriptions/$SUBSCRIPTION/extensionTypeRegistrations/$EXTENSION_NAME/versions/$HELM_SEMVER?api-version=$API_VERSION
-              if [ $? -eq 0 ]; then
-                echo "arc extension registered successfully"
-              else
-                echo "-e error failed to register arc extension"
-                exit 1
-              fi
+                echo "start send request"
+                az rest --method $METHOD --headers "{\"Authorization\": \"Bearer $ACCESS_TOKEN\", \"Content-Type\": \"application/json\"}" --body @request.json --uri $ARC_API_URL/subscriptions/$SUBSCRIPTION/extensionTypeRegistrations/$EXTENSION_NAME/versions/$HELM_SEMVER?api-version=$API_VERSION
+                if [ $? -eq 0 ]; then
+                  echo "arc extension registered successfully"
+                else
+                  echo "-e error failed to register arc extension"
+                  exit 1
+                fi
             displayName: "Deploy: Release to dev release train"
 
           - task: AzureCLI@2
