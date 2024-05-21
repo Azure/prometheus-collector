@@ -74,6 +74,13 @@ TOKEN=$(echo $LOGIN_INFO | jq -r '.accessToken')
 SOURCE_IMAGE_FULL_PATH=${MCR_REGISTRY}${DEV_MCR_REPOSITORY}:${IMAGE_TAG}
 AGENT_IMAGE_FULL_PATH=${PROD_ACR_REPOSITORY_WITHOUT_SLASH}:${IMAGE_TAG}
 
+# Install oras
+curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+mkdir -p oras-install/
+tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+sudo mv oras-install/oras /usr/local/bin/
+rm -rf oras_1.0.0_*.tar.gz oras-install/
+
 # Use oras to copy the image
 oras copy -r $SOURCE_IMAGE_FULL_PATH $ACR_REGISTRY/$AGENT_IMAGE_FULL_PATH --to-password $TOKEN
 if [ $? -eq 0 ]; then
