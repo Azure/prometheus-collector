@@ -1,10 +1,10 @@
 # Azure Monitor Metrics for AKS clusters
 
 ## Release 05-20-2024
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-6.8.11-main-<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-6.8.11-main-<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-6.8.11-main-<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-<tbd>-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-6.8.11-main-05-20-2024-3def0a4b`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-6.8.11-main-05-20-2024-3def0a4b-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-6.8.11-main-05-20-2024-3def0a4b-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-05-20-2024-3def0a4b-cfg`
 * Change log -
   * fix: ccp ignore minimal ingestion profile setting and respecting the keep list regex values - https://github.com/Azure/prometheus-collector/pull/886
   * fix: signature artifacts drop issue - https://github.com/Azure/prometheus-collector/pull/885/files
