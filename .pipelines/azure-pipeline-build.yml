@@ -1454,14 +1454,6 @@ stages:
 
                 echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $HELM_SEMVER"
 
-                echo "Login cli using MSI"
-                az login --managed-identity
-                if [ $? -eq 0 ]; then
-                  echo "Logged in successfully with MSI"
-                else
-                  echo "-e error failed to login to az with managed identity credentials"
-                  exit 1
-                fi
 
                 ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
                 if [ $? -eq 0 ]; then
