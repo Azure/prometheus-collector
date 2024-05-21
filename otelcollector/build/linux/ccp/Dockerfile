@@ -37,7 +37,7 @@ RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 RUN go get
 RUN go build -o ccpmain .
 
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
+FROM azurelinuxpreview.azurecr.io/public/azurelinux/base/core:3.0 as builder
 ENV OS_TYPE "linux"
 ENV tmpdir /opt
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
@@ -71,7 +71,7 @@ RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/ccpsetup.sh ${TARGETARCH}
 
-FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
+FROM azurelinuxpreview.azurecr.io/public/azurelinux/distroless/base:3.0
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
