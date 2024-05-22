@@ -50,4 +50,10 @@ The sonobuoy status command will have the number of tests that passed, failed, o
 {"plugins":[{"plugin":"agenttests","node":"global","status":"complete","result-status":"passed","result-counts":{"passed":50,"skipped":18}}],"status":"complete","tar-info":{"name":"202405152328_sonobuoy_bf5c02ed-1948-48f1-b12d-5a2d74435e46.tar.gz","created":"2024-05-15T23:49:32.876748551Z","sha256":"559406070bd5738dd077355be5fdb5560497680be938d3d0a63a2a8f4ac66d15","size":282521}}
 ```
 
+## Testing on the Arc conformance matrix
+1. In the [release](https://github-private.visualstudio.com/azure/_releaseDefinition?definitionId=79&_a=definition-pipeline), the task `Deploy to Prod Clusters` will deploy the arc extension to the `Staging` release train. This is the release train our conformance tests use.
+2. After releasing to `Staging`, create a duplicate task of [this format](https://dev.azure.com/ArcValidationProgram/ArcValidationProgram/_workitems/edit/1161) and update the title to have the latest agent version.
+3. Post in the [Teams channel](https://teams.microsoft.com/l/channel/19%3ArlnJ5tIxEMP-Hhe-pRPPp9C6iYQ1CwAelt4zTqyC_NI1%40thread.tacv2/General?groupId=a077ab34-99ea-490c-b204-358d31c24fbe&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47) asking for the conformance tests to be run. An example post is [here](https://teams.microsoft.com/l/message/19:rlnJ5tIxEMP-Hhe-pRPPp9C6iYQ1CwAelt4zTqyC_NI1@thread.tacv2/1715902653350?tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47&groupId=a077ab34-99ea-490c-b204-358d31c24fbe&parentMessageId=1715902653350&teamName=Azure%20Arc%20Conformance%20Testing&channelName=General&createdTime=1715902653350).
+4. Wait until the Arc team responds if the `Extension Plugin` tests have passed. The logs of the Ginkgo tests can be viewed by navigating to the test result page and downloading all logs.
+5. After the tests have passed, the extension can be released to the `Stable` release train by starting the `ARC Small Region` release task.
 
