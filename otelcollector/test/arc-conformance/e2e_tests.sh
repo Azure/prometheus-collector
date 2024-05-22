@@ -4,23 +4,23 @@ $x &> /dev/null
 results_dir="${RESULTS_DIR:-/tmp/results}"
 
 validateAuthParameters() {
-	if [ -z $CLIENT_ID ]; then
-	   echo "ERROR: parameter CLIENT_ID is required." > ${results_dir}/error
-	fi
+  if [ -z $CLIENT_ID ]; then
+     echo "ERROR: parameter CLIENT_ID is required." > ${results_dir}/error
+  fi
 }
 
 validateArcConfTestParameters() {
-	if [ -z $SUBSCRIPTION_ID ]; then
-	   echo "ERROR: parameter SUBSCRIPTION_ID is required." > ${results_dir}/error
-	fi
+  if [ -z $SUBSCRIPTION_ID ]; then
+     echo "ERROR: parameter SUBSCRIPTION_ID is required." > ${results_dir}/error
+  fi
 
-	if [ -z $RESOURCE_GROUP ]; then
-		echo "ERROR: parameter RESOURCE_GROUP is required." > ${results_dir}/error
-	fi
+  if [ -z $RESOURCE_GROUP ]; then
+    echo "ERROR: parameter RESOURCE_GROUP is required." > ${results_dir}/error
+  fi
 
-	if [ -z $CLUSTER_NAME ]; then
-		echo "ERROR: parameter CLUSTER_NAME is required." > ${results_dir}/error
-	fi
+  if [ -z $CLUSTER_NAME ]; then
+    echo "ERROR: parameter CLUSTER_NAME is required." > ${results_dir}/error
+  fi
 }
 
 login_to_azure() {
@@ -30,8 +30,8 @@ login_to_azure() {
     az login --identity --username $CLIENT_ID
   fi
 
-	echo "setting subscription: ${SUBSCRIPTION_ID} as default subscription"
-	az account set -s $SUBSCRIPTION_ID
+  echo "setting subscription: ${SUBSCRIPTION_ID} as default subscription"
+  az account set -s $SUBSCRIPTION_ID
 }
 
 addArcConnectedK8sExtension() {
@@ -170,10 +170,10 @@ saveResults() {
   cd ${results_dir}
 
     # Sonobuoy worker expects a tar file.
-	tar czf results.tar.gz *
+  tar czf results.tar.gz *
 
-	# Signal to the worker that we are done and where to find the results.
-	printf ${results_dir}/results.tar.gz > ${results_dir}/done
+  # Signal to the worker that we are done and where to find the results.
+  printf ${results_dir}/results.tar.gz > ${results_dir}/done
 }
 
 # Ensure that we tell the Sonobuoy worker we are done regardless of results.
