@@ -312,40 +312,40 @@ func CheckIfAllContainersAreRunning(clientset *kubernetes.Clientset, namespace, 
  */
  func CheckIfAllPodsScheduleOnNodes(clientset *kubernetes.Clientset, namespace, labelKey string, labelValue string, osLabel string) error {
 
-	// Get list of all nodes
-	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+  // Get list of all nodes
+  nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 
-	if err != nil {
-		return errors.New(fmt.Sprintf("Error getting nodes with the specified labels: %v", err))
-	}
+  if err != nil {
+    return errors.New(fmt.Sprintf("Error getting nodes with the specified labels: %v", err))
+  }
 
-	for _, node := range nodes.Items {
-		if node.Labels["beta.kubernetes.io/os"] == osLabel {
-			// Get list of pods scheduled on this node
-			pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
-				FieldSelector: "spec.nodeName=" + node.Name,
-				LabelSelector: labelKey + "=" + labelValue,
-			})
+  for _, node := range nodes.Items {
+    if node.Labels["beta.kubernetes.io/os"] == osLabel {
+      // Get list of pods scheduled on this node
+      pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+        FieldSelector: "spec.nodeName=" + node.Name,
+        LabelSelector: labelKey + "=" + labelValue,
+      })
 
-			if err != nil || pods == nil || len(pods.Items) == 0 {
-				return errors.New(fmt.Sprintf("Error getting pods on node %s:", node.Name))
-			}
+      if err != nil || pods == nil || len(pods.Items) == 0 {
+        return errors.New(fmt.Sprintf("Error getting pods on node %s:", node.Name))
+      }
 
-			for _, pod := range pods.Items {
-				if pod.Status.Phase != corev1.PodRunning {
-					return errors.New(fmt.Sprintf("Pod is not runinng. Phase is: %v", pod.Status.Phase))
-				}
+      for _, pod := range pods.Items {
+        if pod.Status.Phase != corev1.PodRunning {
+          return errors.New(fmt.Sprintf("Pod is not runinng. Phase is: %v", pod.Status.Phase))
+        }
 
-				for _, containerStatus := range pod.Status.ContainerStatuses {
-					if containerStatus.State.Running == nil {
-						return errors.New(fmt.Sprintf("Container %s is not running", containerStatus.Name))
-					}
-				}
-			}
-		}
-	}
+        for _, containerStatus := range pod.Status.ContainerStatuses {
+          if containerStatus.State.Running == nil {
+            return errors.New(fmt.Sprintf("Container %s is not running", containerStatus.Name))
+          }
+        }
+      }
+    }
+  }
 
-	return nil
+  return nil
 }
 
 /*
@@ -354,40 +354,40 @@ func CheckIfAllContainersAreRunning(clientset *kubernetes.Clientset, namespace, 
  */
 func CheckIfAllPodsScheduleOnSpecificNodesLabels(clientset *kubernetes.Clientset, namespace, labelKey string, labelValue string, nodeLabelKey string, nodeLabelValue string) error {
 
-	// Get list of all nodes
-	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+  // Get list of all nodes
+  nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 
-	if err != nil {
-		return errors.New(fmt.Sprintf("Error getting nodes with the specified labels: %v", err))
-	}
+  if err != nil {
+    return errors.New(fmt.Sprintf("Error getting nodes with the specified labels: %v", err))
+  }
 
-	for _, node := range nodes.Items {
-		if value, ok := node.Labels[nodeLabelKey]; ok && value == nodeLabelValue {
+  for _, node := range nodes.Items {
+    if value, ok := node.Labels[nodeLabelKey]; ok && value == nodeLabelValue {
 
-			// Get list of pods scheduled on this node
-			pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
-				FieldSelector: "spec.nodeName=" + node.Name,
-				LabelSelector: labelKey + "=" + labelValue,
-			})
+      // Get list of pods scheduled on this node
+      pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+        FieldSelector: "spec.nodeName=" + node.Name,
+        LabelSelector: labelKey + "=" + labelValue,
+      })
 
-			if err != nil || pods == nil || len(pods.Items) == 0 {
-				return errors.New(fmt.Sprintf("Error getting pods on node %s:", node.Name))
-			}
-			for _, pod := range pods.Items {
-				if pod.Status.Phase != corev1.PodRunning {
-					return errors.New(fmt.Sprintf("Pod is not runinng. Phase is: %v", pod.Status.Phase))
-				}
+      if err != nil || pods == nil || len(pods.Items) == 0 {
+        return errors.New(fmt.Sprintf("Error getting pods on node %s:", node.Name))
+      }
+      for _, pod := range pods.Items {
+        if pod.Status.Phase != corev1.PodRunning {
+          return errors.New(fmt.Sprintf("Pod is not runinng. Phase is: %v", pod.Status.Phase))
+        }
 
-				for _, containerStatus := range pod.Status.ContainerStatuses {
-					if containerStatus.State.Running == nil {
-						return errors.New(fmt.Sprintf("Container %s is not running", containerStatus.Name))
-					}
-				}
-			}
-		}
-	}
+        for _, containerStatus := range pod.Status.ContainerStatuses {
+          if containerStatus.State.Running == nil {
+            return errors.New(fmt.Sprintf("Container %s is not running", containerStatus.Name))
+          }
+        }
+      }
+    }
+  }
 
-	return nil
+  return nil
 }
 
 /*
