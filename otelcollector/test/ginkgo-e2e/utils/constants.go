@@ -1,5 +1,6 @@
 package utils
 
+
 var(
   // Slices can't be constants
   LogLineErrorsToExclude = [...]string{
@@ -16,10 +17,11 @@ var(
   }
 )
 
-const(
-  OperatorLabel = "operator"
-  ArcExtensionLabel = "arc-extension"
-  WindowsLabel = "windows"
-  ARM64Label = "arm64"
-  LinuxDaemonsetCustomConfig = "linux-daemonset-custom-config"
+const (
+	OperatorLabel              = "operator"
+	ArcExtensionLabel          = "arc-extension"
+	WindowsLabel               = "windows"
+	ARM64Label                 = "arm64"
+	FIPSLabel                  = "fips"
+	LinuxDaemonsetCustomConfig = "linux-daemonset-custom-config"
 )
