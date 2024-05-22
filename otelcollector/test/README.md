@@ -132,7 +132,7 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
   (bash) export GOPROXY=https://proxy.golang.org / (powershell) $env:GOPROXY = "https://proxy.golang.org"
   sudo -E go install -v github.com/onsi/ginkgo/v2/ginkgo@latest
 
-  cd otelcollector/test
+  cd otelcollector/test/ginkgo-e2e
 
   AMW_QUERY_ENDPOINT="<query endpoint>" \
   ginkgo -p -r --keep-going --label-filter='!/./' -ldflags="-s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com" 
