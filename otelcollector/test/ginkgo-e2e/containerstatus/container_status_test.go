@@ -27,6 +27,34 @@ var _ = DescribeTable("The containers should be running",
 )
 
 /*
+ * For each of the DS pods that we deploy in our chart, ensure that all nodes have been used to schedule these pods.
+ * The label and values are provided to get a list of pods only with that label.
+ * The osLabel is provided to check on all DS pods based on the OS.
+ */
+ var _ = DescribeTable("The pods should be scheduled in all nodes",
+ func(namespace string, controllerLabelName string, controllerLabelValue string, osLabel string) {
+   err := utils.CheckIfAllPodsScheduleOnNodes(K8sClient, namespace, controllerLabelName, controllerLabelValue, osLabel)
+   Expect(err).NotTo(HaveOccurred())
+ },
+ Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", "linux"),
+ Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", "windows", Label(utils.WindowsLabel)),
+)
+
+/*
+* For each of the DS pods that we deploy in our chart, ensure that all specific nodes like ARM64,FIPS have been used to schedule these pods.
+* The label and values are provided to get a list of pods only with that label.
+*/
+var _ = DescribeTable("The pods should be scheduled in all Fips and ARM64 nodes",
+ func(namespace string, controllerLabelName string, controllerLabelValue string, nodeLabelKey string, nodeLabelValue string) {
+   err := utils.CheckIfAllPodsScheduleOnSpecificNodesLabels(K8sClient, namespace, controllerLabelName, controllerLabelValue, nodeLabelKey, nodeLabelValue)
+   Expect(err).NotTo(HaveOccurred())
+ },
+ Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", "kubernetes.azure.com/fips_enabled", "true", Label(utils.FIPSLabel)),
+ Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", "kubernetes.azure.com/fips_enabled", "true", Label(utils.WindowsLabel), Label(utils.FIPSLabel)),
+ Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", "kubernetes.io/arch", "arm64", Label(utils.ARM64Label)),
+)
+
+/*
  * For each of the pods that have the prometheus-collector container, check all expected processes are running.
  * The linux replicaset and daemonset will should have the same processes running.
  */
