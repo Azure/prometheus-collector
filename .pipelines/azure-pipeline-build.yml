@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - rashmi/april-release-2024-scale-test
 
 pr:
   autoCancel: true
