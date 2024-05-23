@@ -86,6 +86,8 @@ func SetEnvAndSourceBashrc(key, value string) error {
 		return fmt.Errorf("failed to set environment variable: %v", err)
 	}
 
+	EchoVar(key, value)
+
 	return nil
 }
 

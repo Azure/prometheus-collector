@@ -29,6 +29,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	err = shared.SetupArcEnvironment()
+	if err != nil {
+		shared.EchoError(err.Error())
+	}
+
 	// Check if MODE environment variable is empty
 	mode := os.Getenv("MODE")
 	if mode == "" {
@@ -39,11 +44,6 @@ func main() {
 	shared.EchoVar("MODE", mode)
 	shared.EchoVar("CONTROLLER_TYPE", os.Getenv("CONTROLLER_TYPE"))
 	shared.EchoVar("CLUSTER", os.Getenv("CLUSTER"))
-
-	err = shared.SetupArcEnvironment()
-	if err != nil {
-		shared.EchoError(err.Error())
-	}
 
 	// Call setupTelemetry function with custom environment
 	customEnvironment := os.Getenv("customEnvironment")
@@ -124,7 +124,7 @@ func main() {
 	}
 
 	// Set environment variables
-	os.Setenv("ME_CONFIG_FILE", meConfigFile)
+	shared.SetEnvAndSourceBashrc("ME_CONFIG_FILE", meConfigFile)
 	shared.SetEnvAndSourceBashrc("customResourceId", cluster)
 
 	trimmedRegion := strings.ReplaceAll(aksRegion, " ", "")
@@ -149,6 +149,7 @@ func main() {
 		fmt.Printf("Error starting MetricsExtension: %v\n", err)
 		return
 	}
+	fmt.Printf("OTEL_PID: %d\n", ME_PID)
 
 	// Modify fluentBitConfigFile using OTEL_PID
 	err = shared.ModifyConfigFile(fluentBitConfigFile, ME_PID, "${ME_PID}")
@@ -253,6 +254,16 @@ func main() {
 		return
 	}
 
+	// Run the command and capture the output
+	cmd = exec.Command("fluent-bit", "--version")
+	fluentBitVersion, err := cmd.Output()
+	if err != nil {
+		log.Fatalf("failed to run command: %v", err)
+	}
+
+	// Print the variable and its value
+	shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
+
 	// Start inotify to watch for changes
 	fmt.Println("Starting inotify for watching mdsd config update")
 
@@ -300,7 +311,7 @@ func main() {
 
 	// Printing the environment variable and the readable time
 	fmt.Printf("AZMON_CONTAINER_START_TIME=%d\n", epochTimeNow)
-	fmt.Printf("AZMON_CONTAINER_START_TIME_READABLE=%s\n", epochTimeNowReadable)
+	shared.FmtVar("AZMON_CONTAINER_START_TIME_READABLE", epochTimeNowReadable)
 
 	// Expose a health endpoint for liveness probe
 	http.HandleFunc("/health", healthHandler)
