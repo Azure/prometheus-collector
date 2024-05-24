@@ -13,10 +13,6 @@ sudo tdnf install ca-certificates-microsoft -y
 sudo update-ca-trust
 
 #Need this for newer scripts
-chmod 544 $TMPDIR/*.sh
-chmod 544 $TMPDIR/microsoft/liveness/*.sh
-chmod 544 $TMPDIR/microsoft/configmapparser/*.rb
-
 chmod 744 /usr/sbin/
 
 #download inotify tools for watching configmap changes
