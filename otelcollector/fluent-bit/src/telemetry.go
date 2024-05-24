@@ -102,6 +102,18 @@ var (
 	meMetricsReceivedCountMap = make(map[string]*meMetricsReceivedCount)
 	// meMetricsReceivedCountMapMutex -- used for reading & writing locks on meMetricsReceivedCountMap
 	meMetricsReceivedCountMapMutex = &sync.Mutex{}
+	otelCpuUsages                  = make([]float64, 0)
+	// otelCpuUsagesMutex -- used for reading & writing locks on otelCpuUsages
+	otelCpuUsagesMutex = &sync.Mutex{}
+	meCpuUsages        = make([]float64, 0)
+	// meCpuUsagesMutex -- used for reading & writing locks on meCpuUsages
+	meCpuUsagesMutex = &sync.Mutex{}
+	meMemUsages      = make([]float64, 0)
+	// meMemUsagesMutex -- used for reading & writing locks on meMemUsages
+	meMemUsagesMutex = &sync.Mutex{}
+	otelMemUsages    = make([]float64, 0)
+	// otelMemUsagesMutex -- used for reading & writing locks on otelMemUsages
+	otelMemUsagesMutex = &sync.Mutex{}
 )
 
 const (
@@ -941,8 +953,6 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var count int
-	var otelCpuUsages []float64
-	var otelCpuUsagesMutex sync.Mutex
 
 	otelCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
@@ -997,8 +1007,6 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 
 func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var count int
-	var meCpuUsages []float64
-	var meCpuUsagesMutex sync.Mutex
 
 	meCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
@@ -1053,8 +1061,6 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var count int
-	var meMemUsages []float64
-	var meMemUsagesMutex sync.Mutex
 
 	meMemTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
@@ -1115,8 +1121,6 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 
 func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var count int
-	var otelMemUsages []float64
-	var otelMemUsagesMutex sync.Mutex
 
 	otelMemTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
