@@ -19,6 +19,7 @@
     - [ ] `windows`
     - [ ] `arm64`
     - [ ] `arc-extension`
+    - [ ] `fips`
 - [ ] Have new tests been added? For features, have tests been added for this feature? For fixes, is there a test that could have caught this issue and could validate that the fix works?
   - [ ] Is a new scrape job needed?
     - [ ] The scrape job was added to the folder [test-cluster-yamls](/otelcollector/test/test-cluster-yamls/) in the correct configmap or as a CR. 

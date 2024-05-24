@@ -21,6 +21,12 @@
     - ama-metrics-ksm replicaset
     - ama-metrics-targets-operator replicaset `label=operator`
     - prometheus-node-exporter daemonset `label=arc-extension`
+  - All Daemonset pods are scheduled in all the nodes. Nodes include:
+    - FIPS
+    - ARM64  
+  - All Daemonset pods have all containers running in all nodes. Nodes include:
+    - FIPS
+    - ARM64
 - Liveness Probe
   - When processes aren't running on the `prometheus-collector` replicaset container, the container should restart. Processes include:
     - otelcollector
@@ -53,6 +59,7 @@
 - `windows`: Tests that should only run on clusters that have Windows nodes.
 - `arm64`: Tests that should only run on clusters taht have ARM64 nodes.
 - `linux-daemonset-custom-config`: Tests that should only run on clusters that have the ama-metrics-config-node configmap.
+- `fips`: Tests that should only run on clusters taht have FIPS nodes.
 
 # File Directory Structure
 ```

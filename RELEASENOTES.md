@@ -1,5 +1,15 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 05-20-2024 (CCP release only)
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-05-21-2024-56bc7e3d`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-05-21-2024-56bc7e3d-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-05-21-2024-56bc7e3d-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-05-21-2024-56bc7e3d-cfg`
+* Change log -
+  * fix: ccp ignore minimal ingestion profile setting and respecting the keep list regex values - https://github.com/Azure/prometheus-collector/pull/886
+  * fix: signature artifacts drop issue - https://github.com/Azure/prometheus-collector/pull/885/files
+  * fix: Remove histograms from minimal ingestion list - ccp metrics collector - https://github.com/Azure/prometheus-collector/pull/884
+
 ## Release 05-07-2024 (CCP release only)
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.11-main-6.8.11-main-05-07-2024-fcfa51bd`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.11-main-6.8.11-main-05-07-2024-fcfa51bd-win`
