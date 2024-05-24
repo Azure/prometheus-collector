@@ -44,9 +44,9 @@ LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "linux"
 ENV tmpdir /opt
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+ENV APPLICATIONINSIGHTS_AUTH YWRiODY1OGMtMGM3OC00M2JjLWFkMzctNjA0MjJkMjM2YWRm
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+ENV APPLICATIONINSIGHTS_AUTH_PUBLIC YWRiODY1OGMtMGM3OC00M2JjLWFkMzctNjA0MjJkMjM2YWRm
 # Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH_USGOVERNMENT ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5
 # Below is for ContainerInsightsPrometheusCollector-Mooncake AppInsights Resource
