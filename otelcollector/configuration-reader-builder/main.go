@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os/exec"
@@ -232,49 +231,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	if status != http.StatusOK {
 		fmt.Printf(message)
 		writeTerminationLog(message)
-	}
-}
-
-func startCommandAndWait(command string, args ...string) {
-	cmd := exec.Command(command, args...)
-
-	// Set environment variables from os.Environ()
-	cmd.Env = append(os.Environ())
-	// Create pipes to capture stdout and stderr
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Printf("Error creating stdout pipe: %v\n", err)
-		return
-	}
-
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		fmt.Printf("Error creating stderr pipe: %v\n", err)
-		return
-	}
-
-	// Start the command
-	err = cmd.Start()
-	if err != nil {
-		fmt.Printf("Error starting command: %v\n", err)
-		return
-	}
-
-	// Create goroutines to capture and print stdout and stderr
-	go func() {
-		stdoutBytes, _ := ioutil.ReadAll(stdout)
-		fmt.Print(string(stdoutBytes))
-	}()
-
-	go func() {
-		stderrBytes, _ := ioutil.ReadAll(stderr)
-		fmt.Print(string(stderrBytes))
-	}()
-
-	// Wait for the command to finish
-	err = cmd.Wait()
-	if err != nil {
-		fmt.Printf("Error waiting for command: %v\n", err)
 	}
 }
 
