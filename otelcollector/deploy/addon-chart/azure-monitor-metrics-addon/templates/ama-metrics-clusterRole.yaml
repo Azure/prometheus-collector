@@ -28,7 +28,7 @@ rules:
     verbs: ["get", "watch"]
   - apiGroups: [""]
     resources: ["events"]
-    verbs: ["create"]
+    verbs: ["create", "patch"]
   - nonResourceURLs: ["/metrics"]
     verbs: ["get"]
   - apiGroups: ["clusterconfig.azure.com"]
