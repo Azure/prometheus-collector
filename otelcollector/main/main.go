@@ -149,7 +149,7 @@ func main() {
 		fmt.Printf("Error starting MetricsExtension: %v\n", err)
 		return
 	}
-	fmt.Printf("OTEL_PID: %d\n", ME_PID)
+	fmt.Printf("ME_PID: %d\n", ME_PID)
 
 	// Modify fluentBitConfigFile using OTEL_PID
 	err = shared.ModifyConfigFile(fluentBitConfigFile, ME_PID, "${ME_PID}")

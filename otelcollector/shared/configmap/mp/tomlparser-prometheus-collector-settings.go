@@ -50,13 +50,17 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedConfig map[s
 	}
 
 	if operatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED"); operatorEnabled != "" && strings.ToLower(operatorEnabled) == "true" {
-		cp.IsOperatorEnabledChartSetting = "true"
+		cp.IsOperatorEnabledChartSetting = true
 		if value, ok := parsedConfig["operator_enabled"]; ok {
-			cp.IsOperatorEnabled = value
+			if value == "true" {
+				cp.IsOperatorEnabled = true
+			} else {
+				cp.IsOperatorEnabled = false
+			}
 			fmt.Printf("Configmap setting enabling operator: %s\n", cp.IsOperatorEnabled)
 		}
 	} else {
-		cp.IsOperatorEnabledChartSetting = "false"
+		cp.IsOperatorEnabledChartSetting = false
 	}
 }
 
@@ -70,7 +74,7 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_LABEL=%s\n", configParser.ClusterLabel))
 	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_ALIAS=%s\n", configParser.ClusterAlias))
 	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CHART_SETTING=%s\n", configParser.IsOperatorEnabledChartSetting))
-	if configParser.IsOperatorEnabled != "" && len(configParser.IsOperatorEnabled) > 0 {
+	if configParser.IsOperatorEnabled {
 		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED=%s\n", configParser.IsOperatorEnabled))
 		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=%s\n", configParser.IsOperatorEnabled))
 	}

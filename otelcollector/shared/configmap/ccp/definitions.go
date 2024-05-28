@@ -18,8 +18,8 @@ type ConfigProcessor struct {
 	DefaultMetricAccountName          string
 	ClusterAlias                      string
 	ClusterLabel                      string
-	IsOperatorEnabled                 string
-	IsOperatorEnabledChartSetting     string
+	IsOperatorEnabled                 bool
+	IsOperatorEnabledChartSetting     bool
 	ControlplaneKubeControllerManager string
 	ControlplaneKubeScheduler         string
 	ControlplaneApiserver             string
