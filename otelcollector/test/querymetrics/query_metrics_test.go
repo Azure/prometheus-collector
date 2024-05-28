@@ -200,6 +200,9 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			"kube_node_status_condition",
 			// "kube_node_spec_taint",
 			"kube_pod_container_info",
+			"kube_persistentvolumeclaim_access_mode",
+			"kube_persistentvolumeclaim_labels",
+			"kube_persistentvolume_status_phase",
 		}),
 	)
 
