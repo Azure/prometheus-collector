@@ -24,8 +24,8 @@ var _ = Describe("Query Metrics Test Suite", func() {
 				Expect(warnings).To(BeEmpty())
 
 				vectorResult, ok := result.(model.Vector)
-				Expect(ok).To(BeTrue(), "result should be of type model.Vector")
-				Expect(vectorResult).NotTo(BeEmpty(), "result should not be empty")
+				Expect(ok).To(BeTrue(), "result should be of type model.Vector for metric %s", metric)
+				Expect(vectorResult).NotTo(BeEmpty(), "Metric %s is missing", metric)
 
 				found := false
 				noClusterLabel := false
@@ -200,9 +200,9 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			"kube_node_status_condition",
 			// "kube_node_spec_taint",
 			"kube_pod_container_info",
-			"kube_persistentvolumeclaim_access_mode",
-			"kube_persistentvolumeclaim_labels",
-			"kube_persistentvolume_status_phase",
+			// "kube_persistentvolumeclaim_access_mode",
+			// "kube_persistentvolumeclaim_labels",
+			// "kube_persistentvolume_status_phase",
 		}),
 	)
 

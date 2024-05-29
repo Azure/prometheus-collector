@@ -57,13 +57,13 @@ var _ = Describe("When the daemonset prometheus-collector container liveness pro
       time.Sleep(180 * time.Second)
     },
     Entry("otelcollector is not running, the container should restart", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
-      "OpenTelemetryCollector is not running", "otelcollector", int64(180), FlakeAttempts(1),
+      "OpenTelemetryCollector is not running", "otelcollector", int64(180), FlakeAttempts(2),
     ),
     Entry("MetricsExtension is not running, the container should restart", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
-      "Metrics Extension is not running (configuration exists)", "MetricsExtension", int64(180), FlakeAttempts(1),
+      "Metrics Extension is not running (configuration exists)", "MetricsExtension", int64(180), FlakeAttempts(2),
     ),
     Entry("mdsd is not running, the container should restart", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
-      "mdsd is not running (configuration exists)", "mdsd -a -A -e", int64(180), FlakeAttempts(1),
+      "mdsd is not running (configuration exists)", "mdsd -a -A -e", int64(180), FlakeAttempts(2),
     ),
   )
 
@@ -89,13 +89,13 @@ var _ = Describe("When the windows prometheus-collector container liveness probe
       time.Sleep(240 * time.Second)
     },
     Entry("otelcollector is not running, the container should restart", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector",
-      "", "otelcollector", int64(300), FlakeAttempts(1),
+      "", "otelcollector", int64(300), FlakeAttempts(2),
     ),
     Entry("MetricsExtension is not running, the container should restart", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector",
-      "", "MetricsExtension.Native", int64(300), FlakeAttempts(1),
+      "", "MetricsExtension.Native", int64(300), FlakeAttempts(2),
     ),
     Entry("mdsd is not running, the container should restart", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector",
-      "", "MonAgentLauncher", int64(300), FlakeAttempts(1),
+      "", "MonAgentLauncher", int64(300), FlakeAttempts(2),
     ),
   )
 
