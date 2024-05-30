@@ -459,8 +459,8 @@ func untypedHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	// certFile := "/etc/prometheus/certs/client-cert.pem"
-	// keyFile := "/etc/prometheus/certs/client-key.pem"
+	certFile := "/etc/prometheus/certs/client-cert.pem"
+	keyFile := "/etc/prometheus/certs/client-key.pem"
 	if os.Getenv("RUN_PERF_TEST") == "true" {
 		if os.Getenv("SCRAPE_INTERVAL") != "" {
 			scrapeIntervalSec, _ = strconv.Atoi(os.Getenv("SCRAPE_INTERVAL"))
@@ -491,10 +491,10 @@ func main() {
 	}()
 
 	// Run main server for weather app metrics
-	// err := http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
-	// if err != nil {
-	// 	log.Printf("HTTP server failed to start: %v", err)
-	// }
+	err := http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
+	if err != nil {
+		log.Printf("HTTP server failed to start: %v", err)
+	}
 
 	fmt.Printf("ending main function")
 }
