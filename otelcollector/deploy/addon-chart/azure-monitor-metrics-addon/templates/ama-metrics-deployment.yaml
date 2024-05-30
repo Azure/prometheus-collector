@@ -163,6 +163,9 @@ spec:
               value: "true" # only supported value is the string "true"
           securityContext:
             privileged: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - mountPath: /etc/config/settings
               name: settings-vol-config

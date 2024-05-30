@@ -33,6 +33,9 @@ spec:
         fsGroup: 65534
         runAsGroup: 65534
         runAsUser: 65534
+        capabilities:
+          drop:
+            - ALL
       containers:
       - name: ama-metrics-ksm
         env:
