@@ -17,7 +17,7 @@ data:
     networkobservabilityRetina = true
     networkobservabilityHubble = true
     networkobservabilityCilium = true
-    prometheuscollectorhealth = true
+    prometheuscollectorhealth = false
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""
