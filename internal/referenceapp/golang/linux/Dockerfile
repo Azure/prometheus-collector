@@ -15,8 +15,8 @@ COPY go.sum .
 RUN go mod download
 
 
-COPY ./client-cert.pem /etc/prometheus/certs/
-COPY ./client-key.pem /etc/prometheus/certs/
+COPY client-cert.pem /etc/prometheus/certs/
+COPY client-key.pem /etc/prometheus/certs/
 
 # Copy the code into the container
 COPY . .
