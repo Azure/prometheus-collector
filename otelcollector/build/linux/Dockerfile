@@ -91,6 +91,8 @@ RUN tdnf install -y cpprest boost-filesystem brotli
 RUN tdnf install -y util-linux
 RUN tdnf install -y libyaml
 RUN tdnf install -y re2
+RUN tdnf install -y ruby
+RUN tdnf install -y fluent-bit
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
