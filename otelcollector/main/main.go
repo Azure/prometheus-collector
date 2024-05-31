@@ -144,18 +144,19 @@ func main() {
 	time.Sleep(30 * time.Second)
 
 	fmt.Println("Starting metricsextension with config overrides")
-	ME_PID, err := shared.StartMetricsExtensionForOverlay(meConfigFile)
-	if err != nil {
-		fmt.Printf("Error starting MetricsExtension: %v\n", err)
-		return
-	}
-	fmt.Printf("ME_PID: %d\n", ME_PID)
+	_, err = shared.StartMetricsExtensionForOverlay(meConfigFile)
+	// ME_PID, err := shared.StartMetricsExtensionForOverlay(meConfigFile)
+	// if err != nil {
+	// 	fmt.Printf("Error starting MetricsExtension: %v\n", err)
+	// 	return
+	// }
+	// fmt.Printf("ME_PID: %d\n", ME_PID)
 
-	// Modify fluentBitConfigFile using OTEL_PID
-	err = shared.ModifyConfigFile(fluentBitConfigFile, ME_PID, "${ME_PID}")
-	if err != nil {
-		fmt.Printf("Error modifying config file: %v\n", err)
-	}
+	// // Modify fluentBitConfigFile using ME_PID
+	// err = shared.ModifyConfigFile(fluentBitConfigFile, ME_PID, "${ME_PID}")
+	// if err != nil {
+	// 	fmt.Printf("Error modifying config file: %v\n", err)
+	// }
 
 	// Get ME version
 	meVersion, err := shared.ReadVersionFile("/opt/metricsextversion.txt")
@@ -198,18 +199,19 @@ func main() {
 	}
 
 	fmt.Println("startCommand otelcollector")
-	OTEL_PID, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
-	if err != nil {
-		fmt.Printf("Error starting command: %v\n", err)
-		return
-	}
-	fmt.Printf("OTEL_PID: %d\n", OTEL_PID)
+	_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+	// OTEL_PID, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+	// if err != nil {
+	// 	fmt.Printf("Error starting command: %v\n", err)
+	// 	return
+	// }
+	// fmt.Printf("OTEL_PID: %d\n", OTEL_PID)
 
-	// Modify fluentBitConfigFile using OTEL_PID
-	err = shared.ModifyConfigFile(fluentBitConfigFile, OTEL_PID, "${OTEL_PID}")
-	if err != nil {
-		fmt.Printf("Error modifying config file: %v\n", err)
-	}
+	// // Modify fluentBitConfigFile using OTEL_PID
+	// err = shared.ModifyConfigFile(fluentBitConfigFile, OTEL_PID, "${OTEL_PID}")
+	// if err != nil {
+	// 	fmt.Printf("Error modifying config file: %v\n", err)
+	// }
 
 	otelCollectorVersion, err := exec.Command("/opt/microsoft/otelcollector/otelcollector", "--version", "").Output()
 	if err != nil {
@@ -263,6 +265,35 @@ func main() {
 
 	// Print the variable and its value
 	shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
+
+	fmt.Println("starting telegraf")
+
+	if telemetryDisabled := os.Getenv("TELEMETRY_DISABLED"); telemetryDisabled != "true" {
+		controllerType := os.Getenv("CONTROLLER_TYPE")
+		azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
+
+		var telegrafConfig string
+
+		switch {
+		case controllerType == "ReplicaSet" && azmonOperatorEnabled == "true":
+			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector-ta-enabled.conf"
+		case controllerType == "ReplicaSet":
+			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector.conf"
+		default:
+			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector-ds.conf"
+		}
+
+		telegrafCmd := exec.Command("/usr/bin/telegraf", "--config", telegrafConfig)
+		telegrafCmd.Stdout = os.Stdout
+		telegrafCmd.Stderr = os.Stderr
+		if err := telegrafCmd.Start(); err != nil {
+			fmt.Println("Error starting telegraf:", err)
+			return
+		}
+
+		telegrafVersion, _ := os.ReadFile("/opt/telegrafversion.txt")
+		fmt.Printf("TELEGRAF_VERSION=%s\n", string(telegrafVersion))
+	}
 
 	// Start inotify to watch for changes
 	fmt.Println("Starting inotify for watching mdsd config update")

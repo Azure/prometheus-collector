@@ -93,17 +93,24 @@ cat <<EOF > "request.json"
 EOF
 
 # Send Request
-echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $CHART_VERSION, SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
+echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $CHART_VERSION"
 
-# MSI is not supported
-echo "Login cli using spn"
-az login --service-principal --username=$SPN_CLIENT_ID --password=${SPN_SECRET} --tenant=$SPN_TENANT_ID
-if [ $? -eq 0 ]; then
-  echo "Logged in successfully with spn"
+# Retries needed due to: https://stackoverflow.microsoft.com/questions/195032
+n=0
+signInExitCode=-1
+until [ "$n" -ge 5 ]
+do
+   az login --identity --allow-no-subscriptions && signInExitCode=0 && break
+   n=$((n+1))
+   sleep 15
+done
+
+if [ $signInExitCode -eq 0 ]; then
+  echo "Logged in successfully"
 else
   echo "-e error failed to login to az with managed identity credentials"
   exit 1
-fi    
+fi
 
 ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
 if [ $? -eq 0 ]; then
