@@ -131,7 +131,7 @@ COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
 COPY --from=builder /usr/share/pki/ /usr/share/pki
 
 # executables
-COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
+#COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 COPY --from=builder /usr/bin/ruby /usr/bin/ruby
 COPY --from=builder /usr/lib/ruby /usr/lib/ruby
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
@@ -165,8 +165,8 @@ COPY --from=builder /usr/lib/libruby.so.3.3 /usr/lib/libz.so.1 /usr/lib/libgmp.s
 COPY --from=builder /usr/lib/libre2.so.11 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
 # metricsextension dependencies
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-COPY --from=builder /lib/libboost_filesystem.so.1.83.0 /lib/libcpprest.so.2.10  /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libz.so.1 /lib/libbrotlicommon.so.1 /lib/
-COPY --from=builder /lib64/libuuid.so.1 /lib64
+#COPY --from=builder /lib/libboost_filesystem.so.1.83.0 /lib/libcpprest.so.2.10  /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libz.so.1 /lib/libbrotlicommon.so.1 /lib/
+#COPY --from=builder /lib64/libuuid.so.1 /lib64
 # fluent-bit dependencies
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 COPY --from=builder /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libcurl.so.4 /lib/libm.so.6 /lib/libz.so.1 /lib/libzstd.so.1 /lib/libsasl2.so.3 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/liblzma.so.5 /lib/liblz4.so.1  /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libgssapi_krb5.so.2 /lib/libresolv.so.2 /lib/libgpg-error.so.0 /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /lib/
