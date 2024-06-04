@@ -33,9 +33,6 @@ spec:
         fsGroup: 65534
         runAsGroup: 65534
         runAsUser: 65534
-        capabilities:
-          drop:
-            - ALL
       containers:
       - name: ama-metrics-ksm
         env:
@@ -78,6 +75,10 @@ spec:
           requests:
             cpu: 5m
             memory: 50Mi
+        securityContext:
+          capabilities:
+            drop:
+              - ALL
         ports:
         - containerPort: 8080
           name: "http"

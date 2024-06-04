@@ -31,7 +31,7 @@ spec:
       - name: targetallocator
         args:
         - --enable-prometheus-cr-watcher
-        - --reload-config
+        # - --reload-config
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:
@@ -155,6 +155,10 @@ spec:
             readOnly: true
           - mountPath: /ta-configuration
             name: ta-config-shared
+        securityContext:
+          capabilities:
+            drop:
+              - ALL
         livenessProbe:
           exec:
             command:
@@ -168,10 +172,6 @@ spec:
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
-      securityContext:
-        capabilities:
-          drop:
-            - ALL
       serviceAccount: ama-metrics-serviceaccount
       serviceAccountName: ama-metrics-serviceaccount
       terminationGracePeriodSeconds: 30
