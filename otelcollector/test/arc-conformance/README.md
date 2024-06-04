@@ -13,7 +13,6 @@ From the repository root:
 ```bash
 cd otelcollector/test
 sudo docker build -f arc-conformance/Dockerfile -t containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector:conf-<tag> .
-docker tag 
 az acr login -n containerinsightsprod -u containerinsightsprod -p <password>
 docker push containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector:conf-<tag>
 ```
@@ -23,7 +22,7 @@ Use [local-e2e-tests.yaml](./local-e2e-tests.yaml) to setup sonobuoy and run the
 
 In this file, replace the enivronment variables:
 ```yaml
-- name: CLIENT_ID
+- name: WORKLOAD_CLIENT_ID
   value: "<Managed identity client ID>"
 - name: TENANT_ID
   value: "<Arc cluster and managed identity tenant ID>"

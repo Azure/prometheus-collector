@@ -134,7 +134,7 @@ Ginkgo can be used for any tests written in golang, whether they are unit, integ
   - You have run `az login` from the terminal you will be running the tests in.
 
 ## Running the Tests
-- Run the commands below by replacing the placeholders with the SP Client ID, SP Secret, and the AMW query endpoint:
+- Run the commands below by replacing the placeholders with the AMW query endpoint:
   ```
   (bash) export GOPROXY=https://proxy.golang.org / (powershell) $env:GOPROXY = "https://proxy.golang.org"
   sudo -E go install -v github.com/onsi/ginkgo/v2/ginkgo@latest
@@ -350,7 +350,7 @@ Some highlights are that:
   cd ./testkube
   kubectl apply -f testkube-test-crs.yaml
   ```
-- Get the full resource ID of your AMW and a the client ID of an AKS cluster managed identity. Run the following command to allow query access from the cluster:
+- Get the full resource ID of your AMW and the client ID of the AKS cluster kubelet managed identity. Run the following command to allow query access from the cluster:
 
   ```
   az role assignment create --assignee <client ID>  --role "Monitoring Data Reader" --scope <AMW resource ID>

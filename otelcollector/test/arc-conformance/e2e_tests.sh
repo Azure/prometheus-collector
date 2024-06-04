@@ -4,8 +4,8 @@ $x &> /dev/null
 results_dir="${RESULTS_DIR:-/tmp/results}"
 
 validateAuthParameters() {
-  if [ -z $CLIENT_ID ]; then
-     echo "ERROR: parameter CLIENT_ID is required." > ${results_dir}/error
+  if [ -z $WORKLOAD_CLIENT_ID ]; then
+     echo "ERROR: parameter WORKLOAD_CLIENT_ID is required." > ${results_dir}/error
   fi
 }
 
@@ -24,12 +24,7 @@ validateArcConfTestParameters() {
 }
 
 login_to_azure() {
-  if [ ! -z "$CLIENT_SECRET" ]; then
-    az login --service-principal -u $CLIENT_ID -p $CLIENT_SECRET --tenant $TENANT_ID
-  else
-    az login --identity --username $CLIENT_ID
-  fi
-
+  az login --identity --username $WORKLOAD_CLIENT_ID
   echo "setting subscription: ${SUBSCRIPTION_ID} as default subscription"
   az account set -s $SUBSCRIPTION_ID
 }
