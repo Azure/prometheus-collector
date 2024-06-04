@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-
 pr:
   autoCancel: true
   branches:
@@ -19,7 +18,7 @@ variables:
   MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
-  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.9.2'
+  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.12.0'
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.6.0'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
@@ -1638,7 +1637,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
 
           - bash: |
-              sleep 300
+              sleep 360
 
               exit 0
             displayName: "Wait for cluster to be ready"
