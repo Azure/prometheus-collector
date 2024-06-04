@@ -94,6 +94,7 @@ RUN tdnf install -y re2
 RUN tdnf install -y ruby
 RUN tdnf install -y fluent-bit
 RUN mkdir /busybin && busybox --install /busybin
+RUN mkdir -p /var/opt/microsoft
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
