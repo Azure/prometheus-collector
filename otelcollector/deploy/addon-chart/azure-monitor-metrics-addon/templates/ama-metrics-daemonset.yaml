@@ -429,9 +429,6 @@ spec:
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
-            # - name: host-log-pods
-            #   readOnly: true
-            #   mountPath: /var/log/pods
           livenessProbe:
             exec:
               command:
@@ -507,7 +504,4 @@ spec:
           secret:
             secretName: ama-metrics-mtls-secret
             optional: true
-        # - name: host-log-pods
-        #   hostPath:
-        #     path: /var/log/pods
 {{- end }}
