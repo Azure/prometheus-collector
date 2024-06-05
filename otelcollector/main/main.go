@@ -353,18 +353,22 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
 	message := "prometheuscollector is running."
 
+	// Always running in MAC mode
+
 	if _, err := os.Stat("/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"); os.IsNotExist(err) {
 		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
 			azmonContainerStartTimeStr, err := os.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
 			if err != nil {
 				status = http.StatusServiceUnavailable
 				message = "Error reading azmon-container-start-time: " + err.Error()
+				goto response
 			}
 
 			azmonContainerStartTime, err := strconv.Atoi(strings.TrimSpace(string(azmonContainerStartTimeStr)))
 			if err != nil {
 				status = http.StatusServiceUnavailable
 				message = "Error converting azmon-container-start-time to integer: " + err.Error()
+				goto response
 			}
 
 			epochTimeNow := int(time.Now().Unix())
@@ -378,25 +382,44 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			if durationInMinutes > 15 {
 				status = http.StatusServiceUnavailable
 				message = "No configuration present for the AKS resource"
+				goto response
 			}
 		}
-	}
+	} else {
+		if !shared.IsProcessRunning("/usr/sbin/MetricsExtension") {
+			status = http.StatusServiceUnavailable
+			message = "Metrics Extension is not running (configuration exists)"
+			goto response
+		}
 
-	if !shared.IsProcessRunning("otelcollector") {
-		status = http.StatusServiceUnavailable
-		message = "OpenTelemetryCollector is not running."
-	}
-
-	if shared.HasConfigChanged("/opt/inotifyoutput.txt") {
-		status = http.StatusServiceUnavailable
-		message = "inotifyoutput.txt has been updated - config changed"
+		cmd := exec.Command("pgrep", "-f", "mdsd")
+		output, err := cmd.Output()
+		if err != nil || len(output) == 0 {
+			status = http.StatusServiceUnavailable
+			message = "mdsd is not running (configuration exists)"
+			goto response
+		}
 	}
 
 	if shared.HasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
 		status = http.StatusServiceUnavailable
 		message = "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
+		goto response
 	}
 
+	if !shared.IsProcessRunning("/opt/microsoft/otelcollector/otelcollector") {
+		status = http.StatusServiceUnavailable
+		message = "OpenTelemetryCollector is not running."
+		goto response
+	}
+
+	if shared.HasConfigChanged("/opt/inotifyoutput.txt") {
+		status = http.StatusServiceUnavailable
+		message = "inotifyoutput.txt has been updated - config changed"
+		goto response
+	}
+
+response:
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
 	if status != http.StatusOK {
