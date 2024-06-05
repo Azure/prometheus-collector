@@ -262,8 +262,6 @@ else
       # sleep for 30 seconds
       sleep 30
 
-      chmod 777 -R /etc/mdsd.d
-
       echo "Reading me config file as a string for configOverrides paramater"
       export meConfigString=`cat $ME_CONFIG_FILE | tr '\r' ' ' |  tr '\n' ' ' | sed 's/\"/\\"/g' | sed 's/ //g'`
       echo "Starting metricsextension"
