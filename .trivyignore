@@ -6,6 +6,7 @@
 
 # =========== HIGH ================
 # HIGH - otelcollector
+CVE-2024-36129
 # HIGH - telegraf
 GHSA-fr2g-9hjm-wr23
 CVE-2023-29403
