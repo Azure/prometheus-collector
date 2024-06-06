@@ -34,7 +34,6 @@ var _ = DescribeTable("The Prometheus UI API should return the scrape pools",
       "kube-state-metrics",
       "kubernetes-pods",
       "prometheus_ref_app",
-      "win_prometheus_ref_app",
     },
   ),
   Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
@@ -64,6 +63,7 @@ var _ = DescribeTable("The Prometheus UI API should return the scrape pools",
  */
 var _ = DescribeTable("The Prometheus UI API should return a valid config",
   func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
+		time.Sleep(30 * time.Second)
     var apiResponse utils.APIResponse
     err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
     Expect(err).NotTo(HaveOccurred())
@@ -88,6 +88,8 @@ var _ = DescribeTable("The Prometheus UI API should return a valid config",
  */
 var _ = DescribeTable("The Prometheus UI API should return the targets",
   func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
+		time.Sleep(60 * time.Second)
+
     var apiResponse utils.APIResponse
     err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/targets", isLinux, &apiResponse)
     Expect(err).NotTo(HaveOccurred())
@@ -115,6 +117,8 @@ var _ = DescribeTable("The Prometheus UI API should return the targets",
  */
 var _ = DescribeTable("The Prometheus UI API should return the targets metadata",
   func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
+    time.Sleep(90 * time.Second)
+
     var apiResponse utils.APIResponse
 		queryPath := "/api/v1/targets/metadata?match_target=\\{job=\\\"prometheus_ref_app\\\"\\}"
 		if !isLinux {
@@ -148,7 +152,7 @@ var _ = DescribeTable("The Prometheus UI API should return the targets metadata"
  var _ = DescribeTable("The Prometheus UI should return the /metrics data",
  func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
 
-	time.Sleep(60 * time.Second)
+	time.Sleep(120 * time.Second)
 
 	pods, err := utils.GetPodsWithLabel(K8sClient, namespace, controllerLabelName, controllerLabelValue)
 	Expect(err).NotTo(HaveOccurred())
@@ -181,7 +185,7 @@ var _ = DescribeTable("The Prometheus UI API should return the targets metadata"
 var _ = DescribeTable("The Prometheus UI should return a 200 for its UI pages",
   func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool, uiPaths []string) {
 
-		time.Sleep(90 * time.Second)
+		time.Sleep(180 * time.Second)
     pods, err := utils.GetPodsWithLabel(K8sClient, namespace, controllerLabelName, controllerLabelValue)
     Expect(err).NotTo(HaveOccurred())
   

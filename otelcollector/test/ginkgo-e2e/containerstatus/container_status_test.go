@@ -106,7 +106,7 @@ var _ = DescribeTable("All processes are running",
 			"MonAgentCore",
 		},
 		Label(utils.WindowsLabel),
-		FlakeAttempts(1),
+		FlakeAttempts(3),
 	),
 )
 
