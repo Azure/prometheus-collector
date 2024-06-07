@@ -8,17 +8,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"hash"
-	"hash/fnv"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"regexp"
 	"sync"
 	"time"
+	"unsafe"
 
+	"github.com/cnf/structhash"
 	"github.com/go-kit/log"
+	"github.com/prometheus/client_golang/prometheus"
 	commonconfig "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/config"
@@ -32,7 +34,6 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/gracewehner/prometheusreceiver/internal"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/web"
 )
@@ -54,10 +55,14 @@ type pReceiver struct {
 	configLoaded        chan struct{}
 	loadConfigOnce      sync.Once
 
-	settings         receiver.CreateSettings
-	scrapeManager    *scrape.Manager
-	discoveryManager *discovery.Manager
-	webHandler       *web.Handler
+	settings          receiver.CreateSettings
+	scrapeManager     *scrape.Manager
+	discoveryManager  *discovery.Manager
+	httpClient        *http.Client
+	registerer        prometheus.Registerer
+	unregisterMetrics func()
+	skipOffsetting    bool // for testing only
+	webHandler        *web.Handler
 }
 
 // New creates a new prometheus.Receiver reference.
@@ -68,13 +73,16 @@ func newPrometheusReceiver(set receiver.CreateSettings, cfg *Config, next consum
 		settings:            set,
 		configLoaded:        make(chan struct{}),
 		targetAllocatorStop: make(chan struct{}),
+		registerer: prometheus.WrapRegistererWith(
+			prometheus.Labels{"receiver": set.ID.String()},
+			prometheus.DefaultRegisterer),
 	}
 	return pr
 }
 
 // Start is the method that starts Prometheus scraping. It
 // is controlled by having previously defined a Configuration using perhaps New.
-func (r *pReceiver) Start(_ context.Context, host component.Host) error {
+func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 	discoveryCtx, cancel := context.WithCancel(context.Background())
 	r.cancelFunc = cancel
 
@@ -83,7 +91,7 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 	// add scrape configs defined by the collector configs
 	baseCfg := r.cfg.PrometheusConfig
 
-	err := r.initPrometheusComponents(discoveryCtx, host, logger)
+	err := r.initPrometheusComponents(discoveryCtx, logger)
 	if err != nil {
 		r.settings.Logger.Error("Failed to initPrometheusComponents Prometheus components", zap.Error(err))
 		return err
@@ -97,6 +105,11 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 
 	allocConf := r.cfg.TargetAllocator
 	if allocConf != nil {
+		r.httpClient, err = r.cfg.TargetAllocator.ToClient(ctx, host, r.settings.TelemetrySettings)
+		if err != nil {
+			r.settings.Logger.Error("Failed to create http client", zap.Error(err))
+			return err
+		}
 		err = r.startTargetAllocator(allocConf, baseCfg)
 		if err != nil {
 			return err
@@ -110,10 +123,10 @@ func (r *pReceiver) Start(_ context.Context, host component.Host) error {
 	return nil
 }
 
-func (r *pReceiver) startTargetAllocator(allocConf *targetAllocator, baseCfg *config.Config) error {
+func (r *pReceiver) startTargetAllocator(allocConf *TargetAllocator, baseCfg *PromConfig) error {
 	r.settings.Logger.Info("Starting target allocator discovery")
 	// immediately sync jobs, not waiting for the first tick
-	savedHash, err := r.syncTargetAllocator(nil, allocConf, baseCfg)
+	savedHash, err := r.syncTargetAllocator("", allocConf, baseCfg)
 	if err != nil {
 		return err
 	}
@@ -138,40 +151,20 @@ func (r *pReceiver) startTargetAllocator(allocConf *targetAllocator, baseCfg *co
 	return nil
 }
 
-// Calculate a hash for a scrape config map.
-// This is done by marshaling to YAML because it's the most straightforward and doesn't run into problems with unexported fields.
-func getScrapeConfigHash(jobToScrapeConfig map[string]*config.ScrapeConfig) (hash.Hash64, error) {
-	var err error
-	hash := fnv.New64()
-	yamlEncoder := yaml.NewEncoder(hash)
-	for jobName, scrapeConfig := range jobToScrapeConfig {
-		_, err = hash.Write([]byte(jobName))
-		if err != nil {
-			return nil, err
-		}
-		err = yamlEncoder.Encode(scrapeConfig)
-		if err != nil {
-			return nil, err
-		}
-	}
-	yamlEncoder.Close()
-	return hash, err
-}
-
 // syncTargetAllocator request jobs from targetAllocator and update underlying receiver, if the response does not match the provided compareHash.
 // baseDiscoveryCfg can be used to provide additional ScrapeConfigs which will be added to the retrieved jobs.
-func (r *pReceiver) syncTargetAllocator(compareHash hash.Hash64, allocConf *targetAllocator, baseCfg *config.Config) (hash.Hash64, error) {
+func (r *pReceiver) syncTargetAllocator(compareHash string, allocConf *TargetAllocator, baseCfg *PromConfig) (string, error) {
 	r.settings.Logger.Debug("Syncing target allocator jobs")
 	scrapeConfigsResponse, err := r.getScrapeConfigsResponse(allocConf.Endpoint)
 	if err != nil {
 		r.settings.Logger.Error("Failed to retrieve job list", zap.Error(err))
-		return nil, err
+		return "", err
 	}
 
-	hash, err := getScrapeConfigHash(scrapeConfigsResponse)
+	hash, err := structhash.Hash(scrapeConfigsResponse, 1)
 	if err != nil {
 		r.settings.Logger.Error("Failed to hash job list", zap.Error(err))
-		return nil, err
+		return "", err
 	}
 	if hash == compareHash {
 		// no update needed
@@ -188,7 +181,7 @@ func (r *pReceiver) syncTargetAllocator(compareHash hash.Hash64, allocConf *targ
 				RefreshInterval: model.Duration(30 * time.Second),
 			}
 		} else {
-			httpSD = *allocConf.HTTPSDConfig
+			httpSD = promHTTP.SDConfig(*allocConf.HTTPSDConfig)
 		}
 		escapedJob := url.QueryEscape(jobName)
 		httpSD.URL = fmt.Sprintf("%s/jobs/%s/targets?collector_id=%s", allocConf.Endpoint, escapedJob, allocConf.CollectorID)
@@ -203,7 +196,7 @@ func (r *pReceiver) syncTargetAllocator(compareHash hash.Hash64, allocConf *targ
 	err = r.applyCfg(baseCfg)
 	if err != nil {
 		r.settings.Logger.Error("Failed to apply new scrape configuration", zap.Error(err))
-		return nil, err
+		return "", err
 	}
 
 	return hash, nil
@@ -225,7 +218,7 @@ func (r *pReceiver) getScrapeConfigsResponse(baseURL string) (map[string]*config
 		return nil, err
 	}
 
-	resp, err := http.Get(scrapeConfigsURL) //nolint
+	resp, err := r.httpClient.Get(scrapeConfigsURL)
 	if err != nil {
 		return nil, err
 	}
@@ -248,8 +241,15 @@ func (r *pReceiver) getScrapeConfigsResponse(baseURL string) (map[string]*config
 	return jobToScrapeConfig, nil
 }
 
-func (r *pReceiver) applyCfg(cfg *config.Config) error {
-	if err := r.scrapeManager.ApplyConfig(cfg); err != nil {
+func (r *pReceiver) applyCfg(cfg *PromConfig) error {
+	if !enableNativeHistogramsGate.IsEnabled() {
+		// Enforce scraping classic histograms to avoid dropping them.
+		for _, scrapeConfig := range cfg.ScrapeConfigs {
+			scrapeConfig.ScrapeClassicHistograms = true
+		}
+	}
+
+	if err := r.scrapeManager.ApplyConfig((*config.Config)(cfg)); err != nil {
 		return err
 	}
 
@@ -258,29 +258,35 @@ func (r *pReceiver) applyCfg(cfg *config.Config) error {
 		discoveryCfg[scrapeConfig.JobName] = scrapeConfig.ServiceDiscoveryConfigs
 		r.settings.Logger.Info("Scrape job added", zap.String("jobName", scrapeConfig.JobName))
 	}
-	if err := r.discoveryManager.ApplyConfig(discoveryCfg); err != nil {
-		return err
-	}
-
-	r.webHandler.ApplyConfig(cfg)
-
-	return nil
+	return r.discoveryManager.ApplyConfig(discoveryCfg)
 }
 
-func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component.Host, logger log.Logger) error {
-	r.discoveryManager = discovery.NewManager(ctx, logger)
+func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Logger) error {
+	// Some SD mechanisms use the "refresh" package, which has its own metrics.
+	refreshSdMetrics := discovery.NewRefreshMetrics(r.registerer)
+
+	// Register the metrics specific for each SD mechanism, and the ones for the refresh package.
+	sdMetrics, err := discovery.RegisterSDMetrics(r.registerer, refreshSdMetrics)
+	if err != nil {
+		return fmt.Errorf("failed to register service discovery metrics: %w", err)
+	}
+	r.discoveryManager = discovery.NewManager(ctx, logger, r.registerer, sdMetrics)
+	if r.discoveryManager == nil {
+		// NewManager can sometimes return nil if it encountered an error, but
+		// the error message is logged separately.
+		return fmt.Errorf("failed to create discovery manager")
+	}
 
 	go func() {
 		r.settings.Logger.Info("Starting discovery manager")
-		if err := r.discoveryManager.Run(); err != nil && !errors.Is(err, context.Canceled) {
+		if err = r.discoveryManager.Run(); err != nil && !errors.Is(err, context.Canceled) {
 			r.settings.Logger.Error("Discovery manager failed", zap.Error(err))
-			host.ReportFatalError(err)
+			r.settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(err))
 		}
 	}()
 
 	var startTimeMetricRegex *regexp.Regexp
 	if r.cfg.StartTimeMetricRegex != "" {
-		var err error
 		startTimeMetricRegex, err = regexp.Compile(r.cfg.StartTimeMetricRegex)
 		if err != nil {
 			return err
@@ -294,6 +300,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 		r.cfg.UseStartTimeMetric,
 		startTimeMetricRegex,
 		useCreatedMetricGate.IsEnabled(),
+		enableNativeHistogramsGate.IsEnabled(),
 		r.cfg.PrometheusConfig.GlobalConfig.ExternalLabels,
 		r.cfg.TrimMetricSuffixes,
 	)
@@ -301,14 +308,37 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 		return err
 	}
 
-	r.scrapeManager = scrape.NewManager(&scrape.Options{
-		PassMetadataInContext:     true,
-		EnableProtobufNegotiation: r.cfg.EnableProtobufNegotiation,
-		ExtraMetrics:              r.cfg.ReportExtraScrapeMetrics,
+	opts := &scrape.Options{
+		PassMetadataInContext: true,
+		ExtraMetrics:          r.cfg.ReportExtraScrapeMetrics,
 		HTTPClientOptions: []commonconfig.HTTPClientOption{
 			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
 		},
-	}, logger, store)
+	}
+
+	// for testing only
+	if r.skipOffsetting {
+		optsValue := reflect.ValueOf(opts).Elem()
+		field := optsValue.FieldByName("skipOffsetting")
+		reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).
+			Elem().
+			Set(reflect.ValueOf(true))
+	}
+
+	scrapeManager, err := scrape.NewManager(opts, logger, store, r.registerer)
+	if err != nil {
+		return err
+	}
+	r.scrapeManager = scrapeManager
+
+	r.unregisterMetrics = func() {
+		refreshSdMetrics.Unregister()
+		for _, sdMetric := range sdMetrics {
+			sdMetric.Unregister()
+		}
+		r.discoveryManager.UnregisterMetrics()
+		r.scrapeManager.UnregisterMetrics()
+	}
 
 	go func() {
 		// The scrape manager needs to wait for the configuration to be loaded before beginning
@@ -316,9 +346,10 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 		r.settings.Logger.Info("Starting scrape manager")
 		if err := r.scrapeManager.Run(r.discoveryManager.SyncCh()); err != nil {
 			r.settings.Logger.Error("Scrape manager failed", zap.Error(err))
-			host.ReportFatalError(err)
+			r.settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(err))
 		}
 	}()
+
 	// Setup settings and logger and create Prometheus web handler
 	webOptions := web.Options{
 		ScrapeManager: r.scrapeManager,
@@ -353,13 +384,13 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 	}
 	// Pass config and let the web handler know the config is ready.
 	// These are needed because Prometheus allows reloading the config without restarting.
-	r.webHandler.ApplyConfig(r.cfg.PrometheusConfig)
+	r.webHandler.ApplyConfig((*config.Config)(r.cfg.PrometheusConfig))
 	r.webHandler.SetReady(true)
 	// Uses the same context as the discovery and scrape managers for shutting down
 	go func() {
 		if err := r.webHandler.Run(ctx, listener, ""); err != nil {
 			r.settings.Logger.Error("Web handler failed", zap.Error(err))
-			host.ReportFatalError(err)
+			r.settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(err))
 		}
 	}()
 
@@ -369,7 +400,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, host component
 // gcInterval returns the longest scrape interval used by a scrape config,
 // plus a delta to prevent race conditions.
 // This ensures jobs are not garbage collected between scrapes.
-func gcInterval(cfg *config.Config) time.Duration {
+func gcInterval(cfg *PromConfig) time.Duration {
 	gcInterval := defaultGCInterval
 	if time.Duration(cfg.GlobalConfig.ScrapeInterval)+gcIntervalDelta > gcInterval {
 		gcInterval = time.Duration(cfg.GlobalConfig.ScrapeInterval) + gcIntervalDelta
@@ -391,5 +422,8 @@ func (r *pReceiver) Shutdown(context.Context) error {
 		r.scrapeManager.Stop()
 	}
 	close(r.targetAllocatorStop)
+	if r.unregisterMetrics != nil {
+		r.unregisterMetrics()
+	}
 	return nil
 }

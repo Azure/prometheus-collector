@@ -1,0 +1,1 @@
+go build ./main/main.go ./shared/*.go ./shared/mp/*.go -o main

@@ -20,13 +20,19 @@ import (
 	"time"
 
 	commonconfig "github.com/prometheus/common/config"
-	promconfig "github.com/prometheus/prometheus/config"
-
 	"github.com/prometheus/common/model"
+	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/discovery/file"
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var defaultScrapeProtocols = []promconfig.ScrapeProtocol{
+	promconfig.OpenMetricsText1_0_0,
+	promconfig.OpenMetricsText0_0_1,
+	promconfig.PrometheusText0_0_4,
+}
 
 func TestLoad(t *testing.T) {
 	type args struct {
@@ -44,27 +50,34 @@ func TestLoad(t *testing.T) {
 				file: "./testdata/config_test.yaml",
 			},
 			want: Config{
-				LabelSelector: map[string]string{
-					"app.kubernetes.io/instance":   "default.test",
-					"app.kubernetes.io/managed-by": "opentelemetry-operator",
+				AllocationStrategy: DefaultAllocationStrategy,
+				CollectorSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app.kubernetes.io/instance":   "default.test",
+						"app.kubernetes.io/managed-by": "opentelemetry-operator",
+					},
 				},
+				FilterStrategy: DefaultFilterStrategy,
 				PrometheusCR: PrometheusCRConfig{
 					ScrapeInterval: model.Duration(time.Second * 60),
 				},
 				PromConfig: &promconfig.Config{
 					GlobalConfig: promconfig.GlobalConfig{
 						ScrapeInterval:     model.Duration(60 * time.Second),
+						ScrapeProtocols:    defaultScrapeProtocols,
 						ScrapeTimeout:      model.Duration(10 * time.Second),
 						EvaluationInterval: model.Duration(60 * time.Second),
 					},
 					ScrapeConfigs: []*promconfig.ScrapeConfig{
 						{
-							JobName:         "prometheus",
-							HonorTimestamps: true,
-							ScrapeInterval:  model.Duration(60 * time.Second),
-							ScrapeTimeout:   model.Duration(10 * time.Second),
-							MetricsPath:     "/metrics",
-							Scheme:          "http",
+							JobName:           "prometheus",
+							EnableCompression: true,
+							HonorTimestamps:   true,
+							ScrapeInterval:    model.Duration(60 * time.Second),
+							ScrapeProtocols:   defaultScrapeProtocols,
+							ScrapeTimeout:     model.Duration(10 * time.Second),
+							MetricsPath:       "/metrics",
+							Scheme:            "http",
 							HTTPClientConfig: commonconfig.HTTPClientConfig{
 								FollowRedirects: true,
 								EnableHTTP2:     true,
@@ -108,27 +121,44 @@ func TestLoad(t *testing.T) {
 				file: "./testdata/pod_service_selector_test.yaml",
 			},
 			want: Config{
-				LabelSelector: map[string]string{
-					"app.kubernetes.io/instance":   "default.test",
-					"app.kubernetes.io/managed-by": "opentelemetry-operator",
+				AllocationStrategy: DefaultAllocationStrategy,
+				CollectorSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app.kubernetes.io/instance":   "default.test",
+						"app.kubernetes.io/managed-by": "opentelemetry-operator",
+					},
 				},
+				FilterStrategy: DefaultFilterStrategy,
 				PrometheusCR: PrometheusCRConfig{
+					PodMonitorSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"release": "test",
+						},
+					},
+					ServiceMonitorSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"release": "test",
+						},
+					},
 					ScrapeInterval: DefaultCRScrapeInterval,
 				},
 				PromConfig: &promconfig.Config{
 					GlobalConfig: promconfig.GlobalConfig{
 						ScrapeInterval:     model.Duration(60 * time.Second),
+						ScrapeProtocols:    defaultScrapeProtocols,
 						ScrapeTimeout:      model.Duration(10 * time.Second),
 						EvaluationInterval: model.Duration(60 * time.Second),
 					},
 					ScrapeConfigs: []*promconfig.ScrapeConfig{
 						{
-							JobName:         "prometheus",
-							HonorTimestamps: true,
-							ScrapeInterval:  model.Duration(60 * time.Second),
-							ScrapeTimeout:   model.Duration(10 * time.Second),
-							MetricsPath:     "/metrics",
-							Scheme:          "http",
+							JobName:           "prometheus",
+							EnableCompression: true,
+							HonorTimestamps:   true,
+							ScrapeInterval:    model.Duration(60 * time.Second),
+							ScrapeProtocols:   defaultScrapeProtocols,
+							ScrapeTimeout:     model.Duration(10 * time.Second),
+							MetricsPath:       "/metrics",
+							Scheme:            "http",
 							HTTPClientConfig: commonconfig.HTTPClientConfig{
 								FollowRedirects: true,
 								EnableHTTP2:     true,
@@ -150,12 +180,6 @@ func TestLoad(t *testing.T) {
 							},
 						},
 					},
-				},
-				PodMonitorSelector: map[string]string{
-					"release": "test",
-				},
-				ServiceMonitorSelector: map[string]string{
-					"release": "test",
 				},
 			},
 			wantErr: assert.NoError,
@@ -212,6 +236,7 @@ func TestValidateConfig(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := ValidateConfig(&tc.fileConfig)
 			assert.Equal(t, tc.expectedErr, err)

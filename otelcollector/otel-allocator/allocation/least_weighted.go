@@ -17,11 +17,11 @@ package allocation
 import (
 	"sync"
 
-	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/diff"
-	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/target"
-
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/diff"
+	"github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/target"
 )
 
 var _ Allocator = &leastWeightedAllocator{}
@@ -191,7 +191,7 @@ func (allocator *leastWeightedAllocator) handleCollectors(diff diff.Changes[*Col
 	}
 	// Insert the new collectors
 	for _, i := range diff.Additions() {
-		allocator.collectors[i.Name] = NewCollector(i.Name)
+		allocator.collectors[i.Name] = NewCollector(i.Name, i.NodeName)
 	}
 	if allocateTargets {
 		for _, item := range allocator.targetItems {

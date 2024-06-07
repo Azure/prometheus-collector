@@ -1,15 +1,16 @@
-package main
+package shared
 
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
 )
 
-func isProcessRunning(processName string) bool {
+func IsProcessRunning(processName string) bool {
 	// List all processes in the current process group
 	pid := os.Getpid()
 	processes, err := os.ReadDir("/proc")
@@ -39,7 +40,116 @@ func isProcessRunning(processName string) bool {
 	return false
 }
 
-func startCommand(command string, args ...string) {
+// SetEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
+// and sources the file to apply changes immediately.
+func SetEnvAndSourceBashrc(key, value string) error {
+	// Get user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user's home directory: %v", err)
+	}
+
+	// Construct the path to .bashrc
+	bashrcPath := filepath.Join(homeDir, ".bashrc")
+
+	// Check if .bashrc exists, if not, create it
+	if _, err := os.Stat(bashrcPath); os.IsNotExist(err) {
+		file, err := os.Create(bashrcPath)
+		if err != nil {
+			return fmt.Errorf("failed to create .bashrc file: %v", err)
+		}
+		defer file.Close()
+	}
+
+	// Open the .bashrc file for appending
+	file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open .bashrc file: %v", err)
+	}
+	defer file.Close()
+
+	// Write the export statement to the .bashrc file
+	_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
+	if err != nil {
+		return fmt.Errorf("failed to write to .bashrc file: %v", err)
+	}
+
+	// Source the .bashrc file
+	cmd := exec.Command("bash", "-c", "source "+bashrcPath)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to source .bashrc: %v", err)
+	}
+
+	// Set the environment variable
+	err = os.Setenv(key, value)
+	if err != nil {
+		return fmt.Errorf("failed to set environment variable: %v", err)
+	}
+
+	EchoVar(key, value)
+
+	return nil
+}
+
+func StartCommandWithOutputFile(command string, args []string, outputFile string) (int, error) {
+	cmd := exec.Command(command, args...)
+
+	// Set environment variables from os.Environ()
+	cmd.Env = append(os.Environ())
+
+	// Create file to write stdout and stderr
+	file, err := os.Create(outputFile)
+	if err != nil {
+		return 0, fmt.Errorf("error creating output file: %v", err)
+	}
+
+	// Create pipes to capture stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return 0, fmt.Errorf("error creating stdout pipe: %v", err)
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return 0, fmt.Errorf("error creating stderr pipe: %v", err)
+	}
+
+	// Start the command
+	if err := cmd.Start(); err != nil {
+		return 0, fmt.Errorf("error starting command: %v", err)
+	}
+
+	// Create a wait group to wait for goroutines
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// Create goroutines to continuously read and write stdout and stderr
+	go func() {
+		defer wg.Done()
+		if _, err := io.Copy(file, stdout); err != nil {
+			fmt.Printf("Error copying stdout to file: %v\n", err)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if _, err := io.Copy(file, stderr); err != nil {
+			fmt.Printf("Error copying stderr to file: %v\n", err)
+		}
+	}()
+
+	// Wait for both goroutines to finish before closing the file
+	go func() {
+		wg.Wait()
+		file.Close()
+	}()
+
+	// Get the PID of the started process
+	process_pid := cmd.Process.Pid
+
+	return process_pid, nil
+}
+func StartCommand(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
 	// Set environment variables from os.Environ()
@@ -67,17 +177,17 @@ func startCommand(command string, args ...string) {
 
 	// Create goroutines to capture and print stdout and stderr
 	go func() {
-		stdoutBytes, _ := ioutil.ReadAll(stdout)
+		stdoutBytes, _ := io.ReadAll(io.Reader(stdout))
 		fmt.Print(string(stdoutBytes))
 	}()
 
 	go func() {
-		stderrBytes, _ := ioutil.ReadAll(stderr)
+		stderrBytes, _ := io.ReadAll(io.Reader(stderr))
 		fmt.Print(string(stderrBytes))
 	}()
 }
 
-func startCommandAndWait(command string, args ...string) {
+func StartCommandAndWait(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
 	// Set environment variables from os.Environ()
@@ -105,12 +215,12 @@ func startCommandAndWait(command string, args ...string) {
 
 	// Create goroutines to capture and print stdout and stderr
 	go func() {
-		stdoutBytes, _ := ioutil.ReadAll(stdout)
+		stdoutBytes, _ := io.ReadAll(io.Reader(stdout))
 		fmt.Print(string(stdoutBytes))
 	}()
 
 	go func() {
-		stderrBytes, _ := ioutil.ReadAll(stderr)
+		stderrBytes, _ := io.ReadAll(io.Reader(stderr))
 		fmt.Print(string(stderrBytes))
 	}()
 
@@ -147,7 +257,19 @@ func copyOutputFile(src io.Reader, file *os.File) {
 	}
 }
 
-func startMetricsExtensionWithConfigOverrides(configOverrides string) {
+func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
+	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+	// Set environment variables from os.Environ()
+	cmd.Env = append(os.Environ())
+	// Start the command
+	err := cmd.Start()
+	if err != nil {
+		return 0, fmt.Errorf("error starting MetricsExtension: %v", err)
+	}
+	return cmd.Process.Pid, nil
+}
+
+func StartMetricsExtensionWithConfigOverrides(configOverrides string) {
 	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 
 	// Create a file to store the stdoutput
@@ -197,7 +319,25 @@ func startMetricsExtensionWithConfigOverrides(configOverrides string) {
 	}
 }
 
-func startMdsd() {
+func StartMdsdForOverlay() {
+	mdsdLog := os.Getenv("MDSD_LOG")
+	if mdsdLog == "" {
+		fmt.Println("MDSD_LOG environment variable is not set")
+		return
+	}
+
+	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-e", mdsdLog+"/mdsd.err", "-w", mdsdLog+"/mdsd.warn", "-o", mdsdLog+"/mdsd.info", "-q", mdsdLog+"/mdsd.qos")
+	// Redirect stderr to /dev/null
+	cmd.Stderr = nil
+	// Start the command
+	err := cmd.Start()
+	if err != nil {
+		fmt.Printf("Error starting mdsd: %v\n", err)
+		return
+	}
+}
+
+func StartMdsd() {
 	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-D")
 	// // Create a file to store the stdoutput
 	// mdsd_stdout_file, err := os.Create("mdsd_stdout.log")

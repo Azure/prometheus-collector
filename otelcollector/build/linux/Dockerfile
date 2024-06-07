@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as fluent-bit-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as fluent-bit-builder
 WORKDIR /src
 COPY ./fluent-bit/src/go.mod ./fluent-bit/src/go.sum .
 RUN go version
@@ -8,26 +8,33 @@ RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; else  CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.20 as otelcollector-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as otelcollector-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 RUN go version > goversion.txt
 COPY ./opentelemetry-collector-builder/go.mod ./opentelemetry-collector-builder/go.sum ./opentelemetry-collector-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
+COPY ./pkgtranslatorprometheus/go.mod ./pkgtranslatorprometheus/go.sum ./pkgtranslatorprometheus/
+WORKDIR /src/pkgtranslatorprometheus
+RUN go mod download
 WORKDIR /src/prometheusreceiver
 RUN go mod download
 WORKDIR /src/opentelemetry-collector-builder
 RUN go mod download
 COPY ./opentelemetry-collector-builder /src/opentelemetry-collector-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
+COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.20 as prom-config-validator-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as prom-config-validator-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 COPY ./prom-config-validator-builder/go.mod ./prom-config-validator-builder/go.sum ./prom-config-validator-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
+COPY ./pkgtranslatorprometheus/go.mod ./pkgtranslatorprometheus/go.sum ./pkgtranslatorprometheus/
+WORKDIR /src/pkgtranslatorprometheus
+RUN go mod download
 WORKDIR /src/prometheusreceiver
 RUN go version
 RUN go mod download
@@ -35,8 +42,34 @@ WORKDIR /src/prom-config-validator-builder
 RUN go mod download
 COPY ./prom-config-validator-builder /src/prom-config-validator-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
+COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
+
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as main-builder
+WORKDIR /
+# Create directories
+RUN mkdir -p ./shared/configmap/mp/
+RUN mkdir -p ./main/
+# Copy shared go files
+COPY ../shared/*.go ./main/shared/
+COPY ./shared/go.mod ./main/shared/
+COPY ./shared/go.sum ./main/shared/
+COPY ../shared/configmap/mp/*.go ./main/shared/configmap/mp/
+COPY ../shared/configmap/ccp/*.go ./main/shared/configmap/ccp/
+COPY ./shared/configmap/mp/go.mod ./main/shared/configmap/mp/
+COPY ./shared/configmap/mp/go.sum ./main/shared/configmap/mp/
+COPY ./shared/configmap/ccp/go.mod ./main/shared/configmap/ccp/
+COPY ./shared/configmap/ccp/go.sum ./main/shared/configmap/ccp/
+# Copy main go files
+COPY ./main/*.go ./main/
+COPY ./go.mod ./main/
+COPY ./go.sum ./main/
+WORKDIR /main
+RUN go version
+RUN go mod download
+RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
+RUN go build -o main.exe ./main.go
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
@@ -44,9 +77,9 @@ LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "linux"
 ENV tmpdir /opt
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+ENV APPLICATIONINSIGHTS_AUTH YWRiODY1OGMtMGM3OC00M2JjLWFkMzctNjA0MjJkMjM2YWRm
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+ENV APPLICATIONINSIGHTS_AUTH_PUBLIC YWRiODY1OGMtMGM3OC00M2JjLWFkMzctNjA0MjJkMjM2YWRm
 # Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH_USGOVERNMENT ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5
 # Below is for ContainerInsightsPrometheusCollector-Mooncake AppInsights Resource
@@ -62,13 +95,14 @@ COPY ./logrotate/prometheus-collector /etc/logrotate.d/
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
 COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
-COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
+RUN mkdir -p $tmpdir/microsoft/configmapparser/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/collector-config-replicaset.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
+COPY --from=main-builder --chmod=777 /main/main.exe $tmpdir/main
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
@@ -96,7 +130,7 @@ RUN $tmpdir/setup.sh ${TARGETARCH}
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+ENV APPLICATIONINSIGHTS_AUTH_PUBLIC YWRiODY1OGMtMGM3OC00M2JjLWFkMzctNjA0MjJkMjM2YWRm
 # Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH_USGOVERNMENT ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5
 # Below is for ContainerInsightsPrometheusCollector-Mooncake AppInsights Resource
@@ -105,6 +139,14 @@ ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAw
 ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
 # Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
+# Set environment variables for mdsd
+ENV MDSD_LOG="/opt/microsoft/linuxmonagent"
+ENV SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
+ENV MDSD_FLUENT_SOCKET_PORT="28230"
+ENV ENABLE_MCS="true"
+ENV MONITORING_USE_GENEVA_CONFIG_SERVICE="false"
+ENV MDSD_USE_LOCAL_PERSISTENCY="false"
+ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
 ENV TELEMETRY_DISABLED false
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
 ENV MALLOC_ARENA_MAX=2
@@ -188,5 +230,6 @@ RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
-ENTRYPOINT [ "/bin/bash" ]
-CMD [ "/opt/main.sh" ]
+
+# Run the Go executable, entrypoint
+ENTRYPOINT ["./opt/main"]

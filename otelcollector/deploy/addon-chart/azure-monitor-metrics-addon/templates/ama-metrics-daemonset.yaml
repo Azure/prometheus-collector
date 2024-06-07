@@ -27,6 +27,7 @@ spec:
       containers:
         - name: prometheus-collector
           image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
+          # image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.8.11-rashmi-upgrades-04-24-05-13-2024-9cabda9d"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
@@ -171,11 +172,9 @@ spec:
               readOnly: true
             {{- end }}
           livenessProbe:
-            exec:
-              command:
-                - /bin/bash
-                - -c
-                - /opt/microsoft/liveness/livenessprobe.sh
+            httpGet:
+              path: /health
+              port: 8080
             initialDelaySeconds: 60
             periodSeconds: 15
             timeoutSeconds: 5
