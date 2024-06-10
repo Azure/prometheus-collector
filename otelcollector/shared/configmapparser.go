@@ -7,7 +7,6 @@ import (
 )
 
 func configmapparserforccp() {
-	fmt.Printf("in configmapparserforccp")
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"
 	// Set agent config schema version
