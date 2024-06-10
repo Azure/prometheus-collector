@@ -15,6 +15,7 @@ import (
 func main() {
 	// mac := os.Getenv("MAC")
 	controllerType := os.Getenv("CONTROLLER_TYPE")
+	controllerType = strings.ToLower(strings.TrimSpace(controllerType))
 	clusterOverride := os.Getenv("CLUSTER_OVERRIDE")
 	cluster := os.Getenv("CLUSTER")
 	aksRegion := os.Getenv("AKSREGION")
@@ -35,7 +36,7 @@ func main() {
 
 	var meConfigFile string
 
-	if strings.ToLower(controllerType) == "replicaset" {
+	if controllerType == "replicaset" {
 		if clusterOverride == "true" {
 			meConfigFile = "/usr/sbin/me_internal.config"
 		} else {
