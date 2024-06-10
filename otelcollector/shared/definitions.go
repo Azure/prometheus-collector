@@ -6,6 +6,7 @@ type RegexValues struct {
 	ControlplaneApiserver             string
 	ControlplaneClusterAutoscaler     string
 	ControlplaneEtcd                  string
+	MinimalIngestionProfile           string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
