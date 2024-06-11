@@ -163,6 +163,11 @@ spec:
               value: "true" # only supported value is the string "true"
           securityContext:
             privileged: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - DAC_OVERRIDE
           volumeMounts:
             - mountPath: /etc/config/settings
               name: settings-vol-config
@@ -176,9 +181,6 @@ spec:
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
-            - name: host-log-pods
-              readOnly: true
-              mountPath: /var/log/pods
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
@@ -320,9 +322,6 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
-        - name: host-log-pods
-          hostPath:
-            path: /var/log/pods
         - name: anchors-mariner
           hostPath:
             path: /etc/pki/ca-trust/anchors/

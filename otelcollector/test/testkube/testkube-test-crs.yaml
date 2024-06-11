@@ -101,7 +101,7 @@ metadata:
   namespace: testkube
   labels:
     executor: ginkgo-executor
-    test-type: ginkgo-test/ginkgo-e2e
+    test-type: ginkgo-test
 spec:
   type: ginkgo/test
   content:
