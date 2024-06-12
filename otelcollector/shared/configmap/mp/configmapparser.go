@@ -74,7 +74,7 @@ func parseDefaultScrapeSettings() {
 
 func parseDebugModeSettings() {
 	if err := ConfigureDebugModeSettings(); err != nil {
-		fmt.Printf("%v\n", err)
+		shared.EchoError(err.Error())
 		return
 	}
 	filename := "/opt/microsoft/configmapparser/config_debug_mode_env_var"
@@ -121,7 +121,9 @@ func Configmapparser() {
 			)
 			err := cmd.Run()
 			if err != nil {
+				// Log error everywhere
 				fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
+				shared.EchoError(err.Error())
 				shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
 				if shared.FileExists("/opt/defaultsMergedConfig.yml") {
 					fmt.Println("prom-config-validator::Running validator on just default scrape configs")
@@ -140,6 +142,7 @@ func Configmapparser() {
 		cmd := exec.Command("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
 		if err := cmd.Run(); err != nil {
 			fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+			shared.EchoError(err.Error())
 		} else {
 			fmt.Println("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
 			shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
@@ -195,7 +198,7 @@ func Configmapparser() {
 		// Source envvars.env
 		cmd = exec.Command("bash", "-c", "source /opt/envvars.env && env")
 		if err := cmd.Run(); err != nil {
-			fmt.Println("Error sourcing envvars.env:" + err.Error())
+			shared.EchoError("Error sourcing envvars.env:" + err.Error())
 			return
 		}
 	}
