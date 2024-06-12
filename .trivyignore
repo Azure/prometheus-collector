@@ -6,11 +6,15 @@
 
 # =========== HIGH ================
 # HIGH - otelcollector
+GHSA-87m9-rv8p-rgmg
+CVE-2024-36129
 # HIGH - telegraf
 GHSA-fr2g-9hjm-wr23
 CVE-2023-29403
 CVE-2023-45283
 # HIGH - promconfigvalidator
+GHSA-87m9-rv8p-rgmg
+CVE-2024-36129
 # HIGH - telegraf
 CVE-2023-39325
 GHSA-m425-mq94-257g
@@ -35,12 +39,14 @@ CVE-2023-45290
 CVE-2024-24783
 CVE-2024-24784
 CVE-2024-24785
+CVE-2024-35255
 # MEDIUM - promconfigvalidator
 CVE-2023-48795
 CVE-2024-24786
 CVE-2024-24557
 CVE-2024-27281
 CVE-2020-8559
+CVE-2024-35255
 # MEDIUM - go vulnerabilities
 CVE-2023-3978
 CVE-2023-44487
