@@ -75,7 +75,7 @@ func SetEnvAndSourceBashrc(key, value string) error {
 	}
 
 	// Source the .bashrc file
-	cmd := exec.Command("bash", "-c", "source "+bashrcPath)
+	cmd := exec.Command("bash", "-c", "source "+ bashrcPath)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to source .bashrc: %v", err)
 	}

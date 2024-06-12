@@ -186,14 +186,14 @@ func Configmapparser() {
 		}
 
 		// Source prom_config_validator_env_var
-		cmd := exec.Command("source", "/opt/microsoft/prom_config_validator_env_var")
+		cmd := exec.Command("bash", "-c", "source /opt/microsoft/prom_config_validator_env_var && env")
 		if err := cmd.Run(); err != nil {
 			shared.EchoError("Error sourcing env file:" + err.Error())
 			return
 		}
 
 		// Source envvars.env
-		cmd = exec.Command("source", "/opt/envvars.env")
+		cmd = exec.Command("bash", "-c", "source /opt/envvars.env && env")
 		if err := cmd.Run(); err != nil {
 			fmt.Println("Error sourcing envvars.env:" + err.Error())
 			return
