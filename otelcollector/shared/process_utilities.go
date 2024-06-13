@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"log"
+	"net/http"
+	"time"
 )
 
 func IsProcessRunning(processName string) bool {
@@ -269,7 +272,7 @@ func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
 	return cmd.Process.Pid, nil
 }
 
-func StartMetricsExtensionWithConfigOverrides(configOverrides string) {
+func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string) {
 	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 
 	// Create a file to store the stdoutput
@@ -337,7 +340,7 @@ func StartMdsdForOverlay() {
 	}
 }
 
-func StartMdsd() {
+func StartMdsdForUnderlay() {
 	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-D")
 	// // Create a file to store the stdoutput
 	// mdsd_stdout_file, err := os.Create("mdsd_stdout.log")
@@ -384,5 +387,61 @@ func StartMdsd() {
 	if err != nil {
 		fmt.Printf("Error starting mdsd: %v\n", err)
 		return
+	}
+}
+
+func StartCronDaemon() {
+	cmd := exec.Command("/usr/sbin/crond", "-n", "-s")
+	if err := cmd.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func WaitForTokenAdapter(ccpMetricsEnabled string) {
+	tokenAdapterWaitSecs := 60
+	if ccpMetricsEnabled == "true" {
+		tokenAdapterWaitSecs = 20
+	}
+	waitedSecsSoFar := 1
+
+	for {
+		if waitedSecsSoFar > tokenAdapterWaitSecs {
+			if _, err := http.Get("http://localhost:9999/healthz"); err != nil {
+				log.Printf("giving up waiting for token adapter to become healthy after %d secs\n", waitedSecsSoFar)
+				log.Printf("export tokenadapterUnhealthyAfterSecs=%d\n", waitedSecsSoFar)
+				break
+			}
+		} else {
+			log.Printf("checking health of token adapter after %d secs\n", waitedSecsSoFar)
+			resp, err := http.Get("http://localhost:9999/healthz")
+			if err == nil && resp.StatusCode == http.StatusOK {
+				log.Printf("found token adapter to be healthy after %d secs\n", waitedSecsSoFar)
+				log.Printf("export tokenadapterHealthyAfterSecs=%d\n", waitedSecsSoFar)
+				break
+			}
+		}
+		time.Sleep(1 * time.Second)
+		waitedSecsSoFar++
+	}
+}
+
+func StartFluentBit(fluentBitConfigFile string) {
+	fmt.Println("Starting fluent-bit")
+
+	if err := os.Mkdir("/opt/microsoft/fluent-bit", 0755); err != nil && !os.IsExist(err) {
+		log.Fatalf("Error creating directory: %v\n", err)
+	}
+
+	logFile, err := os.Create("/opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log")
+	if err != nil {
+		log.Fatalf("Error creating log file: %v\n", err)
+	}
+	defer logFile.Close()
+
+	fluentBitCmd := exec.Command("fluent-bit", "-c", fluentBitConfigFile, "-e", "/opt/fluent-bit/bin/out_appinsights.so")
+	fluentBitCmd.Stdout = os.Stdout
+	fluentBitCmd.Stderr = os.Stderr
+	if err := fluentBitCmd.Start(); err != nil {
+		log.Fatalf("Error starting fluent-bit: %v\n", err)
 	}
 }

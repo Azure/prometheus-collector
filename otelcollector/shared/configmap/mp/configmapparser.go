@@ -123,7 +123,7 @@ func Configmapparser() {
 			if err != nil {
 				// Log error everywhere
 				fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
-				shared.EchoError(err.Error())
+				fmt.Println(err)
 				shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
 				if shared.FileExists("/opt/defaultsMergedConfig.yml") {
 					fmt.Println("prom-config-validator::Running validator on just default scrape configs")
