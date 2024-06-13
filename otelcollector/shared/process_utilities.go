@@ -190,7 +190,7 @@ func StartCommand(command string, args ...string) {
 	}()
 }
 
-func StartCommandAndWait(command string, args ...string) {
+func StartCommandAndWait(command string, args ...string) error {
 	cmd := exec.Command(command, args...)
 
 	// Set environment variables from os.Environ()
@@ -199,21 +199,18 @@ func StartCommandAndWait(command string, args ...string) {
 	// Create pipes to capture stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		fmt.Printf("Error creating stdout pipe: %v\n", err)
-		return
+		return fmt.Errorf("error creating stdout pipe: %v", err)
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		fmt.Printf("Error creating stderr pipe: %v\n", err)
-		return
+		return fmt.Errorf("error creating stderr pipe: %v", err)
 	}
 
 	// Start the command
 	err = cmd.Start()
 	if err != nil {
-		fmt.Printf("Error starting command: %v\n", err)
-		return
+		return fmt.Errorf("error starting command: %v", err)
 	}
 
 	// Create goroutines to capture and print stdout and stderr
@@ -230,8 +227,10 @@ func StartCommandAndWait(command string, args ...string) {
 	// Wait for the command to finish
 	err = cmd.Wait()
 	if err != nil {
-		fmt.Printf("Error waiting for command: %v\n", err)
+		return fmt.Errorf("error waiting for command: %v", err)
 	}
+
+	return nil
 }
 
 func copyOutputMulti(src io.Reader, dest io.Writer, file *os.File) {

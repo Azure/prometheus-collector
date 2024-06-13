@@ -114,16 +114,14 @@ func Configmapparser() {
 	// Running promconfigvalidator if promMergedConfig.yml exists
 	if shared.FileExists("/opt/promMergedConfig.yml") {
 		if !shared.FileExists("/opt/microsoft/otelcollector/collector-config.yml") {
-			cmd := exec.Command("/opt/promconfigvalidator",
-				"--config", "/opt/promMergedConfig.yml",
-				"--output", "/opt/microsoft/otelcollector/collector-config.yml",
-				"--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml",
+			err := shared.StartCommandAndWait("/opt/promconfigvalidator",
+			"--config", "/opt/promMergedConfig.yml",
+			"--output", "/opt/microsoft/otelcollector/collector-config.yml",
+			"--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml",
 			)
-			err := cmd.Run()
 			if err != nil {
-				// Log error everywhere
 				fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
-				fmt.Println(err)
+				fmt.Printf("Command execution failed: %v\n", err)
 				shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true")
 				if shared.FileExists("/opt/defaultsMergedConfig.yml") {
 					fmt.Println("prom-config-validator::Running validator on just default scrape configs")
@@ -139,10 +137,10 @@ func Configmapparser() {
 		}
 	} else if _, err := os.Stat("/opt/defaultsMergedConfig.yml"); err == nil {
 		fmt.Println("prom-config-validator::No custom prometheus config found. Only using default scrape configs")
-		cmd := exec.Command("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
-		if err := cmd.Run(); err != nil {
+		err := shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+		if err != nil {
 			fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
-			shared.EchoError(err.Error())
+			fmt.Printf("Command execution failed: %v\n", err)
 		} else {
 			fmt.Println("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
 			shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
