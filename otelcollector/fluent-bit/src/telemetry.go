@@ -999,6 +999,52 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 	return output.FLB_OK
 }
 
+func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	var totalCpuUsage float64
+	var count int
+	var cpuUsages []float64
+
+	Log("enter me cpu function")
+	meCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
+	defer meCpuTelemetryTicker.Stop()
+
+	for range meCpuTelemetryTicker.C {
+		for _, record := range records {
+			logEntry := ToString(record["message"])
+			Log(logEntry)
+
+			meCpuUsage, err := strconv.ParseFloat(logEntry, 64)
+			if err != nil {
+				Log(fmt.Sprintf("Failed to parse meCpuUsage as float64: %v", err))
+				SendException(err.Error())
+				continue
+			}
+
+			totalCpuUsage += meCpuUsage
+			count++
+			cpuUsages = append(cpuUsages, meCpuUsage)
+		}
+
+		if count > 0 {
+			averageCpuUsage := totalCpuUsage / float64(count)
+			TelemetryClient.Track(appinsights.NewMetricTelemetry("metricsextension_cpu_usage_050", averageCpuUsage))
+			Log("Sent ME Cpu usage metrics")
+
+			sort.Float64s(cpuUsages)
+			index := int(math.Ceil(0.95 * float64(len(cpuUsages))))
+			percentile95 := cpuUsages[index-1]
+			TelemetryClient.Track(appinsights.NewMetricTelemetry("metricsextension_cpu_usage_095", percentile95))
+			Log("Sent ME 95th percentile  Cpu usage metrics")
+
+			totalCpuUsage = 0
+			count = 0
+			cpuUsages = []float64{}
+		}
+	}
+	Log("Exit me cpu function")
+	return output.FLB_OK
+}
+
 func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var totalMemUsage float64
 	var count int
@@ -1053,4 +1099,58 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 	Log("Exit me memory cpu function")
 	return output.FLB_OK
 
+}
+
+func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	var count int
+	var memUsages []float64
+
+	otelMemTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
+	defer otelMemTelemetryTicker.Stop()
+
+	for range otelMemTelemetryTicker.C {
+		for _, record := range records {
+			logEntry := ToString(record["message"])
+			Log(logEntry)
+
+			// Define a regular expression to extract mem.VmRSS value
+			memVmrssRegex := regexp.MustCompile(`"mem\.VmRSS":(\d+)`)
+			groupMatches := memVmrssRegex.FindStringSubmatch(logEntry)
+
+			if len(groupMatches) > 1 {
+				// Convert mem.VmRSS value to float64
+				memVmrssFloat, err := strconv.ParseFloat(groupMatches[1], 64)
+				if err != nil {
+					Log(fmt.Sprintf("Failed to convert mem.VmRSS to float64: %v", err))
+					SendException(err.Error())
+					continue
+				}
+
+				count++
+				memUsages = append(memUsages, memVmrssFloat)
+			}
+		}
+
+		if count > 0 {
+			sort.Float64s(memUsages)
+
+			index50 := int(math.Ceil(0.50 * float64(len(memUsages))))
+			percentile50 := memUsages[index50-1]
+
+			index95 := int(math.Ceil(0.95 * float64(len(memUsages))))
+			percentile95 := memUsages[index95-1]
+
+			memUsages = []float64{}
+
+			TelemetryClient.Track(appinsights.NewMetricTelemetry("otelcollector_memory_rss_050", percentile50))
+			Log("Sent Otel average memory usage metrics")
+
+			TelemetryClient.Track(appinsights.NewMetricTelemetry("otelcollector_memory_rss_095", percentile95))
+			Log("Sent Otel 95th percentile memory usage metrics")
+
+			count = 0
+		}
+	}
+	Log("Exit otel memory function")
+	return output.FLB_OK
 }
