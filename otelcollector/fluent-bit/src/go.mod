@@ -1,6 +1,7 @@
 module Docker-Provider/source/plugins/go/src
 
-go 1.22
+go 1.20
+
 
 require (
 	github.com/fluent/fluent-bit-go v0.0.0-20220311094233-780004bf5562
