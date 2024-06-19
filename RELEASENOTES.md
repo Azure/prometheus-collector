@@ -1,5 +1,8 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 06-12-2024
+* Target Allocator Chart update to add Tls secret to the config reader sidecar container  
+
 ## Release 06-10-2024 (CCP release only)
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
