@@ -945,13 +945,11 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 	var count int
 	var cpuUsages []float64
 
-	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
-	deadline := time.Now().Add(duration)
-
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop() // This will stop the ticker when the function returns
+	otelCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
-	for ; time.Now().Before(deadline); <-ticker.C {
+	for ; true; <-otelCpuTelemetryTicker.C {
 		for _, record := range records {
 			var logEntry = ToString(record["message"])
 			Log(logEntry)
@@ -995,14 +993,10 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var totalCpuUsage float64
 	var count int
 	var cpuUsages []float64
+	Log("enter me cpu function")
+	meCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
-	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
-	deadline := time.Now().Add(duration)
-
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop() // This will stop the ticker when the function returns
-
-	for ; time.Now().Before(deadline); <-ticker.C {
+	for ; true; <-meCpuTelemetryTicker.C {
 		for _, record := range records {
 			var logEntry = ToString(record["message"])
 			Log(logEntry)
@@ -1047,13 +1041,9 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 	var count int
 	var memUsages []float64
 
-	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
-	deadline := time.Now().Add(duration)
+	meMemTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	for ; time.Now().Before(deadline); <-ticker.C {
+	for ; true; <-meMemTelemetryTicker.C {
 		for _, record := range records {
 			var logEntry = ToString(record["message"])
 			Log(logEntry)
@@ -1105,13 +1095,9 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 	var count int
 	var memUsages []float64
 
-	duration := time.Duration(meOtelCpuMemoryUsageIntervalSeconds) * time.Second
-	deadline := time.Now().Add(duration)
+	otelMemTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop() // This will stop the ticker when the function returns
-
-	for ; time.Now().Before(deadline); <-ticker.C {
+	for ; true; <-otelMemTelemetryTicker.C {
 		for _, record := range records {
 			var logEntry = ToString(record["message"])
 			Log(logEntry)
