@@ -11,6 +11,7 @@ spec:
       labels:
         app: prometheus-reference-app
     spec:
+      hostNetwork: true
       containers:
         - name: prometheus-reference-app-golang
           image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.8.1-testTLS-11-10-2023-afd40f4c-ref-app-golang
@@ -23,12 +24,16 @@ spec:
               value: "125000"
           ports:
             - containerPort: 2112
+              hostPort: 2112
               protocol: TCP
+              name: "weather-app"
             - containerPort: 2113
+              hostPort: 2113
               protocol: TCP
+              name: "untyped-metrics"
       nodeSelector:
           kubernetes.io/os: linux
-          architecture: amd64
+          kubernetes.io/arch: amd64
 ---
 apiVersion: v1
 kind: Service

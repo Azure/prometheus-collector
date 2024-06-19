@@ -113,6 +113,17 @@ To disable telemetry, you can set the environment variable `TELEMETRY_DISABLED` 
   * Switch to the terminal connected to the underlay and check that the **ama-metrics-ccp** pod restarted once: `k get po`
   * Check the pod logs to see if it started correctly: `k logs -f ama-metrics-ccp-<pod-id>`
 
+## Release validation
+
+Toggle Monitoring clusters for Control Plane image. Link to similar PR [here](https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp/pullrequest/10083525?_a=files)
+
+The following clusters will get the update once the toggle rolls out : 
+
+- [monitoring-metrics-prod-aks-wcus](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-prod-aks/providers/Microsoft.ContainerService/managedClusters/monitoring-metrics-prod-aks-wcus/overview)
+- [monitoring-metrics-prod-aks-eus2euap](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/monitoring-metrics-prod-aks/providers/Microsoft.ContainerService/managedClusters/monitoring-metrics-prod-aks-eus2euap/overview)
+
+All control plane targets have been enabled on these clusters. Validate ingestion volume and e2e data flow for them as part of the release.
+
 ## Trademarks 
 
 This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 

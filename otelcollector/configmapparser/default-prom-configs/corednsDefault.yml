@@ -18,3 +18,6 @@
       target_label: pod
     kubernetes_sd_configs:
     - role: pod
+      namespaces:
+        names:
+          - kube-system

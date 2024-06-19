@@ -6,6 +6,9 @@
     label_value_length_limit: 1023
     kubernetes_sd_configs:
     - role: endpoints
+      namespaces:
+        names:
+          - default
     scheme: https
     tls_config:
       ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt

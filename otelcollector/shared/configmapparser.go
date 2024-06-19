@@ -7,11 +7,10 @@ import (
 )
 
 func configmapparserforccp() {
-	fmt.Printf("in configmapparserforccp")
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"
 	// Set agent config schema version
-	if existsAndNotEmpty("/etc/config/settings/schema-version") {
+	if existsAndNotEmpty(configVersionPath) {
 		configVersion, err := readAndTrim(configVersionPath)
 		if err != nil {
 			fmt.Println("Error reading config version file:", err)
@@ -27,7 +26,7 @@ func configmapparserforccp() {
 	}
 
 	// Set agent config file version
-	if existsAndNotEmpty("/etc/config/settings/config-version") {
+	if existsAndNotEmpty(configSchemaPath) {
 		configSchemaVersion, err := readAndTrim(configSchemaPath)
 		if err != nil {
 			fmt.Println("Error reading config schema version file:", err)
