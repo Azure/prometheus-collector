@@ -955,7 +955,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 	var count int
 	Log("enter otel cpu function")
 	otelCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
-
+	defer otelCpuTelemetryTicker.Stop() // This will stop the ticker when the function returns
 	for ; true; <-otelCpuTelemetryTicker.C {
 		for _, record := range records {
 			var logEntry = ToString(record["message"])
@@ -1007,7 +1007,7 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	var count int
 	Log("enter me cpu function")
 	meCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
-
+	defer meCpuTelemetryTicker.Stop() // This will stop the ticker when the function returns
 	for ; true; <-meCpuTelemetryTicker.C {
 		for _, record := range records {
 			var logEntry = ToString(record["message"])
@@ -1059,7 +1059,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 	var count int
 
 	meMemTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
-
+	defer meMemTelemetryTicker.Stop() // This will stop the ticker when the function returns
 	for ; true; <-meMemTelemetryTicker.C {
 		for _, record := range records {
 			var logEntry = ToString(record["message"])
@@ -1117,7 +1117,7 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 	var count int
 
 	otelMemTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
-
+	defer otelMemTelemetryTicker.Stop() // This will stop the ticker when the function returns
 	for ; true; <-otelMemTelemetryTicker.C {
 		for _, record := range records {
 			var logEntry = ToString(record["message"])
