@@ -110,7 +110,7 @@ spec:
       type: git
       uri: https://github.com/Azure/prometheus-collector
       branch: main
-      path: otelcollector/test
+      path: otelcollector/test/ginkgo-e2e
   executionRequest:
     variables:
       AMW_QUERY_ENDPOINT:
