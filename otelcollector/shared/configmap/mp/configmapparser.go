@@ -49,36 +49,41 @@ func setConfigFileVersionEnv() {
 }
 
 func parseSettingsForPodAnnotations() {
-	// fmt.Printf("Start Processing - %s\n", LOGGING_PREFIX)
-	fmt.Printf("Start Processing - pod annotations\n")
+	shared.EchoSectionDivider("Start Processing - parseSettingsForPodAnnotations")
 	if err := configurePodAnnotationSettings(); err != nil {
 		fmt.Printf("%v\n", err)
 		return
 	}
 	filename := "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
 	handleEnvFileError(filename)
-	fmt.Println("End Processing - pod annotations")
+	shared.EchoSectionDivider("End Processing - parseSettingsForPodAnnotations")
 }
 
 func parsePrometheusCollectorConfig() {
+	shared.EchoSectionDivider("Start Processing - parsePrometheusCollectorConfig")
 	parseConfigAndSetEnvInFile()
 	filename := "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
 	handleEnvFileError(filename)
+	shared.EchoSectionDivider("End Processing - parsePrometheusCollectorConfig")
 }
 
 func parseDefaultScrapeSettings() {
+	shared.EchoSectionDivider("Start Processing - parseDefaultScrapeSettings")
 	tomlparserDefaultScrapeSettings()
 	filename := "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
 	handleEnvFileError(filename)
+	shared.EchoSectionDivider("End Processing - parseDefaultScrapeSettings")
 }
 
 func parseDebugModeSettings() {
+	shared.EchoSectionDivider("Start Processing - parseDebugModeSettings")
 	if err := ConfigureDebugModeSettings(); err != nil {
 		shared.EchoError(err.Error())
 		return
 	}
 	filename := "/opt/microsoft/configmapparser/config_debug_mode_env_var"
 	handleEnvFileError(filename)
+	shared.EchoSectionDivider("End Processing - parseDebugModeSettings")
 }
 
 func handleEnvFileError(filename string) {
@@ -115,9 +120,9 @@ func Configmapparser() {
 	if shared.FileExists("/opt/promMergedConfig.yml") {
 		if !shared.FileExists("/opt/microsoft/otelcollector/collector-config.yml") {
 			err := shared.StartCommandAndWait("/opt/promconfigvalidator",
-			"--config", "/opt/promMergedConfig.yml",
-			"--output", "/opt/microsoft/otelcollector/collector-config.yml",
-			"--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml",
+				"--config", "/opt/promMergedConfig.yml",
+				"--output", "/opt/microsoft/otelcollector/collector-config.yml",
+				"--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml",
 			)
 			if err != nil {
 				fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")

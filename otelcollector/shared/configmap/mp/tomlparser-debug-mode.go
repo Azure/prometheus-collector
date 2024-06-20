@@ -25,8 +25,6 @@ var (
 // sets default values if necessary, writes environment variables to a file,
 // and modifies a YAML configuration file based on debug mode settings.
 func ConfigureDebugModeSettings() error {
-	fmt.Println("Start debug-mode Settings Processing")
-
 	configMapSettings, err := parseConfigMapForDebugSettings()
 	if err != nil {
 		return fmt.Errorf("Error: %v", err)
@@ -87,7 +85,6 @@ func ConfigureDebugModeSettings() error {
 		}
 	}
 
-	fmt.Println("\nEnd debug-mode Settings Processing")
 	return nil
 }
 

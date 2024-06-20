@@ -9,6 +9,7 @@ import (
 	"io/fs"
 
 	"github.com/pelletier/go-toml"
+	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
 )
 
@@ -54,7 +55,6 @@ func getConfigStringValue(configMapSettings *toml.Tree, key string) string {
 
 func processConfigMap() map[string]string {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
-	fmt.Println("Start default-targets-scrape-interval-settings")
 
 	intervalHash := make(map[string]string)
 
@@ -97,7 +97,6 @@ func processConfigMap() map[string]string {
 		}
 	}
 
-	fmt.Println("End default-targets-scrape-interval-settings")
 	return intervalHash
 }
 
@@ -115,10 +114,12 @@ func writeIntervalHashToFile(intervalHash map[string]string, filePath string) er
 }
 
 func tomlparserScrapeInterval() {
+	shared.EchoSectionDivider("Start Processing - tomlparserScrapeInterval")
 	intervalHash := processConfigMap()
 	err := writeIntervalHashToFile(intervalHash, "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash")
 	if err != nil {
 		fmt.Printf("Error writing to file: %v\n", err)
 		return
 	}
+	shared.EchoSectionDivider("End Processing - tomlparserScrapeInterval")
 }

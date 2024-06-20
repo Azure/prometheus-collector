@@ -31,3 +31,7 @@ func EchoVar(name, value string) {
 func EchoStr(name string) {
 	fmt.Printf("%s%s%s\n", Cyan, name, Color_Off)
 }
+
+func EchoSectionDivider(name string) {
+	fmt.Printf("***********************%s%s%s***********************\n", Cyan, name, Color_Off)
+}
