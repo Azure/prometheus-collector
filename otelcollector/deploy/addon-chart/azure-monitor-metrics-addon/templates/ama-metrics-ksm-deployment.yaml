@@ -75,6 +75,10 @@ spec:
           requests:
             cpu: 5m
             memory: 50Mi
+        securityContext:
+          capabilities:
+            drop:
+              - ALL
         ports:
         - containerPort: 8080
           name: "http"
