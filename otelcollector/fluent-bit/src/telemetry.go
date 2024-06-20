@@ -944,7 +944,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 	var totalCpuUsage float64
 	var count int
 	var cpuUsages []float64
-
+	Log("enter otel cpu function")
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop() // This will stop the ticker when the function returns
 	otelCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
@@ -985,7 +985,7 @@ func PushOtelCpuToAppInsightsMetrics(records []map[interface{}]interface{}) int 
 			cpuUsages = []float64{}
 		}
 	}
-
+	Log("exit otel cpu function")
 	return output.FLB_OK
 }
 
@@ -1032,7 +1032,7 @@ func PushMECpuToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 			cpuUsages = []float64{}
 		}
 	}
-
+	Log("exit me cpu function")
 	return output.FLB_OK
 }
 
@@ -1040,7 +1040,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 	var totalMemUsage float64
 	var count int
 	var memUsages []float64
-
+	Log("enter me mem function")
 	meMemTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
 	for ; true; <-meMemTelemetryTicker.C {
@@ -1086,7 +1086,7 @@ func PushMEMemRssToAppInsightsMetrics(records []map[interface{}]interface{}) int
 			memUsages = []float64{}
 		}
 	}
-
+	Log("exit me mem function")
 	return output.FLB_OK
 }
 
@@ -1094,7 +1094,7 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 	var totalMemUsage float64
 	var count int
 	var memUsages []float64
-
+	Log("enter otel mem function")
 	otelMemTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
 	for ; true; <-otelMemTelemetryTicker.C {
@@ -1141,6 +1141,6 @@ func PushOtelColMemRssToAppInsightsMetrics(records []map[interface{}]interface{}
 			memUsages = []float64{}
 		}
 	}
-
+	Log("exit otel mem function")
 	return output.FLB_OK
 }
