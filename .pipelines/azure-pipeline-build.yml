@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - fixhispiketelemetry
+    - fixhispiketelemetryNew
 
 pr:
   autoCancel: true
