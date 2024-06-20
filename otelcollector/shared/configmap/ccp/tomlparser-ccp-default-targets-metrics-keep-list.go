@@ -95,7 +95,7 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 	if regexValues.ControlplaneEtcd != "" && !shared.IsValidRegex(regexValues.ControlplaneEtcd) {
 		return regexValues, fmt.Errorf("invalid regex for controlplane-etcd: %s", regexValues.ControlplaneEtcd)
 	}
-	if regexValues.MinimalIngestionProfile != "" && !isValidRegex(regexValues.MinimalIngestionProfile) {
+	if regexValues.MinimalIngestionProfile != "" && !shared.IsValidRegex(regexValues.MinimalIngestionProfile) {
 		return regexValues, fmt.Errorf("invalid regex for MinimalIngestionProfile: %s", regexValues.MinimalIngestionProfile)
 	}
 
