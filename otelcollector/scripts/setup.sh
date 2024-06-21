@@ -52,7 +52,11 @@ mkdir /opt/microsoft/linuxmonagent
 
 # Install fluent-bit
 echo "Installing fluent-bit..."
-sudo tdnf install fluent-bit-2.1.10 -y
+if ! sudo tdnf install fluent-bit-2.1.10 -y; then
+    echo "fluent-bit-2.1.10 not available, attempting to install the latest version..."
+    curl -L -O https://packages.fluentbit.io/centos/7/fluent-bit-1.8.9-1.x86_64.rpm
+    sudo tdnf install ./fluent-bit-1.8.9-1.x86_64.rpm -y
+fi
 
 # Setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
