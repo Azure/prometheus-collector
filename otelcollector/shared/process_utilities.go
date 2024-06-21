@@ -3,13 +3,13 @@ package shared
 import (
 	"fmt"
 	"io"
+	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
-	"log"
-	"net/http"
 	"time"
 )
 
@@ -44,8 +44,8 @@ func IsProcessRunning(processName string) bool {
 }
 
 // SetEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
-// and sources the file to apply changes immediately.
-func SetEnvAndSourceBashrc(key, value string) error {
+// and sources the file to apply changes immediately. If echo is true, it calls EchoVar.
+func SetEnvAndSourceBashrc(key, value string, echo bool) error {
 	// Get user's home directory
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -78,7 +78,7 @@ func SetEnvAndSourceBashrc(key, value string) error {
 	}
 
 	// Source the .bashrc file
-	cmd := exec.Command("bash", "-c", "source "+ bashrcPath)
+	cmd := exec.Command("bash", "-c", "source "+bashrcPath)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to source .bashrc: %v", err)
 	}
@@ -89,7 +89,10 @@ func SetEnvAndSourceBashrc(key, value string) error {
 		return fmt.Errorf("failed to set environment variable: %v", err)
 	}
 
-	EchoVar(key, value)
+	// Conditionally call EchoVar
+	if echo {
+		EchoVar(key, value)
+	}
 
 	return nil
 }
