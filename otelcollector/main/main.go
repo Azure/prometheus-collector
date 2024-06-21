@@ -271,6 +271,12 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			goto response
 		}
 
+		if !shared.IsProcessRunning("/usr/sbin/mdsd") {
+			status = http.StatusServiceUnavailable
+			message = "mdsd not running (configuration exists)"
+			goto response
+		}
+
 		cmd := exec.Command("pgrep", "-f", "mdsd")
 		output, err := cmd.Output()
 		if err != nil || len(output) == 0 {
