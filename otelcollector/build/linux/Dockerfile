@@ -70,7 +70,7 @@ RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 ARG TARGETOS TARGETARCH
-RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o main.exe ./main.go ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o main.exe ./main.go ; fi
+RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; fi
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
