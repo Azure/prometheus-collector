@@ -16,7 +16,7 @@ import (
 
 var (
 	configMapMountPath                                                     = "/etc/config/settings/default-targets-metrics-keep-list"
-	configSchemaVersion                                                    string
+	configSchemaVersion, minimalIngestionProfile                           string
 	controlplaneApiserverRegex, controlplaneClusterAutoscalerRegex         string
 	controlplaneKubeSchedulerRegex, controlplaneKubeControllerManagerRegex string
 	controlplaneEtcdRegex                                                  string
@@ -64,6 +64,7 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 	configMap["controlplane-apiserver"] = getStringValue(tree.Get("controlplane-apiserver"))
 	configMap["controlplane-cluster-autoscaler"] = getStringValue(tree.Get("controlplane-cluster-autoscaler"))
 	configMap["controlplane-etcd"] = getStringValue(tree.Get("controlplane-etcd"))
+	configMap["minimalingestionprofile"] = getStringValue(tree.Get("minimalingestionprofile"))
 
 	return configMap
 }
@@ -75,6 +76,7 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 		ControlplaneApiserver:             getStringValue(parsedConfig["controlplane-apiserver"]),
 		ControlplaneClusterAutoscaler:     getStringValue(parsedConfig["controlplane-cluster-autoscaler"]),
 		ControlplaneEtcd:                  getStringValue(parsedConfig["controlplane-etcd"]),
+		MinimalIngestionProfile:           getStringValue(parsedConfig["minimalingestionprofile"]),
 	}
 
 	// Validate regex values
@@ -93,6 +95,9 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 	if regexValues.ControlplaneEtcd != "" && !shared.IsValidRegex(regexValues.ControlplaneEtcd) {
 		return regexValues, fmt.Errorf("invalid regex for controlplane-etcd: %s", regexValues.ControlplaneEtcd)
 	}
+	if regexValues.MinimalIngestionProfile != "" && !shared.IsValidRegex(regexValues.MinimalIngestionProfile) {
+		return regexValues, fmt.Errorf("invalid regex for MinimalIngestionProfile: %s", regexValues.MinimalIngestionProfile)
+	}
 
 	// Logging the values being set
 	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneKubeControllerManagerRegex: %s\n", regexValues.ControlplaneKubeControllerManager)
@@ -100,26 +105,31 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneApiserverRegex: %s\n", regexValues.ControlplaneApiserver)
 	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneClusterAutoscalerRegex: %s\n", regexValues.ControlplaneClusterAutoscaler)
 	fmt.Printf("populateSettingValuesFromConfigMap::controlplaneEtcdRegex: %s\n", regexValues.ControlplaneEtcd)
+	fmt.Printf("populateSettingValuesFromConfigMap::minimalIngestionProfile: %s\n", regexValues.MinimalIngestionProfile)
 
 	return regexValues, nil // Return regex values and nil error if everything is valid
 }
 
 func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
-	controlplaneKubeControllerManagerRegex += regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
-	controlplaneKubeSchedulerRegex += regexValues.ControlplaneKubeScheduler + "|" + controlplaneKubeSchedulerMinMac
-	controlplaneApiserverRegex += regexValues.ControlplaneApiserver + "|" + controlplaneApiserverMinMac
-	controlplaneClusterAutoscalerRegex += regexValues.ControlplaneClusterAutoscaler + "|" + controlplaneClusterAutoscalerMinMac
-	controlplaneEtcdRegex += regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
+	if regexValues.MinimalIngestionProfile == "true" {
+		controlplaneKubeControllerManagerRegex += regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
+		controlplaneKubeSchedulerRegex += regexValues.ControlplaneKubeScheduler + "|" + controlplaneKubeSchedulerMinMac
+		controlplaneApiserverRegex += regexValues.ControlplaneApiserver + "|" + controlplaneApiserverMinMac
+		controlplaneClusterAutoscalerRegex += regexValues.ControlplaneClusterAutoscaler + "|" + controlplaneClusterAutoscalerMinMac
+		controlplaneEtcdRegex += regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
 
-	// Print the updated regex strings after appending values
-	// Only log this in debug mode
-	// fmt.Println("Updated Regex Strings After Appending:")
-	// fmt.Println("ControlplaneKubeControllerManagerRegex:", controlplaneKubeControllerManagerRegex)
-	// fmt.Println("ControlplaneKubeSchedulerRegex:", controlplaneKubeSchedulerRegex)
-	// fmt.Println("ControlplaneApiserverRegex:", controlplaneApiserverRegex)
-	// fmt.Println("ControlplaneClusterAutoscalerRegex:", controlplaneClusterAutoscalerRegex)
-	// fmt.Println("ControlplaneEtcdRegex:", controlplaneEtcdRegex)
+		// Print the updated regex strings after appending values
+		// Only log this in debug mode
+		// fmt.Println("Updated Regex Strings After Appending:")
+		// fmt.Println("ControlplaneKubeControllerManagerRegex:", controlplaneKubeControllerManagerRegex)
+		// fmt.Println("ControlplaneKubeSchedulerRegex:", controlplaneKubeSchedulerRegex)
+		// fmt.Println("ControlplaneApiserverRegex:", controlplaneApiserverRegex)
+		// fmt.Println("ControlplaneClusterAutoscalerRegex:", controlplaneClusterAutoscalerRegex)
+		// fmt.Println("ControlplaneEtcdRegex:", controlplaneEtcdRegex)
 
+	} else {
+		fmt.Println("populateRegexValuesWithMinimalIngestionProfile::minimalIngestionProfile:", regexValues.MinimalIngestionProfile)
+	}
 }
 
 func tomlparserCCPTargetsMetricsKeepList() {

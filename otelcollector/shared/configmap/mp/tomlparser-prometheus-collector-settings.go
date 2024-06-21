@@ -83,7 +83,6 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 func (c *Configurator) Configure() {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 
-	fmt.Println("Start prometheus-collector-settings Processing")
 	fmt.Printf("Configure:Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
 
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
@@ -118,7 +117,6 @@ func (c *Configurator) Configure() {
 		return
 	}
 
-	fmt.Println("End prometheus-collector-settings Processing")
 }
 
 func parseConfigAndSetEnvInFile() {

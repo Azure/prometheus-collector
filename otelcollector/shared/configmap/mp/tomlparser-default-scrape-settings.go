@@ -249,7 +249,5 @@ func tomlparserDefaultScrapeSettings() {
 		ConfigParser:   &ConfigProcessor{},
 	}
 
-	fmt.Println("Start default-scrape-settings Processing")
 	configurator.ConfigureDefaultScrapeSettings()
-	fmt.Println("End default-scrape-settings Processing")
 }

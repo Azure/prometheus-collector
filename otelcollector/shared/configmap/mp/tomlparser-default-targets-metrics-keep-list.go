@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml"
+	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
 )
 
@@ -198,7 +199,7 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 
 func tomlparserTargetsMetricsKeepList() {
 	configSchemaVersion = os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
-	fmt.Println("Start default-targets-metrics-keep-list Processing")
+	shared.EchoSectionDivider("Start Processing - tomlparserTargetsMetricsKeepList")
 
 	var regexValues RegexValues
 
@@ -250,5 +251,5 @@ func tomlparserTargetsMetricsKeepList() {
 		return
 	}
 
-	fmt.Println("End default-targets-metrics-keep-list Processing")
+	shared.EchoSectionDivider("End Processing - tomlparserTargetsMetricsKeepList")
 }

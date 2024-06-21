@@ -47,7 +47,6 @@ func main() {
 		}
 	}
 
-
 	if ccpMetricsEnabled == "true" {
 		ccpconfigmapsettings.Configmapparserforccp()
 	} else {
@@ -164,17 +163,17 @@ func main() {
 		shared.StartFluentBit(fluentBitConfigFile)
 
 		// Run the command and capture the output
-	  cmd := exec.Command("fluent-bit", "--version")
-	  fluentBitVersion, err := cmd.Output()
-	  if err != nil {
-	  	log.Fatalf("failed to run command: %v", err)
-	  }
-	  shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
+		cmd := exec.Command("fluent-bit", "--version")
+		fluentBitVersion, err := cmd.Output()
+		if err != nil {
+			log.Fatalf("failed to run command: %v", err)
+		}
+		shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 
 		shared.StartTelegraf()
 
 	}
-	
+
 	// Start inotify to watch for changes
 	fmt.Println("Starting inotify for watching mdsd config update")
 

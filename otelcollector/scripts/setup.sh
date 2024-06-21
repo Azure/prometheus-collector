@@ -32,7 +32,7 @@ echo "Installing tomlrb, deep_merge and re2 gems..."
 gem install colorize
 gem install tomlrb
 gem install deep_merge
-gem install re2
+gem install re2 -v 2.11.0
 
 echo "Installing mdsd..."
 # if [ "${ARCH}" != "amd64" ]; then

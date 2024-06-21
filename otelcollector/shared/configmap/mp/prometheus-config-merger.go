@@ -1190,7 +1190,6 @@ func deepMerge(target, source map[interface{}]interface{}) map[interface{}]inter
 }
 
 func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interface{} {
-	fmt.Printf("Start Updating Default Prometheus Config\n")
 	noDefaultScrapingEnabled := os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED")
 	if noDefaultScrapingEnabled != "" && strings.ToLower(noDefaultScrapingEnabled) == "false" {
 		loadRegexHash()
@@ -1358,6 +1357,7 @@ func setGlobalScrapeConfigInDefaultFilesIfExists(configString string) string {
 }
 
 func prometheusConfigMerger(operatorEnabled bool) {
+	shared.EchoSectionDivider("Start Processing - prometheusConfigMerger")
 	mergedDefaultConfigs = make(map[interface{}]interface{}) // Initialize mergedDefaultConfigs
 	prometheusConfigMap := parseConfigMap()
 
@@ -1367,11 +1367,11 @@ func prometheusConfigMerger(operatorEnabled bool) {
 		// Set label limits for every custom scrape job, before merging the default & custom config
 		labellimitedconfigString := setLabelLimitsPerScrape(modifiedPrometheusConfigString)
 		mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString, mergedDefaultConfigs)
-		fmt.Println("Done Merging Default and Custom Prometheus Config")
+		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Merging Default and Custom Prometheus Config")
 	} else {
 		setDefaultFileScrapeInterval("30s")
 		writeDefaultScrapeTargetsFile(operatorEnabled)
-		fmt.Println("Done Writing Default Prometheus Config")
+		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Writing Default Prometheus Config")
 	}
 
 }
