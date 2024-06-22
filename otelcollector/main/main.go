@@ -229,17 +229,20 @@ func main() {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Health check started")
 	status := http.StatusOK
 	message := "prometheuscollector is running."
 
-	// Always running in MAC mode
-
+	// Checking if TokenConfig file exists
 	if _, err := os.Stat("/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"); os.IsNotExist(err) {
+		fmt.Println("TokenConfig.json does not exist")
 		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
+			fmt.Println("azmon-container-start-time file exists, reading start time")
 			azmonContainerStartTimeStr, err := os.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
 			if err != nil {
 				status = http.StatusServiceUnavailable
 				message = "Error reading azmon-container-start-time: " + err.Error()
+				fmt.Println(message)
 				goto response
 			}
 
@@ -247,61 +250,75 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				status = http.StatusServiceUnavailable
 				message = "Error converting azmon-container-start-time to integer: " + err.Error()
+				fmt.Println(message)
 				goto response
 			}
 
 			epochTimeNow := int(time.Now().Unix())
 			duration := epochTimeNow - azmonContainerStartTime
 			durationInMinutes := duration / 60
+			fmt.Printf("Container has been running for %d minutes\n", durationInMinutes)
 
 			if durationInMinutes%5 == 0 {
-				message = fmt.Sprintf("%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
+				fmt.Printf("%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
 			}
 
 			if durationInMinutes > 15 {
 				status = http.StatusServiceUnavailable
 				message = "No configuration present for the AKS resource"
+				fmt.Println(message)
 				goto response
 			}
+		} else {
+			fmt.Println("azmon-container-start-time file does not exist")
 		}
 	} else {
+		fmt.Println("TokenConfig.json exists, checking if processes are running")
 		if !shared.IsProcessRunning("/usr/sbin/MetricsExtension") {
 			status = http.StatusServiceUnavailable
 			message = "Metrics Extension is not running (configuration exists)"
+			fmt.Println(message)
 			goto response
 		}
 
 		if !shared.IsProcessRunning("/usr/sbin/mdsd") {
 			status = http.StatusServiceUnavailable
 			message = "mdsd not running (configuration exists)"
+			fmt.Println(message)
 			goto response
 		}
-
 	}
 
+	fmt.Println("Checking if inotifyoutput-mdsd-config.txt has been updated")
 	if shared.HasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
 		status = http.StatusServiceUnavailable
 		message = "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
+		fmt.Println(message)
 		goto response
 	}
 
+	fmt.Println("Checking if OpenTelemetryCollector is running")
 	if !shared.IsProcessRunning("/opt/microsoft/otelcollector/otelcollector") {
 		status = http.StatusServiceUnavailable
 		message = "OpenTelemetryCollector is not running."
+		fmt.Println(message)
 		goto response
 	}
 
+	fmt.Println("Checking if inotifyoutput.txt has been updated")
 	if shared.HasConfigChanged("/opt/inotifyoutput.txt") {
 		status = http.StatusServiceUnavailable
 		message = "inotifyoutput.txt has been updated - config changed"
+		fmt.Println(message)
 		goto response
 	}
 
 response:
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
+	fmt.Printf("Health check status: %d, Message: %s\n", status, message)
 	if status != http.StatusOK {
-		fmt.Printf(message)
+		fmt.Printf("Health check failed: %s\n", message)
 		shared.WriteTerminationLog(message)
 	}
 }
