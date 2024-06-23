@@ -951,7 +951,7 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 	return output.FLB_OK
 }
 
-func UpdateOtelCpuUsages(records []map[interface{}]interface{}) {
+func UpdateOtelCpuUsages(records []map[interface{}]interface{}) int {
 	Log("enter otel cpu function")
 
 	for _, record := range records {
@@ -1001,7 +1001,7 @@ func PushOtelCpuToAppInsightsMetrics() {
 	}
 }
 
-func UpdateMECpuUsages(records []map[interface{}]interface{}) {
+func UpdateMECpuUsages(records []map[interface{}]interface{}) int {
 	Log("enter ME cpu function")
 
 	for _, record := range records {
@@ -1051,7 +1051,7 @@ func PushMECpuToAppInsightsMetrics() {
 	}
 }
 
-func UpdateMEMemRssUsages(records []map[interface{}]interface{}) {
+func UpdateMEMemRssUsages(records []map[interface{}]interface{}) int {
 	Log("enter ME memory function")
 
 	for _, record := range records {
@@ -1101,7 +1101,7 @@ func PushMEMemRssToAppInsightsMetrics() {
 	}
 }
 
-func UpdateOtelColMemRssUsages(records []map[interface{}]interface{}) {
+func UpdateOtelColMemRssUsages(records []map[interface{}]interface{}) int {
 	Log("enter OtelCol memory function")
 
 	for _, record := range records {
