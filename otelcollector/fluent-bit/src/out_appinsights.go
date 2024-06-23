@@ -50,6 +50,14 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	go PushMEProcessedAndReceivedCountToAppInsightsMetrics()
 
+	go PushOtelCpuToAppInsightsMetrics()
+
+	go PushMECpuToAppInsightsMetrics()
+
+	go PushMEMemRssToAppInsightsMetrics()
+
+	go PushOtelColMemRssToAppInsightsMetrics()
+
 	return output.FLB_OK
 }
 
@@ -93,19 +101,19 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return RecordExportingFailed(records)
 	case otelcolCpuScrapeTag:
 		Log("Print the entering tag: %s", incomingTag)
-		return PushOtelCpuToAppInsightsMetrics(records)
+		return UpdateOtelCpuUsages(records)
 	case otelcolMemRssScrapeTag:
 		Log("Print the entering tag: %s", incomingTag)
-		return PushOtelColMemRssToAppInsightsMetrics(records)
+		return UpdateOtelColMemRssUsages(records)
 	case meMemRssScrapeTag:
 		Log("Print the entering tag: %s", incomingTag)
-		return PushMEMemRssToAppInsightsMetrics(records)
+		return UpdateMEMemRssUsages(records)
+	case meCpuScrapeTag:
+		Log("Print the entering tag: %s", incomingTag)
+		return UpdateMECpuUsages(records)
 	case promScrapeTag:
 		Log("Print the entering tag: %s", incomingTag)
 		return PushPromToAppInsightsMetrics(records)
-	case meCpuScrapeTag:
-		Log("Print the entering tag: %s", incomingTag)
-		return PushMECpuToAppInsightsMetrics(records)
 	default:
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)
