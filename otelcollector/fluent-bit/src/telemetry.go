@@ -956,7 +956,7 @@ func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
 
 func UpdateOtelCpuUsages(records []map[interface{}]interface{}) int {
 	Log("enter otel cpu function")
-
+	var otelCpuUsages []float64
 	for i, record := range records {
 		Log(fmt.Sprintf("Processing record %d", i))
 		var logEntry = ToString(record["message"])
@@ -970,12 +970,12 @@ func UpdateOtelCpuUsages(records []map[interface{}]interface{}) int {
 			continue
 		}
 
-		Log("Attempting to acquire lock")
-		otelCpuUsagesMutex.Lock()
-		Log("Acquired lock")
+		// Log("Attempting to acquire lock")
+		// otelCpuUsagesMutex.Lock()
+		// Log("Acquired lock")
 		otelCpuUsages = append(otelCpuUsages, otelcpuUsage)
-		otelCpuUsagesMutex.Unlock()
-		Log("Released lock")
+		// otelCpuUsagesMutex.Unlock()
+		// Log("Released lock")
 	}
 
 	Log("Exit otel cpu function")
@@ -986,7 +986,7 @@ func PushOtelCpuToAppInsightsMetrics() {
 	otelCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
 	for ; true; <-otelCpuTelemetryTicker.C {
-		otelCpuUsagesMutex.Lock()
+		// otelCpuUsagesMutex.Lock()
 		sort.Float64s(otelCpuUsages)
 
 		if len(otelCpuUsages) > 0 {
@@ -1004,15 +1004,15 @@ func PushOtelCpuToAppInsightsMetrics() {
 			TelemetryClient.Track(metric95)
 			Log("Sent Otel 95th percentile  Cpu usage metrics")
 
-			otelCpuUsages = make([]float64, 0)
-			otelCpuUsagesMutex.Unlock()
+			otelCpuUsages = []float64{}
+			// otelCpuUsagesMutex.Unlock()
 		}
 	}
 }
 
 func UpdateMECpuUsages(records []map[interface{}]interface{}) int {
 	Log("Enter ME cpu function")
-
+	var meCpuUsages []float64
 	for i, record := range records {
 		Log(fmt.Sprintf("Processing record %d", i))
 		var logEntry = ToString(record["message"])
@@ -1026,12 +1026,12 @@ func UpdateMECpuUsages(records []map[interface{}]interface{}) int {
 			continue
 		}
 
-		Log("Attempting to acquire lock")
-		meCpuUsagesMutex.Lock()
-		Log("Acquired lock")
+		// Log("Attempting to acquire lock")
+		// meCpuUsagesMutex.Lock()
+		// Log("Acquired lock")
 		meCpuUsages = append(meCpuUsages, mecpuUsage)
-		meCpuUsagesMutex.Unlock()
-		Log("Released lock")
+		// meCpuUsagesMutex.Unlock()
+		// Log("Released lock")
 	}
 
 	Log("Exit ME cpu function")
@@ -1042,7 +1042,7 @@ func PushMECpuToAppInsightsMetrics() {
 	meCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
 
 	for ; true; <-meCpuTelemetryTicker.C {
-		meCpuUsagesMutex.Lock()
+		// meCpuUsagesMutex.Lock()
 		sort.Float64s(meCpuUsages)
 
 		if len(meCpuUsages) > 0 {
@@ -1060,8 +1060,9 @@ func PushMECpuToAppInsightsMetrics() {
 			TelemetryClient.Track(metric95)
 			Log("Sent ME 95th percentile  Cpu usage metrics")
 
-			meCpuUsages = make([]float64, 0)
-			meCpuUsagesMutex.Unlock()
+			meCpuUsages = []float64{}
+			// meCpuUsages = make([]float64, 0)
+			// meCpuUsagesMutex.Unlock()
 		}
 	}
 }

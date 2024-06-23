@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - fixhispiketelemetryNew
+    - fixhispiketelemetryNewWOMutex
 
 pr:
   autoCancel: true
