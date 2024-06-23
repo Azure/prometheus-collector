@@ -54,9 +54,9 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	go PushMECpuToAppInsightsMetrics()
 
-	go PushMEMemRssToAppInsightsMetrics()
+	// go PushMEMemRssToAppInsightsMetrics()
 
-	go PushOtelColMemRssToAppInsightsMetrics()
+	// go PushOtelColMemRssToAppInsightsMetrics()
 
 	return output.FLB_OK
 }
@@ -102,12 +102,12 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	case otelcolCpuScrapeTag:
 		Log("Print the entering tag: %s", incomingTag)
 		return UpdateOtelCpuUsages(records)
-	case otelcolMemRssScrapeTag:
-		Log("Print the entering tag: %s", incomingTag)
-		return UpdateOtelColMemRssUsages(records)
-	case meMemRssScrapeTag:
-		Log("Print the entering tag: %s", incomingTag)
-		return UpdateMEMemRssUsages(records)
+	// case otelcolMemRssScrapeTag:
+	// 	Log("Print the entering tag: %s", incomingTag)
+	// 	return UpdateOtelColMemRssUsages(records)
+	// case meMemRssScrapeTag:
+	// 	Log("Print the entering tag: %s", incomingTag)
+	// 	return UpdateMEMemRssUsages(records)
 	case meCpuScrapeTag:
 		Log("Print the entering tag: %s", incomingTag)
 		return UpdateMECpuUsages(records)
