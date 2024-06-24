@@ -229,7 +229,6 @@ func main() {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Health check started")
 	status := http.StatusOK
 	message := "prometheuscollector is running."
 
@@ -273,7 +272,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("azmon-container-start-time file does not exist")
 		}
 	} else {
-		fmt.Println("TokenConfig.json exists, checking if processes are running")
 		if !shared.IsProcessRunning("/usr/sbin/MetricsExtension") {
 			status = http.StatusServiceUnavailable
 			message = "Metrics Extension is not running (configuration exists)"
@@ -289,7 +287,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fmt.Println("Checking if inotifyoutput-mdsd-config.txt has been updated")
 	if shared.HasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
 		status = http.StatusServiceUnavailable
 		message = "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
@@ -297,7 +294,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		goto response
 	}
 
-	fmt.Println("Checking if OpenTelemetryCollector is running")
 	if !shared.IsProcessRunning("/opt/microsoft/otelcollector/otelcollector") {
 		status = http.StatusServiceUnavailable
 		message = "OpenTelemetryCollector is not running."
@@ -305,7 +301,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		goto response
 	}
 
-	fmt.Println("Checking if inotifyoutput.txt has been updated")
 	if shared.HasConfigChanged("/opt/inotifyoutput.txt") {
 		status = http.StatusServiceUnavailable
 		message = "inotifyoutput.txt has been updated - config changed"
@@ -316,9 +311,8 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 response:
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
-	fmt.Printf("Health check status: %d, Message: %s\n", status, message)
 	if status != http.StatusOK {
-		fmt.Printf("Health check failed: %s\n", message)
+		fmt.Printf("Health check failed: %d, Message: %s\n", status, message)
 		shared.WriteTerminationLog(message)
 	}
 }
