@@ -84,6 +84,7 @@ ARG TARGETARCH
 RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update -y
+RUN tdnf install -y net-tools
 RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
 RUN tdnf install -y pcre
 RUN tdnf install -y cpprest
