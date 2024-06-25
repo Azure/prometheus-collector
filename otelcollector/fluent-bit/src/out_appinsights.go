@@ -16,9 +16,10 @@ func FLBPluginRegister(ctx unsafe.Pointer) int {
 	return output.FLBPluginRegister(ctx, "appinsights", "AppInsights GO!")
 }
 
-//export FLBPluginInit
 // (fluentbit will call this)
 // ctx (context) pointer to fluentbit context (state/ c code)
+//
+//export FLBPluginInit
 func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	// This will not load the plugin instance. FLBPluginFlush won't be called.
@@ -49,6 +50,14 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	go PushMEProcessedAndReceivedCountToAppInsightsMetrics()
 
+	go PushOtelCpuToAppInsightsMetrics()
+
+	go PushMECpuToAppInsightsMetrics()
+
+	// go PushMEMemRssToAppInsightsMetrics()
+
+	// go PushOtelColMemRssToAppInsightsMetrics()
+
 	return output.FLB_OK
 }
 
@@ -58,6 +67,8 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	var record map[interface{}]interface{}
 	var records []map[interface{}]interface{}
 
+	incomingTag := strings.ToLower(C.GoString(tag))
+	Log("Print the incoming tag: %s", incomingTag)
 	// Create Fluent Bit decoder
 	dec := output.NewDecoder(data, int(length))
 
@@ -71,20 +82,38 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		records = append(records, record)
 	}
 
-	incomingTag := strings.ToLower(C.GoString(tag))
-
 	// Metrics Extension logs with metrics received, dropped, and processed counts
 	switch incomingTag {
 	case fluentbitEventsProcessedLastPeriodTag:
+		Log("Print the entering tag: %s", incomingTag)
 		return UpdateMEReceivedMetricsCount(records)
 	case fluentbitProcessedCountTag:
+		Log("Print the entering tag: %s", incomingTag)
 		return UpdateMEMetricsProcessedCount(records)
 	case fluentbitDiagnosticHeartbeatTag:
+		Log("Print the entering tag: %s", incomingTag)
 		return PushMetricsDroppedCountToAppInsightsMetrics(records)
 	case fluentbitInfiniteMetricTag:
+		Log("Print the entering tag: %s", incomingTag)
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
+		Log("Print the entering tag: %s", incomingTag)
 		return RecordExportingFailed(records)
+	case otelcolCpuScrapeTag:
+		Log("Print the entering tag: %s", incomingTag)
+		return UpdateOtelCpuUsages(records)
+	case otelcolMemRssScrapeTag:
+		Log("Print the entering tag: %s", incomingTag)
+		return UpdateOtelColMemRssUsages(records)
+	case meMemRssScrapeTag:
+		Log("Print the entering tag: %s", incomingTag)
+		return UpdateMEMemRssUsages(records)
+	case meCpuScrapeTag:
+		Log("Print the entering tag: %s", incomingTag)
+		return UpdateMECpuUsages(records)
+	case promScrapeTag:
+		Log("Print the entering tag: %s", incomingTag)
+		return PushPromToAppInsightsMetrics(records)
 	default:
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)

@@ -20,7 +20,7 @@ echo_var "CLUSTER" "$CLUSTER"
 customEnvironment_lower=$(echo "$customEnvironment" | tr '[:upper:]' '[:lower:]')
 if [ "$customEnvironment_lower" == "azurepubliccloud" ]; then
   encodedaikey="$APPLICATIONINSIGHTS_AUTH_PUBLIC"
-  echo "setting telemetry output to the default azurepubliccloud instance" 
+  echo "setting telemetry output to the default azurepubliccloud instance"
 elif [ "$customEnvironment_lower" == "azureusgovernmentcloud" ]; then
   encodedaikey="$APPLICATIONINSIGHTS_AUTH_USGOVERNMENT"
   aiendpoint="https://dc.applicationinsights.us/v2/track"
@@ -52,11 +52,6 @@ if [ -n "$aiendpoint" ]; then
     export APPLICATIONINSIGHTS_ENDPOINT="$aiendpoint"
     echo "export APPLICATIONINSIGHTS_ENDPOINT=\"$aiendpoint\"" >> ~/.bashrc
 fi
-# Delete this when telegraf is removed
-aikey=$(echo $APPLICATIONINSIGHTS_AUTH | base64 -d)
-export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey
-echo "export TELEMETRY_APPLICATIONINSIGHTS_KEY=$aikey" >> ~/.bashrc
-source ~/.bashrc
 
 #get controller kind in lowercase, trimmed
 controllerType=$(echo $CONTROLLER_TYPE | tr "[:upper:]" "[:lower:]" | xargs)
@@ -255,7 +250,7 @@ else
       # Use options -T 0x1 or -T 0xFFFF for debug logging
       mdsd -a -A -e ${MDSD_LOG}/mdsd.err -w ${MDSD_LOG}/mdsd.warn -o ${MDSD_LOG}/mdsd.info -q ${MDSD_LOG}/mdsd.qos 2>> /dev/null &
 
-      # Running mdsd --version can't be captured into a variable unlike telegraf and otelcollector, have to run after printing the string
+      # Running mdsd --version can't be captured into a variable unlike otelcollector, have to run after printing the string
       echo -n -e "${Cyan}MDSD_VERSION${Color_Off}="; mdsd --version
 
       echo "Waiting for 30s for MDSD to get the config and put them in place for ME"
@@ -267,7 +262,9 @@ else
       echo "Starting metricsextension"
       /usr/sbin/MetricsExtension -Logger File -LogLevel Info -LocalControlChannel -TokenSource AMCS -DataDirectory /etc/mdsd.d/config-cache/metricsextension -Input otlp_grpc_prom -ConfigOverrides $meConfigString > /dev/null &
 fi
-
+ME_PID=$!
+echo_var "ME_PID" "$ME_PID"
+sed -i "s/\${ME_PID}/$ME_PID/" $fluentBitConfigFile
 # Get ME version
 ME_VERSION=`cat /opt/metricsextversion.txt`
 echo_var "ME_VERSION" "$ME_VERSION"
@@ -292,31 +289,25 @@ else
       echo "Starting otelcollector"
       /opt/microsoft/otelcollector/otelcollector --config /opt/microsoft/otelcollector/collector-config.yml &> /opt/microsoft/otelcollector/collector-log.txt &
 fi
+OTEL_PID=$!
+echo_var "OTEL_PID" "$OTEL_PID"
+sed -i "s/\${OTEL_PID}/$OTEL_PID/" $fluentBitConfigFile
 OTELCOLLECTOR_VERSION=`/opt/microsoft/otelcollector/otelcollector --version`
 echo_var "OTELCOLLECTOR_VERSION" "$OTELCOLLECTOR_VERSION"
 PROMETHEUS_VERSION=`cat /opt/microsoft/otelcollector/PROMETHEUS_VERSION`
 echo_var "PROMETHEUS_VERSION" "$PROMETHEUS_VERSION"
 
-echo "starting telegraf"
-if [ "$TELEMETRY_DISABLED" != "true" ]; then
-  if [ "$CONTROLLER_TYPE" == "ReplicaSet" ]  && [ "${AZMON_OPERATOR_ENABLED}" == "true" ]; then
-    /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector-ta-enabled.conf &
-  elif [ "$CONTROLLER_TYPE" == "ReplicaSet" ]; then
-    /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector.conf &
-  else
-    /usr/bin/telegraf --config /opt/telegraf/telegraf-prometheus-collector-ds.conf &
-  fi
-  TELEGRAF_VERSION=`cat /opt/telegrafversion.txt`
-  echo_var "TELEGRAF_VERSION" "$TELEGRAF_VERSION"
-fi
-
 echo "starting fluent-bit"
 mkdir /opt/microsoft/fluent-bit
 touch /opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log
+
+
 fluent-bit -c $FLUENT_BIT_CONFIG_FILE -e /opt/fluent-bit/bin/out_appinsights.so &
+
 FLUENT_BIT_VERSION=`fluent-bit --version`
 echo_var "FLUENT_BIT_VERSION" "$FLUENT_BIT_VERSION"
 echo_var "FLUENT_BIT_CONFIG_FILE" "$FLUENT_BIT_CONFIG_FILE"
+
 
 if [ "${MAC}" == "true" ]; then
   # Run inotify as a daemon to track changes to the dcr/dce config folder and restart container on changes, so that ME can pick them up.

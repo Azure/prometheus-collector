@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -100,12 +102,25 @@ var (
 	meMetricsReceivedCountMap = make(map[string]*meMetricsReceivedCount)
 	// meMetricsReceivedCountMapMutex -- used for reading & writing locks on meMetricsReceivedCountMap
 	meMetricsReceivedCountMapMutex = &sync.Mutex{}
+	otelCpuUsages                  = make([]float64, 0)
+	// otelCpuUsagesMutex -- used for reading & writing locks on otelCpuUsages
+	otelCpuUsagesMutex = &sync.Mutex{}
+	meCpuUsages        = make([]float64, 0)
+	// meCpuUsagesMutex -- used for reading & writing locks on meCpuUsages
+	meCpuUsagesMutex = &sync.Mutex{}
+	meMemUsages      = make([]float64, 0)
+	// meMemUsagesMutex -- used for reading & writing locks on meMemUsages
+	meMemUsagesMutex = &sync.Mutex{}
+	otelMemUsages    = make([]float64, 0)
+	// otelMemUsagesMutex -- used for reading & writing locks on otelMemUsages
+	otelMemUsagesMutex = &sync.Mutex{}
 )
 
 const (
 	coresAttachedTelemetryIntervalSeconds = 600
 	ksmAttachedTelemetryIntervalSeconds   = 600
 	meMetricsTelemetryIntervalSeconds     = 300
+	meOtelCpuMemoryUsageIntervalSeconds   = 300
 	coresAttachedTelemetryName            = "ClusterCoreCapacity"
 	linuxCpuCapacityTelemetryName         = "LiCapacity"
 	linuxNodeCountTelemetryName           = "LiNodeCnt"
@@ -131,6 +146,8 @@ const (
 	envComputerName                       = "NODE_NAME"
 	envDefaultMetricAccountName           = "AZMON_DEFAULT_METRIC_ACCOUNT_NAME"
 	envPodName                            = "POD_NAME"
+	envContainerCpuLimit                  = "CONTAINER_CPU_LIMIT"
+	envContainerMemoryLimit               = "CONTAINER_MEMORY_LIMIT"
 	envTelemetryOffSwitch                 = "DISABLE_TELEMETRY"
 	envNamespace                          = "POD_NAMESPACE"
 	envHelmReleaseName                    = "HELM_RELEASE_NAME"
@@ -142,6 +159,11 @@ const (
 	fluentbitInfiniteMetricTag            = "prometheus.log.infinitemetric"
 	fluentbitContainerLogsTag             = "prometheus.log.prometheuscollectorcontainer"
 	fluentbitExportingFailedTag           = "prometheus.log.exportingfailed"
+	meMemRssScrapeTag                     = "procai.metricsextension.memvmrss.scrape"
+	otelcolMemRssScrapeTag                = "procai.otelcollector.memvmrss.scrape"
+	otelcolCpuScrapeTag                   = "cpu.otel"
+	meCpuScrapeTag                        = "cpu.metricsextension"
+	promScrapeTag                         = "promscrape.scrape"
 	fluentbitFailedScrapeTag              = "prometheus.log.failedscrape"
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
@@ -196,6 +218,42 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["podname"] = os.Getenv(envPodName)
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
+	CommonProperties["containercpulimit"] = os.Getenv(envContainerCpuLimit)
+	CommonProperties["containermemorylimit"] = os.Getenv(envContainerMemoryLimit)
+	CommonProperties["defaultscrapekubelet"] = os.Getenv("AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapecoreDns"] = os.Getenv("AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapecadvisor"] = os.Getenv("AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapekubeproxy"] = os.Getenv("AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapeapiserver"] = os.Getenv("AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapekubestate"] = os.Getenv("AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenodeexporter"] = os.Getenv("AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapecollectorhealth"] = os.Getenv("AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapewindowsexporter"] = os.Getenv("AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapewindowskubeproxy"] = os.Getenv("AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapepodannotations"] = os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED")
+	CommonProperties["podannotationns"] = os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX")
+	CommonProperties["defaultscrapekappiebasic"] = os.Getenv("AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenetworkobservabilityRetina"] = os.Getenv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenetworkobservabilityHubble"] = os.Getenv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED")
+	CommonProperties["defaultscrapenetworkobservabilityCilium"] = os.Getenv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED")
+	CommonProperties["nodeexportertargetport"] = os.Getenv("NODE_EXPORTER_TARGETPORT")
+	CommonProperties["nodeexportername"] = os.Getenv("NODE_EXPORTER_NAME")
+	CommonProperties["kubestatename"] = os.Getenv("KUBE_STATE_NAME")
+	CommonProperties["kubestateversion"] = os.Getenv("KUBE_STATE_VERSION")
+	CommonProperties["nodeexporterversion"] = os.Getenv("NODE_EXPORTER_VERSION")
+	CommonProperties["akvauth"] = os.Getenv("AKVAUTH")
+	CommonProperties["debugmodeenabled"] = os.Getenv("DEBUG_MODE_ENABLED")
+	CommonProperties["kubestatemetriclabelsallowlist"] = os.Getenv("KUBE_STATE_METRIC_LABELS_ALLOWLIST")
+	CommonProperties["kubestatemetricannotationsallowlist"] = os.Getenv("KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST")
+	CommonProperties["httpproxyenabled"] = os.Getenv("HTTP_PROXY_ENABLED")
+	CommonProperties["tadapterh"] = os.Getenv("tokenadapterHealthyAfterSecs")
+	CommonProperties["tadapterf"] = os.Getenv("tokenadapterUnhealthyAfterSecs")
+	CommonProperties["mip"] = os.Getenv("MINIMAL_INGESTION_PROFILE")
+	CommonProperties["operatormodel"] = os.Getenv("AZMON_OPERATOR_ENABLED")
+	CommonProperties["operatormodelcfgmapsetting"] = os.Getenv("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING")
+	CommonProperties["operatormodelchartsetting"] = os.Getenv("AZMON_OPERATOR_ENABLED_CHART_SETTING")
+	CommonProperties["operatortargetstaimgversion"] = os.Getenv("OPERATOR_TARGETS_TA_IMG_VERSION")
+	CommonProperties["operatortargetscfgreaderimgversion"] = os.Getenv("OPERATOR_TARGETS_CFG_READER_IMG_VERSION")
 
 	isMacMode := os.Getenv("MAC")
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
@@ -562,8 +620,10 @@ func PushLogErrorsToAppInsightsTraces(records []map[interface{}]interface{}, sev
 }
 
 func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
+	Log("Enter me metrics proc count function")
 	for _, record := range records {
 		var logEntry = ToString(record["message"])
+		Log(logEntry)
 		var metricScrapeInfoRegex = regexp.MustCompile(`\s*([^\s]+)\s*([^\s]+)\s*([^\s]+).*ProcessedCount: ([\d]+).*ProcessedBytes: ([\d]+).*SentToPublicationCount: ([\d]+).*SentToPublicationBytes: ([\d]+).*`)
 		groupMatches := metricScrapeInfoRegex.FindStringSubmatch(logEntry)
 
@@ -630,13 +690,14 @@ func UpdateMEMetricsProcessedCount(records []map[interface{}]interface{}) int {
 		}
 
 	}
+	Log("Exit me metrics proc count function")
 	return output.FLB_OK
 }
 
 // Get the account name, metrics/bytes processed count, and metrics/bytes sent count from metrics extension log line
 // that was filtered by fluent-bit
 func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
-
+	Log("Enter the ME push ticker function")
 	ticker := time.NewTicker(time.Second * time.Duration(meMetricsTelemetryIntervalSeconds))
 	for ; true; <-ticker.C {
 
@@ -749,6 +810,7 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 			meMetricsReceivedCountMapMutex.Unlock()
 		}
 
+		Log("Enter the ME push ticker function")
 	}
 }
 
@@ -839,4 +901,272 @@ func RecordExportingFailed(records []map[interface{}]interface{}) int {
 		ExportingFailedMutex.Unlock()
 	}
 	return output.FLB_OK
+}
+
+func PushPromToAppInsightsMetrics(records []map[interface{}]interface{}) int {
+	// Define a regular expression to extract the metric name, metric value and other details
+	var logRegex = regexp.MustCompile(`^(?P<metricName>otelcol_processor_dropped_metric_points|otelcol_receiver_refused_metric_points|otelcol_receiver_accepted_metric_points|otelcol_exporter_sent_metric_points|otelcol_exporter_queue_size|otelcol_exporter_send_failed_metric_points|otelcol_process_memory_rss|otelcol_processor_batch_batch_send_size_bytes_sum|otelcol_processor_batch_batch_send_size_bytes_count|prometheus_sd_http_failures_total|opentelemetry_allocator_targets|opentelemetry_allocator_collectors_discovered)(\{[^}]*\})?\s+=\s+(?P<metricValue>\d+)$`)
+	Log("enter prom function")
+	for _, record := range records {
+		var logEntry = ToString(record["message"])
+		Log(logEntry)
+
+		groupMatches := logRegex.FindStringSubmatch(logEntry)
+
+		if len(groupMatches) < 3 {
+			message := fmt.Sprintf("Failed to parse log record: %s", logEntry)
+			Log(message)
+			continue
+		}
+
+		// Extract the metric value and convert to float
+		metricValue, err := strconv.ParseFloat(groupMatches[3], 64)
+		if err != nil {
+			message := fmt.Sprintf("Failed to convert metric value to float64: %v", err)
+			Log(message)
+			continue
+		}
+		var jobName string
+		if groupMatches[1] == "opentelemetry_allocator_targets" {
+			var jobRegex = regexp.MustCompile(`job_name="([^"]+)"`)
+			jobMatches := jobRegex.FindStringSubmatch(groupMatches[2])
+			if len(jobMatches) > 1 {
+				jobName = jobMatches[1]
+				message := fmt.Sprintf("Job name found: %s", jobName)
+				Log(message)
+			} else {
+				message := fmt.Sprintf("Job name not found in %s", groupMatches[2])
+				Log(message)
+				continue
+			}
+		}
+
+		// Create and send metric
+		var metricName string
+		if groupMatches[1] == "opentelemetry_allocator_targets" || groupMatches[1] == "opentelemetry_allocator_collectors_discovered" {
+			metricName = "target_allocator_" + groupMatches[1]
+		} else {
+			metricName = "prometheus_" + groupMatches[1]
+		}
+		metric := appinsights.NewMetricTelemetry(metricName, metricValue)
+		metric.Properties["job_name"] = fmt.Sprintf("%s", jobName)
+		TelemetryClient.Track(metric)
+		Log(fmt.Sprintf("Sent %s metrics", metricName))
+	}
+	return output.FLB_OK
+}
+
+func UpdateOtelCpuUsages(records []map[interface{}]interface{}) int {
+	Log("enter otel cpu function")
+
+	for i, record := range records {
+		Log(fmt.Sprintf("Processing record %d", i))
+		var logEntry = ToString(record["message"])
+		Log(logEntry)
+
+		otelcpuUsage, err := strconv.ParseFloat(logEntry, 64)
+		if err != nil {
+			message := fmt.Sprintf("Failed to parse otelcpuUsage as float64: %v", err)
+			Log(message)
+			SendException(message)
+			continue
+		}
+
+		Log("Attempting to acquire lock")
+		otelCpuUsagesMutex.Lock()
+		Log("Acquired lock")
+		otelCpuUsages = append(otelCpuUsages, otelcpuUsage)
+		otelCpuUsagesMutex.Unlock()
+		Log("Released lock")
+	}
+
+	Log("Exit otel cpu function")
+	return output.FLB_OK
+}
+
+func PushOtelCpuToAppInsightsMetrics() {
+	Log("enter otel cpu timer function")
+	otelCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
+	for ; true; <-otelCpuTelemetryTicker.C {
+		otelCpuUsagesMutex.Lock()
+		sort.Float64s(otelCpuUsages)
+		if len(otelCpuUsages) > 0 {
+			index50 := int(math.Ceil(0.50 * float64(len(otelCpuUsages))))
+			percentile50 := otelCpuUsages[index50-1]
+
+			index95 := int(math.Ceil(0.95 * float64(len(otelCpuUsages))))
+			percentile95 := otelCpuUsages[index95-1]
+
+			metric50 := appinsights.NewMetricTelemetry("otelcollector_cpu_usage_050", percentile50)
+			TelemetryClient.Track(metric50)
+			Log("Sent Otel 50th percentile  Cpu usage metrics")
+
+			metric95 := appinsights.NewMetricTelemetry("otelcollector_cpu_usage_095", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent Otel 95th percentile  Cpu usage metrics")
+		}
+		otelCpuUsages = make([]float64, 0)
+		otelCpuUsagesMutex.Unlock()
+	}
+	Log("Exit otel cpu timer function")
+}
+
+func UpdateMECpuUsages(records []map[interface{}]interface{}) int {
+	Log("Enter ME cpu function")
+
+	for i, record := range records {
+		Log(fmt.Sprintf("Processing record %d", i))
+		var logEntry = ToString(record["message"])
+		Log(logEntry)
+
+		mecpuUsage, err := strconv.ParseFloat(logEntry, 64)
+		if err != nil {
+			message := fmt.Sprintf("Failed to parse mecpuUsage as float64: %v", err)
+			Log(message)
+			SendException(message)
+			continue
+		}
+
+		Log("Attempting to acquire lock")
+		meCpuUsagesMutex.Lock()
+		Log("Acquired lock")
+		meCpuUsages = append(meCpuUsages, mecpuUsage)
+		meCpuUsagesMutex.Unlock()
+		Log("Released lock")
+	}
+
+	Log("Exit ME cpu function")
+	return output.FLB_OK
+}
+
+func PushMECpuToAppInsightsMetrics() {
+	meCpuTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
+
+	for ; true; <-meCpuTelemetryTicker.C {
+		meCpuUsagesMutex.Lock()
+		sort.Float64s(meCpuUsages)
+
+		if len(meCpuUsages) > 0 {
+			index50 := int(math.Ceil(0.50 * float64(len(meCpuUsages))))
+			percentile50 := meCpuUsages[index50-1]
+
+			index95 := int(math.Ceil(0.95 * float64(len(meCpuUsages))))
+			percentile95 := meCpuUsages[index95-1]
+
+			metric50 := appinsights.NewMetricTelemetry("mecollector_cpu_usage_050", percentile50)
+			TelemetryClient.Track(metric50)
+			Log("Sent ME 50th percentile  Cpu usage metrics")
+
+			metric95 := appinsights.NewMetricTelemetry("mecollector_cpu_usage_095", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent ME 95th percentile  Cpu usage metrics")
+
+		}
+		meCpuUsages = make([]float64, 0)
+		meCpuUsagesMutex.Unlock()
+	}
+}
+
+func UpdateMEMemRssUsages(records []map[interface{}]interface{}) int {
+	Log("enter ME memory function")
+
+	for _, record := range records {
+		var logEntry = ToString(record["message"])
+		Log(logEntry)
+
+		memRssUsage, err := strconv.ParseFloat(logEntry, 64)
+		if err != nil {
+			message := fmt.Sprintf("Failed to parse memRssUsage as float64: %v", err)
+			Log(message)
+			SendException(message)
+			continue
+		}
+
+		meCpuUsagesMutex.Lock()
+		meMemUsages = append(meMemUsages, memRssUsage)
+		meCpuUsagesMutex.Unlock()
+	}
+
+	Log("Exit ME memory function")
+	return output.FLB_OK
+}
+
+func PushMEMemRssToAppInsightsMetrics() {
+	meMemRssTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
+
+	for ; true; <-meMemRssTelemetryTicker.C {
+		meCpuUsagesMutex.Lock()
+		sort.Float64s(meMemUsages)
+
+		if len(meMemUsages) > 0 {
+			index50 := int(math.Ceil(0.50 * float64(len(meMemUsages))))
+			percentile50 := meMemUsages[index50-1]
+
+			index95 := int(math.Ceil(0.95 * float64(len(meMemUsages))))
+			percentile95 := meMemUsages[index95-1]
+
+			metric50 := appinsights.NewMetricTelemetry("mecollector_mem_rss_usage_050", percentile50)
+			TelemetryClient.Track(metric50)
+			Log("Sent ME 50th percentile  MemRss usage metrics")
+
+			metric95 := appinsights.NewMetricTelemetry("mecollector_mem_rss_usage_095", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent ME 95th percentile  MemRss usage metrics")
+
+		}
+		meMemUsages = make([]float64, 0)
+		meCpuUsagesMutex.Unlock()
+	}
+}
+
+func UpdateOtelColMemRssUsages(records []map[interface{}]interface{}) int {
+	Log("enter OtelCol memory function")
+
+	for _, record := range records {
+		var logEntry = ToString(record["message"])
+		Log(logEntry)
+
+		memRssUsage, err := strconv.ParseFloat(logEntry, 64)
+		if err != nil {
+			message := fmt.Sprintf("Failed to parse memRssUsage as float64: %v", err)
+			Log(message)
+			SendException(message)
+			continue
+		}
+
+		otelMemUsagesMutex.Lock()
+		otelMemUsages = append(otelMemUsages, memRssUsage)
+		otelMemUsagesMutex.Unlock()
+	}
+
+	Log("Exit OtelCol memory function")
+	return output.FLB_OK
+}
+
+func PushOtelColMemRssToAppInsightsMetrics() {
+	otelColMemRssTelemetryTicker := time.NewTicker(time.Second * time.Duration(meOtelCpuMemoryUsageIntervalSeconds))
+
+	for ; true; <-otelColMemRssTelemetryTicker.C {
+		otelMemUsagesMutex.Lock()
+		sort.Float64s(otelMemUsages)
+
+		if len(otelMemUsages) > 0 {
+			index50 := int(math.Ceil(0.50 * float64(len(otelMemUsages))))
+			percentile50 := otelMemUsages[index50-1]
+
+			index95 := int(math.Ceil(0.95 * float64(len(otelMemUsages))))
+			percentile95 := otelMemUsages[index95-1]
+
+			metric50 := appinsights.NewMetricTelemetry("otelcollector_mem_rss_usage_050", percentile50)
+			TelemetryClient.Track(metric50)
+			Log("Sent OtelCol 50th percentile  MemRss usage metrics")
+
+			metric95 := appinsights.NewMetricTelemetry("otelcollector_mem_rss_usage_095", percentile95)
+			TelemetryClient.Track(metric95)
+			Log("Sent OtelCol 95th percentile  MemRss usage metrics")
+
+		}
+		otelMemUsages = make([]float64, 0)
+		otelMemUsagesMutex.Unlock()
+	}
 }
