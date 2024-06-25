@@ -82,10 +82,10 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 	configMap["minimalingestionprofile"] = getStringValue(tree.Get("minimalingestionprofile"))
 
 	// Print the content of the config map
-	fmt.Println("Content of the config map:")
-	for key, value := range configMap {
-		fmt.Printf("%s: %s\n", key, value)
-	}
+	// fmt.Println("Content of the config map:")
+	// for key, value := range configMap {
+	// 	fmt.Printf("%s: %s\n", key, value)
+	// }
 
 	return configMap
 }

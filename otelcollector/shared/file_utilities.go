@@ -127,7 +127,7 @@ func SetEnvVarsFromFile(filename string) error {
 		key := parts[0]
 		value := parts[1]
 
-		SetEnvAndSourceBashrc(key, value, true)
+		SetEnvAndSourceBashrc(key, value, false)
 	}
 
 	if err := scanner.Err(); err != nil {
