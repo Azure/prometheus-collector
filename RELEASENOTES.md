@@ -1,5 +1,8 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Pending
+* fix: Truncate DCE/DCR to 44/64 chars in ARM, Bicep, Terraform... - https://github.com/Azure/prometheus-collector/pull/922
+
 ## Release 06-12-2024
 * Target Allocator Chart update to add Tls secret to the config reader sidecar container  
 
