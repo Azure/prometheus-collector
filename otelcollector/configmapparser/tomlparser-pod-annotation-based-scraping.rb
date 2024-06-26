@@ -65,7 +65,7 @@ namespaceRegexHash["POD_ANNOTATION_NAMESPACES_REGEX"] = @podannotationNamespaceR
 if !file.nil?
   # Close file after writing scrape interval list hash
   # Writing it as yaml as it is easy to read and write hash
-  file.write("export AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX=#{@podannotationNamespaceRegex}\n")
+  file.write("export AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX='#{@podannotationNamespaceRegex}'\n")
   file.close
 else
   ConfigParseErrorLogger.logError(LOGGING_PREFIX, "Exception while opening file for writing regex config hash")
