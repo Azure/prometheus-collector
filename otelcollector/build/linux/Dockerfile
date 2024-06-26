@@ -152,6 +152,7 @@ ENV TELEMETRY_DISABLED false
 ENV MALLOC_ARENA_MAX=2
 ENV PATH="/busybin:${PATH}"
 ENV OS_TYPE "linux"
+RUN mkdir -p $tmpdir/microsoft/liveness/
 
 # files
 COPY --from=builder /opt /opt

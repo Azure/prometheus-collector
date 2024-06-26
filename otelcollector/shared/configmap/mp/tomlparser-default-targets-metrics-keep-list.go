@@ -143,21 +143,21 @@ func populateKeepListFromConfigMap(parsedConfig map[string]interface{}) (RegexVa
 	}
 
 	// Logging the values being set
-	fmt.Println("Values being set for regex:")
-	fmt.Printf("kubelet: %s\n", regexValues.kubelet)
-	fmt.Printf("coredns: %s\n", regexValues.coredns)
-	fmt.Printf("cadvisor: %s\n", regexValues.cadvisor)
-	fmt.Printf("kubeproxy: %s\n", regexValues.kubeproxy)
-	fmt.Printf("apiserver: %s\n", regexValues.apiserver)
-	fmt.Printf("kubestate: %s\n", regexValues.kubestate)
-	fmt.Printf("nodeexporter: %s\n", regexValues.nodeexporter)
-	fmt.Printf("kappiebasic: %s\n", regexValues.kappiebasic)
-	fmt.Printf("windowsexporter: %s\n", regexValues.windowsexporter)
-	fmt.Printf("windowskubeproxy: %s\n", regexValues.windowskubeproxy)
-	fmt.Printf("networkobservabilityretina: %s\n", regexValues.networkobservabilityretina)
-	fmt.Printf("networkobservabilityhubble: %s\n", regexValues.networkobservabilityhubble)
-	fmt.Printf("networkobservabilitycilium: %s\n", regexValues.networkobservabilitycilium)
-	fmt.Printf("minimalingestionprofile: %s\n", regexValues.minimalingestionprofile)
+	// fmt.Println("Values being set for regex:")
+	// fmt.Printf("kubelet: %s\n", regexValues.kubelet)
+	// fmt.Printf("coredns: %s\n", regexValues.coredns)
+	// fmt.Printf("cadvisor: %s\n", regexValues.cadvisor)
+	// fmt.Printf("kubeproxy: %s\n", regexValues.kubeproxy)
+	// fmt.Printf("apiserver: %s\n", regexValues.apiserver)
+	// fmt.Printf("kubestate: %s\n", regexValues.kubestate)
+	// fmt.Printf("nodeexporter: %s\n", regexValues.nodeexporter)
+	// fmt.Printf("kappiebasic: %s\n", regexValues.kappiebasic)
+	// fmt.Printf("windowsexporter: %s\n", regexValues.windowsexporter)
+	// fmt.Printf("windowskubeproxy: %s\n", regexValues.windowskubeproxy)
+	// fmt.Printf("networkobservabilityretina: %s\n", regexValues.networkobservabilityretina)
+	// fmt.Printf("networkobservabilityhubble: %s\n", regexValues.networkobservabilityhubble)
+	// fmt.Printf("networkobservabilitycilium: %s\n", regexValues.networkobservabilitycilium)
+	// fmt.Printf("minimalingestionprofile: %s\n", regexValues.minimalingestionprofile)
 	return regexValues, nil // Return regex values and nil error if everything is valid
 }
 
