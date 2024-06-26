@@ -96,6 +96,7 @@ COPY ./logrotate/prometheus-collector /etc/logrotate.d/
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
 RUN mkdir -p $tmpdir/microsoft/configmapparser/
+RUN mkdir -p $tmpdir/microsoft/liveness/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/collector-config-replicaset.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
@@ -152,7 +153,6 @@ ENV TELEMETRY_DISABLED false
 ENV MALLOC_ARENA_MAX=2
 ENV PATH="/busybin:${PATH}"
 ENV OS_TYPE "linux"
-RUN mkdir -p $tmpdir/microsoft/liveness/
 
 # files
 COPY --from=builder /opt /opt
@@ -165,6 +165,7 @@ COPY --from=builder /var/lib/logrotate /var/lib/logrotate
 COPY --from=builder /var/spool/cron /var/spool/cron
 COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
 COPY --from=builder /usr/share/pki/ /usr/share/pki
+COPY --from=builder /opt/microsoft/liveness /opt/microsoft/liveness
 
 # executables
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
