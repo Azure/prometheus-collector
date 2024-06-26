@@ -158,7 +158,7 @@ COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
 # inotifywait dependencies
 COPY --from=builder /lib/libinotifytools.so.0 /lib/
 # crond dependencies
-COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre.so.1 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
+COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre2-16.so.0 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
 # vim dependencies
 COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
 # ruby dependencies
@@ -175,7 +175,7 @@ COPY --from=builder /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libcurl.so.4 /
 # mdsd dependencies
 #COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
 # logrotate dependencies
-COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
+COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre2-16.so.0 /lib/
 # curl dependencies
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1   /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
