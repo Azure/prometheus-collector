@@ -63,7 +63,7 @@ func writeConfigToFile() error {
 	}
 	defer file.Close()
 
-	if _, err := file.WriteString(fmt.Sprintf("%s=%s\n", envVariableTemplateName, podannotationNamespaceRegex)); err != nil {
+	if _, err := file.WriteString(fmt.Sprintf("%s='%s'\n", envVariableTemplateName, podannotationNamespaceRegex)); err != nil {
 		return fmt.Errorf("error writing to file: %v", err)
 	}
 
