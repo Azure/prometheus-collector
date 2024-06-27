@@ -95,8 +95,8 @@ ENV MALLOC_ARENA_MAX=2
 COPY ./logrotate/prometheus-collector /etc/logrotate.d/
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
-COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
 RUN mkdir -p $tmpdir/microsoft/configmapparser/
+RUN mkdir -p $tmpdir/microsoft/liveness/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/collector-config-replicaset.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
@@ -120,7 +120,7 @@ ARG TARGETARCH
 RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update -y
-RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
+RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
@@ -165,11 +165,10 @@ COPY --from=builder /var/lib/logrotate /var/lib/logrotate
 COPY --from=builder /var/spool/cron /var/spool/cron
 COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
 COPY --from=builder /usr/share/pki/ /usr/share/pki
+COPY --from=builder /opt/microsoft/liveness /opt/microsoft/liveness
 
 # executables
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
-COPY --from=builder /usr/bin/ruby /usr/bin/ruby
-COPY --from=builder /usr/lib/ruby /usr/lib/ruby
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
@@ -196,10 +195,6 @@ COPY --from=builder /lib/libinotifytools.so.0 /lib/
 COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre.so.1 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
 # vim dependencies
 COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
-# ruby dependencies
-COPY --from=builder /usr/lib/libruby.so.3.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
-# ruby re2 dependencies
-COPY --from=builder /usr/lib/libre2.so.0a /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
 # metricsextension dependencies
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 COPY --from=builder /lib/libboost_filesystem.so.1.76.0 /lib/libcpprest.so.2.10  /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libz.so.1 /lib/libbrotlicommon.so.1 /lib/

@@ -36,7 +36,6 @@ ENV OS_TYPE "linux"
 ENV tmpdir /opt
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
-COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
 COPY --from=configuration-reader-builder /src/goversion.txt $tmpdir/goversion.txt
@@ -52,7 +51,7 @@ ARG TARGETARCH
 RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update -y
-RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
+RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
@@ -71,8 +70,6 @@ COPY --from=builder /var/lib/logrotate /var/lib/logrotate
 COPY --from=builder /var/spool/cron /var/spool/cron
 
 # executables
-COPY --from=builder /usr/bin/ruby /usr/bin/ruby
-COPY --from=builder /usr/lib/ruby /usr/lib/ruby
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
@@ -93,10 +90,6 @@ COPY --from=builder /lib/libinotifytools.so.0 /lib/
 COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre.so.1 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
 # vim dependencies
 COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
-# ruby dependencies
-COPY --from=builder /usr/lib/libruby.so.3.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
-# ruby re2 dependencies
-COPY --from=builder /usr/lib/libre2.so.0a /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
 # logrotate dependencies
 COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
 # curl dependencies
