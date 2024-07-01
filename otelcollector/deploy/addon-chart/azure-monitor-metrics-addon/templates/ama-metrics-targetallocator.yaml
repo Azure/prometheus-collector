@@ -10,7 +10,7 @@ metadata:
 spec:
   progressDeadlineSeconds: 600
   replicas: 1
-  revisionHistoryLimit: 10
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       rsName: ama-metrics-operator-targets
@@ -22,11 +22,15 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      creationTimestamp: null
       labels:
         rsName: ama-metrics-operator-targets
         kubernetes.azure.com/managedby: aks
+      annotations:
+        agentVersion: "0.0.0.1"
+        schema-versions: "v1"
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
+      priorityClassName: system-node-critical
       containers:
       - name: targetallocator
         args:
@@ -214,14 +218,14 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
-        - operator: "Exists"
-          effect: "NoSchedule"
-        - operator: "Exists"
-          effect: "NoExecute"
-        - operator: "Exists"
-          effect: "PreferNoSchedule" 
-        {{- end }}
+        # {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
+        # - operator: "Exists"
+        #   effect: "NoSchedule"
+        # - operator: "Exists"
+        #   effect: "NoExecute"
+        # - operator: "Exists"
+        #   effect: "PreferNoSchedule" 
+        # {{- end }}
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
           effect: "NoSchedule"
