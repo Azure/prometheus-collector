@@ -10,15 +10,21 @@ import (
 	"github.com/prometheus-collector/shared"
 )
 
+const (
+	defaultConfigSchemaVersion = "v1"
+	defaultConfigFileVersion = "ver1"
+)
+
 func setConfigSchemaVersionEnv() {
-	schemaVersionFile := "/etc/config/settings/schema-version"
 	fileInfo, err := os.Stat(schemaVersionFile)
 	if err != nil || fileInfo.Size() == 0 {
+		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true)
 		return
 	}
 	content, err := os.ReadFile(schemaVersionFile)
 	if err != nil {
 		shared.EchoError("Error reading schema version file:" + err.Error())
+		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true)
 		return
 	}
 	trimmedContent := strings.TrimSpace(string(content))
@@ -30,14 +36,15 @@ func setConfigSchemaVersionEnv() {
 }
 
 func setConfigFileVersionEnv() {
-	configVersionFile := "/etc/config/settings/config-version"
 	fileInfo, err := os.Stat(configVersionFile)
 	if err != nil || fileInfo.Size() == 0 {
+		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true)
 		return
 	}
 	content, err := os.ReadFile(configVersionFile)
 	if err != nil {
 		shared.EchoError("Error reading config version file:" + err.Error())
+		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true)
 		return
 	}
 	trimmedContent := strings.TrimSpace(string(content))
@@ -54,24 +61,21 @@ func parseSettingsForPodAnnotations() {
 		fmt.Printf("%v\n", err)
 		return
 	}
-	filename := "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
-	handleEnvFileError(filename)
+	handleEnvFileError(podAnnotationEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseSettingsForPodAnnotations")
 }
 
 func parsePrometheusCollectorConfig() {
 	shared.EchoSectionDivider("Start Processing - parsePrometheusCollectorConfig")
 	parseConfigAndSetEnvInFile()
-	filename := "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
-	handleEnvFileError(filename)
+	handleEnvFileError(collectorSettingsEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parsePrometheusCollectorConfig")
 }
 
 func parseDefaultScrapeSettings() {
 	shared.EchoSectionDivider("Start Processing - parseDefaultScrapeSettings")
 	tomlparserDefaultScrapeSettings()
-	filename := "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
-	handleEnvFileError(filename)
+	handleEnvFileError(defaultSettingsEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseDefaultScrapeSettings")
 }
 
@@ -81,8 +85,7 @@ func parseDebugModeSettings() {
 		shared.EchoError(err.Error())
 		return
 	}
-	filename := "/opt/microsoft/configmapparser/config_debug_mode_env_var"
-	handleEnvFileError(filename)
+	handleEnvFileError(debugModeEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseDebugModeSettings")
 }
 
@@ -128,9 +131,9 @@ func Configmapparser() {
 				fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
 				fmt.Printf("Command execution failed: %v\n", err)
 				shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", true)
-				if shared.FileExists("/opt/defaultsMergedConfig.yml") {
+				if shared.FileExists(mergedDefaultConfigPath) {
 					fmt.Println("prom-config-validator::Running validator on just default scrape configs")
-					shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+					shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", mergedDefaultConfigPath, "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
 					if !shared.FileExists("/opt/collector-config-with-defaults.yml") {
 						fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
 					} else {
@@ -140,9 +143,9 @@ func Configmapparser() {
 				shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
 			}
 		}
-	} else if _, err := os.Stat("/opt/defaultsMergedConfig.yml"); err == nil {
+	} else if _, err := os.Stat(mergedDefaultConfigPath); err == nil {
 		fmt.Println("prom-config-validator::No custom prometheus config found. Only using default scrape configs")
-		err := shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+		err := shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", mergedDefaultConfigPath, "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
 		if err != nil {
 			fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
 			fmt.Printf("Command execution failed: %v\n", err)

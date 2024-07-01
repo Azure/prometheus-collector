@@ -13,10 +13,7 @@ import (
 
 const (
 	loggingPrefix             = "debug-mode-config"
-	configMapDebugMountPath   = "/etc/config/settings/debug-mode"
-	replicaSetCollectorConfig = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
 )
-
 var (
 	defaultEnabled = false
 )
@@ -40,7 +37,7 @@ func ConfigureDebugModeSettings() error {
 		}
 	}
 
-	file, err := os.Create("/opt/microsoft/configmapparser/config_debug_mode_env_var")
+	file, err := os.Create(debugModeEnvVarPath)
 	if err != nil {
 		return fmt.Errorf("Exception while opening file for writing prometheus-collector config environment variables: %v\n", err)
 	}
@@ -112,5 +109,7 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) {
 	if val, ok := parsedConfig["enabled"]; ok {
 		defaultEnabled = val.(bool)
 		fmt.Printf("Using configmap setting for debug mode: %v\n", defaultEnabled)
+	} else {
+		fmt.Printf("Debug mode configmap does not have enabled value, using default value: %v\n", defaultEnabled)
 	}
 }

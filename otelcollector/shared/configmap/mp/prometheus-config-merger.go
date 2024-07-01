@@ -16,40 +16,11 @@ import (
 
 const (
 	configMapMountPath                           = "/etc/config/settings/prometheus/prometheus-config"
-	promMergedConfigPath                         = "/opt/promMergedConfig.yml"
-	mergedDefaultConfigPath                      = "/opt/defaultsMergedConfig.yml"
 	replicasetControllerType                     = "replicaset"
 	daemonsetControllerType                      = "daemonset"
 	configReaderSidecarContainerType             = "configreadersidecar"
 	supportedSchemaVersion                       = true
-	defaultPromConfigPathPrefix                  = "/opt/microsoft/otelcollector/default-prom-configs/"
-	regexHashFile                                = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	sendDSUpMetric                               = false
-	intervalHashFile                             = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
-	kubeletDefaultFileRsSimple                   = defaultPromConfigPathPrefix + "kubeletDefaultRsSimple.yml"
-	kubeletDefaultFileRsAdvanced                 = defaultPromConfigPathPrefix + "kubeletDefaultRsAdvanced.yml"
-	kubeletDefaultFileDs                         = defaultPromConfigPathPrefix + "kubeletDefaultDs.yml"
-	kubeletDefaultFileRsAdvancedWindowsDaemonset = defaultPromConfigPathPrefix + "kubeletDefaultRsAdvancedWindowsDaemonset.yml"
-	coreDNSDefaultFile                           = defaultPromConfigPathPrefix + "corednsDefault.yml"
-	cadvisorDefaultFileRsSimple                  = defaultPromConfigPathPrefix + "cadvisorDefaultRsSimple.yml"
-	cadvisorDefaultFileRsAdvanced                = defaultPromConfigPathPrefix + "cadvisorDefaultRsAdvanced.yml"
-	cadvisorDefaultFileDs                        = defaultPromConfigPathPrefix + "cadvisorDefaultDs.yml"
-	kubeProxyDefaultFile                         = defaultPromConfigPathPrefix + "kubeproxyDefault.yml"
-	apiserverDefaultFile                         = defaultPromConfigPathPrefix + "apiserverDefault.yml"
-	kubeStateDefaultFile                         = defaultPromConfigPathPrefix + "kubestateDefault.yml"
-	nodeExporterDefaultFileRsSimple              = defaultPromConfigPathPrefix + "nodeexporterDefaultRsSimple.yml"
-	nodeExporterDefaultFileRsAdvanced            = defaultPromConfigPathPrefix + "nodeexporterDefaultRsAdvanced.yml"
-	nodeExporterDefaultFileDs                    = defaultPromConfigPathPrefix + "nodeexporterDefaultDs.yml"
-	prometheusCollectorHealthDefaultFile         = defaultPromConfigPathPrefix + "prometheusCollectorHealth.yml"
-	windowsExporterDefaultRsSimpleFile           = defaultPromConfigPathPrefix + "windowsexporterDefaultRsSimple.yml"
-	windowsExporterDefaultDsFile                 = defaultPromConfigPathPrefix + "windowsexporterDefaultDs.yml"
-	windowsKubeProxyDefaultFileRsSimpleFile      = defaultPromConfigPathPrefix + "windowskubeproxyDefaultRsSimple.yml"
-	windowsKubeProxyDefaultDsFile                = defaultPromConfigPathPrefix + "windowskubeproxyDefaultDs.yml"
-	podAnnotationsDefaultFile                    = defaultPromConfigPathPrefix + "podannotationsDefault.yml"
-	kappieBasicDefaultFileDs                     = defaultPromConfigPathPrefix + "kappieBasicDefaultDs.yml"
-	networkObservabilityRetinaDefaultFileDs      = defaultPromConfigPathPrefix + "networkobservabilityRetinaDefaultDs.yml"
-	networkObservabilityHubbleDefaultFileDs      = defaultPromConfigPathPrefix + "networkobservabilityHubbleDefaultDs.yml"
-	networkObservabilityCiliumDefaultFileDs      = defaultPromConfigPathPrefix + "networkobservabilityCiliumDefaultDs.yml"
 )
 
 var (
@@ -1236,7 +1207,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 	}
 
 	for _, currentFile := range defaultFilesArray {
-		contents, err := os.ReadFile(currentFile)
+		contents, err := os.ReadFile(fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, currentFile))
 		if err != nil {
 			fmt.Printf("Error reading file %s: %v\n", currentFile, err)
 			continue

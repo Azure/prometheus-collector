@@ -18,7 +18,6 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["kubestate"] = "true"
 	config["nodeexporter"] = "true"
 	config["prometheuscollectorhealth"] = "false"
-	config["podannotation"] = "false"
 	config["windowsexporter"] = "false"
 	config["windowskubeproxy"] = "false"
 	config["kappiebasic"] = "true"
@@ -40,7 +39,6 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map
 	config["kubestate"] = "true"
 	config["nodeexporter"] = "true"
 	config["prometheuscollectorhealth"] = "false"
-	config["podannotation"] = "false"
 	config["windowsexporter"] = "false"
 	config["windowskubeproxy"] = "false"
 	config["kappiebasic"] = "true"
@@ -116,11 +114,6 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 		fmt.Printf("config::Using scrape settings for prometheuscollectorhealth: %v\n", cp.PrometheusCollectorHealth)
 	}
 
-	if val, ok := parsedConfig["podannotation"]; ok && val != "" {
-		cp.PodAnnotation = val
-		fmt.Printf("config::Using scrape settings for podannotation: %v\n", cp.PodAnnotation)
-	}
-
 	if val, ok := parsedConfig["windowsexporter"]; ok && val != "" {
 		cp.Windowsexporter = val
 		fmt.Printf("config::Using scrape settings for windowsexporter: %v\n", cp.Windowsexporter)
@@ -183,7 +176,6 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED=%v\n", cp.Kubestate))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED=%v\n", cp.NodeExporter))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED=%v\n", cp.PrometheusCollectorHealth))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED=%v\n", cp.PodAnnotation))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=%v\n", cp.Windowsexporter))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=%v\n", cp.Windowskubeproxy))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED=%v\n", cp.Kappiebasic))
@@ -243,9 +235,9 @@ func (c *Configurator) ConfigureDefaultScrapeSettings() {
 
 func tomlparserDefaultScrapeSettings() {
 	configurator := &Configurator{
-		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/default-scrape-settings-enabled"},
+		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: defaultSettingsMountPath},
 		ConfigWriter:   &FileConfigWriter{},
-		ConfigFilePath: "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var",
+		ConfigFilePath: defaultSettingsEnvVarPath,
 		ConfigParser:   &ConfigProcessor{},
 	}
 

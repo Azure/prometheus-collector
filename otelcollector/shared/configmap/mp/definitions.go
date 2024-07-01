@@ -1,5 +1,52 @@
 package configmapsettings
 
+var (
+	schemaVersionFile = "/etc/config/settings/schema-version"
+	configVersionFile = "/etc/config/settings/config-version"
+	configMapDebugMountPath   = "/etc/config/settings/debug-mode"
+	replicaSetCollectorConfig = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
+	debugModeEnvVarPath = "/opt/microsoft/configmapparser/config_debug_mode_env_var"
+	defaultSettingsMountPath = "/etc/config/settings/default-scrape-settings"
+	defaultSettingsEnvVarPath = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
+	configMapMountPathForPodAnnotation = "/etc/config/settings/pod-annotation-based-scraping"
+	podAnnotationEnvVarPath            = "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
+	collectorSettingsMountPath = "/etc/config/settings/prometheus-collector-settings"
+	collectorSettingsEnvVarPath =  "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
+	configMapKeepListMountPath                                          = "/etc/config/settings/default-targets-metrics-keep-list"
+	configMapKeepListEnvVarPath                                         = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
+	configMapScrapeIntervalMountPath = "/etc/config/settings/default-targets-scrape-interval-settings"
+	scrapeIntervalEnvVarPath = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
+	promMergedConfigPath                         = "/opt/promMergedConfig.yml"
+	mergedDefaultConfigPath                      = "/opt/defaultsMergedConfig.yml"
+	defaultPromConfigPathPrefix                  = "/opt/microsoft/otelcollector/default-prom-configs/"
+	regexHashFile                                = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
+	intervalHashFile                             = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
+	kubeletDefaultFileRsSimple                   = "kubeletDefaultRsSimple.yml"
+	kubeletDefaultFileRsAdvanced                 = "kubeletDefaultRsAdvanced.yml"
+	kubeletDefaultFileDs                         = "kubeletDefaultDs.yml"
+	kubeletDefaultFileRsAdvancedWindowsDaemonset = "kubeletDefaultRsAdvancedWindowsDaemonset.yml"
+	coreDNSDefaultFile                           = "corednsDefault.yml"
+	cadvisorDefaultFileRsSimple                  = "cadvisorDefaultRsSimple.yml"
+	cadvisorDefaultFileRsAdvanced                = "cadvisorDefaultRsAdvanced.yml"
+	cadvisorDefaultFileDs                        = "cadvisorDefaultDs.yml"
+	kubeProxyDefaultFile                         = "kubeproxyDefault.yml"
+	apiserverDefaultFile                         = "apiserverDefault.yml"
+	kubeStateDefaultFile                         = "kubestateDefault.yml"
+	nodeExporterDefaultFileRsSimple              = "nodeexporterDefaultRsSimple.yml"
+	nodeExporterDefaultFileRsAdvanced            = "nodeexporterDefaultRsAdvanced.yml"
+	nodeExporterDefaultFileDs                    = "nodeexporterDefaultDs.yml"
+	prometheusCollectorHealthDefaultFile         = "prometheusCollectorHealth.yml"
+	windowsExporterDefaultRsSimpleFile           = "windowsexporterDefaultRsSimple.yml"
+	windowsExporterDefaultDsFile                 = "windowsexporterDefaultDs.yml"
+	windowsKubeProxyDefaultFileRsSimpleFile      = "windowskubeproxyDefaultRsSimple.yml"
+	windowsKubeProxyDefaultDsFile                = "windowskubeproxyDefaultDs.yml"
+	podAnnotationsDefaultFile                    = "podannotationsDefault.yml"
+	kappieBasicDefaultFileDs                     = "kappieBasicDefaultDs.yml"
+	networkObservabilityRetinaDefaultFileDs      = "networkobservabilityRetinaDefaultDs.yml"
+	networkObservabilityHubbleDefaultFileDs      = "networkobservabilityHubbleDefaultDs.yml"
+	networkObservabilityCiliumDefaultFileDs      = "networkobservabilityCiliumDefaultDs.yml"
+)
+
 type RegexValues struct {
 	kubelet                    string
 	coredns                    string
@@ -14,6 +61,7 @@ type RegexValues struct {
 	networkobservabilityretina string
 	networkobservabilityhubble string
 	networkobservabilitycilium string
+	podannotations             string
 	minimalingestionprofile    string
 }
 
