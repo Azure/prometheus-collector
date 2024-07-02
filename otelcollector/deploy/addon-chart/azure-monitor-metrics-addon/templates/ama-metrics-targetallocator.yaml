@@ -185,10 +185,10 @@ spec:
           - weight: 100
             preference:
               matchExpressions:
-              - key: kubernetes.azure.com/mode
+              - key: memory
                 operator: In
                 values:
-                - system
+                - lowmemory
           - weight: 50
             preference:
               matchExpressions:

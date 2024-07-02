@@ -1,345 +1,349 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ama-metrics
-  namespace: kube-system
-  labels:
-    component: ama-metrics
-    kubernetes.azure.com/managedby: aks
-spec:
-  {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
-  replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
-  {{- else}}
-  replicas: 1
-  {{- end }}
-  revisionHistoryLimit: 2
-  paused: false
-  selector:
-    matchLabels:
-      rsName: ama-metrics
-  strategy:
-    type: RollingUpdate
-  template:
-    metadata:
-      labels:
-        rsName: ama-metrics
-        kubernetes.azure.com/managedby: aks
-      annotations:
-        agentVersion: "0.0.0.1"
-        schema-versions: "v1"
-        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
-    spec:
-      priorityClassName: system-node-critical
-      serviceAccountName: ama-metrics-serviceaccount
-      containers:
-        - name: prometheus-collector
-          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
-          imagePullPolicy: IfNotPresent
-          resources:
-            limits:
-              cpu: {{ .Values.AzureMonitorMetrics.RsCPULimit }}
-              memory: {{ .Values.AzureMonitorMetrics.RsMemoryLimit }}
-            requests:
-              cpu: {{ .Values.AzureMonitorMetrics.RsCPURequest }}
-              memory: {{ .Values.AzureMonitorMetrics.RsMemoryRequest }}
-          {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
-          envFrom:
-            - secretRef:
-                name: ama-metrics-proxy-config
-                optional: true
-          {{- end }}
-          env:
-            - name: CLUSTER
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ .Values.Azure.Cluster.ResourceId }}"
-              {{- else }}
-              value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
-              {{- end }}
-            - name: AKSREGION
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ .Values.Azure.Cluster.Region }}"
-              {{- else }}
-              value: "{{ .Values.global.commonGlobals.Region }}"
-              {{- end }}
-            - name: MAC
-              value: "true"
-            - name: AZMON_COLLECT_ENV
-              value: "false"
-            - name: AZMON_OPERATOR_ENABLED
-            {{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
-              value: "true"
-            {{- else }}
-              value: "false"
-            {{- end }}
-            - name: customEnvironment
-              {{- if .Values.AzureMonitorMetrics.isArcACluster }}
-              value: "arcautonomous"
-              {{- else if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ lower .Values.CloudEnvironment }}"
-              {{- else }}
-              value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
-              {{- end }}
-            - name: OMS_TLD
-              value: "opinsights.azure.com"
-            {{- if .Values.AzureMonitorMetrics.isArcACluster }}
-            - name: customRegionalEndpoint
-              value: {{ required "customRegionalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
-            - name: customGlobalEndpoint
-              value: {{ required "customGlobalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
-            - name: customResourceEndpoint
-              value: {{ required "customResourceEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
-            {{- end }}
-            - name: CONTROLLER_TYPE
-              value: "ReplicaSet"
-            - name: NODE_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: CONTAINER_CPU_LIMIT
-              valueFrom:
-                resourceFieldRef:
-                  containerName: prometheus-collector
-                  resource: limits.cpu
-                  divisor: 1m
-            - name: CONTAINER_MEMORY_LIMIT
-              valueFrom:
-                resourceFieldRef:
-                  containerName: prometheus-collector
-                  resource: limits.memory
-                  divisor: 1Mi
-            - name: KUBE_STATE_NAME
-              value: ama-metrics-ksm
-            - name: NODE_EXPORTER_NAME
-              value: "" # Replace this with the node exporter shipped out of box with AKS
-            - name: NODE_EXPORTER_TARGETPORT
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
-              {{- else }}
-              value: "19100"
-              {{- end }}
-            {{- if .Values.AzureMonitorMetrics }}
-              {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
-            - name: KUBE_STATE_VERSION
-              value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
-                {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
-            - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
-              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}"
-                {{-  end  }}
-                {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
-            - name: KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST
-              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}"
-                {{-  end  }}
-              {{-  end  }}
-            {{-  end  }}
-            {{- if .Values.AzureMonitorMetrics }}
-              {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
-            - name: OPERATOR_TARGETS_TA_IMG_VERSION
-              value: "{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
-            - name: OPERATOR_TARGETS_CFG_READER_IMG_VERSION
-              value: "{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
-              {{-  end  }}
-            {{-  end  }}
-            - name: NODE_EXPORTER_VERSION
-              value: "v1.6.0" # Replace this with the version shipped by default
-            - name: AGENT_VERSION
-              value: {{ .Values.AzureMonitorMetrics.ImageTag }}
-            - name: MODE
-              value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
-            - name: WINMODE
-              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
-            - name: MINIMAL_INGESTION_PROFILE
-              value: "true" # only supported value is the string "true"
-          securityContext:
-            privileged: false
-            capabilities:
-              drop:
-                - ALL
-              add:
-                - DAC_OVERRIDE
-          volumeMounts:
-            - mountPath: /etc/config/settings
-              name: settings-vol-config
-              readOnly: true
-            - mountPath: /etc/prometheus/certs
-              name: ama-metrics-tls-secret-volume
-              readOnly: true
-            - mountPath: /etc/config/settings/prometheus
-              name: prometheus-config-vol
-              readOnly: true
-            - name: host-log-containers
-              readOnly: true
-              mountPath: /var/log/containers
-            - mountPath: /anchors/mariner
-              name: anchors-mariner
-              readOnly: true
-            {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
-            - mountPath: /anchors/ubuntu
-              name: anchors-ubuntu
-              readOnly: true
-            {{- end }}
-            {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-            - mountPath: /anchors/proxy
-              name: ama-metrics-proxy-cert
-              readOnly: true
-            {{- end }}
-          livenessProbe:
-            exec:
-              command:
-                - /bin/bash
-                - -c
-                - /opt/microsoft/liveness/livenessprobe.sh
-            initialDelaySeconds: 60
-            periodSeconds: 15
-            timeoutSeconds: 5
-            failureThreshold: 3
-        {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-        - name: arc-msi-adapter
-          imagePullPolicy: IfNotPresent
-          env:
-          - name: TOKEN_NAMESPACE
-            value: "azure-arc"
-          - name: LIVENESS_PROBE_PORT
-            value: "9999"
-          {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
-        {{- else }}
-        - name: addon-token-adapter
-          command:
-            - /addon-token-adapter
-          args:
-            - --secret-namespace=kube-system
-            - --secret-name=aad-msi-auth-token
-            - --token-server-listening-port=7777
-            - --health-server-listening-port=9999
-          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: AZMON_COLLECT_ENV
-              value: "false"
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 9999
-            initialDelaySeconds: 10
-            periodSeconds: 60
-          resources:
-            limits:
-              cpu: 500m
-              memory: 500Mi
-            requests:
-              cpu: 20m
-              memory: 30Mi
-          securityContext:
-            capabilities:
-              drop:
-                - ALL
-              add:
-                - NET_ADMIN
-                - NET_RAW
-        {{- end }}
-      affinity:
-        nodeAffinity:
-          # affinity to schedule on to ephemeral os node if its available
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-              - key: kubernetes.azure.com/mode
-                operator: In
-                values:
-                - system
-          - weight: 50
-            preference:
-              matchExpressions:
-              - key: azuremonitor/metrics.replica.preferred
-                operator: In
-                values:
-                - "true"
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/os
-                    operator: In
-                    values:
-                      - linux
-                  - key: type
-                    operator: NotIn
-                    values:
-                      - virtual-kubelet
-                  {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
-                  - key: kubernetes.azure.com/cluster
-                    operator: Exists
-                  {{- end }}
-      tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
-        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
-        - operator: "Exists"
-          effect: "NoSchedule"
-        - operator: "Exists"
-          effect: "NoExecute"
-        - operator: "Exists"
-          effect: "PreferNoSchedule" 
-        {{- end }}
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "NoExecute"
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "PreferNoSchedule"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "NoExecute"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "PreferNoSchedule"
-      volumes:
-        - name: settings-vol-config
-          configMap:
-            name: ama-metrics-settings-configmap
-            optional: true
-        - name: prometheus-config-vol
-          configMap:
-            name: ama-metrics-prometheus-config
-            optional: true
-        - name: host-log-containers
-          hostPath:
-            path: /var/log/containers
-        - name: anchors-mariner
-          hostPath:
-            path: /etc/pki/ca-trust/anchors/
-            type: DirectoryOrCreate
-        - name: ama-metrics-tls-secret-volume
-          secret:
-            secretName: ama-metrics-mtls-secret
-            optional: true
-        {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
-        - name: anchors-ubuntu
-          hostPath:
-            path: /usr/local/share/ca-certificates/
-            type: DirectoryOrCreate
-        {{- end }}
-        {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-        - name: ama-metrics-proxy-cert
-          secret:
-            secretName: ama-metrics-proxy-cert
-            optional: true
-        {{- end }}
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: ama-metrics
+#   namespace: kube-system
+#   labels:
+#     component: ama-metrics
+#     kubernetes.azure.com/managedby: aks
+# spec:
+#   {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+#   replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
+#   {{- else}}
+#   replicas: 1
+#   {{- end }}
+#   revisionHistoryLimit: 2
+#   paused: false
+#   selector:
+#     matchLabels:
+#       rsName: ama-metrics
+#   strategy:
+#     type: RollingUpdate
+#   template:
+#     metadata:
+#       labels:
+#         rsName: ama-metrics
+#         kubernetes.azure.com/managedby: aks
+#       annotations:
+#         agentVersion: "0.0.0.1"
+#         schema-versions: "v1"
+#         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+#     spec:
+#       priorityClassName: system-node-critical
+#       serviceAccountName: ama-metrics-serviceaccount
+#       containers:
+#         - name: prometheus-collector
+#           image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
+#           imagePullPolicy: IfNotPresent
+#           resources:
+#             limits:
+#               cpu: {{ .Values.AzureMonitorMetrics.RsCPULimit }}
+#               memory: {{ .Values.AzureMonitorMetrics.RsMemoryLimit }}
+#             requests:
+#               cpu: {{ .Values.AzureMonitorMetrics.RsCPURequest }}
+#               memory: {{ .Values.AzureMonitorMetrics.RsMemoryRequest }}
+#           {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
+#           envFrom:
+#             - secretRef:
+#                 name: ama-metrics-proxy-config
+#                 optional: true
+#           {{- end }}
+#           env:
+#             - name: CLUSTER
+#               {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+#               value: "{{ .Values.Azure.Cluster.ResourceId }}"
+#               {{- else }}
+#               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
+#               {{- end }}
+#             - name: AKSREGION
+#               {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+#               value: "{{ .Values.Azure.Cluster.Region }}"
+#               {{- else }}
+#               value: "{{ .Values.global.commonGlobals.Region }}"
+#               {{- end }}
+#             - name: MAC
+#               value: "true"
+#             - name: AZMON_COLLECT_ENV
+#               value: "false"
+#             - name: AZMON_OPERATOR_ENABLED
+#             {{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
+#               value: "true"
+#             {{- else }}
+#               value: "false"
+#             {{- end }}
+#             - name: customEnvironment
+#               {{- if .Values.AzureMonitorMetrics.isArcACluster }}
+#               value: "arcautonomous"
+#               {{- else if .Values.AzureMonitorMetrics.ArcExtension }}
+#               value: "{{ lower .Values.CloudEnvironment }}"
+#               {{- else }}
+#               value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
+#               {{- end }}
+#             - name: OMS_TLD
+#               value: "opinsights.azure.com"
+#             {{- if .Values.AzureMonitorMetrics.isArcACluster }}
+#             - name: customRegionalEndpoint
+#               value: {{ required "customRegionalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customRegionalEndpoint | toString | trim | quote }}
+#             - name: customGlobalEndpoint
+#               value: {{ required "customGlobalEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customGlobalEndpoint | toString | trim | quote }}
+#             - name: customResourceEndpoint
+#               value: {{ required "customResourceEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
+#             {{- end }}
+#             - name: CONTROLLER_TYPE
+#               value: "ReplicaSet"
+#             - name: NODE_IP
+#               valueFrom:
+#                 fieldRef:
+#                   fieldPath: status.hostIP
+#             - name: NODE_NAME
+#               valueFrom:
+#                 fieldRef:
+#                   fieldPath: spec.nodeName
+#             - name: POD_NAME
+#               valueFrom:
+#                 fieldRef:
+#                   fieldPath: metadata.name
+#             - name: POD_NAMESPACE
+#               valueFrom:
+#                 fieldRef:
+#                   fieldPath: metadata.namespace
+#             - name: CONTAINER_CPU_LIMIT
+#               valueFrom:
+#                 resourceFieldRef:
+#                   containerName: prometheus-collector
+#                   resource: limits.cpu
+#                   divisor: 1m
+#             - name: CONTAINER_MEMORY_LIMIT
+#               valueFrom:
+#                 resourceFieldRef:
+#                   containerName: prometheus-collector
+#                   resource: limits.memory
+#                   divisor: 1Mi
+#             - name: KUBE_STATE_NAME
+#               value: ama-metrics-ksm
+#             - name: NODE_EXPORTER_NAME
+#               value: "" # Replace this with the node exporter shipped out of box with AKS
+#             - name: NODE_EXPORTER_TARGETPORT
+#               {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+#               value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
+#               {{- else }}
+#               value: "19100"
+#               {{- end }}
+#             {{- if .Values.AzureMonitorMetrics }}
+#               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
+#             - name: KUBE_STATE_VERSION
+#               value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
+#                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
+#             - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
+#               value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}"
+#                 {{-  end  }}
+#                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}
+#             - name: KUBE_STATE_METRIC_ANNOTATIONS_ALLOWLIST
+#               value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricAnnotationsAllowList }}"
+#                 {{-  end  }}
+#               {{-  end  }}
+#             {{-  end  }}
+#             {{- if .Values.AzureMonitorMetrics }}
+#               {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+#             - name: OPERATOR_TARGETS_TA_IMG_VERSION
+#               value: "{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
+#             - name: OPERATOR_TARGETS_CFG_READER_IMG_VERSION
+#               value: "{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
+#               {{-  end  }}
+#             {{-  end  }}
+#             - name: NODE_EXPORTER_VERSION
+#               value: "v1.6.0" # Replace this with the version shipped by default
+#             - name: AGENT_VERSION
+#               value: {{ .Values.AzureMonitorMetrics.ImageTag }}
+#             - name: MODE
+#               value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
+#             - name: WINMODE
+#               value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+#             - name: MINIMAL_INGESTION_PROFILE
+#               value: "true" # only supported value is the string "true"
+#           securityContext:
+#             privileged: false
+#             capabilities:
+#               drop:
+#                 - ALL
+#               add:
+#                 - DAC_OVERRIDE
+#           volumeMounts:
+#             - mountPath: /etc/config/settings
+#               name: settings-vol-config
+#               readOnly: true
+#             - mountPath: /etc/prometheus/certs
+#               name: ama-metrics-tls-secret-volume
+#               readOnly: true
+#             - mountPath: /etc/config/settings/prometheus
+#               name: prometheus-config-vol
+#               readOnly: true
+#             - name: host-log-containers
+#               readOnly: true
+#               mountPath: /var/log/containers
+#             - mountPath: /anchors/mariner
+#               name: anchors-mariner
+#               readOnly: true
+#             {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
+#             - mountPath: /anchors/ubuntu
+#               name: anchors-ubuntu
+#               readOnly: true
+#             {{- end }}
+#             {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+#             - mountPath: /anchors/proxy
+#               name: ama-metrics-proxy-cert
+#               readOnly: true
+#             {{- end }}
+#           livenessProbe:
+#             exec:
+#               command:
+#                 - /bin/bash
+#                 - -c
+#                 - /opt/microsoft/liveness/livenessprobe.sh
+#             initialDelaySeconds: 60
+#             periodSeconds: 15
+#             timeoutSeconds: 5
+#             failureThreshold: 3
+#         {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+#         - name: arc-msi-adapter
+#           imagePullPolicy: IfNotPresent
+#           env:
+#           - name: TOKEN_NAMESPACE
+#             value: "azure-arc"
+#           - name: LIVENESS_PROBE_PORT
+#             value: "9999"
+#           {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
+#         {{- else }}
+#         - name: addon-token-adapter
+#           command:
+#             - /addon-token-adapter
+#           args:
+#             - --secret-namespace=kube-system
+#             - --secret-name=aad-msi-auth-token
+#             - --token-server-listening-port=7777
+#             - --health-server-listening-port=9999
+#           image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
+#           imagePullPolicy: IfNotPresent
+#           env:
+#             - name: AZMON_COLLECT_ENV
+#               value: "false"
+#           livenessProbe:
+#             httpGet:
+#               path: /healthz
+#               port: 9999
+#             initialDelaySeconds: 10
+#             periodSeconds: 60
+#           resources:
+#             limits:
+#               cpu: 500m
+#               memory: 500Mi
+#             requests:
+#               cpu: 20m
+#               memory: 30Mi
+#           securityContext:
+#             capabilities:
+#               drop:
+#                 - ALL
+#               add:
+#                 - NET_ADMIN
+#                 - NET_RAW
+#         {{- end }}
+#       affinity:
+#         nodeAffinity:
+#           # affinity to schedule on to ephemeral os node if its available
+#           preferredDuringSchedulingIgnoredDuringExecution:
+#           - weight: 100
+#             preference:
+#               matchExpressions:
+#               - key: kubernetes.azure.com/mode
+#                 operator: In
+#                 values:
+#                 - system
+#           - weight: 50
+#             preference:
+#               matchExpressions:
+#               - key: azuremonitor/metrics.replica.preferred
+#                 operator: In
+#                 values:
+#                 - "true"
+#           requiredDuringSchedulingIgnoredDuringExecution:
+#             nodeSelectorTerms:
+#               - matchExpressions:
+#                   - key: kubernetes.io/os
+#                     operator: In
+#                     values:
+#                       - linux
+#                   - key: memory
+#                     operator: In
+#                     values:
+#                       - lowmemory
+#                   - key: type
+#                     operator: NotIn
+#                     values:
+#                       - virtual-kubelet
+#                   {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
+#                   - key: kubernetes.azure.com/cluster
+#                     operator: Exists
+#                   {{- end }}
+#       tolerations:
+#         - key: CriticalAddonsOnly
+#           operator: Exists
+#         {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
+#         - operator: "Exists"
+#           effect: "NoSchedule"
+#         - operator: "Exists"
+#           effect: "NoExecute"
+#         - operator: "Exists"
+#           effect: "PreferNoSchedule" 
+#         {{- end }}
+#         - key: "node-role.kubernetes.io/control-plane"
+#           operator: "Exists"
+#           effect: "NoSchedule"
+#         - key: "node-role.kubernetes.io/control-plane"
+#           operator: "Exists"
+#           effect: "NoExecute"
+#         - key: "node-role.kubernetes.io/control-plane"
+#           operator: "Exists"
+#           effect: "PreferNoSchedule"
+#         - key: "node-role.kubernetes.io/master"
+#           operator: "Exists"
+#           effect: "NoSchedule"
+#         - key: "node-role.kubernetes.io/master"
+#           operator: "Exists"
+#           effect: "NoExecute"
+#         - key: "node-role.kubernetes.io/master"
+#           operator: "Exists"
+#           effect: "PreferNoSchedule"
+#       volumes:
+#         - name: settings-vol-config
+#           configMap:
+#             name: ama-metrics-settings-configmap
+#             optional: true
+#         - name: prometheus-config-vol
+#           configMap:
+#             name: ama-metrics-prometheus-config
+#             optional: true
+#         - name: host-log-containers
+#           hostPath:
+#             path: /var/log/containers
+#         - name: anchors-mariner
+#           hostPath:
+#             path: /etc/pki/ca-trust/anchors/
+#             type: DirectoryOrCreate
+#         - name: ama-metrics-tls-secret-volume
+#           secret:
+#             secretName: ama-metrics-mtls-secret
+#             optional: true
+#         {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
+#         - name: anchors-ubuntu
+#           hostPath:
+#             path: /usr/local/share/ca-certificates/
+#             type: DirectoryOrCreate
+#         {{- end }}
+#         {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+#         - name: ama-metrics-proxy-cert
+#           secret:
+#             secretName: ama-metrics-proxy-cert
+#             optional: true
+#         {{- end }}
         
