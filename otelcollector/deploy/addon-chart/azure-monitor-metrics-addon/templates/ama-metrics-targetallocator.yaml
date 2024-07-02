@@ -189,17 +189,17 @@ spec:
           - weight: 100
             preference:
               matchExpressions:
-              - key: kubernetes.azure.com/mode
+              - key: memory
                 operator: In
                 values:
-                - system
-          - weight: 50
-            preference:
-              matchExpressions:
-              - key: azuremonitor/metrics.replica.preferred
-                operator: In
-                values:
-                - "true"
+                - lowmemory
+          # - weight: 50
+          #   preference:
+          #     matchExpressions:
+          #     - key: azuremonitor/metrics.replica.preferred
+          #       operator: In
+          #       values:
+          #       - "true"
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
@@ -207,6 +207,10 @@ spec:
                     operator: In
                     values:
                       - linux
+                  - key: memory
+                    operator: In
+                    values:
+                      - lowmemory
                   - key: type
                     operator: NotIn
                     values:
@@ -226,24 +230,24 @@ spec:
         # - operator: "Exists"
         #   effect: "PreferNoSchedule" 
         # {{- end }}
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "NoExecute"
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "PreferNoSchedule"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "NoExecute"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "PreferNoSchedule"
+        # - key: "node-role.kubernetes.io/control-plane"
+        #   operator: "Exists"
+        #   effect: "NoSchedule"
+        # - key: "node-role.kubernetes.io/control-plane"
+        #   operator: "Exists"
+        #   effect: "NoExecute"
+        # - key: "node-role.kubernetes.io/control-plane"
+        #   operator: "Exists"
+        #   effect: "PreferNoSchedule"
+        # - key: "node-role.kubernetes.io/master"
+        #   operator: "Exists"
+        #   effect: "NoSchedule"
+        # - key: "node-role.kubernetes.io/master"
+        #   operator: "Exists"
+        #   effect: "NoExecute"
+        # - key: "node-role.kubernetes.io/master"
+        #   operator: "Exists"
+        #   effect: "PreferNoSchedule"
       volumes:
       - name: settings-vol-config
         configMap:
