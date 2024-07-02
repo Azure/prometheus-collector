@@ -188,7 +188,7 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		networkobservabilityCiliumRegex = regexValues.networkobservabilitycilium
 		podAnnotationsRegex = regexValues.podannotations
 
-		/ Print the updated regex strings after appending values
+		// Print the updated regex strings after appending values
 		// Only log this in debug mode
 		// fmt.Println("Updated Regex Strings After Appending:")
 		// fmt.Println("KubeletRegex:", kubeletRegex)

@@ -12,6 +12,10 @@ import (
 
 var _ = Describe("ConfigMapSettings", func() {
 	Describe("parseConfigMapForPodAnnotations", func() {
+		AfterEach(func() {
+			cleanupEnvVars()
+		})
+
 		Context("when the config map file exists", func() {
 			BeforeEach(func() {
 				// Create a temporary file with the desired content
@@ -26,6 +30,17 @@ var _ = Describe("ConfigMapSettings", func() {
 				// Set the configMapMountPathForPodAnnotation to the temporary file path
 				configMapMountPathForPodAnnotation = file.Name()
 				podAnnotationEnvVarPath = fmt.Sprintf("%s_out", configMapMountPathForPodAnnotation)
+
+				setEnvVars(map[string]string {
+					"AZMON_OPERATOR_ENABLED": "true",
+					"CONTAINER_TYPE": "ConfigReaderSidecar",
+					"CONTROLLER_TYPE": "ReplicaSet",
+					"OS_TYPE": "linux",
+					"MODE": "advanced",
+					"KUBE_STATE_NAME": "ama-metrics-ksm",
+					"POD_NAMESPACE": "kube-system",
+					"MAC": "true",
+				})
 			})
 
 			AfterEach(func() {
@@ -54,6 +69,16 @@ var _ = Describe("ConfigMapSettings", func() {
 		Context("when the config map file does not exist", func() {
 			BeforeEach(func() {
 				configMapMountPathForPodAnnotation = "/path/to/nonexistent/file"
+				setEnvVars(map[string]string {
+					"AZMON_OPERATOR_ENABLED": "true",
+					"CONTAINER_TYPE": "ConfigReaderSidecar",
+					"CONTROLLER_TYPE": "ReplicaSet",
+					"OS_TYPE": "linux",
+					"MODE": "advanced",
+					"KUBE_STATE_NAME": "ama-metrics-ksm",
+					"POD_NAMESPACE": "kube-system",
+					"MAC": "true",
+				})
 			})
 
 			It("should return an error", func() {
@@ -77,6 +102,17 @@ var _ = Describe("ConfigMapSettings", func() {
 				// Set the configMapMountPathForPodAnnotation to the temporary file path
 				configMapMountPathForPodAnnotation = file.Name()
 				podAnnotationEnvVarPath = "/path/to/nonexistent/file"
+
+				setEnvVars(map[string]string {
+					"AZMON_OPERATOR_ENABLED": "true",
+					"CONTAINER_TYPE": "ConfigReaderSidecar",
+					"CONTROLLER_TYPE": "ReplicaSet",
+					"OS_TYPE": "linux",
+					"MODE": "advanced",
+					"KUBE_STATE_NAME": "ama-metrics-ksm",
+					"POD_NAMESPACE": "kube-system",
+					"MAC": "true",
+				})
 			})
 
 			It("should return an error", func() {
@@ -99,6 +135,17 @@ var _ = Describe("ConfigMapSettings", func() {
 
 				// Set the configMapMountPathForPodAnnotation to the temporary file path
 				configMapMountPathForPodAnnotation = file.Name()
+
+				setEnvVars(map[string]string {
+					"AZMON_OPERATOR_ENABLED": "true",
+					"CONTAINER_TYPE": "ConfigReaderSidecar",
+					"CONTROLLER_TYPE": "ReplicaSet",
+					"OS_TYPE": "linux",
+					"MODE": "advanced",
+					"KUBE_STATE_NAME": "ama-metrics-ksm",
+					"POD_NAMESPACE": "kube-system",
+					"MAC": "true",
+				})
 			})
 
 			AfterEach(func() {

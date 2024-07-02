@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strings"
 
 	"github.com/pelletier/go-toml"
 )
@@ -49,11 +48,12 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 
 	if podannotationNamespaceRegex != "" {
 		linuxPrefix := ""
-		if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
-			linuxPrefix = "export "
-		}
+		//if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+		//	linuxPrefix = "export "
+		//}
 		envVarString := fmt.Sprintf("%s%s='%s'\n", linuxPrefix, envVariableTemplateName, podannotationNamespaceRegex)
 		envVarAnnotationsEnabled := fmt.Sprintf("%s%s=%s\n", linuxPrefix, envVariableAnnotationsEnabledName, "true")
+		fmt.Printf("Writing to file: %s%s", envVarString, envVarAnnotationsEnabled)
 
 		if _, err := file.WriteString(envVarString); err != nil {
 			return fmt.Errorf("error writing to file: %v", err)

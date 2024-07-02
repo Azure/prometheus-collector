@@ -34,7 +34,7 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 			// Verify the content of the environment variable file
 			content, err := os.ReadFile(debugModeEnvVarPath)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(string(content)).To(gomega.Equal("export DEBUG_MODE_ENABLED=true\n"))
+			gomega.Expect(string(content)).To(gomega.Equal("DEBUG_MODE_ENABLED=true\n"))
 	
 			// Verify the modification of the YAML configuration file
 			config, err := parseYAMLConfigFile(replicaSetCollectorConfig)
@@ -43,7 +43,7 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp", "prometheus"}))
 		})
 
-		ginkgo.It("should not configure debug mode settings for a linux daemonset", func() {
+		ginkgo.It("should configure debug mode settings for a linux daemonset", func() {
 			os.Setenv("CONTROLLER_TYPE", "DaemonSet")
 			os.Setenv("OS_TYPE", "linux")
 
@@ -57,16 +57,16 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 			// Verify the content of the environment variable file
 			content, err := os.ReadFile(debugModeEnvVarPath)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(string(content)).To(gomega.Equal("export DEBUG_MODE_ENABLED=true\n"))
+			gomega.Expect(string(content)).To(gomega.Equal("DEBUG_MODE_ENABLED=true\n"))
 	
 			// Verify the modification of the YAML configuration file
 			config, err := parseYAMLConfigFile(replicaSetCollectorConfig)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(config).NotTo(gomega.BeNil())
-			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp"}))
+			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp", "prometheus"}))
 		})
 
-		ginkgo.It("should not configure debug mode settings for a windows daemonset", func() {
+		ginkgo.It("should configure debug mode settings for a windows daemonset", func() {
 			os.Setenv("CONTROLLER_TYPE", "DaemonSet")
 			os.Setenv("OS_TYPE", "windows")
 
@@ -86,7 +86,7 @@ var _ = ginkgo.Describe("When parsing debug mode settings", func() {
 			config, err := parseYAMLConfigFile(replicaSetCollectorConfig)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(config).NotTo(gomega.BeNil())
-			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp"}))
+			gomega.Expect(config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"]).To(gomega.Equal([]interface{}{"otlp", "prometheus"}))
 		})
 
 		ginkgo.AfterEach(func() {

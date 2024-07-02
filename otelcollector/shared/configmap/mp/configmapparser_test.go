@@ -16,7 +16,15 @@ import (
  * 2) Test that the Prometheus config created is as expected for the settings given.
  */
 var _ = Describe("Configmapparser", Ordered, func() {
+	AfterEach(func() {
+		cleanupEnvVars()
+	})
+
 	Context("when the settings configmap does not exist", func() {
+		AfterEach(func() {
+			cleanupEnvVars()
+		})
+
 		It("should process the config with defaults for the Linux ReplicaSet", func() {
 			setEnvVars(map[string]string {
 				"AZMON_OPERATOR_ENABLED": "true",
@@ -198,7 +206,6 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			})
 
 			mergedFileContents, err := ioutil.ReadFile(mergedDefaultConfigPath)
-			fmt.Println(string(mergedFileContents))
 			Expect(err).NotTo(HaveOccurred())
 			expectedFileContents, err := ioutil.ReadFile(expectedContentsFilePath)
 			Expect(err).NotTo(HaveOccurred())
@@ -211,6 +218,10 @@ var _ = Describe("Configmapparser", Ordered, func() {
 
 
 	Context("when the settings configmap sections exist but are empty", func() {
+		AfterEach(func() {
+			cleanupEnvVars()
+		})
+
 		It("should process the config with defaults for the Linux ReplicaSet", func() {
 			setEnvVars(map[string]string {
 				"AZMON_OPERATOR_ENABLED": "true",
@@ -224,6 +235,8 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			})
 			setupConfigFiles(false)
 			setupProcessedFiles()
+
+			fmt.Println("testing replicaset defaults empty")
 
 			Configmapparser()
 
@@ -253,7 +266,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED": "false",
-				//"DEBUG_MODE_ENABLED": "false",
+				"DEBUG_MODE_ENABLED": "false",
 				"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG": "false",
 				"CONFIG_VALIDATOR_RUNNING_IN_AGENT": "true",
 				"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG": "true",
@@ -312,6 +325,10 @@ var _ = Describe("Configmapparser", Ordered, func() {
 	})
 
 	Context("when the settings configmap sections exist and are not default", func() {
+		AfterEach(func() {
+			cleanupEnvVars()
+		})
+
 		It("should process the config for the Linux ReplicaSet", func() {
 			setEnvVars(map[string]string {
 				"AZMON_OPERATOR_ENABLED": "true",
@@ -387,11 +404,11 @@ var _ = Describe("Configmapparser", Ordered, func() {
 			envVars := map[string]string {
 				"AZMON_AGENT_CFG_SCHEMA_VERSION": "v1",
 				"AZMON_AGENT_CFG_FILE_VERSION":   "ver1",
-				//"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX": "'.*|value'",
+			  "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX": "'.*|value'",
 				"AZMON_DEFAULT_METRIC_ACCOUNT_NAME":                "",
 				"AZMON_CLUSTER_LABEL":                              "alias",
 				"AZMON_CLUSTER_ALIAS":                              "alias",
-				//"AZMON_OPERATOR_ENABLED_CHART_SETTING":              "false",
+				"AZMON_OPERATOR_ENABLED_CHART_SETTING":              "true",
 				"AZMON_OPERATOR_ENABLED":                            "true",
 				"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING":            "",
 				"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED":         "true",
@@ -402,7 +419,7 @@ var _ = Describe("Configmapparser", Ordered, func() {
 				"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED":       "true",
 				"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED":    "true",
 				"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED": "true",
-				//"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":   "true",
+				"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED":   "true",
 				"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED":  "true",
 				"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED": "true",
 				"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED":      "true",
@@ -464,6 +481,10 @@ var _ = Describe("Configmapparser", Ordered, func() {
 	})
 
 	Context("when minimal ingestion is not true", func() {
+		AfterEach(func() {
+			cleanupEnvVars()
+		})
+
 		It("should handle it being set to false with the keeplist regex values", func() {
 			setEnvVars(map[string]string {
 				"AZMON_OPERATOR_ENABLED": "true",
@@ -627,7 +648,7 @@ func setupConfigFiles(defaultPath bool) {
 		configMapDebugMountPath = createTempFile("debug-mode", "")
 		configMapKeepListMountPath = createTempFile("keep-list", "")
 		configMapScrapeIntervalMountPath = createTempFile("scrape-interval", "")
-		replicaSetCollectorConfig = "./tempdata/collector-config-replicaset.yml"
+		replicaSetCollectorConfig = "./testdata/collector-config-replicaset.yml"
 	}
 }
 
@@ -643,4 +664,48 @@ func setupProcessedFiles() {
 	mergedDefaultConfigPath = createTempFile("merged-default-config", "")
 	regexHashFile = configMapKeepListEnvVarPath
 	intervalHashFile = scrapeIntervalEnvVarPath
+}
+
+func cleanupEnvVars() {
+	allEnvVars := []string {
+		"CONTAINER_TYPE",
+		"CONTROLLER_TYPE",
+		"OS_TYPE",
+		"MODE",
+		"KUBE_STATE_NAME",
+		"POD_NAMESPACE",
+		"MAC",
+		"AZMON_AGENT_CFG_SCHEMA_VERSION",
+		"AZMON_AGENT_CFG_FILE_VERSION",
+		"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX",
+		"AZMON_DEFAULT_METRIC_ACCOUNT_NAME",
+		"AZMON_CLUSTER_LABEL",
+		"AZMON_CLUSTER_ALIAS",
+		"AZMON_OPERATOR_ENABLED_CHART_SETTING",
+		"AZMON_OPERATOR_ENABLED",
+		"AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING",
+		"AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED",
+		"AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED",
+		"DEBUG_MODE_ENABLED",
+		"AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG",
+		"CONFIG_VALIDATOR_RUNNING_IN_AGENT",
+		"AZMON_USE_DEFAULT_PROMETHEUS_CONFIG",
+	}
+	for _, envVar := range allEnvVars {
+		os.Unsetenv(envVar)
+	}
 }
