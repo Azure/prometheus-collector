@@ -222,32 +222,28 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-        # {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
-        # - operator: "Exists"
-        #   effect: "NoSchedule"
-        # - operator: "Exists"
-        #   effect: "NoExecute"
-        # - operator: "Exists"
-        #   effect: "PreferNoSchedule" 
-        # {{- end }}
-        # - key: "node-role.kubernetes.io/control-plane"
-        #   operator: "Exists"
-        #   effect: "NoSchedule"
-        # - key: "node-role.kubernetes.io/control-plane"
-        #   operator: "Exists"
-        #   effect: "NoExecute"
-        # - key: "node-role.kubernetes.io/control-plane"
-        #   operator: "Exists"
-        #   effect: "PreferNoSchedule"
-        # - key: "node-role.kubernetes.io/master"
-        #   operator: "Exists"
-        #   effect: "NoSchedule"
-        # - key: "node-role.kubernetes.io/master"
-        #   operator: "Exists"
-        #   effect: "NoExecute"
-        # - key: "node-role.kubernetes.io/master"
-        #   operator: "Exists"
-        #   effect: "PreferNoSchedule"
+        {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
+        - operator: "Exists"
+          effect: "PreferNoSchedule" 
+        {{- end }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "PreferNoSchedule"
       volumes:
       - name: settings-vol-config
         configMap:
