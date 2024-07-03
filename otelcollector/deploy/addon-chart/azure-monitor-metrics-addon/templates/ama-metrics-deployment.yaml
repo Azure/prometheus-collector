@@ -273,10 +273,6 @@ spec:
                     operator: In
                     values:
                       - linux
-                  - key: memory
-                    operator: In
-                    values:
-                      - lowmemory
                   - key: type
                     operator: NotIn
                     values:
