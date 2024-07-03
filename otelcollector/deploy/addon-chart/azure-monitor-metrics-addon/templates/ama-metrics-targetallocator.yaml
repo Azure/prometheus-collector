@@ -30,7 +30,7 @@ spec:
         schema-versions: "v1"
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
-      priorityClassName: system-node-critical
+      priorityClassName: system-cluster-critical
       containers:
       - name: targetallocator
         args:
@@ -222,24 +222,6 @@ spec:
         - operator: "Exists"
           effect: "PreferNoSchedule" 
         {{- end }}
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "NoExecute"
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "PreferNoSchedule"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "NoExecute"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "PreferNoSchedule"
       volumes:
       - name: settings-vol-config
         configMap:
