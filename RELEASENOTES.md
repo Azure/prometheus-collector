@@ -2,6 +2,7 @@
 
 ## Pending
 * fix: Truncate DCE/DCR to 44/64 chars in ARM, Bicep, Terraform... - https://github.com/Azure/prometheus-collector/pull/922
+* fix: add single quotes to pod annotations for multiple namespace scenario - https://github.com/Azure/prometheus-collector/pull/927
 
 ## Release 06-12-2024
 * Target Allocator Chart update to add Tls secret to the config reader sidecar container  
