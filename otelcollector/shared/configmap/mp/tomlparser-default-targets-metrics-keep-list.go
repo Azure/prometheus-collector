@@ -12,13 +12,12 @@ import (
 )
 
 var (
-	configMapKeepListMountPath                                          = "/etc/config/settings/default-targets-metrics-keep-list"
 	configSchemaVersion                                                 string
 	kubeletRegex, coreDNSRegex, cAdvisorRegex, kubeProxyRegex           string
 	apiserverRegex, kubeStateRegex, nodeExporterRegex, kappieBasicRegex string
 	windowsExporterRegex, windowsKubeProxyRegex                         string
 	networkobservabilityRetinaRegex, networkobservabilityHubbleRegex    string
-	networkobservabilityCiliumRegex                                     string
+	networkobservabilityCiliumRegex, podAnnotationsRegex                string
 	kubeletRegex_minimal_mac                                            = "kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_node_name|kubelet_running_pods|kubelet_running_pod_count|kubelet_running_sum_containers|kubelet_running_containers|kubelet_running_container_count|volume_manager_total_volumes|kubelet_node_config_error|kubelet_runtime_operations_total|kubelet_runtime_operations_errors_total|kubelet_runtime_operations_duration_seconds_bucket|kubelet_runtime_operations_duration_seconds_sum|kubelet_runtime_operations_duration_seconds_count|kubelet_pod_start_duration_seconds_bucket|kubelet_pod_start_duration_seconds_sum|kubelet_pod_start_duration_seconds_count|kubelet_pod_worker_duration_seconds_bucket|kubelet_pod_worker_duration_seconds_sum|kubelet_pod_worker_duration_seconds_count|storage_operation_duration_seconds_bucket|storage_operation_duration_seconds_sum|storage_operation_duration_seconds_count|storage_operation_errors_total|kubelet_cgroup_manager_duration_seconds_bucket|kubelet_cgroup_manager_duration_seconds_sum|kubelet_cgroup_manager_duration_seconds_count|kubelet_pleg_relist_interval_seconds_bucket|kubelet_pleg_relist_interval_seconds_count|kubelet_pleg_relist_interval_seconds_sum|kubelet_pleg_relist_duration_seconds_bucket|kubelet_pleg_relist_duration_seconds_count|kubelet_pleg_relist_duration_seconds_sum|rest_client_requests_total|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info|kubelet_certificate_manager_client_ttl_seconds|kubelet_certificate_manager_client_expiration_renew_errors|kubelet_server_expiration_renew_errors|kubelet_certificate_manager_server_ttl_seconds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_inodes_free|kubelet_volume_stats_inodes_used|kubelet_volume_stats_inodes|kube_persistentvolumeclaim_access_mode|kube_persistentvolumeclaim_labels|kube_persistentvolume_status_phase"
 	coreDNSRegex_minimal_mac                                            = "coredns_build_info|coredns_panics_total|coredns_dns_responses_total|coredns_forward_responses_total|coredns_dns_request_duration_seconds|coredns_dns_request_duration_seconds_bucket|coredns_dns_request_duration_seconds_sum|coredns_dns_request_duration_seconds_count|coredns_forward_request_duration_seconds|coredns_forward_request_duration_seconds_bucket|coredns_forward_request_duration_seconds_sum|coredns_forward_request_duration_seconds_count|coredns_dns_requests_total|coredns_forward_requests_total|coredns_cache_hits_total|coredns_cache_misses_total|coredns_cache_entries|coredns_plugin_enabled|coredns_dns_request_size_bytes|coredns_dns_request_size_bytes_bucket|coredns_dns_request_size_bytes_sum|coredns_dns_request_size_bytes_count|coredns_dns_response_size_bytes|coredns_dns_response_size_bytes_bucket|coredns_dns_response_size_bytes_sum|coredns_dns_response_size_bytes_count|coredns_dns_response_size_bytes_bucket|coredns_dns_response_size_bytes_sum|coredns_dns_response_size_bytes_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info"
 	cadvisorRegex_minimal_mac                                           = "container_spec_cpu_quota|container_spec_cpu_period|container_memory_rss|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_network_receive_packets_total|container_network_transmit_packets_total|container_network_receive_packets_dropped_total|container_network_transmit_packets_dropped_total|container_fs_reads_total|container_fs_writes_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_memory_cache|container_memory_swap|container_cpu_cfs_throttled_periods_total|container_cpu_cfs_periods_total|container_memory_rss|kubernetes_build_info|container_start_time_seconds"
@@ -41,6 +40,8 @@ func getStringValue(value interface{}) string {
 		return v
 	case bool:
 		return fmt.Sprintf("%t", v) // Convert boolean to string representation
+	case nil:
+		return ""
 	default:
 		// Handle other types if needed
 		return fmt.Sprintf("%v", v) // Convert any other type to its default string representation
@@ -48,24 +49,29 @@ func getStringValue(value interface{}) string {
 }
 
 func parseConfigMapForKeepListRegex() map[string]interface{} {
+	configMap := make(map[string]interface{})
+	configMap["minimalingestionprofile"] = "true"
 	if _, err := os.Stat(configMapKeepListMountPath); os.IsNotExist(err) {
 		fmt.Println("configmap prometheus-collector-configmap for default-targets-metrics-keep-list not mounted, using defaults")
-		return nil
+		return configMap
 	}
 
 	content, err := os.ReadFile(configMapKeepListMountPath)
 	if err != nil {
 		fmt.Printf("Exception while parsing config map for default-targets-metrics-keep-list: %v, using defaults, please check config map for errors\n", err)
-		return nil
+		return configMap
 	}
 
 	tree, err := toml.Load(string(content))
 	if err != nil {
 		fmt.Printf("Error parsing TOML: %v\n", err)
-		return nil
+		return configMap
 	}
 
-	configMap := make(map[string]interface{})
+	if minimalValue := getStringValue(tree.Get("minimalingestionprofile")); minimalValue != "" {
+		configMap["minimalingestionprofile"] = minimalValue
+ }
+
 	configMap["kubelet"] = getStringValue(tree.Get("kubelet"))
 	configMap["coredns"] = getStringValue(tree.Get("coredns"))
 	configMap["cadvisor"] = getStringValue(tree.Get("cadvisor"))
@@ -79,7 +85,9 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 	configMap["networkobservabilityRetina"] = getStringValue(tree.Get("networkobservabilityRetina"))
 	configMap["networkobservabilityHubble"] = getStringValue(tree.Get("networkobservabilityHubble"))
 	configMap["networkobservabilityCilium"] = getStringValue(tree.Get("networkobservabilityCilium"))
-	configMap["minimalingestionprofile"] = getStringValue(tree.Get("minimalingestionprofile"))
+	configMap["podannotations"] = getStringValue(tree.Get("podannotations"))
+
+	fmt.Printf("Parsed config map for default-targets-metrics-keep-list: %v\n", configMap)
 
 	// Print the content of the config map
 	// fmt.Println("Content of the config map:")
@@ -106,6 +114,7 @@ func validateRegexValues(regexValues RegexValues) error {
 		"networkobservabilityretina": regexValues.networkobservabilityretina,
 		"networkobservabilityhubble": regexValues.networkobservabilityhubble,
 		"networkobservabilitycilium": regexValues.networkobservabilitycilium,
+		"podannotations":             regexValues.podannotations,
 		"minimalingestionprofile":    regexValues.minimalingestionprofile,
 	}
 
@@ -135,6 +144,7 @@ func populateKeepListFromConfigMap(parsedConfig map[string]interface{}) (RegexVa
 		networkobservabilityhubble: getStringValue(parsedConfig["networkobservabilityHubble"]),
 		networkobservabilitycilium: getStringValue(parsedConfig["networkobservabilityCilium"]),
 		minimalingestionprofile:    getStringValue(parsedConfig["minimalingestionprofile"]),
+		podannotations:             getStringValue(parsedConfig["podannotations"]),
 	}
 
 	// Validate regex values
@@ -163,18 +173,20 @@ func populateKeepListFromConfigMap(parsedConfig map[string]interface{}) (RegexVa
 
 func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 	if regexValues.minimalingestionprofile == "true" {
-		kubeletRegex += regexValues.kubelet + "|" + kubeletRegex_minimal_mac
-		coreDNSRegex += regexValues.coredns + "|" + coreDNSRegex_minimal_mac
-		cAdvisorRegex += regexValues.cadvisor + "|" + cadvisorRegex_minimal_mac
-		kubeProxyRegex += regexValues.kubeproxy + "|" + kubeproxyRegex_minimal_mac
-		apiserverRegex += regexValues.apiserver + "|" + apiserverRegex_minimal_mac
-		kubeStateRegex += regexValues.kubestate + "|" + kubestateRegex_minimal_mac
-		nodeExporterRegex += regexValues.nodeexporter + "|" + nodeexporterRegex_minimal_mac
-		kappieBasicRegex += regexValues.kappiebasic + "|" + kappiebasicRegex_minimal_mac
-		windowsExporterRegex += regexValues.windowsexporter + "|" + windowsexporterRegex_minimal_mac
-		windowsKubeProxyRegex += regexValues.windowskubeproxy + "|" + windowskubeproxyRegex_minimal_mac
-		networkobservabilityRetinaRegex += regexValues.networkobservabilityretina + "|" + networkobservabilityRetinaRegex_minimal_mac
-		networkobservabilityHubbleRegex += regexValues.networkobservabilityhubble + "|" + networkobservabilityHubbleRegex_minimal_mac
+		kubeletRegex = fmt.Sprintf("%s|%s", regexValues.kubelet, kubeletRegex_minimal_mac)
+		coreDNSRegex = fmt.Sprintf("%s|%s", regexValues.coredns, coreDNSRegex_minimal_mac)
+		cAdvisorRegex = fmt.Sprintf("%s|%s", regexValues.cadvisor, cadvisorRegex_minimal_mac)
+		kubeProxyRegex = fmt.Sprintf("%s|%s", regexValues.kubeproxy, kubeproxyRegex_minimal_mac)
+		apiserverRegex = fmt.Sprintf("%s|%s", regexValues.apiserver, apiserverRegex_minimal_mac)
+		kubeStateRegex = fmt.Sprintf("%s|%s", regexValues.kubestate, kubestateRegex_minimal_mac)
+		nodeExporterRegex = fmt.Sprintf("%s|%s", regexValues.nodeexporter, nodeexporterRegex_minimal_mac)
+		kappieBasicRegex = fmt.Sprintf("%s|%s", regexValues.kappiebasic, kappiebasicRegex_minimal_mac)
+		windowsExporterRegex = fmt.Sprintf("%s|%s", regexValues.windowsexporter, windowsexporterRegex_minimal_mac)
+		windowsKubeProxyRegex = fmt.Sprintf("%s|%s", regexValues.windowskubeproxy, windowskubeproxyRegex_minimal_mac)
+		networkobservabilityRetinaRegex = fmt.Sprintf("%s|%s", regexValues.networkobservabilityretina, networkobservabilityRetinaRegex_minimal_mac)
+		networkobservabilityHubbleRegex = fmt.Sprintf("%s|%s", regexValues.networkobservabilityhubble, networkobservabilityHubbleRegex_minimal_mac)
+		networkobservabilityCiliumRegex = regexValues.networkobservabilitycilium
+		podAnnotationsRegex = regexValues.podannotations
 
 		// Print the updated regex strings after appending values
 		// Only log this in debug mode
@@ -194,6 +206,21 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		// fmt.Println("NetworkObservabilityCiliumRegex:", networkobservabilityCiliumRegex)
 	} else {
 		fmt.Println("minimalIngestionProfile:", regexValues.minimalingestionprofile)
+
+		kubeletRegex = regexValues.kubelet
+		coreDNSRegex = regexValues.coredns
+		cAdvisorRegex = regexValues.cadvisor
+		kubeProxyRegex = regexValues.kubeproxy
+		apiserverRegex = regexValues.apiserver
+		kubeStateRegex = regexValues.kubestate
+		nodeExporterRegex = regexValues.nodeexporter
+		kappieBasicRegex = regexValues.kappiebasic
+		windowsExporterRegex = regexValues.windowsexporter
+		windowsKubeProxyRegex = regexValues.windowskubeproxy
+		networkobservabilityRetinaRegex = regexValues.networkobservabilityretina
+		networkobservabilityHubbleRegex = regexValues.networkobservabilityhubble
+		networkobservabilityCiliumRegex = regexValues.networkobservabilitycilium
+		podAnnotationsRegex = regexValues.podannotations
 	}
 }
 
@@ -232,7 +259,7 @@ func tomlparserTargetsMetricsKeepList() {
 		"NODEEXPORTER_METRICS_KEEP_LIST_REGEX":               nodeExporterRegex,
 		"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX":            windowsExporterRegex,
 		"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX":           windowsKubeProxyRegex,
-		"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX":             podannotationNamespaceRegex,
+		"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX":             podAnnotationsRegex,
 		"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX":                kappieBasicRegex,
 		"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": networkobservabilityRetinaRegex,
 		"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": networkobservabilityHubbleRegex,
@@ -245,7 +272,7 @@ func tomlparserTargetsMetricsKeepList() {
 		return
 	}
 
-	err = os.WriteFile("/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash", []byte(out), fs.FileMode(0644))
+	err = os.WriteFile(configMapKeepListEnvVarPath, []byte(out), fs.FileMode(0644))
 	if err != nil {
 		fmt.Printf("Exception while writing to file: %v\n", err)
 		return

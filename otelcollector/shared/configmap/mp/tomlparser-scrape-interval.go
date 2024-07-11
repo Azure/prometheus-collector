@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	configMapScrapeIntervalMountPath = "/etc/config/settings/default-targets-scrape-interval-settings"
 	defaultScrapeInterval            = "30s"
 )
 
@@ -76,25 +75,29 @@ func processConfigMap() map[string]string {
 			intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityRetina"))
 			intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityHubble"))
 			intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityCilium"))
+
+			return intervalHash
+		} else {
+			fmt.Printf("Error parsing config map, scrape interval settings is empty. Using default scrape interval settings\n")
 		}
-	} else {
-		if _, err := os.Stat(configMapScrapeIntervalMountPath); os.IsNotExist(err) {
-			fmt.Printf("configmap prometheus-collector-configmap for default-targets-scrape-interval-settings not mounted, using defaults")
-		}
-		// Set each value in intervalHash to "30s"
-		keys := []string{
-			"KUBELET_SCRAPE_INTERVAL", "COREDNS_SCRAPE_INTERVAL", "CADVISOR_SCRAPE_INTERVAL",
-			"KUBEPROXY_SCRAPE_INTERVAL", "APISERVER_SCRAPE_INTERVAL", "KUBESTATE_SCRAPE_INTERVAL",
-			"NODEEXPORTER_SCRAPE_INTERVAL", "WINDOWSEXPORTER_SCRAPE_INTERVAL",
-			"WINDOWSKUBEPROXY_SCRAPE_INTERVAL", "PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL",
-			"POD_ANNOTATION_SCRAPE_INTERVAL", "KAPPIEBASIC_SCRAPE_INTERVAL",
-			"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL", "NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL",
-			"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL",
-		}
-		fmt.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
-		for _, key := range keys {
-			intervalHash[key] = defaultScrapeInterval
-		}
+	}
+
+	if _, err := os.Stat(configMapScrapeIntervalMountPath); os.IsNotExist(err) {
+		fmt.Printf("configmap prometheus-collector-configmap for default-targets-scrape-interval-settings not mounted, using defaults")
+	}
+	// Set each value in intervalHash to "30s"
+	keys := []string{
+		"KUBELET_SCRAPE_INTERVAL", "COREDNS_SCRAPE_INTERVAL", "CADVISOR_SCRAPE_INTERVAL",
+		"KUBEPROXY_SCRAPE_INTERVAL", "APISERVER_SCRAPE_INTERVAL", "KUBESTATE_SCRAPE_INTERVAL",
+		"NODEEXPORTER_SCRAPE_INTERVAL", "WINDOWSEXPORTER_SCRAPE_INTERVAL",
+		"WINDOWSKUBEPROXY_SCRAPE_INTERVAL", "PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL",
+		"POD_ANNOTATION_SCRAPE_INTERVAL", "KAPPIEBASIC_SCRAPE_INTERVAL",
+		"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL", "NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL",
+		"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL",
+	}
+	fmt.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
+	for _, key := range keys {
+		intervalHash[key] = defaultScrapeInterval
 	}
 
 	return intervalHash
@@ -116,7 +119,7 @@ func writeIntervalHashToFile(intervalHash map[string]string, filePath string) er
 func tomlparserScrapeInterval() {
 	shared.EchoSectionDivider("Start Processing - tomlparserScrapeInterval")
 	intervalHash := processConfigMap()
-	err := writeIntervalHashToFile(intervalHash, "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash")
+	err := writeIntervalHashToFile(intervalHash, scrapeIntervalEnvVarPath)
 	if err != nil {
 		fmt.Printf("Error writing to file: %v\n", err)
 		return

@@ -13,12 +13,6 @@ import (
 
 const (
 	loggingPrefix             = "debug-mode-config"
-	configMapDebugMountPath   = "/etc/config/settings/debug-mode"
-	replicaSetCollectorConfig = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
-)
-
-var (
-	defaultEnabled = false
 )
 
 // ConfigureDebugModeSettings reads debug mode settings from a config map,
@@ -26,12 +20,10 @@ var (
 // and modifies a YAML configuration file based on debug mode settings.
 func ConfigureDebugModeSettings() error {
 	configMapSettings, err := parseConfigMapForDebugSettings()
-	if err != nil {
+	if err != nil || configMapSettings == nil {
 		return fmt.Errorf("Error: %v", err)
 	}
-	if configMapSettings != nil {
-		populateSettingValuesFromConfigMap(configMapSettings)
-	}
+	enabled := populateSettingValuesFromConfigMap(configMapSettings)
 
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
@@ -40,19 +32,21 @@ func ConfigureDebugModeSettings() error {
 		}
 	}
 
-	file, err := os.Create("/opt/microsoft/configmapparser/config_debug_mode_env_var")
+	file, err := os.Create(debugModeEnvVarPath)
 	if err != nil {
 		return fmt.Errorf("Exception while opening file for writing prometheus-collector config environment variables: %v\n", err)
 	}
 	defer file.Close()
 
-	if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
-		file.WriteString(fmt.Sprintf("export DEBUG_MODE_ENABLED=%v\n", defaultEnabled))
-	} else {
-		file.WriteString(fmt.Sprintf("DEBUG_MODE_ENABLED=%v\n", defaultEnabled))
-	}
+	//if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+		//file.WriteString(fmt.Sprintf("export DEBUG_MODE_ENABLED=%v\n", defaultEnabled))
+	//} else {
+		file.WriteString(fmt.Sprintf("DEBUG_MODE_ENABLED=%v\n", enabled))
 
-	if defaultEnabled {
+		fmt.Printf("Setting debug mode environment variable: %v\n", enabled)
+	//}
+
+	if enabled {
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType != "" && controllerType == "ReplicaSet" {
 			fmt.Println("Setting otlp in the exporter metrics for service pipeline since debug mode is enabled ...")
@@ -108,9 +102,13 @@ func parseConfigMapForDebugSettings() (map[string]interface{}, error) {
 	}
 }
 
-func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) {
+func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) bool {
+	enabled := false
 	if val, ok := parsedConfig["enabled"]; ok {
-		defaultEnabled = val.(bool)
-		fmt.Printf("Using configmap setting for debug mode: %v\n", defaultEnabled)
+		enabled = val.(bool)
+		fmt.Printf("Using configmap setting for debug mode: %v\n", enabled)
+	} else {
+		fmt.Printf("Debug mode configmap does not have enabled value, using default value: %v\n", enabled)
 	}
+	return enabled
 }

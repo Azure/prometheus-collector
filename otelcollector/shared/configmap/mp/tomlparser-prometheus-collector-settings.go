@@ -57,7 +57,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedConfig map[s
 			} else {
 				cp.IsOperatorEnabled = false
 			}
-			fmt.Printf("Configmap setting enabling operator: %s\n", cp.IsOperatorEnabled)
+			fmt.Printf("Configmap setting enabling operator: %t\n", cp.IsOperatorEnabled)
 		}
 	} else {
 		cp.IsOperatorEnabledChartSetting = false
@@ -121,10 +121,10 @@ func (c *Configurator) Configure() {
 
 func parseConfigAndSetEnvInFile() {
 	configurator := &Configurator{
-		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/prometheus-collector-settings"},
+		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
 		ConfigParser:   &ConfigProcessor{},
 		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
-		ConfigFilePath: "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var",
+		ConfigFilePath: collectorSettingsEnvVarPath,
 	}
 
 	configurator.Configure()
