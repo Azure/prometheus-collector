@@ -80,7 +80,7 @@ func processConfigMap() map[string]string {
 		} else {
 			fmt.Printf("Error parsing config map, scrape interval settings is empty. Using default scrape interval settings\n")
 		}
-	} 
+	}
 
 	if _, err := os.Stat(configMapScrapeIntervalMountPath); os.IsNotExist(err) {
 		fmt.Printf("configmap prometheus-collector-configmap for default-targets-scrape-interval-settings not mounted, using defaults")
