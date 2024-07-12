@@ -1,17 +1,20 @@
-package main
+package shared
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/fs"
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
+	"path/filepath"
 	"strings"
 )
 
-func printMdsdVersion() {
+func PrintMdsdVersion() {
 	cmd := exec.Command("mdsd", "--version")
 	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
@@ -19,10 +22,10 @@ func printMdsdVersion() {
 		fmt.Printf("Error getting MDSD version: %v\n", err)
 		return
 	}
-	fmtVar("MDSD_VERSION", string(output))
+	FmtVar("MDSD_VERSION", string(output))
 }
 
-func readVersionFile(filePath string) (string, error) {
+func ReadVersionFile(filePath string) (string, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err
@@ -30,11 +33,11 @@ func readVersionFile(filePath string) (string, error) {
 	return string(content), nil
 }
 
-func fmtVar(name, value string) {
-	fmt.Printf("%s=\"%s\"\n", name, strings.TrimRight(value, "\n\r"))
+func FmtVar(name, value string) {
+	fmt.Printf("%s=\"%s\"\n", name, value)
 }
 
-func existsAndNotEmpty(filename string) bool {
+func ExistsAndNotEmpty(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return false
@@ -48,7 +51,7 @@ func existsAndNotEmpty(filename string) bool {
 	return true
 }
 
-func readAndTrim(filename string) (string, error) {
+func ReadAndTrim(filename string) (string, error) {
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return "", err
@@ -57,7 +60,7 @@ func readAndTrim(filename string) (string, error) {
 	return trimmedContent, nil
 }
 
-func exists(path string) bool {
+func Exists(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -67,7 +70,7 @@ func exists(path string) bool {
 	return true
 }
 
-func copyFile(sourcePath, destinationPath string) error {
+func CopyFile(sourcePath, destinationPath string) error {
 	sourceFile, err := os.Open(sourcePath)
 	if err != nil {
 		return err
@@ -88,7 +91,17 @@ func copyFile(sourcePath, destinationPath string) error {
 	return nil
 }
 
-func setEnvVarsFromFile(filename string) error {
+// FileExists checks if a file exists and is not a directory before we
+// try using it to prevent further errors.
+func FileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func SetEnvVarsFromFile(filename string) error {
 	// Check if the file exists
 	_, e := os.Stat(filename)
 	if os.IsNotExist(e) {
@@ -114,11 +127,7 @@ func setEnvVarsFromFile(filename string) error {
 		key := parts[0]
 		value := parts[1]
 
-		// Set the environment variable
-		err := os.Setenv(key, value)
-		if err != nil {
-			return err
-		}
+		SetEnvAndSourceBashrc(key, value, false)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -128,7 +137,7 @@ func setEnvVarsFromFile(filename string) error {
 	return nil
 }
 
-func monitorInotify(outputFile string) error {
+func Inotify(outputFile string, location1 string, location2 string) error {
 	// Start inotify to watch for changes
 	fmt.Println("Starting inotify for watching config map update")
 
@@ -140,7 +149,8 @@ func monitorInotify(outputFile string) error {
 	// Define the command to start inotify
 	inotifyCommand := exec.Command(
 		"inotifywait",
-		"/etc/config/settings",
+		location1,
+		location2,
 		"--daemon",
 		"--recursive",
 		"--outfile", outputFile,
@@ -158,7 +168,7 @@ func monitorInotify(outputFile string) error {
 	return nil
 }
 
-func hasConfigChanged(filePath string) bool {
+func HasConfigChanged(filePath string) bool {
 	if _, err := os.Stat(filePath); err == nil {
 		fileInfo, err := os.Stat(filePath)
 		if err != nil {
@@ -171,8 +181,83 @@ func hasConfigChanged(filePath string) bool {
 	return false
 }
 
-func writeTerminationLog(message string) {
+func WriteTerminationLog(message string) {
 	if err := os.WriteFile("/dev/termination-log", []byte(message), fs.FileMode(0644)); err != nil {
 		log.Printf("Error writing to termination log: %v", err)
 	}
+}
+
+func AddLineToBashrc(line string) error {
+	// Get the home directory of the current user
+	currentUser, err := user.Current()
+	if err != nil {
+		return err
+	}
+	homeDir := currentUser.HomeDir
+
+	// Find the .bashrc file path
+	bashrcPath := filepath.Join(homeDir, ".bashrc")
+
+	// Check if the line already exists in .bashrc
+	if exists, err := lineExistsInFile(bashrcPath, line); err != nil {
+		return err
+	} else if exists {
+		return nil // Line already exists, no need to add it again
+	}
+
+	// Open .bashrc file in append mode
+	file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Add the line to .bashrc
+	_, err = file.WriteString(line + "\n")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Function to check if a line exists in a file
+func lineExistsInFile(filePath, line string) (bool, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return false, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if strings.TrimSpace(scanner.Text()) == line {
+			return true, nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return false, err
+	}
+
+	return false, nil
+}
+
+func ModifyConfigFile(configFile string, pid int, placeholder string) error {
+	// Read the contents of the config file
+	content, err := os.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("error reading config file: %v", err)
+	}
+
+	// Replace placeholder with the actual PID
+	replacedContent := bytes.ReplaceAll(content, []byte(placeholder), []byte(fmt.Sprintf("%d", pid)))
+
+	// Write the modified content back to the config file
+	err = os.WriteFile(configFile, replacedContent, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing to config file: %v", err)
+	}
+
+	return nil
 }

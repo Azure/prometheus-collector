@@ -38,9 +38,9 @@ type OtelConfig struct {
 		} `yaml:"pipelines"`
 		Telemetry struct {
 			Logs struct {
-				Level    	 interface{} `yaml:"level"`
-				Encoding 	 interface{} `yaml:"encoding"`
-				OutputPaths  []string `yaml:"output_paths"`
+				Level       interface{} `yaml:"level"`
+				Encoding    interface{} `yaml:"encoding"`
+				OutputPaths []string    `yaml:"output_paths"`
 			} `yaml:"logs"`
 		} `yaml:"telemetry"`
 	} `yaml:"service"`
@@ -273,12 +273,13 @@ func main() {
 			os.Exit(1)
 		}
 
+		fmp := fileprovider.NewWithSettings(confmap.ProviderSettings{})
 		cp, err := otelcol.NewConfigProvider(
 			otelcol.ConfigProviderSettings{
 				ResolverSettings: confmap.ResolverSettings{
 					URIs:       []string{fmt.Sprintf("file:%s", outputFilePath)},
-					Providers:  map[string]confmap.Provider{"file": fileprovider.New()},
-					Converters: []confmap.Converter{expandconverter.New()},
+					Providers:  map[string]confmap.Provider{"file": fmp},
+					Converters: []confmap.Converter{expandconverter.New(confmap.ConverterSettings{})},
 				},
 			},
 		)

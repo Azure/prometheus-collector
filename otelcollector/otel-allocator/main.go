@@ -55,7 +55,6 @@ func main() {
 		allocator        allocation.Allocator
 		discoveryManager *discovery.Manager
 		collectorWatcher *collector.Client
-		fileWatcher      allocatorWatcher.Watcher
 		promWatcher      allocatorWatcher.Watcher
 		targetDiscoverer *target.Discoverer
 
@@ -73,7 +72,7 @@ func main() {
 		setupLog.Info("MICROSOFT SOFTWARE LICENSE TERMS\n\nMICROSOFT Azure Arc-enabled Kubernetes\n\nThis software is licensed to you as part of your or your company's subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/")
 	}
 
-	cfg, configFilePath, err := config.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		fmt.Printf("Failed to load config: %v", err)
 		os.Exit(1)
@@ -89,8 +88,8 @@ func main() {
 	ctx := context.Background()
 	log := ctrl.Log.WithName("allocator")
 
-	allocatorPrehook = prehook.New(cfg.GetTargetsFilterStrategy(), log)
-	allocator, err = allocation.New(cfg.GetAllocationStrategy(), log, allocation.WithFilter(allocatorPrehook))
+	allocatorPrehook = prehook.New(cfg.FilterStrategy, log)
+	allocator, err = allocation.New(cfg.AllocationStrategy, log, allocation.WithFilter(allocatorPrehook))
 	if err != nil {
 		setupLog.Error(err, "Unable to initialize allocation strategy")
 		os.Exit(1)
@@ -98,8 +97,12 @@ func main() {
 	srv := server.NewServer(log, allocator, cfg.ListenAddr)
 
 	discoveryCtx, discoveryCancel := context.WithCancel(ctx)
-	discoveryManager = discovery.NewManager(discoveryCtx, gokitlog.NewNopLogger())
-	discovery.RegisterMetrics() // discovery manager metrics need to be enabled explicitly
+	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(prometheus.DefaultRegisterer)
+	if err != nil {
+		setupLog.Error(err, "Unable to register metrics for Prometheus service discovery")
+		os.Exit(1)
+	}
+	discoveryManager = discovery.NewManager(discoveryCtx, gokitlog.NewNopLogger(), prometheus.DefaultRegisterer, sdMetrics)
 
 	targetDiscoverer = target.NewDiscoverer(log, discoveryManager, allocatorPrehook, srv)
 	collectorWatcher, collectorWatcherErr := collector.NewClient(log, cfg.ClusterConfig)
@@ -107,18 +110,11 @@ func main() {
 		setupLog.Error(collectorWatcherErr, "Unable to initialize collector watcher")
 		os.Exit(1)
 	}
-	if cfg.ReloadConfig {
-		fileWatcher, err = allocatorWatcher.NewFileWatcher(setupLog.WithName("file-watcher"), configFilePath)
-		if err != nil {
-			setupLog.Error(err, "Can't start the file watcher")
-			os.Exit(1)
-		}
-	}
 	signal.Notify(interrupts, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer close(interrupts)
 
 	if cfg.PrometheusCR.Enabled {
-		promWatcher, err = allocatorWatcher.NewPrometheusCRWatcher(setupLog.WithName("prometheus-cr-watcher"), *cfg)
+		promWatcher, err = allocatorWatcher.NewPrometheusCRWatcher(ctx, setupLog.WithName("prometheus-cr-watcher"), *cfg)
 		if err != nil {
 			setupLog.Error(err, "Can't start the prometheus watcher")
 			os.Exit(1)
@@ -137,21 +133,6 @@ func main() {
 				}
 			})
 	}
-	if cfg.ReloadConfig {
-		runGroup.Add(
-			func() error {
-				fileWatcherErr := fileWatcher.Watch(eventChan, errChan)
-				setupLog.Info("File watcher exited")
-				return fileWatcherErr
-			},
-			func(_ error) {
-				setupLog.Info("Closing file watcher")
-				fileWatcherErr := fileWatcher.Close()
-				if fileWatcherErr != nil {
-					setupLog.Error(fileWatcherErr, "file watcher failed to close")
-				}
-			})
-	}
 	runGroup.Add(
 		func() error {
 			discoveryManagerErr := discoveryManager.Run()
@@ -165,11 +146,16 @@ func main() {
 	runGroup.Add(
 		func() error {
 			// Initial loading of the config file's scrape config
-			err = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, cfg.PromConfig)
-			if err != nil {
-				setupLog.Error(err, "Unable to apply initial configuration")
-				return err
+			if cfg.PromConfig != nil {
+				err = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, cfg.PromConfig.ScrapeConfigs)
+				if err != nil {
+					setupLog.Error(err, "Unable to apply initial configuration")
+					return err
+				}
+			} else {
+				setupLog.Info("Prometheus config empty, skipping initial discovery configuration")
 			}
+
 			err := targetDiscoverer.Watch(allocator.SetTargets)
 			setupLog.Info("Target discoverer exited")
 			return err
@@ -180,7 +166,7 @@ func main() {
 		})
 	runGroup.Add(
 		func() error {
-			err := collectorWatcher.Watch(ctx, cfg.LabelSelector, allocator.SetCollectors)
+			err := collectorWatcher.Watch(ctx, cfg.CollectorSelector, allocator.SetCollectors)
 			setupLog.Info("Collector watcher exited")
 			return err
 		},
@@ -211,7 +197,7 @@ func main() {
 						setupLog.Error(err, "Unable to load configuration")
 						continue
 					}
-					err = targetDiscoverer.ApplyConfig(event.Source, loadConfig)
+					err = targetDiscoverer.ApplyConfig(event.Source, loadConfig.ScrapeConfigs)
 					if err != nil {
 						setupLog.Error(err, "Unable to apply configuration")
 						continue
