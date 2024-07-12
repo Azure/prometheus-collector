@@ -39,6 +39,7 @@ RUN go version > goversion.txt
 COPY ./shared /src/shared
 WORKDIR /src/configuration-reader-builder
 RUN go mod download
+RUN go mod tidy
 COPY ./configuration-reader-builder /src/configuration-reader-builder
 
 ARG TARGETOS TARGETARCH
@@ -54,7 +55,7 @@ FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector - configuration reader sidecar"
 LABEL maintainer="ciprometheus@microsoft.com"
 
-ENV OS_TYPE="linux" tmpdir=/opt
+ENV OS_TYPE="linux" tmpdir="/opt"
 
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
