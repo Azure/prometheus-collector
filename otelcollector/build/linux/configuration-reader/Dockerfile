@@ -42,6 +42,7 @@ RUN go mod download
 COPY ./configuration-reader-builder /src/configuration-reader-builder
 
 ARG TARGETOS TARGETARCH
+RUN echo "TARGETOS: $TARGETOS, TARGETARCH: $TARGETARCH"
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
         CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o configurationreader . ; \
     else \
