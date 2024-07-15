@@ -166,6 +166,7 @@ COPY --from=builder /var/spool/cron /var/spool/cron
 COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
 COPY --from=builder /usr/share/pki/ /usr/share/pki
 COPY --from=builder /opt/microsoft/liveness /opt/microsoft/liveness
+COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparser
 
 # executables
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension

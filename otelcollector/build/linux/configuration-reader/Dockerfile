@@ -59,6 +59,7 @@ ENV OS_TYPE="linux" tmpdir="/opt"
 
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
+RUN mkdir -p $tmpdir/microsoft/configmapparser/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
 COPY --from=configuration-reader-builder /src/goversion.txt $tmpdir/goversion.txt
@@ -100,6 +101,7 @@ COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
 COPY --from=builder /usr/bin/gzip /usr/bin/
 COPY --from=builder /usr/bin/curl /usr/bin/
 COPY --from=builder /bin/sh /bin/sh
+COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparser
 
 # bash dependencies
 COPY --from=builder /lib/libreadline.so.8 /lib/
