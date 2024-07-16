@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	LOGGING_PREFIX                     = "pod-annotation-based-scraping"
-	envVariableTemplateName            = "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"
-	envVariableAnnotationsEnabledName  = "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"
+	LOGGING_PREFIX                    = "pod-annotation-based-scraping"
+	envVariableTemplateName           = "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"
+	envVariableAnnotationsEnabledName = "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"
 )
 
 func parseConfigMapForPodAnnotations() (map[string]interface{}, error) {
@@ -51,7 +51,7 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 		//if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
 		//	linuxPrefix = "export "
 		//}
-		envVarString := fmt.Sprintf("%s%s='%s'\n", linuxPrefix, envVariableTemplateName, podannotationNamespaceRegex)
+		envVarString := fmt.Sprintf("%s%s=%s\n", linuxPrefix, envVariableTemplateName, podannotationNamespaceRegex)
 		envVarAnnotationsEnabled := fmt.Sprintf("%s%s=%s\n", linuxPrefix, envVariableAnnotationsEnabledName, "true")
 		fmt.Printf("Writing to file: %s%s", envVarString, envVarAnnotationsEnabled)
 
@@ -69,7 +69,7 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 
 func configurePodAnnotationSettings() error {
 	parsedConfig, err := parseConfigMapForPodAnnotations()
-	if err != nil || parsedConfig == nil{
+	if err != nil || parsedConfig == nil {
 		return err
 	}
 	podannotationNamespaceRegex, err := populatePodAnnotationNamespaceFromConfigMap(parsedConfig)
