@@ -15,12 +15,12 @@ import (
 )
 
 const (
-	configMapMountPath                           = "/etc/config/settings/prometheus/prometheus-config"
-	replicasetControllerType                     = "replicaset"
-	daemonsetControllerType                      = "daemonset"
-	configReaderSidecarContainerType             = "configreadersidecar"
-	supportedSchemaVersion                       = true
-	sendDSUpMetric                               = false
+	configMapMountPath               = "/etc/config/settings/prometheus/prometheus-config"
+	replicasetControllerType         = "replicaset"
+	daemonsetControllerType          = "daemonset"
+	configReaderSidecarContainerType = "configreadersidecar"
+	supportedSchemaVersion           = true
+	sendDSUpMetric                   = false
 )
 
 var (
@@ -447,7 +447,7 @@ func populateDefaultPrometheusConfig() {
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
 		kappiebasicMetricsKeepListRegex, exists := regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
 		kappiebasicScrapeInterval := intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
-		if currentControllerType != replicasetControllerType {
+		if currentControllerType == replicasetControllerType {
 			// Do nothing - Kappie is not supported to be scrapped automatically outside ds.
 			// If needed, the customer can disable this ds target and enable rs scraping through custom config map
 		} else {
@@ -472,7 +472,7 @@ func populateDefaultPrometheusConfig() {
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
 		networkobservabilityRetinaMetricsKeepListRegex, exists := regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"]
 		networkobservabilityRetinaScrapeInterval, intervalExists := intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"]
-		if currentControllerType != replicasetControllerType {
+		if currentControllerType == replicasetControllerType {
 			// Do nothing - Network observability Retina is not supported to be scrapped automatically outside ds.
 			// If needed, the customer can disable this ds target and enable rs scraping through custom config map
 		} else {
@@ -499,7 +499,7 @@ func populateDefaultPrometheusConfig() {
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
 		networkobservabilityHubbleMetricsKeepListRegex, exists := regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"]
 		networkobservabilityHubbleScrapeInterval, intervalExists := intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"]
-		if currentControllerType != replicasetControllerType {
+		if currentControllerType == replicasetControllerType {
 			// Do nothing - Network observability Hubble is not supported to be scrapped automatically outside ds.
 			// If needed, the customer can disable this ds target and enable rs scraping through custom config map
 		} else {
@@ -526,7 +526,7 @@ func populateDefaultPrometheusConfig() {
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
 		networkobservabilityCiliumMetricsKeepListRegex, exists := regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"]
 		networkobservabilityCiliumScrapeInterval, intervalExists := intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"]
-		if currentControllerType != replicasetControllerType {
+		if currentControllerType == replicasetControllerType {
 			// Do nothing - Network observability Cilium is not supported to be scrapped automatically outside ds.
 			// If needed, the customer can disable this ds target and enable rs scraping through custom config map
 		} else {
