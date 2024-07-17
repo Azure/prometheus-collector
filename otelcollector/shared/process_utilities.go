@@ -72,21 +72,21 @@ func SetEnvAndSourceBashrc(key, value string, echo bool) error {
 	defer file.Close()
 
 	// Write the export statement to the .bashrc file
-	_, err = fmt.Fprintf(file, "export %s=\"%s\"\n", key, value)
+	_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
 	if err != nil {
 		return fmt.Errorf("failed to write to .bashrc file: %v", err)
 	}
 
-	// Set the environment variable for the current process
+	// Source the .bashrc file
+	cmd := exec.Command("bash", "-c", "source "+bashrcPath)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to source .bashrc: %v", err)
+	}
+
+	// Set the environment variable
 	err = os.Setenv(key, value)
 	if err != nil {
 		return fmt.Errorf("failed to set environment variable: %v", err)
-	}
-
-	// Source the .bashrc file
-	cmd := exec.Command("bash", "-c", "source "+bashrcPath+" && exec bash")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to source .bashrc: %v", err)
 	}
 
 	// Conditionally call EchoVar
