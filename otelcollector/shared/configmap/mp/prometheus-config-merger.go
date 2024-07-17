@@ -1118,6 +1118,10 @@ func populateDefaultPrometheusConfigWithOperator() {
 				fmt.Printf("Debug: POD_ANNOTATION_METRICS_KEEP_LIST_REGEX found: %s\n", podannotationMetricsKeepListRegex)
 				AppendMetricRelabelConfig(podAnnotationsDefaultFile, podannotationMetricsKeepListRegex)
 			}
+			// Trim the first and last escaped quotes
+			if len(podannotationNamespacesRegex) > 1 && podannotationNamespacesRegex[0] == '"' && podannotationNamespacesRegex[len(podannotationNamespacesRegex)-1] == '"' {
+				podannotationNamespacesRegex = podannotationNamespacesRegex[1 : len(podannotationNamespacesRegex)-1]
+			}
 			if podannotationNamespacesRegex != "" {
 				fmt.Println("Debug: Applying namespace regex for relabeling")
 				relabelConfig := []map[string]interface{}{
