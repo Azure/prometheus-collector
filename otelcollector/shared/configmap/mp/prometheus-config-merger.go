@@ -1075,6 +1075,10 @@ func populateDefaultPrometheusConfigWithOperator() {
 			if podannotationMetricsKeepListRegex != "" {
 				AppendMetricRelabelConfig(podAnnotationsDefaultFile, podannotationMetricsKeepListRegex)
 			}
+			// Trim the first and last escaped quotes
+			if len(podannotationNamespacesRegex) > 1 && podannotationNamespacesRegex[0] == '"' && podannotationNamespacesRegex[len(podannotationNamespacesRegex)-1] == '"' {
+				podannotationNamespacesRegex = podannotationNamespacesRegex[1 : len(podannotationNamespacesRegex)-1]
+			}
 			if podannotationNamespacesRegex != "" {
 				relabelConfig := []map[string]interface{}{
 					{"source_labels": []string{"__meta_kubernetes_namespace"}, "action": "keep", "regex": podannotationNamespacesRegex},

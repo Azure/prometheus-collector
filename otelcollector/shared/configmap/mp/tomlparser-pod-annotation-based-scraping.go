@@ -51,7 +51,7 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 		//if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
 		//	linuxPrefix = "export "
 		//}
-		envVarString := fmt.Sprintf("%s%s=%s\n", linuxPrefix, envVariableTemplateName, podannotationNamespaceRegex)
+		envVarString := fmt.Sprintf("%s%s=\"%s\"\n", linuxPrefix, envVariableTemplateName, podannotationNamespaceRegex)
 		envVarAnnotationsEnabled := fmt.Sprintf("%s%s=%s\n", linuxPrefix, envVariableAnnotationsEnabledName, "true")
 		fmt.Printf("Writing to file: %s%s", envVarString, envVarAnnotationsEnabled)
 
