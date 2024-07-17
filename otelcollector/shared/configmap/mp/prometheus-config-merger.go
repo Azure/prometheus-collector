@@ -635,24 +635,45 @@ func populateDefaultPrometheusConfig() {
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		fmt.Println("Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is set to true and currentControllerType is replicasetControllerType")
+
 		if podannotationNamespacesRegex, exists := os.LookupEnv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"); exists {
+			fmt.Println("Debug: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX is set to", podannotationNamespacesRegex)
+
 			podannotationMetricsKeepListRegex := regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
 			podannotationScrapeInterval, intervalExists := intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
 
 			if intervalExists {
+				fmt.Println("Debug: POD_ANNOTATION_SCRAPE_INTERVAL is set to", podannotationScrapeInterval)
 				UpdateScrapeIntervalConfig(podAnnotationsDefaultFile, podannotationScrapeInterval)
+			} else {
+				fmt.Println("Debug: POD_ANNOTATION_SCRAPE_INTERVAL is not set")
 			}
+
 			if podannotationMetricsKeepListRegex != "" {
+				fmt.Println("Debug: POD_ANNOTATION_METRICS_KEEP_LIST_REGEX is set to", podannotationMetricsKeepListRegex)
 				AppendMetricRelabelConfig(podAnnotationsDefaultFile, podannotationMetricsKeepListRegex)
+			} else {
+				fmt.Println("Debug: POD_ANNOTATION_METRICS_KEEP_LIST_REGEX is not set")
 			}
+
 			if podannotationNamespacesRegex != "" {
+				fmt.Println("Debug: POD_ANNOTATION_NAMESPACES_REGEX is set to", podannotationNamespacesRegex)
 				relabelConfig := []map[string]interface{}{
 					{"source_labels": []string{"__meta_kubernetes_namespace"}, "action": "keep", "regex": podannotationNamespacesRegex},
 				}
 				AppendRelabelConfig(podAnnotationsDefaultFile, relabelConfig, podannotationNamespacesRegex)
+			} else {
+				fmt.Println("Debug: POD_ANNOTATION_NAMESPACES_REGEX is not set")
 			}
+
 			defaultConfigs = append(defaultConfigs, podAnnotationsDefaultFile)
+			fmt.Println("Debug: podAnnotationsDefaultFile appended to defaultConfigs")
+		} else {
+			fmt.Println("Debug: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX is not set")
 		}
+	} else {
+		fmt.Println("Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is not set to true or currentControllerType is not replicasetControllerType")
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
