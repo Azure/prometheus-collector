@@ -2,16 +2,25 @@
 # ignore these CVEs, but continue scanning to catch other vulns. Note : this will ignore these cves globally
 
 # =========== CRITICAL ================
-# none
+CVE-2024-24790
 
 # =========== HIGH ================
 # HIGH - otelcollector
 CVE-2024-36129
+<<<<<<< HEAD
+GHSA-87m9-rv8p-rgmg
+=======
+>>>>>>> trda/linux-3.0-upgrade
 # HIGH - telegraf
 GHSA-fr2g-9hjm-wr23
 CVE-2023-29403
 CVE-2023-45283
 # HIGH - promconfigvalidator
+<<<<<<< HEAD
+GHSA-87m9-rv8p-rgmg
+CVE-2024-36129
+=======
+>>>>>>> trda/linux-3.0-upgrade
 # HIGH - telegraf
 CVE-2023-39325
 GHSA-m425-mq94-257g
@@ -21,6 +30,8 @@ CVE-2024-21626
 
 # =========== MEDIUM ================
 # MEDIUM - otelcollector
+CVE-2024-35255
+CVE-2024-24789
 CVE-2023-29406
 CVE-2023-29409
 CVE-2023-39318
@@ -36,12 +47,16 @@ CVE-2023-45290
 CVE-2024-24783
 CVE-2024-24784
 CVE-2024-24785
+CVE-2024-6104
+GHSA-mh55-gqvf-xfwm
 # MEDIUM - promconfigvalidator
 CVE-2023-48795
 CVE-2024-24786
 CVE-2024-24557
 CVE-2024-27281
 CVE-2020-8559
+CVE-2024-6104
+GHSA-mh55-gqvf-xfwm
 # MEDIUM - go vulnerabilities
 CVE-2023-3978
 CVE-2023-44487
@@ -66,7 +81,15 @@ CVE-2024-28110
 CVE-2024-27289
 CVE-2024-24557
 CVE-2024-29018
+<<<<<<< HEAD
+CVE-2024-24791
 # MEDIUM - mariner
 CVE-2023-5678
 # MEDIUM - ruby
 CVE-2024-27281
+=======
+# MEDIUM - mariner
+CVE-2023-5678
+# MEDIUM - ruby
+CVE-2024-27281
+>>>>>>> trda/linux-3.0-upgrade

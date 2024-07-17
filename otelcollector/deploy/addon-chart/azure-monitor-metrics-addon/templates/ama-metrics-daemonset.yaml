@@ -27,6 +27,7 @@ spec:
       containers:
         - name: prometheus-collector
           image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
+          # image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.8.11-rashmi-upgrades-04-24-05-13-2024-9cabda9d"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
@@ -139,6 +140,11 @@ spec:
               value: "{{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}"
           securityContext:
             privileged: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - DAC_OVERRIDE
           volumeMounts:
             - mountPath: /etc/config/settings
               name: settings-vol-config
@@ -152,9 +158,6 @@ spec:
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
-            - name: host-log-pods
-              readOnly: true
-              mountPath: /var/log/pods
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
@@ -169,11 +172,9 @@ spec:
               readOnly: true
             {{- end }}
           livenessProbe:
-            exec:
-              command:
-                - /bin/bash
-                - -c
-                - /opt/microsoft/liveness/livenessprobe.sh
+            httpGet:
+              path: /health
+              port: 8080
             initialDelaySeconds: 60
             periodSeconds: 15
             timeoutSeconds: 5
@@ -248,7 +249,7 @@ spec:
         - operator: "Exists"
           effect: "NoExecute"
         - operator: "Exists"
-          effect: "PreferNoSchedule" 
+          effect: "PreferNoSchedule"
         {{- end }}
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
@@ -284,9 +285,6 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
-        - name: host-log-pods
-          hostPath:
-            path: /var/log/pods
         - name: anchors-mariner
           hostPath:
             path: /etc/pki/ca-trust/anchors/
@@ -412,6 +410,11 @@ spec:
               value: "{{ .Values.AzureMonitorMetrics.OpenTelemetryMetricsPort }}"
           securityContext:
             privileged: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - DAC_OVERRIDE
           volumeMounts:
             - mountPath: /etc/config/settings
               name: settings-vol-config
@@ -425,9 +428,6 @@ spec:
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
-            - name: host-log-pods
-              readOnly: true
-              mountPath: /var/log/pods
           livenessProbe:
             exec:
               command:
@@ -447,7 +447,7 @@ spec:
            - --token-server-listening-port=7777
            - --health-server-listening-port=9999
           image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepositoryWin }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTagWin }}"
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           livenessProbe:
            httpGet:
              path: /healthz
@@ -461,9 +461,11 @@ spec:
              cpu: 100m
              memory: 100Mi
           securityContext:
-           capabilities:
-             add:
-               - NET_ADMIN
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -501,7 +503,4 @@ spec:
           secret:
             secretName: ama-metrics-mtls-secret
             optional: true
-        - name: host-log-pods
-          hostPath:
-            path: /var/log/pods
 {{- end }}

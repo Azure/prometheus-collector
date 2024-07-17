@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.19 as fluent-bit-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.20 as fluent-bit-builder
 WORKDIR /src
 COPY ./fluent-bit/src/go.mod ./fluent-bit/src/go.sum .
 RUN go version
@@ -8,26 +8,33 @@ RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; else  CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.20 as otelcollector-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as otelcollector-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 RUN go version > goversion.txt
 COPY ./opentelemetry-collector-builder/go.mod ./opentelemetry-collector-builder/go.sum ./opentelemetry-collector-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
+COPY ./pkgtranslatorprometheus/go.mod ./pkgtranslatorprometheus/go.sum ./pkgtranslatorprometheus/
+WORKDIR /src/pkgtranslatorprometheus
+RUN go mod download
 WORKDIR /src/prometheusreceiver
 RUN go mod download
 WORKDIR /src/opentelemetry-collector-builder
 RUN go mod download
 COPY ./opentelemetry-collector-builder /src/opentelemetry-collector-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
+COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.20 as prom-config-validator-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as prom-config-validator-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 COPY ./prom-config-validator-builder/go.mod ./prom-config-validator-builder/go.sum ./prom-config-validator-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
+COPY ./pkgtranslatorprometheus/go.mod ./pkgtranslatorprometheus/go.sum ./pkgtranslatorprometheus/
+WORKDIR /src/pkgtranslatorprometheus
+RUN go mod download
 WORKDIR /src/prometheusreceiver
 RUN go version
 RUN go mod download
@@ -35,10 +42,41 @@ WORKDIR /src/prom-config-validator-builder
 RUN go mod download
 COPY ./prom-config-validator-builder /src/prom-config-validator-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
+COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
+<<<<<<< HEAD
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as main-builder
+WORKDIR /
+# Create directories
+RUN mkdir -p ./shared/configmap/mp/
+RUN mkdir -p ./main/
+# Copy shared go files
+COPY ../shared/*.go ./main/shared/
+COPY ./shared/go.mod ./main/shared/
+COPY ./shared/go.sum ./main/shared/
+COPY ../shared/configmap/mp/*.go ./main/shared/configmap/mp/
+COPY ../shared/configmap/ccp/*.go ./main/shared/configmap/ccp/
+COPY ./shared/configmap/mp/go.mod ./main/shared/configmap/mp/
+COPY ./shared/configmap/mp/go.sum ./main/shared/configmap/mp/
+COPY ./shared/configmap/ccp/go.mod ./main/shared/configmap/ccp/
+COPY ./shared/configmap/ccp/go.sum ./main/shared/configmap/ccp/
+# Copy main go files
+COPY ./main/*.go ./main/
+COPY ./go.mod ./main/
+COPY ./go.sum ./main/
+WORKDIR /main
+RUN go version
+RUN go mod download
+RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
+ARG TARGETOS TARGETARCH
+RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; fi
+
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
+=======
 FROM azurelinuxpreview.azurecr.io/public/azurelinux/base/core:3.0 as builder
+>>>>>>> trda/linux-3.0-upgrade
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "linux"
@@ -61,17 +99,19 @@ ENV MALLOC_ARENA_MAX=2
 COPY ./logrotate/prometheus-collector /etc/logrotate.d/
 COPY ./logrotate/logrotate /etc/cron.daily/logrotate
 COPY ./logrotate/crontab /etc/crontab
-COPY ./scripts/livenessprobe.sh $tmpdir/microsoft/liveness/livenessprobe.sh
-COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
+RUN mkdir -p $tmpdir/microsoft/configmapparser/
+RUN mkdir -p $tmpdir/microsoft/liveness/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml ./opentelemetry-collector-builder/collector-config-replicaset.yml ./opentelemetry-collector-builder/PROMETHEUS_VERSION $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/opentelemetry-collector-builder/otelcollector $tmpdir/microsoft/otelcollector/
 COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
+COPY --from=main-builder --chmod=777 /main/main.exe $tmpdir/main
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
+COPY ./telegraf/ $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit.conf ./fluent-bit/fluent-bit-daemonset.conf ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY ./react /static/react
@@ -84,6 +124,9 @@ ARG TARGETARCH
 RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update -y
+<<<<<<< HEAD
+RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
+=======
 RUN tdnf install -y net-tools
 RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
 RUN tdnf install -y pcre2
@@ -94,6 +137,7 @@ RUN tdnf install -y libyaml
 RUN tdnf install -y re2
 RUN tdnf install -y ruby
 RUN tdnf install -y fluent-bit
+>>>>>>> trda/linux-3.0-upgrade
 RUN mkdir /busybin && busybox --install /busybin
 RUN mkdir -p /var/opt/microsoft
 RUN chmod 775 /etc/cron.daily/logrotate
@@ -114,6 +158,14 @@ ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAw
 ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
 # Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
+# Set environment variables for mdsd
+ENV MDSD_LOG="/opt/microsoft/linuxmonagent"
+ENV SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
+ENV MDSD_FLUENT_SOCKET_PORT="28230"
+ENV ENABLE_MCS="true"
+ENV MONITORING_USE_GENEVA_CONFIG_SERVICE="false"
+ENV MDSD_USE_LOCAL_PERSISTENCY="false"
+ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
 ENV TELEMETRY_DISABLED false
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
 ENV MALLOC_ARENA_MAX=2
@@ -131,15 +183,22 @@ COPY --from=builder /var/lib/logrotate /var/lib/logrotate
 COPY --from=builder /var/spool/cron /var/spool/cron
 COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
 COPY --from=builder /usr/share/pki/ /usr/share/pki
+COPY --from=builder /opt/microsoft/liveness /opt/microsoft/liveness
+COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparser
 
 # executables
+<<<<<<< HEAD
+COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
+=======
 #COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 COPY --from=builder /usr/bin/ruby /usr/bin/ruby
 COPY --from=builder /usr/lib/ruby /usr/lib/ruby
+>>>>>>> trda/linux-3.0-upgrade
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
 COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
+COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
 COPY --from=builder /usr/sbin/crond /usr/sbin/crond
 COPY --from=builder /usr/bin/vim /usr/bin/vim
 COPY --from=builder /usr/share/vim /usr/share/vim
@@ -161,10 +220,13 @@ COPY --from=builder /lib/libinotifytools.so.0 /lib/
 COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre2-16.so.0 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
 # vim dependencies
 COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
+<<<<<<< HEAD
+=======
 # ruby dependencies
 COPY --from=builder /usr/lib/libruby.so.3.3 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
 # ruby re2 dependencies
 COPY --from=builder /usr/lib/libre2.so.11 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
+>>>>>>> trda/linux-3.0-upgrade
 # metricsextension dependencies
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 #COPY --from=builder /lib/libboost_filesystem.so.1.83.0 /lib/libcpprest.so.2.10  /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libz.so.1 /lib/libbrotlicommon.so.1 /lib/
@@ -172,6 +234,8 @@ COPY --from=builder /usr/lib/libre2.so.11 /usr/lib/libstdc++.so.6 /usr/lib/libgc
 # fluent-bit dependencies
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 COPY --from=builder /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libcurl.so.4 /lib/libm.so.6 /lib/libz.so.1 /lib/libzstd.so.1 /lib/libsasl2.so.3 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/liblzma.so.5 /lib/liblz4.so.1  /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libgssapi_krb5.so.2 /lib/libresolv.so.2 /lib/libgpg-error.so.0 /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /lib/
+# telegraf dependencies
+COPY --from=builder /lib/libc.so.6 /lib/
 # mdsd dependencies
 #COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
 # logrotate dependencies
@@ -194,5 +258,6 @@ RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
 RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
 RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
-ENTRYPOINT [ "/bin/bash" ]
-CMD [ "/opt/main.sh" ]
+
+# Run the Go executable, entrypoint
+ENTRYPOINT ["./opt/main"]

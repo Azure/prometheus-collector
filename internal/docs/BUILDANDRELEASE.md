@@ -73,7 +73,7 @@ Each merge into `main` will push the image to the public mcr and deploy to the d
     - Select `Create release`, then choose the build version which should be the same as the image tag.
     - This pushes the linux, windows, and chart builds to the prod ACR which is synchronized with the prod MCR.
     - Once pushed, you can manually start the `Deploy to prod clusters` stage to deploy the image to our prod clusters.
-- **E2E Conformance Tests**: Ask for our conformance tests to be run in the [Arc Conformance teams channel](https://teams.microsoft.com/l/channel/19%3arlnJ5tIxEMP-Hhe-pRPPp9C6iYQ1CwAelt4zTqyC_NI1%40thread.tacv2/General?groupId=a077ab34-99ea-490c-b204-358d31c24fbe&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47).
+- **E2E Conformance Tests**: Ask for our conformance tests to be run in the [Arc Conformance teams channel](https://teams.microsoft.com/l/channel/19%3arlnJ5tIxEMP-Hhe-pRPPp9C6iYQ1CwAelt4zTqyC_NI1%40thread.tacv2/General?groupId=a077ab34-99ea-490c-b204-358d31c24fbe&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47). Follow the instructions in the [Arc test README](../../otelcollector/test/arc-conformance/README.md#testing-on-the-arc-conformance-matrix).
 - **PR 2**: Get the chart semver or container image tag from the commit used for **Build 1** and update the release notes with the changelog. Link to a similar PR [here](https://github.com/Azure/prometheus-collector/pull/298)
 - **PR 3**: Make a PR to update the [Geneva docs](https://msazure.visualstudio.com/One/_git/EngSys-MDA-GenevaDocs?path=%2Fdocumentation%2Fmetrics%2FPrometheus&version=GBmaster&_a=contents) with any changes made in `/otelcollector/deploy/eng.ms/docs/Prometheus`
 - **PR 4**: Make changes in AgentBaker for this new image version. Link to similar PR [here](https://github.com/Azure/AgentBaker/pull/2285/files)
@@ -89,4 +89,5 @@ https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/toolkit/ve
     - To generate snapshots(required when you update the image and/or chart) –
         - [Re-Render Test Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-adapter-charts&version=GBmaster&_a=contents&anchor=re-render-test-snapshots)
         - [Re-Render Addon Chart Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-charts/README.md&version=GBmaster&_a=contents)
+- **PR 6**: Toggle Monitoring clusters for Control Plane image. Link to similar PR [here](https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp/pullrequest/10083525?_a=files)
 - **Arc**: Start Arc release to Canary regions. The new version will be automatically deployed to each region batch every 24 hours.

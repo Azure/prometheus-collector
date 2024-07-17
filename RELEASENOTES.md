@@ -1,5 +1,46 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Pending
+* fix: Truncate DCE/DCR to 44/64 chars in ARM, Bicep, Terraform... - https://github.com/Azure/prometheus-collector/pull/922
+* fix: add single quotes to pod annotations for multiple namespace scenario - https://github.com/Azure/prometheus-collector/pull/927
+* feat: Upgrade components to 0.99 and use golang for config processing - https://github.com/Azure/prometheus-collector/pull/891
+
+## Release 06-12-2024
+* Target Allocator Chart update to add Tls secret to the config reader sidecar container  
+
+## Release 06-10-2024 (CCP release only)
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* Change log -
+  * fix: honor minimal ingestion profile setting for ccp - https://github.com/Azure/prometheus-collector/pull/911
+
+## Release 05-29-2024
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.13-main-05-29-2024-3e72c0e4`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.13-main-05-29-2024-3e72c0e4-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.13-main-05-29-2024-3e72c0e4-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.13-main-05-29-2024-3e72c0e4-cfg`
+* Change log -
+  * fix: update kube-state-metrics from: `v2.9.2` to: `v2.12.0` - https://github.com/Azure/prometheus-collector/pull/887
+  * fix: switch to Managed Identity for ARC release - https://github.com/Azure/prometheus-collector/pull/895
+  * fix: move PV metrics to correct job (from kubelet to k-s-m) - https://github.com/Azure/prometheus-collector/pull/898
+    * `kube_persistentvolumeclaim_access_mode`
+    * `kube_persistentvolumeclaim_labels`
+    * `kube_persistentvolume_status_phase`
+  * fix: signature artifacts drop issue - https://github.com/Azure/prometheus-collector/pull/885/files
+  * fix: revert Telegraf removal (i.e revert PRs #766 & #841) - https://github.com/Azure/prometheus-collector/pull/899
+
+## Release 05-20-2024 (CCP release only)
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-05-21-2024-56bc7e3d`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-05-21-2024-56bc7e3d-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-05-21-2024-56bc7e3d-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.12-main-05-21-2024-56bc7e3d-cfg`
+* Change log -
+  * fix: ccp ignore minimal ingestion profile setting and respecting the keep list regex values - https://github.com/Azure/prometheus-collector/pull/886
+  * fix: signature artifacts drop issue - https://github.com/Azure/prometheus-collector/pull/885/files
+  * fix: Remove histograms from minimal ingestion list - ccp metrics collector - https://github.com/Azure/prometheus-collector/pull/884
+
 ## Release 05-07-2024 (CCP release only)
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.11-main-6.8.11-main-05-07-2024-fcfa51bd`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.11-main-6.8.11-main-05-07-2024-fcfa51bd-win`

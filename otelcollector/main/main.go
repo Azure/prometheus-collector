@@ -2,116 +2,121 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
+
+	shared "github.com/prometheus-collector/shared"
+	ccpconfigmapsettings "github.com/prometheus-collector/shared/configmap/ccp"
+	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
+
 	"strconv"
 	"strings"
 	"time"
 )
 
 func main() {
-	// mac := os.Getenv("MAC")
-	controllerType := os.Getenv("CONTROLLER_TYPE")
-	clusterOverride := os.Getenv("CLUSTER_OVERRIDE")
-	cluster := os.Getenv("CLUSTER")
-	aksRegion := os.Getenv("AKSREGION")
-	ccpMetricsEnabled := os.Getenv("CCP_METRICS_ENABLED")
+	controllerType := shared.GetControllerType()
+	cluster := shared.GetEnv("CLUSTER", "")
+	clusterOverride := shared.GetEnv("CLUSTER_OVERRIDE", "")
+	aksRegion := shared.GetEnv("AKSREGION", "")
+	ccpMetricsEnabled := shared.GetEnv("CCP_METRICS_ENABLED", "false")
 
 	outputFile := "/opt/inotifyoutput.txt"
-	err := monitorInotify(outputFile)
-	if err != nil {
+	if err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs"); err != nil {
 		log.Fatal(err)
 	}
 
+	if ccpMetricsEnabled != "true" {
+		if err := shared.SetupArcEnvironment(); err != nil {
+			shared.EchoError(err.Error())
+		}
+	}
+	// Check if MODE environment variable is empty
+	mode := shared.GetEnv("MODE", "simple")
+	shared.EchoVar("MODE", mode)
+	shared.EchoVar("CONTROLLER_TYPE", shared.GetEnv("CONTROLLER_TYPE", ""))
+	shared.EchoVar("CLUSTER", cluster)
+
+	customEnvironment := shared.GetEnv("customEnvironment", "")
+	if ccpMetricsEnabled != "true" {
+		shared.SetupTelemetry(customEnvironment)
+		if err := shared.ConfigureEnvironment(); err != nil {
+			log.Fatalf("Error configuring environment: %v\n", err)
+		}
+	}
+
 	if ccpMetricsEnabled == "true" {
-		configmapparserforccp()
+		ccpconfigmapsettings.Configmapparserforccp()
 	} else {
-		// TODO : Part of Step 1 of ccp merge to main
-		// configmapparser()
+		configmapsettings.Configmapparser()
+	}
+
+	if ccpMetricsEnabled != "true" {
+		shared.StartCronDaemon()
 	}
 
 	var meConfigFile string
+	var fluentBitConfigFile string
 
-	if strings.ToLower(controllerType) == "replicaset" {
-		if clusterOverride == "true" {
-			meConfigFile = "/usr/sbin/me_internal.config"
-		} else {
-			meConfigFile = "/usr/sbin/me.config"
-		}
-	} else {
-		println("Failed: controllerType is not 'replicaset' and only replicaset mode is supported for CCP")
-		os.Exit(1)
-	}
+	meConfigFile, fluentBitConfigFile = shared.DetermineConfigFiles(controllerType, clusterOverride)
 	fmt.Println("meConfigFile:", meConfigFile)
+	fmt.Println("fluentBitConfigFile:", fluentBitConfigFile)
 
-	// Wait for addon-token-adapter to be healthy
-	tokenAdapterWaitSecs := 20
-	waitedSecsSoFar := 1
+	shared.WaitForTokenAdapter(ccpMetricsEnabled)
 
-	for {
-		if waitedSecsSoFar > tokenAdapterWaitSecs {
-			_, err := http.Get("http://localhost:9999/healthz")
-			if err != nil {
-				fmt.Printf("giving up waiting for token adapter to become healthy after %d secs\n", waitedSecsSoFar)
-				// Log telemetry about failure after waiting for waitedSecsSoFar and break
-				fmt.Printf("export tokenadapterUnhealthyAfterSecs=%d\n", waitedSecsSoFar)
-				break
-			}
-		} else {
-			fmt.Printf("checking health of token adapter after %d secs\n", waitedSecsSoFar)
-			resp, err := http.Get("http://localhost:9999/healthz")
-			if err == nil && resp.StatusCode == http.StatusOK {
-				fmt.Printf("found token adapter to be healthy after %d secs\n", waitedSecsSoFar)
-				// Log telemetry about success after waiting for waitedSecsSoFar and break
-				fmt.Printf("export tokenadapterHealthyAfterSecs=%d\n", waitedSecsSoFar)
-				break
-			}
-		}
-
-		time.Sleep(1 * time.Second)
-		waitedSecsSoFar++
+	if ccpMetricsEnabled != "true" {
+		shared.SetEnvAndSourceBashrc("ME_CONFIG_FILE", meConfigFile, true)
+		shared.SetEnvAndSourceBashrc("customResourceId", cluster, true)
+	} else {
+		os.Setenv("ME_CONFIG_FILE", meConfigFile)
+		os.Setenv("customResourceId", cluster)
 	}
 
-	// Set environment variables
-	os.Setenv("ME_CONFIG_FILE", meConfigFile)
-	os.Setenv("customResourceId", cluster)
-
-	trimmedRegion := strings.ReplaceAll(aksRegion, " ", "")
-	trimmedRegion = strings.ToLower(trimmedRegion)
-	os.Setenv("customRegion", trimmedRegion)
+	trimmedRegion := strings.ToLower(strings.ReplaceAll(aksRegion, " ", ""))
+	if ccpMetricsEnabled != "true" {
+		shared.SetEnvAndSourceBashrc("customRegion", trimmedRegion, true)
+	} else {
+		os.Setenv("customRegion", trimmedRegion)
+	}
 
 	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 	time.Sleep(10 * time.Second)
 
 	fmt.Println("Starting MDSD")
-	startMdsd()
+	if ccpMetricsEnabled != "true" {
+		shared.StartMdsdForOverlay()
+	} else {
+		shared.StartMdsdForUnderlay()
+	}
 
-	printMdsdVersion()
+	// update this to use color coding
+	shared.PrintMdsdVersion()
 
 	fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
 	time.Sleep(30 * time.Second)
 
-	fmt.Println("Starting metricsextension with config overrides")
-	startMetricsExtensionWithConfigOverrides(meConfigFile)
-
-	// Get ME version
-	meVersion, err := readVersionFile("/opt/metricsextversion.txt")
-	if err != nil {
-		fmt.Printf("Error reading ME version file: %v\n", err)
+	fmt.Println("Starting Metrics Extension with config overrides")
+	if ccpMetricsEnabled != "true" {
+		if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile); err != nil {
+			log.Fatalf("Error starting MetricsExtension: %v\n", err)
+		}
 	} else {
-		fmtVar("ME_VERSION", meVersion)
+		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile)
 	}
+	// ME_PID, err := shared.StartMetricsExtensionForOverlay(meConfigFile)
+	// if err != nil {
+	// 	fmt.Printf("Error starting MetricsExtension: %v\n", err)
+	// 	return
+	// }
+	// fmt.Printf("ME_PID: %d\n", ME_PID)
 
-	// Get Golang version
-	golangVersion, err := readVersionFile("/opt/goversion.txt")
-	if err != nil {
-		fmt.Printf("Error reading Golang version file: %v\n", err)
-	} else {
-		fmtVar("GOLANG_VERSION", golangVersion)
-	}
+	// // Modify fluentBitConfigFile using ME_PID
+	// err = shared.ModifyConfigFile(fluentBitConfigFile, ME_PID, "${ME_PID}")
+	// if err != nil {
+	// 	fmt.Printf("Error modifying config file: %v\n", err)
+	// }
 
 	// Start otelcollector
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
@@ -121,31 +126,52 @@ func main() {
 
 	if controllerType == "replicaset" && azmonOperatorEnabled == "true" {
 		fmt.Println("Starting otelcollector in replicaset with Target allocator settings")
-		collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-replicaset.yml"
+		if ccpMetricsEnabled == "true" {
+			collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-replicaset.yml"
+		} else {
+			collectorConfig = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
+		}
 	} else if azmonUseDefaultPrometheusConfig == "true" {
 		fmt.Println("Starting otelcollector with only default scrape configs enabled")
-		collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
+		if ccpMetricsEnabled == "true" {
+			collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
+		} else {
+			collectorConfig = "/opt/microsoft/otelcollector/collector-config-default.yml"
+		}
 	} else {
-		fmt.Println("Should never reach here -> Implement this when merging this into main.sh -> Reverting to default collection for now.")
-		// collectorConfig = "/opt/microsoft/otelcollector/collector-config.yml"
-		collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
+		collectorConfig = "/opt/microsoft/otelcollector/collector-config.yml"
 	}
 
 	fmt.Println("startCommand otelcollector")
-	startCommand("/opt/microsoft/otelcollector/otelcollector", "--config", collectorConfig)
+	_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+	// OTEL_PID, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+	// if err != nil {
+	// 	fmt.Printf("Error starting command: %v\n", err)
+	// 	return
+	// }
+	// fmt.Printf("OTEL_PID: %d\n", OTEL_PID)
 
-	otelCollectorVersion, err := exec.Command("/opt/microsoft/otelcollector/otelcollector", "--version", "").Output()
-	if err != nil {
-		fmt.Printf("Error getting otelcollector version: %v\n", err)
-	} else {
-		fmtVar("OTELCOLLECTOR_VERSION", string(otelCollectorVersion))
-	}
+	// // Modify fluentBitConfigFile using OTEL_PID
+	// err = shared.ModifyConfigFile(fluentBitConfigFile, OTEL_PID, "${OTEL_PID}")
+	// if err != nil {
+	// 	fmt.Printf("Error modifying config file: %v\n", err)
+	// }
 
-	prometheusVersion, err := readVersionFile("/opt/microsoft/otelcollector/PROMETHEUS_VERSION")
-	if err != nil {
-		fmt.Printf("Error reading Prometheus version file: %v\n", err)
-	} else {
-		fmtVar("PROMETHEUS_VERSION", prometheusVersion)
+	shared.LogVersionInfo()
+
+	if ccpMetricsEnabled != "true" {
+		shared.StartFluentBit(fluentBitConfigFile)
+
+		// Run the command and capture the output
+		cmd := exec.Command("fluent-bit", "--version")
+		fluentBitVersion, err := cmd.Output()
+		if err != nil {
+			log.Fatalf("failed to run command: %v", err)
+		}
+		shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
+
+		shared.StartTelegraf()
+
 	}
 
 	// Start inotify to watch for changes
@@ -195,7 +221,7 @@ func main() {
 
 	// Printing the environment variable and the readable time
 	fmt.Printf("AZMON_CONTAINER_START_TIME=%d\n", epochTimeNow)
-	fmt.Printf("AZMON_CONTAINER_START_TIME_READABLE=%s\n", epochTimeNowReadable)
+	shared.FmtVar("AZMON_CONTAINER_START_TIME_READABLE", epochTimeNowReadable)
 
 	// Expose a health endpoint for liveness probe
 	http.HandleFunc("/health", healthHandler)
@@ -205,56 +231,88 @@ func main() {
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	status := http.StatusOK
 	message := "prometheuscollector is running."
-	// macMode := os.Getenv("MAC") == "true"
 
+	// Checking if TokenConfig file exists
 	if _, err := os.Stat("/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"); os.IsNotExist(err) {
+		fmt.Println("TokenConfig.json does not exist")
 		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
-			azmonContainerStartTimeStr, err := ioutil.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
+			fmt.Println("azmon-container-start-time file exists, reading start time")
+			azmonContainerStartTimeStr, err := os.ReadFile("/opt/microsoft/liveness/azmon-container-start-time")
 			if err != nil {
 				status = http.StatusServiceUnavailable
 				message = "Error reading azmon-container-start-time: " + err.Error()
+				fmt.Println(message)
+				goto response
 			}
 
 			azmonContainerStartTime, err := strconv.Atoi(strings.TrimSpace(string(azmonContainerStartTimeStr)))
 			if err != nil {
 				status = http.StatusServiceUnavailable
 				message = "Error converting azmon-container-start-time to integer: " + err.Error()
+				fmt.Println(message)
+				goto response
 			}
 
 			epochTimeNow := int(time.Now().Unix())
 			duration := epochTimeNow - azmonContainerStartTime
 			durationInMinutes := duration / 60
+			fmt.Printf("Container has been running for %d minutes\n", durationInMinutes)
 
 			if durationInMinutes%5 == 0 {
-				message = fmt.Sprintf("%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
+				fmt.Printf("%s No configuration present for the AKS resource\n", time.Now().Format("2006-01-02T15:04:05"))
 			}
 
 			if durationInMinutes > 15 {
 				status = http.StatusServiceUnavailable
 				message = "No configuration present for the AKS resource"
+				fmt.Println(message)
+				goto response
 			}
+		} else {
+			fmt.Println("azmon-container-start-time file does not exist")
+		}
+	} else {
+		if !shared.IsProcessRunning("/usr/sbin/MetricsExtension") {
+			status = http.StatusServiceUnavailable
+			message = "Metrics Extension is not running (configuration exists)"
+			fmt.Println(message)
+			goto response
+		}
+
+		if !shared.IsProcessRunning("/usr/sbin/mdsd") {
+			status = http.StatusServiceUnavailable
+			message = "mdsd not running (configuration exists)"
+			fmt.Println(message)
+			goto response
 		}
 	}
 
-	if !isProcessRunning("otelcollector") {
-		status = http.StatusServiceUnavailable
-		message = "OpenTelemetryCollector is not running."
-	}
-
-	if hasConfigChanged("/opt/inotifyoutput.txt") {
-		status = http.StatusServiceUnavailable
-		message = "inotifyoutput.txt has been updated - config changed"
-	}
-
-	if hasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
+	if shared.HasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
 		status = http.StatusServiceUnavailable
 		message = "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
+		fmt.Println(message)
+		goto response
 	}
 
+	if !shared.IsProcessRunning("/opt/microsoft/otelcollector/otelcollector") {
+		status = http.StatusServiceUnavailable
+		message = "OpenTelemetryCollector is not running."
+		fmt.Println(message)
+		goto response
+	}
+
+	if shared.HasConfigChanged("/opt/inotifyoutput.txt") {
+		status = http.StatusServiceUnavailable
+		message = "inotifyoutput.txt has been updated - config changed"
+		fmt.Println(message)
+		goto response
+	}
+
+response:
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
 	if status != http.StatusOK {
-		fmt.Printf(message)
-		writeTerminationLog(message)
+		fmt.Printf("Health check failed: %d, Message: %s\n", status, message)
+		shared.WriteTerminationLog(message)
 	}
 }
