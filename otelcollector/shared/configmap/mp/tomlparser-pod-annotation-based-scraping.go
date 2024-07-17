@@ -52,7 +52,7 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 		//	linuxPrefix = "export "
 		//}
 		envVarString := fmt.Sprintf("%s%s=\"%s\"\n", linuxPrefix, envVariableTemplateName, podannotationNamespaceRegex)
-		envVarAnnotationsEnabled := fmt.Sprintf("%s%s=\"%s\"\n", linuxPrefix, envVariableAnnotationsEnabledName, "true")
+		envVarAnnotationsEnabled := fmt.Sprintf("%s%s=%s\n", linuxPrefix, envVariableAnnotationsEnabledName, "true")
 		fmt.Printf("Writing to file: %s%s", envVarString, envVarAnnotationsEnabled)
 
 		if _, err := file.WriteString(envVarString); err != nil {
