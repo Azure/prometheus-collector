@@ -634,54 +634,30 @@ func populateDefaultPrometheusConfig() {
 		}
 	}
 
-	fmt.Println("...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"))
-	fmt.Println("...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"))
-	fmt.Println("...Debug: currentControllerType is set to", currentControllerType)
-
-	if strings.ToLower(os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED")) == "true" {
-		fmt.Println(("...Debug: yes its set to true for string"))
-	}
-
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
-		fmt.Println("Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is set to true and currentControllerType is replicasetControllerType")
 
 		if podannotationNamespacesRegex, exists := os.LookupEnv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"); exists {
-			fmt.Println("Debug: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX is set to", podannotationNamespacesRegex)
 
 			podannotationMetricsKeepListRegex := regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
 			podannotationScrapeInterval, intervalExists := intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
 
 			if intervalExists {
-				fmt.Println("Debug: POD_ANNOTATION_SCRAPE_INTERVAL is set to", podannotationScrapeInterval)
 				UpdateScrapeIntervalConfig(podAnnotationsDefaultFile, podannotationScrapeInterval)
-			} else {
-				fmt.Println("Debug: POD_ANNOTATION_SCRAPE_INTERVAL is not set")
 			}
 
 			if podannotationMetricsKeepListRegex != "" {
-				fmt.Println("Debug: POD_ANNOTATION_METRICS_KEEP_LIST_REGEX is set to", podannotationMetricsKeepListRegex)
 				AppendMetricRelabelConfig(podAnnotationsDefaultFile, podannotationMetricsKeepListRegex)
-			} else {
-				fmt.Println("Debug: POD_ANNOTATION_METRICS_KEEP_LIST_REGEX is not set")
 			}
 
 			if podannotationNamespacesRegex != "" {
-				fmt.Println("Debug: POD_ANNOTATION_NAMESPACES_REGEX is set to", podannotationNamespacesRegex)
 				relabelConfig := []map[string]interface{}{
 					{"source_labels": []string{"__meta_kubernetes_namespace"}, "action": "keep", "regex": podannotationNamespacesRegex},
 				}
 				AppendRelabelConfig(podAnnotationsDefaultFile, relabelConfig, podannotationNamespacesRegex)
-			} else {
-				fmt.Println("Debug: POD_ANNOTATION_NAMESPACES_REGEX is not set")
 			}
 
 			defaultConfigs = append(defaultConfigs, podAnnotationsDefaultFile)
-			fmt.Println("Debug: podAnnotationsDefaultFile appended to defaultConfigs")
-		} else {
-			fmt.Println("Debug: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX is not set")
 		}
-	} else {
-		fmt.Println("Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is not set to true or currentControllerType is not replicasetControllerType")
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
@@ -1093,29 +1069,17 @@ func populateDefaultPrometheusConfigWithOperator() {
 		}
 	}
 
-	fmt.Println("**...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"))
-	fmt.Println("**...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"))
-	fmt.Println("**...Debug: currentControllerType is set to", currentControllerType)
-
-	if strings.ToLower(os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED")) == "true" {
-		fmt.Println(("*...Debug: yes its set to true for string"))
-	}
-
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && (isConfigReaderSidecar() || currentControllerType == replicasetControllerType) {
-		fmt.Println("Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is true")
 
 		if podannotationNamespacesRegex, exists := os.LookupEnv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"); exists {
-			fmt.Printf("Debug: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX found: %s\n", podannotationNamespacesRegex)
 
 			podannotationMetricsKeepListRegex := regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
 			podannotationScrapeInterval, intervalExists := intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
 
 			if intervalExists {
-				fmt.Printf("Debug: POD_ANNOTATION_SCRAPE_INTERVAL found: %v\n", podannotationScrapeInterval)
 				UpdateScrapeIntervalConfig(podAnnotationsDefaultFile, podannotationScrapeInterval)
 			}
 			if podannotationMetricsKeepListRegex != "" {
-				fmt.Printf("Debug: POD_ANNOTATION_METRICS_KEEP_LIST_REGEX found: %s\n", podannotationMetricsKeepListRegex)
 				AppendMetricRelabelConfig(podAnnotationsDefaultFile, podannotationMetricsKeepListRegex)
 			}
 			// Trim the first and last escaped quotes
@@ -1123,7 +1087,6 @@ func populateDefaultPrometheusConfigWithOperator() {
 				podannotationNamespacesRegex = podannotationNamespacesRegex[1 : len(podannotationNamespacesRegex)-1]
 			}
 			if podannotationNamespacesRegex != "" {
-				fmt.Println("Debug: Applying namespace regex for relabeling")
 				relabelConfig := []map[string]interface{}{
 					{"source_labels": []string{"__meta_kubernetes_namespace"}, "action": "keep", "regex": podannotationNamespacesRegex},
 				}
