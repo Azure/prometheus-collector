@@ -1093,9 +1093,9 @@ func populateDefaultPrometheusConfigWithOperator() {
 		}
 	}
 
-	fmt.Println("*...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"))
-	fmt.Println("*...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"))
-	fmt.Println("*...Debug: currentControllerType is set to", currentControllerType)
+	fmt.Println("**...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"))
+	fmt.Println("**...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"))
+	fmt.Println("**...Debug: currentControllerType is set to", currentControllerType)
 
 	if strings.ToLower(os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED")) == "true" {
 		fmt.Println(("*...Debug: yes its set to true for string"))
