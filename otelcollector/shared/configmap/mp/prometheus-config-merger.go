@@ -634,6 +634,14 @@ func populateDefaultPrometheusConfig() {
 		}
 	}
 
+	fmt.Println("...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"))
+	fmt.Println("...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"))
+	fmt.Println("...Debug: currentControllerType is set to", currentControllerType)
+
+	if strings.ToLower(os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED")) == "true" {
+		fmt.Println(("...Debug: yes its set to true for string"))
+	}
+
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
 		fmt.Println("Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is set to true and currentControllerType is replicasetControllerType")
 
@@ -1083,6 +1091,14 @@ func populateDefaultPrometheusConfigWithOperator() {
 				}
 			}
 		}
+	}
+
+	fmt.Println("*...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"))
+	fmt.Println("*...Debug: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX is set to", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"))
+	fmt.Println("*...Debug: currentControllerType is set to", currentControllerType)
+
+	if strings.ToLower(os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED")) == "true" {
+		fmt.Println(("*...Debug: yes its set to true for string"))
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && (isConfigReaderSidecar() || currentControllerType == replicasetControllerType) {
