@@ -94,8 +94,6 @@ func handlePodAnnotationsFile(filename string) {
 		key := line[:index]
 		value := line[index+1:]
 
-		fmt.Println("Key: ", key, " Value: ", value)
-
 		if key == "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX" {
 			shared.SetEnvAndSourceBashrc(key, value, false, true)
 		} else {
