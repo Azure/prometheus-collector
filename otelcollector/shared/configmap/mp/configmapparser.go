@@ -18,13 +18,13 @@ const (
 func setConfigSchemaVersionEnv() {
 	fileInfo, err := os.Stat(schemaVersionFile)
 	if err != nil || fileInfo.Size() == 0 {
-		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true)
+		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true, false)
 		return
 	}
 	content, err := os.ReadFile(schemaVersionFile)
 	if err != nil {
 		shared.EchoError("Error reading schema version file:" + err.Error())
-		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true)
+		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true, false)
 		return
 	}
 	trimmedContent := strings.TrimSpace(string(content))
@@ -32,19 +32,19 @@ func setConfigSchemaVersionEnv() {
 	if len(configSchemaVersion) > 10 {
 		configSchemaVersion = configSchemaVersion[:10]
 	}
-	shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
+	shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true, false)
 }
 
 func setConfigFileVersionEnv() {
 	fileInfo, err := os.Stat(configVersionFile)
 	if err != nil || fileInfo.Size() == 0 {
-		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true)
+		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true, false)
 		return
 	}
 	content, err := os.ReadFile(configVersionFile)
 	if err != nil {
 		shared.EchoError("Error reading config version file:" + err.Error())
-		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true)
+		shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true, false)
 		return
 	}
 	trimmedContent := strings.TrimSpace(string(content))
@@ -52,7 +52,7 @@ func setConfigFileVersionEnv() {
 	if len(configFileVersion) > 10 {
 		configFileVersion = configFileVersion[:10]
 	}
-	shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion, true)
+	shared.SetEnvAndSourceBashrc("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion, true, false)
 }
 
 func parseSettingsForPodAnnotations() {
@@ -95,9 +95,11 @@ func handlePodAnnotationsFile(filename string) {
 		value := line[index+1:]
 
 		if key == "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX" {
-			value = fmt.Sprintf("\"%s\"", value)
+			shared.SetEnvAndSourceBashrc(key, value, false, true)
+		} else {
+			shared.SetEnvAndSourceBashrc(key, value, false, false)
 		}
-		shared.SetEnvAndSourceBashrc(key, value, false)
+
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -156,8 +158,8 @@ func Configmapparser() {
 		prometheusConfigMerger(false)
 	}
 
-	shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
-	shared.SetEnvAndSourceBashrc("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
+	shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true, false)
+	shared.SetEnvAndSourceBashrc("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true, false)
 
 	// Running promconfigvalidator if promMergedConfig.yml exists
 	if shared.FileExists("/opt/promMergedConfig.yml") {
@@ -170,7 +172,7 @@ func Configmapparser() {
 			if err != nil {
 				fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
 				fmt.Printf("Command execution failed: %v\n", err)
-				shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", true)
+				shared.SetEnvAndSourceBashrc("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", true, false)
 				if shared.FileExists(mergedDefaultConfigPath) {
 					fmt.Println("prom-config-validator::Running validator on just default scrape configs")
 					shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", mergedDefaultConfigPath, "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
@@ -180,7 +182,7 @@ func Configmapparser() {
 						shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
 					}
 				}
-				shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
+				shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true, false)
 			}
 		}
 	} else if _, err := os.Stat(mergedDefaultConfigPath); err == nil {
@@ -193,11 +195,11 @@ func Configmapparser() {
 			fmt.Println("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
 			shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
 		}
-		shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
+		shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true, false)
 	} else {
 		// This else block is needed, when there is no custom config mounted as config map or default configs enabled
 		fmt.Println("prom-config-validator::No custom config via configmap or default scrape configs enabled.")
-		shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
+		shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true, false)
 	}
 
 	if _, err := os.Stat("/opt/microsoft/prom_config_validator_env_var"); err == nil {

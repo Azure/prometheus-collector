@@ -67,8 +67,8 @@ func main() {
 	shared.WaitForTokenAdapter(ccpMetricsEnabled)
 
 	if ccpMetricsEnabled != "true" {
-		shared.SetEnvAndSourceBashrc("ME_CONFIG_FILE", meConfigFile, true)
-		shared.SetEnvAndSourceBashrc("customResourceId", cluster, true)
+		shared.SetEnvAndSourceBashrc("ME_CONFIG_FILE", meConfigFile, true, false)
+		shared.SetEnvAndSourceBashrc("customResourceId", cluster, true, false)
 	} else {
 		os.Setenv("ME_CONFIG_FILE", meConfigFile)
 		os.Setenv("customResourceId", cluster)
@@ -76,7 +76,7 @@ func main() {
 
 	trimmedRegion := strings.ToLower(strings.ReplaceAll(aksRegion, " ", ""))
 	if ccpMetricsEnabled != "true" {
-		shared.SetEnvAndSourceBashrc("customRegion", trimmedRegion, true)
+		shared.SetEnvAndSourceBashrc("customRegion", trimmedRegion, true, false)
 	} else {
 		os.Setenv("customRegion", trimmedRegion)
 	}
