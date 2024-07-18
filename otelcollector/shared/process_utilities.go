@@ -72,7 +72,7 @@ func SetEnvAndSourceBashrc(key, value string, echo bool) error {
 	defer file.Close()
 
 	// Write the export statement to the .bashrc file
-	_, err = fmt.Fprintf(file, "export %s=\"%s\"\n", key, value)
+	_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
 	if err != nil {
 		return fmt.Errorf("failed to write to .bashrc file: %v", err)
 	}

@@ -12,7 +12,7 @@ import (
 
 const (
 	defaultConfigSchemaVersion = "v1"
-	defaultConfigFileVersion = "ver1"
+	defaultConfigFileVersion   = "ver1"
 )
 
 func setConfigSchemaVersionEnv() {
@@ -61,8 +61,48 @@ func parseSettingsForPodAnnotations() {
 		fmt.Printf("%v\n", err)
 		return
 	}
-	handleEnvFileError(podAnnotationEnvVarPath)
+	handlePodAnnotationsFile(podAnnotationEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseSettingsForPodAnnotations")
+}
+
+func handlePodAnnotationsFile(filename string) {
+	// Check if the file exists
+	_, e := os.Stat(filename)
+	if os.IsNotExist(e) {
+		fmt.Printf("File does not exist: %s\n", filename)
+		return
+	}
+
+	// Open the file for reading
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Printf("Error opening file: %s\n", err)
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		index := strings.Index(line, "=")
+		if index == -1 {
+			fmt.Printf("Skipping invalid line: %s\n", line)
+			continue
+		}
+
+		key := line[:index]
+		value := line[index+1:]
+
+		if key == "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX" {
+			value = fmt.Sprintf("\"%s\"", value)
+		}
+		shared.SetEnvAndSourceBashrc(key, value, false)
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("Error reading file: %s\n", err)
+	}
 }
 
 func parsePrometheusCollectorConfig() {
