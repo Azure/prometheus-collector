@@ -73,7 +73,7 @@ func SetEnvAndSourceBashrc(key, value string, echo bool, quotes bool) error {
 
 	// Write the export statement to the .bashrc file
 	if quotes {
-		_, err = fmt.Fprintf(file, "export %s='%s'\n", key, value)
+		_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
 	} else {
 		_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
 	}
