@@ -1073,10 +1073,6 @@ func populateDefaultPrometheusConfigWithOperator() {
 			podannotationMetricsKeepListRegex := regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
 			podannotationScrapeInterval, intervalExists := intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
 
-			// Print the value of podannotationNamespacesRegex
-			fmt.Printf("..podannotationNamespacesRegex: %q\n", podannotationNamespacesRegex)
-			fmt.Printf("..AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX: %q\n", os.Getenv("AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"))
-
 			if intervalExists {
 				UpdateScrapeIntervalConfig(podAnnotationsDefaultFile, podannotationScrapeInterval)
 			}
