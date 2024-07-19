@@ -1083,10 +1083,13 @@ func populateDefaultPrometheusConfigWithOperator() {
 			if podannotationMetricsKeepListRegex != "" {
 				AppendMetricRelabelConfig(podAnnotationsDefaultFile, podannotationMetricsKeepListRegex)
 			}
-			// Trim the first and last escaped quotes
+			// Trim the first and last escaped quotes if they exist
 			if len(podannotationNamespacesRegex) > 1 && podannotationNamespacesRegex[0] == '"' && podannotationNamespacesRegex[len(podannotationNamespacesRegex)-1] == '"' {
 				podannotationNamespacesRegex = podannotationNamespacesRegex[1 : len(podannotationNamespacesRegex)-1]
 			}
+			// Additional trim to remove single quotes if present
+			podannotationNamespacesRegex = strings.Trim(podannotationNamespacesRegex, "'")
+
 			if podannotationNamespacesRegex != "" {
 				relabelConfig := []map[string]interface{}{
 					{"source_labels": []string{"__meta_kubernetes_namespace"}, "action": "keep", "regex": podannotationNamespacesRegex},
