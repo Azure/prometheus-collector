@@ -44,8 +44,8 @@ func IsProcessRunning(processName string) bool {
 }
 
 // SetEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
-// and sources the file to apply changes immediately. If echo is true, it calls EchoVar.
-func SetEnvAndSourceBashrc(key, value string, echo bool) error {
+// and sources the file to apply changes immediately. If echo is true, it calls EchoVar. If quotes is true, it add quotes around the value
+func SetEnvAndSourceBashrc(key, value string, echo bool, quotes bool) error {
 	// Get user's home directory
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -72,7 +72,11 @@ func SetEnvAndSourceBashrc(key, value string, echo bool) error {
 	defer file.Close()
 
 	// Write the export statement to the .bashrc file
-	_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
+	if quotes {
+		_, err = fmt.Fprintf(file, "export %s=\\\"%s\\\"\n", key, value)
+	} else {
+		_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to write to .bashrc file: %v", err)
 	}
