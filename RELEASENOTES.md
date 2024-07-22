@@ -1,18 +1,27 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Pending
+## Release 07-19-2024
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* Change log -
 * fix: Truncate DCE/DCR to 44/64 chars in ARM, Bicep, Terraform... - https://github.com/Azure/prometheus-collector/pull/922
 * fix: add single quotes to pod annotations for multiple namespace scenario - https://github.com/Azure/prometheus-collector/pull/927
 * feat: Upgrade components to 0.99 and use golang for config processing - https://github.com/Azure/prometheus-collector/pull/891
+* fix: move to single quote for telegraf - https://github.com/Azure/prometheus-collector/pull/946
+* compliance: add codeql to build pipeline - https://github.com/Azure/prometheus-collector/pull/939
+* Updating deployment specs for ama-metrics-operator-targets as this pod was not getting cleaned up by GC on low memory evictions due to memory pressure - https://github.com/Azure/prometheus-collector/pull/931
+* Test: unit tests and some small fixes for configmap processing - https://github.com/Azure/prometheus-collector/pull/930
 
 ## Release 06-12-2024
 * Target Allocator Chart update to add Tls secret to the config reader sidecar container  
 
 ## Release 06-10-2024 (CCP release only)
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.14-main-06-10-2024-b20600b3`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.14-main-06-10-2024-b20600b3-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.14-main-06-10-2024-b20600b3-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.8.14-main-06-10-2024-b20600b3-cfg`
 * Change log -
   * fix: honor minimal ingestion profile setting for ccp - https://github.com/Azure/prometheus-collector/pull/911
 
