@@ -1,3 +1,10 @@
+# This script is only for AKS cluster testing. It reads the template files (Chart-template.yaml and values-template.yaml),
+# replaces placeholders with actual values, removes specific sections, 
+# and then writes the modified content back to new files (Chart.yaml and values.yaml).
+# The placeholders replaced include HELM_CHART_NAME, IMAGE_TAG, MCR_REPOSITORY, ARC_EXTENSION, 
+# AKS_REGION, and AKS_RESOURCE_ID. It also removes the dependencies section from the 
+# Chart-template.yaml file.
+
 # Define variables
 $ImageTag = "6.8.14-kaveesh-q-07-19-2024-e7626ca2"
 $AKSRegion = "westeurope"
