@@ -94,6 +94,8 @@ func (t *transaction) Append(_ storage.SeriesRef, ls labels.Labels, atMs int64, 
 	default:
 	}
 
+	fmt.Println("ExternalLabels: %v", t.externalLabels)
+
 	if t.externalLabels.Len() != 0 {
 		b := labels.NewBuilder(ls)
 		t.externalLabels.Range(func(l labels.Label) {
