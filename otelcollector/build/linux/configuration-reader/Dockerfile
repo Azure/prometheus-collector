@@ -112,17 +112,11 @@ COPY --from=builder /lib/libinotifytools.so.0 /lib/
 
 # crond dependencies
 COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre2-16.so.0 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
->>>>>>> trda/linux-3.0-upgrade
 # vim dependencies
 COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
 
 # logrotate dependencies
-<<<<<<< HEAD
-COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
-
-=======
 COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre2-16.so.0 /lib/
->>>>>>> trda/linux-3.0-upgrade
 # curl dependencies
 COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
 COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
