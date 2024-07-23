@@ -97,6 +97,9 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 		return err
 	}
 
+	fmt.Printf("Config in metrics_receiver.go: %v\n", r.cfg.PrometheusConfig)
+	fmt.Printf("Global Config in metrics_receiver.go: %v\n", r.cfg.PrometheusConfig.GlobalConfig)
+
 	err = r.applyCfg(baseCfg)
 	if err != nil {
 		r.settings.Logger.Error("Failed to apply new scrape configuration", zap.Error(err))
@@ -292,6 +295,8 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 			return err
 		}
 	}
+
+	fmt.Printf("External Labels in metrics_receiver.go: %v\n", r.cfg.PrometheusConfig.GlobalConfig.ExternalLabels)
 
 	store, err := internal.NewAppendable(
 		r.consumer,
