@@ -46,37 +46,7 @@ COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
-<<<<<<< HEAD
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as main-builder
-WORKDIR /
-# Create directories
-RUN mkdir -p ./shared/configmap/mp/
-RUN mkdir -p ./main/
-# Copy shared go files
-COPY ../shared/*.go ./main/shared/
-COPY ./shared/go.mod ./main/shared/
-COPY ./shared/go.sum ./main/shared/
-COPY ../shared/configmap/mp/*.go ./main/shared/configmap/mp/
-COPY ../shared/configmap/ccp/*.go ./main/shared/configmap/ccp/
-COPY ./shared/configmap/mp/go.mod ./main/shared/configmap/mp/
-COPY ./shared/configmap/mp/go.sum ./main/shared/configmap/mp/
-COPY ./shared/configmap/ccp/go.mod ./main/shared/configmap/ccp/
-COPY ./shared/configmap/ccp/go.sum ./main/shared/configmap/ccp/
-# Copy main go files
-COPY ./main/*.go ./main/
-COPY ./go.mod ./main/
-COPY ./go.sum ./main/
-WORKDIR /main
-RUN go version
-RUN go mod download
-RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
-ARG TARGETOS TARGETARCH
-RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; fi
-
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
-=======
 FROM azurelinuxpreview.azurecr.io/public/azurelinux/base/core:3.0 as builder
->>>>>>> trda/linux-3.0-upgrade
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "linux"
@@ -124,9 +94,7 @@ ARG TARGETARCH
 RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update -y
-<<<<<<< HEAD
 RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
-=======
 RUN tdnf install -y net-tools
 RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
 RUN tdnf install -y pcre2
@@ -137,7 +105,6 @@ RUN tdnf install -y libyaml
 RUN tdnf install -y re2
 RUN tdnf install -y ruby
 RUN tdnf install -y fluent-bit
->>>>>>> trda/linux-3.0-upgrade
 RUN mkdir /busybin && busybox --install /busybin
 RUN mkdir -p /var/opt/microsoft
 RUN chmod 775 /etc/cron.daily/logrotate
@@ -187,13 +154,9 @@ COPY --from=builder /opt/microsoft/liveness /opt/microsoft/liveness
 COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparser
 
 # executables
-<<<<<<< HEAD
-COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
-=======
 #COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 COPY --from=builder /usr/bin/ruby /usr/bin/ruby
 COPY --from=builder /usr/lib/ruby /usr/lib/ruby
->>>>>>> trda/linux-3.0-upgrade
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
@@ -220,13 +183,10 @@ COPY --from=builder /lib/libinotifytools.so.0 /lib/
 COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre2-16.so.0 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
 # vim dependencies
 COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
-<<<<<<< HEAD
-=======
 # ruby dependencies
 COPY --from=builder /usr/lib/libruby.so.3.3 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
 # ruby re2 dependencies
 COPY --from=builder /usr/lib/libre2.so.11 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libz.so.1 /usr/lib/libgmp.so.10 /usr/lib/libcrypt.so.1 /usr/lib/libm.so.6 /usr/lib/
->>>>>>> trda/linux-3.0-upgrade
 # metricsextension dependencies
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 #COPY --from=builder /lib/libboost_filesystem.so.1.83.0 /lib/libcpprest.so.2.10  /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libz.so.1 /lib/libbrotlicommon.so.1 /lib/
