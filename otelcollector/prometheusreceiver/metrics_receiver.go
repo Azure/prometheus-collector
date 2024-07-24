@@ -252,6 +252,8 @@ func (r *pReceiver) applyCfg(cfg *PromConfig) error {
 		}
 	}
 
+	fmt.Printf("applyCfg: %v\n", cfg)
+	fmt.Printf("applyCfg converted: %v\n", (*config.Config)(cfg))
 	if err := r.scrapeManager.ApplyConfig((*config.Config)(cfg)); err != nil {
 		return err
 	}

@@ -76,10 +76,14 @@ var _ confmap.Unmarshaler = (*PromConfig)(nil)
 
 func (cfg *PromConfig) Unmarshal(componentParser *confmap.Conf) error {
 	cfgMap := componentParser.ToStringMap()
+	fmt.Printf("cfgMap: %v\n", cfgMap)
 	if len(cfgMap) == 0 {
 		return nil
 	}
-	return unmarshalYAML(cfgMap, (*promconfig.Config)(cfg))
+	err := unmarshalYAML(cfgMap, (*promconfig.Config)(cfg))
+	fmt.Printf("unmarshal cfg: %v\n", cfg)
+	fmt.Printf("promconfig.Config: %v\n", (*promconfig.Config)(cfg))
+	return err
 }
 
 func (cfg *PromConfig) Validate() error {
