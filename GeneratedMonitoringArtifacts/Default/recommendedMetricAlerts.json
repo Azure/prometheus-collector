@@ -571,11 +571,55 @@
                         ]
                     },
                     {
+                        "alert": "KubeWindowsContainerAverageCPUHigh",
+                        "expression": "(sum(rate(windows_container_cpu_usage_seconds_total{job=\"windows-exporter\", container_id != \"\"}[5m] )* on(container_id) group_left(container, pod, namespace) label_replace(max(kube_pod_container_info{job=\"kube-state-metrics\", container_id != \"\"}) by (container, container_id, pod, namespace), \"container_id\", \"$1\", \"container_id\", \"(.*)\") ) by (container, pod, namespace))/(kube_pod_container_resource_limits{resource=\"cpu\",job=\"kube-state-metrics\"} * on(container,pod,namespace) (windows_container_available{job=\"windows-exporter\", container_id != \"\"} * on(container_id) group_left(container, pod, namespace) max(kube_pod_container_info{job=\"kube-state-metrics\", container_id != \"\"}) by(container, container_id, pod, namespace))) > .95",
+                        "for": "PT5M",
+                        "annotations": {
+                          "description": "Average CPU usage per windows container is greater than 95%. For more information on this alert, please refer to this [link](https://aka.ms/aks-alerts/pod-level-recommended-alerts)."
+                        },
+                        "enabled": true,
+                        "severity": 4,
+                        "resolveConfiguration": {
+                          "autoResolved": true,
+                          "timeToResolve": "PT15M"
+                        },
+                        "labels": {
+                          "severity": "warning"
+                        },
+                        "actions": [
+                          {
+                            "actionGroupId": "[parameters('actionGroupResourceId')]"
+                          }
+                        ]
+                    },
+                    {
                         "alert": "KubeContainerAverageMemoryHigh",
                         "expression": "avg by (namespace, controller, container, cluster)(((container_memory_working_set_bytes{container!=\"\", image!=\"\", container!=\"POD\"} / on(namespace,cluster,pod,container) group_left kube_pod_container_resource_limits{resource=\"memory\", node!=\"\"})*on(namespace, pod, cluster) group_left(controller) label_replace(kube_pod_owner, \"controller\", \"$1\", \"owner_name\", \"(.*)\")) > .95)",
                         "for": "PT10M",
                         "annotations": {
                           "description": "Average Memory usage per container is greater than 95%. For more information on this alert, please refer to this [link](https://aka.ms/aks-alerts/pod-level-recommended-alerts)."
+                        },
+                        "enabled": true,
+                        "severity": 4,
+                        "resolveConfiguration": {
+                          "autoResolved": true,
+                          "timeToResolve": "PT10M"
+                        },
+                        "labels": {
+                          "severity": "warning"
+                        },
+                        "actions": [
+                          {
+                            "actionGroupId": "[parameters('actionGroupResourceId')]"
+                          }
+                        ]
+                    },
+                    {
+                        "alert": "KubeWindowsContainerAverageMemoryHigh",
+                        "expression": "avg by (namespace, pod, container, instance) ((windows_container_memory_usage{job=\"windows-exporter\", container_id != \"\"} / on(namespace, pod, container) group_left(instance)max by (namespace, pod, container) (kube_pod_container_resource_limits{resource=\"memory\", job=\"kube-state-metrics\"}))) > .95",
+                        "for": "PT10M",
+                        "annotations": {
+                          "description": "Average Memory usage per windows container is greater than 95%. For more information on this alert, please refer to this [link](https://aka.ms/aks-alerts/pod-level-recommended-alerts)."
                         },
                         "enabled": true,
                         "severity": 4,
