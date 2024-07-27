@@ -42,14 +42,14 @@ resource "azurerm_monitor_workspace" "amw" {
 }
 
 resource "azurerm_monitor_data_collection_endpoint" "dce" {
-  name                = "MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}"
+  name                = substr("MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}", 0, 44)
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   kind                = "Linux"
 }
 
 resource "azurerm_monitor_data_collection_rule" "dcr" {
-  name                        = "MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}"
+  name                        = substr("MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}", 0, 64)
   resource_group_name         = azurerm_resource_group.rg.name
   location                    = azurerm_resource_group.rg.location
   data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dce.id
@@ -66,7 +66,6 @@ resource "azurerm_monitor_data_collection_rule" "dcr" {
     streams      = ["Microsoft-PrometheusMetrics"]
     destinations = ["MonitoringAccount1"]
   }
-
 
   data_sources {
     prometheus_forwarder {

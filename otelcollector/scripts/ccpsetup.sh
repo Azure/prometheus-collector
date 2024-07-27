@@ -10,7 +10,6 @@ sudo update-ca-trust
 #Need this for newer scripts
 chmod 544 $TMPDIR/*.sh
 chmod 544 $TMPDIR/microsoft/liveness/*.sh
-chmod 544 $TMPDIR/microsoft/configmapparser/*.rb
 
 echo "Installing packages for re2 gem install..."
 sudo tdnf install -y build-essential re2-devel

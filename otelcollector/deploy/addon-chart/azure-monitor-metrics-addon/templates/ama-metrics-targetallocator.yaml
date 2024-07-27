@@ -10,7 +10,7 @@ metadata:
 spec:
   progressDeadlineSeconds: 600
   replicas: 1
-  revisionHistoryLimit: 10
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       rsName: ama-metrics-operator-targets
@@ -22,16 +22,19 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      creationTimestamp: null
       labels:
         rsName: ama-metrics-operator-targets
         kubernetes.azure.com/managedby: aks
+      annotations:
+        agentVersion: "0.0.0.1"
+        schema-versions: "v1"
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
     spec:
+      priorityClassName: system-cluster-critical
       containers:
       - name: targetallocator
         args:
         - --enable-prometheus-cr-watcher
-        - --reload-config
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:
@@ -73,10 +76,12 @@ spec:
           name: ta-config-shared
         livenessProbe:
           httpGet:
-            path: /metrics
-            port: 8080
+            path: /health-ta
+            port: 8081
           initialDelaySeconds: 60
-          periodSeconds: 3
+          timeoutSeconds: 5
+          periodSeconds: 15
+          failureThreshold: 3
       - name: config-reader
         image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
         imagePullPolicy: IfNotPresent
@@ -163,11 +168,9 @@ spec:
             drop:
               - ALL
         livenessProbe:
-          exec:
-            command:
-              - /bin/bash
-              - -c
-              - /opt/microsoft/liveness/livenessprobe-configreader.sh
+          httpGet:
+            path: /health
+            port: 8081
           initialDelaySeconds: 60
           periodSeconds: 15
           timeoutSeconds: 5
@@ -216,30 +219,8 @@ spec:
           operator: Exists
         {{- if eq (default .Values.tolerationsOnlyForControlPlane false) false }}
         - operator: "Exists"
-          effect: "NoSchedule"
-        - operator: "Exists"
-          effect: "NoExecute"
-        - operator: "Exists"
           effect: "PreferNoSchedule" 
         {{- end }}
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "NoExecute"
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "PreferNoSchedule"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "NoExecute"
-        - key: "node-role.kubernetes.io/master"
-          operator: "Exists"
-          effect: "PreferNoSchedule"
       volumes:
       - name: settings-vol-config
         configMap:
