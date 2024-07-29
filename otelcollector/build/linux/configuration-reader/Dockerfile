@@ -51,7 +51,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     fi
 
 # Stage 3: builder
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
+FROM azurelinuxpreview.azurecr.io/public/azurelinux/base/core:3.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector - configuration reader sidecar"
 LABEL maintainer="ciprometheus@microsoft.com"
 
@@ -81,7 +81,7 @@ RUN tdnf clean all && tdnf repolist --refresh && tdnf update -y && tdnf install 
     $tmpdir/setup-configreader.sh ${TARGETARCH}
 
 # Stage 4: final
-FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
+FROM azurelinuxpreview.azurecr.io/public/azurelinux/distroless/base:3.0
 
 ENV PATH="/busybin:${PATH}" OS_TYPE="linux"
 
