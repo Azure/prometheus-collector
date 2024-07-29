@@ -27,6 +27,32 @@ COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; fi
 
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as main-builder
+WORKDIR /
+# Create directories
+RUN mkdir -p ./shared/configmap/mp/
+RUN mkdir -p ./main/
+# Copy shared go files
+COPY ../shared/*.go ./main/shared/
+COPY ./shared/go.mod ./main/shared/
+COPY ./shared/go.sum ./main/shared/
+COPY ../shared/configmap/mp/*.go ./main/shared/configmap/mp/
+COPY ../shared/configmap/ccp/*.go ./main/shared/configmap/ccp/
+COPY ./shared/configmap/mp/go.mod ./main/shared/configmap/mp/
+COPY ./shared/configmap/mp/go.sum ./main/shared/configmap/mp/
+COPY ./shared/configmap/ccp/go.mod ./main/shared/configmap/ccp/
+COPY ./shared/configmap/ccp/go.sum ./main/shared/configmap/ccp/
+# Copy main go files
+COPY ./main/*.go ./main/
+COPY ./go.mod ./main/
+COPY ./go.sum ./main/
+WORKDIR /main
+RUN go version
+RUN go mod download
+RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
+ARG TARGETOS TARGETARCH
+RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; fi
+
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as prom-config-validator-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
@@ -46,7 +72,7 @@ COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
-FROM azurelinuxpreview.azurecr.io/public/azurelinux/base/core:3.0 as builder
+FROM azurelinuxpreview.azurecr.io/public/azurelinux/base/core:3.0 as builder 
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "linux"
