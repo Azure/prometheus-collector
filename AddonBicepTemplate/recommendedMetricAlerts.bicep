@@ -320,6 +320,28 @@ resource recommendedMetricAlertsNodeLevel 'Microsoft.AlertsManagement/prometheus
           }
         ]
       }
+      {
+        alert: 'KubeNodeDiskUsageExceeding'
+        expression: '100 - ((node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100) > 80'
+        for: 'PT15M'
+        annotations: {
+          description: 'The disk usage on node {{ $labels.instance }} in {{ $labels.job }} has exceeded 80% and current usage is {{ $value | humanizePercentage }}%). For more information on this alert, please refer to this [link](https://aka.ms/aks-alerts/node-level-recommended-alerts).'
+        }
+        enabled: true
+        severity: 3
+        resolveConfiguration: {
+          autoResolved: true
+          timeToResolve: 'PT10M'
+        }
+        labels: {
+          severity: 'warning'
+        }
+        actions: [
+          {
+            actionGroupId: actionGroupResourceId
+          }
+        ]
+      }
     ]
   }
 }
