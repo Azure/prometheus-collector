@@ -42,14 +42,14 @@ resource "azurerm_monitor_workspace" "amw" {
 }
 
 resource "azurerm_monitor_data_collection_endpoint" "dce" {
-  name                = substr("MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}", 0, 44)
+  name                = substr("MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}", 0, min(44, length("MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}")))
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   kind                = "Linux"
 }
 
 resource "azurerm_monitor_data_collection_rule" "dcr" {
-  name                        = substr("MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}", 0, 64)
+  name                        = substr("MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}", 0, min(64, length("MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}")))
   resource_group_name         = azurerm_resource_group.rg.name
   location                    = azurerm_resource_group.rg.location
   data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dce.id
