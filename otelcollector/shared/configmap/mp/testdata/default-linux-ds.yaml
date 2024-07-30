@@ -1,0 +1,179 @@
+scrape_configs:
+- bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  job_name: kubelet
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  metric_relabel_configs:
+  - action: keep
+    regex: '|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_node_name|kubelet_running_pods|kubelet_running_pod_count|kubelet_running_sum_containers|kubelet_running_containers|kubelet_running_container_count|volume_manager_total_volumes|kubelet_node_config_error|kubelet_runtime_operations_total|kubelet_runtime_operations_errors_total|kubelet_runtime_operations_duration_seconds_bucket|kubelet_runtime_operations_duration_seconds_sum|kubelet_runtime_operations_duration_seconds_count|kubelet_pod_start_duration_seconds_bucket|kubelet_pod_start_duration_seconds_sum|kubelet_pod_start_duration_seconds_count|kubelet_pod_worker_duration_seconds_bucket|kubelet_pod_worker_duration_seconds_sum|kubelet_pod_worker_duration_seconds_count|storage_operation_duration_seconds_bucket|storage_operation_duration_seconds_sum|storage_operation_duration_seconds_count|storage_operation_errors_total|kubelet_cgroup_manager_duration_seconds_bucket|kubelet_cgroup_manager_duration_seconds_sum|kubelet_cgroup_manager_duration_seconds_count|kubelet_pleg_relist_interval_seconds_bucket|kubelet_pleg_relist_interval_seconds_count|kubelet_pleg_relist_interval_seconds_sum|kubelet_pleg_relist_duration_seconds_bucket|kubelet_pleg_relist_duration_seconds_count|kubelet_pleg_relist_duration_seconds_sum|rest_client_requests_total|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info|kubelet_certificate_manager_client_ttl_seconds|kubelet_certificate_manager_client_expiration_renew_errors|kubelet_server_expiration_renew_errors|kubelet_certificate_manager_server_ttl_seconds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_inodes_free|kubelet_volume_stats_inodes_used|kubelet_volume_stats_inodes|kube_persistentvolumeclaim_access_mode|kube_persistentvolumeclaim_labels|kube_persistentvolume_status_phase'
+    source_labels:
+    - __name__
+  metrics_path: /metrics
+  relabel_configs:
+  - regex: (.*)
+    source_labels:
+    - __metrics_path__
+    target_label: metrics_path
+  - replacement: null
+    source_labels:
+    - __address__
+    target_label: instance
+  - replacement: linux
+    source_labels:
+    - __address__
+    target_label: kubernetes_io_os
+  scheme: https
+  scrape_interval: 30s
+  static_configs:
+  - targets:
+    - :10250
+  tls_config:
+    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecure_skip_verify: true
+- bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  job_name: cadvisor
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  metric_relabel_configs:
+  - action: keep
+    regex: '|container_spec_cpu_quota|container_spec_cpu_period|container_memory_rss|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_network_receive_packets_total|container_network_transmit_packets_total|container_network_receive_packets_dropped_total|container_network_transmit_packets_dropped_total|container_fs_reads_total|container_fs_writes_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_memory_cache|container_memory_swap|container_cpu_cfs_throttled_periods_total|container_cpu_cfs_periods_total|container_memory_rss|kubernetes_build_info|container_start_time_seconds'
+    source_labels:
+    - __name__
+  metrics_path: /metrics/cadvisor
+  relabel_configs:
+  - replacement: null
+    source_labels:
+    - __address__
+    target_label: instance
+  scheme: https
+  scrape_interval: 30s
+  static_configs:
+  - targets:
+    - :10250
+  tls_config:
+    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecure_skip_verify: true
+- job_name: kappie-basic
+  kubernetes_sd_configs:
+  - role: service
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  metric_relabel_configs:
+  - action: keep
+    regex: '|kappie.*'
+    source_labels:
+    - __name__
+  relabel_configs:
+  - action: keep
+    regex: kube-system;kappie-svc
+    source_labels:
+    - __meta_kubernetes_namespace
+    - __meta_kubernetes_service_name
+  - action: replace
+    replacement: :10093
+    source_labels:
+    - __address__
+    target_label: __address__
+  - replacement: null
+    source_labels:
+    - __address__
+    target_label: instance
+  scheme: http
+  scrape_interval: 30s
+- job_name: networkobservability-retina
+  kubernetes_sd_configs:
+  - role: service
+  metric_relabel_configs:
+  - action: keep
+    regex: '|networkobservability.*'
+    source_labels:
+    - __name__
+  relabel_configs:
+  - action: keep
+    regex: kube-system;network-observability;retina
+    source_labels:
+    - __meta_kubernetes_namespace
+    - __meta_kubernetes_service_name
+    - __meta_kubernetes_service_port_name
+  - action: replace
+    replacement: null
+    source_labels:
+    - __address__
+    target_label: __address__
+  - action: replace
+    regex: ([^:]+)(?::\d+)?;(\d+)
+    replacement: $1:$2
+    source_labels:
+    - __address__
+    - __meta_kubernetes_service_port_number
+    target_label: __address__
+  - replacement: null
+    source_labels:
+    - __address__
+    target_label: instance
+  scheme: http
+  scrape_interval: 30s
+- job_name: networkobservability-hubble
+  kubernetes_sd_configs:
+  - role: service
+  metric_relabel_configs:
+  - action: keep
+    regex: '|hubble.*'
+    source_labels:
+    - __name__
+  relabel_configs:
+  - action: keep
+    regex: kube-system;network-observability;hubble
+    source_labels:
+    - __meta_kubernetes_namespace
+    - __meta_kubernetes_service_name
+    - __meta_kubernetes_service_port_name
+  - action: replace
+    replacement: null
+    source_labels:
+    - __address__
+    target_label: __address__
+  - action: replace
+    regex: ([^:]+)(?::\d+)?;(\d+)
+    replacement: $1:$2
+    source_labels:
+    - __address__
+    - __meta_kubernetes_service_port_number
+    target_label: __address__
+  - replacement: null
+    source_labels:
+    - __address__
+    target_label: instance
+  scheme: http
+  scrape_interval: 30s
+- job_name: networkobservability-cilium
+  kubernetes_sd_configs:
+  - role: service
+  relabel_configs:
+  - action: keep
+    regex: kube-system;network-observability;cilium
+    source_labels:
+    - __meta_kubernetes_namespace
+    - __meta_kubernetes_service_name
+    - __meta_kubernetes_service_port_name
+  - action: replace
+    replacement: null
+    source_labels:
+    - __address__
+    target_label: __address__
+  - action: replace
+    regex: ([^:]+)(?::\d+)?;(\d+)
+    replacement: $1:$2
+    source_labels:
+    - __address__
+    - __meta_kubernetes_service_port_number
+    target_label: __address__
+  - replacement: null
+    source_labels:
+    - __address__
+    target_label: instance
+  scheme: http
+  scrape_interval: 30s

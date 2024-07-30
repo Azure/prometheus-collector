@@ -1,7 +1,0 @@
-route:
-  receiver: "null"
-receivers:
-- name: "null"
-global:
-  opsgenie_api_key_file: "xxx"
-templates: []

@@ -1,0 +1,52 @@
+exporters:
+  otlp:
+    compression: gzip
+    endpoint: 127.0.0.1:55680
+    retry_on_failure:
+      enabled: false
+    timeout: 12s
+    tls:
+      insecure: true
+  prometheus:
+    const_labels:
+      cluster: $AZMON_CLUSTER_LABEL
+    endpoint: 127.0.0.1:9091
+processors:
+  batch:
+    send_batch_max_size: 7000
+    send_batch_size: 7000
+    timeout: 200ms
+  resource:
+    attributes:
+    - action: upsert
+      key: cluster
+      value: $AZMON_CLUSTER_LABEL
+    - action: insert
+      from_attribute: service.name
+      key: job
+    - action: insert
+      from_attribute: service.instance.id
+      key: instance
+receivers:
+  prometheus:
+    target_allocator:
+      collector_id: $POD_NAME
+      endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
+      interval: 30s
+service:
+  pipelines:
+    metrics:
+      exporters:
+      - otlp
+      - prometheus
+      processors:
+      - batch
+      - resource
+      receivers:
+      - prometheus
+  telemetry:
+    logs:
+      encoding: json
+      level: warn
+    metrics:
+      level: detailed
