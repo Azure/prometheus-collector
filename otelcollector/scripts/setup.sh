@@ -63,8 +63,14 @@ sudo tdnf install fluent-bit-2.1.10 -y
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Install ME
-echo "Installing Metrics Extension..."
-sudo tdnf install -y metricsext2-2.2024.419.1535
+# echo "Installing Metrics Extension..."
+# sudo tdnf install -y metricsext2-2.2024.419.1535
+# sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
+
+# Custom ME bits with memory dealloc fix
+echo "Installing Metrics Extension for dealloc..."
+wget https://github.com/Azure/prometheus-collector/releases/download/v6.9.0-main-07-22-2024-2e3dfb56/metricsext2-2.2024.730.1341-1.cm2.x86_64.rpm
+sudo tdnf install -y metricsext2-2.2024.730.1341-1.cm2.x86_64.rpm
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
