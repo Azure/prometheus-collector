@@ -1,2 +1,51 @@
 # Check for HIGH/CRITICAL & MEDIUM CVEs. HIGH/CRITICAL to be fixed asap, MEDIUM is best effort
 # ignore these CVEs, but continue scanning to catch other vulns. Note : this will ignore these cves globally
+
+# CRITICAL
+# Mariner
+CVE-2024-5535
+# otelcollector
+CVE-2024-41110
+# promconfigvalidator
+CVE-2024-41110
+# telegraf
+CVE-2024-41110
+CVE-2024-24790
+
+# HIGH
+# otelcollector
+GHSA-87m9-rv8p-rgmg
+CVE-2024-36129
+# promconfigvalidator
+GHSA-87m9-rv8p-rgmg
+CVE-2024-36129
+# telegraf
+CVE-2024-21626
+CVE-2023-45288
+
+
+# MEDIUM
+# otelcollector
+CVE-2024-35255
+CVE-2024-6104
+GHSA-mh55-gqvf-xfwm
+# promconfigvalidator
+CVE-2024-35255
+CVE-2024-6104
+GHSA-mh55-gqvf-xfwm
+# telegraf
+CVE-2024-35255
+CVE-2024-28110
+GHSA-7ww5-4wqc-m92c
+CVE-2024-24557
+CVE-2023-50658
+GHSA-mhpq-9638-x6pw
+CVE-2023-45288
+CVE-2024-24786
+CVE-2023-45289
+CVE-2023-45290
+CVE-2024-24783
+CVE-2024-24784
+CVE-2024-24785
+CVE-2024-24789
+CVE-2024-24791
