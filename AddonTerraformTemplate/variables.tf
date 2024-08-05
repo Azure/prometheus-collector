@@ -37,3 +37,8 @@ variable "resource_group_location" {
   default     = "eastus"
   description = "Location of the resource group."
 }
+
+variable "useAzureMonitorPrivateLinkScope" {
+  description = "Condition to use Azure Monitor Private Link Scope"
+  type        = bool
+}
