@@ -35,7 +35,7 @@ spec:
       - args: 
         - --config.file=%CONTAINER_SANDBOX_MOUNT_POINT%/config.yml
         name: windows-exporter
-        image: mcr.microsoft.com/oss/prometheus/windows-exporter:v0.25.0
+        image: mcr.microsoft.com/oss/prometheus/windows-exporter:v0.25.1
         imagePullPolicy: Always
         ports:
         - containerPort: 9182
