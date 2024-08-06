@@ -92,12 +92,13 @@ resource "azurerm_monitor_data_collection_rule_association" "dcra" {
 
 resource "azurerm_monitor_data_collection_rule_association" "dcraprivatelink" {
   count = var.useAzureMonitorPrivateLinkScope && azurerm_kubernetes_cluster.k8s.location == azurerm_monitor_workspace.amw.location ? 1 : 0
-  name                = "${azurerm_kubernetes_cluster.k8s.id}/providers/microsoft.insights/dataCollectionRuleAssociations/configurationAccessEndpoint"
-  data_collection_rule_id = azurerm_monitor_data_collection_rule.dcr.id
+  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dce.id
   target_resource_id  = azurerm_kubernetes_cluster.k8s.id
   description             = "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster."
   depends_on = [
-    azurerm_monitor_data_collection_endpoint.dce
+    azurerm_monitor_data_collection_endpoint.dce,
+    azurerm_monitor_data_collection_rule.dcr,
+    azurerm_kubernetes_cluster.k8s
   ]
 }
 
