@@ -42,3 +42,9 @@ variable "useAzureMonitorPrivateLinkScope" {
   description = "Condition to use Azure Monitor Private Link Scope"
   type        = bool
 }
+
+variable "private_link_dce_id" {
+  description = "Data Collection Endpoint ID to use if cluster and workspace regions do not match"
+  type        = string
+  default     = ""
+}

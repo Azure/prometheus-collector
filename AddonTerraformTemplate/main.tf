@@ -80,6 +80,15 @@ resource "azurerm_monitor_data_collection_rule" "dcr" {
   ]
 }
 
+resource "azurerm_monitor_data_collection_endpoint" "private_link_dce" {
+  count = var.useAzureMonitorPrivateLinkScope && azurerm_kubernetes_cluster.k8s.location != azurerm_monitor_workspace.amw.location ? 1 : 0
+  name                = "MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}-PrivateLink"
+  location            = azurerm_kubernetes_cluster.k8s.location
+  resource_group_name = azurerm_monitor_workspace.amw.resource_group_name
+  kind                = "Linux"
+  public_network_access_enabled = false
+}
+
 resource "azurerm_monitor_data_collection_rule_association" "dcra" {
   name                    = "MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}"
   target_resource_id      = azurerm_kubernetes_cluster.k8s.id
@@ -91,10 +100,11 @@ resource "azurerm_monitor_data_collection_rule_association" "dcra" {
 }
 
 resource "azurerm_monitor_data_collection_rule_association" "dcraprivatelink" {
-  count = var.useAzureMonitorPrivateLinkScope && azurerm_kubernetes_cluster.k8s.location == azurerm_monitor_workspace.amw.location ? 1 : 0
-  data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dce.id
+  count = var.useAzureMonitorPrivateLinkScope ? 1 : 0
+  data_collection_endpoint_id = azurerm_kubernetes_cluster.k8s.location == azurerm_monitor_workspace.amw.location ? azurerm_monitor_data_collection_endpoint.dce.id : azurerm_monitor_data_collection_endpoint.private_link_dce.id
   target_resource_id  = azurerm_kubernetes_cluster.k8s.id
-  description             = "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster."
+  description         = "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster."
+  
   depends_on = [
     azurerm_monitor_data_collection_endpoint.dce,
     azurerm_monitor_data_collection_rule.dcr,
