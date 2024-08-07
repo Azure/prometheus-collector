@@ -70,10 +70,10 @@ cp /etc/cron.daily/logrotate /etc/cron.hourly/
 # Custom ME bits with memory dealloc fix
 echo "Installing Metrics Extension for dealloc..."
 if [ "${ARCH}" != "amd64" ]; then
-  wget https://github.com/Azure/prometheus-collector/releases/download/v6.9.0-main-07-22-2024-2e3dfb56/metricsext2-2.2024.730.1341-1.cm2.aarch64.rpm
+  wget https://github.com/Azure/prometheus-collector/releases/download/v6.9.0-main-07-22-2024-2e3dfb56/metricsext2-2.2024.806.2017-1.cm2.aarch64.rpm
   sudo tdnf install -y metricsext2-2.2024.730.1341-1.cm2.aarch64.rpm
 else
-  wget https://github.com/Azure/prometheus-collector/releases/download/v6.9.0-main-07-22-2024-2e3dfb56/metricsext2-2.2024.730.1341-1.cm2.x86_64.rpm
+  wget https://github.com/Azure/prometheus-collector/releases/download/v6.9.0-main-07-22-2024-2e3dfb56/metricsext2-2.2024.806.2017-1.cm2.x86_64.rpm
   sudo tdnf install -y metricsext2-2.2024.730.1341-1.cm2.x86_64.rpm
 fi
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
