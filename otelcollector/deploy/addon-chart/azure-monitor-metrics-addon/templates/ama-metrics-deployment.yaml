@@ -10,7 +10,7 @@ spec:
   {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
   replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
   {{- else}}
-  replicas: 1
+  replicas: 2
   {{- end }}
   revisionHistoryLimit: 2
   paused: false
@@ -279,6 +279,26 @@ spec:
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
                   {{- end }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: rsName
+                  operator: In
+                  values:
+                  - ama-metrics
+              topologyKey: topology.kubernetes.io/zone
+            weight: 10
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: rsName
+                  operator: In
+                  values:
+                  - ama-metrics
+              topologyKey: kubernetes.io/hostname
+            weight: 5
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
