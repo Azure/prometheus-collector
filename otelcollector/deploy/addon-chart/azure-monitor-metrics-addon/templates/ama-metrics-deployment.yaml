@@ -279,26 +279,39 @@ spec:
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
                   {{- end }}
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: rsName
-                  operator: In
-                  values:
-                  - ama-metrics
-              topologyKey: topology.kubernetes.io/zone
-            weight: 10
-          - podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: rsName
-                  operator: In
-                  values:
-                  - ama-metrics
-              topologyKey: kubernetes.io/hostname
-            weight: 5
+      # topologySpreadConstraints:
+      # - maxSkew: 1
+      #   topologyKey: kubernetes.io/hostname
+      #   whenUnsatisfiable: ScheduleAnyway
+      #   labelSelector:
+      #     matchLabels:
+      #       rsName: ama-metrics
+      # - maxSkew: 1
+      #   topologyKey: topology.kubernetes.io/zone
+      #   whenUnsatisfiable: ScheduleAnyway
+      #   labelSelector:
+      #     matchLabels:
+      #       rsName: ama-metrics
+        # podAntiAffinity:
+        #   preferredDuringSchedulingIgnoredDuringExecution:
+        #   - podAffinityTerm:
+        #       labelSelector:
+        #         matchExpressions:
+        #         - key: rsName
+        #           operator: In
+        #           values:
+        #           - ama-metrics
+        #       topologyKey: topology.kubernetes.io/zone
+        #     weight: 10
+        #   - podAffinityTerm:
+        #       labelSelector:
+        #         matchExpressions:
+        #         - key: rsName
+        #           operator: In
+        #           values:
+        #           - ama-metrics
+        #       topologyKey: kubernetes.io/hostname
+        #     weight: 5
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
