@@ -1,0 +1,30 @@
+{{- if .Values.AzureMonitorMetrics.CollectorHPAEnabled}}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ama-metrics-hpa
+  namespace: kube-system
+  labels:
+    component: ama-metrics-hpa
+    kubernetes.azure.com/managedby: aks
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ama-metrics
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: ContainerResource
+      containerResource:
+        name: memory
+        container: prometheus-collector
+        target:
+          averageUtilization: 75
+          #averageValue: 10Gi # resulted in 2 replicas
+          # averageValue: 5Gi # resulted in 2 replicas
+          type: AverageValue
+  # {{- if .Values.autoscaling.autoscaleBehavior }}
+  # TBD behavior: {{ toYaml .Values.autoscaling.autoscaleBehavior | nindent 4 }}
+  # {{- end }}
+{{- end }}
