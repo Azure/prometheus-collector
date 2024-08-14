@@ -279,6 +279,19 @@ spec:
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
                   {{- end }}
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            rsName: ama-metrics
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            rsName: ama-metrics
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
