@@ -12,7 +12,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: ama-metrics
-  minReplicas: 2
+  minReplicas: 1
   maxReplicas: 8
   metrics:
     - type: ContainerResource
@@ -20,11 +20,8 @@ spec:
         name: memory
         container: prometheus-collector
         target:
-          averageUtilization: 75
-          #averageValue: 10Gi # resulted in 2 replicas
+          # averageUtilization: 75
+          averageValue: 12Gi # resulted in 2 replicas
           # averageValue: 5Gi # resulted in 2 replicas
           type: AverageValue
-  # {{- if .Values.autoscaling.autoscaleBehavior }}
-  # TBD behavior: {{ toYaml .Values.autoscaling.autoscaleBehavior | nindent 4 }}
-  # {{- end }}
 {{- end }}
