@@ -209,6 +209,7 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		fmt.Fprintln(w, message)
 	}
+	defer resp.Body.Close()
 }
 
 func writeTerminationLog(message string) {
