@@ -7,17 +7,17 @@ metadata:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
 spec:
-  # {{- if .Values.AzureMonitorMetrics.CollectorHPAEnabled}}
-  # {{- $currentSpec := (lookup "apps/v1" "Deployment" .Release.Namespace "ama-metrics").spec }}
-  # # {{- if gt ($currentSpec.replicas | default 0) 0 }}
-  # replicas: {{ $currentSpec.replicas }}
-  # # replicas: {{ . }}
-  # {{- else if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
-  # replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
-  # {{- else}}
-  # replicas: 1
-  # {{- end }}
-  # {{- end }}
+  {{- if .Values.AzureMonitorMetrics.CollectorHPAEnabled}}
+  {{- $currentSpec := (lookup "apps/v1" "Deployment" .Release.Namespace "ama-metrics").spec }}
+  # {{- if gt ($currentSpec.replicas | default 0) 0 }}
+  replicas: {{ $currentSpec.replicas }}
+  # replicas: {{ . }}
+  {{- else if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+  replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
+  {{- else}}
+  replicas: 1
+  {{- end }}
+  {{- end }}
   replicas: 1
   revisionHistoryLimit: 2
   paused: false

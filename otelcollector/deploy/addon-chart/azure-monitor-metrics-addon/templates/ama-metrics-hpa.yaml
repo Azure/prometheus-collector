@@ -21,7 +21,7 @@ spec:
         container: prometheus-collector
         target:
           # averageUtilization: 75
-          averageValue: 12Gi # resulted in 2 replicas
+          averageValue: 10Gi # resulted in 2 replicas
           # averageValue: 5Gi # resulted in 2 replicas
           type: AverageValue
 {{- end }}
