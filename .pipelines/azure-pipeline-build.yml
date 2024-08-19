@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - rashmi/memory-leak-fix
 pr:
   autoCancel: true
   branches:
