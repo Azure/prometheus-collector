@@ -406,9 +406,11 @@ func WaitForTokenAdapter(ccpMetricsEnabled string) {
 	}
 	waitedSecsSoFar := 1
 
+	var resp *http.Response
+
 	for {
 		if waitedSecsSoFar > tokenAdapterWaitSecs {
-			if _, err := http.Get("http://localhost:9999/healthz"); err != nil {
+			if resp, err := http.Get("http://localhost:9999/healthz"); err != nil {
 				log.Printf("giving up waiting for token adapter to become healthy after %d secs\n", waitedSecsSoFar)
 				log.Printf("export tokenadapterUnhealthyAfterSecs=%d\n", waitedSecsSoFar)
 				break
@@ -424,6 +426,10 @@ func WaitForTokenAdapter(ccpMetricsEnabled string) {
 		}
 		time.Sleep(1 * time.Second)
 		waitedSecsSoFar++
+	}
+
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
 	}
 }
 
