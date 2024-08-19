@@ -407,6 +407,7 @@ func WaitForTokenAdapter(ccpMetricsEnabled string) {
 	waitedSecsSoFar := 1
 
 	var resp *http.Response
+	var err error
 
 	for {
 		if waitedSecsSoFar > tokenAdapterWaitSecs {
