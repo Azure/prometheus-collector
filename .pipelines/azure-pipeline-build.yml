@@ -1139,7 +1139,7 @@ stages:
         displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
       - powershell: |
-          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build WS2019 image"
         retryCountOnTaskFailure: 2
@@ -1150,7 +1150,7 @@ stages:
           targetType: 'inline'
           script: |
             echo "Creating docker container..."
-            docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
 
             echo "Creating fist party directory..."
             mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
@@ -1167,7 +1167,7 @@ stages:
             cd $(Build.ArtifactStagingDirectory)/ossSigning
 
             echo "Extract fluent-bit"
-            docker cp signingContainer:C:\opt\fluent-bit\bin .
+            docker cp signingContainer:C:\opt\fluent-bit .
             
             echo "Extract Ruby"
             docker cp signingContainer:C:\ruby26 .
@@ -1226,6 +1226,24 @@ stages:
           MaxConcurrency: '50'
           MaxRetryAttempts: '5'
         displayName: 'EsrpCodeSigning for first party'
+
+      - task: PowerShell@2
+        displayName: Replace files in origin Image
+        inputs:
+          targetType: 'inline'
+          script: |
+            docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
+            
+            echo "Copy Signed binaries/folders back to docker image..."
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.exe pushContainer:C:\opt\microsoft\scripts\livenessprobe.exe
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
+
+            docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            docker rm pushContainer
 
       - task: EsrpCodeSigning@5
         inputs:
@@ -1295,7 +1313,7 @@ stages:
         displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
       - powershell: |
-          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build WS2022 image"
         retryCountOnTaskFailure: 2
@@ -1306,7 +1324,7 @@ stages:
           targetType: 'inline'
           script: |
             echo "Creating docker container..."
-            docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
 
             echo "Creating fist party directory..."
             mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
@@ -1323,7 +1341,7 @@ stages:
             cd $(Build.ArtifactStagingDirectory)/ossSigning
 
             echo "Extract fluent-bit"
-            docker cp signingContainer:C:\opt\fluent-bit\bin .
+            docker cp signingContainer:C:\opt\fluent-bit .
             
             echo "Extract Ruby"
             docker cp signingContainer:C:\ruby26 .
@@ -1425,6 +1443,24 @@ stages:
           MaxRetryAttempts: '5'
         displayName: 'EsrpCodeSigning for OSS'   
              
+      - task: PowerShell@2
+        displayName: Replace files in origin Image
+        inputs:
+          targetType: 'inline'
+          script: |
+            docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
+            
+            echo "Copy Signed binaries/folders back to docker image..."
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.exe pushContainer:C:\opt\microsoft\scripts\livenessprobe.exe
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
+
+            docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            docker rm pushContainer
+
       - powershell: |
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
