@@ -410,14 +410,14 @@ func WaitForTokenAdapter(ccpMetricsEnabled string) {
 
 	for {
 		if waitedSecsSoFar > tokenAdapterWaitSecs {
-			if resp, err := http.Get("http://localhost:9999/healthz"); err != nil {
+			if resp, err = http.Get("http://localhost:9999/healthz"); err != nil {
 				log.Printf("giving up waiting for token adapter to become healthy after %d secs\n", waitedSecsSoFar)
 				log.Printf("export tokenadapterUnhealthyAfterSecs=%d\n", waitedSecsSoFar)
 				break
 			}
 		} else {
 			log.Printf("checking health of token adapter after %d secs\n", waitedSecsSoFar)
-			resp, err := http.Get("http://localhost:9999/healthz")
+			resp, err = http.Get("http://localhost:9999/healthz")
 			if err == nil && resp.StatusCode == http.StatusOK {
 				log.Printf("found token adapter to be healthy after %d secs\n", waitedSecsSoFar)
 				log.Printf("export tokenadapterHealthyAfterSecs=%d\n", waitedSecsSoFar)
