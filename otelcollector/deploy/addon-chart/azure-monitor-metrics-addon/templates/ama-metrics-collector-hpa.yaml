@@ -1,4 +1,5 @@
 {{- if .Values.AzureMonitorMetrics.CollectorHPAEnabled}}
+{{- $hpa := include "merge-discovery-hpa" . | fromYaml }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -12,8 +13,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: ama-metrics
-  minReplicas: 1
-  maxReplicas: 8
+  minReplicas: {{ $hpa.minReplicas }}
+  maxReplicas: {{ $hpa.maxReplicas }}
   metrics:
     - type: ContainerResource
       containerResource:
