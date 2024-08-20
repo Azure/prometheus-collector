@@ -13,10 +13,11 @@ deploymentName: {{ $deploymentName }}
 
 {{/* Set the default HPA values for minReplicas, maxReplicas, and metrics.  */}}
 
+{{- $autoscaleMin := 2 }}
+{{- $autoscaleMax := 8 -}}
+
 maxReplicas: 2
 minReplicas: 2
-autoscaleMin: 2
-autoscaleMax: 8
 
 {{/* If the current HPA already exists, set the HPA values to the current 
      HPA spec to preserve those values. */}}
