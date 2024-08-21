@@ -1225,7 +1225,7 @@ stages:
           SessionTimeout: '60'
           MaxConcurrency: '50'
           MaxRetryAttempts: '5'
-        displayName: 'EsrpCodeSigning for first party'
+        displayName: 'EsrpCodeSigning for first party binaries'
 
       - task: PowerShell@2
         displayName: Replace files in origin Image
@@ -1283,7 +1283,7 @@ stages:
           SessionTimeout: '60'
           MaxConcurrency: '50'
           MaxRetryAttempts: '5'
-        displayName: 'EsrpCodeSigning for OSS'   
+        displayName: 'EsrpCodeSigning for OSS binaries'   
              
       - powershell: |
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1401,7 +1401,7 @@ stages:
           SessionTimeout: '60'
           MaxConcurrency: '50'
           MaxRetryAttempts: '5'
-        displayName: 'EsrpCodeSigning for first party'
+        displayName: 'EsrpCodeSigning for first party binaries'
 
       - task: EsrpCodeSigning@5
         inputs:
@@ -1441,7 +1441,7 @@ stages:
           SessionTimeout: '60'
           MaxConcurrency: '50'
           MaxRetryAttempts: '5'
-        displayName: 'EsrpCodeSigning for OSS'   
+        displayName: 'EsrpCodeSigning for OSS binaries'   
              
       - task: PowerShell@2
         displayName: Replace files in origin Image
