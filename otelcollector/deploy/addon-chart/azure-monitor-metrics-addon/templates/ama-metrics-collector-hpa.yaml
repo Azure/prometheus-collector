@@ -15,6 +15,7 @@ spec:
     name: ama-metrics
   minReplicas: {{ $hpa.minReplicas }}
   maxReplicas: {{ $hpa.maxReplicas }}
+  # maxReplicas: 2
   metrics:
     - type: ContainerResource
       containerResource:

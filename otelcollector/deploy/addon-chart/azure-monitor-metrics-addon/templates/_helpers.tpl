@@ -27,7 +27,7 @@ minReplicas: 2
   {{- if ge (int $currentHPA.spec.minReplicas) $autoscaleMin -}}
 minReplicas: {{ $currentHPA.spec.minReplicas }}
   {{- end }}
-    {{- if le (int $currentHPA.spec.minReplicas) $autoscaleMax -}}  
+  {{- if le (int $currentHPA.spec.minReplicas) $autoscaleMax -}}  
 maxReplicas: {{ $currentHPA.spec.maxReplicas }}
   {{- end }}
 {{- end }}

@@ -7,18 +7,35 @@ metadata:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
 spec:
-  {{- if .Values.AzureMonitorMetrics.CollectorHPAEnabled}}
-  {{- $currentSpec := (lookup "apps/v1" "Deployment" .Release.Namespace "ama-metrics").spec }}
-  # {{- if gt ($currentSpec.replicas | default 0) 0 }}
-  replicas: {{ $currentSpec.replicas }}
-  # replicas: {{ . }}
-  {{- else if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+# New TargetAllocator Enabled scenario
+# {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+#   {{- if gt ($.Values.AzureMonitorMetrics.DeploymentReplicas|int) 2 }} # If toggle override is present do not enable HPA update the shards, since max is 2
+#   replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
+#   {{- else if .Values.AzureMonitorMetrics.CollectorHPAEnabled }} # If HPA toggle is enabled, allow HPA to modify the deployment spec for autoscale
+#   replicas: 2
+#   {{- else }} # If DeploymentReplicas == 2 and HPA toggle is not enabled, set replicas to 2 by default
+#   replicas: 2
+#   {{- end }}
+# {{- else }} # Legacy with no TargetAllocator Enabled
+#   replicas: 1
+# {{- end }}
+{{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+  {{- if gt ($.Values.AzureMonitorMetrics.DeploymentReplicas|int) 2 }} # If toggle override is present do not enable HPA update the shards, since max is 2
   replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
-  {{- else}}
-  replicas: 1
+  {{- else if .Values.AzureMonitorMetrics.CollectorHPAEnabled }} # If HPA toggle is enabled, allow HPA to modify the deployment spec for autoscale
+  {{- $currentSpec := (lookup "apps/v1" "Deployment" .Release.Namespace "ama-metrics").spec }}
+    {{- if $currentSpec }}
+    # in if check
+  replicas: {{ $currentSpec.replicas }}
+    {{- else}} # If current spec cannot be found
+  replicas: 2
+    {{- end }}
+  {{- else }} # If DeploymentReplicas == 2 and HPA toggle is not enabled, set replicas to 2 by default
+  replicas: 2
   {{- end }}
-  {{- end }}
+{{- else }} # Legacy with no TargetAllocator Enabled
   replicas: 1
+{{- end }}
   revisionHistoryLimit: 2
   paused: false
   selector:
