@@ -16,7 +16,7 @@ deploymentName: {{ $deploymentName }}
 {{- $autoscaleMin := 2 }}
 {{- $autoscaleMax := 8 -}}
 
-maxReplicas: 2
+maxReplicas: 8
 minReplicas: 2
 
 {{/* If the current HPA already exists, set the HPA values to the current 
