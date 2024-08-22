@@ -82,6 +82,12 @@ spec:
             {{- else }}
               value: "false"
             {{- end }}
+            - name: AZMON_COLLECTOR_HPA_ENABLED
+            {{- if eq .Values.AzureMonitorMetrics.CollectorHPAEnabled true }}
+              value: "true"
+            {{- else }}
+              value: "false"
+            {{- end }}
             - name: customEnvironment
               {{- if .Values.AzureMonitorMetrics.isArcACluster }}
               value: "arcautonomous"
