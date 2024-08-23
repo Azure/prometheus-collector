@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
@@ -181,7 +182,7 @@ func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, 
 		SubResource("exec")
 	scheme := runtime.NewScheme()
 	if err := corev1.AddToScheme(scheme); err != nil {
-		return "", "", errors.New(fmt.Sprintf("Error setting up exec request: %v", err))
+		return "", "", fmt.Errorf("Error setting up exec request: %v", err)
 	}
 
 	parameterCodec := runtime.NewParameterCodec(scheme)
@@ -196,15 +197,16 @@ func ExecCmd(client *kubernetes.Clientset, config *rest.Config, podName string, 
 
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
-		return "", "", errors.New(fmt.Sprintf("Error while creating command executor: %v", err))
+		return "", "", fmt.Errorf("Error while creating command executor: %v", err)
 	}
 
+	ctx, _ := context.WithTimeout(context.Background(), 60*time.Second)
 	var stdoutB, stderrB bytes.Buffer
-	if err := exec.Stream(remotecommand.StreamOptions{
+	if err := exec.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdout: &stdoutB,
 		Stderr: &stderrB,
 	}); err != nil {
-		return stdoutB.String(), stderrB.String(), errors.New(fmt.Sprintf("Error when running command %v in the container: %v. Stderr: %s", command, err, stderrB.String()))
+		return stdoutB.String(), stderrB.String(), fmt.Errorf("Error when running command %v in the container: %v. Stderr: %s", command, err, stderrB.String())
 	}
 
 	return stdoutB.String(), stderrB.String(), nil
