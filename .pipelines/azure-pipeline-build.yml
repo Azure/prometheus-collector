@@ -1156,7 +1156,7 @@ stages:
             cd $(Build.ArtifactStagingDirectory)/fpSigning
 
             echo "Extract LivenessProbe"
-            docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.exe .
+            docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.cmd .
 
             echo "Extract OtelCollector"
             docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
@@ -1234,7 +1234,7 @@ stages:
             docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
             
             echo "Copy Signed binaries/folders back to docker image..."
-            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.exe pushContainer:C:\opt\microsoft\scripts\livenessprobe.exe
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
             docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
             docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
             docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
@@ -1330,7 +1330,7 @@ stages:
             cd $(Build.ArtifactStagingDirectory)/fpSigning
 
             echo "Extract LivenessProbe"
-            docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.exe .
+            docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.cmd .
 
             echo "Extract OtelCollector"
             docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
@@ -1450,7 +1450,7 @@ stages:
             docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
             
             echo "Copy Signed binaries/folders back to docker image..."
-            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.exe pushContainer:C:\opt\microsoft\scripts\livenessprobe.exe
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
             docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
             docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
             docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
