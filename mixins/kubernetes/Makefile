@@ -35,7 +35,7 @@ jsonnet-fmt: $(JSONNETFMT_BIN)
 
 .PHONY: markdownfmt
 markdownfmt: $(MARKDOWNFMT_BIN)
-	@for file in $(MD_FILES); do $(MARKDOWNFMT_BIN) -w -/usr/local/go/bin/gofmt $$file; done
+	@for file in $(MD_FILES); do $(MARKDOWNFMT_BIN) -w -gofmt $$file; done
 
 prometheus_alerts.yaml: $(JSONNET_BIN) mixin.libsonnet lib/alerts.jsonnet alerts/*.libsonnet
 	@$(JSONNET_BIN) -J vendor -S lib/alerts.jsonnet > $@
@@ -97,10 +97,11 @@ $(BIN_DIR):
 
 $(TOOLING): $(BIN_DIR)
 	@echo Installing tools from hack/tools.go
-	@cd scripts && /usr/local/go/bin/go list -e -mod=mod -tags tools -f '{{ range .Imports }}{{ printf "%s\n" .}}{{end}}' ./ | xargs -tI % /usr/local/go/bin/go build -mod=mod -o $(BIN_DIR) %
-
+	@cd scripts && go list -e -mod=mod -tags tools -f '{{ range .Imports }}{{ printf "%s\n" .}}{{end}}' ./ | xargs -tI % go build -mod=mod -o $(BIN_DIR) %
+	
 ########################################
 # "check-with-upstream" workflow checks.
+# @cd scripts && /usr/local/go/bin/go list -e -mod=mod -tags tools -f '{{ range .Imports }}{{ printf "%s\n" .}}{{end}}' ./ | xargs -tI % /usr/local/go/bin/go build -mod=mod -o $(BIN_DIR) %
 ########################################
 
 check-selectors-ksm:
