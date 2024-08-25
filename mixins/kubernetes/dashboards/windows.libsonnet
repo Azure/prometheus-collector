@@ -124,7 +124,7 @@ local var = g.dashboard.variable;
         statPanel(
           'CPU Utilisation',
           'none',
-          '1 - avg(rate(windows_cpu_time_total{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, mode="idle"}[1m]))' % $._config
+          '1 - avg(rate(windows_cpu_time_total{%(clusterLabel)s="$cluster", %(windowsExporterSelector)s, mode="idle"}[$__rate_interval]))' % $._config
         )
         + stat.gridPos.withW(4)
         + stat.gridPos.withH(3),
@@ -830,13 +830,13 @@ local var = g.dashboard.variable;
         + tsPanel.queryOptions.withTargets([
           prometheus.new(
             '${datasource}',
-            'sort_desc(sum by (container) (rate(windows_container_network_received_bytes_total{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}[1m])))' % $._config
+            'sort_desc(sum by (container) (rate(windows_container_network_received_bytes_total{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}[$__rate_interval])))' % $._config
           )
           + prometheus.withLegendFormat('Received : {{ container }}'),
 
           prometheus.new(
             '${datasource}',
-            'sort_desc(sum by (container) (rate(windows_container_network_transmitted_bytes_total{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}[1m])))' % $._config
+            'sort_desc(sum by (container) (rate(windows_container_network_transmitted_bytes_total{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod"}[$__rate_interval])))' % $._config
           )
           + prometheus.withLegendFormat('Transmitted : {{ container }}'),
         ]),
