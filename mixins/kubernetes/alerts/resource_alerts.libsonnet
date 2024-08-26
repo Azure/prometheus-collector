@@ -99,7 +99,7 @@
                 > %(namespaceOvercommitFactor)s
             ||| % $._config,
             annotations+: {
-              description: 'Cluster {{ $labels.%(clusterLabel)s }}  has overcommitted CPU resource requests for Namespaces.' % $._config,
+              description: 'Cluster {{ $labels.%(clusterLabel)s }} has overcommitted CPU resource requests for Namespaces.' % $._config,
             },
           } else
             {
@@ -131,7 +131,7 @@
                 > %(namespaceOvercommitFactor)s
             ||| % $._config,
             annotations+: {
-              description: 'Cluster {{ $labels.%(clusterLabel)s }}  has overcommitted memory resource requests for Namespaces.' % $._config,
+              description: 'Cluster {{ $labels.%(clusterLabel)s }} has overcommitted memory resource requests for Namespaces.' % $._config,
             },
           } else
             {
