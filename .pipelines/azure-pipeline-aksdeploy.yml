@@ -1,0 +1,26 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  vmImage: windows-latest
+
+steps:
+- task: AzureCLI@2
+  displayName: Azure CLI
+  inputs:
+    azureSubscription: WtdTestPlaygroundDev
+    scriptType: ps
+    scriptLocation: inlineScript
+    inlineScript: |
+      az --version
+      az account show
+      az deployment group create `
+          --resource-group wtd-test `
+          --name aksDeployment `
+          --template-file ".\otelcollector\test\ci-cd\ci-cd-cluster.json" `
+          --parameters ".\otelcollector\test\ci-cd\ci-cd-cluster.parameters.json"
