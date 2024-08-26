@@ -63,20 +63,20 @@ sudo tdnf install fluent-bit-2.1.10 -y
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Install ME
-# echo "Installing Metrics Extension..."
-# sudo tdnf install -y metricsext2-2.2024.419.1535
-# sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
+echo "Installing Metrics Extension..."
+sudo tdnf install -y metricsext2-2.2024.823.1539-247b56
+sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # Custom ME bits with memory dealloc fix
-echo "Installing Metrics Extension for dealloc..."
-if [ "${ARCH}" != "amd64" ]; then
-  wget https://github.com/Azure/prometheus-collector/releases/download/v6.9.0-main-07-22-2024-2e3dfb56/metricsext2-2.2024.810.111-1.cm2.aarch64.rpm
-  sudo tdnf install -y metricsext2-2.2024.810.111-1.cm2.aarch64.rpm
-else
-  wget https://github.com/Azure/prometheus-collector/releases/download/v6.9.0-main-07-22-2024-2e3dfb56/metricsext2-2.2024.810.111-1.cm2.x86_64.rpm
-  sudo tdnf install -y metricsext2-2.2024.810.111-1.cm2.x86_64.rpm
-fi
-sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
+# echo "Installing Metrics Extension for dealloc..."
+# if [ "${ARCH}" != "amd64" ]; then
+#   wget https://github.com/Azure/prometheus-collector/releases/download/v6.9.0-main-07-22-2024-2e3dfb56/metricsext2-2.2024.810.111-1.cm2.aarch64.rpm
+#   sudo tdnf install -y metricsext2-2.2024.810.111-1.cm2.aarch64.rpm
+# else
+#   wget https://github.com/Azure/prometheus-collector/releases/download/v6.9.0-main-07-22-2024-2e3dfb56/metricsext2-2.2024.810.111-1.cm2.x86_64.rpm
+#   sudo tdnf install -y metricsext2-2.2024.810.111-1.cm2.x86_64.rpm
+# fi
+# sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless
 #sudo tdnf remove g++ binutils libgcc-atomic make patch bison diffutils docbook-dtd-xml gawk glibc-devel installkernel kernel-headers libgcc-devel libgomp-devel libmpc libstdc++-devel libtool libxml2-devel libxslt m4 mariner-rpm-macros mpfr python3-lxml python3-pygments dnf -y

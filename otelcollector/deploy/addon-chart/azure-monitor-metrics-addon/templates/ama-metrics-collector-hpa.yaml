@@ -22,5 +22,6 @@ spec:
         container: prometheus-collector
         target:
           averageValue: {{ $hpa.targetAverageValue }}
+          # averageValue: 10Gi
           type: AverageValue
 {{- end }}

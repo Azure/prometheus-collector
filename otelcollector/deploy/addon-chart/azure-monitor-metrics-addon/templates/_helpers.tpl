@@ -19,7 +19,6 @@ deploymentName: {{ $deploymentName }}
 maxReplicas: 8
 minReplicas: 2
 targetAverageValue: 10Gi
-
 {{/* 
 metrics:
 - type: ContainerResource
@@ -45,12 +44,29 @@ minReplicas: {{ $currentHPA.spec.minReplicas }}
 maxReplicas: {{ $currentHPA.spec.maxReplicas }}
   {{- end }}
 
-  {{- if and $currentHPA.spec $currentHPA.spec.metrics $currentHPA.spec.metrics.containerResource $currentHPA.spec.metrics.containerResource.target $currentHPA.spec.metrics.containerResource.target.averageValue }}
+{{/* {{- if and $currentHPA.spec $currentHPA.spec.metrics $currentHPA.spec.metrics.containerResource $currentHPA.spec.metrics.containerResource.target $currentHPA.spec.metrics.containerResource.target.averageValue }}
     {{- $validMemoryValue := regexMatch "(\\d+)Gi$" $currentHPA.spec.metrics.containerResource.target.averageValue -}}
      {{- if $validMemoryValue -}}
 targetAverageValue: {{ $currentHPA.spec.metrics.containerResource.target.averageValue }}
      {{- end }}
   {{- end }}
 {{- end }}
+ {{- end }} */}}
+
+
+  {{- if and $currentHPA.spec $currentHPA.spec.metrics -}}
+    {{- range $key, $value := $currentHPA.spec.metrics }} 
+    {{- $containerResource := $value.containerResource }}
+      {{- if and $containerResource $containerResource.target $containerResource.target.averageValue -}}
+        {{- $validMemoryValue := regexMatch "(\\d+)Gi$" $containerResource.target.averageValue -}}
+        {{- if $validMemoryValue -}}
+targetAverageValue: {{ $containerResource.target.averageValue }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  
 {{- end }}
+
+{{- end }} 
 
