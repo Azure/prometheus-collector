@@ -588,9 +588,9 @@ tests:
 # Verify that node:node_num_cpu:sum triggers no many-to-many errors.
 - interval: 1m
   input_series:
-  - series: 'node_cpu_seconds_total{cpu="0",endpoint="https",instance="instance1",job="node-exporter",mode="idle",cluster="kubernetes",namespace="openshift-monitoring",pod="node-exporter-1",service="node-exporter"}'
+  - series: 'node_cpu_seconds_total{cpu="0",endpoint="https",instance="instance1",job="node",mode="idle",cluster="kubernetes",namespace="openshift-monitoring",pod="node-exporter-1",service="node-exporter"}'
     values: '1 1'
-  - series: 'node_cpu_seconds_total{cpu="1",endpoint="https",instance="instance1",job="node-exporter",mode="idle",cluster="kubernetes",namespace="openshift-monitoring",pod="node-exporter-1",service="node-exporter"}'
+  - series: 'node_cpu_seconds_total{cpu="1",endpoint="https",instance="instance1",job="node",mode="idle",cluster="kubernetes",namespace="openshift-monitoring",pod="node-exporter-1",service="node-exporter"}'
     values: '1 1'
   - series: 'kube_pod_info{cluster="kubernetes",namespace="openshift-monitoring",node="node-1",pod="node-exporter-1",job="kube-state-metrics",instance="10.129.2.7:8443"}'
     values: '1 1'
@@ -616,9 +616,9 @@ tests:
 # it didn't add stale markers to the "old" series on shutdown.
 - interval: 1m
   input_series:
-  - series: 'node_cpu_seconds_total{cpu="0",endpoint="https",instance="instance1",job="node-exporter",mode="idle",cluster="kubernetes",namespace="openshift-monitoring",pod="node-exporter-1",service="node-exporter"}'
+  - series: 'node_cpu_seconds_total{cpu="0",endpoint="https",instance="instance1",job="node",mode="idle",cluster="kubernetes",namespace="openshift-monitoring",pod="node-exporter-1",service="node-exporter"}'
     values: '1 1'
-  - series: 'node_cpu_seconds_total{cpu="0",endpoint="https",instance="instance2",job="node-exporter",mode="idle",cluster="kubernetes",namespace="openshift-monitoring",pod="node-exporter-2",service="node-exporter"}'
+  - series: 'node_cpu_seconds_total{cpu="0",endpoint="https",instance="instance2",job="node",mode="idle",cluster="kubernetes",namespace="openshift-monitoring",pod="node-exporter-2",service="node-exporter"}'
     values: '1 1'
   - series: 'node_namespace_pod:kube_pod_info:{cluster="kubernetes",node="node-1",namespace="openshift-monitoring",pod="node-exporter-1"}'
     values: '1 1'
