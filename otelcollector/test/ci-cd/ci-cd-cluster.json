@@ -266,7 +266,16 @@
               "osSKU": "Windows2019",
               "enableFIPS": false
           }
-        ]
+        ],
+        "azureMonitorProfile": {
+          "metrics": {
+            "enabled": true,
+            "kubeStateMetrics": {
+              "metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
+              "metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
+            }
+          }
+        }
       }
     },
     {
@@ -354,45 +363,8 @@
         "parameters": {}
       }
     },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "[Concat('azuremonitormetrics-profile-', '-',  uniqueString(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))))]",
-      "apiVersion": "2017-05-10",
-      "dependsOn": [
-        "[Concat('azuremonitormetrics-dcra', '-',  uniqueString(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))))]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "parameters": {},
-          "variables": {},
-          "resources": [
-            {
-              "name": "[parameters('clusterName')]",
-              "type": "Microsoft.ContainerService/managedClusters",
-              "location": "[parameters('clusterLocation')]",
-              "apiVersion": "2023-01-01",
-              "properties": {
-                "mode": "Incremental",
-                "id": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]",
-                "azureMonitorProfile": {
-                  "metrics": {
-                    "enabled": false,
-                    "kubeStateMetrics": {
-                      "metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
-                      "metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        "parameters": {}
-      }
-    },
+
+    
     {
       "name": "[variables('nodeRecordingRuleGroupName')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
@@ -723,6 +695,8 @@
         ]
       }
     },
+
+
     {
       "name": "[Concat(parameters('clusterName'), '-dev-alerts')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
