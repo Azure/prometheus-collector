@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - signbinaries
 pr:
   autoCancel: true
   branches:
@@ -1187,6 +1188,14 @@ stages:
       - script: dir $(Build.ArtifactStagingDirectory)
         displayName: 'List files in Staging Directory'
 
+      - task: PowerShell@2
+        displayName: Remove existing signature from telegraf
+        inputs:
+          targetType: 'inline'
+          script: |
+            echo "Removing existing signature from telegraf.exe..."
+            signtool remove /s $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe
+
       - task: EsrpCodeSigning@5
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
@@ -1225,24 +1234,6 @@ stages:
           MaxConcurrency: '50'
           MaxRetryAttempts: '5'
         displayName: 'EsrpCodeSigning for first party binaries'
-
-      - task: PowerShell@2
-        displayName: Replace files in origin Image
-        inputs:
-          targetType: 'inline'
-          script: |
-            docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
-            
-            echo "Copy Signed binaries/folders back to docker image..."
-            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
-            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
-            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
-            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
-            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
-            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
-
-            docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
-            docker rm pushContainer
 
       - task: EsrpCodeSigning@5
         inputs:
@@ -1283,7 +1274,25 @@ stages:
           MaxConcurrency: '50'
           MaxRetryAttempts: '5'
         displayName: 'EsrpCodeSigning for OSS binaries'   
-             
+
+      - task: PowerShell@2
+        displayName: Replace files in origin Image
+        inputs:
+          targetType: 'inline'
+          script: |
+            docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
+            
+            echo "Copy Signed binaries/folders back to docker image..."
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
+
+            docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            docker rm pushContainer
+
       - powershell: |
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
@@ -1362,6 +1371,13 @@ stages:
       - script: dir $(Build.ArtifactStagingDirectory)
         displayName: 'List files in Staging Directory'
 
+      - task: PowerShell@2
+        displayName: Remove existing signature from telegraf
+        inputs:
+          targetType: 'inline'
+          script: |
+            echo "Removing existing signature from telegraf.exe..."
+            signtool remove /s $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe
 
       - task: EsrpCodeSigning@5
         inputs:
