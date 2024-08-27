@@ -13,14 +13,14 @@ steps:
 - task: AzureCLI@2
   displayName: Azure CLI
   inputs:
-    azureSubscription: WtdTestPlaygroundDev
+    azureSubscription: $(AZURESUBSCRIPTION)
     scriptType: ps
     scriptLocation: inlineScript
     inlineScript: |
       az --version
       az account show
       az deployment group create `
-          --resource-group wtd-test `
-          --name aksDeployment `
+          --resource-group ${env:RESOURCE-GROUP} `
+          --name  ${env:DEPLOYMENT-NAME} `
           --template-file ".\otelcollector\test\ci-cd\ci-cd-cluster.json" `
-          --parameters ".\otelcollector\test\ci-cd\ci-cd-cluster.parameters.json"
+          --parameters ${env:PARAMETERS}          

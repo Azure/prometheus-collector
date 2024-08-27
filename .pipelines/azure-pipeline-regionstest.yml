@@ -1,0 +1,33 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  vmImage: windows-latest
+
+variables:
+  KUBERNETES_SERVICE_HOST: 'wtdaks9-vze7soa3.hcp.westus2.azmk8s.io'
+  KUBERNETES_SERVICE_PORT: '9376'
+
+steps:
+- task: AzureCLI@2
+  displayName: Azure CLI
+  inputs:
+    azureSubscription: $(AZURESUBSCRIPTION)
+    scriptType: ps
+    scriptLocation: inlineScript
+    inlineScript: az aks get-credentials --resource-group ${env:RESOURCE-GROUP} --name ${env:CLUSTER-NAME}
+
+- task: Go@0
+  displayName: "RegionsTest -- go test"
+  inputs:
+    command: 'test' # 'get' | 'build' | 'test' | 'custom'. Required. Command. Default: get.
+    #customCommand: # string. Required when command == custom. Custom command. 
+    #arguments: # string. Arguments. 
+  # Advanced
+    workingDirectory: '.\otelcollector\test\ginkgo-e2e\regionTests'  # string. Working directory.
+
