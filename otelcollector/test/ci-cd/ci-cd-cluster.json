@@ -4,7 +4,7 @@
   "parameters": {
     "azureMonitorWorkspaceLocation": {
       "type": "string",
-      "defaultValue": "eastus",
+      "defaultValue": "westus2",
       "allowedValues": [
         "eastus2euap",
         "northcentralus",
@@ -67,7 +67,7 @@
     },
     "clusterLocation": {
       "type": "string",
-      "defaultValue": "eastus",
+      "defaultValue": "westus2",
       "metadata": {
         "description": "The location of the Managed Cluster resource."
       }
@@ -364,12 +364,16 @@
       }
     },
 
-    
+
     {
       "name": "[variables('nodeRecordingRuleGroupName')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2023-03-01",
+      "apiVersion": "2023-03-01",    
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
+      "dependsOn": [
+        "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+      ],        
       "properties": {
         "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
         "scopes": [
@@ -431,6 +435,10 @@
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
       "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
+      "dependsOn": [
+        "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+      ],      
       "properties": {
         "description": "[concat(variables('kubernetesRecordingRuleGroupDescription'), variables('version'))]",
         "scopes": [
@@ -536,6 +544,10 @@
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
       "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
+      "dependsOn": [
+        "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+      ],      
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
         "scopes": [
@@ -614,6 +626,10 @@
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
       "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
+      "dependsOn": [
+        "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+      ],      
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
         "scopes": [
@@ -702,8 +718,12 @@
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
       "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
+      "dependsOn": [
+        "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+      ],         
       "properties": {
-          "description": "[Concat('Rule group for cluster', parameters('clusterName'), 'in the workspace', variables('azureMonitorWorkspaceName')]",
+          "description": "[Concat('Rule group for cluster', parameters('clusterName'), 'in the workspace', variables('azureMonitorWorkspaceName'))]",
           "scopes": [
               "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
               "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"

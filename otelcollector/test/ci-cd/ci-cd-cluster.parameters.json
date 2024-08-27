@@ -4,9 +4,6 @@
   "parameters": {
     "clusterName": {
       "value": "aks-"
-    },
-    "location": {
-      "value": "eastus"
     }
   }
 }
