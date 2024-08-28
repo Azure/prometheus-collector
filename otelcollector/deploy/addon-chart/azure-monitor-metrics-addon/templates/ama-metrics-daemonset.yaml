@@ -159,8 +159,8 @@ spec:
               readOnly: true
               mountPath: /var/log/containers
             - name: host-log-pods
-              hostPath:
-                path: /var/log/pods
+              readOnly: true
+              mountPath: /var/log/pods
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
