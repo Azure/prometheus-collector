@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - kaveesh/golang_windows
 pr:
   autoCancel: true
   branches:

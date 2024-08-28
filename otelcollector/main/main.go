@@ -22,6 +22,7 @@ func main() {
 	clusterOverride := shared.GetEnv("CLUSTER_OVERRIDE", "")
 	aksRegion := shared.GetEnv("AKSREGION", "")
 	ccpMetricsEnabled := shared.GetEnv("CCP_METRICS_ENABLED", "false")
+	osType := os.Getenv("OS_TYPE")
 
 	outputFile := "/opt/inotifyoutput.txt"
 	if err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs"); err != nil {
@@ -53,7 +54,7 @@ func main() {
 		configmapsettings.Configmapparser()
 	}
 
-	if ccpMetricsEnabled != "true" {
+	if ccpMetricsEnabled != "true" && osType == "linux" {
 		shared.StartCronDaemon()
 	}
 
