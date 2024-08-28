@@ -13,15 +13,15 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: ama-metrics
-  minReplicas: {{ $hpa.minReplicas }}
-  maxReplicas: {{ $hpa.maxReplicas }}
+  minReplicas: {{ $hpa.minReplicasFromHelper }}
+  maxReplicas: {{ $hpa.maxReplicasFromHelper }}
   metrics:
     - type: ContainerResource
       containerResource:
         name: memory
         container: prometheus-collector
         target:
-          averageValue: {{ $hpa.targetAverageValue }}
-          # averageValue: 10Gi
+          # averageValue: {{ $hpa.targetAverageValue }}
+          averageValue: 10Gi
           type: AverageValue
 {{- end }}

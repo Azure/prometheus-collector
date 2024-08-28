@@ -15,10 +15,11 @@ deploymentName: {{ $deploymentName }}
 
 {{- $autoscaleMin := 2 -}}
 {{- $autoscaleMax := 8 -}}
+{{- $minReplicasValue := 2 -}}
 
-maxReplicas: 8
-minReplicas: 2
-targetAverageValue: 10Gi
+maxReplicasFromHelper: 8
+minReplicasFromHelper: 2
+{{/* targetAverageValue: 10Gi */}}
 {{/* 
 metrics:
 - type: ContainerResource
@@ -34,14 +35,25 @@ metrics:
      HPA spec to preserve those values. */}}
 
 {{- $currentHPA := lookup "autoscaling/v2" "HorizontalPodAutoscaler" "kube-system" $hpaName }}
-{{- if $currentHPA }}
-
-  {{- if ge (int $currentHPA.spec.minReplicas) $autoscaleMin -}}
-minReplicas: {{ $currentHPA.spec.minReplicas }}
+{{- if and $currentHPA $currentHPA.spec }}
+{{- $minReplicasFromCurrentSpec := 2 -}}
+{{- $maxReplicasFromCurrentSpec := 8 -}}
+ {{/* $currentHPA.spec.minReplicas */}}
+  {{- if and ($currentHPA.spec.minReplicas) (gt (int $currentHPA.spec.minReplicas) 0) }}
+{{- $minReplicasFromCurrentSpec = $currentHPA.spec.minReplicas -}}
+  {{- end }}
+  {{- if and ($currentHPA.spec.minReplicas) (gt (int $currentHPA.spec.maxReplicas) 0) }}
+{{- $maxReplicasFromCurrentSpec = $currentHPA.spec.maxReplicas -}}
   {{- end }}
 
-  {{- if le (int $currentHPA.spec.maxReplicas) $autoscaleMax -}}  
-maxReplicas: {{ $currentHPA.spec.maxReplicas }}
+
+  {{- if and (ge (int $minReplicasFromCurrentSpec) $autoscaleMin) (le (int $minReplicasFromCurrentSpec) $maxReplicasFromCurrentSpec) -}}
+minReplicasFromHelper: {{ $minReplicasFromCurrentSpec }}
+{{- $minReplicasValue = $minReplicasFromCurrentSpec -}}
+  {{- end }}
+
+  {{- if and (le (int $maxReplicasFromCurrentSpec) $autoscaleMax) (ge (int $maxReplicasFromCurrentSpec) $minReplicasValue) -}}  
+ {{/* maxReplicasFromHelper: {{ $maxReplicasFromCurrentSpec }} */}}
   {{- end }}
 
 {{/* {{- if and $currentHPA.spec $currentHPA.spec.metrics $currentHPA.spec.metrics.containerResource $currentHPA.spec.metrics.containerResource.target $currentHPA.spec.metrics.containerResource.target.averageValue }}
@@ -54,7 +66,7 @@ targetAverageValue: {{ $currentHPA.spec.metrics.containerResource.target.average
  {{- end }} */}}
 
 
-  {{- if and $currentHPA.spec $currentHPA.spec.metrics -}}
+{{/*  {{- if and $currentHPA.spec $currentHPA.spec.metrics -}}
     {{- range $key, $value := $currentHPA.spec.metrics }} 
     {{- $containerResource := $value.containerResource }}
       {{- if and $containerResource $containerResource.target $containerResource.target.averageValue -}}
@@ -64,7 +76,7 @@ targetAverageValue: {{ $containerResource.target.averageValue }}
         {{- end }}
       {{- end }}
     {{- end }}
-  {{- end }}
+  {{- end }} */}}
   
 {{- end }}
 
