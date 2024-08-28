@@ -36,6 +36,7 @@ COPY ./telegraf/telegraf-prometheus-collector-windows.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit-windows.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
+COPY ./main/main $tmpdir/microsoft
 COPY ./react /Users/ContainerAdministrator/Documents/static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
@@ -72,4 +73,5 @@ RUN powershell -Command "Remove-Item -Force C:\ruby26\lib\ruby\gems\2.6.0\cache\
 SHELL ["powershell"]
 RUN ./opt/scripts/setup.ps1
 
-ENTRYPOINT ["powershell", "C:\\opt\\scripts\\main.ps1"]
+# Run the Go executable, entrypoint
+ENTRYPOINT ["powershell", "C:\\opt\\microsoft\\main"]
