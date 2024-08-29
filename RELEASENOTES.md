@@ -1,10 +1,20 @@
 # Azure Monitor Metrics for AKS clusters
 
-## Release 07-19-2024
+
+## Release 08-28-2024
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
 * TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* Change log -
+* fix: ama-metrics-operator-targets Config Reader sidecar memory leak fix - https://github.com/Azure/prometheus-collector/pull/962
+* fix: Adding back log mount for tailing logs(telemetry fix) - https://github.com/Azure/prometheus-collector/pull/966
+
+## Release 07-22-2024
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.9.0-main-07-22-2024-2e3dfb56`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.9.0-main-07-22-2024-2e3dfb56-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.9.0-main-07-22-2024-2e3dfb56-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.9.0-main-07-22-2024-2e3dfb56-cfg`
 * Change log -
 * fix: Truncate DCE/DCR to 44/64 chars in ARM, Bicep, Terraform... - https://github.com/Azure/prometheus-collector/pull/922
 * fix: add single quotes to pod annotations for multiple namespace scenario - https://github.com/Azure/prometheus-collector/pull/927
