@@ -3,6 +3,8 @@
 
 # =========== CRITICAL ================
 CVE-2024-24790
+CVE-2024-5535
+CVE-2024-41110
 
 # =========== HIGH ================
 # HIGH - otelcollector
@@ -80,3 +82,6 @@ CVE-2024-24791
 CVE-2023-5678
 # MEDIUM - ruby
 CVE-2024-27281
+# MEDIUM - targetallocator
+CVE-2023-42363
+CVE-2023-42365

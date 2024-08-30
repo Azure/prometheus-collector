@@ -158,6 +158,9 @@ spec:
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
@@ -285,6 +288,9 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
         - name: anchors-mariner
           hostPath:
             path: /etc/pki/ca-trust/anchors/
@@ -428,6 +434,9 @@ spec:
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
           livenessProbe:
             exec:
               command:
@@ -499,6 +508,9 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
         - name: ama-metrics-tls-secret-volume
           secret:
             secretName: ama-metrics-mtls-secret

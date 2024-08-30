@@ -52,7 +52,7 @@ AzureMonitorMetrics:
   ImageTagCfgReader: ${IMAGE_TAG}-cfg
   TargetAllocatorEnabled: true
   CollectorHPAEnabled: true
-  DeploymentReplicas: 1
+  DeploymentReplicas: 2
   CfgReaderCPULimit: 1
   CfgReaderMemoryLimit: 1Gi
   CfgReaderCPURequest: 1m
