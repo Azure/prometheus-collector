@@ -1,5 +1,5 @@
 {{- if .Values.AzureMonitorMetrics.CollectorHPAEnabled}}
-{{- $hpa := include "merge-discovery-hpa" . | fromYaml }}
+{{- $amaMetricsHpa := include "ama-metrics-merge-custom-hpa" . | fromYaml }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -13,15 +13,14 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: ama-metrics
-  minReplicas: {{ $hpa.minReplicasFromHelper }}
-  maxReplicas: {{ $hpa.maxReplicasFromHelper }}
+  minReplicas: {{ $amaMetricsHpa.amaMetricsMinReplicasFromHelper }}
+  maxReplicas: {{ $amaMetricsHpa.amaMetricsMaxReplicasFromHelper }}
   metrics:
     - type: ContainerResource
       containerResource:
         name: memory
         container: prometheus-collector
         target:
-          # averageValue: {{ $hpa.targetAverageValue }}
           averageValue: 10Gi
           type: AverageValue
 {{- end }}
