@@ -406,16 +406,26 @@ func WaitForTokenAdapter(ccpMetricsEnabled string) {
 	}
 	waitedSecsSoFar := 1
 
+	var resp *http.Response
+	var err error
+
+	client := &http.Client{Timeout: time.Duration(2) * time.Second}
+
+	req, err := http.NewRequest("GET", "http://localhost:9999/healthz", nil)
+	if err != nil {
+		log.Printf("Unable to create http request for the healthz endpoint")
+		return
+	}
 	for {
 		if waitedSecsSoFar > tokenAdapterWaitSecs {
-			if _, err := http.Get("http://localhost:9999/healthz"); err != nil {
+			if resp, err = client.Do(req); err != nil {
 				log.Printf("giving up waiting for token adapter to become healthy after %d secs\n", waitedSecsSoFar)
 				log.Printf("export tokenadapterUnhealthyAfterSecs=%d\n", waitedSecsSoFar)
 				break
 			}
 		} else {
 			log.Printf("checking health of token adapter after %d secs\n", waitedSecsSoFar)
-			resp, err := http.Get("http://localhost:9999/healthz")
+			resp, err = client.Do(req)
 			if err == nil && resp.StatusCode == http.StatusOK {
 				log.Printf("found token adapter to be healthy after %d secs\n", waitedSecsSoFar)
 				log.Printf("export tokenadapterHealthyAfterSecs=%d\n", waitedSecsSoFar)
@@ -424,6 +434,10 @@ func WaitForTokenAdapter(ccpMetricsEnabled string) {
 		}
 		time.Sleep(1 * time.Second)
 		waitedSecsSoFar++
+	}
+
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
 	}
 }
 

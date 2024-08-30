@@ -198,6 +198,9 @@ spec:
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
@@ -296,6 +299,19 @@ spec:
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
                   {{- end }}
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            rsName: ama-metrics
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            rsName: ama-metrics
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
@@ -337,6 +353,9 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
         - name: anchors-mariner
           hostPath:
             path: /etc/pki/ca-trust/anchors/
