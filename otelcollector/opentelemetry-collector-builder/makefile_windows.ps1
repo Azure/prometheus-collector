@@ -39,7 +39,6 @@ Set-Location opentelemetry-collector-builder
 Write-Output "FINISHED building promconfigvalidator"
 
 Set-Location ..
-Set-Location otelcollector
 Set-Location main
 
 # Create directories
