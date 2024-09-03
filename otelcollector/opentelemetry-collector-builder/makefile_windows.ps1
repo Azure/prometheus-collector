@@ -47,17 +47,18 @@ New-Item -Path "./shared/configmap/mp/" -ItemType Directory -Force
 
 # Copy shared Go files
 Copy-Item -Path "../shared/*.go" -Destination "./main/shared/"
-Copy-Item -Path "./shared/go.mod" -Destination "./main/shared/"
-Copy-Item -Path "./shared/go.sum" -Destination "./main/shared/"
+Copy-Item -Path "../shared/go.mod" -Destination "./main/shared/"
+Copy-Item -Path "../shared/go.sum" -Destination "./main/shared/"
 Copy-Item -Path "../shared/configmap/mp/*.go" -Destination "./main/shared/configmap/mp/"
-Copy-Item -Path "./shared/configmap/mp/go.mod" -Destination "./main/shared/configmap/mp/"
-Copy-Item -Path "./shared/configmap/mp/go.sum" -Destination "./main/shared/configmap/mp/"
+Copy-Item -Path "../shared/configmap/mp/go.mod" -Destination "./main/shared/configmap/mp/"
+Copy-Item -Path "../shared/configmap/mp/go.sum" -Destination "./main/shared/configmap/mp/"
 
 # Copy main Go files
 Copy-Item -Path "./main/*.go" -Destination "./main/"
 Copy-Item -Path "./go.mod" -Destination "./main/"
 Copy-Item -Path "./go.sum" -Destination "./main/"
 
+Set-Location main
 
 # Print Go version
 go version
