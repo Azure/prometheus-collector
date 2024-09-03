@@ -25,7 +25,7 @@ func Configmapparserforccp() {
 			configVersion = configVersion[:10]
 		}
 		// Set the environment variable
-		SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configVersion, true)
+		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configVersion, true)
 	}
 
 	// Set agent config file version
@@ -41,7 +41,7 @@ func Configmapparserforccp() {
 			configSchemaVersion = configSchemaVersion[:10]
 		}
 		// Set the environment variable
-		SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
+		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
 	}
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings
@@ -65,11 +65,11 @@ func Configmapparserforccp() {
 
 	prometheusCcpConfigMerger()
 
-	SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
-	SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
+	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
+	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
 
 	// No need to merge custom prometheus config, only merging in the default configs
-	SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
+	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
 	shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
 	if !shared.Exists("/opt/ccp-collector-config-with-defaults.yml") {
 		fmt.Printf("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")

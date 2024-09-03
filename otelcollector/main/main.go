@@ -68,8 +68,8 @@ func main() {
 	shared.WaitForTokenAdapter(ccpMetricsEnabled)
 
 	if ccpMetricsEnabled != "true" {
-		SetEnvAndSourceBashrcOrPowershell("ME_CONFIG_FILE", meConfigFile, true)
-		SetEnvAndSourceBashrcOrPowershell("customResourceId", cluster, true)
+		shared.SetEnvAndSourceBashrcOrPowershell("ME_CONFIG_FILE", meConfigFile, true)
+		shared.SetEnvAndSourceBashrcOrPowershell("customResourceId", cluster, true)
 	} else {
 		os.Setenv("ME_CONFIG_FILE", meConfigFile)
 		os.Setenv("customResourceId", cluster)
@@ -77,7 +77,7 @@ func main() {
 
 	trimmedRegion := strings.ToLower(strings.ReplaceAll(aksRegion, " ", ""))
 	if ccpMetricsEnabled != "true" {
-		SetEnvAndSourceBashrcOrPowershell("customRegion", trimmedRegion, true)
+		shared.SetEnvAndSourceBashrcOrPowershell("customRegion", trimmedRegion, true)
 	} else {
 		os.Setenv("customRegion", trimmedRegion)
 	}
