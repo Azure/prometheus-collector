@@ -43,6 +43,7 @@ Set-Location main
 
 # Create directories
 New-Item -Path "./shared/configmap/mp/" -ItemType Directory -Force
+New-Item -Path "./shared/configmap/ccp/" -ItemType Directory -Force
 # New-Item -Path "./main/" -ItemType Directory -Force
 
 # Copy shared Go files
