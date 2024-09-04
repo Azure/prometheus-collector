@@ -52,6 +52,9 @@ Copy-Item -Path "../shared/go.sum" -Destination "./shared/"
 Copy-Item -Path "../shared/configmap/mp/*.go" -Destination "./shared/configmap/mp/"
 Copy-Item -Path "../shared/configmap/mp/go.mod" -Destination "./shared/configmap/mp/"
 Copy-Item -Path "../shared/configmap/mp/go.sum" -Destination "./shared/configmap/mp/"
+Copy-Item -Path "../shared/configmap/ccp/*.go" -Destination "./shared/configmap/ccp/"
+Copy-Item -Path "../shared/configmap/ccp/go.mod" -Destination "./shared/configmap/ccp/"
+Copy-Item -Path "../shared/configmap/ccp/go.sum" -Destination "./shared/configmap/ccp/"
 
 # # Copy main Go files
 # Copy-Item -Path "./main/*.go" -Destination "./main/"
@@ -61,6 +64,7 @@ Copy-Item -Path "../shared/configmap/mp/go.sum" -Destination "./shared/configmap
 
 go version
 go mod tidy
+ls
 go build -o "main" "./main.go"
 
 Write-Output "Build main executable completed"
