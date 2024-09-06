@@ -1661,8 +1661,8 @@ stages:
                 kubectl apply -f ./test-cluster-yamls
 
                 exit 0
-            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
-            displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
+              workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+              displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
 
           - bash: |
               sleep 360
