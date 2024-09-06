@@ -14,7 +14,7 @@
 | **completedJobsCount**                              | `count(kube_job_status_succeeded{status="true"} and time() - kube_job_status_start_time > 6 * 3600)`                                                        |
 | **restartingContainerCount**                        | `sum by(container, namespace) (rate(kube_pod_container_status_restarts_total[5m]))`                                                                         |
 | **oomKilledContainerCount**                         | `sum by(container, namespace) (kube_pod_container_status_terminated_reason{reason="OOMKilled"})`                                                            |
-| **podReadyPercentage**                              | `100 * (sum(kube_pod_status_phase{phase="Running"} == 1) by (namespace) / count(kube_pod_status_phase{phase!="Succeeded"})) by (namespace)`                 |
+| **podReadyPercentage**                              | `100 * (sum(kube_pod_status_phase{phase="Running"}) by (namespace) / sum(kube_pod_status_phase{phase!="Succeeded"}) by (namespace))`                        |
 | **cpuThresholdViolated**                            | `container_cpu_usage_seconds_total > 95.0`                                                                                                                  |
 | **memoryRssThresholdViolated**                      | `container_memory_rss > (memory_rss_exceeded_percentage / 100 * machine_memory_bytes)`                                                                      |
 | **memoryWorkingSetThresholdViolated**               | `container_memory_working_set_bytes > (memory_workingset_exceeded_percentage / 100 * machine_memory_bytes)`                                                 |
