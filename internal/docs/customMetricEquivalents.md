@@ -2,12 +2,12 @@
 |-----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **cpuUsageMillicores**                              | `container_cpu_usage_seconds_total`                                                                                                                         |
 | **cpuUsagePercentage**                              | `100 * rate(container_cpu_usage_seconds_total[5m])`                                                                                                         |
-| **cpuUsageAllocatablePercentage**                   | `100 * (rate(container_cpu_usage_seconds_total[5m]) / node:node_cpu:sum{mode!="idle"})`                                                                     |
+| **cpuUsageAllocatablePercentage**                   | `100 * ( sum by (cluster) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate) / sum by (cluster) (instance:node_num_cpu:sum) )`      |
 | **memoryRssBytes**                                  | `container_memory_rss`                                                                                                                                      |
-| **memoryRssPercentage**                             | `100 * (container_memory_rss / machine_memory_bytes)`                                                                                                       |
-| **memoryRssAllocatablePercentage**                  | `100 * (container_memory_rss / node_memory_MemTotal_bytes)`                                                                                                 |
+| **memoryRssPercentage**                             | `100 * (sum by (instance) (container_memory_rss{job="cadvisor"}) / sum by (instance) (machine_memory_bytes{job="cadvisor"}))`                               |
+| **memoryRssAllocatablePercentage**                  | `100 * (sum by (node) (container_memory_rss) / sum by (node) (node_memory_MemTotal_bytes))`                                                                 |
 | **memoryWorkingSetBytes**                           | `container_memory_working_set_bytes`                                                                                                                        |
-| **memoryWorkingSetPercentage**                      | `100 * (container_memory_working_set_bytes / machine_memory_bytes)`                                                                                         |
+| **memoryWorkingSetPercentage**                      | `100 * (sum by (node) (container_memory_working_set_bytes) / sum by (node) (node_memory_MemTotal_bytes))`                                                   |
 | **nodesCount**                                       | `count(kube_node_status_condition{condition="Ready", status="true"})`                                                                                      |
 | **diskUsedPercentage**                              | `100 * (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes`                                                              |
 | **podCount**                                        | `count(kube_pod_info)`                                                                                                                                      |
@@ -15,7 +15,7 @@
 | **restartingContainerCount**                        | `sum by(container, namespace) (rate(kube_pod_container_status_restarts_total[5m]))`                                                                         |
 | **oomKilledContainerCount**                         | `sum by(container, namespace) (kube_pod_container_status_terminated_reason{reason="OOMKilled"})`                                                            |
 | **podReadyPercentage**                              | `100 * (sum(kube_pod_status_phase{phase="Running"}) by (namespace) / sum(kube_pod_status_phase{phase!="Succeeded"}) by (namespace))`                        |
-| **cpuThresholdViolated**                            | `container_cpu_usage_seconds_total > 95.0`                                                                                                                  |
-| **memoryRssThresholdViolated**                      | `container_memory_rss > (memory_rss_exceeded_percentage / 100 * machine_memory_bytes)`                                                                      |
-| **memoryWorkingSetThresholdViolated**               | `container_memory_working_set_bytes > (memory_workingset_exceeded_percentage / 100 * machine_memory_bytes)`                                                 |
-| **pvUsageThresholdViolated**                        | `100 * (kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) > 60.0`                                                                      |
+| **cpuThresholdViolated**                            |                                                                                                                                                             |
+| **memoryRssThresholdViolated**                      |                                                                     |
+| **memoryWorkingSetThresholdViolated**               |                                                 |
+| **pvUsageThresholdViolated**                        |  |
