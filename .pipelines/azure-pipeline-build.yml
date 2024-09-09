@@ -1128,7 +1128,7 @@ stages:
       WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
       WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
-    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true)
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
@@ -1162,7 +1162,7 @@ stages:
       WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
       WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
-    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true)
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
@@ -1200,7 +1200,7 @@ stages:
       WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
       WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
-    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true)
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
