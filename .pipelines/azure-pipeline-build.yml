@@ -1570,7 +1570,8 @@ stages:
               envsubst < ./testkube/testkube-test-crs-arc.yaml > ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
               kubectl apply -f ./testkube/api-server-permissions.yaml
               kubectl apply -f ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
-              kubectl apply -f ./test-cluster-yamls
+              kubectl apply -f ./test-cluster-yamls/configmaps
+              kubectl apply -f ./test-cluster-yamls/prometheus-reference-app.yaml
 
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
@@ -1663,7 +1664,8 @@ stages:
                 envsubst < ./testkube/testkube-test-crs-arc.yaml > ./testkube/testkube-test-crs-ci-dev-arc-proxy.yaml
                 kubectl apply -f ./testkube/api-server-permissions.yaml
                 kubectl apply -f ./testkube/testkube-test-crs-ci-dev-arc-proxy.yaml
-                kubectl apply -f ./test-cluster-yamls
+                kubectl apply -f ./test-cluster-yamls/configmaps
+                kubectl apply -f ./test-cluster-yamls/customresources
 
                 exit 0
               workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
