@@ -15,7 +15,3 @@
 | **restartingContainerCount**                        | `sum by(container, namespace) (rate(kube_pod_container_status_restarts_total[5m]))`                                                                         |
 | **oomKilledContainerCount**                         | `sum by(container, namespace) (kube_pod_container_status_terminated_reason{reason="OOMKilled"})`                                                            |
 | **podReadyPercentage**                              | `100 * (sum(kube_pod_status_phase{phase="Running"}) by (namespace) / sum(kube_pod_status_phase{phase!="Succeeded"}) by (namespace))`                        |
-| **cpuThresholdViolated**                            |                                                                                                                                                             |
-| **memoryRssThresholdViolated**                      |                                                                     |
-| **memoryWorkingSetThresholdViolated**               |                                                 |
-| **pvUsageThresholdViolated**                        |  |
