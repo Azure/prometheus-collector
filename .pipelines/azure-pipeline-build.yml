@@ -23,6 +23,7 @@ variables:
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.6.0'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
+  BUILD_WINDOWS: false
   Codeql.Enabled: true
 
 stages:
@@ -1127,6 +1128,7 @@ stages:
       WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
       WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true)
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
@@ -1160,6 +1162,7 @@ stages:
       WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
       WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true)
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
@@ -1197,6 +1200,7 @@ stages:
       WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
       WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true)
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
@@ -1563,7 +1567,7 @@ stages:
               export AMW_QUERY_ENDPOINT="https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com"
               export AZURE_CLIENT_ID="c7f895bb-c4f6-45af-be82-2273a424e237"
 
-              envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
+              envsubst < ./testkube/testkube-test-crs-arc.yaml > ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
               kubectl apply -f ./testkube/api-server-permissions.yaml
               kubectl apply -f ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
               kubectl apply -f ./test-cluster-yamls
@@ -1652,10 +1656,11 @@ stages:
               azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                az connectedk8s proxy -n ci-dev-arc-proxy -g ci-dev-arc-proxy
+                az connectedk8s proxy -n ci-dev-arc-proxy -g ci-dev-arc-proxy &
+                sleep 30
                 export AMW_QUERY_ENDPOINT="https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com"
 
-                envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-crs-ci-dev-arc-proxy.yaml
+                envsubst < ./testkube/testkube-test-crs-arc.yaml > ./testkube/testkube-test-crs-ci-dev-arc-proxy.yaml
                 kubectl apply -f ./testkube/api-server-permissions.yaml
                 kubectl apply -f ./testkube/testkube-test-crs-ci-dev-arc-proxy.yaml
                 kubectl apply -f ./test-cluster-yamls
