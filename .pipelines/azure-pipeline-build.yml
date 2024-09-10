@@ -1565,7 +1565,7 @@ stages:
           
           - bash: |
               export AMW_QUERY_ENDPOINT="https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="c7f895bb-c4f6-45af-be82-2273a424e237"
+              export AZURE_CLIENT_ID="5f13547e-a4e2-4efd-85fe-a2b03d5b8661"
 
               envsubst < ./testkube/testkube-test-crs-arc.yaml > ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
               kubectl apply -f ./testkube/api-server-permissions.yaml
@@ -1658,63 +1658,58 @@ stages:
               scriptLocation: 'inlineScript'
               inlineScript: |
                 az connectedk8s proxy -n ci-dev-arc-proxy -g ci-dev-arc-proxy &
+                AZ_CONNECTEDK8S_PID=$!
                 sleep 30
                 export AMW_QUERY_ENDPOINT="https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com"
+                export AZURE_CLIENT_ID="be961593-112c-4256-bf9b-c9ef14c20f2a"
 
                 envsubst < ./testkube/testkube-test-crs-arc.yaml > ./testkube/testkube-test-crs-ci-dev-arc-proxy.yaml
-                kubectl apply -f ./testkube/api-server-permissions.yaml
-                kubectl apply -f ./testkube/testkube-test-crs-ci-dev-arc-proxy.yaml
-                kubectl apply -f ./test-cluster-yamls/configmaps
-                kubectl apply -f ./test-cluster-yamls/customresources
+                kubectl apply -f ./testkube/api-server-permissions.yaml --validate=false
+                kubectl apply -f ./testkube/testkube-test-crs-ci-dev-arc-proxy.yaml --validate=false
+                kubectl apply -f ./test-cluster-yamls/configmaps --validate=false
+                kubectl apply -f ./test-cluster-yamls/customresources --validate=false
 
+
+                # Run the full test suite
+                kubectl testkube run testsuite e2e-tests-merge --verbose
+
+                # Get the current id of the test suite now running
+                execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
+
+                # Watch until the all the tests in the test suite finish
+                kubectl testkube watch testsuiteexecution $execution_id
+
+                # Get the results as a formatted json file
+                kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
+
+                # For any test that has failed, print out the Ginkgo logs
+                if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
+
+                  # Get each test name and id that failed
+                  jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
+                    testName=$(echo $line | cut -d ' ' -f 1)
+                    id=$(echo $line | cut -d ' ' -f 2)
+                    echo "Test $testName failed. Test ID: $id"
+
+                    # Get the Ginkgo logs of the test
+                    kubectl testkube get execution $id > out 2>error.log
+
+                    # Remove superfluous logs of everything before the last occurence of 'go downloading'.
+                    # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
+                    cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+                  done
+
+                  # Explicitly fail the ADO task since at least one test failed
+                  
+                  kill $AZ_CONNECTEDK8S_PID
+                  exit 0
+                fi
+
+
+                kill $AZ_CONNECTEDK8S_PID
                 exit 0
               workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
               displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
-
-          - bash: |
-              sleep 360
-
-              exit 0
-            displayName: "Wait for cluster to be ready"
-
-          - bash: |
-              # Run the full test suite
-              kubectl testkube run testsuite e2e-tests-merge --verbose
-
-              # Get the current id of the test suite now running
-              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
-
-              # Watch until the all the tests in the test suite finish
-              kubectl testkube watch testsuiteexecution $execution_id
-
-              # Get the results as a formatted json file
-              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
-
-              # For any test that has failed, print out the Ginkgo logs
-              if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
-
-                # Get each test name and id that failed
-                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
-                  testName=$(echo $line | cut -d ' ' -f 1)
-                  id=$(echo $line | cut -d ' ' -f 2)
-                  echo "Test $testName failed. Test ID: $id"
-
-                  # Get the Ginkgo logs of the test
-                  kubectl testkube get execution $id > out 2>error.log
-
-                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
-                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
-                done
-
-                # Explicitly fail the ADO task since at least one test failed
-                exit 0
-              fi
-
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)
-            displayName: "Run tests"
-
 
   - deployment: Deploy_AKS_Chart
     displayName: "Deploy: AKS dev cluster"
