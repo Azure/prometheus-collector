@@ -12,7 +12,7 @@ import (
 
 func copyCAAnchors() {
 	// Copy CA anchors from specified locations
-	locations := []string{"/anchors/ubuntu/*", "/anchors/mariner/*", "/anchors/proxy/*"}
+	locations := []string{"/anchors/ubuntu/.", "/anchors/mariner/.", "/anchors/proxy/."}
 	for _, loc := range locations {
 		matches, err := filepath.Glob(loc)
 		if err != nil {
