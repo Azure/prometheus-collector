@@ -7,7 +7,7 @@
   prometheusRules+:: {
     groups+: [
       {
-        name: 'k8s.rules',
+        name: 'k8s.rules.container_cpu_usage_seconds_total',
         rules: [
           {
             // Reduces cardinality of this timeseries by #cores, which makes it
@@ -22,42 +22,67 @@
               )
             ||| % $._config,
           },
+        ],
+      },
+      {
+        name: 'k8s.rules.container_memory_working_set_bytes',
+        rules: [
           {
             record: 'node_namespace_pod_container:container_memory_working_set_bytes',
             expr: |||
               container_memory_working_set_bytes{%(cadvisorSelector)s, image!=""}
-              * on (namespace, pod) group_left(node) topk by(namespace, pod) (1,
-                max by(namespace, pod, node) (kube_pod_info{node!=""})
+              * on (%(clusterLabel)s, namespace, pod) group_left(node) topk by(%(clusterLabel)s, namespace, pod) (1,
+                max by(%(clusterLabel)s, namespace, pod, node) (kube_pod_info{node!=""})
               )
             ||| % $._config,
           },
+        ],
+      },
+      {
+        name: 'k8s.rules.container_memory_rss',
+        rules: [
           {
             record: 'node_namespace_pod_container:container_memory_rss',
             expr: |||
               container_memory_rss{%(cadvisorSelector)s, image!=""}
-              * on (namespace, pod) group_left(node) topk by(namespace, pod) (1,
-                max by(namespace, pod, node) (kube_pod_info{node!=""})
+              * on (%(clusterLabel)s, namespace, pod) group_left(node) topk by(%(clusterLabel)s, namespace, pod) (1,
+                max by(%(clusterLabel)s, namespace, pod, node) (kube_pod_info{node!=""})
               )
             ||| % $._config,
           },
+        ],
+      },
+      {
+        name: 'k8s.rules.container_memory_cache',
+        rules: [
           {
             record: 'node_namespace_pod_container:container_memory_cache',
             expr: |||
               container_memory_cache{%(cadvisorSelector)s, image!=""}
-              * on (namespace, pod) group_left(node) topk by(namespace, pod) (1,
-                max by(namespace, pod, node) (kube_pod_info{node!=""})
+              * on (%(clusterLabel)s, namespace, pod) group_left(node) topk by(%(clusterLabel)s, namespace, pod) (1,
+                max by(%(clusterLabel)s, namespace, pod, node) (kube_pod_info{node!=""})
               )
             ||| % $._config,
           },
+        ],
+      },
+      {
+        name: 'k8s.rules.container_memory_swap',
+        rules: [
           {
             record: 'node_namespace_pod_container:container_memory_swap',
             expr: |||
               container_memory_swap{%(cadvisorSelector)s, image!=""}
-              * on (namespace, pod) group_left(node) topk by(namespace, pod) (1,
-                max by(namespace, pod, node) (kube_pod_info{node!=""})
+              * on (%(clusterLabel)s, namespace, pod) group_left(node) topk by(%(clusterLabel)s, namespace, pod) (1,
+                max by(%(clusterLabel)s, namespace, pod, node) (kube_pod_info{node!=""})
               )
             ||| % $._config,
           },
+        ],
+      },
+      {
+        name: 'k8s.rules.container_resource',
+        rules: [
           {
             record: 'cluster:namespace:pod_memory:active:kube_pod_container_resource_requests',
             expr: |||
@@ -150,6 +175,11 @@
               )
             ||| % $._config,
           },
+        ],
+      },
+      {
+        name: 'k8s.rules.pod_owner',
+        rules: [
           // workload aggregation for deployments
           {
             record: 'namespace_workload_pod:kube_pod_owner:relabel',
