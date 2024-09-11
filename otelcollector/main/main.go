@@ -24,9 +24,11 @@ func main() {
 	ccpMetricsEnabled := shared.GetEnv("CCP_METRICS_ENABLED", "false")
 	osType := os.Getenv("OS_TYPE")
 
-	outputFile := "/opt/inotifyoutput.txt"
-	if err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs"); err != nil {
-		log.Fatal(err)
+	if osType == "linux" {
+		outputFile := "/opt/inotifyoutput.txt"
+		if err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs"); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if ccpMetricsEnabled != "true" {
@@ -175,31 +177,33 @@ func main() {
 
 	}
 
-	// Start inotify to watch for changes
-	fmt.Println("Starting inotify for watching mdsd config update")
+	if osType == "linux" {
+		// Start inotify to watch for changes
+		fmt.Println("Starting inotify for watching mdsd config update")
 
-	// Create an output file for inotify events
-	outputFile = "/opt/inotifyoutput-mdsd-config.txt"
-	_, err = os.Create(outputFile)
-	if err != nil {
-		log.Fatalf("Error creating output file: %v\n", err)
-	}
+		// Create an output file for inotify events
+		outputFile := "/opt/inotifyoutput-mdsd-config.txt"
+		_, err = os.Create(outputFile)
+		if err != nil {
+			log.Fatalf("Error creating output file: %v\n", err)
+		}
 
-	// Define the command to start inotify
-	inotifyCommand := exec.Command(
-		"inotifywait",
-		"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
-		"--daemon",
-		"--outfile", outputFile,
-		"--event", "ATTRIB",
-		"--format", "%e : %T",
-		"--timefmt", "+%s",
-	)
+		// Define the command to start inotify
+		inotifyCommand := exec.Command(
+			"inotifywait",
+			"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
+			"--daemon",
+			"--outfile", outputFile,
+			"--event", "ATTRIB",
+			"--format", "%e : %T",
+			"--timefmt", "+%s",
+		)
 
-	// Start the inotify process
-	err = inotifyCommand.Start()
-	if err != nil {
-		log.Fatalf("Error starting inotify process: %v\n", err)
+		// Start the inotify process
+		err = inotifyCommand.Start()
+		if err != nil {
+			log.Fatalf("Error starting inotify process: %v\n", err)
+		}
 	}
 
 	// Setting time at which the container started running
@@ -230,6 +234,7 @@ func main() {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
+	osType := os.Getenv("OS_TYPE")
 	status := http.StatusOK
 	message := "prometheuscollector is running."
 
@@ -287,24 +292,31 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			goto response
 		}
 	}
-
-	if shared.HasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
-		status = http.StatusServiceUnavailable
-		message = "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
-		fmt.Println(message)
-		goto response
+	if osType == "linux" {
+		if shared.HasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
+			status = http.StatusServiceUnavailable
+			message = "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
+			fmt.Println(message)
+			goto response
+		}
+		if shared.HasConfigChanged("/opt/inotifyoutput.txt") {
+			status = http.StatusServiceUnavailable
+			message = "inotifyoutput.txt has been updated - config changed"
+			fmt.Println(message)
+			goto response
+		}
+	} else {
+		if shared.HasConfigChanged("C:\\opt\\microsoft\\scripts\\filesystemwatcher.txt") {
+			status = http.StatusServiceUnavailable
+			message = "Config Map Updated or DCR/DCE updated since agent started"
+			fmt.Println(message)
+			goto response
+		}
 	}
 
 	if !shared.IsProcessRunning("/opt/microsoft/otelcollector/otelcollector") {
 		status = http.StatusServiceUnavailable
 		message = "OpenTelemetryCollector is not running."
-		fmt.Println(message)
-		goto response
-	}
-
-	if shared.HasConfigChanged("/opt/inotifyoutput.txt") {
-		status = http.StatusServiceUnavailable
-		message = "inotifyoutput.txt has been updated - config changed"
 		fmt.Println(message)
 		goto response
 	}

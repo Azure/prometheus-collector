@@ -65,7 +65,7 @@ Copy-Item -Path "../shared/configmap/ccp/go.sum" -Destination "./shared/configma
 
 go version
 go mod tidy
-go build -o "main" "./main.go"
+go build -buildmode=pie -o "main.exe" "./main.go"
 
 Write-Output "Build main executable completed"
 

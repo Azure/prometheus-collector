@@ -26,7 +26,6 @@ COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/main.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/filesystemwatcher.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/livenessprobe.cmd $tmpdir/microsoft/scripts/
-
 COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/otelcollector.exe ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/microsoft/otelcollector/
@@ -36,7 +35,7 @@ COPY ./telegraf/telegraf-prometheus-collector-windows.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit-windows.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
-COPY ./main/main $tmpdir/microsoft
+COPY ./main/main.exe $tmpdir/microsoft
 COPY ./react /Users/ContainerAdministrator/Documents/static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
@@ -74,6 +73,6 @@ SHELL ["powershell"]
 RUN ./opt/scripts/setup.ps1
 
 # Run the Go executable, entrypoint
-ENTRYPOINT ["powershell", "C:\\opt\\microsoft\\main"]
+ENTRYPOINT ["powershell", "C:\\opt\\microsoft\\main.exe"]
 # ENTRYPOINT ["powershell", "C:\\opt\\scripts\\main.ps1"]
 
