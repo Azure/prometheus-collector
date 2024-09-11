@@ -24,6 +24,7 @@ var (
 	kubeletDefaultFileRsSimple                   = "kubeletDefaultRsSimple.yml"
 	kubeletDefaultFileRsAdvanced                 = "kubeletDefaultRsAdvanced.yml"
 	kubeletDefaultFileDs                         = "kubeletDefaultDs.yml"
+	criDefaultFileDs                             = "criDefaultDs.yml"
 	kubeletDefaultFileRsAdvancedWindowsDaemonset = "kubeletDefaultRsAdvancedWindowsDaemonset.yml"
 	coreDNSDefaultFile                           = "corednsDefault.yml"
 	cadvisorDefaultFileRsSimple                  = "cadvisorDefaultRsSimple.yml"

@@ -24,6 +24,7 @@ LOGGING_PREFIX = "prometheus-config-merger-with-operator"
 @kubeletDefaultFileRsSimple = @defaultPromConfigPathPrefix + "kubeletDefaultRsSimple.yml"
 @kubeletDefaultFileRsAdvanced = @defaultPromConfigPathPrefix + "kubeletDefaultRsAdvanced.yml"
 @kubeletDefaultFileDs = @defaultPromConfigPathPrefix + "kubeletDefaultDs.yml"
+@criDefaultFileDs = @defaultPromConfigPathPrefix + "criDefaultDs.yml"
 @kubeletDefaultFileRsAdvancedWindowsDaemonset = @defaultPromConfigPathPrefix + "kubeletDefaultRsAdvancedWindowsDaemonset.yml"
 @corednsDefaultFile = @defaultPromConfigPathPrefix + "corednsDefault.yml"
 @cadvisorDefaultFileRsSimple = @defaultPromConfigPathPrefix + "cadvisorDefaultRsSimple.yml"
@@ -228,6 +229,15 @@ def populateDefaultPrometheusConfig
           contents = contents.gsub("$$OS_TYPE$$", ENV["OS_TYPE"])
           File.open(@kubeletDefaultFileDs, "w") { |file| file.puts contents }
           defaultConfigs.push(@kubeletDefaultFileDs)
+        end
+        if advancedMode == true && currentControllerType == @daemonsetControllerType && (ENV["OS_TYPE"].downcase == "linux")
+          UpdateScrapeIntervalConfig(@criDefaultFileDs, kubeletScrapeInterval)
+          contents = File.read(@criDefaultFileDs)
+          contents = contents.gsub("$$NODE_IP$$", ENV["NODE_IP"])
+          contents = contents.gsub("$$NODE_NAME$$", ENV["NODE_NAME"])
+          contents = contents.gsub("$$OS_TYPE$$", ENV["OS_TYPE"])
+          File.open(@criDefaultFileDs, "w") { |file| file.puts contents }
+          defaultConfigs.push(@criDefaultFileDs)
         end
       end
     end
@@ -596,7 +606,7 @@ end
 
 def setDefaultFileScrapeInterval(scrapeInterval)
   defaultFilesArray = [
-    @kubeletDefaultFileRsSimple, @kubeletDefaultFileRsAdvanced, @kubeletDefaultFileDs, @kubeletDefaultFileRsAdvancedWindowsDaemonset,
+    @kubeletDefaultFileRsSimple, @kubeletDefaultFileRsAdvanced, @kubeletDefaultFileDs, @criDefaultFileDs, @kubeletDefaultFileRsAdvancedWindowsDaemonset,
     @corednsDefaultFile, @cadvisorDefaultFileRsSimple, @cadvisorDefaultFileRsAdvanced, @cadvisorDefaultFileDs, @kubeproxyDefaultFile,
     @apiserverDefaultFile, @kubestateDefaultFile, @nodeexporterDefaultFileRsSimple, @nodeexporterDefaultFileRsAdvanced, @nodeexporterDefaultFileDs,
     @prometheusCollectorHealthDefaultFile, @windowsexporterDefaultRsSimpleFile, @windowsexporterDefaultDsFile,

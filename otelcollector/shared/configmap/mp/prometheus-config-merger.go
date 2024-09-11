@@ -299,6 +299,19 @@ func populateDefaultPrometheusConfig() {
 					}
 				}
 			}
+			if advancedMode && (strings.ToLower(os.Getenv("OS_TYPE")) == "linux") {
+				UpdateScrapeIntervalConfig(criDefaultFileDs, kubeletScrapeInterval)
+				contents, err := os.ReadFile(criDefaultFileDs)
+				if err == nil {
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$OS_TYPE$$", os.Getenv("OS_TYPE")))
+					err = os.WriteFile(criDefaultFileDs, contents, 0644)
+					if err == nil {
+						defaultConfigs = append(defaultConfigs, criDefaultFileDs)
+					}
+				}
+			}
 		}
 	}
 
@@ -731,6 +744,19 @@ func populateDefaultPrometheusConfigWithOperator() {
 					err = os.WriteFile(kubeletDefaultFileDs, contents, 0644)
 					if err == nil {
 						defaultConfigs = append(defaultConfigs, kubeletDefaultFileDs)
+					}
+				}
+			}
+			if advancedMode && currentControllerType == daemonsetControllerType && (strings.ToLower(os.Getenv("OS_TYPE")) == "linux") {
+				UpdateScrapeIntervalConfig(criDefaultFileDs, kubeletScrapeInterval)
+				contents, err := os.ReadFile(criDefaultFileDs)
+				if err == nil {
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_IP$$", os.Getenv("NODE_IP")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$NODE_NAME$$", os.Getenv("NODE_NAME")))
+					contents = []byte(strings.ReplaceAll(string(contents), "$$OS_TYPE$$", os.Getenv("OS_TYPE")))
+					err = os.WriteFile(criDefaultFileDs, contents, 0644)
+					if err == nil {
+						defaultConfigs = append(defaultConfigs, criDefaultFileDs)
 					}
 				}
 			}
@@ -1209,7 +1235,7 @@ func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interfa
 
 func setDefaultFileScrapeInterval(scrapeInterval string) {
 	defaultFilesArray := []string{
-		kubeletDefaultFileRsSimple, kubeletDefaultFileRsAdvanced, kubeletDefaultFileDs,
+		kubeletDefaultFileRsSimple, kubeletDefaultFileRsAdvanced, kubeletDefaultFileDs, criDefaultFileDs,
 		kubeletDefaultFileRsAdvancedWindowsDaemonset, coreDNSDefaultFile,
 		cadvisorDefaultFileRsSimple, cadvisorDefaultFileRsAdvanced, cadvisorDefaultFileDs,
 		kubeProxyDefaultFile, apiserverDefaultFile, kubeStateDefaultFile,

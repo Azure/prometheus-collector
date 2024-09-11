@@ -1,0 +1,20 @@
+  scrape_configs:
+  - job_name: node_runtime
+    scheme: http
+    metrics_path: /v1/metrics
+    scrape_interval: $$SCRAPE_INTERVAL$$
+    label_limit: 63
+    label_name_length_limit: 511
+    label_value_length_limit: 1023
+    relabel_configs:
+    - source_labels: [__metrics_path__]
+      regex: (.*)
+      target_label: metrics_path
+    - source_labels: [__address__]
+      replacement: '$$NODE_NAME$$'
+      target_label: instance
+    - source_labels: [__address__]
+      replacement: '$$OS_TYPE$$'
+      target_label: "kubernetes_io_os"
+    static_configs:
+    - targets: ['$$NODE_IP$$:10257']
