@@ -250,28 +250,44 @@ func recordMetrics() {
 	}()
 }
 
-func recordPerfMetrics() {
+func recordPerfMetrics(cancel chan struct{}) {
 	go func() {
 		i := 0
 		for {
-			for _, gauge := range gaugeList {
-				for location, tempInfoByCity := range locationsToMinTempPerf {
-					for city, info := range tempInfoByCity {
-						tempRange := info.tempRange
-						minTemp := info.minTemp
-						temperature := float64(rand.Intn(tempRange) + minTemp)
-						gauge.WithLabelValues(city, location).Set(temperature)
+			select {
+			case <-cancel:
+				return
+			default:
+				for _, gauge := range gaugeList {
+					for location, tempInfoByCity := range locationsToMinTempPerf {
+						for city, info := range tempInfoByCity {
+							tempRange := info.tempRange
+							minTemp := info.minTemp
+							temperature := float64(rand.Intn(tempRange) + minTemp)
+							gauge.WithLabelValues(city, location).Set(temperature)
+						}
+					}
+
+					i++
+				}
+				// Wait the scrape interval
+				for j := 0; j < scrapeIntervalSec; j++ {
+					select {
+					case <-cancel:
+						return
+					default:
+						time.Sleep(1 * time.Second)
 					}
 				}
-
-				i++
-			}
-			// Wait the scrape interval
-			for j := 0; j < scrapeIntervalSec; j++ {
-				time.Sleep(1 * time.Second)
 			}
 		}
 	}()
+}
+
+func deleteGauges() {
+	for _, gauge := range gaugeList {
+		gauge.Reset()
+	}
 }
 
 func createGauges() {
@@ -293,6 +309,8 @@ func createGauges() {
 var (
 	scrapeIntervalSec = 60
 	metricCount       = 10000
+	resetIntervalSec  = 300
+	hpaTesting        = false
 	gaugeList         = make([]*prometheus.GaugeVec, 0, metricCount)
 	counter           = promauto.NewCounterVec(
 		prometheus.CounterOpts{
@@ -461,6 +479,9 @@ func main() {
 
 	// certFile := "/etc/prometheus/certs/client-cert.pem"
 	// keyFile := "/etc/prometheus/certs/client-key.pem"
+
+	cancel := make(chan struct{})
+
 	if os.Getenv("RUN_PERF_TEST") == "true" {
 		if os.Getenv("SCRAPE_INTERVAL") != "" {
 			scrapeIntervalSec, _ = strconv.Atoi(os.Getenv("SCRAPE_INTERVAL"))
@@ -468,8 +489,35 @@ func main() {
 		if os.Getenv("METRIC_COUNT") != "" {
 			metricCount, _ = strconv.Atoi(os.Getenv("METRIC_COUNT"))
 		}
+		if os.Getenv("HPA_TESTING") != "" {
+			hpaTesting, _ = strconv.ParseBool(os.Getenv("HPA_TESTING"))
+		}
+		if os.Getenv("RESET_INTERVAL") != "" {
+			resetIntervalSec, _ = strconv.Atoi(os.Getenv("RESET_INTERVAL"))
+		}
+
 		createGauges()
-		recordPerfMetrics()
+
+		if hpaTesting {
+			go func() {
+				for {
+					cancel := make(chan struct{})
+					recordPerfMetrics(cancel)
+
+					// Have perf metrics for interval
+					time.Sleep(time.Duration(resetIntervalSec) * time.Second)
+
+					// Cancel recordPerfMetrics
+					close(cancel)
+					deleteGauges()
+
+					// Have no metrics for interval
+					time.Sleep(time.Duration(resetIntervalSec) * time.Second)
+				}
+			}()
+		} else {
+			recordPerfMetrics(cancel)
+		}
 	} else {
 		recordMetrics()
 	}
@@ -491,10 +539,10 @@ func main() {
 	}()
 
 	// Run main server for weather app metrics
-	// err := http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
-	// if err != nil {
-	// 	log.Printf("HTTP server failed to start: %v", err)
-	// }
+	err := http.ListenAndServe(":2112", weatherServer)
+	if err != nil {
+		log.Printf("HTTP server failed to start: %v", err)
+	}
 
 	fmt.Printf("ending main function")
 }
