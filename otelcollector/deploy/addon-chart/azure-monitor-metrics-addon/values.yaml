@@ -36,8 +36,8 @@ AzureMonitorMetrics:
       - validatingwebhookconfigurations
       - volumeattachments
   ImageRepository: /azuremonitor/containerinsights/cidev/prometheus-collector/images
-  ImageTag: 6.9.0-kaveesh-golang-windows-09-05-2024-16232f2f
-  ImageTagWin: 6.9.0-kaveesh-golang-windows-09-05-2024-16232f2f-win
+  ImageTag: 6.9.0-kaveesh-golang-windows-09-10-2024-0114d41a
+  ImageTagWin: 6.9.0-kaveesh-golang-windows-09-10-2024-0114d41a-win
   RsCPULimit: 7
   RsMemoryLimit: 14Gi
   RsCPURequest: 150m
@@ -48,8 +48,8 @@ AzureMonitorMetrics:
   DsMemoryRequestLinux: 150Mi
   DsCPULimitWindows: 500m
   DsMemoryLimitWindows: 1Gi
-  ImageTagTargetAllocator: 6.9.0-kaveesh-golang-windows-09-05-2024-16232f2f-targetallocator
-  ImageTagCfgReader: 6.9.0-kaveesh-golang-windows-09-05-2024-16232f2f-cfg
+  ImageTagTargetAllocator: 6.9.0-kaveesh-golang-windows-09-10-2024-0114d41a-targetallocator
+  ImageTagCfgReader: 6.9.0-kaveesh-golang-windows-09-10-2024-0114d41a-cfg
   TargetAllocatorEnabled: true
   DeploymentReplicas: 2
   CfgReaderCPULimit: 1

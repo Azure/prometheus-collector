@@ -428,14 +428,14 @@ spec:
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
-          # livenessProbe:
-          #   httpGet:
-          #     path: /health
-          #     port: 8080
-          #   initialDelaySeconds: 60
-          #   periodSeconds: 15
-          #   timeoutSeconds: 5
-          #   failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
         - name: addon-token-adapter-win
           command:
            - addon-token-adapter-win
