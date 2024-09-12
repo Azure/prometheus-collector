@@ -394,6 +394,29 @@ func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string)
 	}
 }
 
+func StartMA() {
+	osType := os.Getenv("OS_TYPE")
+	var cmd *exec.Cmd
+
+	switch osType {
+	case "linux":
+		fmt.Println("Should never reach here")
+
+	case "windows":
+		cmd = exec.Command("C:\\opt\\genevamonitoringagent\\genevamonitoringagent\\Monitoring\\Agent\\MonAgentLauncher.exe", "-useenv")
+		// On Windows, stderr redirection is not needed as `cmd.Start()` handles it internally
+	}
+
+	// Start the command
+	err := cmd.Start()
+	if err != nil {
+		fmt.Printf("Error starting mdsd/MonAgentLauncher: %v\n", err)
+		return
+	}
+
+	fmt.Printf("%s process started successfully.\n", cmd.Path)
+}
+
 // StartMdsdForOverlay starts the mdsd process based on the OS
 func StartMdsdForOverlay() {
 	osType := os.Getenv("OS_TYPE")

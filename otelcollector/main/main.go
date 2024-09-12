@@ -87,15 +87,22 @@ func main() {
 	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 	time.Sleep(10 * time.Second)
 
-	fmt.Println("Starting MDSD")
 	if ccpMetricsEnabled != "true" {
-		shared.StartMdsdForOverlay()
+		if osType == "linux" {
+			fmt.Println("Starting MDSD")
+			shared.StartMdsdForOverlay()
+		} else {
+			fmt.Println("Starting MA")
+			shared.StartMA()
+		}
 	} else {
 		shared.StartMdsdForUnderlay()
 	}
 
-	// update this to use color coding
-	shared.PrintMdsdVersion()
+	if osType == "linux" {
+		// update this to use color coding
+		shared.PrintMdsdVersion()
+	}
 
 	fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
 	time.Sleep(30 * time.Second)
