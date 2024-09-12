@@ -549,21 +549,37 @@ func WaitForTokenAdapter(ccpMetricsEnabled string) {
 
 func StartFluentBit(fluentBitConfigFile string) {
 	fmt.Println("Starting fluent-bit")
+	if os.Getenv("OS_TYPE") == "linux" {
+		if err := os.Mkdir("/opt/microsoft/fluent-bit", 0755); err != nil && !os.IsExist(err) {
+			log.Fatalf("Error creating directory: %v\n", err)
+		}
 
-	if err := os.Mkdir("/opt/microsoft/fluent-bit", 0755); err != nil && !os.IsExist(err) {
-		log.Fatalf("Error creating directory: %v\n", err)
-	}
+		logFile, err := os.Create("/opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log")
+		if err != nil {
+			log.Fatalf("Error creating log file: %v\n", err)
+		}
+		defer logFile.Close()
 
-	logFile, err := os.Create("/opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log")
-	if err != nil {
-		log.Fatalf("Error creating log file: %v\n", err)
-	}
-	defer logFile.Close()
+		fluentBitCmd := exec.Command("fluent-bit", "-c", fluentBitConfigFile, "-e", "/opt/fluent-bit/bin/out_appinsights.so")
+		fluentBitCmd.Stdout = os.Stdout
+		fluentBitCmd.Stderr = os.Stderr
+		if err := fluentBitCmd.Start(); err != nil {
+			log.Fatalf("Error starting fluent-bit: %v\n", err)
+		}
+	} else {
+		fluentBitCmd := exec.Command("C:\\opt\\fluent-bit\\bin\\fluent-bit.exe", "-c", "C:\\opt\\fluent-bit\\fluent-bit-windows.conf", "-e", "C:\\opt\\fluent-bit\\bin\\out_appinsights.so")
+		fluentBitCmd.Stdout = os.Stdout
+		fluentBitCmd.Stderr = os.Stderr
 
-	fluentBitCmd := exec.Command("fluent-bit", "-c", fluentBitConfigFile, "-e", "/opt/fluent-bit/bin/out_appinsights.so")
-	fluentBitCmd.Stdout = os.Stdout
-	fluentBitCmd.Stderr = os.Stderr
-	if err := fluentBitCmd.Start(); err != nil {
-		log.Fatalf("Error starting fluent-bit: %v\n", err)
+		if err := fluentBitCmd.Start(); err != nil {
+			log.Fatalf("Error starting fluent-bit: %v\n", err)
+		}
+
+		// Run fluent-bit as a background process
+		go func() {
+			if err := fluentBitCmd.Wait(); err != nil {
+				log.Printf("Fluent-bit exited with error: %v\n", err)
+			}
+		}()
 	}
 }

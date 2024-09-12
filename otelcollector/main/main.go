@@ -167,7 +167,9 @@ func main() {
 	// 	fmt.Printf("Error modifying config file: %v\n", err)
 	// }
 
-	shared.LogVersionInfo()
+	if osType == "linux" {
+		shared.LogVersionInfo()
+	}
 
 	if ccpMetricsEnabled != "true" {
 		shared.StartFluentBit(fluentBitConfigFile)
