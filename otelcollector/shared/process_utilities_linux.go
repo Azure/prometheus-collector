@@ -338,6 +338,10 @@ func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string)
 	}
 }
 
+func StartMA() {
+	fmt.Println("Should never reach here, defining function since main.go expects it")
+}
+
 func StartMdsdForOverlay() {
 	mdsdLog := os.Getenv("MDSD_LOG")
 	if mdsdLog == "" {
