@@ -10,7 +10,7 @@ spec:
 # New TargetAllocator Enabled scenario
 {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
   {{- if .Values.AzureMonitorMetrics.CollectorHPAEnabled }} # If HPA toggle is enabled, allow HPA to modify the deployment spec
-  {{- $currentSpec := (lookup "apps/v1" "Deployment" .Release.Namespace "ama-metrics").spec }}
+  {{- $currentSpec := (lookup "apps/v1" "Deployment" "kube-system" "ama-metrics").spec }}
     {{- if $currentSpec }}
     # in if check
   replicas: {{ $currentSpec.replicas }}
