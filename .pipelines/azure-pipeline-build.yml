@@ -1661,7 +1661,7 @@ stages:
                 AZ_CONNECTEDK8S_PID=$!
                 sleep 30
                 export AMW_QUERY_ENDPOINT="https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com"
-                export AZURE_CLIENT_ID="be961593-112c-4256-bf9b-c9ef14c20f2a"
+                export AZURE_CLIENT_ID="849e69d7-d813-45dd-b989-375ca0a418a5"
 
                 envsubst < ./testkube/testkube-test-crs-arc.yaml > ./testkube/testkube-test-crs-ci-dev-arc-proxy.yaml
                 kubectl apply -f ./testkube/api-server-permissions.yaml --validate=false
