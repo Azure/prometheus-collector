@@ -1708,6 +1708,7 @@ stages:
                 kill $AZ_CONNECTEDK8S_PID
                 0<&-
                 <&-
+                kill $(ps -s $$ -o pid=)
                 exit 0
               workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
               displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
