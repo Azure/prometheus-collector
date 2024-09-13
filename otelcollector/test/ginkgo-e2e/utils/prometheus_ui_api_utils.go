@@ -50,7 +50,7 @@ func QueryPromUIFromPod(clientset *kubernetes.Clientset, cfg *rest.Config, names
 		// Execute the command and capture the output
 		var command []string
 		if isLinux {
-			command = []string{"sh", "-c", fmt.Sprintf("curl \"http://localhost:9090%s\"", queryPath)}
+			command = []string{"sh", "-c", fmt.Sprintf("curl --noproxy \"*\" \"http://localhost:9090%s\"", queryPath)}
 		} else {
 			command = []string{"powershell", "-c", fmt.Sprintf("(curl \"http://localhost:9090%s\" %s).Content", queryPath, "-UseBasicParsing")}
 		}
