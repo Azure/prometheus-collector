@@ -6,7 +6,7 @@ spec:
   selector:
     matchLabels:
       app: prometheus-reference-app
-  replicas: 1
+  replicas: 55
   template:
     metadata:
       labels:
@@ -14,14 +14,18 @@ spec:
     spec:
       containers:
         - name: prometheus-reference-app-golang
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-golang
+          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.9.1-grace-arc-ci-cd-09-11-2024-98a98940-ref-app-golang
           env:
             - name: RUN_PERF_TEST
-              value: "false"
+              value: "true"
             - name: SCRAPE_INTERVAL
-              value: "15"
+              value: "60"
             - name: METRIC_COUNT
-              value: "125000"
+              value: "10000"
+            - name: HPA_TESTING
+              value: "true"
+            - name: RESET_INTERVAL
+              value: "3600"
           ports:
             - containerPort: 2112
               protocol: TCP
@@ -29,12 +33,6 @@ spec:
             - containerPort: 2113
               protocol: TCP
               name: "untyped-metrics"
-        - name: prometheus-reference-app-python
-          image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-python
-          ports:
-          - containerPort: 2114
-            protocol: TCP
-            name: "python-client"
       nodeSelector:
           kubernetes.io/os: linux
           kubernetes.io/arch: amd64
@@ -53,11 +51,3 @@ spec:
       protocol: TCP
       port: 2112
       targetPort: 2112
-    - name: "untyped-metrics"
-      protocol: TCP
-      port: 2113
-      targetPort: 2113
-    - name: "python-client"
-      protocol: TCP
-      port: 2114
-      targetPort: 2114
