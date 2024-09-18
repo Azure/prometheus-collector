@@ -7,11 +7,22 @@ metadata:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
 spec:
-  {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+# New TargetAllocator Enabled scenario
+{{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+  {{- if .Values.AzureMonitorMetrics.CollectorHPAEnabled }} # If HPA toggle is enabled, allow HPA to modify the deployment spec
+  {{- $currentSpec := (lookup "apps/v1" "Deployment" "kube-system" "ama-metrics").spec }}
+    {{- if $currentSpec }}
+    # in if check
+  replicas: {{ $currentSpec.replicas }}
+    {{- else}} # If current spec cannot be found, set to default
+  replicas: 2
+    {{- end }}
+  {{- else }} # HPA is not enabled, set the replicas via helm adapter values
   replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
-  {{- else}}
-  replicas: 1
   {{- end }}
+{{- else }} # Legacy with no TargetAllocator Enabled
+  replicas: 1
+{{- end }}
   revisionHistoryLimit: 2
   paused: false
   selector:
@@ -67,6 +78,12 @@ spec:
               value: "false"
             - name: AZMON_OPERATOR_ENABLED
             {{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
+              value: "true"
+            {{- else }}
+              value: "false"
+            {{- end }}
+            - name: AZMON_COLLECTOR_HPA_ENABLED
+            {{- if eq .Values.AzureMonitorMetrics.CollectorHPAEnabled true }}
               value: "true"
             {{- else }}
               value: "false"

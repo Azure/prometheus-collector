@@ -1,4 +1,4 @@
-## Managed Prometheus support for Sharding (In private preview)
+## Managed Prometheus support for Sharding
 
 
 ### Overview
