@@ -1,0 +1,47 @@
+scrape_configs:
+- job_name: acstor-capacity-provisioner
+  honor_labels: true
+  scrape_interval: $$SCRAPE_INTERVAL$$
+  scheme: http
+  kubernetes_sd_configs:
+    - role: pod
+  relabel_configs:
+    # Include only specified namespace
+  - source_labels: [__meta_kubernetes_namespace]
+    action: keep
+    regex: acstor
+    # Include only specified pods
+  - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name, __meta_kubernetes_pod_label_app_kubernetes_io_component]
+    action: keep
+    regex: capacity-provisioner;capacity-provisioner
+    # Include only specified ports
+  - source_labels: [__meta_kubernetes_pod_container_port_name]
+    action: keep
+    regex: metrics
+
+  # If prometheus.io/path is specified, scrape this path instead of /metrics
+  #- source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+  #  action: replace
+  #  target_label: __metrics_path__
+  #  regex: (.+)
+
+
+  # If prometheus.io/scheme is specified, scrape with this scheme instead of http
+  #- source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scheme]
+  #  action: replace
+  #  regex: (http|https)
+  #  target_label: __scheme__
+
+  # Include the pod namespace as a label for each metric (namespace)
+  #- source_labels: [__meta_kubernetes_namespace]
+  #  action: replace
+  #  target_label: namespace
+
+  # Include the pod name as a label for each metric
+  #- source_labels: [__meta_kubernetes_pod_name]
+  #  action: replace
+  #  target_label: pod
+
+  # [Optional] Include all pod labels as labels for each metric
+  #- action: labelmap
+  #  regex: __meta_kubernetes_pod_label_(.+)
