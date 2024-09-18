@@ -18,6 +18,7 @@ var (
 	windowsExporterRegex, windowsKubeProxyRegex                         string
 	networkobservabilityRetinaRegex, networkobservabilityHubbleRegex    string
 	networkobservabilityCiliumRegex, podAnnotationsRegex                string
+	acstorCapacityProvisionerRegex, acstorMetricsExporterRegex          string
 	kubeletRegex_minimal_mac                                            = "kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_used_bytes|kubelet_node_name|kubelet_running_pods|kubelet_running_pod_count|kubelet_running_sum_containers|kubelet_running_containers|kubelet_running_container_count|volume_manager_total_volumes|kubelet_node_config_error|kubelet_runtime_operations_total|kubelet_runtime_operations_errors_total|kubelet_runtime_operations_duration_seconds_bucket|kubelet_runtime_operations_duration_seconds_sum|kubelet_runtime_operations_duration_seconds_count|kubelet_pod_start_duration_seconds_bucket|kubelet_pod_start_duration_seconds_sum|kubelet_pod_start_duration_seconds_count|kubelet_pod_worker_duration_seconds_bucket|kubelet_pod_worker_duration_seconds_sum|kubelet_pod_worker_duration_seconds_count|storage_operation_duration_seconds_bucket|storage_operation_duration_seconds_sum|storage_operation_duration_seconds_count|storage_operation_errors_total|kubelet_cgroup_manager_duration_seconds_bucket|kubelet_cgroup_manager_duration_seconds_sum|kubelet_cgroup_manager_duration_seconds_count|kubelet_pleg_relist_interval_seconds_bucket|kubelet_pleg_relist_interval_seconds_count|kubelet_pleg_relist_interval_seconds_sum|kubelet_pleg_relist_duration_seconds_bucket|kubelet_pleg_relist_duration_seconds_count|kubelet_pleg_relist_duration_seconds_sum|rest_client_requests_total|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info|kubelet_certificate_manager_client_ttl_seconds|kubelet_certificate_manager_client_expiration_renew_errors|kubelet_server_expiration_renew_errors|kubelet_certificate_manager_server_ttl_seconds|kubelet_volume_stats_available_bytes|kubelet_volume_stats_capacity_bytes|kubelet_volume_stats_inodes_free|kubelet_volume_stats_inodes_used|kubelet_volume_stats_inodes|kube_persistentvolumeclaim_access_mode|kube_persistentvolumeclaim_labels|kube_persistentvolume_status_phase"
 	coreDNSRegex_minimal_mac                                            = "coredns_build_info|coredns_panics_total|coredns_dns_responses_total|coredns_forward_responses_total|coredns_dns_request_duration_seconds|coredns_dns_request_duration_seconds_bucket|coredns_dns_request_duration_seconds_sum|coredns_dns_request_duration_seconds_count|coredns_forward_request_duration_seconds|coredns_forward_request_duration_seconds_bucket|coredns_forward_request_duration_seconds_sum|coredns_forward_request_duration_seconds_count|coredns_dns_requests_total|coredns_forward_requests_total|coredns_cache_hits_total|coredns_cache_misses_total|coredns_cache_entries|coredns_plugin_enabled|coredns_dns_request_size_bytes|coredns_dns_request_size_bytes_bucket|coredns_dns_request_size_bytes_sum|coredns_dns_request_size_bytes_count|coredns_dns_response_size_bytes|coredns_dns_response_size_bytes_bucket|coredns_dns_response_size_bytes_sum|coredns_dns_response_size_bytes_count|coredns_dns_response_size_bytes_bucket|coredns_dns_response_size_bytes_sum|coredns_dns_response_size_bytes_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines|kubernetes_build_info"
 	cadvisorRegex_minimal_mac                                           = "container_spec_cpu_quota|container_spec_cpu_period|container_memory_rss|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_network_receive_packets_total|container_network_transmit_packets_total|container_network_receive_packets_dropped_total|container_network_transmit_packets_dropped_total|container_fs_reads_total|container_fs_writes_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_memory_cache|container_memory_swap|container_cpu_cfs_throttled_periods_total|container_cpu_cfs_periods_total|container_memory_rss|kubernetes_build_info|container_start_time_seconds"
@@ -29,8 +30,10 @@ var (
 	networkobservabilityRetinaRegex_minimal_mac                         = "networkobservability.*"
 	networkobservabilityHubbleRegex_minimal_mac                         = "hubble.*"
 	// networkobservabilityCiliumRegex_minimal_mac                         = "cilium_drop.*|cilium_forward.*"
-	windowsexporterRegex_minimal_mac  = "windows_system_system_up_time|windows_cpu_time_total|windows_memory_available_bytes|windows_os_visible_memory_bytes|windows_memory_cache_bytes|windows_memory_modified_page_list_bytes|windows_memory_standby_cache_core_bytes|windows_memory_standby_cache_normal_priority_bytes|windows_memory_standby_cache_reserve_bytes|windows_memory_swap_page_operations_total|windows_logical_disk_read_seconds_total|windows_logical_disk_write_seconds_total|windows_logical_disk_size_bytes|windows_logical_disk_free_bytes|windows_net_bytes_total|windows_net_packets_received_discarded_total|windows_net_packets_outbound_discarded_total|windows_container_available|windows_container_cpu_usage_seconds_total|windows_container_memory_usage_commit_bytes|windows_container_memory_usage_private_working_set_bytes|windows_container_network_receive_bytes_total|windows_container_network_transmit_bytes_total"
-	windowskubeproxyRegex_minimal_mac = "kubeproxy_sync_proxy_rules_duration_seconds|kubeproxy_sync_proxy_rules_duration_seconds_bucket|kubeproxy_sync_proxy_rules_duration_seconds_sum|kubeproxy_sync_proxy_rules_duration_seconds_count|rest_client_requests_total|rest_client_request_duration_seconds|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines"
+	windowsexporterRegex_minimal_mac           = "windows_system_system_up_time|windows_cpu_time_total|windows_memory_available_bytes|windows_os_visible_memory_bytes|windows_memory_cache_bytes|windows_memory_modified_page_list_bytes|windows_memory_standby_cache_core_bytes|windows_memory_standby_cache_normal_priority_bytes|windows_memory_standby_cache_reserve_bytes|windows_memory_swap_page_operations_total|windows_logical_disk_read_seconds_total|windows_logical_disk_write_seconds_total|windows_logical_disk_size_bytes|windows_logical_disk_free_bytes|windows_net_bytes_total|windows_net_packets_received_discarded_total|windows_net_packets_outbound_discarded_total|windows_container_available|windows_container_cpu_usage_seconds_total|windows_container_memory_usage_commit_bytes|windows_container_memory_usage_private_working_set_bytes|windows_container_network_receive_bytes_total|windows_container_network_transmit_bytes_total"
+	windowskubeproxyRegex_minimal_mac          = "kubeproxy_sync_proxy_rules_duration_seconds|kubeproxy_sync_proxy_rules_duration_seconds_bucket|kubeproxy_sync_proxy_rules_duration_seconds_sum|kubeproxy_sync_proxy_rules_duration_seconds_count|rest_client_requests_total|rest_client_request_duration_seconds|rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count|process_resident_memory_bytes|process_cpu_seconds_total|go_goroutines"
+	acstorCapacityProvisionerRegex_minimal_mac = "storage_pool_ready_state|storage_pool_capacity_used_bytes|storage_pool_capacity_provisioned_bytes|storage_pool_snapshot_capacity_reserved_bytes"
+	acstorMetricsExporter_minimal_mac          = "disk_pool_ready_state|disk_read_operations_completed_total|disk_write_operations_total|disk_read_operations_time_total_sec|disk_write_operations_time_total_sec|disk_errors_total|disk_read_bytes_total|disk_written_bytes_total"
 )
 
 // getStringValue checks the type of the value and returns it as a string if possible.
@@ -70,7 +73,7 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 
 	if minimalValue := getStringValue(tree.Get("minimalingestionprofile")); minimalValue != "" {
 		configMap["minimalingestionprofile"] = minimalValue
- }
+	}
 
 	configMap["kubelet"] = getStringValue(tree.Get("kubelet"))
 	configMap["coredns"] = getStringValue(tree.Get("coredns"))
@@ -86,6 +89,8 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 	configMap["networkobservabilityHubble"] = getStringValue(tree.Get("networkobservabilityHubble"))
 	configMap["networkobservabilityCilium"] = getStringValue(tree.Get("networkobservabilityCilium"))
 	configMap["podannotations"] = getStringValue(tree.Get("podannotations"))
+	configMap["acstor-capacity-provisioner"] = getStringValue(tree.Get("acstor-capacity-provisioner"))
+	configMap["acstor-metrics-exporter"] = getStringValue(tree.Get("acstor-metrics-exporter"))
 
 	fmt.Printf("Parsed config map for default-targets-metrics-keep-list: %v\n", configMap)
 
@@ -101,21 +106,23 @@ func parseConfigMapForKeepListRegex() map[string]interface{} {
 func validateRegexValues(regexValues RegexValues) error {
 	// Define a map of field names to their corresponding values
 	fields := map[string]string{
-		"kubelet":                    regexValues.kubelet,
-		"coredns":                    regexValues.coredns,
-		"cadvisor":                   regexValues.cadvisor,
-		"kubeproxy":                  regexValues.kubeproxy,
-		"apiserver":                  regexValues.apiserver,
-		"kubestate":                  regexValues.kubestate,
-		"nodeexporter":               regexValues.nodeexporter,
-		"kappiebasic":                regexValues.kappiebasic,
-		"windowsexporter":            regexValues.windowsexporter,
-		"windowskubeproxy":           regexValues.windowskubeproxy,
-		"networkobservabilityretina": regexValues.networkobservabilityretina,
-		"networkobservabilityhubble": regexValues.networkobservabilityhubble,
-		"networkobservabilitycilium": regexValues.networkobservabilitycilium,
-		"podannotations":             regexValues.podannotations,
-		"minimalingestionprofile":    regexValues.minimalingestionprofile,
+		"kubelet":                     regexValues.kubelet,
+		"coredns":                     regexValues.coredns,
+		"cadvisor":                    regexValues.cadvisor,
+		"kubeproxy":                   regexValues.kubeproxy,
+		"apiserver":                   regexValues.apiserver,
+		"kubestate":                   regexValues.kubestate,
+		"nodeexporter":                regexValues.nodeexporter,
+		"kappiebasic":                 regexValues.kappiebasic,
+		"windowsexporter":             regexValues.windowsexporter,
+		"windowskubeproxy":            regexValues.windowskubeproxy,
+		"networkobservabilityretina":  regexValues.networkobservabilityretina,
+		"networkobservabilityhubble":  regexValues.networkobservabilityhubble,
+		"networkobservabilitycilium":  regexValues.networkobservabilitycilium,
+		"podannotations":              regexValues.podannotations,
+		"minimalingestionprofile":     regexValues.minimalingestionprofile,
+		"acstor-capacity-provisioner": regexValues.acstorcapacityprovisioner,
+		"acstor-metrics-exporter":     regexValues.acstormetricsexporter,
 	}
 
 	// Iterate over the fields and validate each regex
@@ -145,6 +152,8 @@ func populateKeepListFromConfigMap(parsedConfig map[string]interface{}) (RegexVa
 		networkobservabilitycilium: getStringValue(parsedConfig["networkobservabilityCilium"]),
 		minimalingestionprofile:    getStringValue(parsedConfig["minimalingestionprofile"]),
 		podannotations:             getStringValue(parsedConfig["podannotations"]),
+		acstorcapacityprovisioner:  getStringValue(parsedConfig["acstor-capacity-provisioner"]),
+		acstormetricsexporter:      getStringValue(parsedConfig["acstor-metrics-exporter"]),
 	}
 
 	// Validate regex values
@@ -187,6 +196,8 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		networkobservabilityHubbleRegex = fmt.Sprintf("%s|%s", regexValues.networkobservabilityhubble, networkobservabilityHubbleRegex_minimal_mac)
 		networkobservabilityCiliumRegex = regexValues.networkobservabilitycilium
 		podAnnotationsRegex = regexValues.podannotations
+		acstorCapacityProvisionerRegex = fmt.Sprintf("%s|%s", regexValues.acstorcapacityprovisioner, acstorCapacityProvisionerRegex_minimal_mac)
+		acstorMetricsExporterRegex = fmt.Sprintf("%s|%s", regexValues.acstormetricsexporter, acstorMetricsExporter_minimal_mac)
 
 		// Print the updated regex strings after appending values
 		// Only log this in debug mode
@@ -221,6 +232,8 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		networkobservabilityHubbleRegex = regexValues.networkobservabilityhubble
 		networkobservabilityCiliumRegex = regexValues.networkobservabilitycilium
 		podAnnotationsRegex = regexValues.podannotations
+		acstorCapacityProvisionerRegex = regexValues.acstorcapacityprovisioner
+		acstorMetricsExporterRegex = regexValues.acstormetricsexporter
 	}
 }
 
@@ -264,6 +277,8 @@ func tomlparserTargetsMetricsKeepList() {
 		"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": networkobservabilityRetinaRegex,
 		"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": networkobservabilityHubbleRegex,
 		"NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX": networkobservabilityCiliumRegex,
+		"ACSTORCAPACITYPROVISONER_KEEP_LIST_REGEX":           acstorCapacityProvisionerRegex,
+		"ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX":              acstorMetricsExporterRegex,
 	}
 
 	out, err := yaml.Marshal(data)

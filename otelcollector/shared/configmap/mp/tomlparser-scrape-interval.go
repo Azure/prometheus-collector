@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	defaultScrapeInterval            = "30s"
+	defaultScrapeInterval = "30s"
 )
 
 var (
@@ -75,6 +75,8 @@ func processConfigMap() map[string]string {
 			intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityRetina"))
 			intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityHubble"))
 			intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityCilium"))
+			intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "acstor-capacity-provisioner"))
+			intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "acstor-metrics-exporter"))
 
 			return intervalHash
 		} else {
@@ -93,7 +95,8 @@ func processConfigMap() map[string]string {
 		"WINDOWSKUBEPROXY_SCRAPE_INTERVAL", "PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL",
 		"POD_ANNOTATION_SCRAPE_INTERVAL", "KAPPIEBASIC_SCRAPE_INTERVAL",
 		"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL", "NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL",
-		"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL",
+		"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL", "ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL",
+		"ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL",
 	}
 	fmt.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
 	for _, key := range keys {

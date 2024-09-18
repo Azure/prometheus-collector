@@ -25,6 +25,8 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["networkobservabilityHubble"] = "true"
 	config["networkobservabilityCilium"] = "true"
 	config["noDefaultsEnabled"] = "false"
+	config["acstor-capacity-provisioner"] = "false"
+	config["acstor-metrics-exporter"] = "false"
 	return config, nil
 }
 
@@ -46,6 +48,8 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map
 	config["networkobservabilityHubble"] = "true"
 	config["networkobservabilityCilium"] = "true"
 	config["noDefaultsEnabled"] = "false"
+	config["acstor-capacity-provisioner"] = "false"
+	config["acstor-metrics-exporter"] = "false"
 
 	if _, err := os.Stat(fcl.ConfigMapMountPath); os.IsNotExist(err) {
 		fmt.Println("configmap for default scrape settings not mounted, using defaults")
@@ -144,6 +148,16 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 		fmt.Printf("config::Using scrape settings for networkobservabilityCilium: %v\n", cp.NetworkObservabilityCilium)
 	}
 
+	if val, ok := parsedConfig["acstor-capacity-provisioner"]; ok && val != "" {
+		cp.AcstorCapacityProvisioner = val
+		fmt.Printf("config:: Using scrape settings for acstor-capacity-provisioner: %v\n", cp.AcstorCapacityProvisioner)
+	}
+
+	if val, ok := parsedConfig["acstor-metrics-exporter"]; ok && val != "" {
+		cp.AcstorMetricsExporter = val
+		fmt.Printf("config:: Using scrape settings for acstor-metrics-exporter: %v\n", cp.AcstorMetricsExporter)
+	}
+
 	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType == "ReplicaSet" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" &&
@@ -183,6 +197,8 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED=%v\n", cp.NetworkObservabilityHubble))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED=%v\n", cp.NetworkObservabilityCilium))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", cp.NoDefaultsEnabled))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ACSTORCAPACITYPROVISIONER_SCRAPING_ENABLED=%v\n", cp.AcstorCapacityProvisioner))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ACSTORMETRICSEXPORTER_SCRAPING_ENABLED=%v\n", cp.AcstorMetricsExporter))
 
 	return nil
 }
