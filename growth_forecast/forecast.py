@@ -18,6 +18,7 @@ from azure.identity import DefaultAzureCredential
 from azure.monitor.query import MetricsQueryClient, MetricAggregationType
 pd.options.mode.chained_assignment = None
 import prometheus_client
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # Constants
 SUBSCRIPTION_ID = "b9842c7c-1a38-4385-8f39-a51314758bcf"
@@ -93,9 +94,7 @@ def get_time_series_df(client, uri, metric_name, timespan_hours, granularity_hou
     df['ds'] = df['ds'].astype('datetime64[ns]')
     return df
 
-def main():
-    print("Welcome to the Growth Forecast Script")
-
+def forecast_job(g):
     credential = DefaultAzureCredential()
     client = MetricsQueryClient(credential)
     df = get_time_series_df(client, METRICS_URI, METRIC_NAME, TIMESPAN_HOURS, GRANULARITY_HOURS, AGGREGATION_TYPE)
@@ -107,10 +106,19 @@ def main():
     difference = round((timestamp - datetime.now()) / timedelta(days=1))
     print("The limit will be reached at {} which is {} days from now".format(timestamp, difference))
 
-    g = prometheus_client.Gauge('predicted_metric_limit_timestamp_seconds', 'Description of gauge')
     g.set(timestamp.timestamp())
     print(timestamp.timestamp())
+
+def main():
+    print("Welcome to the Growth Forecast Script")
+    g = prometheus_client.Gauge('predicted_metric_limit_timestamp_seconds', 'Description of gauge')
+    forecast_job(g)
+
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(lambda: forecast_job(g), 'interval', minutes=15)
+    scheduler.start()
     prometheus_client.start_http_server(PROMETHEUS_PORT)
+
     while True:
         pass
 
