@@ -189,7 +189,7 @@ stages:
           docker buildx create --name dockerbuilder
           docker buildx use dockerbuilder
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --file linux/Dockerfile -t $(LINUX_FORECAST_PYTHON_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/forecastingpythonimage/metadata.json --push
+          docker buildx build . --file Dockerfile -t $(LINUX_FORECAST_PYTHON_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/forecastingpythonimage/metadata.json --push
           docker pull $(LINUX_FORECAST_PYTHON_FULL_IMAGE_NAME)  
         workingDirectory: $(Build.SourcesDirectory)/growth_forecast
         displayName: "Build: build and push reference app python linux image to dev ACR"
