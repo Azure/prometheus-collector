@@ -1,0 +1,9 @@
+prophet
+pandas
+numpy
+datetime
+matplotlib
+urllib3
+azure-identity
+azure-monitor-query
+prometheus-client

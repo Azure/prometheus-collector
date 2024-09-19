@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/hack
 pr:
   autoCancel: true
   branches:
@@ -63,6 +64,7 @@ stages:
           LINUX_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-113)
           LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
           LINUX_REF_APP_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-python
+          LINUX_FORECAST_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-forecast-python
 
           # Truncating to 115 characters as it is required by docker (4 characters used in -win and 9 characters used in -ltsc2019/-ltsc2022)
           WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-115)
@@ -93,6 +95,7 @@ stages:
           LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_PYTHON_IMAGE_TAG
           WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
           WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_PYTHON_IMAGE_TAG
+          LINUX_FORECAST_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_FORECAST_PYTHON_IMAGE_TAG
 
           echo "##vso[build.updatebuildnumber]$SEMVER"
           echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
@@ -107,6 +110,7 @@ stages:
           echo "##vso[task.setvariable variable=LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME"
           echo "##vso[task.setvariable variable=WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME"
           echo "##vso[task.setvariable variable=WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME;isOutput=true]$WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=LINUX_FORECAST_PYTHON_FULL_IMAGE_NAME;isOutput=true]$LINUX_FORECAST_PYTHON_FULL_IMAGE_NAME"
           echo "##vso[task.setvariable variable=WINDOWS_IMAGE_TAG;isOutput=true]$WINDOWS_IMAGE_TAG"
           echo "##vso[task.setvariable variable=WINDOWS_2019_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2019_BASE_IMAGE_VERSION"
           echo "##vso[task.setvariable variable=WINDOWS_2022_BASE_IMAGE_VERSION;isOutput=true]$WINDOWS_2022_BASE_IMAGE_VERSION"
@@ -164,6 +168,31 @@ stages:
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
+
+  - job: Linux_Python_Forecasting_App
+    displayName: "Build: linux python forecasting image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      skipComponentGovernanceDetection: true
+      LINUX_FORECAST_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FORECAST_PYTHON_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+    #condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+    steps:
+      - checkout: self
+        persistCredentials: true
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/forecastingpythonimage
+
+          docker buildx create --name dockerbuilder
+          docker buildx use dockerbuilder
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker buildx build . --file linux/Dockerfile -t $(LINUX_FORECAST_PYTHON_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/forecastingpythonimage/metadata.json --push
+          docker pull $(LINUX_FORECAST_PYTHON_FULL_IMAGE_NAME)  
+        workingDirectory: $(Build.SourcesDirectory)/growth_forecast
+        displayName: "Build: build and push reference app python linux image to dev ACR"
 
   - job: Linux_Golang_Reference_App
     displayName: "Build: linux golang reference app image"
