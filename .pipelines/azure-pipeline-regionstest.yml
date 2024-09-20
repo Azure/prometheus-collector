@@ -11,7 +11,7 @@ pool:
 
 steps:
 - task: AzureCLI@2
-  displayName: Azure CLI
+  displayName: Aks Get-Credentials
   inputs:
     azureSubscription: $(AZURESUBSCRIPTION)
     scriptType: ps
