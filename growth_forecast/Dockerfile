@@ -7,4 +7,4 @@ COPY . .
 EXPOSE 8000
 
 # Run forecast.py when the container launches
-CMD ["python", "forecast.py"]
+CMD ["python3", "forecast.py"]
