@@ -257,14 +257,17 @@ var _ = Describe("Regions Suite", func() {
 				var a azquery.Metric = *v
 				fmt.Printf("ID[%d]: %s\r\n", i, *(a.ID))
 				fmt.Printf("Timeseries length: %d\r\n", len(a.TimeSeries))
+
+				Expect(a.TimeSeries).NotTo(BeNil())
 				for j, t := range a.TimeSeries {
 					fmt.Printf("TimeSeries #%d\r\n", j)
 
+					Expect(t.Data).NotTo(BeNil())
 					for k, d := range t.Data {
 						// fmt.Printf("%d - ", k)
 						// fmt.Print((*d).TimeStamp.GoString())
-						fmt.Printf("%d - %s - Average(%f); Count(%f); Max(%f); Min(%f); Total(%f);\r\n", k,
-							(*d).TimeStamp.GoString(),
+						fmt.Printf("%d - %s - Average(%f); Count(%f); Max(%f); Min(%f); Total(%f);\r\n",
+							k, (*d).TimeStamp.GoString(),
 							safeDereferenceFloatPtr((*d).Average),
 							safeDereferenceFloatPtr((*d).Count),
 							safeDereferenceFloatPtr((*d).Maximum),
