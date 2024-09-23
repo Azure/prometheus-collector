@@ -171,7 +171,7 @@ func main() {
 		shared.LogVersionInfo()
 	}
 
-	if ccpMetricsEnabled != "true" {
+	if ccpMetricsEnabled != "true" && osType == "linux" {
 		shared.StartFluentBit(fluentBitConfigFile)
 
 		// Run the command and capture the output

@@ -6,7 +6,7 @@
 # Chart-template.yaml file.
 
 # Define variables
-$ImageTag = "6.9.0-kaveesh-golang-windows-09-12-2024-603c5fd4"
+$ImageTag = "6.9.0-kaveesh-golang-windows-09-12-2024-54de5cb8"
 $AKSRegion = "northeurope"
 $AKSResourceId = "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveeshwin/providers/Microsoft.ContainerService/managedClusters/kaveeshwin"
 
