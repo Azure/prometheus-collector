@@ -246,9 +246,15 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	osType := os.Getenv("OS_TYPE")
 	status := http.StatusOK
 	message := "prometheuscollector is running."
+	processToCheck := ""
+
+	tokenConfigFileLocation := "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
+	if osType == "windows" {
+		tokenConfigFileLocation = "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\TokenConfig.json"
+	}
 
 	// Checking if TokenConfig file exists
-	if _, err := os.Stat("/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"); os.IsNotExist(err) {
+	if _, err := os.Stat(tokenConfigFileLocation); os.IsNotExist(err) {
 		fmt.Println("TokenConfig.json does not exist")
 		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
 			fmt.Println("azmon-container-start-time file exists, reading start time")
@@ -287,14 +293,22 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("azmon-container-start-time file does not exist")
 		}
 	} else {
-		if !shared.IsProcessRunning("/usr/sbin/MetricsExtension") {
+		processToCheck = "/usr/sbin/MetricsExtension"
+		if osType == "windows" {
+			processToCheck = "MetricsExtension.Native.exe"
+		}
+		if !shared.IsProcessRunning(processToCheck) {
 			status = http.StatusServiceUnavailable
 			message = "Metrics Extension is not running (configuration exists)"
 			fmt.Println(message)
 			goto response
 		}
 
-		if !shared.IsProcessRunning("/usr/sbin/mdsd") {
+		processToCheck = "/usr/sbin/mdsd"
+		if osType == "windows" {
+			processToCheck = "MonAgentLauncher.exe"
+		}
+		if !shared.IsProcessRunning(processToCheck) {
 			status = http.StatusServiceUnavailable
 			message = "mdsd not running (configuration exists)"
 			fmt.Println(message)
@@ -323,7 +337,11 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if !shared.IsProcessRunning("/opt/microsoft/otelcollector/otelcollector") {
+	processToCheck = "/opt/microsoft/otelcollector/otelcollector"
+	if osType == "windows" {
+		processToCheck = "otelcollector.exe"
+	}
+	if !shared.IsProcessRunning(processToCheck) {
 		status = http.StatusServiceUnavailable
 		message = "OpenTelemetryCollector is not running."
 		fmt.Println(message)
