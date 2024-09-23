@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/vuln-0923
 pr:
   autoCancel: true
   branches:
@@ -23,6 +24,7 @@ variables:
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   Codeql.Enabled: true
+  GOLANG_VERSION: '1.22'
 
 stages:
 - stage: Build
@@ -186,7 +188,7 @@ stages:
           docker buildx create --name dockerbuilder
           docker buildx use dockerbuilder
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
+          docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(variables.GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
           docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
         workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
         displayName: "Build: build and push reference app golang linux image to dev ACR"
@@ -272,7 +274,7 @@ stages:
           docker buildx create --name dockerbuilder
           docker buildx use dockerbuilder
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
+          docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(variables.GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
           docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)  
         workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
         displayName: "Build: build and push reference app python linux image to dev ACR"
@@ -537,7 +539,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(variables.GOLANG_VERSION)
 
       - bash: |
           sudo apt-get install build-essential -y
@@ -608,7 +610,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(variables.GOLANG_VERSION)
 
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
@@ -622,7 +624,7 @@ stages:
 
           docker buildx create --name dockerbuilder
           docker buildx use dockerbuilder
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(variables.GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
           docker pull $(LINUX_FULL_IMAGE_NAME)
           docker system prune --all -f
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -783,7 +785,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(variables.GOLANG_VERSION)
 
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
@@ -957,7 +959,7 @@ stages:
           docker buildx create --name dockerbuilder
           docker buildx use dockerbuilder
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(variables.GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
           docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
           MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
           DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
@@ -1130,7 +1132,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(variables.GOLANG_VERSION)
 
       - powershell: |
           ./makefile_windows.ps1
@@ -1163,7 +1165,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(variables.GOLANG_VERSION)
 
       - powershell: |
           ./makefile_windows.ps1
@@ -1200,7 +1202,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(variables.GOLANG_VERSION)
 
       - bash: |
           export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
