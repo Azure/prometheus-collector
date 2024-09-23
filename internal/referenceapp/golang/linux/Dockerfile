@@ -1,4 +1,6 @@
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.20
+ARG GOLANG_VERSION
+
+FROM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION}
 
 # Set necessary environmet variables needed for our image
 ENV GO111MODULE=on \
