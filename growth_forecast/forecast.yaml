@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: growth-forecast
+  labels:
+    app: growth-forecast
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: growth-forecast
+  template:
+    metadata:
+      labels:
+        app: growth-forecast
+    spec:
+      containers:
+      - name: growth-forecast-container
+        image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.10.0-grace-hack-09-20-2024-788da26f
+        ports:
+        - containerPort: 8000
+---
+apiVersion: azmonitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: growth-forecast-podmonitor
+  labels:
+    app: growth-forecast
+spec:
+  selector:
+    matchLabels:
+      app: growth-forecast
+  namespaceSelector:
+    any: true
+  podMetricsEndpoints:
+  - port: '8000'

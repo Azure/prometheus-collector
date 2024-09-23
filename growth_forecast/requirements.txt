@@ -3,7 +3,11 @@ pandas
 numpy
 datetime
 matplotlib
+plotly
+PySide2
 urllib3
 azure-identity
 azure-monitor-query
 prometheus-client
+prometheus-api-client
+APIScheduler
