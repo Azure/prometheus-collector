@@ -1,6 +1,5 @@
-ARG GOLANG_VERSION
-
 # Stage 1: prom-config-validator-builder
+ARG GOLANG_VERSION
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as prom-config-validator-builder
 WORKDIR /src
 RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu
@@ -26,6 +25,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     fi
 
 # Stage 2: configuration-reader-builder
+ARG GOLANG_VERSION
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as configuration-reader-builder
 WORKDIR /src
 RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu

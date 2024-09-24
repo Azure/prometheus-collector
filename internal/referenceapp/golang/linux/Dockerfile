@@ -1,5 +1,4 @@
 ARG GOLANG_VERSION
-
 FROM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION}
 
 # Set necessary environmet variables needed for our image
