@@ -24,6 +24,10 @@ func main() {
 	ccpMetricsEnabled := shared.GetEnv("CCP_METRICS_ENABLED", "false")
 	osType := os.Getenv("OS_TYPE")
 
+	if osType == "windows" {
+		shared.SetEnvVariablesForWindows()
+	}
+
 	if osType == "linux" {
 		outputFile := "/opt/inotifyoutput.txt"
 		if err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs"); err != nil {

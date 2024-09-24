@@ -180,3 +180,110 @@ func StartTelegraf() {
 		}
 	}
 }
+
+func SetEnvVariablesForWindows() {
+	// Set Windows version (Microsoft Windows Server 2019 Datacenter or 2022 Datacenter)
+	out, err := exec.Command("wmic", "os", "get", "Caption").Output()
+	if err != nil {
+		log.Fatalf("Failed to get Windows version: %v", err)
+	}
+	windowsVersion := strings.TrimSpace(string(out))
+	windowsVersion = strings.Split(windowsVersion, "\n")[1] // Extract version name
+
+	// Set environment variables for process and machine
+	os.Setenv("windowsVersion", windowsVersion)
+	SetEnvAndSourceBashrcOrPowershell("windowsVersion", windowsVersion, true)
+
+	// Resource ID override
+	mac := os.Getenv("MAC")
+	cluster := os.Getenv("CLUSTER")
+	nodeName := os.Getenv("NODE_NAME")
+	if mac == "" {
+		if cluster == "" {
+			fmt.Printf("CLUSTER is empty or not set. Using %s as CLUSTER\n", nodeName)
+			os.Setenv("customResourceId", nodeName)
+			SetEnvAndSourceBashrcOrPowershell("customResourceId", nodeName, true)
+		} else {
+			os.Setenv("customResourceId", cluster)
+			SetEnvAndSourceBashrcOrPowershell("customResourceId", cluster, true)
+		}
+	} else {
+		os.Setenv("customResourceId", cluster)
+		SetEnvAndSourceBashrcOrPowershell("customResourceId", cluster, true)
+
+		aksRegion := os.Getenv("AKSREGION")
+		os.Setenv("customRegion", aksRegion)
+		SetEnvAndSourceBashrcOrPowershell("customRegion", aksRegion, true)
+
+		// Set variables for Telegraf
+		SetTelegrafVariables(aksRegion, cluster)
+	}
+
+	// Set monitoring-related variables
+	SetMonitoringVariables()
+
+	// Handle custom environment settings
+	customEnvironment := strings.ToLower(os.Getenv("customEnvironment"))
+	mcsEndpoint, mcsGlobalEndpoint := GetMcsEndpoints(customEnvironment)
+
+	// Set MCS endpoint environment variables
+	os.Setenv("MCS_AZURE_RESOURCE_ENDPOINT", mcsEndpoint)
+	os.Setenv("MCS_GLOBAL_ENDPOINT", mcsGlobalEndpoint)
+	SetEnvAndSourceBashrcOrPowershell("MCS_AZURE_RESOURCE_ENDPOINT", mcsEndpoint, true)
+	SetEnvAndSourceBashrcOrPowershell("MCS_GLOBAL_ENDPOINT", mcsGlobalEndpoint, true)
+}
+
+func SetTelegrafVariables(aksRegion, cluster string) {
+	os.Setenv("AKSREGION", aksRegion)
+	SetEnvAndSourceBashrcOrPowershell("AKSREGION", aksRegion, true)
+	os.Setenv("CLUSTER", cluster)
+	SetEnvAndSourceBashrcOrPowershell("CLUSTER", cluster, true)
+	azmonClusterAlias := os.Getenv("AZMON_CLUSTER_ALIAS")
+	os.Setenv("AZMON_CLUSTER_ALIAS", azmonClusterAlias)
+	SetEnvAndSourceBashrcOrPowershell("AZMON_CLUSTER_ALIAS", azmonClusterAlias, true)
+}
+
+func SetMonitoringVariables() {
+	SetEnvAndSourceBashrcOrPowershell("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", true)
+	SetEnvAndSourceBashrcOrPowershell("MA_RoleEnvironment_OsType", "Windows", true)
+	SetEnvAndSourceBashrcOrPowershell("MONITORING_VERSION", "2.0", true)
+	SetEnvAndSourceBashrcOrPowershell("MONITORING_ROLE", "cloudAgentRoleIdentity", true)
+	SetEnvAndSourceBashrcOrPowershell("MONITORING_IDENTITY", "use_ip_address", true)
+	SetEnvAndSourceBashrcOrPowershell("MONITORING_USE_GENEVA_CONFIG_SERVICE", "false", true)
+	SetEnvAndSourceBashrcOrPowershell("SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH", "true", true)
+	SetEnvAndSourceBashrcOrPowershell("ENABLE_MCS", "true", true)
+	SetEnvAndSourceBashrcOrPowershell("MDSD_USE_LOCAL_PERSISTENCY", "false", true)
+}
+
+func GetMcsEndpoints(customEnvironment string) (string, string) {
+	var mcsEndpoint, mcsGlobalEndpoint string
+
+	switch customEnvironment {
+	case "azurepubliccloud":
+		aksRegion := strings.ToLower(os.Getenv("AKSREGION"))
+		if aksRegion == "eastus2euap" || aksRegion == "centraluseuap" {
+			mcsEndpoint = "https://monitor.azure.com/"
+			mcsGlobalEndpoint = "https://global.handler.canary.control.monitor.azure.com"
+		} else {
+			mcsEndpoint = "https://monitor.azure.com/"
+			mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.com"
+		}
+	case "azureusgovernmentcloud":
+		mcsEndpoint = "https://monitor.azure.us/"
+		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.us"
+	case "azurechinacloud":
+		mcsEndpoint = "https://monitor.azure.cn/"
+		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.cn"
+	case "usnat":
+		mcsEndpoint = "https://monitor.azure.eaglex.ic.gov/"
+		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.eaglex.ic.gov"
+	case "ussec":
+		mcsEndpoint = "https://monitor.azure.microsoft.scloud/"
+		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.microsoft.scloud/"
+	default:
+		fmt.Printf("Unknown customEnvironment: %s, setting mcs endpoint to default azurepubliccloud values\n", customEnvironment)
+		mcsEndpoint = "https://monitor.azure.com/"
+		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.com"
+	}
+	return mcsEndpoint, mcsGlobalEndpoint
+}
