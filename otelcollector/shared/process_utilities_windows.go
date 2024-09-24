@@ -59,6 +59,19 @@ func isProcessRunningLinux(processName string) bool {
 	return false
 }
 
+type ProcessEntry32 struct {
+	Size              uint32
+	CntUsage          uint32
+	ProcessID         uint32
+	DefaultHeapID     uintptr
+	ModuleID          uint32
+	CntThreads        uint32
+	ParentProcessID   uint32
+	PriorityClassBase int32
+	Flags             uint32
+	ExeFile           [260]uint16 // Process name
+}
+
 // Windows implementation using syscalls
 func isProcessRunningWindows(processName string) bool {
 	kernel32 := syscall.NewLazyDLL("kernel32.dll")
@@ -66,23 +79,24 @@ func isProcessRunningWindows(processName string) bool {
 	procProcessFirst := kernel32.NewProc("Process32FirstW")
 	procProcessNext := kernel32.NewProc("Process32NextW")
 	handle, _, _ := procSnapshot.Call(2, 0) // TH32CS_SNAPPROCESS
-
-	if handle < 0 {
+	if handle == 0 {
 		fmt.Println("Error getting snapshot of processes")
 		return false
 	}
 	defer syscall.CloseHandle(syscall.Handle(handle))
-
-	var entry [568]byte // PROCESSENTRY32 struct size
-	*(*uint32)(unsafe.Pointer(&entry[0])) = uint32(unsafe.Sizeof(entry))
-
+	var entry ProcessEntry32
+	entry.Size = uint32(unsafe.Sizeof(entry))
+	// Get the first process
 	ret, _, _ := procProcessFirst.Call(handle, uintptr(unsafe.Pointer(&entry)))
 	for ret != 0 {
-		exeFile := syscall.UTF16ToString((*[260]uint16)(unsafe.Pointer(&entry[36]))[:])
+		// Convert UTF-16 file name to string
+		exeFile := syscall.UTF16ToString(entry.ExeFile[:])
 
-		if strings.Contains(exeFile, processName) {
+		// Case-insensitive comparison
+		if strings.EqualFold(exeFile, processName) {
 			return true
 		}
+		// Move to the next process
 		ret, _, _ = procProcessNext.Call(handle, uintptr(unsafe.Pointer(&entry)))
 	}
 	return false
