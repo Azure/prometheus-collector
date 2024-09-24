@@ -73,6 +73,6 @@ SHELL ["powershell"]
 RUN ./opt/scripts/setup.ps1
 
 # Run the Go executable, entrypoint
-# ENTRYPOINT ["powershell", "C:\\opt\\microsoft\\main.exe"]
-ENTRYPOINT ["powershell", "C:\\opt\\scripts\\main.ps1"]
+ENTRYPOINT ["powershell", "C:\\opt\\microsoft\\main.exe"]
+# ENTRYPOINT ["powershell", "C:\\opt\\scripts\\main.ps1"]
 
