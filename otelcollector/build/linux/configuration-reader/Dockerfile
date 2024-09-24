@@ -7,10 +7,6 @@ RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu
 
 COPY ./prom-config-validator-builder/go.mod ./prom-config-validator-builder/go.sum ./prom-config-validator-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
-COPY ./pkgtranslatorprometheus/go.mod ./pkgtranslatorprometheus/go.sum ./pkgtranslatorprometheus/
-
-WORKDIR /src/pkgtranslatorprometheus
-RUN go mod download
 
 WORKDIR /src/prometheusreceiver
 RUN go version
@@ -21,7 +17,6 @@ RUN go mod download
 
 COPY ./prom-config-validator-builder /src/prom-config-validator-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
-COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
