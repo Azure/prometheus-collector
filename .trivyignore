@@ -1,11 +1,15 @@
 # CRITICAL
 # telegraf
 CVE-2024-41110
+# kube-state-metrics
+CVE-2024-24790
 # HIGH
 # telegraf
 GHSA-7jwh-3vrq-q3m8
 CVE-2024-27289
 CVE-2024-27304
+# kube-state-metrics
+CVE-2024-34156
 # MEDIUM
 # telegraf
 CVE-2024-35255
@@ -14,3 +18,8 @@ CVE-2024-24557
 CVE-2024-29018
 CVE-2023-45288
 CVE-2024-24786
+# kube-state-metrics
+CVE-2024-24789
+CVE-2024-24791
+CVE-2024-34155
+CVE-2024-34158
