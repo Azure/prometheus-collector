@@ -31,48 +31,32 @@
     hostMountpointSelector: 'mountpoint="/"',
     windowsExporterSelector: 'job="windows-exporter"',
     containerfsSelector: 'container!=""',
-    clusterSelector: 'cluster="replace_cluster_name_here"',
 
     // Grafana dashboard IDs are necessary for stable links for dashboards
     grafanaDashboardIDs: {
-      //non-default
-      'k8s-resources-multicluster.json': 'e6fd5c5a88514d61af69c0d97ee76738',
+      'apiserver.json': std.md5('apiserver.json'),
+      'cluster-total.json': std.md5('cluster-total.json'),
+      'controller-manager.json': std.md5('controller-manager.json'),
       'k8s-resources-cluster.json': 'efa86fd1d0c121a26444b636a3f56738',
+      'k8s-resources-multicluster.json': std.md5('k8s-resources-multicluster.json'),
       'k8s-resources-namespace.json': '85a562078cdf77779eaa1add43cc6738',
+      'k8s-resources-node.json': '200ac8fdbfbb74b39aff88118e4d6738',
       'k8s-resources-pod.json': '6581e46e4e5c7ba40a07646395ef6738',
-      //not-used 'k8s-multicluster-rsrc-use.json': 'NJ9AlnsObVgj9uKiJMeAqfzMi1wihOMupcsDhlhR',
-      //not-used 'k8s-cluster-rsrc-use.json': 'uXQldxzqUNgIOUX6FyZNvqgP2vgYb78daNu4GiDc',
-      //not-used 'k8s-node-rsrc-use.json': 'E577CMUOwmPsxVVqM9lj40czM1ZPjclw7hGa7OT7',
-      // ? Confirm if I need to add the new dashboards here
-      //not-used 'nodes.json': 'kcb9C2QDe4IYcjiTOmYyfhsImuzxRcvwWC3YLJPS',
-      //non-default
-      'persistentvolumesusage.json': '497766c2c6ea4851b6b4397cb8a96738',
-      //not-used 'pods.json': 'AMK9hS0rSbSz7cKjPHcOtk6CGHFjhSHwhbQ3sedK',
-      //not-used 'statefulset.json': 'dPiBt0FRG5BNYo0XJ4L0Meoc7DWs9eL40c1CRc1g',
       'k8s-resources-windows-cluster.json': '6438557df4391b100730f2494bcc6738',
       'k8s-resources-windows-namespace.json': '98e54027a2724ab1d4c45666c1fa6738',
       'k8s-resources-windows-pod.json': '56497a7ea5610e936dc6ed374a7c6738',
+      'k8s-resources-workload.json': 'a164a7f0339f99e89cea5cb47e9b6738',
+      'k8s-resources-workloads-namespace.json': 'a87fb0d919ec0ea5f6543124e16c6738',
       'k8s-windows-cluster-rsrc-use.json': 'VESDB6738',
       'k8s-windows-node-rsrc-use.json': 'YCBDf6738',
-      'k8s-resources-workloads-namespace.json': 'a87fb0d919ec0ea5f6543124e16c6738',
-      'k8s-resources-workload.json': 'a164a7f0339f99e89cea5cb47e9b6738',
-      'apiserver.json': 'efe630eb6d9d4888ac542cad7a666738',
-      'controller-manager.json': '3aa700ed75ce4c64ba52ef5ca23f6738',
-      'scheduler.json': '0252eb9a5da7445a8787400871546738',
-      'proxy.json': '6cc85d728d7245aeaa630a3486206738',
       'kubelet.json': '3138fa155d5915769fbded898ac06738',
-      //newly added non-default
-      'workload-total.json': 'a11d4aaa68bb4018b6a83623ca046738',
-      //non-default
-      'pod-total.json': 'e7f918d9d1aa4d37a3933c0f9a816738',
-      //non-default
-      'namespace-by-workload.json': '2043d0bedbc24793aecdc5ed7dc16738',
-      //non-default
-      'namespace-by-pod.json': '6fd059f91b894b499a13fada53606738',
-      'k8s-resources-node.json': '200ac8fdbfbb74b39aff88118e4d6738',
-      //non-default
-      'cluster-total.json': '2fdf7ea1f7c04f028a220e7835066738', 
-
+      'namespace-by-pod.json': std.md5('namespace-by-pod.json'),
+      'namespace-by-workload.json': std.md5('namespace-by-workload.json'),
+      'persistentvolumesusage.json': std.md5('persistentvolumesusage.json'),
+      'pod-total.json': std.md5('pod-total.json'),
+      'proxy.json': std.md5('proxy.json'),
+      'scheduler.json': std.md5('scheduler.json'),
+      'workload-total.json': std.md5('workload-total.json'),
     },
 
     // Support for Grafana 7.2+ `$__rate_interval` instead of `$__interval`
@@ -114,7 +98,7 @@
 
     // This list of disk device names is referenced in various expressions.
     diskDevices: ['mmcblk.p.+', 'nvme.+', 'rbd.+', 'sd.+', 'vd.+', 'xvd.+', 'dm-.+', 'dasd.+'],
-    diskDeviceSelector: 'device=~"%s"' % std.join('|', self.diskDevices),
+    diskDeviceSelector: 'device=~"(/dev.+)|%s"' % std.join('|', self.diskDevices),
 
     // Certain workloads (e.g. KubeVirt/CDI) will fully utilise the persistent volume they claim
     // the size of the PV will never grow since they consume the entirety of the volume by design.

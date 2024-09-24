@@ -1,4 +1,4 @@
-## Managed Prometheus support for CRD (In private preview)
+## Managed Prometheus support for CRD
 
 ### Use Prometheus Pod and Service Monitor Custom Resources
 The Azure Monitor metrics add-on supports scraping Prometheus metrics using Prometheus - Pod Monitors and Service Monitors, similar to the OSS Prometheus operator. Enabling the add-on will deploy the Pod and Service Monitor custom resource definitions to allow you to create your own custom resources.
@@ -7,12 +7,11 @@ Creating these custom resources allows for easy configuration of scrape jobs in 
 This document illustrates the steps need to setup custom resources (pod monitors and service monitors) with Azure Managed Prometheus to setup scrape jobs for the workloads running in your AKS clusters. 
 
 ### Pre-requisites
-1.	You have Azure Managed Prometheus Operator model configured in the AKS cluster. Currently this feature is in private preview – please send us an email to ciprometheus@microsoft.com to enable the feature for your cluster or subscription.
-2.	Azure Monitor Workspace is configured and receiving Azure Managed Prometheus metrics.
-3.	The workload that you want to scrape metrics from is deployed and running on the AKS cluster.
+1.	Azure Monitor Workspace is configured and receiving Azure Managed Prometheus metrics.
+2.	The workload that you want to scrape metrics from is deployed and running on the AKS cluster.
 
 ### Enable Azure Managed Prometheus with Operator/CRD support
-Once your cluster/subscription is enabled with preview, you can enable Managed Prometheus for the AKS cluster. This will deploy the Azure Monitor metrics add-on and will automatically install the custom resource definition (CRD) for pod and service monitors. The add-on will use the same custom resource definition (CRD) for pod and service monitors as open-source Prometheus, except for a change in the group name and API version. If you have existing Prometheus CRDs and custom resources on your cluster, these will not conflict with the CRDs created by the add-on.
+Once your cluster has Managed Prometheus enabled, Azure Monitor metrics add-on and will automatically install the custom resource definition (CRD) for pod and service monitors. The add-on will use the same custom resource definition (CRD) for pod and service monitors as open-source Prometheus, except for a change in the group name and API version. If you have existing Prometheus CRDs and custom resources on your cluster, these will not conflict with the CRDs created by the add-on.
 At the same time, the CRDs created for the OSS Prometheus will not be picked up by the managed Prometheus addon. This is intentional for the purposes of isolation of scrape jobs.
 
 ### Create a Pod or Service Monitor
