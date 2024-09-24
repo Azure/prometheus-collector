@@ -947,6 +947,12 @@ stages:
     steps:
       - checkout: self
         persistCredentials: true
+
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: $(GOLANG_VERSION)
+  
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
@@ -1038,6 +1044,11 @@ stages:
       DOCKER_BUILDKIT: 1
       skipComponentGovernanceDetection: true
     steps:
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: $(GOLANG_VERSION)
+
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
 
