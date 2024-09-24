@@ -180,7 +180,7 @@ var _ = DescribeTable("The Prometheus UI should return the /metrics data",
 			// Execute the command and capture the output
 			var command []string
 			if isLinux {
-				command = []string{"sh", "-c", "curl \"http://localhost:9090/metrics\""}
+				command = []string{"sh", "-c", "curl --noproxy \"*\" \"http://localhost:9090/metrics\""}
 			} else {
 				command = []string{"powershell", "-c", "(curl \"http://localhost:9090/metrics\" -UseBasicParsing).Content"}
 			}
@@ -213,7 +213,7 @@ var _ = DescribeTable("The Prometheus UI should return a 200 for its UI pages",
 			for _, uiPath := range uiPaths {
 				var command []string
 				if isLinux {
-					command = []string{"sh", "-c", fmt.Sprintf("curl \"http://localhost:9090%s\"", uiPath)}
+					command = []string{"sh", "-c", fmt.Sprintf("curl --noproxy \"*\" \"http://localhost:9090%s\"", uiPath)}
 				} else {
 					command = []string{"powershell", "-c", fmt.Sprintf("(curl \"http://localhost:9090/%s\" -UseBasicParsing).Content", uiPath)}
 				}
