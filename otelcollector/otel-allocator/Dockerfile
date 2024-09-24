@@ -1,5 +1,5 @@
 # Build the otel-allocator binary
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as builder
+FROM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as builder
 
 WORKDIR /app
 
