@@ -24,7 +24,7 @@ variables:
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.22'
+  GOLANG_VERSION: '1.22.7'
 
 stages:
 - stage: Build
