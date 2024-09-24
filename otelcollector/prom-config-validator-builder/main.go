@@ -273,13 +273,14 @@ func main() {
 			os.Exit(1)
 		}
 
-		fmp := fileprovider.NewWithSettings(confmap.ProviderSettings{})
+		fmp := fileprovider.NewFactory()
+		providers := []confmap.ProviderFactory{fmp}
 		cp, err := otelcol.NewConfigProvider(
 			otelcol.ConfigProviderSettings{
 				ResolverSettings: confmap.ResolverSettings{
-					URIs:       []string{fmt.Sprintf("file:%s", outputFilePath)},
-					Providers:  map[string]confmap.Provider{"file": fmp},
-					Converters: []confmap.Converter{expandconverter.New(confmap.ConverterSettings{})},
+					URIs:               []string{fmt.Sprintf("file:%s", outputFilePath)},
+					ProviderFactories:  providers,
+					ConverterFactories: []confmap.ConverterFactory{expandconverter.NewFactory()},
 				},
 			},
 		)
