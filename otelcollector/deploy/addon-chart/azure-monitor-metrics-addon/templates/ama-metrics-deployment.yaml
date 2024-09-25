@@ -9,7 +9,7 @@ metadata:
 spec:
 # New TargetAllocator Enabled scenario
 {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
-  {{- if .Values.AzureMonitorMetrics.CollectorHPAEnabled }} # If HPA toggle is enabled, allow HPA to modify the deployment spec
+  {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (.Values.AzureMonitorMetrics.CollectorHPAEnabled) }} # If HPA toggle is enabled, allow HPA to modify the deployment spec
   {{- $currentSpec := (lookup "apps/v1" "Deployment" "kube-system" "ama-metrics").spec }}
     {{- if $currentSpec }}
     # in if check
@@ -83,7 +83,7 @@ spec:
               value: "false"
             {{- end }}
             - name: AZMON_COLLECTOR_HPA_ENABLED
-            {{- if eq .Values.AzureMonitorMetrics.CollectorHPAEnabled true }}
+            {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.CollectorHPAEnabled true) }}
               value: "true"
             {{- else }}
               value: "false"
