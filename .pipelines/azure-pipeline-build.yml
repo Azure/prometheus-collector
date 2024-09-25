@@ -1193,7 +1193,7 @@ stages:
           targetType: 'inline'
           script: |
             echo "Removing existing signature from telegraf.exe..."
-            "${env:ProgramFiles(x86)}\Microsoft SDKs\ClickOnce\SignTool\signtool.exe" remove /s $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe
+            ${env:ProgramFiles}\"Microsoft SDKs"\ClickOnce\SignTool\signtool.exe remove /s $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe
 
       - task: EsrpCodeSigning@5
         inputs:
@@ -1376,7 +1376,7 @@ stages:
           targetType: 'inline'
           script: |
             echo "Removing existing signature from telegraf.exe..."
-            "${env:ProgramFiles(x86)}\Microsoft SDKs\ClickOnce\SignTool\signtool.exe" remove /s $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe
+            ${env:ProgramFiles}\"Microsoft SDKs"\ClickOnce\SignTool\signtool.exe remove /s $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe
 
       - task: EsrpCodeSigning@5
         inputs:
