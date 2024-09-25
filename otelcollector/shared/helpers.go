@@ -54,9 +54,9 @@ func DetermineConfigFiles(controllerType, clusterOverride string) (string, strin
 	default:
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-windows.conf"
 		if clusterOverride == "true" {
-			meConfigFile = "/usr/sbin/me_ds_internal_win.config"
+			meConfigFile = "/opt/metricextension/me_ds_internal_win.config"
 		} else {
-			meConfigFile = "/usr/sbin/me_ds_win.config"
+			meConfigFile = "/opt/metricextension/me_ds_win.config"
 		}
 	}
 
