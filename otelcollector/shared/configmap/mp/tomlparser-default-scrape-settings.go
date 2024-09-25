@@ -48,8 +48,8 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map
 	config["networkobservabilityHubble"] = "true"
 	config["networkobservabilityCilium"] = "true"
 	config["noDefaultsEnabled"] = "false"
-	config["acstor-capacity-provisioner"] = "false"
-	config["acstor-metrics-exporter"] = "false"
+	config["acstor-capacity-provisioner"] = "true"
+	config["acstor-metrics-exporter"] = "true"
 
 	if _, err := os.Stat(fcl.ConfigMapMountPath); os.IsNotExist(err) {
 		fmt.Println("configmap for default scrape settings not mounted, using defaults")
