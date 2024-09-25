@@ -343,7 +343,17 @@ func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
 		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
 
 	case "windows":
-		cmd = exec.Command("C:\\opt\\metricextension\\MetricsExtension\\MetricsExtension.Native.exe", "-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\\", "-Input", "otlp_grpc_prom", "-MonitoringAccount", os.Getenv("AZMON_DEFAULT_METRIC_ACCOUNT_NAME"), "-ConfigOverridesFilePath", meConfigFile)
+		// Prepare the command and its arguments
+		cmd = exec.Command(
+			"C:\\opt\\metricextension\\MetricsExtension\\MetricsExtension.Native.exe",
+			"-Logger", "File",
+			"-LogLevel", "Info",
+			"-LocalControlChannel",
+			"-TokenSource", "AMCS",
+			"-DataDirectory", "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\",
+			"-Input", "otlp_grpc_prom",
+			"-ConfigOverridesFilePath", meConfigFile,
+		)
 	}
 
 	cmd.Env = append(os.Environ())
