@@ -110,13 +110,11 @@ func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
 	osType := os.Getenv("OS_TYPE")
 
 	if osType == "linux" {
-		// Get user's home directory
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return fmt.Errorf("failed to get user's home directory: %v", err)
 		}
 
-		// Construct the path to .bashrc
 		bashrcPath := filepath.Join(homeDir, ".bashrc")
 
 		// Check if .bashrc exists, if not, create it
@@ -147,16 +145,16 @@ func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
 		}
 
 	} else if osType == "windows" {
-		// On Windows, set the environment variable persistently
-		cmd := exec.Command("setx", key, value)
+		// On Windows, set the environment variable for the machine (persistent across sessions)
+		cmd := exec.Command("setx", key, value, "/M") // "/M" flag sets the variable for the machine
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to set environment variable on Windows: %v", err)
+			return fmt.Errorf("failed to set environment variable on Windows (Machine scope): %v", err)
 		}
 
-		// Set the environment variable for the current session
+		// Set the environment variable for the current process
 		err := os.Setenv(key, value)
 		if err != nil {
-			return fmt.Errorf("failed to set environment variable: %v", err)
+			return fmt.Errorf("failed to set environment variable for current session: %v", err)
 		}
 	} else {
 		return fmt.Errorf("unsupported OS_TYPE: %s", osType)
@@ -345,7 +343,7 @@ func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
 		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
 
 	case "windows":
-		cmd = exec.Command("C:\\opt\\metricextension\\MetricsExtension\\MetricsExtension.Native.exe", "-Logger", "File", "-LogLevel", "Info", "-DataDirectory", "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+		cmd = exec.Command("C:\\opt\\metricextension\\MetricsExtension\\MetricsExtension.Native.exe", "-Logger", "File", "-LogLevel", "Info", "-DataDirectory", ".\\", "-Input", "otlp_grpc_prom", "-MonitoringAccount", os.Getenv("AZMON_DEFAULT_METRIC_ACCOUNT_NAME"), "-ConfigOverridesFilePath", meConfigFile)
 	}
 
 	cmd.Env = append(os.Environ())

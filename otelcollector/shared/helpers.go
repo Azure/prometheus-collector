@@ -208,11 +208,9 @@ func SetEnvVariablesForWindows() {
 			SetEnvAndSourceBashrcOrPowershell("customResourceId", cluster, true)
 		}
 	} else {
-		os.Setenv("customResourceId", cluster)
 		SetEnvAndSourceBashrcOrPowershell("customResourceId", cluster, true)
 
 		aksRegion := os.Getenv("AKSREGION")
-		os.Setenv("customRegion", aksRegion)
 		SetEnvAndSourceBashrcOrPowershell("customRegion", aksRegion, true)
 
 		// Set variables for Telegraf
@@ -227,19 +225,14 @@ func SetEnvVariablesForWindows() {
 	mcsEndpoint, mcsGlobalEndpoint := GetMcsEndpoints(customEnvironment)
 
 	// Set MCS endpoint environment variables
-	os.Setenv("MCS_AZURE_RESOURCE_ENDPOINT", mcsEndpoint)
-	os.Setenv("MCS_GLOBAL_ENDPOINT", mcsGlobalEndpoint)
 	SetEnvAndSourceBashrcOrPowershell("MCS_AZURE_RESOURCE_ENDPOINT", mcsEndpoint, true)
 	SetEnvAndSourceBashrcOrPowershell("MCS_GLOBAL_ENDPOINT", mcsGlobalEndpoint, true)
 }
 
 func SetTelegrafVariables(aksRegion, cluster string) {
-	os.Setenv("AKSREGION", aksRegion)
 	SetEnvAndSourceBashrcOrPowershell("AKSREGION", aksRegion, true)
-	os.Setenv("CLUSTER", cluster)
 	SetEnvAndSourceBashrcOrPowershell("CLUSTER", cluster, true)
 	azmonClusterAlias := os.Getenv("AZMON_CLUSTER_ALIAS")
-	os.Setenv("AZMON_CLUSTER_ALIAS", azmonClusterAlias)
 	SetEnvAndSourceBashrcOrPowershell("AZMON_CLUSTER_ALIAS", azmonClusterAlias, true)
 }
 
@@ -253,6 +246,9 @@ func SetMonitoringVariables() {
 	SetEnvAndSourceBashrcOrPowershell("SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH", "true", true)
 	SetEnvAndSourceBashrcOrPowershell("ENABLE_MCS", "true", true)
 	SetEnvAndSourceBashrcOrPowershell("MDSD_USE_LOCAL_PERSISTENCY", "false", true)
+	SetEnvAndSourceBashrcOrPowershell("MA_RoleEnvironment_Location", os.Getenv("AKSREGION"), true)
+	SetEnvAndSourceBashrcOrPowershell("MA_RoleEnvironment_ResourceId", os.Getenv("CLUSTER"), true)
+	SetEnvAndSourceBashrcOrPowershell("MCS_CUSTOM_RESOURCE_ID", os.Getenv("CLUSTER"), true)
 }
 
 func GetMcsEndpoints(customEnvironment string) (string, string) {
