@@ -13,12 +13,12 @@ spec:
     repository:
       type: git
       uri: https://github.com/Azure/prometheus-collector
-      branch: main
+      branch: grace/arc-ci-cd
       path: otelcollector/test/ginkgo-e2e
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,linux-daemonset-custom-config)"
+      - "!(windows,arm64,linux-daemonset-custom-config)"
       - "./containerstatus"
     executePostRunScriptBeforeScraping: false
 ---
@@ -37,12 +37,12 @@ spec:
     repository:
       type: git
       uri: https://github.com/Azure/prometheus-collector
-      branch: main
+      branch: grace/arc-ci-cd
       path: otelcollector/test/ginkgo-e2e
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,linux-daemonset-custom-config)"
+      - "!(windows,arm64,linux-daemonset-custom-config)"
       - "./livenessprobe"
     executePostRunScriptBeforeScraping: false
 ---
@@ -61,12 +61,12 @@ spec:
     repository:
       type: git
       uri: https://github.com/Azure/prometheus-collector
-      branch: main
+      branch: grace/arc-ci-cd
       path: otelcollector/test/ginkgo-e2e
   executionRequest:
     args:
       - "--label-filter"
-      - "!(arc-extension,linux-daemonset-custom-config)"
+      - "!(windows,arm64,linux-daemonset-custom-config)"
       - "./prometheusui"
     executePostRunScriptBeforeScraping: false
 ---
@@ -85,7 +85,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/Azure/prometheus-collector
-      branch: main
+      branch: grace/arc-ci-cd
       path: otelcollector/test/ginkgo-e2e
   executionRequest:
     args:
@@ -109,7 +109,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/Azure/prometheus-collector
-      branch: main
+      branch: grace/arc-ci-cd
       path: otelcollector/test/ginkgo-e2e
   executionRequest:
     variables:
@@ -122,6 +122,8 @@ spec:
         value: "$AZURE_CLIENT_ID"
         type: basic
     args:
+      - "--label-filter"
+      - "!(windows,arm64,linux-daemonset-custom-config)"
       - "./querymetrics"
     executePostRunScriptBeforeScraping: false
 ---
