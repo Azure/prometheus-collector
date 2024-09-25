@@ -3,16 +3,16 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "azureMonitorWorkspaceResourceId": {
-      "value": "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveeshwin/providers/microsoft.monitor/accounts/kaveeshwin"
+      "value": "/subscriptions/{sub_id}/resourceGroups/{rg_name}/providers/microsoft.monitor/accounts/{amw_name}"
     },
     "azureMonitorWorkspaceLocation": {
-      "value": "northeurope"
+      "value": "{amwLocation}"
     },
     "clusterResourceId": {
-      "value": "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveeshwin/providers/Microsoft.ContainerService/managedClusters/kaveeshwin"
+      "value": "/subscriptions/{sub_id}/resourcegroups/{rg_name}/providers/Microsoft.ContainerService/managedClusters/{cluster_name}"
     },
     "clusterLocation": {
-      "value": "northeurope"
+      "value": "{clusterLocation}"
     },
     "metricLabelsAllowlist": {
       "value": ""
@@ -22,6 +22,15 @@
     },
     "enableWindowsRecordingRules": {
       "value": false
+    },
+    "grafanaResourceId": {
+      "value": "/subscriptions/{sub_id}/resourceGroups/{rg_name}/providers/Microsoft.Dashboard/grafana/{grafana_name}"
+    },
+    "grafanaLocation": {
+      "value": "{grafanaLocation}"
+    },
+    "grafanaSku": {
+      "value": "Standard"
     }
   }
 }
