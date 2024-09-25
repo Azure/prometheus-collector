@@ -307,13 +307,13 @@ Some highlights are that:
     wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
     echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
     sudo apt-get update
-    sudo apt-get install -y testkube
+    sudo apt-get install -y testkube=1.14.2
   ```
   Other OS installation instructions are [here](https://docs.testkube.io/articles/install-cli/).
 - Install the [helm chart](https://docs.testkube.io/articles/helm-chart/) on your cluster:
   ```bash
   helm repo add kubeshop https://kubeshop.github.io/helm-charts
-  helm install --create-namespace testkube kubeshop/testkube
+  helm install --create-namespace testkube kubeshop/testkube --version 1.15.17 -n testkube
   ```
 - The helm chart will install in the namespace `testkube`.
 - Run `testkube dashboard` to port-forward the dashboard.
