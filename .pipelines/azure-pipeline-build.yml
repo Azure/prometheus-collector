@@ -1193,7 +1193,8 @@ stages:
           targetType: 'inline'
           script: |
             echo "Removing existing signature from telegraf.exe..."
-            $signtoolPath = "${env:ProgramFiles}\Microsoft SDKs\ClickOnce\SignTool\signtool.exe" & $signtoolPath remove /s "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
+            $signtoolPath = "${env:ProgramFiles}\Microsoft SDKs\ClickOnce\SignTool\signtool.exe"
+            & $signtoolPath remove /s "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
 
       - task: EsrpCodeSigning@5
         inputs:
