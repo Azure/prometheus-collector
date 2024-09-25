@@ -1197,7 +1197,7 @@ stages:
           script: |
             echo "Removing existing signature from telegraf.exe..."
             $signtoolPath = "${env:ProgramFiles(x86)}\Microsoft SDKs\ClickOnce\SignTool\signtool.exe"
-            & $signtoolPath remove /s "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
+            & $signtoolPath remove /c /u "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
 
       - task: EsrpCodeSigning@5
         inputs:
@@ -1382,7 +1382,9 @@ stages:
           script: |
             echo "Removing existing signature from telegraf.exe..."
             $signtoolPath = "${env:ProgramFiles(x86)}\Microsoft SDKs\ClickOnce\SignTool\signtool.exe"
-            & $signtoolPath remove /s "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
+            # /c: Removes all certificates except for the signer certificate from the signature.
+            # /u: Removes unauthenticated attributes from the signature, such as timestamps.
+            & $signtoolPath remove /c /u "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
 
       - task: EsrpCodeSigning@5
         inputs:
