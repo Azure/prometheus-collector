@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - grace/vuln-0923
+    - grace/env-var-experiment
 pr:
   autoCancel: true
   branches:
