@@ -72,7 +72,7 @@ RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; fi
 
-FROM azurelinuxpreview.azurecr.io/public/azurelinux/public/base/core:3.0 as builder
+FROM mcr.microsoft.com/azurelinux/base/core:3.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
 ENV OS_TYPE "linux"
@@ -139,7 +139,7 @@ RUN $tmpdir/setup.sh ${TARGETARCH}
 # If wanting to run without distroless, uncomment this line and comment everything after
 # CMD [ "/opt/main.sh" ]
 
-FROM azurelinuxpreview.azurecr.io/public/azurelinux/distroless/base:3.0
+FROM mcr.microsoft.com/azurelinux/distroless/base:3.0
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
 ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
 # Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
