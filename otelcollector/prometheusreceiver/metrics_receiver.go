@@ -95,7 +95,7 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 		return err
 	}
 
-	err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager)
+	err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager, r.webHandler)
 	if err != nil {
 		return err
 	}
