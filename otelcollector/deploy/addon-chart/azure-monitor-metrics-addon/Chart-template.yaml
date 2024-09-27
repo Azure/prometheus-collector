@@ -21,10 +21,10 @@ version: 6.9.0-kaveesh-golang-windows-09-04-2024-de843bbe
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "6.9.0-kaveesh-golang-windows-09-04-2024-de843bbe"
-# dependencies:
-# - name: prometheus-node-exporter
-#   version: "4.26.0"
-#   repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
-#   condition: AzureMonitorMetrics.ArcExtension
+appVersion: "${IMAGE_TAG}"
+dependencies:
+- name: prometheus-node-exporter
+  version: "4.39.0"
+  repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
+  condition: AzureMonitorMetrics.ArcExtension
   

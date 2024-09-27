@@ -33,7 +33,7 @@
             expr: |||
               sum by (namespace, pod, %(clusterLabel)s) (
                 max by(namespace, pod, %(clusterLabel)s) (
-                  kube_pod_status_phase{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, phase=~"Pending|Unknown"}
+                  kube_pod_status_phase{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, phase=~"Pending|Unknown|Failed"}
                 ) * on(namespace, pod, %(clusterLabel)s) group_left(owner_kind) topk by(namespace, pod, %(clusterLabel)s) (
                   1, max by(namespace, pod, owner_kind, %(clusterLabel)s) (kube_pod_owner{owner_kind!="Job"})
                 )
@@ -43,11 +43,11 @@
               severity: 'warning',
             },
             annotations: {
-              description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state by controller for longer than 15 minutes.',
-              summary: 'Pod has been in a non-ready state by controller for more than 15 minutes.',
+              description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state for longer than 15 minutes.',
+              summary: 'Pod has been in a non-ready state for more than 15 minutes.',
             },
             'for': '15m',
-            alert: 'KubePodNotReadyByController',
+            alert: 'KubePodNotReady',
           },
           {
             expr: |||
@@ -89,6 +89,21 @@
           },
           {
             expr: |||
+              kube_deployment_status_condition{condition="Progressing", status="false",%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
+              != 0
+            ||| % $._config,
+            labels: {
+              severity: 'warning',
+            },
+            annotations: {
+              description: 'Rollout of deployment {{ $labels.namespace }}/{{ $labels.deployment }} is not progressing for longer than 15 minutes.',
+              summary: 'Deployment rollout is not progressing.',
+            },
+            'for': '15m',
+            alert: 'KubeDeploymentRolloutStuck',
+          },
+          {
+            expr: |||
               (
                 kube_statefulset_status_replicas_ready{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                   !=
@@ -104,7 +119,7 @@
             },
             annotations: {
               description: 'StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has not matched the expected number of replicas for longer than 15 minutes.',
-              summary: 'Deployment has not matched the expected number of replicas.',
+              summary: 'StatefulSet has not matched the expected number of replicas.',
             },
             'for': '15m',
             alert: 'KubeStatefulSetReplicasMismatch',
@@ -128,7 +143,7 @@
           {
             expr: |||
               (
-                max without (revision) (
+                max by(namespace, statefulset) (
                   kube_statefulset_status_current_revision{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                     unless
                   kube_statefulset_status_update_revision{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
@@ -285,7 +300,7 @@
             },
             annotations: {
               description: 'HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler  }} has not matched the desired number of replicas for longer than 15 minutes.',
-              summary: 'HPA has not matched descired number of replicas.',
+              summary: 'HPA has not matched desired number of replicas.',
             },
             'for': '15m',
             alert: 'KubeHpaReplicasMismatch',

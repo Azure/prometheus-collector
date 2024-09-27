@@ -26,7 +26,7 @@ spec:
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
-          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
+          image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
           # image: "mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.8.11-rashmi-upgrades-04-24-05-13-2024-9cabda9d"
           imagePullPolicy: IfNotPresent
           resources:
@@ -119,7 +119,7 @@ spec:
             {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
-              value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
+              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
@@ -158,6 +158,9 @@ spec:
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
@@ -197,7 +200,7 @@ spec:
             - --secret-name=aad-msi-auth-token
             - --token-server-listening-port=7777
             - --health-server-listening-port=9999
-          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
+          image: "{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
           imagePullPolicy: IfNotPresent
           env:
             - name: AZMON_COLLECT_ENV
@@ -285,6 +288,9 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
         - name: anchors-mariner
           hostPath:
             path: /etc/pki/ca-trust/anchors/
@@ -331,7 +337,7 @@ spec:
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
-          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagWin }}"
+          image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagWin }}"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
@@ -389,7 +395,7 @@ spec:
             {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
-              value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTagWin }}"
+              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTagWin }}"
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
@@ -428,6 +434,9 @@ spec:
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
           livenessProbe:
             httpGet:
               path: /health
@@ -444,7 +453,7 @@ spec:
            - --secret-name=aad-msi-auth-token
            - --token-server-listening-port=7777
            - --health-server-listening-port=9999
-          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepositoryWin }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTagWin }}"
+          image: "{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepositoryWin }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTagWin }}"
           imagePullPolicy: IfNotPresent
           livenessProbe:
            httpGet:
@@ -497,6 +506,9 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
         - name: ama-metrics-tls-secret-volume
           secret:
             secretName: ama-metrics-mtls-secret

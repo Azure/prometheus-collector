@@ -15,8 +15,8 @@ New-Item -Type Directory -Path /etc/genevamonitoringagent
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.8.9-main-05-02-2024-9facd0f8/MdmMetricsExtension.2.2024.419.1535.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2024.419.1535.zip
-    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2024.419.1535.zip -Destination /installation/ME/
+    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/metricsext2-2.2024.823.1539/MdmMetricsExtension.2.2024.823.1539.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2024.823.1539.zip
+    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2024.823.1539.zip -Destination /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
 catch {
@@ -74,7 +74,7 @@ Write-Host ('Finished downloading Telegraf')
 ############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
-    $genevamonitoringagentUri='https://github.com/Azure/prometheus-collector/releases/download/Promtheus-MA-Windows-4.1.2024/GenevaMonitoringAgent.46.15.4.zip'
+    $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Promtheus-MA-Windows-4.1.2024/GenevaMonitoringAgent.46.15.4.zip'
     Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip
     Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent
     Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction SilentlyContinue

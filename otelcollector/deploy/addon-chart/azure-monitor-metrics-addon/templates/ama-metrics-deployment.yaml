@@ -7,11 +7,22 @@ metadata:
     component: ama-metrics
     kubernetes.azure.com/managedby: aks
 spec:
-  {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+# New TargetAllocator Enabled scenario
+{{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
+  {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (.Values.AzureMonitorMetrics.CollectorHPAEnabled) }} # If HPA toggle is enabled, allow HPA to modify the deployment spec
+  {{- $currentSpec := (lookup "apps/v1" "Deployment" "kube-system" "ama-metrics").spec }}
+    {{- if $currentSpec }}
+    # in if check
+  replicas: {{ $currentSpec.replicas }}
+    {{- else}} # If current spec cannot be found, set to default
+  replicas: 2
+    {{- end }}
+  {{- else }} # HPA is not enabled, set the replicas via helm adapter values
   replicas: {{ .Values.AzureMonitorMetrics.DeploymentReplicas }}
-  {{- else}}
-  replicas: 1
   {{- end }}
+{{- else }} # Legacy with no TargetAllocator Enabled
+  replicas: 1
+{{- end }}
   revisionHistoryLimit: 2
   paused: false
   selector:
@@ -33,7 +44,7 @@ spec:
       serviceAccountName: ama-metrics-serviceaccount
       containers:
         - name: prometheus-collector
-          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
+          image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTag }}"
           imagePullPolicy: IfNotPresent
           resources:
             limits:
@@ -67,6 +78,12 @@ spec:
               value: "false"
             - name: AZMON_OPERATOR_ENABLED
             {{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
+              value: "true"
+            {{- else }}
+              value: "false"
+            {{- end }}
+            - name: AZMON_COLLECTOR_HPA_ENABLED
+            {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.CollectorHPAEnabled true) }}
               value: "true"
             {{- else }}
               value: "false"
@@ -132,7 +149,7 @@ spec:
             {{- if .Values.AzureMonitorMetrics }}
               {{- if .Values.AzureMonitorMetrics.KubeStateMetrics }}
             - name: KUBE_STATE_VERSION
-              value: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
+              value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.KubeStateMetrics.ImageTag }}"
                 {{- if .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}
             - name: KUBE_STATE_METRIC_LABELS_ALLOWLIST
               value: "{{ .Values.AzureMonitorMetrics.KubeStateMetrics.MetricLabelsAllowlist }}"
@@ -181,6 +198,9 @@ spec:
             - name: host-log-containers
               readOnly: true
               mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
@@ -220,7 +240,7 @@ spec:
             - --secret-name=aad-msi-auth-token
             - --token-server-listening-port=7777
             - --health-server-listening-port=9999
-          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
+          image: "{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRegistry }}{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
           imagePullPolicy: IfNotPresent
           env:
             - name: AZMON_COLLECT_ENV
@@ -333,6 +353,9 @@ spec:
         - name: host-log-containers
           hostPath:
             path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
         - name: anchors-mariner
           hostPath:
             path: /etc/pki/ca-trust/anchors/
