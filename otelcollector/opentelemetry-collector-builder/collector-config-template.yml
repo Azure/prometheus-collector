@@ -3,8 +3,6 @@ exporters:
     endpoint: "127.0.0.1:9091"
     const_labels:
       cluster: $AZMON_CLUSTER_LABEL
-  file:
-    path: /opt/microsoft/otelcollector/promotel.json
   otlp:
     endpoint: 127.0.0.1:55680
     tls:
