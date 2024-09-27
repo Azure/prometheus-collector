@@ -136,8 +136,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						replacement := relabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
 						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "${NODE_NAME}")
-						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "${NODE_IP}")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
 						relabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
