@@ -51,28 +51,17 @@ func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
 	osType := os.Getenv("OS_TYPE")
 
 	if osType == "linux" {
-		// Get user's home directory
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return fmt.Errorf("failed to get user's home directory: %v", err)
 		}
 
-		// Construct the path to .bashrc
 		bashrcPath := filepath.Join(homeDir, ".bashrc")
 
-		// Check if .bashrc exists, if not, create it
-		if _, err := os.Stat(bashrcPath); os.IsNotExist(err) {
-			file, err := os.Create(bashrcPath)
-			if err != nil {
-				return fmt.Errorf("failed to create .bashrc file: %v", err)
-			}
-			defer file.Close()
-		}
-
-		// Open the .bashrc file for appending
-		file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
+		// Open the .bashrc file for appending, or create it if not present
+		file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
-			return fmt.Errorf("failed to open .bashrc file: %v", err)
+			return fmt.Errorf("failed to open or create .bashrc file: %v", err)
 		}
 		defer file.Close()
 
@@ -87,23 +76,18 @@ func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
 			return fmt.Errorf("failed to source .bashrc: %v", err)
 		}
 
-	} else if osType == "windows" {
-		// On Windows, set the environment variable persistently
-		cmd := exec.Command("setx", key, value)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to set environment variable on Windows: %v", err)
-		}
-
 		// Set the environment variable for the current session
-		err := os.Setenv(key, value)
-		if err != nil {
+		if err := os.Setenv(key, value); err != nil {
 			return fmt.Errorf("failed to set environment variable: %v", err)
 		}
+
+	} else if osType == "windows" {
+		fmt.Println("Should never reach here as this is the linux file")
 	} else {
 		return fmt.Errorf("unsupported OS_TYPE: %s", osType)
 	}
 
-	// Conditionally call EchoVar
+	// Optionally echo the variable
 	if echo {
 		EchoVar(key, value)
 	}

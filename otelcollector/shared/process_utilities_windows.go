@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -110,40 +109,7 @@ func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
 	osType := os.Getenv("OS_TYPE")
 
 	if osType == "linux" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("failed to get user's home directory: %v", err)
-		}
-
-		bashrcPath := filepath.Join(homeDir, ".bashrc")
-
-		// Check if .bashrc exists, if not, create it
-		if _, err := os.Stat(bashrcPath); os.IsNotExist(err) {
-			file, err := os.Create(bashrcPath)
-			if err != nil {
-				return fmt.Errorf("failed to create .bashrc file: %v", err)
-			}
-			defer file.Close()
-		}
-
-		// Open the .bashrc file for appending
-		file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
-		if err != nil {
-			return fmt.Errorf("failed to open .bashrc file: %v", err)
-		}
-		defer file.Close()
-
-		_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
-		if err != nil {
-			return fmt.Errorf("failed to write to .bashrc file: %v", err)
-		}
-
-		// Source the .bashrc file
-		cmd := exec.Command("bash", "-c", "source "+bashrcPath)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to source .bashrc: %v", err)
-		}
-
+		fmt.Println(("Should never reach here as this is the windows file"))
 	} else if osType == "windows" {
 		// On Windows, set the environment variable for the machine (persistent across sessions)
 		cmd := exec.Command("setx", key, value, "/M") // "/M" flag sets the variable for the machine
