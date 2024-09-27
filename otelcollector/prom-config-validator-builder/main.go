@@ -170,6 +170,24 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
+
+				if scrapeConfig["static_configs"] != nil {
+					staticConfigs := scrapeConfig["static_configs"].([]interface{})
+					for _, staticConfig := range staticConfigs {
+						staticConfig := staticConfig.(map[interface{}]interface{})
+						if staticConfig["labels"] != nil {
+							labels := staticConfig["labels"].(map[interface{}]interface{})
+							for key, value := range labels {
+								if _, isString := value.(string); isString {
+									labelValue := value.(string)
+									modifiedLabelValue := strings.ReplaceAll(labelValue, "$$NODE_NAME", "${NODE_NAME}")
+									modifiedLabelValue = strings.ReplaceAll(modifiedLabelValue, "$$NODE_IP", "${NODE_IP}")
+									labels[key] = modifiedLabelValue
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 	}
