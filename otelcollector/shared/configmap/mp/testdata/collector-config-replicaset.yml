@@ -9,7 +9,7 @@ exporters:
       insecure: true
   prometheus:
     const_labels:
-      cluster: $AZMON_CLUSTER_LABEL
+      cluster: ${AZMON_CLUSTER_LABEL}
     endpoint: 127.0.0.1:9091
 processors:
   batch:
@@ -20,7 +20,7 @@ processors:
     attributes:
     - action: upsert
       key: cluster
-      value: $AZMON_CLUSTER_LABEL
+      value: ${AZMON_CLUSTER_LABEL}
     - action: insert
       from_attribute: service.name
       key: job
@@ -30,7 +30,7 @@ processors:
 receivers:
   prometheus:
     target_allocator:
-      collector_id: $POD_NAME
+      collector_id: ${POD_NAME}
       endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
       interval: 30s
 service:

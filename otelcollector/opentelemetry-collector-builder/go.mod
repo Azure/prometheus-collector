@@ -9,6 +9,9 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.109.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.109.0
 	go.opentelemetry.io/collector/component v0.109.0
+	go.opentelemetry.io/collector/confmap v1.15.0
+	go.opentelemetry.io/collector/confmap/provider/envprovider v1.15.0
+	go.opentelemetry.io/collector/confmap/provider/fileprovider v1.15.0
 	go.opentelemetry.io/collector/exporter v0.109.0
 	go.opentelemetry.io/collector/exporter/otlpexporter v0.109.0
 	go.opentelemetry.io/collector/extension v0.109.0
@@ -183,7 +186,6 @@ require (
 	go.opentelemetry.io/collector/config/configtelemetry v0.110.0 // indirect
 	go.opentelemetry.io/collector/config/configtls v1.16.0 // indirect
 	go.opentelemetry.io/collector/config/internal v0.110.0 // indirect
-	go.opentelemetry.io/collector/confmap v1.16.0 // indirect
 	go.opentelemetry.io/collector/connector v0.109.0 // indirect
 	go.opentelemetry.io/collector/connector/connectorprofiles v0.109.0 // indirect
 	go.opentelemetry.io/collector/consumer v0.110.0 // indirect
