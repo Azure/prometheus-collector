@@ -38,7 +38,7 @@ data:
         replacement: $$NODE_IP
         target_label: node_ip_double_dollar_sign
       static_configs:
-      - targets: ['${NODE_IP}:9100']
+      - targets: ['$NODE_IP:9100']
 metadata:
   name: ama-metrics-prometheus-config-node
   namespace: kube-system
