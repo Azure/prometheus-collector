@@ -19,7 +19,7 @@ processors:
   resource:
     attributes:
     - key: cluster
-      value: "$AZMON_CLUSTER_LABEL"
+      value: "${AZMON_CLUSTER_LABEL}"
       action: "upsert"
     - key: job
       from_attribute: service.name
