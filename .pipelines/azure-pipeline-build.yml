@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/env-var-experiment
 pr:
   autoCancel: true
   branches:
@@ -23,6 +22,7 @@ variables:
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.6.0'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
+  BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.22.7'
 
@@ -1139,6 +1139,7 @@ stages:
       WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
       WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
@@ -1172,6 +1173,7 @@ stages:
       WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
       WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
@@ -1209,6 +1211,7 @@ stages:
       WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
       WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
@@ -1522,6 +1525,112 @@ stages:
               inlineScript: |
                 az config set extension.use_dynamic_install=yes_without_prompt
                 az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
+
+          - task: AzureCLI@2
+            displayName: "Deploy: ci-dev-arc-proxy cluster"
+            inputs:
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az config set extension.use_dynamic_install=yes_without_prompt
+                az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-proxy --cluster-name ci-dev-arc-proxy --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
+
+  - deployment: Testkube_ARC
+    displayName: "Test: Arc testkube tests"
+    environment: Prometheus-Collector
+    dependsOn: Deploy_Chart_ARC
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+    variables:
+      HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+      HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+      skipComponentGovernanceDetection: true
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            persistCredentials: true
+
+          - bash: |
+              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
+              sudo apt-get update
+              sudo apt-get install -y testkube
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install testkube CLI"
+
+          - task: AzureCLI@1
+            displayName: Get kubeconfig
+            inputs:
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az aks get-credentials -g ci-dev-arc-wcus -n ci-dev-arc-wcus'
+          
+          - bash: |
+              export AMW_QUERY_ENDPOINT="https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com"
+              export AZURE_CLIENT_ID="5f13547e-a4e2-4efd-85fe-a2b03d5b8661"
+
+              envsubst < ./testkube/testkube-test-crs-arc.yaml > ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
+              kubectl apply -f ./testkube/api-server-permissions.yaml
+              kubectl apply -f ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps
+              kubectl apply -f ./test-cluster-yamls/prometheus-reference-app.yaml
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+            displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
+
+          - bash: |
+              sleep 360
+
+              exit 0
+            displayName: "Wait for cluster to be ready"
+
+          - bash: |
+              # Run the full test suite
+              kubectl testkube run testsuite e2e-tests-merge --verbose
+
+              # Get the current id of the test suite now running
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
+
+              # Watch until the all the tests in the test suite finish
+              kubectl testkube watch testsuiteexecution $execution_id
+
+              # Get the results as a formatted json file
+              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
+
+              # For any test that has failed, print out the Ginkgo logs
+              if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
+
+                # Get each test name and id that failed
+                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
+                  testName=$(echo $line | cut -d ' ' -f 1)
+                  id=$(echo $line | cut -d ' ' -f 2)
+                  echo "Test $testName failed. Test ID: $id"
+
+                  # Get the Ginkgo logs of the test
+                  kubectl testkube get execution $id > out 2>error.log
+
+                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
+                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
+                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+                done
+
+                # Explicitly fail the ADO task since at least one test failed
+                exit 0
+              fi
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Run tests"
 
   - deployment: Deploy_AKS_Chart
     displayName: "Deploy: AKS dev cluster"
