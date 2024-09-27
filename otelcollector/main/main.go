@@ -175,16 +175,17 @@ func main() {
 		shared.LogVersionInfo()
 	}
 
-	if ccpMetricsEnabled != "true" && osType == "linux" {
+	if ccpMetricsEnabled != "true" {
 		shared.StartFluentBit(fluentBitConfigFile)
-
 		// Run the command and capture the output
-		cmd := exec.Command("fluent-bit", "--version")
-		fluentBitVersion, err := cmd.Output()
-		if err != nil {
-			log.Fatalf("failed to run command: %v", err)
+		if osType == "linux" {
+			cmd := exec.Command("fluent-bit", "--version")
+			fluentBitVersion, err := cmd.Output()
+			if err != nil {
+				log.Fatalf("failed to run command: %v", err)
+			}
+			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 		}
-		shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 
 		shared.StartTelegraf()
 
