@@ -1869,7 +1869,7 @@ stages:
             displayName: "Run tests"
 
 
-  - deployment: Testkube
+  - deployment: Testkube_Proxy
     displayName: "Test: AKS Proxy testkube tests"
     environment: Prometheus-Collector
     dependsOn: Deploy_AKS_Proxy_Chart
