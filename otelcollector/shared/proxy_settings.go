@@ -24,7 +24,7 @@ func copyCAAnchors() {
 				cmd := exec.Command("cp", match, "/etc/pki/ca-trust/source/anchors")
 				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {
-					log.Printf("Error copying %s: %v", match, err)
+					log.Printf("Warning copying %s: %v", match, err)
 				}
 			} else if os.IsNotExist(err) {
 				log.Printf("File %s does not exist", match)

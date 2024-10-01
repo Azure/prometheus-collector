@@ -3,6 +3,7 @@ AzureMonitorMetrics:
 # Uncomment the below 2 settings if you want to pass in the labels and/or annotations
     #MetricLabelsAllowlist: "testlabel=[.*]"
     #MetricAnnotationsAllowList: ""
+    ImageRegistry: mcr.microsoft.com
     ImageRepository: "/oss/kubernetes/kube-state-metrics"
 # Kube-state-metrics ImageTag - 2.12.0, corresponds to chart version - 5.19.0
     ImageTag: "v2.12.0"
@@ -35,6 +36,7 @@ AzureMonitorMetrics:
       - storageclasses
       - validatingwebhookconfigurations
       - volumeattachments
+  ImageRegistry: mcr.microsoft.com
   ImageRepository: ${MCR_REPOSITORY}
   ImageTag: ${IMAGE_TAG}
   ImageTagWin: ${IMAGE_TAG}-win
@@ -69,12 +71,13 @@ AzureMonitorMetrics:
   # Repository: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/addon-charts/azure-monitor-metrics-addon/templates/ama-metrics-daemonset.yaml&version=GBrashmi/prom-addon-arm64&line=136&lineEnd=136&lineStartColumn=56&lineEndColumn=85&lineStyle=plain&_a=contents
   # ImageTag: https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/kube-control-plane/templates/_images.tpl&version=GBrashmi/prom-addon-arm64&line=530&lineEnd=530&lineStartColumn=28&lineEndColumn=53&lineStyle=plain&_a=contents
   AddonTokenAdapter:
+    ImageRegistry: mcr.microsoft.com
     ImageRepository: "/aks/msi/addon-token-adapter"
     ImageTag: "master.230804.1"
     ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
     ImageTagWin: "master.240102.1"
   ArcExtension: ${ARC_EXTENSION}
-  ArcEnableOperator: false
+  ArcEnableOperator: true
   # Do not change the below settings. They are reserved for Arc Autonomous
   isArcACluster: false
   arcAutonomousSettings:

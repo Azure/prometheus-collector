@@ -1,4 +1,4 @@
-{{- if .Values.AzureMonitorMetrics.CollectorHPAEnabled}}
+{{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (.Values.AzureMonitorMetrics.CollectorHPAEnabled)}}
 {{- $amaMetricsHpa := include "ama-metrics-merge-custom-hpa" . | fromYaml }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
