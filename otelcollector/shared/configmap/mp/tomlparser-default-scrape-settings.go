@@ -25,8 +25,8 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["networkobservabilityHubble"] = "true"
 	config["networkobservabilityCilium"] = "true"
 	config["noDefaultsEnabled"] = "false"
-	config["acstor-capacity-provisioner"] = "false"
-	config["acstor-metrics-exporter"] = "false"
+	config["acstor-capacity-provisioner"] = "true"
+	config["acstor-metrics-exporter"] = "true"
 	return config, nil
 }
 
