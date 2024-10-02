@@ -113,24 +113,14 @@ COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
-COPY ./mdsd/envmdsd $tmpdir/
-COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
+COPY ./mdsd/envmdsd $tmpdir/ 
+COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/ 
 
 ARG TARGETARCH
 RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update -y
 RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
-RUN tdnf install -y net-tools
-RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
-RUN tdnf install -y pcre2
-RUN tdnf install -y cpprest
-RUN tdnf install -y cpprest boost-filesystem brotli
-RUN tdnf install -y util-linux
-RUN tdnf install -y libyaml
-RUN tdnf install -y re2
-RUN tdnf install -y ruby
-RUN tdnf install -y fluent-bit
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
