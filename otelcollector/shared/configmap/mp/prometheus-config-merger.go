@@ -1124,7 +1124,7 @@ func populateDefaultPrometheusConfigWithOperator() {
 		}
 	}
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ACSTORCAPACITYPROVISIONER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ACSTORCAPACITYPROVISIONER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && (isConfigReaderSidecar() || currentControllerType == replicasetControllerType) {
 		acstorCapacityProvisionerKeepListRegex, exists := regexHash["ACSTORCAPACITYPROVISONER_KEEP_LIST_REGEX"]
 		acstorCapacityProvisionerScrapeInterval, intervalExists := intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"]
 		log.Printf("path %s: %s\n", "acstorCapacityProvisionerDefaultFile", acstorCapacityProvisionerDefaultFile)
@@ -1137,7 +1137,7 @@ func populateDefaultPrometheusConfigWithOperator() {
 		defaultConfigs = append(defaultConfigs, acstorCapacityProvisionerDefaultFile)
 	}
 
-	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ACSTORMETRICSEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ACSTORMETRICSEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && (isConfigReaderSidecar() || currentControllerType == replicasetControllerType) {
 		acstorMetricsExporterKeepListRegex, exists := regexHash["ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX"]
 		acstorMetricsExporterScrapeInterval, intervalExists := intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"]
 		log.Printf("path %s: %s\n", "acstorMetricsExporterDefaultFile", acstorMetricsExporterDefaultFile)
@@ -1268,7 +1268,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 		prometheusCollectorHealthDefaultFile, windowsExporterDefaultRsSimpleFile, windowsExporterDefaultDsFile,
 		windowsKubeProxyDefaultFileRsSimpleFile, windowsKubeProxyDefaultDsFile, podAnnotationsDefaultFile,
 		kappieBasicDefaultFileDs, networkObservabilityRetinaDefaultFileDs, networkObservabilityHubbleDefaultFileDs,
-		networkObservabilityCiliumDefaultFileDs,acstorMetricsExporterDefaultFile, acstorCapacityProvisionerDefaultFile,
+		networkObservabilityCiliumDefaultFileDs, acstorMetricsExporterDefaultFile, acstorCapacityProvisionerDefaultFile,
 	}
 
 	for _, currentFile := range defaultFilesArray {
