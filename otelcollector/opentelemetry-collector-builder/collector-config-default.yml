@@ -2,7 +2,7 @@ exporters:
   prometheus:
     endpoint: "127.0.0.1:9091"
     const_labels:
-      cluster: $AZMON_CLUSTER_LABEL
+      cluster: ${nev:AZMON_CLUSTER_LABEL}
   otlp:
     endpoint: 127.0.0.1:55680
     tls:
@@ -19,7 +19,7 @@ processors:
   resource:
     attributes:
     - key: cluster
-      value: "$AZMON_CLUSTER_LABEL"
+      value: "${env:AZMON_CLUSTER_LABEL}"
       action: "upsert"
     - key: job
       from_attribute: service.name
