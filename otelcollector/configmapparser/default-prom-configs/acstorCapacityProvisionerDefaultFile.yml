@@ -13,7 +13,7 @@
      # Include only specified pods
    - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name, __meta_kubernetes_pod_label_app_kubernetes_io_component]
      action: keep
-     regex: capacity-provisioner;capacity-provisioner
+     regex: capacity-provisioner;capacity-provisoner
      # Include only specified ports
    - source_labels: [__meta_kubernetes_pod_container_port_name]
      action: keep
