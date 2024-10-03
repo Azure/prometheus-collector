@@ -121,6 +121,11 @@ RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update -y
 RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
+RUN tdnf install -y telegraf
+RUN tdnf install -y fluent-bit
+RUN tdnf install -y ruby
+RUN tdnf install -y azure-mdsd
+# RUN tdnf install -y metricsext
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
