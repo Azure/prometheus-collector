@@ -111,6 +111,7 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
+COPY ./marinara/ $tmpdir/marinara/
 
 ARG TARGETARCH
 RUN tdnf clean all
@@ -120,6 +121,7 @@ RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox d
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
+RUN chmod 775 $tmpdir/marinara/marinaraextend.py;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
 
@@ -132,7 +134,6 @@ ARG TEMP_MANIFEST_LOCATION="/tmp/rpmmanifest"
 ARG USER="root"
 ARG USER_UID=0
 ARG USER_GID=${USER_UID}
-COPY ./marinara/ $tmpdir/marinara/
 RUN $tmpdir/marinara/marinaraextend.py \
     --azure-linux-version "2.0" \
     --location "${PACKAGES_INSTALL_LOCATION}" \
