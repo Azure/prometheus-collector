@@ -132,13 +132,12 @@ ARG TEMP_MANIFEST_LOCATION="/tmp/rpmmanifest"
 ARG USER="root"
 ARG USER_UID=0
 ARG USER_GID=${USER_UID}
-COPY --from=modify ${ORIGINAL_MANIFEST_LOCATION}/ ${TEMP_MANIFEST_LOCATION}/
 RUN ./marinara/marinaraextend.py \
     --azure-linux-version "2.0" \
     --location "${PACKAGES_INSTALL_LOCATION}" \
     --add-packages "${PACKAGES_TO_INSTALL}" \
     --packages-to-holdback "${PACKAGES_TO_HOLDBACK}" \
-    --existing-manifest-location "${TEMP_MANIFEST_LOCATION}" \
+    --existing-manifest-location "${ORIGINAL_MANIFEST_LOCATIO}" \
     --new-manifest-location "${ORIGINAL_MANIFEST_LOCATION}" \
     --user "${USER}" \
     --user-uid "${USER_UID}" \
