@@ -146,7 +146,7 @@ RUN $tmpdir/setup.sh ${TARGETARCH}
 #     --user-gid "${USER_GID}"
 
 # If wanting to run without distroless, uncomment this line and comment everything after
-CMD [ "/opt/main.sh" ]
+CMD ["./opt/main"]
 
 # FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 # # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
