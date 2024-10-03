@@ -33,6 +33,8 @@ func main() {
 		if err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs"); err != nil {
 			log.Fatal(err)
 		}
+	} else if osType == "windows" {
+		shared.StartCommand("powershell", "-NoNewWindow", "/opt/scripts/filesystemwatcher.ps1")
 	}
 
 	if ccpMetricsEnabled != "true" {

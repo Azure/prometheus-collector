@@ -192,6 +192,7 @@ func StartCommandWithOutputFile(command string, args []string, outputFile string
 
 	return process_pid, nil
 }
+
 func StartCommand(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
