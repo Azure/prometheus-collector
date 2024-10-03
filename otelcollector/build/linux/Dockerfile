@@ -125,25 +125,25 @@ RUN chmod 775 $tmpdir/marinara/marinaraextend.py;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
 
-ARG AZL_VERSION=2.0
-ARG PACKAGES_INSTALL_LOCATION="/staging"
-ARG PACKAGES_TO_INSTALL
-ARG PACKAGES_TO_HOLDBACK
-ARG ORIGINAL_MANIFEST_LOCATION="/var/lib/rpmmanifest"
-ARG TEMP_MANIFEST_LOCATION="/tmp/rpmmanifest"
-ARG USER="root"
-ARG USER_UID=0
-ARG USER_GID=${USER_UID}
-RUN $tmpdir/marinara/marinaraextend.py \
-    --azure-linux-version "2.0" \
-    --location "${PACKAGES_INSTALL_LOCATION}" \
-    --add-packages "${PACKAGES_TO_INSTALL}" \
-    --packages-to-holdback "${PACKAGES_TO_HOLDBACK}" \
-    --existing-manifest-location "${ORIGINAL_MANIFEST_LOCATION}" \
-    --new-manifest-location "${ORIGINAL_MANIFEST_LOCATION}" \
-    --user "${USER}" \
-    --user-uid "${USER_UID}" \
-    --user-gid "${USER_GID}"
+# ARG AZL_VERSION=2.0
+# ARG PACKAGES_INSTALL_LOCATION="/staging"
+# ARG PACKAGES_TO_INSTALL="telegraf"
+# ARG PACKAGES_TO_HOLDBACK
+# ARG ORIGINAL_MANIFEST_LOCATION="/var/lib/rpmmanifest"
+# ARG TEMP_MANIFEST_LOCATION="/tmp/rpmmanifest"
+# ARG USER="root"
+# ARG USER_UID=0
+# ARG USER_GID=${USER_UID}
+# RUN $tmpdir/marinara/marinaraextend.py \
+#     --azure-linux-version "2.0" \
+#     --location "${PACKAGES_INSTALL_LOCATION}" \
+#     --add-packages "${PACKAGES_TO_INSTALL}" \
+#     --packages-to-holdback "${PACKAGES_TO_HOLDBACK}" \
+#     --existing-manifest-location "${ORIGINAL_MANIFEST_LOCATION}" \
+#     --new-manifest-location "${ORIGINAL_MANIFEST_LOCATION}" \
+#     --user "${USER}" \
+#     --user-uid "${USER_UID}" \
+#     --user-gid "${USER_GID}"
 
 # If wanting to run without distroless, uncomment this line and comment everything after
 CMD [ "/opt/main.sh" ]
