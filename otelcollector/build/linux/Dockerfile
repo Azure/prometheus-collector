@@ -139,7 +139,7 @@ RUN $tmpdir/marinara/marinaraextend.py \
     --location "${PACKAGES_INSTALL_LOCATION}" \
     --add-packages "${PACKAGES_TO_INSTALL}" \
     --packages-to-holdback "${PACKAGES_TO_HOLDBACK}" \
-    --existing-manifest-location "${ORIGINAL_MANIFEST_LOCATIO}" \
+    --existing-manifest-location "${ORIGINAL_MANIFEST_LOCATION}" \
     --new-manifest-location "${ORIGINAL_MANIFEST_LOCATION}" \
     --user "${USER}" \
     --user-uid "${USER_UID}" \
