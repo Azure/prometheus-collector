@@ -132,7 +132,8 @@ ARG TEMP_MANIFEST_LOCATION="/tmp/rpmmanifest"
 ARG USER="root"
 ARG USER_UID=0
 ARG USER_GID=${USER_UID}
-RUN ./marinara/marinaraextend.py \
+COPY ./marinara/ $tmpdir/marinara/
+RUN $tmpdir/marinara/marinaraextend.py \
     --azure-linux-version "2.0" \
     --location "${PACKAGES_INSTALL_LOCATION}" \
     --add-packages "${PACKAGES_TO_INSTALL}" \
