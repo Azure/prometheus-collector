@@ -195,7 +195,7 @@ ENV PATH="/busybin:${PATH}"
 ENV OS_TYPE "linux"
 
 # files
-COPY --from=marinara-builder /var/lib/rpmmanifest /var/lib/rpmmanifest
+COPY --from=marinara-builder /staging/var/lib/rpmmanifest /var/lib/rpmmanifest
 
 COPY --from=builder /opt /opt
 COPY --from=builder /etc /etc
