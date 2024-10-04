@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - grace/release-fix
+
 pr:
   autoCancel: true
   branches:
