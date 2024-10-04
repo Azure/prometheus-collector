@@ -264,6 +264,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 					val, ok := sample.Metric[model.LabelName(label)]
 					Expect(ok).To(BeTrue(), fmt.Sprintf("Expected label %q not found in metric %q", label, metric))
 					Expect(val).NotTo(BeEmpty(), fmt.Sprintf("Label %q is empty in metric %q", label, metric))
+					Expect(sample.Value.String()).To(Equal("1"))
 				}
 			}
 		},
