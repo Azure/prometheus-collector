@@ -17,9 +17,11 @@ package watcher
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/go-logr/logr"
@@ -40,6 +42,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/retry"
 
 	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 )
@@ -68,6 +71,9 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		return nil, err
 	}
 
+	// we want to use endpointslices by default
+	serviceDiscoveryRole := monitoringv1.ServiceDiscoveryRole("EndpointSlice")
+
 	// TODO: We should make these durations configurable
 	prom := &monitoringv1.Prometheus{
 		Spec: monitoringv1.PrometheusSpec{
@@ -77,28 +83,42 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 				PodMonitorSelector:              cfg.PrometheusCR.PodMonitorSelector,
 				ServiceMonitorNamespaceSelector: cfg.PrometheusCR.ServiceMonitorNamespaceSelector,
 				PodMonitorNamespaceSelector:     cfg.PrometheusCR.PodMonitorNamespaceSelector,
+				ServiceDiscoveryRole:            &serviceDiscoveryRole,
 			},
 		},
 	}
 
 	promOperatorLogger := level.NewFilter(log.NewLogfmtLogger(os.Stderr), level.AllowWarn())
+	promOperatorSlogLogger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	generator, err := prometheus.NewConfigGenerator(promOperatorLogger, prom, true)
 
 	if err != nil {
 		return nil, err
 	}
 
-	store := assets.NewStore(clientset.CoreV1(), clientset.CoreV1())
+	store := assets.NewStoreBuilder(clientset.CoreV1(), clientset.CoreV1())
 	promRegisterer := prometheusgoclient.NewRegistry()
 	operatorMetrics := operator.NewMetrics(promRegisterer)
-	eventRecorder := operator.NewEventRecorder(clientset, "target-allocator")
+	eventRecorderFactory := operator.NewEventRecorderFactory(false)
+	eventRecorder := eventRecorderFactory(clientset, "target-allocator")
 
-	nsMonInf, err := getNamespaceInformer(ctx, map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, clientset, operatorMetrics)
+	var nsMonInf cache.SharedIndexInformer
+	getNamespaceInformerErr := retry.OnError(retry.DefaultRetry,
+		func(err error) bool {
+			logger.Error(err, "Retrying namespace informer creation in promOperator CRD watcher")
+			return true
+		}, func() error {
+			nsMonInf, err = getNamespaceInformer(ctx, map[string]struct{}{v1.NamespaceAll: {}}, promOperatorLogger, clientset, operatorMetrics)
+			return err
+		})
+	if getNamespaceInformerErr != nil {
+		logger.Error(getNamespaceInformerErr, "Failed to create namespace informer in promOperator CRD watcher")
+		return nil, getNamespaceInformerErr
+	}
+
+	resourceSelector, err = prometheus.NewResourceSelector(promOperatorSlogLogger, prom, store, nsMonInf, operatorMetrics, eventRecorder)
 	if err != nil {
-		logger.Error(err, "Failed to create namespace informer in promOperator CRD watcher")
-
-	} else {
-		resourceSelector = prometheus.NewResourceSelector(promOperatorLogger, prom, store, nsMonInf, operatorMetrics, eventRecorder)
+		logger.Error(err, "Failed to create resource selector in promOperator CRD watcher")
 	}
 
 	return &PrometheusCRWatcher{
@@ -131,7 +151,7 @@ type PrometheusCRWatcher struct {
 	podMonitorNamespaceSelector     *metav1.LabelSelector
 	serviceMonitorNamespaceSelector *metav1.LabelSelector
 	resourceSelector                *prometheus.ResourceSelector
-	store                           *assets.Store
+	store                           *assets.StoreBuilder
 }
 
 func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, promOperatorLogger log.Logger, clientset kubernetes.Interface, operatorMetrics *operator.Metrics) (cache.SharedIndexInformer, error) {
@@ -140,10 +160,14 @@ func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, pr
 	if err != nil {
 		return nil, err
 	}
+	kubernetesSemverVersion, err := semver.ParseTolerant(kubernetesVersion.String())
+	if err != nil {
+		return nil, err
+	}
 	lw, _, err := listwatch.NewNamespaceListWatchFromClient(
 		ctx,
 		promOperatorLogger,
-		*kubernetesVersion,
+		kubernetesSemverVersion,
 		clientset.CoreV1(),
 		clientset.AuthorizationV1().SelfSubjectAccessReviews(),
 		allowList,
@@ -319,7 +343,6 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 		}
 
 		generatedConfig, err := w.configGenerator.GenerateServerConfiguration(
-			ctx,
 			"30s",
 			"",
 			nil,

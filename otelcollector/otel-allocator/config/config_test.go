@@ -59,7 +59,14 @@ func TestLoad(t *testing.T) {
 				},
 				FilterStrategy: DefaultFilterStrategy,
 				PrometheusCR: PrometheusCRConfig{
+					Enabled:        true,
 					ScrapeInterval: model.Duration(time.Second * 60),
+				},
+				HTTPS: HTTPSServerConfig{
+					Enabled:         true,
+					CAFilePath:      "/path/to/ca.pem",
+					TLSCertFilePath: "/path/to/cert.pem",
+					TLSKeyFilePath:  "/path/to/key.pem",
 				},
 				PromConfig: &promconfig.Config{
 					GlobalConfig: promconfig.GlobalConfig{
@@ -68,6 +75,7 @@ func TestLoad(t *testing.T) {
 						ScrapeTimeout:      model.Duration(10 * time.Second),
 						EvaluationInterval: model.Duration(60 * time.Second),
 					},
+					Runtime: promconfig.DefaultRuntimeConfig,
 					ScrapeConfigs: []*promconfig.ScrapeConfig{
 						{
 							JobName:           "prometheus",
@@ -149,6 +157,7 @@ func TestLoad(t *testing.T) {
 						ScrapeTimeout:      model.Duration(10 * time.Second),
 						EvaluationInterval: model.Duration(60 * time.Second),
 					},
+					Runtime: promconfig.DefaultRuntimeConfig,
 					ScrapeConfigs: []*promconfig.ScrapeConfig{
 						{
 							JobName:           "prometheus",

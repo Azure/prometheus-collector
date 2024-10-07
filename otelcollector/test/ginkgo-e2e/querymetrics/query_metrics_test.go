@@ -204,6 +204,80 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			// "kube_persistentvolumeclaim_labels",
 			// "kube_persistentvolume_status_phase",
 		}),
+		Entry("prometheus-reference-app", "prometheus_ref_app", []string{
+			"myapp_measurements_total",
+			"myapp_temperature",
+			"myapp_rainfall",
+			"empty_dimension_rainfall",
+			"max_dimension_rainfall",
+			"upperGaugeFqyOtBTnstaUDVyHTkqkQOTOSbCMUzpBtykcaoOYephoAVbYzWvBMWHGnCEApFYGwUzayYWTegbAQomgbabGBpgzXZNtEVHczWymZEGRx_UbzNVZvvhQutrDYcNDKwRErwUxKuJYxGCEywsXAvJGCufsEGzDUCmBPfPpcboHdHNjvmdEdtvVZzMTPyfCFwfftgzHSzoBkQSJJZxPUkyzpknfbfwbdUnZftFYqyBzmrbdQfmnMOBcer",
+			"myapp_temperature_summary",
+			"myapp_temperature_summary_count",
+			"myapp_temperature_summary_sum",
+			"myapp_rainfall_summary",
+			"myapp_rainfall_summary_count",
+			"myapp_rainfall_summary_sum",
+			"upperSummaryyOtBTnstaUDVyHTkqkQOTOSbCMUzpBtykcaoOYgphoAVbYzWvBMWHGnCEApFYGwUzayYWTegbAQomgbabGBpgzXZNrEVHc_WymZEGRxFUbzNVZvvhQutrDYcNDKwRErwUxKuJYxGCEywsXAvJGCufsEGzDUCmBPfPpcboHdHNjvmdEdtvVZzMTPyfCFwffthzHSzoBkQSJJZxPUkyzpknfbfwbdUnZftFYqyBzmrbdQfmnMOBcer",
+			"upperSummaryyOtBTnstaUDVyHTkqkQOTOSbCMUzpBtykcaoOYgphoAVbYzWvBMWHGnCEApFYGwUzayYWTegbAQomgbabGBpgzXZNrEVHc_WymZEGRxFUbzNVZvvhQutrDYcNDKwRErwUxKuJYxGCEywsXAvJGCufsEGzDUCmBPfPpcboHdHNjvmdEdtvVZzMTPyfCFwffthzHSzoBkQSJJZxPUkyzpknfbfwbdUnZftFYqyBzmrbdQfmnMOBcer_count",
+			"upperSummaryyOtBTnstaUDVyHTkqkQOTOSbCMUzpBtykcaoOYgphoAVbYzWvBMWHGnCEApFYGwUzayYWTegbAQomgbabGBpgzXZNrEVHc_WymZEGRxFUbzNVZvvhQutrDYcNDKwRErwUxKuJYxGCEywsXAvJGCufsEGzDUCmBPfPpcboHdHNjvmdEdtvVZzMTPyfCFwffthzHSzoBkQSJJZxPUkyzpknfbfwbdUnZftFYqyBzmrbdQfmnMOBcer_sum",
+			"max_dimension_rainfall_summary",
+			"max_dimension_rainfall_summary_count",
+			"max_dimension_rainfall_summary_sum",
+			"empty_dimension_summary",
+			"empty_dimension_summary_count",
+			"empty_dimension_summary_sum",
+			"myapp_temperature_histogram_bucket",
+			"myapp_temperature_histogram_count",
+			"myapp_temperature_histogram_sum",
+			"myapp_rainfall_histogram_bucket",
+			"myapp_rainfall_histogram_count",
+			"myapp_rainfall_histogram_sum",
+			"upperHistogramtBTnstaUDVyHTkqkQOTOSbCMUzpBtykcaoOYgphoAVbYzWvBMWHGnCEApFYGwUzayYWTegbAQomgbabGBpgzXZNtEVHczWy_ZEGRxFUbzNVZvvhQutrDYcNDKwRErwUxKuJYxGCEywtrXAvJGCufsEGzDUCmBPfPpcboHdHNjvmdEdtvVZzMTPyfCFwfftkzHSzoBkQSJJZxPUkyzpknfbfwbdUnZftFYqyBzmrbdQfmnMOBcer_bucket",
+			"upperHistogramtBTnstaUDVyHTkqkQOTOSbCMUzpBtykcaoOYgphoAVbYzWvBMWHGnCEApFYGwUzayYWTegbAQomgbabGBpgzXZNtEVHczWy_ZEGRxFUbzNVZvvhQutrDYcNDKwRErwUxKuJYxGCEywtrXAvJGCufsEGzDUCmBPfPpcboHdHNjvmdEdtvVZzMTPyfCFwfftkzHSzoBkQSJJZxPUkyzpknfbfwbdUnZftFYqyBzmrbdQfmnMOBcer_count",
+			"upperHistogramtBTnstaUDVyHTkqkQOTOSbCMUzpBtykcaoOYgphoAVbYzWvBMWHGnCEApFYGwUzayYWTegbAQomgbabGBpgzXZNtEVHczWy_ZEGRxFUbzNVZvvhQutrDYcNDKwRErwUxKuJYxGCEywtrXAvJGCufsEGzDUCmBPfPpcboHdHNjvmdEdtvVZzMTPyfCFwfftkzHSzoBkQSJJZxPUkyzpknfbfwbdUnZftFYqyBzmrbdQfmnMOBcer_sum",
+			"max_dimension_rainfall_histogram_bucket",
+			"max_dimension_rainfall_histogram_count",
+			"max_dimension_rainfall_histogram_sum",
+			"empty_dimension_histogram_bucket",
+			"empty_dimension_histogram_count",
+			"empty_dimension_histogram_sum",
+			"untyped_metric",
+			"request_processing_seconds_count",
+			"request_processing_seconds_sum",
+		}),
+	)
+
+	DescribeTable("should return the expected labels for specified metrics in each job",
+		func(job string, metric string, labels []string) {
+			for _, label := range labels {
+				query := fmt.Sprintf("%s{job=\"%s\"}", metric, job)
+
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, query)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(warnings).To(BeEmpty())
+
+				vectorResult, ok := result.(model.Vector)
+				Expect(ok).To(BeTrue(), "result should be of type model.Vector for metric %s", metric)
+				Expect(vectorResult).NotTo(BeEmpty(), "Metric %s is missing", metric)
+
+				for _, sample := range vectorResult {
+					val, ok := sample.Metric[model.LabelName(label)]
+					Expect(ok).To(BeTrue(), fmt.Sprintf("Expected label %q not found in metric %q", label, metric))
+					Expect(val).NotTo(BeEmpty(), fmt.Sprintf("Label %q is empty in metric %q", label, metric))
+					Expect(sample.Value.String()).To(Equal("1"))
+				}
+			}
+		},
+		Entry("Metric relabeling with dollar signs", "prometheus_ref_app", "up", []string{
+			"double_dollar_sign",
+			"single_dollar_sign",
+		}),
+		Entry("Metric relabeling with $NODE_NAME and $NODE_IP", "node-configmap", "up", []string{
+			"node_name_single_dollar_sign",
+			"node_ip_single_dollar_sign",
+			"node_name_double_dollar_sign",
+			"node_ip_double_dollar_sign",
+		}),
 	)
 
 	Context("When querying metrics", func() {

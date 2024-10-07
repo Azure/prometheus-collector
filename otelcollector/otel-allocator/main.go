@@ -54,7 +54,7 @@ func main() {
 		allocatorPrehook prehook.Hook
 		allocator        allocation.Allocator
 		discoveryManager *discovery.Manager
-		collectorWatcher *collector.Client
+		collectorWatcher *collector.Watcher
 		promWatcher      allocatorWatcher.Watcher
 		targetDiscoverer *target.Discoverer
 
@@ -94,7 +94,17 @@ func main() {
 		setupLog.Error(err, "Unable to initialize allocation strategy")
 		os.Exit(1)
 	}
-	srv := server.NewServer(log, allocator, cfg.ListenAddr)
+
+	httpOptions := []server.Option{}
+	if cfg.HTTPS.Enabled {
+		tlsConfig, confErr := cfg.HTTPS.NewTLSConfig()
+		if confErr != nil {
+			setupLog.Error(confErr, "Unable to initialize TLS configuration")
+			os.Exit(1)
+		}
+		httpOptions = append(httpOptions, server.WithTLSConfig(tlsConfig, cfg.HTTPS.ListenAddr))
+	}
+	srv := server.NewServer(log, allocator, cfg.ListenAddr, httpOptions...)
 
 	discoveryCtx, discoveryCancel := context.WithCancel(ctx)
 	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(prometheus.DefaultRegisterer)
@@ -105,7 +115,7 @@ func main() {
 	discoveryManager = discovery.NewManager(discoveryCtx, gokitlog.NewNopLogger(), prometheus.DefaultRegisterer, sdMetrics)
 
 	targetDiscoverer = target.NewDiscoverer(log, discoveryManager, allocatorPrehook, srv)
-	collectorWatcher, collectorWatcherErr := collector.NewClient(log, cfg.ClusterConfig)
+	collectorWatcher, collectorWatcherErr := collector.NewCollectorWatcher(log, cfg.ClusterConfig)
 	if collectorWatcherErr != nil {
 		setupLog.Error(collectorWatcherErr, "Unable to initialize collector watcher")
 		os.Exit(1)
@@ -117,6 +127,17 @@ func main() {
 		promWatcher, err = allocatorWatcher.NewPrometheusCRWatcher(ctx, setupLog.WithName("prometheus-cr-watcher"), *cfg)
 		if err != nil {
 			setupLog.Error(err, "Can't start the prometheus watcher")
+			os.Exit(1)
+		}
+		// apply the initial configuration
+		promConfig, loadErr := promWatcher.LoadConfig(ctx)
+		if loadErr != nil {
+			setupLog.Error(err, "Can't load initial Prometheus configuration from Prometheus CRs")
+			os.Exit(1)
+		}
+		loadErr = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourcePrometheusCR, promConfig.ScrapeConfigs)
+		if loadErr != nil {
+			setupLog.Error(err, "Can't load initial scrape targets from Prometheus CRs")
 			os.Exit(1)
 		}
 		runGroup.Add(
@@ -146,7 +167,7 @@ func main() {
 	runGroup.Add(
 		func() error {
 			// Initial loading of the config file's scrape config
-			if cfg.PromConfig != nil {
+			if cfg.PromConfig != nil && len(cfg.PromConfig.ScrapeConfigs) > 0 {
 				err = targetDiscoverer.ApplyConfig(allocatorWatcher.EventSourceConfigMap, cfg.PromConfig.ScrapeConfigs)
 				if err != nil {
 					setupLog.Error(err, "Unable to apply initial configuration")
@@ -166,7 +187,7 @@ func main() {
 		})
 	runGroup.Add(
 		func() error {
-			err := collectorWatcher.Watch(ctx, cfg.CollectorSelector, allocator.SetCollectors)
+			err := collectorWatcher.Watch(cfg.CollectorSelector, allocator.SetCollectors)
 			setupLog.Info("Collector watcher exited")
 			return err
 		},
@@ -186,6 +207,20 @@ func main() {
 				setupLog.Error(shutdownErr, "Error on server shutdown")
 			}
 		})
+	if cfg.HTTPS.Enabled {
+		runGroup.Add(
+			func() error {
+				err := srv.StartHTTPS()
+				setupLog.Info("HTTPS Server failed to start")
+				return err
+			},
+			func(_ error) {
+				setupLog.Info("Closing HTTPS server")
+				if shutdownErr := srv.ShutdownHTTPS(ctx); shutdownErr != nil {
+					setupLog.Error(shutdownErr, "Error on HTTPS server shutdown")
+				}
+			})
+	}
 	runGroup.Add(
 		func() error {
 			for {

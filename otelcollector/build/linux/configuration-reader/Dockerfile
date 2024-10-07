@@ -1,14 +1,11 @@
 # Stage 1: prom-config-validator-builder
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as prom-config-validator-builder
+ARG GOLANG_VERSION
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as prom-config-validator-builder
 WORKDIR /src
 RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu
 
 COPY ./prom-config-validator-builder/go.mod ./prom-config-validator-builder/go.sum ./prom-config-validator-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
-COPY ./pkgtranslatorprometheus/go.mod ./pkgtranslatorprometheus/go.sum ./pkgtranslatorprometheus/
-
-WORKDIR /src/pkgtranslatorprometheus
-RUN go mod download
 
 WORKDIR /src/prometheusreceiver
 RUN go version
@@ -19,7 +16,6 @@ RUN go mod download
 
 COPY ./prom-config-validator-builder /src/prom-config-validator-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
-COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
@@ -29,7 +25,8 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     fi
 
 # Stage 2: configuration-reader-builder
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as configuration-reader-builder
+ARG GOLANG_VERSION
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as configuration-reader-builder
 WORKDIR /src
 RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu
 
