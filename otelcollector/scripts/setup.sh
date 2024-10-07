@@ -55,6 +55,7 @@ mkdir /opt/microsoft/linuxmonagent
 # sudo tdnf install telegraf-1.29.4 -y
 # sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.txt
 
+tdnf install tar -y
 wget https://dl.influxdata.com/telegraf/releases/telegraf-1.32.0_linux_$ARCH.tar.gz
 tar -zxvf telegraf-1.32.0_linux_$ARCH.tar.gz
 mv /opt/telegraf-1.32.0/usr/bin/telegraf /opt/telegraf/telegraf
