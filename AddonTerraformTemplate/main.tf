@@ -8,7 +8,6 @@ resource "azurerm_kubernetes_cluster" "k8s" {
   name                = var.cluster_name
   resource_group_name = azurerm_resource_group.rg.name
 
-
   dns_prefix = var.dns_prefix
   tags = {
     Environment = "Development"
@@ -80,11 +79,27 @@ resource "azurerm_monitor_data_collection_rule" "dcr" {
   ]
 }
 
+# Create another DCE if the regions don't match
+resource "azurerm_monitor_data_collection_endpoint" "dce_mismatch" {
+  count               = local.dce_region_mismatch ? 1 : 0
+  name                = substr("MSProm-PL-${azurerm_resource_group.rg.location}-${var.cluster_name}", 0, min(44, length("MSProm-PL-${azurerm_resource_group.rg.location}-${var.cluster_name}")))
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = var.dce_location
+  kind                = "Linux"
+}
+
+# Update the DCRA with the new DCE endpoint if regions don't match
 resource "azurerm_monitor_data_collection_rule_association" "dcra" {
   name                    = "MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}"
   target_resource_id      = azurerm_kubernetes_cluster.k8s.id
   data_collection_rule_id = azurerm_monitor_data_collection_rule.dcr.id
   description             = "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster."
+
+  # Set the correct DCE endpoint based on region match
+  data_collection_endpoint_id = local.dce_region_mismatch 
+    ? azurerm_monitor_data_collection_endpoint.dce_mismatch[0].id
+    : azurerm_monitor_data_collection_endpoint.dce.id
+
   depends_on = [
     azurerm_monitor_data_collection_rule.dcr
   ]
@@ -109,6 +124,7 @@ resource "azurerm_role_assignment" "datareaderrole" {
   role_definition_id = "/subscriptions/${split("/", azurerm_monitor_workspace.amw.id)[2]}/providers/Microsoft.Authorization/roleDefinitions/b0d8363b-8ddd-447d-831f-62ca05bff136"
   principal_id       = azurerm_dashboard_grafana.grafana.identity.0.principal_id
 }
+
 
 resource "azurerm_monitor_alert_prometheus_rule_group" "node_recording_rules_rule_group" {
   name                = "NodeRecordingRulesRuleGroup-${var.cluster_name}"
