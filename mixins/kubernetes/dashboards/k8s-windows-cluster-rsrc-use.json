@@ -362,7 +362,8 @@
    "refresh": "1m",
    "schemaVersion": 39,
    "tags": [
-      "kubernetes-mixin"
+      "kubernetes-mixin",
+      "Microsoft-managed"
    ],
    "templating": {
       "list": [
@@ -399,6 +400,6 @@
       "to": "now"
    },
    "timezone": "utc",
-   "title": "Kubernetes / USE Method / Cluster(Windows)",
-   "uid": "VESDB6738"
+   "title": "Kubernetes / USE Method / Cluster (Windows)",
+   "uid": "VPLDB6738"
 }

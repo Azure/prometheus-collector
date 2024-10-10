@@ -959,7 +959,8 @@
    "refresh": "1m",
    "schemaVersion": 39,
    "tags": [
-      "kubernetes-mixin"
+      "kubernetes-mixin",
+      "Microsoft-managed"
    ],
    "templating": {
       "list": [
@@ -1037,5 +1038,5 @@
    },
    "timezone": "UTC",
    "title": "Kubernetes / Compute Resources / Workload",
-   "uid": "a164a7f0339f99e89cea5cb47e9b6738"
+   "uid": "3151475894614845ba54456099696738"
 }

@@ -498,7 +498,8 @@
    "refresh": "1m",
    "schemaVersion": 39,
    "tags": [
-      "kubernetes-mixin"
+      "kubernetes-mixin",
+      "Microsoft-managed"
    ],
    "templating": {
       "list": [
@@ -549,5 +550,5 @@
    },
    "timezone": "UTC",
    "title": "Kubernetes / Compute Resources / Node (Pods)",
-   "uid": "200ac8fdbfbb74b39aff88118e4d6738"
+   "uid": "7857fbef7cd44823a509c7dfbd166738"
 }

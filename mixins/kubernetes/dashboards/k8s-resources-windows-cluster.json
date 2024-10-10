@@ -633,7 +633,8 @@
    "refresh": "1m",
    "schemaVersion": 39,
    "tags": [
-      "kubernetes-mixin"
+      "kubernetes-mixin",
+      "Microsoft-managed"
    ],
    "templating": {
       "list": [
@@ -670,6 +671,6 @@
       "to": "now"
    },
    "timezone": "utc",
-   "title": "Kubernetes / Compute Resources / Cluster(Windows)",
-   "uid": "6438557df4391b100730f2494bcc6738"
+   "title": "Kubernetes / Compute Resources / Cluster (Windows)",
+   "uid": "6438557df4391b100730f2494baa6738"
 }

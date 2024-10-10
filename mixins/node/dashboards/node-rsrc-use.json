@@ -1091,7 +1091,8 @@
     "refresh": "1M",
     "schemaVersion": 39,
     "tags": [
-      "node-exporter-mixin"
+      "node-exporter-mixin",
+      "Microsoft-managed"
     ],
     "templating": {
       "list": [
@@ -1189,8 +1190,7 @@
         "30d"
       ]
     },
-    "timezone": "",
+    "timezone": "utc",
     "title": "Node Exporter / USE Method / Node",
-    "uid": "t5aja6738",
-    "version": 3
+    "uid": "t6aja6738"
   }
