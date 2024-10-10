@@ -68,6 +68,11 @@ var (
 	PodannotationKeepListRegex string
 	// Kappie Basic metrics keep list regex
 	KappieBasicKeepListRegex string
+	// ACStor Capacity Provisioner keep list regex
+	AcstorCapacityProvisionerKeepListRegex string
+	// ACStor Metrics Exporter keep list regex
+	AcstorMetricsExporterKeepListRegex string
+
 	// Kubelet scrape interval
 	KubeletScrapeInterval string
 	// CoreDNS scrape interval
@@ -92,6 +97,11 @@ var (
 	PodAnnotationScrapeInterval string
 	// Kappie Basic scrape interval
 	KappieBasicScrapeInterval string
+	// ACStor Capacity Provisioner keep list regex
+	AcstorCapacityProvisionerScrapeInterval string
+	// ACStor Metrics Exporter keep list regex
+	AcstorMetricsExporterScrapeInterval string
+
 	// meMetricsProcessedCount map, which holds references to metrics per metric account
 	meMetricsProcessedCountMap = make(map[string]*meMetricsProcessedCount)
 	// meMetricsProcessedCountMapMutex -- used for reading & writing locks on meMetricsProcessedCountMap
@@ -290,6 +300,8 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			WinKubeProxyKeepListRegex = regexHash["WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX"]
 			PodannotationKeepListRegex = regexHash["POD_ANNOTATION_METRICS_KEEP_LIST_REGEX"]
 			KappieBasicKeepListRegex = regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
+			AcstorCapacityProvisionerKeepListRegex = regexHash["ACSTORCAPACITYPROVISONER_KEEP_LIST_REGEX"]
+			AcstorMetricsExporterKeepListRegex = regexHash["ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX"]
 		}
 	}
 
@@ -316,6 +328,8 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			PromHealthScrapeInterval = intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"]
 			PodAnnotationScrapeInterval = intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
 			KappieBasicScrapeInterval = intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
+			AcstorCapacityProvisionerScrapeInterval = intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"]
+			AcstorMetricsExporterScrapeInterval = intervalHash["ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX"]
 		}
 	}
 
@@ -689,6 +703,13 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				if KappieBasicKeepListRegex != "" {
 					metric.Properties["KappieBasicKeepListRegex"] = KappieBasicKeepListRegex
 				}
+				if AcstorCapacityProvisionerKeepListRegex != "" {
+					metric.Properties["AcstorCapacityProvisionerRegex"] = AcstorCapacityProvisionerKeepListRegex
+				}
+				if AcstorMetricsExporterKeepListRegex != "" {
+					metric.Properties["AcstorMetricsExporterRegex"] = AcstorMetricsExporterKeepListRegex
+				}
+
 				if KubeletScrapeInterval != "" {
 					metric.Properties["KubeletScrapeInterval"] = KubeletScrapeInterval
 				}
@@ -724,6 +745,12 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				}
 				if KappieBasicScrapeInterval != "" {
 					metric.Properties["KappieBasicScrapeInterval"] = KappieBasicScrapeInterval
+				}
+				if AcstorCapacityProvisionerScrapeInterval != "" {
+					metric.Properties["AcstorCapacityProvisionerScrapeInterval"] = AcstorCapacityProvisionerScrapeInterval
+				}
+				if AcstorMetricsExporterScrapeInterval != "" {
+					metric.Properties["AcstorMetricsExporterScrapeInterval"] = AcstorMetricsExporterScrapeInterval
 				}
 			}
 
