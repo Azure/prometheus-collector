@@ -1,6 +1,6 @@
 resource "azurerm_resource_group" "rg" {
   location = var.resource_group_location
-  name     = "defaultPrometheusOnboardingResourceGroup"
+  name     = "kaveeshterraform2"
 }
 
 resource "azurerm_kubernetes_cluster" "k8s" {
@@ -21,8 +21,6 @@ resource "azurerm_kubernetes_cluster" "k8s" {
   }
 
   monitor_metrics {
-    annotations_allowed = var.metric_annotations_allowlist
-    labels_allowed      = var.metric_labels_allowlist
   }
 
   network_profile {
@@ -45,6 +43,15 @@ resource "azurerm_monitor_data_collection_endpoint" "dce" {
   name                = substr("MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}", 0, min(44, length("MSProm-${azurerm_resource_group.rg.location}-${var.cluster_name}")))
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
+  kind                = "Linux"
+}
+
+# Create another DCE if the regions don't match
+resource "azurerm_monitor_data_collection_endpoint" "dce_mismatch" {
+  count               = local.dce_region_mismatch ? 1 : 0
+  name                = substr("MSProm-PL-${azurerm_resource_group.rg.location}-${var.cluster_name}", 0, min(44, length("MSProm-PL-${azurerm_resource_group.rg.location}-${var.cluster_name}")))
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = var.cluster_region
   kind                = "Linux"
 }
 
@@ -90,10 +97,25 @@ resource "azurerm_monitor_data_collection_rule_association" "dcra" {
   ]
 }
 
+# Logic to determine region mismatch
+locals {
+  dce_region_mismatch = var.cluster_region != var.amw_region
+}
+
+resource "azurerm_monitor_data_collection_rule_association" "dcra_mismatch" {
+  target_resource_id      = azurerm_kubernetes_cluster.k8s.id
+  data_collection_endpoint_id = local.dce_region_mismatch ? azurerm_monitor_data_collection_endpoint.dce_mismatch[0].id : azurerm_monitor_data_collection_endpoint.dce.id
+  description             = "Association of data collection endpoint for private link clusters. Deleting this association will break the data collection for this AKS Cluster."
+  depends_on = [
+    azurerm_monitor_data_collection_endpoint.dce
+  ]
+}
+
 resource "azurerm_dashboard_grafana" "grafana" {
   name                = var.grafana_name
   resource_group_name = azurerm_resource_group.rg.name
   location            = var.grafana_location
+  grafana_major_version             = 10
 
   identity {
     type = "SystemAssigned"

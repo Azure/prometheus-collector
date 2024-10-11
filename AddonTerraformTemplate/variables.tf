@@ -33,6 +33,16 @@ variable "monitor_workspace_name" {
   default = "amwtest"
 }
 
+variable "amw_region" {
+  default = "northeurope"
+  description = "Location of the Azure Monitor Workspace"
+}
+
+variable "cluster_region" {
+  default = "eastus"
+  description = "Location of the Azure Kubernetes Cluster"
+}
+
 variable "resource_group_location" {
   default     = "eastus"
   description = "Location of the resource group."
