@@ -9,6 +9,17 @@ spec:
   labelNameLengthLimit: 511
   labelValueLengthLimit: 1023
   podMetricsEndpoints:
+  - relabelings:
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: replace
+      regex: (.*)
+      replacement: $$1
+      target_label: double_dollar_sign
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: replace
+      regex: (.*)
+      replacement: $1
+      target_label: single_dollar_sign
   - metricRelabelings:
       - action: keep
         regex: up
@@ -31,6 +42,17 @@ spec:
   labelValueLengthLimit: 1023
   # rest of the service monitor
   endpoints:
+  - relabelings:
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: replace
+      regex: (.*)
+      replacement: $$1
+      target_label: double_dollar_sign
+    - source_labels: [__meta_kubernetes_pod_label_app]
+      action: replace
+      regex: (.*)
+      replacement: $1
+      target_label: single_dollar_sign
   - metricRelabelings:
       - action: keep
         regex: up
