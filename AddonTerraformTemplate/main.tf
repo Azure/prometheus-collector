@@ -1,6 +1,6 @@
 resource "azurerm_resource_group" "rg" {
   location = var.resource_group_location
-  name     = "kaveeshterraform2"
+  name     = "defaultPrometheusOnboardingResourceGroup"
 }
 
 resource "azurerm_kubernetes_cluster" "k8s" {
@@ -21,6 +21,8 @@ resource "azurerm_kubernetes_cluster" "k8s" {
   }
 
   monitor_metrics {
+    annotations_allowed = var.metric_annotations_allowlist
+    labels_allowed      = var.metric_labels_allowlist
   }
 
   network_profile {
