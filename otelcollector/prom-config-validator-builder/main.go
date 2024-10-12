@@ -170,22 +170,22 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						metricRelabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
+			}
 
-				if scrapeConfig["static_configs"] != nil {
-					staticConfigs := scrapeConfig["static_configs"].([]interface{})
-					for _, staticConfig := range staticConfigs {
-						staticConfig := staticConfig.(map[interface{}]interface{})
-						if staticConfig["labels"] != nil {
-							labels := staticConfig["labels"].(map[interface{}]interface{})
-							for key, value := range labels {
-								if _, isString := value.(string); isString {
-									labelValue := value.(string)
-									modifiedLabelValue := strings.ReplaceAll(labelValue, "$$NODE_NAME", "$NODE_NAME")
-									modifiedLabelValue = strings.ReplaceAll(modifiedLabelValue, "$$NODE_IP", "$NODE_IP")
-									modifiedLabelValue = strings.ReplaceAll(modifiedLabelValue, "$NODE_NAME", "${env:NODE_NAME}")
-									modifiedLabelValue = strings.ReplaceAll(modifiedLabelValue, "$NODE_IP", "${env:NODE_IP}")
-									labels[key] = modifiedLabelValue
-								}
+			if scrapeConfig["static_configs"] != nil {
+				staticConfigs := scrapeConfig["static_configs"].([]interface{})
+				for _, staticConfig := range staticConfigs {
+					staticConfig := staticConfig.(map[interface{}]interface{})
+					if staticConfig["targets"] != nil {
+						targets := staticConfig["targets"].([]interface{})
+						for i, target := range targets {
+							if _, isString := target.(string); isString {
+								targetValue := target.(string)
+								modifiedtargetValue := strings.ReplaceAll(targetValue, "$$NODE_NAME", "$NODE_NAME")
+								modifiedtargetValue = strings.ReplaceAll(modifiedtargetValue, "$$NODE_IP", "$NODE_IP")
+								modifiedtargetValue = strings.ReplaceAll(modifiedtargetValue, "$NODE_NAME", "${env:NODE_NAME}")
+								modifiedtargetValue = strings.ReplaceAll(modifiedtargetValue, "$NODE_IP", "${env:NODE_IP}")
+								staticConfig["targets"].([]interface{})[i] = modifiedtargetValue
 							}
 						}
 					}
