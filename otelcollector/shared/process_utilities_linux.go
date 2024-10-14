@@ -43,53 +43,51 @@ func IsProcessRunning(processName string) bool {
 	return false
 }
 
-// SetEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
-// and sources the file to apply changes immediately. If echo is true, it calls EchoVar
-func SetEnvAndSourceBashrc(key, value string, echo bool) error {
-	// Get user's home directory
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get user's home directory: %v", err)
-	}
+// SetEnvAndSourceBashrcOrPowershell sets a key-value pair as an environment variable.
+// If OS_TYPE is 'linux', it sets the variable in the .bashrc file and sources it.
+// If OS_TYPE is 'windows', it sets the variable in the system environment.
+func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
+	// Get the OS_TYPE from environment variables
+	osType := os.Getenv("OS_TYPE")
 
-	// Construct the path to .bashrc
-	bashrcPath := filepath.Join(homeDir, ".bashrc")
-
-	// Check if .bashrc exists, if not, create it
-	if _, err := os.Stat(bashrcPath); os.IsNotExist(err) {
-		file, err := os.Create(bashrcPath)
+	if osType == "linux" {
+		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			return fmt.Errorf("failed to create .bashrc file: %v", err)
+			return fmt.Errorf("failed to get user's home directory: %v", err)
+		}
+
+		bashrcPath := filepath.Join(homeDir, ".bashrc")
+
+		// Open the .bashrc file for appending, or create it if not present
+		file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to open or create .bashrc file: %v", err)
 		}
 		defer file.Close()
+
+		_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
+		if err != nil {
+			return fmt.Errorf("failed to write to .bashrc file: %v", err)
+		}
+
+		// Source the .bashrc file
+		cmd := exec.Command("bash", "-c", "source "+bashrcPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to source .bashrc: %v", err)
+		}
+
+		// Set the environment variable for the current session
+		if err := os.Setenv(key, value); err != nil {
+			return fmt.Errorf("failed to set environment variable: %v", err)
+		}
+
+	} else if osType == "windows" {
+		fmt.Println("Should never reach here as this is the linux file")
+	} else {
+		return fmt.Errorf("unsupported OS_TYPE: %s", osType)
 	}
 
-	// Open the .bashrc file for appending
-	file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to open .bashrc file: %v", err)
-	}
-	defer file.Close()
-
-	_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
-
-	if err != nil {
-		return fmt.Errorf("failed to write to .bashrc file: %v", err)
-	}
-
-	// Source the .bashrc file
-	cmd := exec.Command("bash", "-c", "source "+bashrcPath)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to source .bashrc: %v", err)
-	}
-
-	// Set the environment variable
-	err = os.Setenv(key, value)
-	if err != nil {
-		return fmt.Errorf("failed to set environment variable: %v", err)
-	}
-
-	// Conditionally call EchoVar
+	// Optionally echo the variable
 	if echo {
 		EchoVar(key, value)
 	}
@@ -322,6 +320,10 @@ func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string)
 		fmt.Printf("Error starting MetricsExtension: %v\n", err)
 		return
 	}
+}
+
+func StartMA() {
+	fmt.Println("Should never reach here, defining function since main.go expects it")
 }
 
 func StartMdsdForOverlay() {

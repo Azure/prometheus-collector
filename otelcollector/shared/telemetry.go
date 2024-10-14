@@ -45,7 +45,7 @@ func SetupTelemetry(customEnvironment string) {
 	}
 
 	// Export APPLICATIONINSIGHTS_AUTH
-	err := SetEnvAndSourceBashrc("APPLICATIONINSIGHTS_AUTH", encodedAIKey, false)
+	err := SetEnvAndSourceBashrcOrPowershell("APPLICATIONINSIGHTS_AUTH", encodedAIKey, false)
 	if err != nil {
 		fmt.Println("Error setting APPLICATIONINSIGHTS_AUTH environment variable:", err)
 		return
@@ -84,7 +84,7 @@ func SetupTelemetry(customEnvironment string) {
 	}
 	aiKey = string(aiKeyBytes)
 
-	err = SetEnvAndSourceBashrc("TELEMETRY_APPLICATIONINSIGHTS_KEY", aiKey, false)
+	err = SetEnvAndSourceBashrcOrPowershell("TELEMETRY_APPLICATIONINSIGHTS_KEY", aiKey, false)
 	if err != nil {
 		fmt.Println("Error setting TELEMETRY_APPLICATIONINSIGHTS_KEY environment variable:", err)
 		return
