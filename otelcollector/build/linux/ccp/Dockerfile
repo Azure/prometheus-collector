@@ -54,7 +54,7 @@ WORKDIR /main
 RUN go version
 RUN go mod download
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
-RUN go build -o ccpmain.exe ./main.go
+RUN go build -o ccpmain ./main.go
 
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 ENV OS_TYPE "linux"
@@ -76,7 +76,7 @@ COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
-COPY --from=ccpmain-builder --chmod=777 /main/ccpmain.exe $tmpdir/main/
+COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/main/
 COPY ./react /static/react
 
 ARG TARGETARCH
