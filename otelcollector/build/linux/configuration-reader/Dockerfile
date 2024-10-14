@@ -111,7 +111,7 @@ COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
 COPY --from=builder /lib/libinotifytools.so.0 /lib/
 
 # crond dependencies
-COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre.so.1 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
+COPY --from=builder /usr/lib/libselinux.so.1 /usr/lib/libpam.so.0 /usr/lib/libc.so.6 /usr/lib/libaudit.so.1 /usr/lib/libcap-ng.so.0/ /usr/lib/
 
 # vim dependencies
 COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
