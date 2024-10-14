@@ -1173,7 +1173,8 @@
    "refresh": "1m",
    "schemaVersion": 39,
    "tags": [
-      "kubernetes-mixin"
+      "kubernetes-mixin",
+      "Microsoft-managed"
    ],
    "templating": {
       "list": [
@@ -1224,5 +1225,5 @@
    },
    "timezone": "UTC",
    "title": "Kubernetes / Kubelet",
-   "uid": "3138fa155d5915769fbded898ac06738"
+   "uid": "184244a28b3d478e9c0de82def316738"
 }
