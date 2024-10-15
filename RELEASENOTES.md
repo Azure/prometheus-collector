@@ -7,6 +7,7 @@
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
 * Change log -
 * fix: Control Plane fixes (call proper executable in dockerfile, set env correctly) - https://github.com/Azure/prometheus-collector/pull/993
+* feat : Onboard ACStor targets - https://github.com/Azure/prometheus-collector/pull/976
 
 ## Release 09-16-2024
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.10.0-main-09-16-2024-85a71678`
