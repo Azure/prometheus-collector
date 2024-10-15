@@ -29,6 +29,11 @@ processors:
       action: insert
 receivers:
     prometheus:
+      config:
+      global:
+        external_labels: 
+          - rashmi1: rashmi1
+          - rashmi2: rashmi2
       target_allocator:
         endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
         interval: 30s
