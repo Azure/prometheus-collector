@@ -89,5 +89,9 @@ https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/toolkit/ve
     - To generate snapshots(required when you update the image and/or chart) –
         - [Re-Render Test Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-adapter-charts&version=GBmaster&_a=contents&anchor=re-render-test-snapshots)
         - [Re-Render Addon Chart Snapshots](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/ccp/charts/tests/addon-charts/README.md&version=GBmaster&_a=contents)
-- **PR 5**: Toggle Monitoring clusters for Control Plane image. Link to similar PR [here](https://msazure.visualstudio.com/DefaultCollection/CloudNativeCompute/_git/aks-rp/pullrequest/10083525?_a=files)
+- **Control Plane Step**
+  - **PR 5** Toggle Monitoring clusters for Control Plane image. Link to similar PR [here](https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp/pullrequest/11017213?_a=files)
+  - Once the deployment complete, verify that the latest candidate image is running on the monitoring metrics clusters using the following dashboard [tile](https://dataexplorer.azure.com/dashboards/2ed37a93-2d75-494c-a072-e34fe60dcdd6?p-_startTime=24hours&p-_endTime=now&tile=3298383e-b7f7-409e-aa6f-8a32cf4ad7e4)
+  - Verify data flow for CCP metrics in the grafana dashboard using these [dashboards](https://mon-graf-metric-westus-f5hvdcaxc3hjdcdm.wus.grafana.azure.com/dashboards/f/cloud-native/azure-kubernetes-service-monitoring)
+  - Post about the candidate image release for the AKS team to update in the [Managed Prometheus (Azure Monitor Metrics addon)](https://teams.microsoft.com/l/channel/19%3Ae9dd234c60824ac5b494dbe3ec7dcb6b%40thread.skype/Managed%20Prometheus%20(Azure%20Monitor%20Metrics%20addon)?groupId=e121dbfd-0ec1-40ea-8af5-26075f6a731b&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47) teams channel
 - **Arc**: Start Arc release to Canary regions. The new version will be automatically deployed to each region batch every 24 hours.
