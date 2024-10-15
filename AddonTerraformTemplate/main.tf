@@ -8,7 +8,6 @@ resource "azurerm_kubernetes_cluster" "k8s" {
   name                = var.cluster_name
   resource_group_name = azurerm_resource_group.rg.name
 
-
   dns_prefix = var.dns_prefix
   tags = {
     Environment = "Development"
@@ -48,9 +47,14 @@ resource "azurerm_monitor_data_collection_endpoint" "dce" {
   kind                = "Linux"
 }
 
-# Create another DCE if the regions don't match
+# Logic to determine region mismatch
+locals {
+  dce_region_mismatch = var.cluster_region != var.amw_region
+}
+
+# Create another DCE if the regions don't match and is_private_cluster is true
 resource "azurerm_monitor_data_collection_endpoint" "dce_mismatch" {
-  count               = local.dce_region_mismatch ? 1 : 0
+  count               = (local.dce_region_mismatch && var.is_private_cluster) ? 1 : 0
   name                = substr("MSProm-PL-${azurerm_resource_group.rg.location}-${var.cluster_name}", 0, min(44, length("MSProm-PL-${azurerm_resource_group.rg.location}-${var.cluster_name}")))
   resource_group_name = azurerm_resource_group.rg.name
   location            = var.cluster_region
@@ -99,12 +103,8 @@ resource "azurerm_monitor_data_collection_rule_association" "dcra" {
   ]
 }
 
-# Logic to determine region mismatch
-locals {
-  dce_region_mismatch = var.cluster_region != var.amw_region
-}
-
 resource "azurerm_monitor_data_collection_rule_association" "dcra_mismatch" {
+  count                   = (local.dce_region_mismatch && var.is_private_cluster) ? 1 : 0
   target_resource_id      = azurerm_kubernetes_cluster.k8s.id
   data_collection_endpoint_id = local.dce_region_mismatch ? azurerm_monitor_data_collection_endpoint.dce_mismatch[0].id : azurerm_monitor_data_collection_endpoint.dce.id
   description             = "Association of data collection endpoint for private link clusters. Deleting this association will break the data collection for this AKS Cluster."
@@ -117,7 +117,7 @@ resource "azurerm_dashboard_grafana" "grafana" {
   name                = var.grafana_name
   resource_group_name = azurerm_resource_group.rg.name
   location            = var.grafana_location
-  grafana_major_version             = 10
+  grafana_major_version = var.grafana_version
 
   identity {
     type = "SystemAssigned"
@@ -133,6 +133,7 @@ resource "azurerm_role_assignment" "datareaderrole" {
   role_definition_id = "/subscriptions/${split("/", azurerm_monitor_workspace.amw.id)[2]}/providers/Microsoft.Authorization/roleDefinitions/b0d8363b-8ddd-447d-831f-62ca05bff136"
   principal_id       = azurerm_dashboard_grafana.grafana.identity.0.principal_id
 }
+
 
 resource "azurerm_monitor_alert_prometheus_rule_group" "node_recording_rules_rule_group" {
   name                = "NodeRecordingRulesRuleGroup-${var.cluster_name}"

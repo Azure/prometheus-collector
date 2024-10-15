@@ -29,6 +29,14 @@ variable "grafana_location" {
   default = "eastus"
 }
 
+variable "grafana_version" {
+  default = "10"
+}
+
+variable "is_private_cluster" {
+  default = "false"
+}
+
 variable "monitor_workspace_name" {
   default = "amwtest"
 }
