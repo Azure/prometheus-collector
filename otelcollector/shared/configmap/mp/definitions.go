@@ -45,6 +45,8 @@ var (
 	networkObservabilityRetinaDefaultFileDs      = "networkobservabilityRetinaDefaultDs.yml"
 	networkObservabilityHubbleDefaultFileDs      = "networkobservabilityHubbleDefaultDs.yml"
 	networkObservabilityCiliumDefaultFileDs      = "networkobservabilityCiliumDefaultDs.yml"
+	acstorCapacityProvisionerDefaultFile         = "acstorCapacityProvisionerDefaultFile.yml"
+	acstorMetricsExporterDefaultFile             = "acstorMetricsExporterDefaultFile.yml"
 )
 
 type RegexValues struct {
@@ -63,6 +65,8 @@ type RegexValues struct {
 	networkobservabilitycilium string
 	podannotations             string
 	minimalingestionprofile    string
+	acstorcapacityprovisioner  string
+	acstormetricsexporter      string
 }
 
 // FilesystemConfigLoader implements ConfigLoader for file-based configuration loading.
@@ -99,6 +103,8 @@ type ConfigProcessor struct {
 	NetworkObservabilityRetina string
 	NetworkObservabilityHubble string
 	NetworkObservabilityCilium string
+	AcstorCapacityProvisioner  string
+	AcstorMetricsExporter      string
 }
 
 // ConfigParser is an interface for parsing configurations.
