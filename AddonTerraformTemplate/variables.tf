@@ -29,8 +29,26 @@ variable "grafana_location" {
   default = "eastus"
 }
 
+variable "grafana_version" {
+  default = "10"
+}
+
+variable "is_private_cluster" {
+  default = "false"
+}
+
 variable "monitor_workspace_name" {
   default = "amwtest"
+}
+
+variable "amw_region" {
+  default = "northeurope"
+  description = "Location of the Azure Monitor Workspace"
+}
+
+variable "cluster_region" {
+  default = "eastus"
+  description = "Location of the Azure Kubernetes Cluster"
 }
 
 variable "resource_group_location" {

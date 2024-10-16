@@ -46,6 +46,23 @@ func IsProcessRunning(processName string) bool {
 // SetEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
 // and sources the file to apply changes immediately. If echo is true, it calls EchoVar
 func SetEnvAndSourceBashrc(key, value string, echo bool) error {
+
+	// Set the environment variable
+	err := os.Setenv(key, value)
+	if err != nil {
+		return fmt.Errorf("failed to set environment variable: %v", err)
+	}
+
+	// Conditionally call EchoVar
+	if echo {
+		EchoVar(key, value)
+	}
+
+	if GetEnv("CCP_METRICS_ENABLED", "false") == "true" {
+		// return if in ccp mode as no bash shell present here
+		return nil
+	}
+
 	// Get user's home directory
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -81,17 +98,6 @@ func SetEnvAndSourceBashrc(key, value string, echo bool) error {
 	cmd := exec.Command("bash", "-c", "source "+bashrcPath)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to source .bashrc: %v", err)
-	}
-
-	// Set the environment variable
-	err = os.Setenv(key, value)
-	if err != nil {
-		return fmt.Errorf("failed to set environment variable: %v", err)
-	}
-
-	// Conditionally call EchoVar
-	if echo {
-		EchoVar(key, value)
 	}
 
 	return nil

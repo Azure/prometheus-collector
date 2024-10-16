@@ -21,6 +21,13 @@ spec:
         name: memory
         container: prometheus-collector
         target:
-          averageValue: 10Gi
+          averageValue: 5Gi
           type: AverageValue
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 300
 {{- end }}
