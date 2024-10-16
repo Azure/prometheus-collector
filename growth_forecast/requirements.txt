@@ -10,4 +10,4 @@ azure-identity
 azure-monitor-query
 prometheus-client
 prometheus-api-client
-APIScheduler
+APScheduler

@@ -267,8 +267,8 @@ def main():
     forecast_prometheus_metrics(scrape_samples_gauge)
 
     scheduler = BackgroundScheduler()
-    #scheduler.add_job(lambda: forecast_az_monitor_metrics(metric_limit_gauge), 'interval', minutes=15)
-    scheduler.add_job(lambda: forecast_prometheus_metrics(scrape_samples_gauge), 'interval', minutes=15)
+    scheduler.add_job(lambda: forecast_az_monitor_metrics(metric_limit_gauge), 'interval', minutes=15)
+    #scheduler.add_job(lambda: forecast_prometheus_metrics(scrape_samples_gauge), 'interval', minutes=15)
     scheduler.start()
     plt.show()
     prometheus_client.start_http_server(PROMETHEUS_PORT)
