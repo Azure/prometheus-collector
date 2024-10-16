@@ -11,7 +11,7 @@ np.float_ = np.float64
 from prophet import Prophet
 from datetime import datetime, timedelta, timezone
 import matplotlib
-matplotlib.use("webagg")
+#matplotlib.use("webagg")
 from matplotlib import pyplot as plt
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

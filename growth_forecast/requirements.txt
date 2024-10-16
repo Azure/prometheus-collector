@@ -11,3 +11,4 @@ azure-monitor-query
 prometheus-client
 prometheus-api-client
 APScheduler
+Tornado
