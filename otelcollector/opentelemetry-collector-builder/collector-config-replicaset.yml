@@ -32,8 +32,7 @@ receivers:
       config:
         global:
           external_labels: 
-            - rashmi1: rashmi1
-            - rashmi2: rashmi2
+            [ rashmi1: rashmi1 ]
       target_allocator:
         endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
         interval: 30s
