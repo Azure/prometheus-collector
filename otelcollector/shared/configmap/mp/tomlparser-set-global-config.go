@@ -36,7 +36,7 @@ type OtelConfig struct {
 	} `yaml:"service"`
 }
 
-func setGlobalSettingsInCollectorConfig() {
+func SetGlobalSettingsInCollectorConfig() {
 	azmonSetGlobalSettings := os.Getenv("AZMON_SET_GLOBAL_SETTINGS")
 
 	if azmonSetGlobalSettings == "true" {
