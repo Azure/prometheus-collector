@@ -1,5 +1,5 @@
 import toAzurePromAlertingRuleProperties from './to-azure-prom-rule-group-properties'
-import{test, expect} from '@jest/globals';
+import { test, expect } from '@jest/globals';
 
 const params = {
   actionGroupId: 'actionGroupId',
@@ -43,9 +43,8 @@ test('Distinguish between alerting and recording rule', () => {
   expect(converted.rules[1].alert).toBe("alertName");
   expect(converted.rules[1].severity).toBe(3);
   expect(converted.rules[1].resolveConfiguration).toEqual({
-      autoResolve: true,
-      timeToResolve: "PT10M"
+    autoResolved: true,
+    timeToResolve: "PT10M"
   });
   expect(converted.rules[1].actions[0].actionGroupId).toBe("[parameters('actionGroupId')]");
 });
-
