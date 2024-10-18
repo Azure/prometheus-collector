@@ -130,6 +130,7 @@ func main() {
 			collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-replicaset.yml"
 		} else {
 			collectorConfig = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
+			configmapsettings.setGlobalSettingsInCollectorConfig()
 		}
 	} else if azmonUseDefaultPrometheusConfig == "true" {
 		fmt.Println("Starting otelcollector with only default scrape configs enabled")
