@@ -1,2 +1,1 @@
-import StepResult from './types/step-result';
-export default function yamlToArmTemplateFlow(yamlStr: string, options: any): StepResult;
+export default function convert(input: string, options: any): Promise<void>;
