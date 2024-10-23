@@ -1,6 +1,7 @@
 package configmapsettings
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -24,6 +25,9 @@ func parseConfigMapForPodAnnotations() (map[string]interface{}, error) {
 	if data, err := os.ReadFile(configMapMountPathForPodAnnotation); err == nil {
 		parsedConfig := make(map[string]interface{})
 		if err := toml.Unmarshal(data, &parsedConfig); err == nil {
+			// Pretty-print the parsed config to show all levels
+			configJson, _ := json.MarshalIndent(parsedConfig, "", "  ")
+			fmt.Printf("Parsed Config: %s\n", configJson)
 			return parsedConfig, nil
 		} else {
 			return nil, fmt.Errorf("exception while parsing config map for pod annotations: %v, using defaults, please check config map for pod annotations", err)
