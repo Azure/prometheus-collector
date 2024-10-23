@@ -441,9 +441,9 @@ spec:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 60
-            periodSeconds: 15
-            timeoutSeconds: 5
+            initialDelaySeconds: 300
+            periodSeconds: 60
+            timeoutSeconds: 60
             failureThreshold: 3
         - name: addon-token-adapter-win
           command:
