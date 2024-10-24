@@ -1461,26 +1461,46 @@ stages:
         inputs:
           targetType: 'inline'
           script: |
-            echo "Removing existing signature from telegraf.exe by copying the binary..."
+            echo "Checking for osslsigncode..."
             
-            $sourcePath = "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
-            $tempPath = "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf_temp.exe"
-            
-            # Copy the file to a temporary location
-            Copy-Item -Path $sourcePath -Destination $tempPath
-      
-            # Check if the copied file has no signature
-            $signature = Get-AuthenticodeSignature $tempPath
-            if ($signature.Status -eq 'NotSigned') {
-              Write-Host "Signature removed successfully from the copied file."
+            # Check if osslsigncode is installed
+            $osslsigncodePath = Get-Command osslsigncode -ErrorAction SilentlyContinue
+            if ($osslsigncodePath) {
+              Write-Host "osslsigncode found. Proceeding with signature removal..."
               
-              # Replace the original file with the unsigned version
-              Move-Item -Path $tempPath -Destination $sourcePath -Force
-              Write-Host "Original telegraf.exe replaced with unsigned version."
-            } else {
-              Write-Host "Signature still exists on the copied file."
-            }
+              $sourcePath = "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
+              $tempPath = "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf_unsigned.exe"
       
+              # Use osslsigncode to remove the signature
+              & $osslsigncodePath remove-signature -in $sourcePath -out $tempPath
+      
+              # Check if the signature has been removed from the new file
+              $signature = Get-AuthenticodeSignature $tempPath
+              if ($signature.Status -eq 'NotSigned') {
+                Write-Host "Signature removed successfully from the copied file."
+                
+                # Replace the original file with the unsigned version
+                Move-Item -Path $tempPath -Destination $sourcePath -Force
+                Write-Host "Original telegraf.exe replaced with unsigned version."
+              } else {
+                Write-Host "Signature still exists on the copied file."
+              }
+            } else {
+              Write-Host "osslsigncode not found. Trying signtool instead..."
+      
+              # Fall back to signtool if osslsigncode is not available
+              $signtoolPath = "${env:ProgramFiles(x86)}\Windows Kits\10\App Certification Kit\signtool.exe"
+              & $signtoolPath remove $sourcePath
+      
+              # Check if the signature has been removed
+              $signature = Get-AuthenticodeSignature $sourcePath
+              if ($signature.Status -eq 'NotSigned') {
+                Write-Host "Signature removed successfully."
+              } else {
+                Write-Host "Signature still exists."
+              }
+            }
+
 
       - task: EsrpCodeSigning@5
         inputs:
