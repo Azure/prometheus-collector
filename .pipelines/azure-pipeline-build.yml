@@ -1271,14 +1271,14 @@ stages:
       - script: dir $(Build.ArtifactStagingDirectory)
         displayName: 'List files in Staging Directory'
 
-      - task: PowerShell@2
-        displayName: Remove existing signature from telegraf
-        inputs:
-          targetType: 'inline'
-          script: |
-            echo "Removing existing signature from telegraf.exe..."
-            $signtoolPath = "${env:ProgramFiles(x86)}\Microsoft SDKs\ClickOnce\SignTool\signtool.exe"
-            & $signtoolPath remove /c /u "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
+      # - task: PowerShell@2
+      #   displayName: Remove existing signature from telegraf
+      #   inputs:
+      #     targetType: 'inline'
+      #     script: |
+      #       echo "Removing existing signature from telegraf.exe..."
+      #       $signtoolPath = "${env:ProgramFiles(x86)}\Microsoft SDKs\ClickOnce\SignTool\signtool.exe"
+      #       & $signtoolPath remove /c /u "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
 
       - task: EsrpCodeSigning@5
         inputs:
