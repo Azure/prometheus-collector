@@ -1271,15 +1271,6 @@ stages:
       - script: dir $(Build.ArtifactStagingDirectory)
         displayName: 'List files in Staging Directory'
 
-      # - task: PowerShell@2
-      #   displayName: Remove existing signature from telegraf
-      #   inputs:
-      #     targetType: 'inline'
-      #     script: |
-      #       echo "Removing existing signature from telegraf.exe..."
-      #       $signtoolPath = "${env:ProgramFiles(x86)}\Microsoft SDKs\ClickOnce\SignTool\signtool.exe"
-      #       & $signtoolPath remove /c /u "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
-
       - task: EsrpCodeSigning@5
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
@@ -1455,32 +1446,6 @@ stages:
 
       - script: dir $(Build.ArtifactStagingDirectory)
         displayName: 'List files in Staging Directory'
-
-      # - task: PowerShell@2
-      #   displayName: Remove existing signature from telegraf
-      #   inputs:
-      #     targetType: 'inline'
-      #     script: |
-      #       echo "Removing existing signature from telegraf.exe by copying the binary..."
-            
-      #       $sourcePath = "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
-      #       $tempPath = "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf_temp.exe"
-            
-      #       # Copy the file to a temporary location
-      #       Copy-Item -Path $sourcePath -Destination $tempPath
-      
-      #       # Check if the copied file has no signature
-      #       $signature = Get-AuthenticodeSignature $tempPath
-      #       if ($signature.Status -eq 'NotSigned') {
-      #         Write-Host "Signature removed successfully from the copied file."
-              
-      #         # Replace the original file with the unsigned version
-      #         Move-Item -Path $tempPath -Destination $sourcePath -Force
-      #         Write-Host "Original telegraf.exe replaced with unsigned version."
-      #       } else {
-      #         Write-Host "Signature still exists on the copied file."
-      #       }
-      
 
       - task: EsrpCodeSigning@5
         inputs:
