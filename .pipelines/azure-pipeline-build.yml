@@ -1463,9 +1463,16 @@ stages:
           script: |
             echo "Removing existing signature from telegraf.exe..."
             $signtoolPath = "${env:ProgramFiles(x86)}\Microsoft SDKs\ClickOnce\SignTool\signtool.exe"
-            # /c: Removes all certificates except for the signer certificate from the signature.
-            # /u: Removes unauthenticated attributes from the signature, such as timestamps.
             & $signtoolPath remove /c /u "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
+
+            # Check if the signature has been removed
+            $signature = Get-AuthenticodeSignature "$(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe"
+            if ($signature.Status -eq 'NotSigned') {
+              Write-Host "Signature removed successfully."
+            } else {
+              Write-Host "Signature still exists."
+            }
+
 
       - task: EsrpCodeSigning@5
         inputs:
