@@ -79,7 +79,7 @@ func SetGlobalSettingsInCollectorConfig() {
 				return
 			}
 
-			log.Println("Updated file - %s with global settings", collectorConfigReplicasetPath)
+			log.Println("Updated file with global settings", collectorConfigReplicasetPath)
 			return
 		}
 		fmt.Println("Global settings are empty in custom config map, making no replacement")
