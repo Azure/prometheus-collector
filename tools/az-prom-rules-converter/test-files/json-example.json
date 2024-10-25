@@ -1,0 +1,18 @@
+{
+    "groups": [
+        {
+            "name": "example",
+            "interval": "2m",
+            "rules": [
+                {
+                    "record": "job:http_inprogress_requests:sum",
+                    "expr": "sum by (job) (http_inprogress_requests)"
+                },
+                {
+                    "alert": "alert name",
+                    "expr": "sum by (job) (http_inprogress_requests)"
+                }
+            ]
+        }
+    ]
+}

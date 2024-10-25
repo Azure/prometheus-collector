@@ -1,19 +1,19 @@
 import { PrometheusRules } from '../types/prometheus-rules'
-import  StepResult from '../types/step-result';
+import StepResult from '../types/step-result';
 import toAzurePromRuleGroup from './to-azure/to-azure-prom-rule-group'
 
-export default function toArmTemplate(promRules: PrometheusRules, params: any) : StepResult {
+export default function toArmTemplate(promRules: PrometheusRules, params: any): StepResult {
   const result: StepResult = {
     success: true,
     output: getArmTemplateFormat(params)
   };
 
-  promRules?.groups?.every( (group, i) => {    
+  promRules?.groups?.every((group, i) => {
     try {
       const resource = toAzurePromRuleGroup(group, params);
       result.output.resources.push(resource);
       return true;
-    } catch(exception) {
+    } catch (exception) {
       result.success = false;
       result.error = {
         title: `Error converting group ${i}`,
@@ -23,18 +23,18 @@ export default function toArmTemplate(promRules: PrometheusRules, params: any) :
         }
       };
       return false;
-    }    
+    }
   });
-  
+
   return result;
 }
 
 /**
  * Get Arm Template format
  * taken from https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/syntax
- * @returns 
- */ 
-const getArmTemplateFormat = (params: any) : any => {
+ * @returns
+ */
+const getArmTemplateFormat = (params: any): any => {
   const result: any = {
     $schema: "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     contentVersion: "1.0.0.0",
@@ -62,11 +62,11 @@ const getArmTemplateFormat = (params: any) : any => {
         }
       }
     },
-    variables: {  },
-    resources: [  ]
+    variables: {},
+    resources: []
   };
-  ['clusterName', 'actionGroupId', 'azureMonitorWorkspace', 'location'].forEach( (paramName) => {
-    console.log(paramName, params[paramName]);
+  ['clusterName', 'actionGroupId', 'azureMonitorWorkspace', 'location'].forEach((paramName) => {
+    // console.log(paramName, params[paramName]);
     if (params[paramName]) {
       result.parameters[paramName].defaultValue = params[paramName];
     }
