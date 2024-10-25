@@ -183,6 +183,8 @@ func Configmapparser() {
 					}
 				}
 				shared.SetEnvAndSourceBashrc("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
+			} else {
+				shared.SetEnvAndSourceBashrc("AZMON_SET_GLOBAL_SETTINGS", "true", true)
 			}
 		}
 	} else if _, err := os.Stat(mergedDefaultConfigPath); err == nil {
