@@ -1,5 +1,14 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 10-15-2024 (CCP release only)
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.10.2-main-10-15-2024-06b20de5`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.10.2-main-10-15-2024-06b20de5-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.10.2-main-10-15-2024-06b20de5-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.10.2-main-10-15-2024-06b20de5-cfg`
+* Change log -
+* fix: Control Plane fixes (call proper executable in dockerfile, set env correctly) - https://github.com/Azure/prometheus-collector/pull/993
+* feat : Onboard ACStor targets - https://github.com/Azure/prometheus-collector/pull/976
+
 ## Release 09-16-2024
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.10.0-main-09-16-2024-85a71678`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.10.0-main-09-16-2024-85a71678-win`

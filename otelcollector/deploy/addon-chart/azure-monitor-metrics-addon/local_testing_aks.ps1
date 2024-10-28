@@ -27,7 +27,7 @@ $valuesTemplateContent | Out-File -FilePath $valuesOutputPath
 $chartTemplateContent = $chartTemplateContent -replace '\$\{HELM_CHART_NAME\}', 'ama-metrics'
 $chartTemplateContent = $chartTemplateContent -replace '\$\{IMAGE_TAG\}', $ImageTag
 # Remove the dependencies section
-$chartTemplateContent = $chartTemplateContent -replace '(?s)dependencies:\s*-\s*name:\s*prometheus-node-exporter\s*version:\s*"4\.26\.0"\s*repository:\s*oci://\$\{MCR_REGISTRY\}\$\{MCR_REPOSITORY_HELM_DEPENDENCIES\}\s*condition:\s*AzureMonitorMetrics\.ArcExtension\s*', ''
+$chartTemplateContent = $chartTemplateContent -replace '(?s)dependencies:\s*-\s*name:\s*prometheus-node-exporter\s*version:\s*"4\.39\.0"\s*repository:\s*oci://\$\{MCR_REGISTRY\}\$\{MCR_REPOSITORY_HELM_DEPENDENCIES\}\s*condition:\s*AzureMonitorMetrics\.ArcExtension\s*', ''
 
 
 # Replace placeholders in values-template.yaml
