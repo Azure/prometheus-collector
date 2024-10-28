@@ -43,9 +43,9 @@ func IsProcessRunning(processName string) bool {
 	return false
 }
 
-// SetEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
+// SetEnvAndSourceBashrcOrPowershell sets a key-value pair as an environment variable in the .bashrc file
 // and sources the file to apply changes immediately. If echo is true, it calls EchoVar
-func SetEnvAndSourceBashrc(key, value string, echo bool) error {
+func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
 
 	// Set the environment variable
 	err := os.Setenv(key, value)
