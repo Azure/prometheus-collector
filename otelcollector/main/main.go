@@ -34,7 +34,7 @@ func main() {
 			log.Fatal(err)
 		}
 	} else if osType == "windows" {
-		shared.StartCommand("powershell", "-NoNewWindow", "/opt/scripts/filesystemwatcher.ps1")
+		shared.StartCommand("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\opt\\scripts\\filesystemwatcher.ps1")
 	}
 
 	if ccpMetricsEnabled != "true" {
