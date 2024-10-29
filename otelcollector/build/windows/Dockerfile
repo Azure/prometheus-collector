@@ -24,6 +24,7 @@ ENV TELEMETRY_DISABLED false
 
 COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/filesystemwatcher.ps1 $tmpdir/scripts/
+RUN mkdir -p $tmpdir/microsoft/configmapparser/
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/otelcollector.exe ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/microsoft/otelcollector/
 COPY ./prom-config-validator-builder/promconfigvalidator.exe $tmpdir/
