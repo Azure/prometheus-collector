@@ -34,6 +34,7 @@ func main() {
 			log.Fatal(err)
 		}
 	} else if osType == "windows" {
+		fmt.Println("Starting filesystemwatcher.ps1")
 		shared.StartCommand("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\opt\\scripts\\filesystemwatcher.ps1")
 	}
 
