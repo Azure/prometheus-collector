@@ -1,0 +1,33 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "accountName": {
+            "type": "String"
+        },
+        "accountLocation": {
+            "type": "String"
+        },
+        "maxActiveTimeSeries": {
+            "type": "Int"
+        },
+        "maxEventsPerMinute": {
+            "type": "Int"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "microsoft.monitor/accounts/metricsContainers",
+            "apiVersion": "2024-04-03-preview",
+            "name": "[concat(parameters('accountName'), '/default')]",
+            "location": "[parameters('accountLocation')]",
+            "properties": {
+                "limits": {
+                    "maxActiveTimeSeries": "[parameters('maxActiveTimeSeries')]",
+                    "maxEventsPerMinute": "[parameters('maxEventsPerMinute')]"
+                }
+            }
+        }
+    ]
+}
