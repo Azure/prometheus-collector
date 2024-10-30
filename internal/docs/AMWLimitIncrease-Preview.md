@@ -24,22 +24,28 @@ Submit the form [here](https://forms.microsoft.com/r/8P9F2GS7k4) to share the su
 
 ### Step 2: Download the ARM templates and update the parameters
 
-Update the parameters.json file with the AMW name, location and required ingestion limits (maximum is 2 Mn).
+Download the ARM template files ([AMWLimitIncrease-Template.json](./AMWLimitIncrease-Template.json) and [AMWLimitIncrease-Parameters.json](./AMWLimitIncrease-Parameters.json) ) and update the Parameters.json file with the AMW name, location and required ingestion limits (maximum is 20 Mn).
 
 ### Step 3: Execute the ARM update
 
 Run the below commands from the downloaded ARM templates folder:
 
 For Azure CLI:
+
+```azurecli
 az login
 az account set --subscription <subscriptionId>
-az deployment group create --name AmwLimits --resource-group <resourceGroupName>   --template-file template.json --parameters parameters.json
+az deployment group create --name AmwLimits --resource-group <resourceGroupName>   --template-file AMWLimitIncrease-Template.json --parameters AMWLimitIncrease-Parameters.json
+```
 
 For Azure Powershell:
 
+```
 Connect-AzAccount
-New-AzResourceGroupDeployment -Name AmwLimits -ResourceGroupName  <resourceGroupName> -TemplateFile template.json -TemplateParameterFile parameters.json
+New-AzResourceGroupDeployment -Name AmwLimits -ResourceGroupName  <resourceGroupName> -TemplateFile AMWLimitIncrease-Template.json -TemplateParameterFile AMWLimitIncrease-Parameters.json
+```
 
 ### Step 4: Verify if the limits are updated
 
-To verify if the limits are updated successfully, you can go to the Azure portal, navigate to the Azure Monitor Workspace -> Metrics explorer and then verify if the updated limits are applied to the “Active Time Series Limit” and “Events per minute Ingested Limit” .
+To verify if the limits are updated successfully, you can go to the Azure portal, navigate to the Azure Monitor Workspace -> Metrics explorer and then verify if the updated limits are applied to the “Active Time Series Limit” and “Events per minute Ingested Limit”.
+
