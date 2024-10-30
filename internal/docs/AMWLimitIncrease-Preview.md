@@ -5,8 +5,8 @@ Azure Monitor Workspaces or AMW are containers that store data collected by Azur
 
 Customers can now update the ingestion limits for their AMW instance using the Azure Resource Manager (ARM) API. Few additional details about this update:
 - Customers can request for an increase in limit from 1 Mn events/min or active TS to up to 20 Mn events/min or active TS with an API update through cli or through ARM update. For limits above 20 mn, customers will need to create a support ticket.
-  - Customers can request upto 4 Mn and get approved - no usage will be checked.
-  - If customers request beyond 4 Mn, we will check usage for at least 50%, i.e. if customer's AMW is at 5 Mn, they can request for increase upto 10Mn. Customers can request up to 20 Mn.
+  - Customers can request upto 2 Mn and get approved - no usage will be checked.
+  - If customers request beyond 2 Mn, we will check usage for at least 50%, i.e. if customer's AMW is at 5 Mn, they can request for increase upto 10Mn. Customers can request up to 20 Mn.
   - For requests beyond 20 Mn, please create a support ticket.
 - Customers can request an increase for an existing AMW instance. We are not supporting creation of AMW with increased limits. Creation of AMW will always apply the default limits. This is because we want to support increasing the limits based on certain heuristics/usage.
 
