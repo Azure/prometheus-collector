@@ -218,7 +218,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	globalSettingsFromMergedOtelConfig := prometheusConfig["global"]
 
 	if globalSettingsFromMergedOtelConfig != nil {
-		globalSettings := globalSettingsFromMergedOtelConfig2.(map[interface{}]interface{})
+		globalSettings := globalSettingsFromMergedOtelConfig.(map[interface{}]interface{})
 		scrapeInterval := globalSettings["scrape_interval"]
 		if (len(globalSettings) > 1) || (len(globalSettings) == 1 && scrapeInterval != "15s") {
 			if os.Getenv("CONTROLLER_TYPE") == "ReplicaSet" {
