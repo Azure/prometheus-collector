@@ -215,6 +215,23 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
 	}
 
+	globalSettingsFromMergedOtelConfig := prometheusConfig["global"]
+
+	if globalSettingsFromMergedOtelConfig != nil {
+		globalSettings := globalSettingsFromMergedOtelConfig2.(map[interface{}]interface{})
+		scrapeInterval := globalSettings["scrape_interval"]
+		if (len(globalSettings) > 1) || (len(globalSettings) == 1 && scrapeInterval != "15s") {
+			if os.Getenv("CONTROLLER_TYPE") == "ReplicaSet" {
+				os.Setenv("AZMON_GLOBAL_SETTINGS_ENABLED_REPLICASET", "true")
+			} else if os.Getenv("CONTROLLER_TYPE") == "DaemonSet" && os.Getenv("OS_TYPE") == "linux" {
+				os.Setenv("AZMON_GLOBAL_SETTINGS_ENABLED_DAEMONSET_LINUX", "true")
+			} else if os.Getenv("CONTROLLER_TYPE") == "DaemonSet" && os.Getenv("OS_TYPE") != "linux" {
+				os.Setenv("AZMON_GLOBAL_SETTINGS_ENABLED_DAEMONSET_WINDOWS", "true")
+			}
+			fmt.Printf("prom-config-validator::Successfully set env variables for global config\n")
+		}
+	}
+
 	otelConfig.Receivers.Prometheus.Config = prometheusConfig
 
 	if os.Getenv("DEBUG_MODE_ENABLED") == "true" {
