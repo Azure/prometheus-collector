@@ -438,13 +438,11 @@ spec:
               readOnly: true
               mountPath: /var/log/pods
           livenessProbe:
-            exec:
-              command:
-                - cmd
-                - /c
-                - C:\opt\microsoft\scripts\livenessprobe.cmd
-            periodSeconds: 60
+            httpGet:
+              path: /health
+              port: 8080
             initialDelaySeconds: 300
+            periodSeconds: 60
             timeoutSeconds: 60
             failureThreshold: 3
         - name: addon-token-adapter-win

@@ -1,0 +1,8 @@
+{
+  "identity": {
+      "type": "UserAssigned",
+      "userAssignedIdentities": {
+          "/subscriptions/{sub_id}/resourceGroups/{rg_name}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{name}": {}
+      }
+  }
+}
