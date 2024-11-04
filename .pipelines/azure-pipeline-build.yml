@@ -513,6 +513,7 @@ stages:
       name: Azure-Pipelines-Windows-CI-Test-EO
     variables:
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         submodules: true
@@ -530,6 +531,7 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
     variables:
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         submodules: true
@@ -694,18 +696,29 @@ stages:
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
-          if [ $? -ne 0 ]; then
-            exit 1
-          fi
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
-          if [ $? -ne 0 ]; then
-            exit 1
-          fi
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
-          if [ $? -ne 0 ]; then
-            exit 1
-          fi
+          export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+          export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
+          for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
+            for i in {1..5}; do
+              trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image > trivy_output.log 2>&1
+              TRIVY_EXIT_CODE=$?
+              if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+                cat trivy_output.log
+                break
+              fi
+              if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+                echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+                sleep 5
+              else
+                cat trivy_output.log
+                exit 1
+              fi
+            done
+            if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+              echo "Error: Trivy scan failed after 5 retries."
+              exit 1
+            fi
+          done
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
 
@@ -870,8 +883,25 @@ stages:
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CCP_FULL_IMAGE_NAME)
-          if [ $? -ne 0 ]; then
+          export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+          export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
+          for i in {1..5}; do
+            trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CCP_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+            TRIVY_EXIT_CODE=$?
+            if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+              cat trivy_output.log
+              break
+            fi
+            if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+              echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+              sleep 5
+            else
+              cat trivy_output.log
+              exit 1
+            fi
+          done
+          if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+            echo "Error: Trivy scan failed after 5 retries."
             exit 1
           fi
         workingDirectory: $(Build.SourcesDirectory)
@@ -980,7 +1010,27 @@ stages:
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+          export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+          export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
+          for i in {1..5}; do
+            trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+            TRIVY_EXIT_CODE=$?
+            if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+              cat trivy_output.log
+              break
+            fi
+            if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+              echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+              sleep 5
+            else
+              cat trivy_output.log
+              exit 1
+            fi
+          done
+          if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+            echo "Error: Trivy scan failed after 5 retries."
+            exit 1
+          fi
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
 
@@ -1075,7 +1125,27 @@ stages:
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
+          export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+          export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
+          for i in {1..5}; do
+            trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+            TRIVY_EXIT_CODE=$?
+            if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+              cat trivy_output.log
+              break
+            fi
+            if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+              echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+              sleep 5
+            else
+              cat trivy_output.log
+              exit 1
+            fi
+          done
+          if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+            echo "Error: Trivy scan failed after 5 retries."
+            exit 1
+          fi
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
 
@@ -1153,10 +1223,151 @@ stages:
         displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
       - powershell: |
-          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build WS2019 image"
         retryCountOnTaskFailure: 2
+
+      - task: PowerShell@2
+        displayName: Extract files to sign
+        inputs:
+          targetType: 'inline'
+          script: |
+            echo "Creating docker container..."
+            docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
+
+            echo "Creating fist party directory..."
+            mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
+            cd $(Build.ArtifactStagingDirectory)/fpSigning
+
+            echo "Extract LivenessProbe"
+            docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.cmd .
+
+            echo "Extract OtelCollector"
+            docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
+
+            echo "Creating OSS directory..."
+            mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
+            cd $(Build.ArtifactStagingDirectory)/ossSigning
+
+            echo "Extract fluent-bit"
+            docker cp signingContainer:C:\opt\fluent-bit .
+            
+            echo "Extract Ruby"
+            docker cp signingContainer:C:\ruby26 .
+
+            echo "Extract telegraf"
+            docker cp signingContainer:C:\opt\telegraf\telegraf.exe .
+
+            echo "Extract promconfigvalidator"
+            docker cp signingContainer:C:\opt\promconfigvalidator.exe .
+
+            echo "Removing container..."
+            docker rm signingContainer
+
+            echo "List ArtifactStagingDirectory"
+            ls $(Build.ArtifactStagingDirectory)
+            ls .       
+
+      - script: dir $(Build.ArtifactStagingDirectory)
+        displayName: 'List files in Staging Directory'
+
+      - task: EsrpCodeSigning@5
+        inputs:
+          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: '$(Build.ArtifactStagingDirectory)/fpSigning'
+          Pattern: '*.dll,*.exe,*.so,*.ps1'
+          signConfigType: 'inlineSignParams'
+          inlineOperation: |
+            [
+                    {
+                        "KeyCode" : "CP-230012",
+                        "OperationCode" : "SigntoolSign",
+                        "Parameters" : {
+                            "OpusName" : "Microsoft",
+                            "OpusInfo" : "http://www.microsoft.com",
+                            "FileDigest" : "/fd \"SHA256\"",
+                            "PageHash" : "/NPH",
+                            "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                        },
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    },
+                    {
+                        "KeyCode" : "CP-230012",
+                        "OperationCode" : "SigntoolVerify",
+                        "Parameters" : {},
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    }
+                ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+        displayName: 'EsrpCodeSigning for first party binaries'
+
+      - task: EsrpCodeSigning@5
+        inputs:
+          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: '$(Build.ArtifactStagingDirectory)/ossSigning'
+          Pattern: '*.dll,*.exe,*.so'
+          signConfigType: 'inlineSignParams'
+          inlineOperation: |
+            [
+                    {
+                        "KeyCode" : "CP-231522",
+                        "OperationCode" : "SigntoolSign",
+                        "Parameters" : {
+                            "OpusName" : "Microsoft",
+                            "OpusInfo" : "http://www.microsoft.com",
+                            "Append" : "/as",
+                            "FileDigest" : "/fd \"SHA256\"",
+                            "PageHash" : "/NPH",
+                            "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                        },
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    },
+                    {
+                        "KeyCode" : "CP-231522",
+                        "OperationCode" : "SigntoolVerify",
+                        "Parameters" : {},
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    }
+                ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+        displayName: 'EsrpCodeSigning for OSS binaries'   
+
+      - task: PowerShell@2
+        displayName: Replace files in origin Image
+        inputs:
+          targetType: 'inline'
+          script: |
+            docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
+            
+            echo "Copy Signed binaries/folders back to docker image..."
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
+
+            docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            docker rm pushContainer
 
       - powershell: |
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1187,10 +1398,152 @@ stages:
         displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
       - powershell: |
-          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build WS2022 image"
         retryCountOnTaskFailure: 2
+
+      - task: PowerShell@2
+        displayName: Extract files to sign
+        inputs:
+          targetType: 'inline'
+          script: |
+            echo "Creating docker container..."
+            docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
+
+            echo "Creating fist party directory..."
+            mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
+            cd $(Build.ArtifactStagingDirectory)/fpSigning
+
+            echo "Extract LivenessProbe"
+            docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.cmd .
+
+            echo "Extract OtelCollector"
+            docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
+
+            echo "Creating OSS directory..."
+            mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
+            cd $(Build.ArtifactStagingDirectory)/ossSigning
+
+            echo "Extract fluent-bit"
+            docker cp signingContainer:C:\opt\fluent-bit .
+            
+            echo "Extract Ruby"
+            docker cp signingContainer:C:\ruby26 .
+
+            echo "Extract telegraf"
+            docker cp signingContainer:C:\opt\telegraf\telegraf.exe .
+
+            echo "Extract promconfigvalidator"
+            docker cp signingContainer:C:\opt\promconfigvalidator.exe .
+
+            echo "Removing container..."
+            docker rm signingContainer
+
+            echo "List ArtifactStagingDirectory"
+            ls $(Build.ArtifactStagingDirectory)
+            ls .       
+
+
+      - script: dir $(Build.ArtifactStagingDirectory)
+        displayName: 'List files in Staging Directory'
+
+      - task: EsrpCodeSigning@5
+        inputs:
+          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: '$(Build.ArtifactStagingDirectory)/fpSigning'
+          Pattern: '*.dll,*.exe,*.so,*.ps1'
+          signConfigType: 'inlineSignParams'
+          inlineOperation: |
+            [
+                    {
+                        "KeyCode" : "CP-230012",
+                        "OperationCode" : "SigntoolSign",
+                        "Parameters" : {
+                            "OpusName" : "Microsoft",
+                            "OpusInfo" : "http://www.microsoft.com",
+                            "FileDigest" : "/fd \"SHA256\"",
+                            "PageHash" : "/NPH",
+                            "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                        },
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    },
+                    {
+                        "KeyCode" : "CP-230012",
+                        "OperationCode" : "SigntoolVerify",
+                        "Parameters" : {},
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    }
+                ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+        displayName: 'EsrpCodeSigning for first party binaries'
+
+      - task: EsrpCodeSigning@5
+        inputs:
+          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: '$(Build.ArtifactStagingDirectory)/ossSigning'
+          Pattern: '*.dll,*.exe,*.so'
+          signConfigType: 'inlineSignParams'
+          inlineOperation: |
+            [
+                    {
+                        "KeyCode" : "CP-231522",
+                        "OperationCode" : "SigntoolSign",
+                        "Parameters" : {
+                            "OpusName" : "Microsoft",
+                            "OpusInfo" : "http://www.microsoft.com",
+                            "Append" : "/as",
+                            "FileDigest" : "/fd \"SHA256\"",
+                            "PageHash" : "/NPH",
+                            "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                        },
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    },
+                    {
+                        "KeyCode" : "CP-231522",
+                        "OperationCode" : "SigntoolVerify",
+                        "Parameters" : {},
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    }
+                ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+        displayName: 'EsrpCodeSigning for OSS binaries'   
+             
+      - task: PowerShell@2
+        displayName: Replace files in origin Image
+        inputs:
+          targetType: 'inline'
+          script: |
+            docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
+            
+            echo "Copy Signed binaries/folders back to docker image..."
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
+
+            docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            docker rm pushContainer
 
       - powershell: |
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1526,6 +1879,29 @@ stages:
               inlineScript: |
                 az config set extension.use_dynamic_install=yes_without_prompt
                 az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
+              retryCountOnTaskFailure: 2
+
+          - task: AzureCLI@2
+            displayName: "Deploy: wait for ci-dev-arc-proxy cluster to be ready"
+            inputs:
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                  do
+                    state=$(az k8s-extension show --name azuremonitor-metrics --resource-group ci-dev-arc-proxy --cluster-name ci-dev-arc-proxy --cluster-type connectedClusters | jq -r '.provisioningState')
+                    # We want to wait in case the status is 'Creating' or 'Updating' because of another PR merged shortly before the current one.
+                    if [ "$state" = "Succeeded" ] || [ "$state" = "Failed" ]
+                    then
+                      echo "Cluster is ready to install extension"
+                      exit 0
+                    fi
+                    sleep 30
+                  done
+                  echo "Cluster is installing a different version of the extension"
+                  exit 1
+              retryCountOnTaskFailure: 5
 
           - task: AzureCLI@2
             displayName: "Deploy: ci-dev-arc-proxy cluster"
@@ -1536,6 +1912,7 @@ stages:
               inlineScript: |
                 az config set extension.use_dynamic_install=yes_without_prompt
                 az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-proxy --cluster-name ci-dev-arc-proxy --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
+              retryCountOnTaskFailure: 2
 
   - deployment: Testkube_ARC
     displayName: "Test: Arc testkube tests"
