@@ -185,11 +185,12 @@ stages:
         persistCredentials: true
       
       - bash: |
+          export DOCKER_BUILDKIT=1
           mkdir -p $(Build.ArtifactStagingDirectory)/refappgolanglinux
-
           docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           docker run -d --name buildkit-container --privileged mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-          docker buildx use dockerbuilder
+          docker buildx create --name dockerbuilder --use
+          docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
           docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
@@ -628,9 +629,11 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           docker run -d --name buildkit-container --privileged mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-          docker buildx use dockerbuilder
+          docker buildx create --name dockerbuilder --driver docker-container --use
+          docker buildx inspect --bootstrap
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
           docker pull $(LINUX_FULL_IMAGE_NAME)
           docker system prune --all -f
