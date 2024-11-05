@@ -277,7 +277,8 @@ stages:
 
           docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           docker run -d --name buildkit-container --privileged mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-          docker buildx use dockerbuilder
+          docker buildx create --name dockerbuilder --driver docker-container --use
+          docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
           docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)  
@@ -821,7 +822,8 @@ stages:
 
           docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           docker run -d --name buildkit-container --privileged mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-          docker buildx use dockerbuilder
+          docker buildx create --name dockerbuilder --driver docker-container --use
+          docker buildx inspect --bootstrap
           docker buildx build . --platform=linux/amd64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
           docker pull $(LINUX_CCP_FULL_IMAGE_NAME)
           docker system prune --all -f
@@ -1003,7 +1005,8 @@ stages:
 
           docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           docker run -d --name buildkit-container --privileged mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-          docker buildx use dockerbuilder
+          docker buildx create --name dockerbuilder --driver docker-container --use
+          docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
           docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
@@ -1119,7 +1122,8 @@ stages:
 
           docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           docker run -d --name buildkit-container --privileged mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-          docker buildx use dockerbuilder
+          docker buildx create --name dockerbuilder --driver docker-container --use
+          docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
           docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
