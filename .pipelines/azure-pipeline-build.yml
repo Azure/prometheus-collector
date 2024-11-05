@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - kaveesh/test_buildx
     
 pr:
   autoCancel: true
@@ -186,7 +187,7 @@ stages:
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/refappgolanglinux
 
-          docker buildx create --name dockerbuilder
+          docker buildx create --name dockerbuilder --use kaveeshacr.azurecr.io/buildkit:buildx-stable-1
           docker buildx use dockerbuilder
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
@@ -272,7 +273,7 @@ stages:
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/refapppythonlinux
 
-          docker buildx create --name dockerbuilder
+          docker buildx create --name dockerbuilder --use kaveeshacr.azurecr.io/buildkit:buildx-stable-1
           docker buildx use dockerbuilder
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
@@ -625,7 +626,7 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-          docker buildx create --name dockerbuilder
+          docker buildx create --name dockerbuilder --use kaveeshacr.azurecr.io/buildkit:buildx-stable-1
           docker buildx use dockerbuilder
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
           docker pull $(LINUX_FULL_IMAGE_NAME)
@@ -812,7 +813,7 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-          docker buildx create --name dockerbuilder
+          docker buildx create --name dockerbuilder --use kaveeshacr.azurecr.io/buildkit:buildx-stable-1
           docker buildx use dockerbuilder
           docker buildx build . --platform=linux/amd64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
           docker pull $(LINUX_CCP_FULL_IMAGE_NAME)
@@ -993,7 +994,7 @@ stages:
 
           docker system prune --all -f
 
-          docker buildx create --name dockerbuilder
+          docker buildx create --name dockerbuilder --use kaveeshacr.azurecr.io/buildkit:buildx-stable-1
           docker buildx use dockerbuilder
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
@@ -1108,7 +1109,7 @@ stages:
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
           docker system prune --all -f
 
-          docker buildx create --name dockerbuilder
+          docker buildx create --name dockerbuilder --use kaveeshacr.azurecr.io/buildkit:buildx-stable-1
           docker buildx use dockerbuilder
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
