@@ -43,14 +43,14 @@ func SetGlobalSettingsInCollectorConfig() {
 		mergedCollectorConfigPath := "/opt/microsoft/otelcollector/collector-config.yml"
 		mergedCollectorConfigFileContents, err := os.ReadFile(mergedCollectorConfigPath)
 		if err != nil {
-			fmt.Printf("config-reader::Unable to read file contents from: %s - %v\n", mergedCollectorConfigPath, err)
+			fmt.Printf("Unable to read file contents from: %s - %v\n", mergedCollectorConfigPath, err)
 			return
 		}
 		var promScrapeConfig map[string]interface{}
 		var otelConfig OtelConfig
 		err = yaml.Unmarshal([]byte(mergedCollectorConfigFileContents), &otelConfig)
 		if err != nil {
-			fmt.Printf("config-reader::Unable to unmarshal merged otel configuration from: %s - %v\n", mergedCollectorConfigFileContents, err)
+			fmt.Printf("Unable to unmarshal merged otel configuration from: %s - %v\n", mergedCollectorConfigFileContents, err)
 			return
 		}
 
@@ -62,20 +62,20 @@ func SetGlobalSettingsInCollectorConfig() {
 			collectorConfigReplicasetPath := "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
 			replicasetCollectorConfigFileContents, err := os.ReadFile(collectorConfigReplicasetPath)
 			if err != nil {
-				fmt.Printf("config-reader::Unable to read file contents from: %s - %v\n", replicasetCollectorConfigFileContents, err)
+				fmt.Printf("Unable to read file contents from: %s - %v\n", replicasetCollectorConfigFileContents, err)
 				return
 			}
 			var otelConfigReplicaset OtelConfig
 			err = yaml.Unmarshal([]byte(replicasetCollectorConfigFileContents), &otelConfigReplicaset)
 			if err != nil {
-				fmt.Printf("config-reader::Unable to unmarshal merged otel configuration from: %s - %v\n", replicasetCollectorConfigFileContents, err)
+				fmt.Printf("Unable to unmarshal merged otel configuration from: %s - %v\n", replicasetCollectorConfigFileContents, err)
 				return
 			}
 			otelConfigReplicaset.Receivers.Prometheus.Config = map[string]interface{}{"global": ""}
 			otelConfigReplicaset.Receivers.Prometheus.Config["global"] = globalSettingsFromMergedOtelConfig
 			otelReplacedConfigYaml, _ := yaml.Marshal(otelConfigReplicaset)
 			if err := os.WriteFile(collectorConfigReplicasetPath, otelReplacedConfigYaml, 0644); err != nil {
-				fmt.Printf("config-reader::Unable to write to: %s - %v\n", collectorConfigReplicasetPath, err)
+				fmt.Printf("Unable to write to: %s - %v\n", collectorConfigReplicasetPath, err)
 				return
 			}
 
