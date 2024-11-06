@@ -12,9 +12,10 @@ program.description('Azure Prometheus rule groups tool');
 // program.version(pack.version);
 
 async function yaml2arm(inputPath: string, options: any, command: Command) {
-  const inputAbsolutePath = path.resolve(inputPath);
-  const str = (await fs.readFile(inputAbsolutePath))?.toString();
-  const flowResult: StepResult = toArmTemplateFlow(str, options);
+  const inputStr = inputPath ? 
+                  (await fs.readFile(path.resolve(inputPath)))?.toString() :
+                  await readStdin();
+  const flowResult: StepResult = toArmTemplateFlow(inputStr, options);
   
   if (flowResult.success == false){
     console.error(flowResult.error?.title);
@@ -33,7 +34,7 @@ async function yaml2arm(inputPath: string, options: any, command: Command) {
 
 program//.command('yaml2arm')
   .description('Convert Prometheus rules Yaml file to ARM template')
-  .argument('<input>', 'Input Prometheus rule groups Yaml (or Json) file path.')
+  .argument('[input]', 'Input Prometheus rule groups Yaml (or Json) file path.')
   .option('-amw, --azure-monitor-workspace <string>', 'Azure monitor workspace id\'s that this rule group is scoped to.')
   .option('-c, --cluster-name <string>', 'The cluster name of the rule group evaluation.')
   .option('-a, --action-group-id <string>', 'The resource id of the action group to use for alerting rules.')
@@ -43,3 +44,22 @@ program//.command('yaml2arm')
   .action(yaml2arm);
 
 program.parse();
+
+
+async function readStdin(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let input = '';
+
+    process.stdin.on('data', chunk => {
+      input += chunk;
+    });
+
+    process.stdin.on('end', () => {
+      resolve(input);
+    });
+
+    process.stdin.on('error', err => {
+      reject(err);
+    });
+  });
+}
