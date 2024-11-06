@@ -33,7 +33,7 @@ async function yaml2arm(inputPath: string, options: any, command: Command) {
 
 program//.command('yaml2arm')
   .description('Convert Prometheus rules Yaml file to ARM template')
-  .argument('<input>', 'Input Prometheus rule groups Yaml file path.')
+  .argument('<input>', 'Input Prometheus rule groups Yaml (or Json) file path.')
   .option('-amw, --azure-monitor-workspace <string>', 'Azure monitor workspace id\'s that this rule group is scoped to.')
   .option('-c, --cluster-name <string>', 'The cluster name of the rule group evaluation.')
   .option('-a, --action-group-id <string>', 'The resource id of the action group to use for alerting rules.')
