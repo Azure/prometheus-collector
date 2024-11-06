@@ -72,15 +72,6 @@ catch {
 }
 Write-Host ('Finished downloading Telegraf')
 ############################################################################################
-#Remove gemfile.lock for http_parser gem 0.6.0
-#see  - https://github.com/fluent/fluentd/issues/3374 https://github.com/tmm1/http_parser.rb/issues/70
-$gemfile = "\ruby26\lib\ruby\gems\2.6.0\gems\http_parser.rb-0.6.0\Gemfile.lock"
-$gemfileFullPath = $Env:SYSTEMDRIVE + "\" + $gemfile
-If (Test-Path -Path $gemfile ) {
-    Write-Host ("Renaming unused gemfile.lock for http_parser 0.6.0")
-    Rename-Item -Path $gemfileFullPath -NewName  "renamed_Gemfile_lock.renamed"
-}
-############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
     $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Promtheus-MA-Windows-4.1.2024/GenevaMonitoringAgent.46.15.4.zip'
