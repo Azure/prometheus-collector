@@ -227,7 +227,7 @@ func Configmapparser() {
 			if len(parts) == 2 {
 				key := parts[0]
 				value := parts[1]
-				os.Setenv(key, value)
+				shared.SetEnvAndSourceBashrcOrPowershell(key, value, true)
 
 				// Write to envvars.env
 				fmt.Fprintf(envFile, "%s=%s\n", key, value)
