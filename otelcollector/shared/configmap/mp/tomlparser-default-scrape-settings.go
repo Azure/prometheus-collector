@@ -4,52 +4,24 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
+
+	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
 )
 
 func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string, error) {
 	config := make(map[string]string)
-	// Set default values
-	config["kubelet"] = "true"
-	config["coredns"] = "false"
-	config["cadvisor"] = "true"
-	config["kubeproxy"] = "false"
-	config["apiserver"] = "false"
-	config["kubestate"] = "true"
-	config["nodeexporter"] = "true"
-	config["prometheuscollectorhealth"] = "false"
-	config["windowsexporter"] = "false"
-	config["windowskubeproxy"] = "false"
-	config["kappiebasic"] = "true"
-	config["networkobservabilityRetina"] = "true"
-	config["networkobservabilityHubble"] = "true"
-	config["networkobservabilityCilium"] = "true"
+	for jobName := range scrapeConfigs.DefaultScrapeJobs {
+		config[jobName] = strconv.FormatBool(scrapeConfigs.DefaultScrapeJobs[jobName].Enabled)
+	}
 	config["noDefaultsEnabled"] = "false"
-	config["acstor-capacity-provisioner"] = "true"
-	config["acstor-metrics-exporter"] = "true"
+
 	return config, nil
 }
 
 func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map[string]string, error) {
-	config := make(map[string]string)
-	// Set default values
-	config["kubelet"] = "true"
-	config["coredns"] = "false"
-	config["cadvisor"] = "true"
-	config["kubeproxy"] = "false"
-	config["apiserver"] = "false"
-	config["kubestate"] = "true"
-	config["nodeexporter"] = "true"
-	config["prometheuscollectorhealth"] = "false"
-	config["windowsexporter"] = "false"
-	config["windowskubeproxy"] = "false"
-	config["kappiebasic"] = "true"
-	config["networkobservabilityRetina"] = "true"
-	config["networkobservabilityHubble"] = "true"
-	config["networkobservabilityCilium"] = "true"
-	config["noDefaultsEnabled"] = "false"
-	config["acstor-capacity-provisioner"] = "true"
-	config["acstor-metrics-exporter"] = "true"
+	config, err := fcl.SetDefaultScrapeSettings()
 
 	if _, err := os.Stat(fcl.ConfigMapMountPath); os.IsNotExist(err) {
 		fmt.Println("configmap for default scrape settings not mounted, using defaults")
@@ -78,101 +50,39 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map
 }
 
 func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string) {
-	if val, ok := parsedConfig["kubelet"]; ok && val != "" {
-		cp.Kubelet = val
-		fmt.Printf("config::Using scrape settings for kubelet: %v\n", cp.Kubelet)
-	}
-
-	if val, ok := parsedConfig["coredns"]; ok && val != "" {
-		cp.Coredns = val
-		fmt.Printf("config::Using scrape settings for coredns: %v\n", cp.Coredns)
-	}
-
-	if val, ok := parsedConfig["cadvisor"]; ok && val != "" {
-		cp.Cadvisor = val
-		fmt.Printf("config::Using scrape settings for cadvisor: %v\n", cp.Cadvisor)
-	}
-
-	if val, ok := parsedConfig["kubeproxy"]; ok && val != "" {
-		cp.Kubeproxy = val
-		fmt.Printf("config::Using scrape settings for kubeproxy: %v\n", cp.Kubeproxy)
-	}
-
-	if val, ok := parsedConfig["apiserver"]; ok && val != "" {
-		cp.Apiserver = val
-		fmt.Printf("config::Using scrape settings for apiserver: %v\n", cp.Apiserver)
-	}
-
-	if val, ok := parsedConfig["kubestate"]; ok && val != "" {
-		cp.Kubestate = val
-		fmt.Printf("config::Using scrape settings for kubestate: %v\n", cp.Kubestate)
-	}
-
-	if val, ok := parsedConfig["nodeexporter"]; ok && val != "" {
-		cp.NodeExporter = val
-		fmt.Printf("config::Using scrape settings for nodeexporter: %v\n", cp.NodeExporter)
-	}
-
-	if val, ok := parsedConfig["prometheuscollectorhealth"]; ok && val != "" {
-		cp.PrometheusCollectorHealth = val
-		fmt.Printf("config::Using scrape settings for prometheuscollectorhealth: %v\n", cp.PrometheusCollectorHealth)
-	}
-
-	if val, ok := parsedConfig["windowsexporter"]; ok && val != "" {
-		cp.Windowsexporter = val
-		fmt.Printf("config::Using scrape settings for windowsexporter: %v\n", cp.Windowsexporter)
-	}
-
-	if val, ok := parsedConfig["windowskubeproxy"]; ok && val != "" {
-		cp.Windowskubeproxy = val
-		fmt.Printf("config::Using scrape settings for windowskubeproxy: %v\n", cp.Windowskubeproxy)
-	}
-
-	if val, ok := parsedConfig["kappiebasic"]; ok && val != "" {
-		cp.Kappiebasic = val
-		fmt.Printf("config::Using scrape settings for kappiebasic: %v\n", cp.Kappiebasic)
-	}
-
-	if val, ok := parsedConfig["networkobservabilityRetina"]; ok && val != "" {
-		cp.NetworkObservabilityRetina = val
-		fmt.Printf("config::Using scrape settings for networkobservabilityRetina: %v\n", cp.NetworkObservabilityRetina)
-	}
-
-	if val, ok := parsedConfig["networkobservabilityHubble"]; ok && val != "" {
-		cp.NetworkObservabilityHubble = val
-		fmt.Printf("config::Using scrape settings for networkobservabilityHubble: %v\n", cp.NetworkObservabilityHubble)
-	}
-
-	if val, ok := parsedConfig["networkobservabilityCilium"]; ok && val != "" {
-		cp.NetworkObservabilityCilium = val
-		fmt.Printf("config::Using scrape settings for networkobservabilityCilium: %v\n", cp.NetworkObservabilityCilium)
-	}
-
-	if val, ok := parsedConfig["acstor-capacity-provisioner"]; ok && val != "" {
-		cp.AcstorCapacityProvisioner = val
-		fmt.Printf("config:: Using scrape settings for acstor-capacity-provisioner: %v\n", cp.AcstorCapacityProvisioner)
-	}
-
-	if val, ok := parsedConfig["acstor-metrics-exporter"]; ok && val != "" {
-		cp.AcstorMetricsExporter = val
-		fmt.Printf("config:: Using scrape settings for acstor-metrics-exporter: %v\n", cp.AcstorMetricsExporter)
-	}
-
-	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
-		controllerType := os.Getenv("CONTROLLER_TYPE")
-		if controllerType == "ReplicaSet" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" &&
-			cp.Kubelet == "" && cp.Cadvisor == "" &&
-			cp.NodeExporter == "" && cp.PrometheusCollectorHealth == "" && cp.Kappiebasic == "" {
-			cp.NoDefaultsEnabled = true
+	for scrapeJobName := range scrapeConfigs.DefaultScrapeJobs {
+		isEnabledString := parsedConfig[scrapeJobName]
+		isEnabled, err := strconv.ParseBool(isEnabledString)
+		if err != nil {
+			fmt.Printf("config::Error converting %s to bool: %v\n", isEnabledString, err)
+			continue
 		}
-	} else if cp.Kubelet == "" && cp.Cadvisor == "" &&
-		cp.NodeExporter == "" && cp.PrometheusCollectorHealth == "" && cp.Kappiebasic == "" {
-		cp.NoDefaultsEnabled = true
+		job := scrapeConfigs.DefaultScrapeJobs[scrapeJobName]
+		job.Enabled = isEnabled
+		scrapeConfigs.DefaultScrapeJobs[scrapeJobName] = job
+		fmt.Printf("config::Using configmap setting for if %s is enabled: %v\n", scrapeJobName, isEnabled)
 	}
+
+	controllerType := os.Getenv("CONTROLLER_TYPE")
+	osType := strings.ToLower(os.Getenv("OS_TYPE"))
+	cp.NoDefaultsEnabled = areNoDefaultsEnabled(controllerType, osType)
 
 	if cp.NoDefaultsEnabled {
 		fmt.Printf("No default scrape configs enabled")
 	}
+}
+
+func areNoDefaultsEnabled(controllerType, osType string) bool {
+	noDefaultsEnabled := true
+	for jobName := range scrapeConfigs.DefaultScrapeJobs {
+		if scrapeConfigs.DefaultScrapeJobs[jobName].ControllerType == controllerType &&
+			scrapeConfigs.DefaultScrapeJobs[jobName].OSType == osType &&
+			scrapeConfigs.DefaultScrapeJobs[jobName].Enabled == true {
+			noDefaultsEnabled = false
+			continue
+		}
+	}
+	return noDefaultsEnabled
 }
 
 func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, cp *ConfigProcessor) error {
@@ -182,23 +92,10 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	}
 	defer file.Close()
 
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED=%v\n", cp.Kubelet))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_COREDNS_SCRAPING_ENABLED=%v\n", cp.Coredns))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CADVISOR_SCRAPING_ENABLED=%v\n", cp.Cadvisor))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_KUBEPROXY_SCRAPING_ENABLED=%v\n", cp.Kubeproxy))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_APISERVER_SCRAPING_ENABLED=%v\n", cp.Apiserver))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED=%v\n", cp.Kubestate))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NODEEXPORTER_SCRAPING_ENABLED=%v\n", cp.NodeExporter))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_COLLECTOR_HEALTH_SCRAPING_ENABLED=%v\n", cp.PrometheusCollectorHealth))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_WINDOWSEXPORTER_SCRAPING_ENABLED=%v\n", cp.Windowsexporter))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_WINDOWSKUBEPROXY_SCRAPING_ENABLED=%v\n", cp.Windowskubeproxy))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_KAPPIEBASIC_SCRAPING_ENABLED=%v\n", cp.Kappiebasic))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NETWORKOBSERVABILITYRETINA_SCRAPING_ENABLED=%v\n", cp.NetworkObservabilityRetina))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NETWORKOBSERVABILITYHUBBLE_SCRAPING_ENABLED=%v\n", cp.NetworkObservabilityHubble))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NETWORKOBSERVABILITYCILIUM_SCRAPING_ENABLED=%v\n", cp.NetworkObservabilityCilium))
+	for jobName := range scrapeConfigs.DefaultScrapeJobs {
+		file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_%s_SCRAPING_ENABLED=%v\n", strings.ToUpper(scrapeConfigs.DefaultScrapeJobs[jobName].JobName), DefaultScrapeJobs[jobName].Enabled))
+	}
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", cp.NoDefaultsEnabled))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ACSTORCAPACITYPROVISIONER_SCRAPING_ENABLED=%v\n", cp.AcstorCapacityProvisioner))
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_ACSTORMETRICSEXPORTER_SCRAPING_ENABLED=%v\n", cp.AcstorMetricsExporter))
 
 	return nil
 }

@@ -7,11 +7,13 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml"
+	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
 	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
 )
 
 var (
+	minimalIngestionEnabled                                             = true
 	configSchemaVersion                                                 string
 	kubeletRegex, coreDNSRegex, cAdvisorRegex, kubeProxyRegex           string
 	apiserverRegex, kubeStateRegex, nodeExporterRegex, kappieBasicRegex string
@@ -51,234 +53,63 @@ func getStringValue(value interface{}) string {
 	}
 }
 
-func parseConfigMapForKeepListRegex() map[string]interface{} {
-	configMap := make(map[string]interface{})
-	configMap["minimalingestionprofile"] = "true"
+func parseConfigMapForKeepListRegex() {
 	if _, err := os.Stat(configMapKeepListMountPath); os.IsNotExist(err) {
 		fmt.Println("configmap prometheus-collector-configmap for default-targets-metrics-keep-list not mounted, using defaults")
-		return configMap
+		return
 	}
-
 	content, err := os.ReadFile(configMapKeepListMountPath)
 	if err != nil {
-		fmt.Printf("Exception while parsing config map for default-targets-metrics-keep-list: %v, using defaults, please check config map for errors\n", err)
-		return configMap
+		fmt.Printf("Error while parsing config map for default-targets-metrics-keep-list: %v, using defaults, please check config map for errors\n", err)
+		return
+	}
+	configSchemaVersion = os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+	if configSchemaVersion == "" || strings.TrimSpace(configSchemaVersion) != "v1" {
+		fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
+		return
 	}
 
 	tree, err := toml.Load(string(content))
 	if err != nil {
 		fmt.Printf("Error parsing TOML: %v\n", err)
-		return configMap
+		return
 	}
 
-	if minimalValue := getStringValue(tree.Get("minimalingestionprofile")); minimalValue != "" {
-		configMap["minimalingestionprofile"] = minimalValue
-	}
-
-	configMap["kubelet"] = getStringValue(tree.Get("kubelet"))
-	configMap["coredns"] = getStringValue(tree.Get("coredns"))
-	configMap["cadvisor"] = getStringValue(tree.Get("cadvisor"))
-	configMap["kubeproxy"] = getStringValue(tree.Get("kubeproxy"))
-	configMap["apiserver"] = getStringValue(tree.Get("apiserver"))
-	configMap["kubestate"] = getStringValue(tree.Get("kubestate"))
-	configMap["nodeexporter"] = getStringValue(tree.Get("nodeexporter"))
-	configMap["kappiebasic"] = getStringValue(tree.Get("kappiebasic"))
-	configMap["windowsexporter"] = getStringValue(tree.Get("windowsexporter"))
-	configMap["windowskubeproxy"] = getStringValue(tree.Get("windowskubeproxy"))
-	configMap["networkobservabilityRetina"] = getStringValue(tree.Get("networkobservabilityRetina"))
-	configMap["networkobservabilityHubble"] = getStringValue(tree.Get("networkobservabilityHubble"))
-	configMap["networkobservabilityCilium"] = getStringValue(tree.Get("networkobservabilityCilium"))
-	configMap["podannotations"] = getStringValue(tree.Get("podannotations"))
-	configMap["acstor-capacity-provisioner"] = getStringValue(tree.Get("acstor-capacity-provisioner"))
-	configMap["acstor-metrics-exporter"] = getStringValue(tree.Get("acstor-metrics-exporter"))
-
-	fmt.Printf("Parsed config map for default-targets-metrics-keep-list: %v\n", configMap)
-
-	// Print the content of the config map
-	// fmt.Println("Content of the config map:")
-	// for key, value := range configMap {
-	// 	fmt.Printf("%s: %s\n", key, value)
-	// }
-
-	return configMap
-}
-
-func validateRegexValues(regexValues RegexValues) error {
-	// Define a map of field names to their corresponding values
-	fields := map[string]string{
-		"kubelet":                     regexValues.kubelet,
-		"coredns":                     regexValues.coredns,
-		"cadvisor":                    regexValues.cadvisor,
-		"kubeproxy":                   regexValues.kubeproxy,
-		"apiserver":                   regexValues.apiserver,
-		"kubestate":                   regexValues.kubestate,
-		"nodeexporter":                regexValues.nodeexporter,
-		"kappiebasic":                 regexValues.kappiebasic,
-		"windowsexporter":             regexValues.windowsexporter,
-		"windowskubeproxy":            regexValues.windowskubeproxy,
-		"networkobservabilityretina":  regexValues.networkobservabilityretina,
-		"networkobservabilityhubble":  regexValues.networkobservabilityhubble,
-		"networkobservabilitycilium":  regexValues.networkobservabilitycilium,
-		"podannotations":              regexValues.podannotations,
-		"minimalingestionprofile":     regexValues.minimalingestionprofile,
-		"acstor-capacity-provisioner": regexValues.acstorcapacityprovisioner,
-		"acstor-metrics-exporter":     regexValues.acstormetricsexporter,
-	}
-
-	// Iterate over the fields and validate each regex
-	for key, value := range fields {
-		if value != "" && !isValidRegex(value) {
-			return fmt.Errorf("invalid regex for %s: %s", key, value)
+	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
+		customerKeepListRegex := getStringValue(tree.Get(jobName))
+		if customerKeepListRegex != "" && !isValidRegex(customerKeepListRegex) {
+			fmt.Printf("invalid regex for %s: %s", jobName, customerKeepListRegex)
+			customerKeepListRegex = ""
 		}
+		job.CustomerKeepListRegex = customerKeepListRegex
+		scrapeConfigs.DefaultScrapeJobs[jobName] = job
 	}
 
-	return nil
+	fmt.Printf("Parsed config map for default-targets-metrics-keep-list successfully\n")
 }
 
-func populateKeepListFromConfigMap(parsedConfig map[string]interface{}) (RegexValues, error) {
-	regexValues := RegexValues{
-		kubelet:                    getStringValue(parsedConfig["kubelet"]),
-		coredns:                    getStringValue(parsedConfig["coredns"]),
-		cadvisor:                   getStringValue(parsedConfig["cadvisor"]),
-		kubeproxy:                  getStringValue(parsedConfig["kubeproxy"]),
-		apiserver:                  getStringValue(parsedConfig["apiserver"]),
-		kubestate:                  getStringValue(parsedConfig["kubestate"]),
-		nodeexporter:               getStringValue(parsedConfig["nodeexporter"]),
-		kappiebasic:                getStringValue(parsedConfig["kappiebasic"]),
-		windowsexporter:            getStringValue(parsedConfig["windowsexporter"]),
-		windowskubeproxy:           getStringValue(parsedConfig["windowskubeproxy"]),
-		networkobservabilityretina: getStringValue(parsedConfig["networkobservabilityRetina"]),
-		networkobservabilityhubble: getStringValue(parsedConfig["networkobservabilityHubble"]),
-		networkobservabilitycilium: getStringValue(parsedConfig["networkobservabilityCilium"]),
-		minimalingestionprofile:    getStringValue(parsedConfig["minimalingestionprofile"]),
-		podannotations:             getStringValue(parsedConfig["podannotations"]),
-		acstorcapacityprovisioner:  getStringValue(parsedConfig["acstor-capacity-provisioner"]),
-		acstormetricsexporter:      getStringValue(parsedConfig["acstor-metrics-exporter"]),
-	}
+func combineMinimalIngestionWithConfigMapValues() {
+	fmt.Println("Using minimalIngestionProfile:", minimalIngestionEnabled)
+	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
+		if minimalIngestionEnabled {
+			job.KeepListRegex = fmt.Sprintf("%s|%s", job.CustomerKeepListRegex, job.MinimalKeepListRegex)
+		} else {
+			job.KeepListRegex = job.CustomerKeepListRegex
+		}
 
-	// Validate regex values
-	if err := validateRegexValues(regexValues); err != nil {
-		return regexValues, err
-	}
-
-	// Logging the values being set
-	// fmt.Println("Values being set for regex:")
-	// fmt.Printf("kubelet: %s\n", regexValues.kubelet)
-	// fmt.Printf("coredns: %s\n", regexValues.coredns)
-	// fmt.Printf("cadvisor: %s\n", regexValues.cadvisor)
-	// fmt.Printf("kubeproxy: %s\n", regexValues.kubeproxy)
-	// fmt.Printf("apiserver: %s\n", regexValues.apiserver)
-	// fmt.Printf("kubestate: %s\n", regexValues.kubestate)
-	// fmt.Printf("nodeexporter: %s\n", regexValues.nodeexporter)
-	// fmt.Printf("kappiebasic: %s\n", regexValues.kappiebasic)
-	// fmt.Printf("windowsexporter: %s\n", regexValues.windowsexporter)
-	// fmt.Printf("windowskubeproxy: %s\n", regexValues.windowskubeproxy)
-	// fmt.Printf("networkobservabilityretina: %s\n", regexValues.networkobservabilityretina)
-	// fmt.Printf("networkobservabilityhubble: %s\n", regexValues.networkobservabilityhubble)
-	// fmt.Printf("networkobservabilitycilium: %s\n", regexValues.networkobservabilitycilium)
-	// fmt.Printf("minimalingestionprofile: %s\n", regexValues.minimalingestionprofile)
-	return regexValues, nil // Return regex values and nil error if everything is valid
-}
-
-func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
-	if regexValues.minimalingestionprofile == "true" {
-		kubeletRegex = fmt.Sprintf("%s|%s", regexValues.kubelet, kubeletRegex_minimal_mac)
-		coreDNSRegex = fmt.Sprintf("%s|%s", regexValues.coredns, coreDNSRegex_minimal_mac)
-		cAdvisorRegex = fmt.Sprintf("%s|%s", regexValues.cadvisor, cadvisorRegex_minimal_mac)
-		kubeProxyRegex = fmt.Sprintf("%s|%s", regexValues.kubeproxy, kubeproxyRegex_minimal_mac)
-		apiserverRegex = fmt.Sprintf("%s|%s", regexValues.apiserver, apiserverRegex_minimal_mac)
-		kubeStateRegex = fmt.Sprintf("%s|%s", regexValues.kubestate, kubestateRegex_minimal_mac)
-		nodeExporterRegex = fmt.Sprintf("%s|%s", regexValues.nodeexporter, nodeexporterRegex_minimal_mac)
-		kappieBasicRegex = fmt.Sprintf("%s|%s", regexValues.kappiebasic, kappiebasicRegex_minimal_mac)
-		windowsExporterRegex = fmt.Sprintf("%s|%s", regexValues.windowsexporter, windowsexporterRegex_minimal_mac)
-		windowsKubeProxyRegex = fmt.Sprintf("%s|%s", regexValues.windowskubeproxy, windowskubeproxyRegex_minimal_mac)
-		networkobservabilityRetinaRegex = fmt.Sprintf("%s|%s", regexValues.networkobservabilityretina, networkobservabilityRetinaRegex_minimal_mac)
-		networkobservabilityHubbleRegex = fmt.Sprintf("%s|%s", regexValues.networkobservabilityhubble, networkobservabilityHubbleRegex_minimal_mac)
-		networkobservabilityCiliumRegex = regexValues.networkobservabilitycilium
-		podAnnotationsRegex = regexValues.podannotations
-		acstorCapacityProvisionerRegex = fmt.Sprintf("%s|%s", regexValues.acstorcapacityprovisioner, acstorCapacityProvisionerRegex_minimal_mac)
-		acstorMetricsExporterRegex = fmt.Sprintf("%s|%s", regexValues.acstormetricsexporter, acstorMetricsExporter_minimal_mac)
-
-		// Print the updated regex strings after appending values
-		// Only log this in debug mode
-		// fmt.Println("Updated Regex Strings After Appending:")
-		// fmt.Println("KubeletRegex:", kubeletRegex)
-		// fmt.Println("CoreDNSRegex:", coreDNSRegex)
-		// fmt.Println("CAdvisorRegex:", cAdvisorRegex)
-		// fmt.Println("KubeProxyRegex:", kubeProxyRegex)
-		// fmt.Println("APIServerRegex:", apiserverRegex)
-		// fmt.Println("KubeStateRegex:", kubeStateRegex)
-		// fmt.Println("NodeExporterRegex:", nodeExporterRegex)
-		// fmt.Println("KappieBasicRegex:", kappieBasicRegex)
-		// fmt.Println("WindowsExporterRegex:", windowsExporterRegex)
-		// fmt.Println("WindowsKubeProxyRegex:", windowsKubeProxyRegex)
-		// fmt.Println("NetworkObservabilityRetinaRegex:", networkobservabilityRetinaRegex)
-		// fmt.Println("NetworkObservabilityRetinaRegex:", networkobservabilityRetinaRegex)
-		// fmt.Println("NetworkObservabilityCiliumRegex:", networkobservabilityCiliumRegex)
-	} else {
-		fmt.Println("minimalIngestionProfile:", regexValues.minimalingestionprofile)
-
-		kubeletRegex = regexValues.kubelet
-		coreDNSRegex = regexValues.coredns
-		cAdvisorRegex = regexValues.cadvisor
-		kubeProxyRegex = regexValues.kubeproxy
-		apiserverRegex = regexValues.apiserver
-		kubeStateRegex = regexValues.kubestate
-		nodeExporterRegex = regexValues.nodeexporter
-		kappieBasicRegex = regexValues.kappiebasic
-		windowsExporterRegex = regexValues.windowsexporter
-		windowsKubeProxyRegex = regexValues.windowskubeproxy
-		networkobservabilityRetinaRegex = regexValues.networkobservabilityretina
-		networkobservabilityHubbleRegex = regexValues.networkobservabilityhubble
-		networkobservabilityCiliumRegex = regexValues.networkobservabilitycilium
-		podAnnotationsRegex = regexValues.podannotations
-		acstorCapacityProvisionerRegex = regexValues.acstorcapacityprovisioner
-		acstorMetricsExporterRegex = regexValues.acstormetricsexporter
+		scrapeConfigs.DefaultScrapeJobs[jobName] = job
 	}
 }
 
 func tomlparserTargetsMetricsKeepList() {
-	configSchemaVersion = os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	shared.EchoSectionDivider("Start Processing - tomlparserTargetsMetricsKeepList")
 
-	var regexValues RegexValues
-
-	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
-		configMapSettings := parseConfigMapForKeepListRegex()
-		if configMapSettings != nil {
-			var err error
-			regexValues, err = populateKeepListFromConfigMap(configMapSettings)
-			if err != nil {
-				fmt.Printf("Error populating setting values: %v\n", err)
-				return
-			}
-		}
-	} else {
-		if _, err := os.Stat(configMapKeepListMountPath); err == nil {
-			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
-		}
-	}
-
-	populateRegexValuesWithMinimalIngestionProfile(regexValues)
+	parseConfigMapForKeepListRegex()
 
 	// Write settings to a YAML file.
-	data := map[string]string{
-		"KUBELET_METRICS_KEEP_LIST_REGEX":                    kubeletRegex,
-		"COREDNS_METRICS_KEEP_LIST_REGEX":                    coreDNSRegex,
-		"CADVISOR_METRICS_KEEP_LIST_REGEX":                   cAdvisorRegex,
-		"KUBEPROXY_METRICS_KEEP_LIST_REGEX":                  kubeProxyRegex,
-		"APISERVER_METRICS_KEEP_LIST_REGEX":                  apiserverRegex,
-		"KUBESTATE_METRICS_KEEP_LIST_REGEX":                  kubeStateRegex,
-		"NODEEXPORTER_METRICS_KEEP_LIST_REGEX":               nodeExporterRegex,
-		"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX":            windowsExporterRegex,
-		"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX":           windowsKubeProxyRegex,
-		"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX":             podAnnotationsRegex,
-		"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX":                kappieBasicRegex,
-		"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": networkobservabilityRetinaRegex,
-		"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": networkobservabilityHubbleRegex,
-		"NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX": networkobservabilityCiliumRegex,
-		"ACSTORCAPACITYPROVISONER_KEEP_LIST_REGEX":           acstorCapacityProvisionerRegex,
-		"ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX":              acstorMetricsExporterRegex,
+	data := map[string]string{}
+	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
+		data[fmt.Sprintf("%s_METRICS_KEEP_LIST_REGEX", strings.ToUpper(jobName))] = job.KeepListRegex
 	}
 
 	out, err := yaml.Marshal(data)

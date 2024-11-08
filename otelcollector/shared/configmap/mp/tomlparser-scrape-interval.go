@@ -10,6 +10,7 @@ import (
 
 	"github.com/pelletier/go-toml"
 	"github.com/prometheus-collector/shared"
+	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
 	"gopkg.in/yaml.v2"
 )
 
@@ -54,53 +55,29 @@ func getConfigStringValue(configMapSettings *toml.Tree, key string) string {
 
 func processConfigMap() map[string]string {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
-
 	intervalHash := make(map[string]string)
+	var configMapSettings *toml.Tree
 
-	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
-		configMapSettings := parseConfigMapForScrapeSettings()
+	err := os.Stat(configMapScrapeIntervalMountPath)
+	if os.IsNotExist(err)
+		fmt.Printf("configmap prometheus-collector-configmap for default-targets-scrape-interval-settings not mounted, using defaults")
+	} else if err == nil && configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
+		configMapSettings = parseConfigMapForScrapeSettings()
 		if configMapSettings != nil {
-			intervalHash["KUBELET_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "kubelet"))
-			intervalHash["COREDNS_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "coredns"))
-			intervalHash["CADVISOR_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "cadvisor"))
-			intervalHash["KUBEPROXY_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "kubeproxy"))
-			intervalHash["APISERVER_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "apiserver"))
-			intervalHash["KUBESTATE_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "kubestate"))
-			intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "nodeexporter"))
-			intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "windowsexporter"))
-			intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "windowskubeproxy"))
-			intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "prometheuscollectorhealth"))
-			intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "podannotations"))
-			intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "kappiebasic"))
-			intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityRetina"))
-			intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityHubble"))
-			intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "networkobservabilityCilium"))
-			intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "acstor-capacity-provisioner"))
-			intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"] = checkDuration(getConfigStringValue(configMapSettings, "acstor-metrics-exporter"))
-
-			return intervalHash
 		} else {
 			fmt.Printf("Error parsing config map, scrape interval settings is empty. Using default scrape interval settings\n")
 		}
 	}
 
-	if _, err := os.Stat(configMapScrapeIntervalMountPath); os.IsNotExist(err) {
-		fmt.Printf("configmap prometheus-collector-configmap for default-targets-scrape-interval-settings not mounted, using defaults")
-	}
-	// Set each value in intervalHash to "30s"
-	keys := []string{
-		"KUBELET_SCRAPE_INTERVAL", "COREDNS_SCRAPE_INTERVAL", "CADVISOR_SCRAPE_INTERVAL",
-		"KUBEPROXY_SCRAPE_INTERVAL", "APISERVER_SCRAPE_INTERVAL", "KUBESTATE_SCRAPE_INTERVAL",
-		"NODEEXPORTER_SCRAPE_INTERVAL", "WINDOWSEXPORTER_SCRAPE_INTERVAL",
-		"WINDOWSKUBEPROXY_SCRAPE_INTERVAL", "PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL",
-		"POD_ANNOTATION_SCRAPE_INTERVAL", "KAPPIEBASIC_SCRAPE_INTERVAL",
-		"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL", "NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL",
-		"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL", "ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL",
-		"ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL",
-	}
-	fmt.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
-	for _, key := range keys {
-		intervalHash[key] = defaultScrapeInterval
+	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
+		if configMapSettings != nil {
+			interval := checkDuration(getConfigStringValue(configMapSettings, jobName))
+			if interval != "" {
+				job.ScrapeInterval = interval
+				scrapeConfigs.DefaultScrapeJobs[jobName] = job
+			}
+		}
+		intervalHash[fmt.Sprintf("%s_SCRAPE_INTERVAL", strings.ToUpper(jobName))] = job.ScrapeInterval
 	}
 
 	return intervalHash

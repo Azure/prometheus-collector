@@ -1,10 +1,13 @@
 module Docker-Provider/source/plugins/go/src
 
-go 1.22
+replace github.com/prometheus-collector/defaultscrapeconfigs => ../../defaultscrapeconfigs
+
+go 1.23.2
 
 require (
 	github.com/fluent/fluent-bit-go v0.0.0-20220311094233-780004bf5562
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
+	github.com/prometheus-collector/defaultscrapeconfigs v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.18.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v2 v2.4.0

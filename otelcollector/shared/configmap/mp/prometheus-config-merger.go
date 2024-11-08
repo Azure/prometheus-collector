@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
 	"github.com/prometheus-collector/shared"
 
 	"gopkg.in/yaml.v2"
@@ -244,6 +245,17 @@ func AppendRelabelConfig(yamlConfigFile string, relabelConfig []map[string]inter
 	}
 }
 
+func UpdatePlaceholders(yamlConfigFile string, placeholders []string) error {
+	contents, err := os.ReadFile(yamlConfigFile)
+	if err != nil {
+		return err
+	}
+	for _, placeholder := range placeholders {
+		contents = []byte(strings.ReplaceAll(string(contents), fmt.Sprintf("$$%s$$", placeholder), os.Getenv(placeholder)))
+	}
+	return os.WriteFile(kubeletDefaultFileDs, contents, 0644)
+}
+
 func populateDefaultPrometheusConfig() {
 	defaultConfigs := []string{}
 	currentControllerType := strings.TrimSpace(strings.ToLower(os.Getenv("CONTROLLER_TYPE")))
@@ -262,6 +274,33 @@ func populateDefaultPrometheusConfig() {
 	winMode := strings.TrimSpace(strings.ToLower(os.Getenv("WINMODE")))
 	if winMode == "advanced" {
 		windowsDaemonset = true
+	}
+
+	osType := strings.ToLower(os.Getenv("OS_TYPE"))
+
+	for _, job := range scrapeConfigs.DefaultScrapeJobs {
+		if job.Enabled && job.ControllerType == currentControllerType && job.OSType == osType {
+			if job.ScrapeInterval != "" {
+				UpdateScrapeIntervalConfig(job.ScrapeConfigDefinitionFile, job.ScrapeInterval)
+			}
+			if job.KeepListRegex != "" {
+				AppendMetricRelabelConfig(job.ScrapeConfigDefinitionFile, job.KeepListRegex)
+			}
+			if job.ControllerType == scrapeConfigs.ControllerType.DaemonSet {
+				err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, []string{"NODE_IP", "NODE_NAME"})
+				if err != nil {
+					fmt.Printf("Error updating placeholders for DaemonSet: %v\n", err)
+				}
+			}
+			if job.PlaceholderNames != nil {
+				err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, job.PlaceholderNames)
+				if err != nil {
+					fmt.Printf("Error updating placeholders: %v\n", err)
+				}
+			}
+
+			defaultConfigs = append(defaultConfigs, job.ScrapeConfigDefinitionFile)
+		}
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
@@ -722,6 +761,33 @@ func populateDefaultPrometheusConfigWithOperator() {
 	}
 	if winMode == "advanced" {
 		windowsDaemonset = true
+	}
+
+	osType := strings.ToLower(os.Getenv("OS_TYPE"))
+
+	for _, job := range scrapeConfigs.DefaultScrapeJobs {
+		if job.Enabled && job.ControllerType == currentControllerType && job.OSType == osType {
+			if job.ScrapeInterval != "" {
+				UpdateScrapeIntervalConfig(job.ScrapeConfigDefinitionFile, job.ScrapeInterval)
+			}
+			if job.KeepListRegex != "" {
+				AppendMetricRelabelConfig(job.ScrapeConfigDefinitionFile, job.KeepListRegex)
+			}
+			if job.ControllerType == scrapeConfigs.ControllerType.DaemonSet {
+				err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, []string{"NODE_IP", "NODE_NAME"})
+				if err != nil {
+					fmt.Printf("Error updating placeholders for DaemonSet: %v\n", err)
+				}
+			}
+			if job.PlaceholderNames != nil {
+				err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, job.PlaceholderNames)
+				if err != nil {
+					fmt.Printf("Error updating placeholders: %v\n", err)
+				}
+			}
+
+			defaultConfigs = append(defaultConfigs, job.ScrapeConfigDefinitionFile)
+		}
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KUBELET_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" {
