@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - rashmi/global-ext
 pr:
   autoCancel: true
   branches:
