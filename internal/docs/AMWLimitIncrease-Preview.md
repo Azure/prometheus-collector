@@ -3,7 +3,9 @@
 ## Introduction
 Azure Monitor Workspaces or AMW are containers that store data collected by Azure Monitor managed service for Prometheus. An AMW instance has certain limits on how much data it can ingest. These limits are set by default, but they can be customized by the customer by creating a support ticket. For more details on these limits, see [Azure Monitor service limits](https://learn.microsoft.com/azure/azure-monitor/service-limits#prometheus-metrics)
 
-Customers can now update the ingestion limits for their AMW instance using the Azure Resource Manager (ARM) API. Few additional details about this update:
+Customers can now update the ingestion limits for their AMW instance using the Azure Resource Manager (ARM) API. Currently this capability is available only in 3 regions (WCUS, NCUS and UKS) and it will be rolled out to all other regions by January'2025.
+
+Few additional details about this update:
 - Customers can request for an increase in limit from 1 Mn events/min or active TS to up to 20 Mn events/min or active TS with an API update through cli or through ARM update. For limits above 20 mn, customers will need to create a support ticket.
   - Customers can request upto 2 Mn and get approved - no usage will be checked.
   - If customers request beyond 2 Mn, we will check usage for at least 50%, i.e. if customer's AMW is at 5 Mn, they can request for increase upto 10Mn. Customers can request up to 20 Mn.
