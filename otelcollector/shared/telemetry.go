@@ -51,6 +51,13 @@ func SetupTelemetry(customEnvironment string) {
 		return
 	}
 
+	// Export APPLICATIONINSIGHTS_ENDPOINT
+	err = SetEnvAndSourceBashrcOrPowershell("APPLICATIONINSIGHTS_ENDPOINT", aiEndpoint , false)
+	if err != nil {
+		fmt.Println("Error setting APPLICATIONINSIGHTS_ENDPOINT environment variable:", err)
+		return
+	}
+
 	// Setting TELEMETRY_APPLICATIONINSIGHTS_KEY
 	aiKeyBytes, err := base64.StdEncoding.DecodeString(encodedAIKey)
 	if err != nil {
