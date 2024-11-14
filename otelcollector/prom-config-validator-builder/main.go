@@ -221,7 +221,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		globalSettings := globalSettingsFromMergedOtelConfig.(map[interface{}]interface{})
 		scrapeInterval := globalSettings["scrape_interval"]
 		if (len(globalSettings) > 1) || (len(globalSettings) == 1 && scrapeInterval != "15s") {
-			setEnvVarString := fmt.Sprintf("export AZMON_GLOBAL_SETTINGS_CONFIGURED=true\n")
+			setEnvVarString := fmt.Sprintf("AZMON_GLOBAL_SETTINGS_CONFIGURED=true\n")
 			file, err := os.OpenFile("/opt/microsoft/prom_config_validator_env_var", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				log.Println("prom-config-validator::Unable to open file - prom_config_validator_env_var")
