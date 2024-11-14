@@ -1,4 +1,5 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.20 as fluent-bit-builder
+ARG GOLANG_VERSION
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as fluent-bit-builder
 WORKDIR /src
 COPY ./fluent-bit/src/go.mod ./fluent-bit/src/go.sum .
 RUN go version
@@ -8,33 +9,28 @@ RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; else  CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=c-shared -ldflags '-extldflags=-Wl,-z,now' -o out_appinsights.so . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as otelcollector-builder
+ARG GOLANG_VERSION
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as otelcollector-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 RUN go version > goversion.txt
 COPY ./opentelemetry-collector-builder/go.mod ./opentelemetry-collector-builder/go.sum ./opentelemetry-collector-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
-COPY ./pkgtranslatorprometheus/go.mod ./pkgtranslatorprometheus/go.sum ./pkgtranslatorprometheus/
-WORKDIR /src/pkgtranslatorprometheus
-RUN go mod download
 WORKDIR /src/prometheusreceiver
 RUN go mod download
 WORKDIR /src/opentelemetry-collector-builder
 RUN go mod download
 COPY ./opentelemetry-collector-builder /src/opentelemetry-collector-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
-COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o otelcollector . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as prom-config-validator-builder
+ARG GOLANG_VERSION
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as prom-config-validator-builder
 WORKDIR /src
 RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 COPY ./prom-config-validator-builder/go.mod ./prom-config-validator-builder/go.sum ./prom-config-validator-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
-COPY ./pkgtranslatorprometheus/go.mod ./pkgtranslatorprometheus/go.sum ./pkgtranslatorprometheus/
-WORKDIR /src/pkgtranslatorprometheus
-RUN go mod download
 WORKDIR /src/prometheusreceiver
 RUN go version
 RUN go mod download
@@ -42,11 +38,11 @@ WORKDIR /src/prom-config-validator-builder
 RUN go mod download
 COPY ./prom-config-validator-builder /src/prom-config-validator-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
-COPY ./pkgtranslatorprometheus /src/pkgtranslatorprometheus
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o promconfigvalidator . ; fi
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:1.21 as main-builder
+ARG GOLANG_VERSION
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as main-builder
 WORKDIR /
 # Create directories
 RUN mkdir -p ./shared/configmap/mp/

@@ -22,10 +22,20 @@ func main() {
 	clusterOverride := shared.GetEnv("CLUSTER_OVERRIDE", "")
 	aksRegion := shared.GetEnv("AKSREGION", "")
 	ccpMetricsEnabled := shared.GetEnv("CCP_METRICS_ENABLED", "false")
+	osType := os.Getenv("OS_TYPE")
 
-	outputFile := "/opt/inotifyoutput.txt"
-	if err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs"); err != nil {
-		log.Fatal(err)
+	if osType == "windows" {
+		shared.SetEnvVariablesForWindows()
+	}
+
+	if osType == "linux" {
+		outputFile := "/opt/inotifyoutput.txt"
+		if err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs"); err != nil {
+			log.Fatal(err)
+		}
+	} else if osType == "windows" {
+		fmt.Println("Starting filesystemwatcher.ps1")
+		shared.StartCommand("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\opt\\scripts\\filesystemwatcher.ps1")
 	}
 
 	if ccpMetricsEnabled != "true" {
@@ -53,7 +63,7 @@ func main() {
 		configmapsettings.Configmapparser()
 	}
 
-	if ccpMetricsEnabled != "true" {
+	if ccpMetricsEnabled != "true" && osType == "linux" {
 		shared.StartCronDaemon()
 	}
 
@@ -67,8 +77,8 @@ func main() {
 	shared.WaitForTokenAdapter(ccpMetricsEnabled)
 
 	if ccpMetricsEnabled != "true" {
-		shared.SetEnvAndSourceBashrc("ME_CONFIG_FILE", meConfigFile, true)
-		shared.SetEnvAndSourceBashrc("customResourceId", cluster, true)
+		shared.SetEnvAndSourceBashrcOrPowershell("ME_CONFIG_FILE", meConfigFile, true)
+		shared.SetEnvAndSourceBashrcOrPowershell("customResourceId", cluster, true)
 	} else {
 		os.Setenv("ME_CONFIG_FILE", meConfigFile)
 		os.Setenv("customResourceId", cluster)
@@ -76,7 +86,7 @@ func main() {
 
 	trimmedRegion := strings.ToLower(strings.ReplaceAll(aksRegion, " ", ""))
 	if ccpMetricsEnabled != "true" {
-		shared.SetEnvAndSourceBashrc("customRegion", trimmedRegion, true)
+		shared.SetEnvAndSourceBashrcOrPowershell("customRegion", trimmedRegion, true)
 	} else {
 		os.Setenv("customRegion", trimmedRegion)
 	}
@@ -84,15 +94,22 @@ func main() {
 	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 	time.Sleep(10 * time.Second)
 
-	fmt.Println("Starting MDSD")
 	if ccpMetricsEnabled != "true" {
-		shared.StartMdsdForOverlay()
+		if osType == "linux" {
+			fmt.Println("Starting MDSD")
+			shared.StartMdsdForOverlay()
+		} else {
+			fmt.Println("Starting MA")
+			shared.StartMA()
+		}
 	} else {
 		shared.StartMdsdForUnderlay()
 	}
 
-	// update this to use color coding
-	shared.PrintMdsdVersion()
+	if osType == "linux" {
+		// update this to use color coding
+		shared.PrintMdsdVersion()
+	}
 
 	fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
 	time.Sleep(30 * time.Second)
@@ -157,48 +174,53 @@ func main() {
 	// 	fmt.Printf("Error modifying config file: %v\n", err)
 	// }
 
-	shared.LogVersionInfo()
+	if osType == "linux" {
+		shared.LogVersionInfo()
+	}
 
 	if ccpMetricsEnabled != "true" {
 		shared.StartFluentBit(fluentBitConfigFile)
-
 		// Run the command and capture the output
-		cmd := exec.Command("fluent-bit", "--version")
-		fluentBitVersion, err := cmd.Output()
-		if err != nil {
-			log.Fatalf("failed to run command: %v", err)
+		if osType == "linux" {
+			cmd := exec.Command("fluent-bit", "--version")
+			fluentBitVersion, err := cmd.Output()
+			if err != nil {
+				log.Fatalf("failed to run command: %v", err)
+			}
+			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 		}
-		shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 
 		shared.StartTelegraf()
 
 	}
 
-	// Start inotify to watch for changes
-	fmt.Println("Starting inotify for watching mdsd config update")
+	if osType == "linux" {
+		// Start inotify to watch for changes
+		fmt.Println("Starting inotify for watching mdsd config update")
 
-	// Create an output file for inotify events
-	outputFile = "/opt/inotifyoutput-mdsd-config.txt"
-	_, err = os.Create(outputFile)
-	if err != nil {
-		log.Fatalf("Error creating output file: %v\n", err)
-	}
+		// Create an output file for inotify events
+		outputFile := "/opt/inotifyoutput-mdsd-config.txt"
+		_, err = os.Create(outputFile)
+		if err != nil {
+			log.Fatalf("Error creating output file: %v\n", err)
+		}
 
-	// Define the command to start inotify
-	inotifyCommand := exec.Command(
-		"inotifywait",
-		"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
-		"--daemon",
-		"--outfile", outputFile,
-		"--event", "ATTRIB",
-		"--format", "%e : %T",
-		"--timefmt", "+%s",
-	)
+		// Define the command to start inotify
+		inotifyCommand := exec.Command(
+			"inotifywait",
+			"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
+			"--daemon",
+			"--outfile", outputFile,
+			"--event", "ATTRIB",
+			"--format", "%e : %T",
+			"--timefmt", "+%s",
+		)
 
-	// Start the inotify process
-	err = inotifyCommand.Start()
-	if err != nil {
-		log.Fatalf("Error starting inotify process: %v\n", err)
+		// Start the inotify process
+		err = inotifyCommand.Start()
+		if err != nil {
+			log.Fatalf("Error starting inotify process: %v\n", err)
+		}
 	}
 
 	// Setting time at which the container started running
@@ -229,11 +251,18 @@ func main() {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
+	osType := os.Getenv("OS_TYPE")
 	status := http.StatusOK
 	message := "prometheuscollector is running."
+	processToCheck := ""
+
+	tokenConfigFileLocation := "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
+	if osType == "windows" {
+		tokenConfigFileLocation = "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\TokenConfig.json"
+	}
 
 	// Checking if TokenConfig file exists
-	if _, err := os.Stat("/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"); os.IsNotExist(err) {
+	if _, err := os.Stat(tokenConfigFileLocation); os.IsNotExist(err) {
 		fmt.Println("TokenConfig.json does not exist")
 		if _, err := os.Stat("/opt/microsoft/liveness/azmon-container-start-time"); err == nil {
 			fmt.Println("azmon-container-start-time file exists, reading start time")
@@ -272,38 +301,57 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("azmon-container-start-time file does not exist")
 		}
 	} else {
-		if !shared.IsProcessRunning("/usr/sbin/MetricsExtension") {
+		processToCheck = "/usr/sbin/MetricsExtension"
+		if osType == "windows" {
+			processToCheck = "MetricsExtension.Native.exe"
+		}
+		if !shared.IsProcessRunning(processToCheck) {
 			status = http.StatusServiceUnavailable
 			message = "Metrics Extension is not running (configuration exists)"
 			fmt.Println(message)
 			goto response
 		}
 
-		if !shared.IsProcessRunning("/usr/sbin/mdsd") {
+		processToCheck = "/usr/sbin/mdsd"
+		if osType == "windows" {
+			processToCheck = "MonAgentLauncher.exe"
+		}
+		if !shared.IsProcessRunning(processToCheck) {
 			status = http.StatusServiceUnavailable
 			message = "mdsd not running (configuration exists)"
 			fmt.Println(message)
 			goto response
 		}
 	}
-
-	if shared.HasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
-		status = http.StatusServiceUnavailable
-		message = "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
-		fmt.Println(message)
-		goto response
+	if osType == "linux" {
+		if shared.HasConfigChanged("/opt/inotifyoutput-mdsd-config.txt") {
+			status = http.StatusServiceUnavailable
+			message = "inotifyoutput-mdsd-config.txt has been updated - mdsd config changed"
+			fmt.Println(message)
+			goto response
+		}
+		if shared.HasConfigChanged("/opt/inotifyoutput.txt") {
+			status = http.StatusServiceUnavailable
+			message = "inotifyoutput.txt has been updated - config changed"
+			fmt.Println(message)
+			goto response
+		}
+	} else {
+		if shared.HasConfigChanged("C:\\opt\\microsoft\\scripts\\filesystemwatcher.txt") {
+			status = http.StatusServiceUnavailable
+			message = "Config Map Updated or DCR/DCE updated since agent started"
+			fmt.Println(message)
+			goto response
+		}
 	}
 
-	if !shared.IsProcessRunning("/opt/microsoft/otelcollector/otelcollector") {
+	processToCheck = "/opt/microsoft/otelcollector/otelcollector"
+	if osType == "windows" {
+		processToCheck = "otelcollector.exe"
+	}
+	if !shared.IsProcessRunning(processToCheck) {
 		status = http.StatusServiceUnavailable
 		message = "OpenTelemetryCollector is not running."
-		fmt.Println(message)
-		goto response
-	}
-
-	if shared.HasConfigChanged("/opt/inotifyoutput.txt") {
-		status = http.StatusServiceUnavailable
-		message = "inotifyoutput.txt has been updated - config changed"
 		fmt.Println(message)
 		goto response
 	}

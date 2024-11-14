@@ -6,9 +6,9 @@
 # Chart-template.yaml file.
 
 # Define variables
-$ImageTag = "6.8.14-kaveesh-q-07-19-2024-e7626ca2"
-$AKSRegion = "westeurope"
-$AKSResourceId = "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveeshtest/providers/Microsoft.ContainerService/managedClusters/kaveeshtest"
+$ImageTag = "6.9.0-kaveesh-golang-windows-09-25-2024-5d45d385"
+$AKSRegion = "northeurope"
+$AKSResourceId = "/subscriptions/ce4d1293-71c0-4c72-bc55-133553ee9e50/resourceGroups/kaveeshwin/providers/Microsoft.ContainerService/managedClusters/kaveeshwin"
 
 # Read files
 $chartTemplatePath = ".\Chart-template.yaml"
@@ -27,7 +27,7 @@ $valuesTemplateContent | Out-File -FilePath $valuesOutputPath
 $chartTemplateContent = $chartTemplateContent -replace '\$\{HELM_CHART_NAME\}', 'ama-metrics'
 $chartTemplateContent = $chartTemplateContent -replace '\$\{IMAGE_TAG\}', $ImageTag
 # Remove the dependencies section
-$chartTemplateContent = $chartTemplateContent -replace '(?s)dependencies:\s*-\s*name:\s*prometheus-node-exporter\s*version:\s*"4\.26\.0"\s*repository:\s*oci://\$\{MCR_REGISTRY\}\$\{MCR_REPOSITORY_HELM_DEPENDENCIES\}\s*condition:\s*AzureMonitorMetrics\.ArcExtension\s*', ''
+$chartTemplateContent = $chartTemplateContent -replace '(?s)dependencies:\s*-\s*name:\s*prometheus-node-exporter\s*version:\s*"4\.39\.0"\s*repository:\s*oci://\$\{MCR_REGISTRY\}\$\{MCR_REPOSITORY_HELM_DEPENDENCIES\}\s*condition:\s*AzureMonitorMetrics\.ArcExtension\s*', ''
 
 
 # Replace placeholders in values-template.yaml

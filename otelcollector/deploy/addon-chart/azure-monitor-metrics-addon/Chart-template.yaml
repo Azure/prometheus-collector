@@ -15,7 +15,7 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: ${IMAGE_TAG}
+version:  ${IMAGE_TAG}
 
 # This is the version number of the application being deployed (basically, imagetag for the image built/compatible with this chart semver above). This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
@@ -24,7 +24,7 @@ version: ${IMAGE_TAG}
 appVersion: "${IMAGE_TAG}"
 dependencies:
 - name: prometheus-node-exporter
-  version: "4.26.0"
+  version: "4.39.0"
   repository: oci://${MCR_REGISTRY}${MCR_REPOSITORY_HELM_DEPENDENCIES}
   condition: AzureMonitorMetrics.ArcExtension
   

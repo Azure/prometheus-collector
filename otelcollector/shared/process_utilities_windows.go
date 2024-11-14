@@ -7,86 +7,123 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
+	"unsafe"
 )
 
+// IsProcessRunning checks if a process with the given name is running on the system
 func IsProcessRunning(processName string) bool {
-	// List all processes in the current process group
+	osType := os.Getenv("OS_TYPE")
+
+	switch osType {
+	case "linux":
+		return isProcessRunningLinux(processName)
+	case "windows":
+		return isProcessRunningWindows(processName)
+	default:
+		fmt.Println("Unsupported OS_TYPE:", osType)
+		return false
+	}
+}
+
+// Linux implementation using the /proc directory
+func isProcessRunningLinux(processName string) bool {
 	pid := os.Getpid()
-	processes, err := os.ReadDir("/proc")
+	dir, err := os.Open("/proc")
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Error opening /proc:", err)
+		return false
+	}
+	defer dir.Close()
+
+	procs, err := dir.Readdirnames(0)
+	if err != nil {
+		fmt.Println("Error reading /proc:", err)
 		return false
 	}
 
-	for _, processDir := range processes {
-		if processDir.IsDir() {
-			processID := processDir.Name()
-			_, err := os.Stat("/proc/" + processID + "/cmdline")
-			if err == nil {
-				cmdline, err := os.ReadFile("/proc/" + processID + "/cmdline")
-				if err == nil {
-					if strings.Contains(string(cmdline), processName) {
-						// Skip the current process (this program)
-						if processID != fmt.Sprintf("%d", pid) {
-							return true
-						}
-					}
+	for _, proc := range procs {
+		if _, err := os.Stat("/proc/" + proc + "/cmdline"); err == nil {
+			cmdline, err := os.ReadFile("/proc/" + proc + "/cmdline")
+			if err == nil && strings.Contains(string(cmdline), processName) {
+				if proc != fmt.Sprintf("%d", pid) {
+					return true
 				}
 			}
 		}
 	}
-
 	return false
 }
 
-// SetEnvAndSourceBashrc sets a key-value pair as an environment variable in the .bashrc file
-// and sources the file to apply changes immediately. If echo is true, it calls EchoVar
-func SetEnvAndSourceBashrc(key, value string, echo bool) error {
-	// Get user's home directory
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get user's home directory: %v", err)
+type ProcessEntry32 struct {
+	Size              uint32
+	CntUsage          uint32
+	ProcessID         uint32
+	DefaultHeapID     uintptr
+	ModuleID          uint32
+	CntThreads        uint32
+	ParentProcessID   uint32
+	PriorityClassBase int32
+	Flags             uint32
+	ExeFile           [260]uint16 // Process name
+}
+
+// Windows implementation using syscalls
+func isProcessRunningWindows(processName string) bool {
+	kernel32 := syscall.NewLazyDLL("kernel32.dll")
+	procSnapshot := kernel32.NewProc("CreateToolhelp32Snapshot")
+	procProcessFirst := kernel32.NewProc("Process32FirstW")
+	procProcessNext := kernel32.NewProc("Process32NextW")
+	handle, _, _ := procSnapshot.Call(2, 0) // TH32CS_SNAPPROCESS
+	if handle == 0 {
+		fmt.Println("Error getting snapshot of processes")
+		return false
 	}
+	defer syscall.CloseHandle(syscall.Handle(handle))
+	var entry ProcessEntry32
+	entry.Size = uint32(unsafe.Sizeof(entry))
+	// Get the first process
+	ret, _, _ := procProcessFirst.Call(handle, uintptr(unsafe.Pointer(&entry)))
+	for ret != 0 {
+		// Convert UTF-16 file name to string
+		exeFile := syscall.UTF16ToString(entry.ExeFile[:])
 
-	// Construct the path to .bashrc
-	bashrcPath := filepath.Join(homeDir, ".bashrc")
-
-	// Check if .bashrc exists, if not, create it
-	if _, err := os.Stat(bashrcPath); os.IsNotExist(err) {
-		file, err := os.Create(bashrcPath)
-		if err != nil {
-			return fmt.Errorf("failed to create .bashrc file: %v", err)
+		// Case-insensitive comparison
+		if strings.EqualFold(exeFile, processName) {
+			return true
 		}
-		defer file.Close()
+		// Move to the next process
+		ret, _, _ = procProcessNext.Call(handle, uintptr(unsafe.Pointer(&entry)))
 	}
+	return false
+}
 
-	// Open the .bashrc file for appending
-	file, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to open .bashrc file: %v", err)
-	}
-	defer file.Close()
+// SetEnvAndSourceBashrcOrPowershell sets a key-value pair as an environment variable.
+// If OS_TYPE is 'linux', it sets the variable in the .bashrc file and sources it.
+// If OS_TYPE is 'windows', it sets the variable in the system environment.
+func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
+	// Get the OS_TYPE from environment variables
+	osType := os.Getenv("OS_TYPE")
 
-	_, err = fmt.Fprintf(file, "export %s=%s\n", key, value)
+	if osType == "linux" {
+		fmt.Println(("Should never reach here as this is the windows file"))
+	} else if osType == "windows" {
+		// On Windows, set the environment variable for the machine (persistent across sessions)
+		cmd := exec.Command("setx", key, value, "/M") // "/M" flag sets the variable for the machine
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set environment variable on Windows (Machine scope): %v", err)
+		}
 
-	if err != nil {
-		return fmt.Errorf("failed to write to .bashrc file: %v", err)
-	}
-
-	// Source the .bashrc file
-	cmd := exec.Command("bash", "-c", "source "+bashrcPath)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to source .bashrc: %v", err)
-	}
-
-	// Set the environment variable
-	err = os.Setenv(key, value)
-	if err != nil {
-		return fmt.Errorf("failed to set environment variable: %v", err)
+		// Set the environment variable for the current process
+		err := os.Setenv(key, value)
+		if err != nil {
+			return fmt.Errorf("failed to set environment variable for current session: %v", err)
+		}
+	} else {
+		return fmt.Errorf("unsupported OS_TYPE: %s", osType)
 	}
 
 	// Conditionally call EchoVar
@@ -155,6 +192,7 @@ func StartCommandWithOutputFile(command string, args []string, outputFile string
 
 	return process_pid, nil
 }
+
 func StartCommand(command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
@@ -262,15 +300,36 @@ func copyOutputFile(src io.Reader, file *os.File) {
 	}
 }
 
+// StartMetricsExtensionForOverlay starts the MetricsExtension process based on the OS
 func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
-	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
-	// Set environment variables from os.Environ()
+	osType := os.Getenv("OS_TYPE")
+	var cmd *exec.Cmd
+
+	switch osType {
+	case "linux":
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+
+	case "windows":
+		// Prepare the command and its arguments
+		cmd = exec.Command(
+			"C:\\opt\\metricextension\\MetricsExtension\\MetricsExtension.Native.exe",
+			"-Logger", "File",
+			"-LogLevel", "Info",
+			"-LocalControlChannel",
+			"-TokenSource", "AMCS",
+			"-DataDirectory", "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\",
+			"-Input", "otlp_grpc_prom",
+			"-ConfigOverridesFilePath", meConfigFile,
+		)
+	}
+
 	cmd.Env = append(os.Environ())
-	// Start the command
+
 	err := cmd.Start()
 	if err != nil {
 		return 0, fmt.Errorf("error starting MetricsExtension: %v", err)
 	}
+
 	return cmd.Process.Pid, nil
 }
 
@@ -324,22 +383,58 @@ func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string)
 	}
 }
 
-func StartMdsdForOverlay() {
-	mdsdLog := os.Getenv("MDSD_LOG")
-	if mdsdLog == "" {
-		fmt.Println("MDSD_LOG environment variable is not set")
-		return
+func StartMA() {
+	osType := os.Getenv("OS_TYPE")
+	var cmd *exec.Cmd
+
+	switch osType {
+	case "linux":
+		fmt.Println("Should never reach here")
+
+	case "windows":
+		cmd = exec.Command("C:\\opt\\genevamonitoringagent\\genevamonitoringagent\\Monitoring\\Agent\\MonAgentLauncher.exe", "-useenv")
+		// On Windows, stderr redirection is not needed as `cmd.Start()` handles it internally
 	}
 
-	cmd := exec.Command("/usr/sbin/mdsd", "-a", "-A", "-e", mdsdLog+"/mdsd.err", "-w", mdsdLog+"/mdsd.warn", "-o", mdsdLog+"/mdsd.info", "-q", mdsdLog+"/mdsd.qos")
-	// Redirect stderr to /dev/null
-	cmd.Stderr = nil
 	// Start the command
 	err := cmd.Start()
 	if err != nil {
-		fmt.Printf("Error starting mdsd: %v\n", err)
+		fmt.Printf("Error starting mdsd/MonAgentLauncher: %v\n", err)
 		return
 	}
+
+	fmt.Printf("%s process started successfully.\n", cmd.Path)
+}
+
+// StartMdsdForOverlay starts the mdsd process based on the OS
+func StartMdsdForOverlay() {
+	osType := os.Getenv("OS_TYPE")
+	var cmd *exec.Cmd
+
+	switch osType {
+	case "linux":
+		mdsdLog := os.Getenv("MDSD_LOG")
+		if mdsdLog == "" {
+			fmt.Println("MDSD_LOG environment variable is not set")
+			return
+		}
+		cmd = exec.Command("/usr/sbin/mdsd", "-a", "-A", "-e", mdsdLog+"/mdsd.err", "-w", mdsdLog+"/mdsd.warn", "-o", mdsdLog+"/mdsd.info", "-q", mdsdLog+"/mdsd.qos")
+		// Redirect stderr to /dev/null
+		cmd.Stderr = nil
+
+	case "windows":
+		cmd = exec.Command("C:\\opt\\genevamonitoringagent\\genevamonitoringagent\\Monitoring\\Agent\\MonAgentLauncher.exe", "-useenv")
+		// On Windows, stderr redirection is not needed as `cmd.Start()` handles it internally
+	}
+
+	// Start the command
+	err := cmd.Start()
+	if err != nil {
+		fmt.Printf("Error starting mdsd/MonAgentLauncher: %v\n", err)
+		return
+	}
+
+	fmt.Printf("%s process started successfully.\n", cmd.Path)
 }
 
 func StartMdsdForUnderlay() {
@@ -443,21 +538,37 @@ func WaitForTokenAdapter(ccpMetricsEnabled string) {
 
 func StartFluentBit(fluentBitConfigFile string) {
 	fmt.Println("Starting fluent-bit")
+	if os.Getenv("OS_TYPE") == "linux" {
+		if err := os.Mkdir("/opt/microsoft/fluent-bit", 0755); err != nil && !os.IsExist(err) {
+			log.Fatalf("Error creating directory: %v\n", err)
+		}
 
-	if err := os.Mkdir("/opt/microsoft/fluent-bit", 0755); err != nil && !os.IsExist(err) {
-		log.Fatalf("Error creating directory: %v\n", err)
-	}
+		logFile, err := os.Create("/opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log")
+		if err != nil {
+			log.Fatalf("Error creating log file: %v\n", err)
+		}
+		defer logFile.Close()
 
-	logFile, err := os.Create("/opt/microsoft/fluent-bit/fluent-bit-out-appinsights-runtime.log")
-	if err != nil {
-		log.Fatalf("Error creating log file: %v\n", err)
-	}
-	defer logFile.Close()
+		fluentBitCmd := exec.Command("fluent-bit", "-c", fluentBitConfigFile, "-e", "/opt/fluent-bit/bin/out_appinsights.so")
+		fluentBitCmd.Stdout = os.Stdout
+		fluentBitCmd.Stderr = os.Stderr
+		if err := fluentBitCmd.Start(); err != nil {
+			log.Fatalf("Error starting fluent-bit: %v\n", err)
+		}
+	} else {
+		fluentBitCmd := exec.Command("C:\\opt\\fluent-bit\\bin\\fluent-bit.exe", "-c", "C:\\opt\\fluent-bit\\fluent-bit-windows.conf", "-e", "C:\\opt\\fluent-bit\\bin\\out_appinsights.so")
+		fluentBitCmd.Stdout = os.Stdout
+		fluentBitCmd.Stderr = os.Stderr
 
-	fluentBitCmd := exec.Command("fluent-bit", "-c", fluentBitConfigFile, "-e", "/opt/fluent-bit/bin/out_appinsights.so")
-	fluentBitCmd.Stdout = os.Stdout
-	fluentBitCmd.Stderr = os.Stderr
-	if err := fluentBitCmd.Start(); err != nil {
-		log.Fatalf("Error starting fluent-bit: %v\n", err)
+		if err := fluentBitCmd.Start(); err != nil {
+			log.Fatalf("Error starting fluent-bit: %v\n", err)
+		}
+
+		// Run fluent-bit as a background process
+		go func() {
+			if err := fluentBitCmd.Wait(); err != nil {
+				log.Printf("Fluent-bit exited with error: %v\n", err)
+			}
+		}()
 	}
 }
