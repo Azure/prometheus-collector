@@ -634,7 +634,7 @@ stages:
           docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
           docker buildx inspect --bootstrap
-          docker buildx build . --platform=linux/amd64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
           docker pull $(LINUX_FULL_IMAGE_NAME)
           docker system prune --all -f
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
