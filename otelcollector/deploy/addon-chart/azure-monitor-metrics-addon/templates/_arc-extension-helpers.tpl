@@ -27,7 +27,7 @@ hpaEnabled: true
 
 # Get node-exporter values
 nodeExporterTargetPort: {{ index .Values "prometheus-node-exporter" "service" "targetPort" }}
-nodeExporterVersion: {{ (index .Subcharts "prometheus-node-exporter").Chart.appVersion  }}
+nodeExporterVersion: {{ (index .Subcharts "prometheus-node-exporter").Charts.appVersion }}
 
 mountMarinerCerts: {{ eq .Values.MountCATrustAnchorsDirectory true }} 
 mountUbuntuCerts: {{ eq .Values.MountUbuntuCACertDirectory true }}
