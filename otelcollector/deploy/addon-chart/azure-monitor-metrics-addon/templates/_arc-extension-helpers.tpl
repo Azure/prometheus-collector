@@ -33,7 +33,7 @@ mountMarinerCerts: {{ eq .Values.MountCATrustAnchorsDirectory true }}
 mountUbuntuCerts: {{ eq .Values.MountUbuntuCACertDirectory true }}
 {{- if $isArcExtension }}
     # Keep backwards compatible for aks_edge either through our override ClusterDistribution value or inherited Arc cluster helm value
-    {{- if (hasPrefix "aks_edge" .Values.ClusterDistribution) or (or (eq .Values.Azure.Cluster.Distribution "aks_edge_k3s") (eq .Values.Azure.Cluster.Distribution "aks_edge_k8s")) }}
+    {{- if or (hasPrefix "aks_edge" .Values.ClusterDistribution) (or (eq .Values.Azure.Cluster.Distribution "aks_edge_k3s") (eq .Values.Azure.Cluster.Distribution "aks_edge_k8s")) }}
         mountUbuntuCerts: false
     {{- end }}
     {{- if (eq .Values.MountUbuntuCACertDirectory false) }}
