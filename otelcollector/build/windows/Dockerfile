@@ -35,7 +35,7 @@ COPY ./fluent-bit/fluent-bit-windows.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY ./main/main.exe $tmpdir/microsoft
-COPY ./react /Users/ContainerAdministrator/Documents/static/react
+COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 

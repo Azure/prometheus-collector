@@ -71,15 +71,15 @@ func setFatalErrorMessageAsEnvVar(message string) {
 	truncatedMessage = re.ReplaceAllString(truncatedMessage, "")
 
 	// Write env var to a file so it can be used by other processes
-	file, err := os.Create("/opt/microsoft/prom_config_validator_env_var")
+	file, err := os.OpenFile("/opt/microsoft/prom_config_validator_env_var", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Println("prom-config-validator::Unable to create file for prom_config_validator_env_var")
+		log.Println("prom-config-validator::Unable to open file - prom_config_validator_env_var")
 	}
 	setEnvVarString := fmt.Sprintf("export INVALID_CONFIG_FATAL_ERROR=\"%s\"\n", truncatedMessage)
 	if os.Getenv("OS_TYPE") != "linux" {
 		setEnvVarString = fmt.Sprintf("INVALID_CONFIG_FATAL_ERROR=%s\n", truncatedMessage)
 	}
-	_, err = file.WriteString(setEnvVarString)
+	_, err = file.Write([]byte(setEnvVarString))
 	if err != nil {
 		log.Println("prom-config-validator::Unable to write to the file prom_config_validator_env_var")
 	}
@@ -213,6 +213,30 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	}
 	if len(unsupportedFeatures) != 0 {
 		return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
+	}
+
+	globalSettingsFromMergedOtelConfig := prometheusConfig["global"]
+
+	if globalSettingsFromMergedOtelConfig != nil {
+		globalSettings := globalSettingsFromMergedOtelConfig.(map[interface{}]interface{})
+		scrapeInterval := globalSettings["scrape_interval"]
+		if (len(globalSettings) > 1) || (len(globalSettings) == 1 && scrapeInterval != "15s") {
+			setEnvVarString := fmt.Sprintf("AZMON_GLOBAL_SETTINGS_CONFIGURED=true\n")
+			file, err := os.OpenFile("/opt/microsoft/prom_config_validator_env_var", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				log.Println("prom-config-validator::Unable to open file - prom_config_validator_env_var")
+			}
+			_, err = file.Write([]byte(setEnvVarString))
+			if err != nil {
+				log.Println("prom-config-validator::Unable to write to the file prom_config_validator_env_var")
+			}
+			file.Close()
+			if err != nil {
+				log.Println("prom-config-validator::Unable to close file prom_config_validator_env_var", err)
+			} else {
+				log.Printf("prom-config-validator::Successfully set env variables for global config in file prom_config_validator_env_var\n")
+			}
+		}
 	}
 
 	otelConfig.Receivers.Prometheus.Config = prometheusConfig
