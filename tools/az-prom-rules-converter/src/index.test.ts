@@ -2,7 +2,7 @@ import yamlToArmTemplateFlow from './index';
 import StepResult from './types/step-result';
 import fs from "fs/promises";
 
-describe('toArmTemplateFlow exmpale 1', () => {
+describe('toArmTemplateFlow example 1', () => {
   let expectedResult: any;
 
   beforeAll(async () => {
