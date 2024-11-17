@@ -44,5 +44,14 @@ You could also edit the min and max replicas by doing a **kubectl edit** and upd
 kubectl edit hpa ama-metrics-hpa -n kube-system
 ```
 
+### Update min and max shards to disable HPA scaling
+HPA should be able to handle the load automatically for varying customer needs. But, it it doesnt fit the needs you can set min shards = max shards so that HPA doesnt scale the replicas based on the varying loads. 
+
+Ex - If the customer wants to set the shards to 8 and not have the HPA update the shards, update the min and max shards to 8.
+
+**Update Min and Max replicas**
+```bash
+kubectl patch hpa ama-metrics-hpa -n kube-system --type merge --patch '{"spec": {"minReplicas": 8, "maxReplicas": 8}}'
+```
 
 
