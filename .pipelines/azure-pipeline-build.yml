@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/distro
     
 pr:
   autoCancel: true
@@ -23,7 +24,7 @@ variables:
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.6.0'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
-  BUILD_WINDOWS: true
+  BUILD_WINDOWS: false
   Codeql.Enabled: true
   GOLANG_VERSION: '1.22.7'
 
@@ -694,9 +695,9 @@ stages:
             --artifact-type 'application/vnd.cncf.notary.signature' \
             ./payload.json:application/cose \
             -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-          oras attach $(LINUX_FULL_IMAGE_NAME) \
-            --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
+          # oras attach $(LINUX_FULL_IMAGE_NAME) \
+          #   --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
+          #   --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
         workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
         condition: succeeded()
