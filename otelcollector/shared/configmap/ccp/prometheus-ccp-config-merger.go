@@ -64,13 +64,21 @@ func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 		"regex":         keepListRegex,
 	}
 
+	finalDropMetricRelabelConfig := map[string]interface{}{
+		"source_labels": []interface{}{"__name__"},
+		"action":        "drop",
+		"regex":         ".*",
+	}
+
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
 		for _, scfg := range scrapeConfigs {
 			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
 				if metricRelabelCfgs, ok := scfgMap["metric_relabel_configs"].([]interface{}); ok {
-					scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
+					// Append both the keep and drop rules
+					scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig, finalDropMetricRelabelConfig)
 				} else {
-					scfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
+					// Initialize with both keep and drop rules if none exist
+					scfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig, finalDropMetricRelabelConfig}
 				}
 			}
 		}
