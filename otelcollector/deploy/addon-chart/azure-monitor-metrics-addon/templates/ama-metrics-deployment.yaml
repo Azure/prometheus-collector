@@ -170,7 +170,7 @@ spec:
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
-              value: {{ $arcExtensionSettings.nodeExporterVersion }}
+              value: "{{ $arcExtensionSettings.nodeExporterVersion }}"
             - name: AGENT_VERSION
               value: {{ .Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE
@@ -183,7 +183,7 @@ spec:
             - name: IS_ARC_EXTENSION
               value: "true"
             - name: ARC_DISTRIBUTION
-              value: "{{ $arcExtensionSettings.dustribution }}"
+              value: "{{ $arcExtensionSettings.distribution }}"
             - name: MOUNT_MARINER_CERTS
               value: "{{ $arcExtensionSettings.mountMarinerCerts }}"
             - name: MOUNT_UBUNTU_CERTS
