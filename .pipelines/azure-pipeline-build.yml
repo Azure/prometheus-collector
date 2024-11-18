@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/arc-ga
     
 pr:
   autoCancel: true
@@ -1792,7 +1791,7 @@ stages:
   jobs:
   - deployment: Deploy_Chart_ARC
     displayName: "Deploy: Arc dev cluster"
-    #condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_Chart_ARC')), eq(variables['System.StageAttempt'], 1))))
+    condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_Chart_ARC')), eq(variables['System.StageAttempt'], 1))))
     environment: Prometheus-Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
@@ -1901,7 +1900,7 @@ stages:
     dependsOn: Deploy_Chart_ARC
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
     variables:
       HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
       HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
