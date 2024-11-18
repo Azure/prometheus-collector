@@ -12,9 +12,6 @@ spec:
       labels:
         app: prometheus-reference-app
     spec:
-      tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
       containers:
         - name: prometheus-reference-app-golang
           image: mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:6.7.5-main-09-12-2023-8fbde9ca-ref-app-golang
