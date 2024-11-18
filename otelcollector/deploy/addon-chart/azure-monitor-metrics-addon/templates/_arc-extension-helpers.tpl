@@ -16,13 +16,13 @@ isProxyEnabled: {{ and ($isArcExtension) (.Values.Azure.proxySettings.isProxyEna
 operatorEnabled: true
 {{- if $isArcExtension }}
     {{- if or (ne .Values.AzureMonitorMetrics.ArcEnableOperator true) (ne .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
-        operatorEnabled: false
+operatorEnabled: false
     {{- end }}
 {{- end }}
 
 hpaEnabled: true
-{{- if or ($isArcExtension) (ne .Values.AzureMonitorMetrics.CollectorHPAEnabled true) }}
-    hpaEnabled: false
+{{- if or $isArcExtension (ne .Values.AzureMonitorMetrics.CollectorHPAEnabled true) }}
+hpaEnabled: false
 {{- end }}
 
 # Get node-exporter values
@@ -34,13 +34,13 @@ mountUbuntuCerts: {{ eq .Values.MountUbuntuCACertDirectory true }}
 {{- if $isArcExtension }}
     # Keep backwards compatible for aks_edge either through our override ClusterDistribution value or inherited Arc cluster helm value
     {{- if or (hasPrefix "aks_edge" .Values.ClusterDistribution) (or (eq .Values.Azure.Cluster.Distribution "aks_edge_k3s") (eq .Values.Azure.Cluster.Distribution "aks_edge_k8s")) }}
-        mountUbuntuCerts: false
+mountUbuntuCerts: false
     {{- end }}
     {{- if (eq .Values.MountUbuntuCACertDirectory false) }}
-        mountUbuntuCerts: false
+mountUbuntuCerts: false
     {{- end }}
     {{- if (eq .Values.MountCATrustAnchorsDirectory false) }}
-        mountMarinerCerts: false
+mountMarinerCerts: false
     {{- end }}
 {{- end }}
 
