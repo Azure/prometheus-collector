@@ -49,8 +49,6 @@ type OtelConfig struct {
 var RESET = "\033[0m"
 var RED = "\033[31m"
 
-var promConfigValidatorEnvVarPath = "/opt/microsoft/prom_config_validator_env_var"
-
 func logFatalError(message string) {
 	// Do not set env var if customer is running outside of agent to just validate config
 	if os.Getenv("CONFIG_VALIDATOR_RUNNING_IN_AGENT") == "true" {
@@ -73,11 +71,7 @@ func setFatalErrorMessageAsEnvVar(message string) {
 	truncatedMessage = re.ReplaceAllString(truncatedMessage, "")
 
 	// Write env var to a file so it can be used by other processes
-	if envVarPath := os.Getenv("PROM_CONFIG_VALIDATOR_ENV_VAR_PATH"); envVarPath != "" {
-		fmt.Printf("prom-config-validator::Setting env var in file %s\n", envVarPath)
-		promConfigValidatorEnvVarPath = envVarPath
-	}
-	file, err := os.Create(promConfigValidatorEnvVarPath)
+	file, err := os.OpenFile("/opt/microsoft/prom_config_validator_env_var", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Println("prom-config-validator::Unable to open file - prom_config_validator_env_var")
 	}
