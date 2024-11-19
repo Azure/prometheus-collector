@@ -25,14 +25,14 @@ sudo tdnf check-update
 sudo tdnf repolist --refresh
 sudo tdnf install inotify-tools -y
 
-echo "Installing packages for re2 gem install..."
-sudo tdnf install -y build-essential re2-devel
+# echo "Installing packages for re2 gem install..."
+# sudo tdnf install -y build-essential re2-devel
 
-echo "Installing tomlrb, deep_merge and re2 gems..."
-gem install colorize
-gem install tomlrb
-gem install deep_merge
-gem install re2 -v 2.11.0
+# echo "Installing tomlrb, deep_merge and re2 gems..."
+# gem install colorize
+# gem install tomlrb
+# gem install deep_merge
+# gem install re2 -v 2.11.0
 
 echo "Installing mdsd..."
 # if [ "${ARCH}" != "amd64" ]; then
@@ -57,7 +57,7 @@ sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.tx
 
 # Install fluent-bit
 echo "Installing fluent-bit..."
-sudo tdnf install fluent-bit-2.1.10 -y
+sudo tdnf install fluent-bit-2.2.3 -y
 
 # Setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
