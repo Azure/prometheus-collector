@@ -116,8 +116,9 @@ ARG TARGETARCH
 RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update -y
-RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
-RUN mkdir /busybin && busybox --install /busybin
+RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng diffutils curl 
+# busybox
+#RUN mkdir /busybin && busybox --install /busybin
 RUN rm busybin/rpm
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
@@ -146,9 +147,9 @@ RUN marinaracreate.py \
     --user-uid "${USER_UID}" \
     --user-gid "${USER_GID}"
 
-RUN ls -l /staging
-RUN tdnf install which -y
-RUN which telegraf
+# RUN ls -l /staging
+# RUN tdnf install which -y
+# RUN which telegraf
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
@@ -191,13 +192,13 @@ COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparse
 COPY --from=marinara-builder /staging/var/lib/rpmmanifest /var/lib/rpmmanifest
 
 # executables
-COPY --from=marinara-builder /staging/usr/bin/telegraf /usr/bin/telegraf
+# COPY --from=marinara-builder /staging/usr/bin/telegraf /usr/bin/telegraf
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
-COPY --from=builder /usr/bin/bash /usr/bin/bash
+# COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
 COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
-#COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
+COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
 COPY --from=builder /usr/sbin/crond /usr/sbin/crond
 COPY --from=builder /usr/bin/vim /usr/bin/vim
 COPY --from=builder /usr/share/vim /usr/share/vim
@@ -211,8 +212,8 @@ COPY --from=builder /usr/bin/p11-kit /usr/bin
 COPY --from=builder /usr/bin/trust /usr/bin
 
 # bash dependencies
-COPY --from=builder /lib/libreadline.so.8 /lib/
-COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
+# COPY --from=builder /lib/libreadline.so.8 /lib/
+# COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
 # inotifywait dependencies
 COPY --from=builder /lib/libinotifytools.so.0 /lib/
 # crond dependencies
@@ -227,7 +228,7 @@ COPY --from=builder /lib64/libuuid.so.1 /lib64
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
 COPY --from=builder /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libcurl.so.4 /lib/libm.so.6 /lib/libz.so.1 /lib/libzstd.so.1 /lib/libsasl2.so.3 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/liblzma.so.5 /lib/liblz4.so.1  /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libgssapi_krb5.so.2 /lib/libresolv.so.2 /lib/libgpg-error.so.0 /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /lib/
 # telegraf dependencies
-#COPY --from=builder /lib/libc.so.6 /lib/
+COPY --from=builder /lib/libc.so.6 /lib/
 # mdsd dependencies
 COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
 # logrotate dependencies
