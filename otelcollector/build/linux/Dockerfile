@@ -173,13 +173,13 @@ ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
 ENV TELEMETRY_DISABLED false
 # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
 ENV MALLOC_ARENA_MAX=2
-ENV PATH="/busybin:${PATH}"
+#ENV PATH="/busybin:${PATH}"
 ENV OS_TYPE "linux"
 
 # files
 COPY --from=builder /opt /opt
 COPY --from=builder /etc /etc
-COPY --from=builder /busybin /busybin
+#COPY --from=builder /busybin /busybin
 COPY --from=builder /static/react /static/react
 COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_internal.config /usr/sbin/
 COPY --from=builder /var/opt/microsoft /var/opt/microsoft
@@ -196,7 +196,7 @@ COPY --from=marinara-builder /staging/var/lib/rpmmanifest /var/lib/rpmmanifest
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
 COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 # COPY --from=builder /usr/bin/bash /usr/bin/bash
-COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
+#COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
 COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
 COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
 COPY --from=builder /usr/sbin/crond /usr/sbin/crond
