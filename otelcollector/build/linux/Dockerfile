@@ -247,10 +247,10 @@ COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/
 COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
 COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
 
-RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
-RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
-RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
-RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
+# RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
+# RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
+# RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
+# RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
 
 # Run the Go executable, entrypoint
 ENTRYPOINT ["./opt/main"]
