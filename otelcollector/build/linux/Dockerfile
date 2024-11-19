@@ -119,7 +119,7 @@ RUN tdnf update -y
 RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng diffutils curl 
 # busybox
 #RUN mkdir /busybin && busybox --install /busybin
-RUN rm busybin/rpm
+# RUN rm busybin/rpm
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
