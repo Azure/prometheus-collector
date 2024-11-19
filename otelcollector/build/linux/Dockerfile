@@ -147,9 +147,9 @@ RUN marinaracreate.py \
     --user-uid "${USER_UID}" \
     --user-gid "${USER_GID}"
 
-# RUN ls -l /staging
-# RUN tdnf install which -y
-# RUN which telegraf
+RUN ls -l /staging
+RUN ls -l /staging/usr/bin
+RUN ls -l /usr/bin
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
