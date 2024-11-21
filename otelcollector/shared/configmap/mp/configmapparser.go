@@ -183,6 +183,8 @@ func Configmapparser() {
 					}
 				}
 				shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
+			} else {
+				shared.SetEnvAndSourceBashrcOrPowershell("AZMON_SET_GLOBAL_SETTINGS", "true", true)
 			}
 		}
 	} else if _, err := os.Stat(mergedDefaultConfigPath); err == nil {
@@ -225,7 +227,7 @@ func Configmapparser() {
 			if len(parts) == 2 {
 				key := parts[0]
 				value := parts[1]
-				os.Setenv(key, value)
+				shared.SetEnvAndSourceBashrcOrPowershell(key, value, true)
 
 				// Write to envvars.env
 				fmt.Fprintf(envFile, "%s=%s\n", key, value)
