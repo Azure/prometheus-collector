@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -26,6 +27,8 @@ var (
 	PrometheusQueryClient v1.API
 	parmRuleName          string
 	parmAmwResourceId     string
+	//v                     bool
+	//verboseLogging        bool = false
 )
 
 const namespace = "kube-system"
@@ -33,14 +36,15 @@ const containerName = "prometheus-collector"
 const controllerLabelName = "rsName"
 const controllerLabelValue = "ama-metrics"
 
-func TestTest(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Suite")
-}
-
 func init() {
 	flag.StringVar(&parmRuleName, "parmRuleName", "", "Prometheus rule name to use in this test suite")
 	flag.StringVar(&parmAmwResourceId, "parmAmwResourceId", "", "AMW resource id to use in this test suite")
+}
+
+func TestTest(t *testing.T) {
+	flag.Parse()
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Test Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -61,6 +65,10 @@ var _ = BeforeSuite(func() {
 
 	fmt.Printf("parmAmwResourceId: %s\r\n", parmAmwResourceId)
 	Expect(parmAmwResourceId).ToNot(BeEmpty())
+
+	// fmt.Printf("parmVerbose: %s\r\n", parmVerbose)
+	// Expect(strings.ToLower(parmVerbose)).To(BeElementOf([]string{"true", "false"}), "parmVerbose must be either 'true' or 'false'.")
+
 })
 
 var _ = AfterSuite(func() {
@@ -148,11 +156,14 @@ var _ = Describe("Regions Suite", func() {
 				writeLines(readFile(mdsdInfoFileName, podName))
 				writeLines(readFile(mdsdWarnFileName, podName))
 			}
+
+			Expect(numErrLines).To(Equal(0))
 		})
 
 		It("Enumerate all the 'error' or 'warning' records in /MetricsExtensionConsoleDebugLog.log", func() {
 
 			var lines []string = readFile(metricsExtDebugLogFileName, podName)
+			count := 0
 
 			// for i := 0; i < 10; i++ {
 			// 	line := lines[i]
@@ -166,9 +177,12 @@ var _ = Describe("Regions Suite", func() {
 					status := strings.ToLower(metricExt.status)
 					if strings.Contains(status, ERROR) || strings.Contains(status, WARN) {
 						fmt.Println(line)
+						count++
 					}
 				}
 			}
+
+			Expect(count).To(Equal(0))
 		})
 
 		It("Check that /etc/mdsd.d/config-cache/metricsextension exists", func() {
@@ -202,10 +216,15 @@ var _ = Describe("Regions Suite", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(warnings).To(BeEmpty())
 
-			fmt.Println(result)
+			// Ensure there is at least one result
+			vectorResult, ok := result.(model.Vector)
+			Expect(ok).To(BeTrue(), "Result should be of type model.Vector")
+			Expect(vectorResult).NotTo(BeEmpty(), "Result should not be empty")
+
+			fmt.Printf("%d metrics were returned from the query.\r\n", vectorResult.Len())
 		})
 
-		It("Check that the specified recording rule exists", func() {
+		It("Query the specified recording rule", func() {
 			fmt.Printf("Examining the recording rule: %s", parmRuleName)
 
 			warnings, result, err := utils.InstantQuery(PrometheusQueryClient, parmRuleName)
@@ -213,7 +232,10 @@ var _ = Describe("Regions Suite", func() {
 			fmt.Println(warnings)
 			Expect(err).NotTo(HaveOccurred())
 
-			fmt.Println(result)
+			// Ensure there is at least one result
+			vectorResult, ok := result.(model.Vector)
+			Expect(ok).To(BeTrue(), "Result should be of type model.Vector")
+			Expect(vectorResult).NotTo(BeEmpty(), "Result should not be empty")
 		})
 
 		It("Query Prometheus alerts", func() {

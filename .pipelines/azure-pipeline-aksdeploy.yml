@@ -4,23 +4,14 @@
 # https://aka.ms/yaml
 
 trigger:
-- main
+- none
 
 pool:
   vmImage: windows-latest
 
 steps:
-- task: AzureCLI@2
-  displayName: Azure CLI
-  inputs:
+- template: azure-template-aksdeploy.yml
+  parameters:
     azureSubscription: $(AZURESUBSCRIPTION)
-    scriptType: ps
-    scriptLocation: inlineScript
-    inlineScript: |
-      az --version
-      az account show
-      az deployment group create `
-          --resource-group ${env:RESOURCE-GROUP} `
-          --name  ${env:DEPLOYMENT-NAME} `
-          --template-file ".\otelcollector\test\ci-cd\ci-cd-cluster.json" `
-          --parameters ${env:PARAMETERS}          
+    resourceGroup: $(RESOURCE-GROUP)
+    deployParameters: $(PARAMETERS)         

@@ -4,99 +4,15 @@
 # https://aka.ms/yaml
 
 trigger:
-- main
+- none
 
 pool:
   vmImage: windows-latest
 
-variables:
-  varRULE: ""
-  varAMW_RESOURCE_ID: ""
-  varAMW_QUERY_ENDPOINT: ""
-
 steps:
-- task: Go@0
-  displayName: "go install ginkgo"
-  inputs:
-    command: 'install' # 'get' | 'build' | 'test' | 'custom'. Required. Command. Default: get.
-    #customCommand: # string. Required when command == custom. Custom command. 
-    arguments: github.com/onsi/ginkgo/v2/ginkgo@latest # string. Arguments. 
-  # Advanced
-    ##workingDirectory: '.\otelcollector\test\ginkgo-e2e\regionTests'  # string. Working directory.
-
-- task: AzureCLI@2
-  displayName: Aks Get-Credentials
-  inputs:
+- template: azure-template-regionstest.yml
+  parameters:
     azureSubscription: $(AZURESUBSCRIPTION)
-    scriptType: ps
-    scriptLocation: inlineScript
-    inlineScript: az aks get-credentials --resource-group ${env:RESOURCE-GROUP} --name ${env:CLUSTER-NAME}
-
-- task: AzureCLI@2
-  displayName: "Initialize variables"
-  inputs:
-    azureSubscription: $(AZURESUBSCRIPTION)
-    scriptType: ps
-    scriptLocation: inlineScript
-    inlineScript: |
-      az extension add --name alertsmanagement --allow-preview true                                                                    
-      az alerts-management prometheus-rule-group list -g ${env:RESOURCE-GROUP}
-
-      $o = az alerts-management prometheus-rule-group list -g ${env:RESOURCE-GROUP}                                                                
-      $s = [string]::Join("", $o)                                                                                                      
-      "prometheus-rule-group - $s"
-      $j = convertfrom-json -InputObject $s  
-      $rule = $j[0].rules[0].record
-      $rule
-      echo "##vso[task.setvariable variable=varRULE]$rule"
-      ##[Environment]::SetEnvironmentVariable("envRULE", $rule)
-
-      $clusterName = ${env:CLUSTER-NAME} 
-      $amw = "$clusterName-amw"
-      $amw
-      $o = az resource show --resource-type "microsoft.monitor/accounts" -g ${env:RESOURCE-GROUP}  -n $amw
-      $s = [string]::Join("", $o)                                                                                                      
-      "microsoft.monitor/accounts - $s"
-      $j = convertfrom-json -InputObject $s
-      $endPoint = $j.properties.metrics.prometheusQueryEndpoint
-      $endPoint
-      $resourceId = $j.id
-      $resourceId
-      echo "##vso[task.setvariable variable=varAMW_QUERY_ENDPOINT]$endPoint"
-      echo "##vso[task.setvariable variable=varAMW_RESOURCE_ID]$resourceId"
-      [Environment]::SetEnvironmentVariable("AMW_QUERY_ENDPOINT", $endPoint)
-    workingDirectory: '.\otelcollector\test\ginkgo-e2e\regionTests'    
-
-- task: AzureCLI@2
-  displayName: "Run RegionsTest test suite"
-  inputs:
-    azureSubscription: $(AZURESUBSCRIPTION)
-    scriptType: ps
-    scriptLocation: inlineScript
-    inlineScript: |
-      # Run Ginkgo
-      $cmd = "$([Environment]::GetEnvironmentVariable('userprofile'))\go\bin\ginkgo.exe -- -parmRuleName ""$env:varRULE"" -parmAmwResourceId ""$env:varAMW_RESOURCE_ID"""
-      "cmd - $cmd"
-      "env:varAMW_QUERY_ENDPOINT - $env:varAMW_QUERY_ENDPOINT"
-      [Environment]::SetEnvironmentVariable("AMW_QUERY_ENDPOINT", $env:varAMW_QUERY_ENDPOINT)
-      Invoke-Expression -Command $cmd 
-    workingDirectory: '.\otelcollector\test\ginkgo-e2e\regionTests'
-
-# - task: AzureCLI@2
-#   displayName: "Run QueryMetrics test suite"
-#   inputs:
-#     azureSubscription: $(AZURESUBSCRIPTION)
-#     scriptType: ps
-#     scriptLocation: inlineScript
-#     inlineScript: |
-#       # Run Ginkgo
-#       $cmd = "$([Environment]::GetEnvironmentVariable('userprofile'))\go\bin\ginkgo.exe"
-#       "cmd - $cmd"
-#       "env:varAMW_QUERY_ENDPOINT - $env:varAMW_QUERY_ENDPOINT"                                                                               
-#       [Environment]::SetEnvironmentVariable("AMW_QUERY_ENDPOINT", $env:varAMW_QUERY_ENDPOINT)
-#       Invoke-Expression -Command $cmd 
-#     workingDirectory: '.\otelcollector\test\ginkgo-e2e\querymetrics'  # string. Working directory.
-         
-
-
+    resourceGroup: $(RESOURCE-GROUP)
+    clusterName: $(CLUSTER-NAME)
 
