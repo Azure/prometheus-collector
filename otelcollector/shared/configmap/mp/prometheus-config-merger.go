@@ -376,6 +376,7 @@ func populateDefaultPrometheusConfig() {
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_KUBESTATE_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
 		kubestateMetricsKeepListRegex, exists := regexHash["KUBESTATE_METRICS_KEEP_LIST_REGEX"]
 		kubestateScrapeInterval, intervalExists := intervalHash["KUBESTATE_SCRAPE_INTERVAL"]
+		log.Printf("path %s: %s\n", "kubeStateDefaultFile", kubeStateDefaultFile)
 
 		if intervalExists {
 			UpdateScrapeIntervalConfig(kubeStateDefaultFile, kubestateScrapeInterval)
@@ -660,6 +661,30 @@ func populateDefaultPrometheusConfig() {
 			}
 			defaultConfigs = append(defaultConfigs, podAnnotationsDefaultFile)
 		}
+	}
+
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ACSTORCAPACITYPROVISIONER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		acstorCapacityProvisionerKeepListRegex, exists := regexHash["ACSTORCAPACITYPROVISONER_KEEP_LIST_REGEX"]
+		acstorCapacityProvisionerScrapeInterval, intervalExists := intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"]
+		if intervalExists {
+			UpdateScrapeIntervalConfig(acstorCapacityProvisionerDefaultFile, acstorCapacityProvisionerScrapeInterval)
+		}
+		if exists && acstorCapacityProvisionerKeepListRegex != "" {
+			AppendMetricRelabelConfig(acstorCapacityProvisionerDefaultFile, acstorCapacityProvisionerKeepListRegex)
+		}
+		defaultConfigs = append(defaultConfigs, acstorCapacityProvisionerDefaultFile)
+	}
+
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ACSTORMETRICSEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		acstorMetricsExporterKeepListRegex, exists := regexHash["ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX"]
+		acstorMetricsExporterScrapeInterval, intervalExists := intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"]
+		if intervalExists {
+			UpdateScrapeIntervalConfig(acstorMetricsExporterDefaultFile, acstorMetricsExporterScrapeInterval)
+		}
+		if exists && acstorMetricsExporterKeepListRegex != "" {
+			AppendMetricRelabelConfig(acstorMetricsExporterDefaultFile, acstorMetricsExporterKeepListRegex)
+		}
+		defaultConfigs = append(defaultConfigs, acstorMetricsExporterDefaultFile)
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
@@ -1099,6 +1124,32 @@ func populateDefaultPrometheusConfigWithOperator() {
 		}
 	}
 
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ACSTORCAPACITYPROVISIONER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && (isConfigReaderSidecar() || currentControllerType == replicasetControllerType) {
+		acstorCapacityProvisionerKeepListRegex, exists := regexHash["ACSTORCAPACITYPROVISONER_KEEP_LIST_REGEX"]
+		acstorCapacityProvisionerScrapeInterval, intervalExists := intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"]
+		log.Printf("path %s: %s\n", "acstorCapacityProvisionerDefaultFile", acstorCapacityProvisionerDefaultFile)
+		if intervalExists {
+			UpdateScrapeIntervalConfig(acstorCapacityProvisionerDefaultFile, acstorCapacityProvisionerScrapeInterval)
+		}
+		if exists && acstorCapacityProvisionerKeepListRegex != "" {
+			AppendMetricRelabelConfig(acstorCapacityProvisionerDefaultFile, acstorCapacityProvisionerKeepListRegex)
+		}
+		defaultConfigs = append(defaultConfigs, acstorCapacityProvisionerDefaultFile)
+	}
+
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_ACSTORMETRICSEXPORTER_SCRAPING_ENABLED"); exists && strings.ToLower(enabled) == "true" && (isConfigReaderSidecar() || currentControllerType == replicasetControllerType) {
+		acstorMetricsExporterKeepListRegex, exists := regexHash["ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX"]
+		acstorMetricsExporterScrapeInterval, intervalExists := intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"]
+		log.Printf("path %s: %s\n", "acstorMetricsExporterDefaultFile", acstorMetricsExporterDefaultFile)
+		if intervalExists {
+			UpdateScrapeIntervalConfig(acstorMetricsExporterDefaultFile, acstorMetricsExporterScrapeInterval)
+		}
+		if exists && acstorMetricsExporterKeepListRegex != "" {
+			AppendMetricRelabelConfig(acstorMetricsExporterDefaultFile, acstorMetricsExporterKeepListRegex)
+		}
+		defaultConfigs = append(defaultConfigs, acstorMetricsExporterDefaultFile)
+	}
+
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
 	// if mergedDefaultConfigs != nil {
 	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
@@ -1217,7 +1268,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 		prometheusCollectorHealthDefaultFile, windowsExporterDefaultRsSimpleFile, windowsExporterDefaultDsFile,
 		windowsKubeProxyDefaultFileRsSimpleFile, windowsKubeProxyDefaultDsFile, podAnnotationsDefaultFile,
 		kappieBasicDefaultFileDs, networkObservabilityRetinaDefaultFileDs, networkObservabilityHubbleDefaultFileDs,
-		networkObservabilityCiliumDefaultFileDs,
+		networkObservabilityCiliumDefaultFileDs, acstorMetricsExporterDefaultFile, acstorCapacityProvisionerDefaultFile,
 	}
 
 	for _, currentFile := range defaultFilesArray {

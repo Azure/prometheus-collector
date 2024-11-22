@@ -12,11 +12,12 @@ New-Item -Type Directory -Path /opt/microsoft/liveness -ErrorAction SilentlyCont
 New-Item -Type Directory -Path /opt/genevamonitoringagent -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/genevamonitoringagent/datadirectory -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /etc/genevamonitoringagent
+New-Item -Type Directory -Path /static/react -Force -ErrorAction SilentlyContinue
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.8.9-main-05-02-2024-9facd0f8/MdmMetricsExtension.2.2024.419.1535.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2024.419.1535.zip
-    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2024.419.1535.zip -Destination /installation/ME/
+    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/metricsext2-2.2024.823.1539/MdmMetricsExtension.2.2024.823.1539.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2024.823.1539.zip
+    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2024.823.1539.zip -Destination /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
 catch {
@@ -72,18 +73,9 @@ catch {
 }
 Write-Host ('Finished downloading Telegraf')
 ############################################################################################
-#Remove gemfile.lock for http_parser gem 0.6.0
-#see  - https://github.com/fluent/fluentd/issues/3374 https://github.com/tmm1/http_parser.rb/issues/70
-$gemfile = "\ruby26\lib\ruby\gems\2.6.0\gems\http_parser.rb-0.6.0\Gemfile.lock"
-$gemfileFullPath = $Env:SYSTEMDRIVE + "\" + $gemfile
-If (Test-Path -Path $gemfile ) {
-    Write-Host ("Renaming unused gemfile.lock for http_parser 0.6.0")
-    Rename-Item -Path $gemfileFullPath -NewName  "renamed_Gemfile_lock.renamed"
-}
-############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {
-    $genevamonitoringagentUri='https://github.com/Azure/prometheus-collector/releases/download/Promtheus-MA-Windows-4.1.2024/GenevaMonitoringAgent.46.15.4.zip'
+    $genevamonitoringagentUri = 'https://github.com/Azure/prometheus-collector/releases/download/Promtheus-MA-Windows-4.1.2024/GenevaMonitoringAgent.46.15.4.zip'
     Invoke-WebRequest -Uri $genevamonitoringagentUri -OutFile /installation/genevamonitoringagent.zip
     Expand-Archive -Path /installation/genevamonitoringagent.zip -Destination /installation/genevamonitoringagent
     Move-Item -Path /installation/genevamonitoringagent -Destination /opt/genevamonitoringagent/ -ErrorAction SilentlyContinue

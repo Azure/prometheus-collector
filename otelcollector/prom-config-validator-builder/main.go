@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/confmap/converter/expandconverter"
+	"go.opentelemetry.io/collector/confmap/provider/envprovider"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	"go.opentelemetry.io/collector/otelcol"
 	yaml "gopkg.in/yaml.v2"
@@ -71,15 +71,15 @@ func setFatalErrorMessageAsEnvVar(message string) {
 	truncatedMessage = re.ReplaceAllString(truncatedMessage, "")
 
 	// Write env var to a file so it can be used by other processes
-	file, err := os.Create("/opt/microsoft/prom_config_validator_env_var")
+	file, err := os.OpenFile("/opt/microsoft/prom_config_validator_env_var", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Println("prom-config-validator::Unable to create file for prom_config_validator_env_var")
+		log.Println("prom-config-validator::Unable to open file - prom_config_validator_env_var")
 	}
 	setEnvVarString := fmt.Sprintf("export INVALID_CONFIG_FATAL_ERROR=\"%s\"\n", truncatedMessage)
 	if os.Getenv("OS_TYPE") != "linux" {
 		setEnvVarString = fmt.Sprintf("INVALID_CONFIG_FATAL_ERROR=%s\n", truncatedMessage)
 	}
-	_, err = file.WriteString(setEnvVarString)
+	_, err = file.Write([]byte(setEnvVarString))
 	if err != nil {
 		log.Println("prom-config-validator::Unable to write to the file prom_config_validator_env_var")
 	}
@@ -126,8 +126,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
 							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
 							// Doing the below since we dont want to substitute $ with $$ for env variables NODE_NAME and NODE_IP.
-							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
-							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "${env:NODE_NAME}")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "${env:NODE_IP}")
 							relabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -136,8 +136,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						replacement := relabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
 						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
-						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "${env:NODE_NAME}")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "${env:NODE_IP}")
 						relabelConfig["replacement"] = modifiedReplacementString
 					}
 				}
@@ -154,8 +154,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 							regexString := metricRelabelConfig["regex"].(string)
 							modifiedRegexString := strings.ReplaceAll(regexString, "$$", "$")
 							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$", "$$")
-							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "$NODE_NAME")
-							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "$NODE_IP")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_NAME", "${env:NODE_NAME}")
+							modifiedRegexString = strings.ReplaceAll(modifiedRegexString, "$$NODE_IP", "${env:NODE_IP}")
 							metricRelabelConfig["regex"] = modifiedRegexString
 						}
 					}
@@ -165,9 +165,29 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 						replacement := metricRelabelConfig["replacement"].(string)
 						modifiedReplacementString := strings.ReplaceAll(replacement, "$$", "$")
 						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$", "$$")
-						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "$NODE_NAME")
-						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "$NODE_IP")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_NAME", "${env:NODE_NAME}")
+						modifiedReplacementString = strings.ReplaceAll(modifiedReplacementString, "$$NODE_IP", "${env:NODE_IP}")
 						metricRelabelConfig["replacement"] = modifiedReplacementString
+					}
+				}
+			}
+
+			if scrapeConfig["static_configs"] != nil {
+				staticConfigs := scrapeConfig["static_configs"].([]interface{})
+				for _, staticConfig := range staticConfigs {
+					staticConfig := staticConfig.(map[interface{}]interface{})
+					if staticConfig["targets"] != nil {
+						targets := staticConfig["targets"].([]interface{})
+						for i, target := range targets {
+							if _, isString := target.(string); isString {
+								targetValue := target.(string)
+								modifiedtargetValue := strings.ReplaceAll(targetValue, "$$NODE_NAME", "$NODE_NAME")
+								modifiedtargetValue = strings.ReplaceAll(modifiedtargetValue, "$$NODE_IP", "$NODE_IP")
+								modifiedtargetValue = strings.ReplaceAll(modifiedtargetValue, "$NODE_NAME", "${env:NODE_NAME}")
+								modifiedtargetValue = strings.ReplaceAll(modifiedtargetValue, "$NODE_IP", "${env:NODE_IP}")
+								staticConfig["targets"].([]interface{})[i] = modifiedtargetValue
+							}
+						}
 					}
 				}
 			}
@@ -193,6 +213,30 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 	}
 	if len(unsupportedFeatures) != 0 {
 		return fmt.Errorf("unsupported features:\n\t%s", strings.Join(unsupportedFeatures, "\n\t"))
+	}
+
+	globalSettingsFromMergedOtelConfig := prometheusConfig["global"]
+
+	if globalSettingsFromMergedOtelConfig != nil {
+		globalSettings := globalSettingsFromMergedOtelConfig.(map[interface{}]interface{})
+		scrapeInterval := globalSettings["scrape_interval"]
+		if (len(globalSettings) > 1) || (len(globalSettings) == 1 && scrapeInterval != "15s") {
+			setEnvVarString := fmt.Sprintf("AZMON_GLOBAL_SETTINGS_CONFIGURED=true\n")
+			file, err := os.OpenFile("/opt/microsoft/prom_config_validator_env_var", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				log.Println("prom-config-validator::Unable to open file - prom_config_validator_env_var")
+			}
+			_, err = file.Write([]byte(setEnvVarString))
+			if err != nil {
+				log.Println("prom-config-validator::Unable to write to the file prom_config_validator_env_var")
+			}
+			file.Close()
+			if err != nil {
+				log.Println("prom-config-validator::Unable to close file prom_config_validator_env_var", err)
+			} else {
+				log.Printf("prom-config-validator::Successfully set env variables for global config in file prom_config_validator_env_var\n")
+			}
+		}
 	}
 
 	otelConfig.Receivers.Prometheus.Config = prometheusConfig
@@ -273,13 +317,14 @@ func main() {
 			os.Exit(1)
 		}
 
-		fmp := fileprovider.NewWithSettings(confmap.ProviderSettings{})
+		fmp := fileprovider.NewFactory()
+		envp := envprovider.NewFactory()
+		providers := []confmap.ProviderFactory{fmp, envp}
 		cp, err := otelcol.NewConfigProvider(
 			otelcol.ConfigProviderSettings{
 				ResolverSettings: confmap.ResolverSettings{
-					URIs:       []string{fmt.Sprintf("file:%s", outputFilePath)},
-					Providers:  map[string]confmap.Provider{"file": fmp},
-					Converters: []confmap.Converter{expandconverter.New(confmap.ConverterSettings{})},
+					URIs:              []string{fmt.Sprintf("file:%s", outputFilePath)},
+					ProviderFactories: providers,
 				},
 			},
 		)

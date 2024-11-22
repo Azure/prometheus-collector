@@ -43,7 +43,7 @@ test('Distinguish between alerting and recording rule', () => {
   expect(converted.rules[1].alert).toBe("alertName");
   expect(converted.rules[1].severity).toBe(3);
   expect(converted.rules[1].resolveConfiguration).toEqual({
-      autoResolve: true,
+      autoResolved: true,
       timeToResolve: "PT10M"
   });
   expect(converted.rules[1].actions[0].actionGroupId).toBe("[parameters('actionGroupId')]");

@@ -7,7 +7,7 @@ test('Empty source should add the default properties', () => {
   const converted = toAzurePromAlertingRule(({} as AlertingRule), {actionGroupId: 'actionGroupId'});
   expect(converted.severity).toBe(3);
   expect(converted.resolveConfiguration).toEqual({
-      autoResolve: true,
+      autoResolved: true,
       timeToResolve: "PT10M"
   });
   expect(converted.actions[0].actionGroupId).toBe("[parameters('actionGroupId')]");

@@ -1,0 +1,33 @@
+{{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (.Values.AzureMonitorMetrics.CollectorHPAEnabled)}}
+{{- $amaMetricsHpa := include "ama-metrics-merge-custom-hpa" . | fromYaml }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ama-metrics-hpa
+  namespace: kube-system
+  labels:
+    component: ama-metrics-hpa
+    kubernetes.azure.com/managedby: aks
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ama-metrics
+  minReplicas: {{ $amaMetricsHpa.amaMetricsMinReplicasFromHelper }}
+  maxReplicas: {{ $amaMetricsHpa.amaMetricsMaxReplicasFromHelper }}
+  metrics:
+    - type: ContainerResource
+      containerResource:
+        name: memory
+        container: prometheus-collector
+        target:
+          averageValue: 5Gi
+          type: AverageValue
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 300
+{{- end }}

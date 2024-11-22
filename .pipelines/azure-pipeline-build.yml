@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    
 pr:
   autoCancel: true
   branches:
@@ -22,7 +23,9 @@ variables:
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.6.0'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
+  BUILD_WINDOWS: true
   Codeql.Enabled: true
+  GOLANG_VERSION: '1.22.7'
 
 stages:
 - stage: Build
@@ -181,12 +184,14 @@ stages:
         persistCredentials: true
       
       - bash: |
+          export DOCKER_BUILDKIT=1
           mkdir -p $(Build.ArtifactStagingDirectory)/refappgolanglinux
-
-          docker buildx create --name dockerbuilder
-          docker buildx use dockerbuilder
+          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+          
+          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
+          docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
           docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
         workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
         displayName: "Build: build and push reference app golang linux image to dev ACR"
@@ -269,10 +274,12 @@ stages:
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/refapppythonlinux
 
-          docker buildx create --name dockerbuilder
-          docker buildx use dockerbuilder
+          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+          
+          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
+          docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
           docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)  
         workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
         displayName: "Build: build and push reference app python linux image to dev ACR"
@@ -510,6 +517,7 @@ stages:
       name: Azure-Pipelines-Windows-CI-Test-EO
     variables:
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         submodules: true
@@ -527,6 +535,7 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
     variables:
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         submodules: true
@@ -537,7 +546,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(GOLANG_VERSION)
 
       - bash: |
           sudo apt-get install build-essential -y
@@ -608,7 +617,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(GOLANG_VERSION)
 
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
@@ -620,9 +629,12 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-          docker buildx create --name dockerbuilder
-          docker buildx use dockerbuilder
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+          
+          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx inspect --bootstrap
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
           docker pull $(LINUX_FULL_IMAGE_NAME)
           docker system prune --all -f
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -691,18 +703,29 @@ stages:
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_FULL_IMAGE_NAME)
-          if [ $? -ne 0 ]; then
-            exit 1
-          fi
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(KUBE_STATE_METRICS_IMAGE)
-          if [ $? -ne 0 ]; then
-            exit 1
-          fi
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(NODE_EXPORTER_IMAGE)
-          if [ $? -ne 0 ]; then
-            exit 1
-          fi
+          export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+          export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
+          for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
+            for i in {1..5}; do
+              trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image > trivy_output.log 2>&1
+              TRIVY_EXIT_CODE=$?
+              if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+                cat trivy_output.log
+                break
+              fi
+              if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+                echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+                sleep 5
+              else
+                cat trivy_output.log
+                exit 1
+              fi
+            done
+            if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+              echo "Error: Trivy scan failed after 5 retries."
+              exit 1
+            fi
+          done
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
 
@@ -783,7 +806,7 @@ stages:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(GOLANG_VERSION)
 
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
@@ -796,9 +819,11 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-          docker buildx create --name dockerbuilder
-          docker buildx use dockerbuilder
-          docker buildx build . --platform=linux/amd64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
+          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+          
+          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx inspect --bootstrap
+          docker buildx build . --platform=linux/amd64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
           docker pull $(LINUX_CCP_FULL_IMAGE_NAME)
           docker system prune --all -f
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -867,8 +892,25 @@ stages:
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CCP_FULL_IMAGE_NAME)
-          if [ $? -ne 0 ]; then
+          export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+          export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
+          for i in {1..5}; do
+            trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CCP_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+            TRIVY_EXIT_CODE=$?
+            if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+              cat trivy_output.log
+              break
+            fi
+            if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+              echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+              sleep 5
+            else
+              cat trivy_output.log
+              exit 1
+            fi
+          done
+          if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+            echo "Error: Trivy scan failed after 5 retries."
             exit 1
           fi
         workingDirectory: $(Build.SourcesDirectory)
@@ -945,6 +987,12 @@ stages:
     steps:
       - checkout: self
         persistCredentials: true
+
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: $(GOLANG_VERSION)
+  
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
@@ -954,10 +1002,12 @@ stages:
 
           docker system prune --all -f
 
-          docker buildx create --name dockerbuilder
-          docker buildx use dockerbuilder
+          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+          
+          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
           docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
           MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
           DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
@@ -971,7 +1021,27 @@ stages:
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+          export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+          export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
+          for i in {1..5}; do
+            trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+            TRIVY_EXIT_CODE=$?
+            if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+              cat trivy_output.log
+              break
+            fi
+            if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+              echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+              sleep 5
+            else
+              cat trivy_output.log
+              exit 1
+            fi
+          done
+          if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+            echo "Error: Trivy scan failed after 5 retries."
+            exit 1
+          fi
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
 
@@ -1036,6 +1106,11 @@ stages:
       DOCKER_BUILDKIT: 1
       skipComponentGovernanceDetection: true
     steps:
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: $(GOLANG_VERSION)
+
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/linuxcfgreader
 
@@ -1044,10 +1119,12 @@ stages:
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
           docker system prune --all -f
 
-          docker buildx create --name dockerbuilder
-          docker buildx use dockerbuilder
+          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+          
+          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
           docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
           MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
           DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
@@ -1061,7 +1138,27 @@ stages:
 
       - bash: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM --exit-code 1 $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
+          export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+          export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
+          for i in {1..5}; do
+            trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+            TRIVY_EXIT_CODE=$?
+            if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+              cat trivy_output.log
+              break
+            fi
+            if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+              echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+              sleep 5
+            else
+              cat trivy_output.log
+              exit 1
+            fi
+          done
+          if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+            echo "Error: Trivy scan failed after 5 retries."
+            exit 1
+          fi
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
 
@@ -1126,11 +1223,12 @@ stages:
       WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
       WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(GOLANG_VERSION)
 
       - powershell: |
           ./makefile_windows.ps1
@@ -1138,10 +1236,151 @@ stages:
         displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
       - powershell: |
-          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build WS2019 image"
         retryCountOnTaskFailure: 2
+
+      - task: PowerShell@2
+        displayName: Extract files to sign
+        inputs:
+          targetType: 'inline'
+          script: |
+            echo "Creating docker container..."
+            docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
+
+            echo "Creating fist party directory..."
+            mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
+            cd $(Build.ArtifactStagingDirectory)/fpSigning
+
+            echo "Extract LivenessProbe"
+            docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.cmd .
+
+            echo "Extract OtelCollector"
+            docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
+
+            echo "Creating OSS directory..."
+            mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
+            cd $(Build.ArtifactStagingDirectory)/ossSigning
+
+            echo "Extract fluent-bit"
+            docker cp signingContainer:C:\opt\fluent-bit .
+            
+            echo "Extract Ruby"
+            docker cp signingContainer:C:\ruby26 .
+
+            echo "Extract telegraf"
+            docker cp signingContainer:C:\opt\telegraf\telegraf.exe .
+
+            echo "Extract promconfigvalidator"
+            docker cp signingContainer:C:\opt\promconfigvalidator.exe .
+
+            echo "Removing container..."
+            docker rm signingContainer
+
+            echo "List ArtifactStagingDirectory"
+            ls $(Build.ArtifactStagingDirectory)
+            ls .       
+
+      - script: dir $(Build.ArtifactStagingDirectory)
+        displayName: 'List files in Staging Directory'
+
+      - task: EsrpCodeSigning@5
+        inputs:
+          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: '$(Build.ArtifactStagingDirectory)/fpSigning'
+          Pattern: '*.dll,*.exe,*.so,*.ps1'
+          signConfigType: 'inlineSignParams'
+          inlineOperation: |
+            [
+                    {
+                        "KeyCode" : "CP-230012",
+                        "OperationCode" : "SigntoolSign",
+                        "Parameters" : {
+                            "OpusName" : "Microsoft",
+                            "OpusInfo" : "http://www.microsoft.com",
+                            "FileDigest" : "/fd \"SHA256\"",
+                            "PageHash" : "/NPH",
+                            "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                        },
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    },
+                    {
+                        "KeyCode" : "CP-230012",
+                        "OperationCode" : "SigntoolVerify",
+                        "Parameters" : {},
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    }
+                ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+        displayName: 'EsrpCodeSigning for first party binaries'
+
+      - task: EsrpCodeSigning@5
+        inputs:
+          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: '$(Build.ArtifactStagingDirectory)/ossSigning'
+          Pattern: '*.dll,*.exe,*.so'
+          signConfigType: 'inlineSignParams'
+          inlineOperation: |
+            [
+                    {
+                        "KeyCode" : "CP-231522",
+                        "OperationCode" : "SigntoolSign",
+                        "Parameters" : {
+                            "OpusName" : "Microsoft",
+                            "OpusInfo" : "http://www.microsoft.com",
+                            "Append" : "/as",
+                            "FileDigest" : "/fd \"SHA256\"",
+                            "PageHash" : "/NPH",
+                            "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                        },
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    },
+                    {
+                        "KeyCode" : "CP-231522",
+                        "OperationCode" : "SigntoolVerify",
+                        "Parameters" : {},
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    }
+                ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+        displayName: 'EsrpCodeSigning for OSS binaries'   
+
+      - task: PowerShell@2
+        displayName: Replace files in origin Image
+        inputs:
+          targetType: 'inline'
+          script: |
+            docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned
+            
+            echo "Copy Signed binaries/folders back to docker image..."
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
+
+            docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
+            docker rm pushContainer
 
       - powershell: |
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1159,11 +1398,12 @@ stages:
       WINDOWS_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_FULL_IMAGE_NAME'] ]
       WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(GOLANG_VERSION)
 
       - powershell: |
           ./makefile_windows.ps1
@@ -1171,10 +1411,152 @@ stages:
         displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
       - powershell: |
-          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION) --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+          docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build WS2022 image"
         retryCountOnTaskFailure: 2
+
+      - task: PowerShell@2
+        displayName: Extract files to sign
+        inputs:
+          targetType: 'inline'
+          script: |
+            echo "Creating docker container..."
+            docker create --name signingContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
+
+            echo "Creating fist party directory..."
+            mkdir -p $(Build.ArtifactStagingDirectory)/fpSigning
+            cd $(Build.ArtifactStagingDirectory)/fpSigning
+
+            echo "Extract LivenessProbe"
+            docker cp signingContainer:C:\opt\microsoft\scripts\livenessprobe.cmd .
+
+            echo "Extract OtelCollector"
+            docker cp signingContainer:C:\opt\microsoft\otelcollector\otelcollector.exe .
+
+            echo "Creating OSS directory..."
+            mkdir -p $(Build.ArtifactStagingDirectory)/ossSigning
+            cd $(Build.ArtifactStagingDirectory)/ossSigning
+
+            echo "Extract fluent-bit"
+            docker cp signingContainer:C:\opt\fluent-bit .
+            
+            echo "Extract Ruby"
+            docker cp signingContainer:C:\ruby26 .
+
+            echo "Extract telegraf"
+            docker cp signingContainer:C:\opt\telegraf\telegraf.exe .
+
+            echo "Extract promconfigvalidator"
+            docker cp signingContainer:C:\opt\promconfigvalidator.exe .
+
+            echo "Removing container..."
+            docker rm signingContainer
+
+            echo "List ArtifactStagingDirectory"
+            ls $(Build.ArtifactStagingDirectory)
+            ls .       
+
+
+      - script: dir $(Build.ArtifactStagingDirectory)
+        displayName: 'List files in Staging Directory'
+
+      - task: EsrpCodeSigning@5
+        inputs:
+          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: '$(Build.ArtifactStagingDirectory)/fpSigning'
+          Pattern: '*.dll,*.exe,*.so,*.ps1'
+          signConfigType: 'inlineSignParams'
+          inlineOperation: |
+            [
+                    {
+                        "KeyCode" : "CP-230012",
+                        "OperationCode" : "SigntoolSign",
+                        "Parameters" : {
+                            "OpusName" : "Microsoft",
+                            "OpusInfo" : "http://www.microsoft.com",
+                            "FileDigest" : "/fd \"SHA256\"",
+                            "PageHash" : "/NPH",
+                            "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                        },
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    },
+                    {
+                        "KeyCode" : "CP-230012",
+                        "OperationCode" : "SigntoolVerify",
+                        "Parameters" : {},
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    }
+                ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+        displayName: 'EsrpCodeSigning for first party binaries'
+
+      - task: EsrpCodeSigning@5
+        inputs:
+          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: 'ESRPReqPrometheusProdCert'
+          FolderPath: '$(Build.ArtifactStagingDirectory)/ossSigning'
+          Pattern: '*.dll,*.exe,*.so'
+          signConfigType: 'inlineSignParams'
+          inlineOperation: |
+            [
+                    {
+                        "KeyCode" : "CP-231522",
+                        "OperationCode" : "SigntoolSign",
+                        "Parameters" : {
+                            "OpusName" : "Microsoft",
+                            "OpusInfo" : "http://www.microsoft.com",
+                            "Append" : "/as",
+                            "FileDigest" : "/fd \"SHA256\"",
+                            "PageHash" : "/NPH",
+                            "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                        },
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    },
+                    {
+                        "KeyCode" : "CP-231522",
+                        "OperationCode" : "SigntoolVerify",
+                        "Parameters" : {},
+                        "ToolName" : "sign",
+                        "ToolVersion" : "1.0"
+                    }
+                ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+        displayName: 'EsrpCodeSigning for OSS binaries'   
+             
+      - task: PowerShell@2
+        displayName: Replace files in origin Image
+        inputs:
+          targetType: 'inline'
+          script: |
+            docker create --name pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned
+            
+            echo "Copy Signed binaries/folders back to docker image..."
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/livenessprobe.cmd pushContainer:C:\opt\microsoft\scripts\livenessprobe.cmd
+            docker cp $(Build.ArtifactStagingDirectory)/fpSigning/otelcollector.exe pushContainer:C:\opt\microsoft\otelcollector\otelcollector.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/fluent-bit/. pushContainer:C:\opt\fluent-bit/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/ruby26/. pushContainer:C:\ruby26/
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/telegraf.exe pushContainer:C:\opt\telegraf\telegraf.exe
+            docker cp $(Build.ArtifactStagingDirectory)/ossSigning/promconfigvalidator.exe pushContainer:C:\opt\promconfigvalidator.exe
+
+            docker commit pushContainer $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)
+            docker rm pushContainer
 
       - powershell: |
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
@@ -1196,11 +1578,12 @@ stages:
       WINDOWS_2019_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2019_BASE_IMAGE_VERSION'] ]
       WINDOWS_2022_BASE_IMAGE_VERSION: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_2022_BASE_IMAGE_VERSION'] ]
       skipComponentGovernanceDetection: true
+    condition: and(succeeded(), eq(variables.BUILD_WINDOWS, true))
     steps:
       - task: GoTool@0
         displayName: "Build: specify golang version"
         inputs:
-          version: '1.21.5'
+          version: $(GOLANG_VERSION)
 
       - bash: |
           export ACR_REPOSITORY_VAR="$(ACR_REPOSITORY)"
@@ -1509,6 +1892,139 @@ stages:
               inlineScript: |
                 az config set extension.use_dynamic_install=yes_without_prompt
                 az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
+              retryCountOnTaskFailure: 2
+
+          - task: AzureCLI@2
+            displayName: "Deploy: wait for ci-dev-arc-proxy cluster to be ready"
+            inputs:
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                  do
+                    state=$(az k8s-extension show --name azuremonitor-metrics --resource-group ci-dev-arc-proxy --cluster-name ci-dev-arc-proxy --cluster-type connectedClusters | jq -r '.provisioningState')
+                    # We want to wait in case the status is 'Creating' or 'Updating' because of another PR merged shortly before the current one.
+                    if [ "$state" = "Succeeded" ] || [ "$state" = "Failed" ]
+                    then
+                      echo "Cluster is ready to install extension"
+                      exit 0
+                    fi
+                    sleep 30
+                  done
+                  echo "Cluster is installing a different version of the extension"
+                  exit 1
+              retryCountOnTaskFailure: 5
+
+          - task: AzureCLI@2
+            displayName: "Deploy: ci-dev-arc-proxy cluster"
+            inputs:
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az config set extension.use_dynamic_install=yes_without_prompt
+                az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-proxy --cluster-name ci-dev-arc-proxy --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
+              retryCountOnTaskFailure: 2
+
+  - deployment: Testkube_ARC
+    displayName: "Test: Arc testkube tests"
+    environment: Prometheus-Collector
+    dependsOn: Deploy_Chart_ARC
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+    variables:
+      HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+      HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+      skipComponentGovernanceDetection: true
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            persistCredentials: true
+
+          - bash: |
+              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
+              sudo apt-get update
+              sudo apt-get install -y testkube
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install testkube CLI"
+
+          - task: AzureCLI@1
+            displayName: Get kubeconfig
+            inputs:
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az aks get-credentials -g ci-dev-arc-wcus -n ci-dev-arc-wcus'
+          
+          - bash: |
+              export AMW_QUERY_ENDPOINT="https://ci-dev-arc-amw-p3eu.eastus.prometheus.monitor.azure.com"
+              export AZURE_CLIENT_ID="5f13547e-a4e2-4efd-85fe-a2b03d5b8661"
+
+              envsubst < ./testkube/testkube-test-crs-arc.yaml > ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
+              kubectl apply -f ./testkube/api-server-permissions.yaml
+              kubectl apply -f ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows=configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+            displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
+
+          - bash: |
+              sleep 360
+
+              exit 0
+            displayName: "Wait for cluster to be ready"
+
+          - bash: |
+              # Run the full test suite
+              kubectl testkube run testsuite e2e-tests-merge --verbose
+
+              # Get the current id of the test suite now running
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
+
+              # Watch until the all the tests in the test suite finish
+              kubectl testkube watch testsuiteexecution $execution_id
+
+              # Get the results as a formatted json file
+              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
+
+              # For any test that has failed, print out the Ginkgo logs
+              if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
+
+                # Get each test name and id that failed
+                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
+                  testName=$(echo $line | cut -d ' ' -f 1)
+                  id=$(echo $line | cut -d ' ' -f 2)
+                  echo "Test $testName failed. Test ID: $id"
+
+                  # Get the Ginkgo logs of the test
+                  kubectl testkube get execution $id > out 2>error.log
+
+                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
+                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
+                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+                done
+
+                # Explicitly fail the ADO task since at least one test failed
+                exit 0
+              fi
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Run tests"
 
   - deployment: Deploy_AKS_Chart
     displayName: "Deploy: AKS dev cluster"
@@ -1586,6 +2102,82 @@ stages:
               waitForExecution: false
               arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
 
+  - deployment: Deploy_AKS_Proxy_Chart
+    displayName: "Deploy: AKS proxy dev cluster"
+    environment: Prometheus-Collector
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Proxy_Chart')), eq(variables['System.StageAttempt'], 1)))
+    variables:
+      HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+      HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+      IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
+      IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+      skipComponentGovernanceDetection: true
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            submodules: true
+            persistCredentials: true
+
+          - bash: |
+              git config --global user.name "AzureDevOps Agent"
+              git tag "v$(HELM_SEMVER)"
+              git push origin "v$(HELM_SEMVER)"
+            displayName: Tag commit with semver
+
+          - task: HelmInstaller@1
+            displayName: Install Helm version
+            inputs:
+              helmVersionToInstall: 3.12.3
+          - bash: |
+              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                  do
+                    sleep 30
+                    echo $(IMAGE_TAG)
+                    echo $(IMAGE_TAG_WINDOWS)
+                    echo $(IMAGE_TAG_TARGET_ALLOCATOR)
+                    echo $(IMAGE_TAG_CONFIG_READER)
+                    output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                    if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
+                    then
+                      echo "Images are published to mcr"
+                      exit 0
+                    fi
+                  done
+                  echo "Images are not published to mcr within the timeout"
+                  exit 1
+            displayName: "Check images are pushed to dev MCR"
+            retryCountOnTaskFailure: 5
+          - bash: |
+              export AKS_REGION="westcentralus"
+              export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-proxy/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-proxy"
+              export ARC_EXTENSION="false"
+              envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+              ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+              cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+              helm dependency update
+            displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
+          - task: HelmDeploy@0
+            displayName: "Deploy: ci-dev-aks-proxy cluster"
+            inputs:
+              connectionType: 'Azure Resource Manager'
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              azureResourceGroup: 'ci-dev-aks-proxy'
+              kubernetesCluster: 'ci-dev-aks-proxy'
+              namespace: 'default'
+              command: 'upgrade'
+              chartType: 'FilePath'
+              chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+              releaseName: 'ama-metrics'
+              waitForExecution: false
+              arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+
   - deployment: Testkube
     displayName: "Test: AKS testkube tests"
     environment: Prometheus-Collector
@@ -1631,6 +2223,106 @@ stages:
               envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
               kubectl apply -f ./testkube/api-server-permissions.yaml
               kubectl apply -f ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows=configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+            displayName: "Apply TestKube CRs, scrape configs and pod/service monitors"
+
+          - bash: |
+              sleep 360
+
+              exit 0
+            displayName: "Wait for cluster to be ready"
+
+          - bash: |
+              # Run the full test suite
+              kubectl testkube run testsuite e2e-tests-merge --verbose
+
+              # Get the current id of the test suite now running
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
+
+              # Watch until the all the tests in the test suite finish
+              kubectl testkube watch testsuiteexecution $execution_id
+
+              # Get the results as a formatted json file
+              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
+
+              # For any test that has failed, print out the Ginkgo logs
+              if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
+
+                # Get each test name and id that failed
+                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
+                  testName=$(echo $line | cut -d ' ' -f 1)
+                  id=$(echo $line | cut -d ' ' -f 2)
+                  echo "Test $testName failed. Test ID: $id"
+
+                  # Get the Ginkgo logs of the test
+                  kubectl testkube get execution $id > out 2>error.log
+
+                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
+                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
+                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+                done
+
+                # Explicitly fail the ADO task since at least one test failed
+                exit 0
+              fi
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Run tests"
+
+
+  - deployment: Testkube_Proxy
+    displayName: "Test: AKS Proxy testkube tests"
+    environment: Prometheus-Collector
+    dependsOn: Deploy_AKS_Proxy_Chart
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+    variables:
+      HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+      HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+      skipComponentGovernanceDetection: true
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            persistCredentials: true
+
+          - bash: |
+              wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+              echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
+              sudo apt-get update
+              sudo apt-get install -y testkube
+
+              exit 0
+            workingDirectory: $(Build.SourcesDirectory)
+            displayName: "Install testkube CLI"
+
+          - task: AzureCLI@1
+            displayName: Get kubeconfig
+            inputs:
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az aks get-credentials -g ci-dev-aks-proxy -n ci-dev-aks-proxy'
+          
+          - bash: |
+              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-proxy-amw-cwdggqerdxguanaq.westcentralus.prometheus.monitor.azure.com"
+              export AZURE_CLIENT_ID="ef9cebf6-7553-4220-8a49-50c823909c9f"
+
+              envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-crs-ci-dev-aks-proxy.yaml
+              kubectl apply -f ./testkube/api-server-permissions.yaml
+              kubectl apply -f ./testkube/testkube-test-crs-ci-dev-aks-proxy.yaml
               kubectl apply -f ./test-cluster-yamls
 
               exit 0

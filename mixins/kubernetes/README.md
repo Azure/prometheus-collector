@@ -1,29 +1,30 @@
 # Prometheus Monitoring Mixin for Kubernetes
+
 [![ci](https://github.com/kubernetes-monitoring/kubernetes-mixin/actions/workflows/ci.yaml/badge.svg)](https://github.com/kubernetes-monitoring/kubernetes-mixin/actions/workflows/ci.yaml)
 
 > NOTE: This project is *pre-release* stage. Flags, configuration, behaviour and design may change significantly in following releases.
- Last synced on 07/28/2022 to commit - https://github.com/kubernetes-monitoring/kubernetes-mixin/commit/b8f44bb7be728423836bef0e904ec7166895a34b
+
 A set of Grafana dashboards and Prometheus alerts for Kubernetes.
 
 ## Releases
 
-| Release branch | Kubernetes Compatibility   | Prometheus Compatibility | Kube-state-metrics Compatibility |
-| -------------- | -------------------------- | ------------------------ | -------------------------------- |
-| release-0.1  | v1.13 and before   |           |       |
-| release-0.2  | v1.14.1 and before | v2.11.0+  |       |
-| release-0.3  | v1.17 and before   | v2.11.0+  |       |
-| release-0.4  | v1.18              | v2.11.0+  |       |
-| release-0.5  | v1.19              | v2.11.0+  |       |
-| release-0.6  | v1.19+             | v2.11.0+  |       |
-| release-0.7  | v1.19+             | v2.11.0+  | v1.x  |
-| release-0.8  | v1.20+             | v2.11.0+  | v2.0+ |
-| release-0.9  | v1.20+             | v2.11.0+  | v2.0+ |
-| release-0.10 | v1.20+             | v2.11.0+  | v2.0+ |
-| release-0.11 | v1.23+             | v2.11.0+  | v2.0+ |
-| master       | v1.23+             | v2.11.0+  | v2.0+ |
+| Release branch | Kubernetes Compatibility | Prometheus Compatibility | Kube-state-metrics Compatibility |
+|----------------|--------------------------|--------------------------|----------------------------------|
+| release-0.1    | v1.13 and before         |                          |                                  |
+| release-0.2    | v1.14.1 and before       | v2.11.0+                 |                                  |
+| release-0.3    | v1.17 and before         | v2.11.0+                 |                                  |
+| release-0.4    | v1.18                    | v2.11.0+                 |                                  |
+| release-0.5    | v1.19                    | v2.11.0+                 |                                  |
+| release-0.6    | v1.19+                   | v2.11.0+                 |                                  |
+| release-0.7    | v1.19+                   | v2.11.0+                 | v1.x                             |
+| release-0.8    | v1.20+                   | v2.11.0+                 | v2.0+                            |
+| release-0.9    | v1.20+                   | v2.11.0+                 | v2.0+                            |
+| release-0.10   | v1.20+                   | v2.11.0+                 | v2.0+                            |
+| release-0.11   | v1.23+                   | v2.11.0+                 | v2.0+                            |
+| release-0.12   | v1.23+                   | v2.11.0+                 | v2.0+                            |
+| master         | v1.26+                   | v2.11.0+                 | v2.0+                            |
 
-In Kubernetes 1.14 there was a major [metrics overhaul](https://github.com/kubernetes/enhancements/issues/1206) implemented.
-Therefore v0.1.x of this repository is the last release to support Kubernetes 1.13 and previous version on a best effort basis.
+In Kubernetes 1.14 there was a major [metrics overhaul](https://github.com/kubernetes/enhancements/issues/1206) implemented. Therefore v0.1.x of this repository is the last release to support Kubernetes 1.13 and previous version on a best effort basis.
 
 Some alerts now use Prometheus filters made available in Prometheus 2.11.0, which makes this version of Prometheus a dependency.
 
@@ -33,18 +34,16 @@ Warning: By default the expressions will generate *grafana 7.2+* compatible rule
 
 ## How to use
 
-This mixin is designed to be vendored into the repo with your infrastructure config.
-To do this, use [jsonnet-bundler](https://github.com/jsonnet-bundler/jsonnet-bundler):
+This mixin is designed to be vendored into the repo with your infrastructure config. To do this, use [jsonnet-bundler](https://github.com/jsonnet-bundler/jsonnet-bundler):
 
 You then have three options for deploying your dashboards
 1. Generate the config files and deploy them yourself
-1. Use ksonnet to deploy this mixin along with Prometheus and Grafana
-1. Use prometheus-operator to deploy this mixin (TODO)
+2. Use ksonnet to deploy this mixin along with Prometheus and Grafana
+3. Use prometheus-operator to deploy this mixin (TODO)
 
 ## Generate config files
 
-You can manually generate the alerts, dashboards and rules files, but first you
-must install some tools:
+You can manually generate the alerts, dashboards and rules files, but first you must install some tools:
 
 ```
 $ go install github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest
@@ -67,13 +66,11 @@ $ make prometheus_rules.yaml
 $ make dashboards_out
 ```
 
-The `prometheus_alerts.yaml` and `prometheus_rules.yaml` file then need to passed
-to your Prometheus server, and the files in `dashboards_out` need to be imported
-into you Grafana server.  The exact details will depending on how you deploy your
-monitoring stack to Kubernetes.
+The `prometheus_alerts.yaml` and `prometheus_rules.yaml` file then need to passed to your Prometheus server, and the files in `dashboards_out` need to be imported into you Grafana server. The exact details will depending on how you deploy your monitoring stack to Kubernetes.
 
 ### Dashboards for Windows Nodes
-There are separate dashboards for windows resources.
+
+There exist separate dashboards for windows resources.
 1) Compute Resources / Cluster(Windows)
 2) Compute Resources / Namespace(Windows)
 3) Compute Resources / Pod(Windows)
@@ -81,15 +78,6 @@ There are separate dashboards for windows resources.
 5) USE Method / Node(Windows)
 
 These dashboards are based on metrics populated by [windows-exporter](https://github.com/prometheus-community/windows_exporter) from each Windows node.
-
-### Recording Rules
-
-The recording rules were taken from the default [kubernetes mixin](https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/rules) and incorporated into our repo for the default dashboards that the Azure Monitor Metrics addon provides. If there is a need to update any of them then please note that the following places need to be updated too:
-
-1) OSS Communityu kuberenetes mixin - [link to rules](https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/rules)
-2) Azure Monitor Metrics UX Extension
-3) Alerts RP (stores recording rules for CLI)
-4) Prometheus collector repo - [Sample PR](https://github.com/Azure/prometheus-collector/pull/470/)
 
 ## Running the tests
 
@@ -99,10 +87,7 @@ make test
 
 ## Using with prometheus-ksonnet
 
-Alternatively you can also use the mixin with
-[prometheus-ksonnet](https://github.com/kausalco/public/tree/master/prometheus-ksonnet),
-a [ksonnet](https://github.com/ksonnet/ksonnet) module to deploy a fully-fledged
-Prometheus-based monitoring system for Kubernetes:
+Alternatively you can also use the mixin with [prometheus-ksonnet](https://github.com/kausalco/public/tree/master/prometheus-ksonnet), a [ksonnet](https://github.com/ksonnet/ksonnet) module to deploy a fully-fledged Prometheus-based monitoring system for Kubernetes:
 
 Make sure you have the ksonnet v0.8.0:
 
@@ -123,8 +108,7 @@ $ cd <application name>
 $ ks env add default
 ```
 
-Grab the kubernetes-jsonnet module using and its dependencies, which include
-the kubernetes-mixin:
+Grab the kubernetes-jsonnet module using and its dependencies, which include the kubernetes-mixin:
 
 ```
 $ go get github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb
@@ -166,9 +150,7 @@ Kubernetes-mixin can support dashboards across multiple clusters. You need eithe
 
 ## Customising the mixin
 
-Kubernetes-mixin allows you to override the selectors used for various jobs,
-to match those used in your Prometheus set. You can also customize the dashboard
-names and add grafana tags.
+Kubernetes-mixin allows you to override the selectors used for various jobs, to match those used in your Prometheus set. You can also customize the dashboard names and add grafana tags.
 
 In a new directory, add a file `mixin.libsonnet`:
 
@@ -220,7 +202,7 @@ local utils = import 'lib/utils.libsonnet';
       local slack = 'observability';
       local specialAlerts = {
         KubePodCrashLooping: { slack_channel: slack },
-        KubePodNotReadyByController: { slack_channel: slack },
+        KubePodNotReady: { slack_channel: slack },
       };
 
       local addExtraAnnotations(rule) = rule {
@@ -233,11 +215,13 @@ local utils = import 'lib/utils.libsonnet';
   }
 )
 ```
+
 Create new file: `lib/kubernetes_customised_alerts.jsonnet` with the following:
 
 ```jsonnet
 std.manifestYamlDoc((import '../kubernetes_mixin_override.libsonnet').prometheusAlerts)
 ```
+
 Running `jsonnet -S lib/kubernetes_customised_alerts.jsonnet` will build the alerts with your customisations.
 
 Same result can be achieved by modyfying the existing `config.libsonnet` with the content of `kubernetes_mixin_override.libsonnet`.
@@ -245,20 +229,18 @@ Same result can be achieved by modyfying the existing `config.libsonnet` with th
 ## Background
 
 ### Alert Severities
+
 While the community has not yet fully agreed on alert severities and their to be used, this repository assumes the following paradigms when setting the severities:
 
 * Critical: An issue, that needs to page a person to take instant action
 * Warning: An issue, that needs to be worked on but in the regular work queue or for during office hours rather than paging the oncall
 * Info: Is meant to support a trouble shooting process by informing about a non-normal situation for one or more systems but not worth a page or ticket on its own.
 
-
 ### Architecture and Technical Decisions
 
-* For more motivation, see
-"[The RED Method: How to instrument your services](https://kccncna17.sched.com/event/CU8K/the-red-method-how-to-instrument-your-services-b-tom-wilkie-kausal?iframe=no&w=100%&sidebar=yes&bg=no)" talk from CloudNativeCon Austin.
-* For more information about monitoring mixins, see this [design doc](https://docs.google.com/document/d/1A9xvzwqnFVSOZ5fD3blKODXfsat5fg6ZhnKu9LK3lB4/edit#).
+* For more motivation, see "[The RED Method: How to instrument your services](https://kccncna17.sched.com/event/CU8K/the-red-method-how-to-instrument-your-services-b-tom-wilkie-kausal?iframe=no&w=100%&sidebar=yes&bg=no)" talk from CloudNativeCon Austin.
+* For more information about monitoring mixins, see this [design doc](DESIGN.md).
 
 ## Note
 
-You can use the external tool call [prom-metrics-check](https://github.com/ContainerSolutions/prom-metrics-check) to validate the created dashboards. This tool allows you to check if the metrics installed and used in Grafana dashboards exist in the Prometheus instance.
-Please have a look at https://github.com/ContainerSolutions/prom-metrics-check.
+You can use the external tool call [prom-metrics-check](https://github.com/ContainerSolutions/prom-metrics-check) to validate the created dashboards. This tool allows you to check if the metrics installed and used in Grafana dashboards exist in the Prometheus instance. Please have a look at https://github.com/ContainerSolutions/prom-metrics-check.

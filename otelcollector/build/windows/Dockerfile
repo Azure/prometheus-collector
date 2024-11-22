@@ -23,11 +23,9 @@ ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhN
 ENV TELEMETRY_DISABLED false
 
 COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
-COPY ./build/windows/scripts/main.ps1 $tmpdir/scripts/
 COPY ./build/windows/scripts/filesystemwatcher.ps1 $tmpdir/scripts/
-COPY ./build/windows/scripts/livenessprobe.cmd $tmpdir/microsoft/scripts/
-
-COPY ./configmapparser/*.rb $tmpdir/microsoft/configmapparser/
+RUN mkdir "C:\\opt\\microsoft\\configmapparser"
+RUN mkdir "C:\\opt\\microsoft\\scripts"
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/otelcollector.exe ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/microsoft/otelcollector/
 COPY ./prom-config-validator-builder/promconfigvalidator.exe $tmpdir/
@@ -36,40 +34,13 @@ COPY ./telegraf/telegraf-prometheus-collector-windows.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit-windows.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
-COPY ./react /Users/ContainerAdministrator/Documents/static/react
+COPY ./main/main.exe $tmpdir/microsoft
+COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
-
-# Do not split this into multiple RUN!
-# Docker creates a layer for every RUN-Statement
-ENV chocolateyVersion "1.4.0"
-RUN powershell -Command "Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
-# Fluentd depends on cool.io whose fat gem is only available for Ruby < 2.5, so need to specify --platform ruby when install Ruby > 2.5 and install msys2 to get dev tools
-RUN choco install -y ruby --version 2.6.5.1 --params "'/InstallDir:C:\ruby26'" \
-&& choco install -y msys2 --version 20211130.0.0 --params "'/NoPath /NoUpdate /InstallDir:C:\ruby26\msys64'" \
-&& choco install -y vim
-
-# gangams - optional MSYS2 update via ridk failing in merged docker file so skipping that since we dont need optional update
-RUN refreshenv \
-&& ridk install 3 \
-&& echo gem: --no-document >> C:\ProgramData\gemrc \
-&& gem install cool.io -v 1.5.4 --platform ruby \
-&& gem install oj -v 3.3.10 \
-&& gem install json -v 2.2.0 \
-&& gem install fluentd -v 1.12.2 \
-&& gem install win32-service -v 1.0.1 \
-&& gem install win32-ipc -v 0.7.0 \
-&& gem install win32-event -v 0.6.3 \
-&& gem install windows-pr -v 1.2.6 \
-&& gem install tomlrb -v 1.3.0 \
-&& gem install deep_merge -v 1.2.1\
-&& gem install colorize\
-&& gem sources --clear-all
-
-# Remove gem cache and chocolatey
-RUN powershell -Command "Remove-Item -Force C:\ruby26\lib\ruby\gems\2.6.0\cache\*.gem; Remove-Item -Recurse -Force 'C:\ProgramData\chocolatey'"
 
 SHELL ["powershell"]
 RUN ./opt/scripts/setup.ps1
 
-ENTRYPOINT ["powershell", "C:\\opt\\scripts\\main.ps1"]
+# Run the Go executable, entrypoint
+ENTRYPOINT ["powershell", "C:\\opt\\microsoft\\main.exe"]
