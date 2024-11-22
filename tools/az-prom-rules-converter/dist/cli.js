@@ -24,9 +24,10 @@ program.description('Azure Prometheus rule groups tool');
 function yaml2arm(inputPath, options, command) {
     var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
-        const inputAbsolutePath = path_1.default.resolve(inputPath);
-        const str = (_a = (yield promises_1.default.readFile(inputAbsolutePath))) === null || _a === void 0 ? void 0 : _a.toString();
-        const flowResult = (0, _1.default)(str, options);
+        const inputStr = inputPath ?
+            (_a = (yield promises_1.default.readFile(path_1.default.resolve(inputPath)))) === null || _a === void 0 ? void 0 : _a.toString() :
+            yield readStdin();
+        const flowResult = (0, _1.default)(inputStr, options);
         if (flowResult.success == false) {
             console.error((_b = flowResult.error) === null || _b === void 0 ? void 0 : _b.title);
             console.error(JSON.stringify((_c = flowResult.error) === null || _c === void 0 ? void 0 : _c.details, null, 2));
@@ -44,7 +45,7 @@ function yaml2arm(inputPath, options, command) {
 }
 program //.command('yaml2arm')
     .description('Convert Prometheus rules Yaml file to ARM template')
-    .argument('<input>', 'Input Prometheus rule groups Yaml file path.')
+    .argument('[input]', 'Input Prometheus rule groups Yaml (or Json) file path.')
     .option('-amw, --azure-monitor-workspace <string>', 'Azure monitor workspace id\'s that this rule group is scoped to.')
     .option('-c, --cluster-name <string>', 'The cluster name of the rule group evaluation.')
     .option('-a, --action-group-id <string>', 'The resource id of the action group to use for alerting rules.')
@@ -53,3 +54,19 @@ program //.command('yaml2arm')
     .option('-l, --location <string>', 'Rule group location.')
     .action(yaml2arm);
 program.parse();
+function readStdin() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            let input = '';
+            process.stdin.on('data', chunk => {
+                input += chunk;
+            });
+            process.stdin.on('end', () => {
+                resolve(input);
+            });
+            process.stdin.on('error', err => {
+                reject(err);
+            });
+        });
+    });
+}
