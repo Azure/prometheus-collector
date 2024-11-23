@@ -3,7 +3,6 @@ trigger:
     include:
     - main
     - vishwa/netmonfix
-    
 pr:
   autoCancel: true
   branches:
