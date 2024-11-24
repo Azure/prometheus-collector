@@ -194,7 +194,7 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		windowsKubeProxyRegex = fmt.Sprintf("%s|%s", regexValues.windowskubeproxy, windowskubeproxyRegex_minimal_mac)
 		networkobservabilityRetinaRegex = fmt.Sprintf("%s|%s", regexValues.networkobservabilityretina, networkobservabilityRetinaRegex_minimal_mac)
 		networkobservabilityHubbleRegex = fmt.Sprintf("%s|%s", regexValues.networkobservabilityhubble, networkobservabilityHubbleRegex_minimal_mac)
-		networkobservabilityCiliumRegex = fmt.Sprintf("%s|%s", regexValues.networkobservabilityCilium, networkobservabilityCiliumRegex_minimal_mac)
+		networkobservabilityCiliumRegex = fmt.Sprintf("%s|%s", regexValues.networkobservabilitycilium, networkobservabilityCiliumRegex_minimal_mac)
 		podAnnotationsRegex = regexValues.podannotations
 		acstorCapacityProvisionerRegex = fmt.Sprintf("%s|%s", regexValues.acstorcapacityprovisioner, acstorCapacityProvisionerRegex_minimal_mac)
 		acstorMetricsExporterRegex = fmt.Sprintf("%s|%s", regexValues.acstormetricsexporter, acstorMetricsExporter_minimal_mac)
