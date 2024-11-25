@@ -1,5 +1,13 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 11-25-2024 (hot-fix for network observability minimal ingestion regex-es for hubble & cilium - from branch - `netmonfix11252024`)
+* Linux image - 
+* Windows image - 
+* TA image -
+* CFG sidecar image -
+Change log -
+* Update minimal ingestion profile Regex-es for hubble & cilium - (https://github.com/Azure/prometheus-collector/pull/1017)
+
 ## Release 10-15-2024 (CCP release only)
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.10.2-main-10-15-2024-06b20de5`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.10.2-main-10-15-2024-06b20de5-win`
