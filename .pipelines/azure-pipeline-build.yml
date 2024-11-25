@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-    - main
+    - netmonfix11252024
     
 pr:
   autoCancel: true
@@ -22,7 +22,7 @@ variables:
   KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.12.0'
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.6.0'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
-  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
+  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'netmonfix11252024')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.22.7'
