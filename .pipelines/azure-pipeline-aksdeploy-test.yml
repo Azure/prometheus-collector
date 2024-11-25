@@ -14,6 +14,14 @@ stages:
         azureSubscription: $(AZURESUBSCRIPTION)
         resourceGroup: $(RESOURCE-GROUP)
         deployParameters: ${env:PARAMETERS}
+    - task: PowerShell@2
+      inputs:
+        targetType: 'inline'
+        script: |
+          $sleepTime = ${env:SLEEPTIME_IN_SECONDS}
+          Get-Date
+          Write-host "Allowing cluster run $sleepTime seconds before testing..."
+          Sleep -Seconds $sleepTime        
 
 - stage: Test
   dependsOn: Deploy
