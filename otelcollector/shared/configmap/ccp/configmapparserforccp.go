@@ -3,6 +3,7 @@ package ccpconfigmapsettings
 import (
 	"fmt"
 	"strings"
+	"os"
 
 	// "prometheus-collector/shared"
 	"github.com/prometheus-collector/shared"
@@ -12,6 +13,18 @@ func Configmapparserforccp() {
 	fmt.Printf("in configmapparserforccp")
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"
+
+	entries, er := os.ReadDir("/etc/config/settings")
+    if er != nil {
+        fmt.Println("error listing /etc/config/settings", er)
+    }
+ 
+    for _, e := range entries {
+            fmt.Println(e.Name())
+    }
+
+	fmt.Println("done listing /etc/config/settings")
+
 	// Set agent config schema version
 	if shared.ExistsAndNotEmpty(configSchemaPath) {
 		configVersion, err := shared.ReadAndTrim(configVersionPath)
