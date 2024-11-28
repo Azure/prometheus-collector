@@ -25,7 +25,10 @@ func Configmapparserforccp() {
 			configVersion = configVersion[:10]
 		}
 		// Set the environment variable
+		fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_FILE_VERSION:", configVersion)
 		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configVersion, true)
+	} else {
+		fmt.Println("Configmapparserforccp fileversion file doesn't exist. or configmap doesn't exist:", configVersionPath)
 	}
 
 	// Set agent config file version
@@ -41,7 +44,10 @@ func Configmapparserforccp() {
 			configSchemaVersion = configSchemaVersion[:10]
 		}
 		// Set the environment variable
+		fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_SCHEMA_VERSION:", configSchemaVersion)
 		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
+	} else {
+		fmt.Println("Configmapparserforccp schemaversion file doesn't exist. or configmap doesn't exist:", configSchemaPath)
 	}
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings

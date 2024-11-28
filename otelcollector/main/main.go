@@ -17,6 +17,18 @@ import (
 )
 
 func main() {
+
+	entries, err := os.ReadDir("/etc/config/settings")
+    if err != nil {
+        fmt.Println("error listing /etc/config/settings")
+    }
+ 
+    for _, e := range entries {
+            fmt.Println(e.Name())
+    }
+
+	fmt.Println("done listing /etc/config/settings")
+
 	controllerType := shared.GetControllerType()
 	cluster := shared.GetEnv("CLUSTER", "")
 	clusterOverride := shared.GetEnv("CLUSTER_OVERRIDE", "")

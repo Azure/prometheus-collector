@@ -40,12 +40,15 @@ func FmtVar(name, value string) {
 func ExistsAndNotEmpty(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
+		fmt.Println("ExistsAndNotEmpty: file:", filename, "doesn't exist")
 		return false
 	}
 	if err != nil {
+		fmt.Println("ExistsAndNotEmpty: path:", filename, ":error:", err)
 		return false
 	}
 	if info.Size() == 0 {
+		fmt.Println("ExistsAndNotEmpty: file size is 0 for:", filename)
 		return false
 	}
 	return true
