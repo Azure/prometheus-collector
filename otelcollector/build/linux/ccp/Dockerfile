@@ -160,5 +160,8 @@ COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.
 # Expose the port on which the application listens
 EXPOSE 8080
 
+# Run as root to access /etc
+USER root
+
 # Run the Go executable, entrypoint
 ENTRYPOINT ["./opt/main/ccpmain"]
