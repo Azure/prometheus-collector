@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"os"
+	"time"
 
 	// "prometheus-collector/shared"
 	"github.com/prometheus-collector/shared"
@@ -11,6 +12,9 @@ import (
 
 func Configmapparserforccp() {
 	fmt.Printf("in configmapparserforccp")
+	fmt.Printf("waiting for 30 secs...")
+    time.Sleep(30 * time.Second)
+	
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"
 
