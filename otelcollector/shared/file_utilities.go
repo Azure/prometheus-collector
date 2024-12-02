@@ -147,6 +147,7 @@ func Inotify(outputFile string, location1 string, location2 string) error {
 	_, err := os.Create(outputFile)
 	if err != nil {
 		log.Fatalf("Error creating output file: %v\n", err)
+		fmt.Println("Error creating inotify output file:", err)
 	}
 
 	// Define the command to start inotify
@@ -157,7 +158,7 @@ func Inotify(outputFile string, location1 string, location2 string) error {
 		"--daemon",
 		"--recursive",
 		"--outfile", outputFile,
-		"--event", "create,delete",
+		"--event", "create,delete,modify",
 		"--format", "%e : %T",
 		"--timefmt", "+%s",
 	)
@@ -165,7 +166,8 @@ func Inotify(outputFile string, location1 string, location2 string) error {
 	// Start the inotify process
 	err = inotifyCommand.Start()
 	if err != nil {
-		log.Fatalf("Error starting inotify process: %v\n", err)
+		log.Fatalf("Error starting inotify process:", err)
+		fmt.Println("Error starting inotify process:", err)
 	}
 
 	return nil

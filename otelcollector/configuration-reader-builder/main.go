@@ -245,6 +245,7 @@ func main() {
 	_, err := os.Create("/opt/inotifyoutput.txt")
 	if err != nil {
 		log.Fatalf("Error creating output file: %v\n", err)
+		fmt.Println("Error creating inotify output file:", err)
 	}
 
 	// Define the command to start inotify for config reader's liveness probe
@@ -254,7 +255,7 @@ func main() {
 		"--daemon",
 		"--recursive",
 		"--outfile", "/opt/inotifyoutput.txt",
-		"--event", "create,delete",
+		"--event", "create,delete,modify",
 		"--format", "%e : %T",
 		"--timefmt", "+%s",
 	)
@@ -263,6 +264,7 @@ func main() {
 	err = inotifyCommandCfg.Start()
 	if err != nil {
 		log.Fatalf("Error starting inotify process for config reader's liveness probe: %v\n", err)
+		fmt.Println("Error starting inotify process:", err)
 	}
 
 	configmapsettings.Configmapparser()
