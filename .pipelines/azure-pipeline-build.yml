@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - grace/remove-telegraf
+    - grace/telegraf-removal-2024
     
 pr:
   autoCancel: true
