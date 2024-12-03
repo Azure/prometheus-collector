@@ -16,9 +16,10 @@ func FLBPluginRegister(ctx unsafe.Pointer) int {
 	return output.FLBPluginRegister(ctx, "appinsights", "AppInsights GO!")
 }
 
-//export FLBPluginInit
 // (fluentbit will call this)
 // ctx (context) pointer to fluentbit context (state/ c code)
+//
+//export FLBPluginInit
 func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	// This will not load the plugin instance. FLBPluginFlush won't be called.
@@ -46,6 +47,10 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 	if strings.ToLower(os.Getenv(envControllerType)) == "daemonset" {
 		go SendContainersCpuMemoryToAppInsightsMetrics()
 	}
+
+	// Collect, aggregate, and send CPU and Memory usage telemetry for the processes below
+	processAggregations := InitProcessAggregations([]string{"otelcollector", "MetricsExtension", "fluent-bit", "mdsd", "telegraf"})
+	processAggregations.Run()
 
 	go PushMEProcessedAndReceivedCountToAppInsightsMetrics()
 
