@@ -13,8 +13,8 @@ import (
 func Configmapparserforccp() {
 	fmt.Printf("in configmapparserforccp")
 	fmt.Printf("waiting for 30 secs...")
-    time.Sleep(30 * time.Second)
-	
+    time.Sleep(30 * time.Second) //needed to save a restart at times when config watcher sidecar starts up later than us and hence config map wasn't yet projected into emptydir volume yet during pod startups.
+
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"
 
