@@ -43,8 +43,7 @@ func main() {
 			if err := shared.Inotify(outputFile, "/etc/prometheus/certs"); err != nil {
 				log.Fatal(err)
 			}
-		}
-		else { //control-plane
+		} else { //control-plane
 			if err := shared.InotifyCCP(outputFile, "/etc/config/settings"); err != nil {
 				log.Fatal(err)
 			}
