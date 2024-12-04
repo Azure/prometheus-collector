@@ -32,9 +32,15 @@ func main() {
 	}
 
 	if osType == "linux" {
-		outputFile := "/opt/inotifyoutput.txt"
-		if err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs"); err != nil {
+		outputFile := "/opt/inotifyoutput.txt" 
+		if err := shared.Inotify(outputFile, "/etc/config/settings"); err != nil {
 			log.Fatal(err)
+		}
+
+		if ccpMetricsEnabled != "true" {
+			if err = shared.Inotify(outputFile, "/etc/prometheus/certs"); err != nil {
+				log.Fatal(err)
+			}
 		}
 	} else if osType == "windows" {
 		fmt.Println("Starting filesystemwatcher.ps1")
