@@ -38,7 +38,7 @@ func main() {
 		}
 
 		if ccpMetricsEnabled != "true" {
-			if err = shared.Inotify(outputFile, "/etc/prometheus/certs"); err != nil {
+			if err := shared.Inotify(outputFile, "/etc/prometheus/certs"); err != nil {
 				log.Fatal(err)
 			}
 		}
