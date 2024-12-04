@@ -216,6 +216,9 @@ func main() {
 			"--daemon",
 			"--outfile", outputFile,
 			"--event", "ATTRIB",
+			"--event", "create",
+			"--event", "delete",
+			"--event", "modify",
 			"--format", "%e : %T",
 			"--timefmt", "+%s",
 		)

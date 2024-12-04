@@ -255,7 +255,9 @@ func main() {
 		"--daemon",
 		"--recursive",
 		"--outfile", "/opt/inotifyoutput.txt",
-		"--event", "create,delete,modify,attrib,move",
+		"--event", "create",
+		"--event", "delete",
+		"--event", "modify",
 		"--format", "%e : %T",
 		"--timefmt", "+%s",
 	)

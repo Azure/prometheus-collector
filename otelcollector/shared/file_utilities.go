@@ -158,7 +158,9 @@ func Inotify(outputFile string, location1 string, location2 string) error {
 		"--daemon",
 		"--recursive",
 		"--outfile", outputFile,
-		"--event", "create,delete,modify,attrib,move",
+		"--event", "create",
+		"--event", "delete",
+		"--event", "modify",
 		"--format", "%e : %T",
 		"--timefmt", "+%s",
 	)
