@@ -72,9 +72,9 @@ func (pa *ProcessAggregations) CollectStats() {
 				p.cpuValues = append(p.cpuValues, cpu)
 				p.cpuValues.Sort()
 			}
-			mem, err := p.process.MemoryPercent()
+			mem, err := p.process.MemoryInfo()
 			if err == nil {
-				p.memValues = append(p.memValues, float64(mem))
+				p.memValues = append(p.memValues, float64(mem.RSS))
 				p.memValues.Sort()
 			}
 
