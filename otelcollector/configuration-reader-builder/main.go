@@ -257,7 +257,6 @@ func main() {
 		"--outfile", "/opt/inotifyoutput.txt",
 		"--event", "create",
 		"--event", "delete",
-		"--event", "modify",
 		"--format", "%e : %T",
 		"--timefmt", "+%s",
 	)

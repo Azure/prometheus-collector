@@ -33,12 +33,19 @@ func main() {
 
 	if osType == "linux" {
 		outputFile := "/opt/inotifyoutput.txt" 
-		if err := shared.Inotify(outputFile, "/etc/config/settings"); err != nil {
-			log.Fatal(err)
-		}
+		
+		if ccpMetricsEnabled != "true" { //data-plane
 
-		if ccpMetricsEnabled != "true" {
+			if err := shared.Inotify(outputFile, "/etc/config/settings"); err != nil {
+				log.Fatal(err)
+			}
+
 			if err := shared.Inotify(outputFile, "/etc/prometheus/certs"); err != nil {
+				log.Fatal(err)
+			}
+		}
+		else { //control-plane
+			if err := shared.InotifyCCP(outputFile, "/etc/config/settings"); err != nil {
 				log.Fatal(err)
 			}
 		}

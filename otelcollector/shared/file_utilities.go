@@ -159,6 +159,39 @@ func Inotify(outputFile string, location string) error {
 		"--outfile", outputFile,
 		"--event", "create",
 		"--event", "delete",
+		"--format", "%e : %T",
+		"--timefmt", "+%s",
+	)
+
+	// Start the inotify process
+	err = inotifyCommand.Start()
+	if err != nil {
+		log.Fatalf("Error starting inotify process: %v\n", err)
+		fmt.Println("Error starting inotify process:", err)
+	}
+
+	return nil
+}
+
+func InotifyCCP(outputFile string, location string) error {
+	// Start inotify to watch for changes
+	fmt.Println("Starting inotify for watching config map update for ccp")
+
+	_, err := os.Create(outputFile)
+	if err != nil {
+		log.Fatalf("Error creating output file: %v\n", err)
+		fmt.Println("Error creating inotify output file:", err)
+	}
+
+	// Define the command to start inotify
+	inotifyCommand := exec.Command(
+		"inotifywait",
+		location,
+		"--daemon",
+		"--recursive",
+		"--outfile", outputFile,
+		"--event", "create",
+		"--event", "delete",
 		"--event", "modify",
 		"--format", "%e : %T",
 		"--timefmt", "+%s",
