@@ -17,6 +17,9 @@ import (
 )
 
 func main() {
+
+	
+
 	controllerType := shared.GetControllerType()
 	cluster := shared.GetEnv("CLUSTER", "")
 	clusterOverride := shared.GetEnv("CLUSTER_OVERRIDE", "")
@@ -29,9 +32,21 @@ func main() {
 	}
 
 	if osType == "linux" {
-		outputFile := "/opt/inotifyoutput.txt"
-		if err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs"); err != nil {
-			log.Fatal(err)
+		outputFile := "/opt/inotifyoutput.txt" 
+		
+		if ccpMetricsEnabled != "true" { //data-plane
+
+			if err := shared.Inotify(outputFile, "/etc/config/settings"); err != nil {
+				log.Fatal(err)
+			}
+
+			if err := shared.Inotify(outputFile, "/etc/prometheus/certs"); err != nil {
+				log.Fatal(err)
+			}
+		} else { //control-plane
+			if err := shared.InotifyCCP(outputFile, "/etc/config/settings"); err != nil {
+				log.Fatal(err)
+			}
 		}
 	} else if osType == "windows" {
 		fmt.Println("Starting filesystemwatcher.ps1")
@@ -213,6 +228,9 @@ func main() {
 			"--daemon",
 			"--outfile", outputFile,
 			"--event", "ATTRIB",
+			"--event", "create",
+			"--event", "delete",
+			"--event", "modify",
 			"--format", "%e : %T",
 			"--timefmt", "+%s",
 		)
