@@ -154,7 +154,7 @@ func (pa *ProcessAggregations) SendToAppInsights() {
 				}
 
 				if len(p.memValues) > 0 {
-					memMetric := createProcessMetric(processName, "memory_usage", percentile, p.memValues)
+					memMetric := createProcessMetric(processName, "memory_rss", percentile, p.memValues)
 					TelemetryClient.Track(memMetric)
 				}
 			}
