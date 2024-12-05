@@ -191,7 +191,7 @@ func main() {
 			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 		}
 
-		shared.StartTelegraf()
+		//shared.StartTelegraf()
 
 	}
 
