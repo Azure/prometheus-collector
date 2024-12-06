@@ -79,7 +79,7 @@ ARG FLUENT_BIT_VERSION
 RUN wget https://github.com/fluent/fluent-bit/archive/refs/tags/v${FLUENT_BIT_VERSION}.tar.gz
 RUN tar -xvf v${FLUENT_BIT_VERSION}.tar.gz
 # Add a file with settings to build only the plugins we use
-COPY ./plugins_options.cmake /fluent-bit-${FLUENT_BIT_VERSION}/cmake/plugins_options.cmake
+COPY ./fluent-bit/plugins_options.cmake /fluent-bit-${FLUENT_BIT_VERSION}/cmake/plugins_options.cmake
 # Make a change that allows Fluent-Bit metrics to flow to our Go output plugin
 RUN sed -i '/out->type  = FLB_OUTPUT_PLUGIN_PROXY;/a \ \ \ \ out->event_type = FLB_OUTPUT_LOGS | FLB_OUTPUT_METRICS;' /fluent-bit-${FLUENT_BIT_VERSION}/src/flb_plugin_proxy.c
 WORKDIR /fluent-bit-${FLUENT_BIT_VERSION}/build
