@@ -1,5 +1,11 @@
 # Azure Monitor Metrics for AKS clusters
 
+## Release 12-04-2024 (hot-fix for ccp config map issue ) - CCP release only - 
+* CCP image - 
+
+* Changelog -
+  - Fix for CCP Config map processing issue - (https://github.com/Azure/prometheus-collector/pull/1017)
+
 ## Release 10-21-2024
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.11.0-main-10-21-2024-91ec49e3`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.11.0-main-10-21-2024-91ec49e3-win`

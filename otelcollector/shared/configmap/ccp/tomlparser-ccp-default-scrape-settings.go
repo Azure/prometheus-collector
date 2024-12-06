@@ -111,6 +111,7 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 
 func (c *Configurator) ConfigureDefaultScrapeSettings() {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+	fmt.Printf("ConfigureDefaultScrapeSettings getenv:configSchemaVersion:", configSchemaVersion)
 
 	fmt.Printf("Start prometheus-collector-settings Processing\n")
 
