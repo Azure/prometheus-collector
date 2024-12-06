@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - vishwa/ccp-fix-2
 pr:
   autoCancel: true
   branches:
