@@ -127,8 +127,6 @@ func (pa *ProcessAggregations) CollectStats() {
 				p.memValues = append(p.memValues, float64(mem.RSS))
 				p.memValues.Sort()
 			}
-
-			fmt.Printf("cpu: %f, mem: %f\n", cpu, mem)
 		}
 
 		pa.mu.Unlock()
