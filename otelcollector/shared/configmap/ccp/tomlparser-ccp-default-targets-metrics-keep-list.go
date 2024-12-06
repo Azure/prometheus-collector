@@ -114,14 +114,8 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 
 	fmt.Println("populateRegexValuesWithMinimalIngestionProfile::minimalIngestionProfile:", regexValues.MinimalIngestionProfile)
 
-	if regexValues.MinimalIngestionProfile == "true" {
-		controlplaneKubeControllerManagerRegex += regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
-		controlplaneKubeSchedulerRegex += regexValues.ControlplaneKubeScheduler + "|" + controlplaneKubeSchedulerMinMac
-		controlplaneApiserverRegex += regexValues.ControlplaneApiserver + "|" + controlplaneApiserverMinMac
-		controlplaneClusterAutoscalerRegex += regexValues.ControlplaneClusterAutoscaler + "|" + controlplaneClusterAutoscalerMinMac
-		controlplaneEtcdRegex += regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
+	if regexValues.MinimalIngestionProfile == "false" {
 
-	} else {
 		controlplaneKubeControllerManagerRegex += regexValues.ControlplaneKubeControllerManager
 		controlplaneKubeSchedulerRegex += regexValues.ControlplaneKubeScheduler
 		controlplaneApiserverRegex += regexValues.ControlplaneApiserver
@@ -136,6 +130,15 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		fmt.Println("ControlplaneApiserverRegex:", controlplaneApiserverRegex)
 		fmt.Println("ControlplaneClusterAutoscalerRegex:", controlplaneClusterAutoscalerRegex)
 		fmt.Println("ControlplaneEtcdRegex:", controlplaneEtcdRegex)
+
+	} else { //else accounts for "true" and any other values including "nil" (meaning no configmap or no minimal setting in the configmap)
+
+		controlplaneKubeControllerManagerRegex += regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
+		controlplaneKubeSchedulerRegex += regexValues.ControlplaneKubeScheduler + "|" + controlplaneKubeSchedulerMinMac
+		controlplaneApiserverRegex += regexValues.ControlplaneApiserver + "|" + controlplaneApiserverMinMac
+		controlplaneClusterAutoscalerRegex += regexValues.ControlplaneClusterAutoscaler + "|" + controlplaneClusterAutoscalerMinMac
+		controlplaneEtcdRegex += regexValues.ControlplaneEtcd + "|" + controlplaneEtcdMinMac
+		
 	}
 }
 
