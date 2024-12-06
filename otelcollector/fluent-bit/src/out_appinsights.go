@@ -64,7 +64,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	var records []map[interface{}]interface{}
 
 	// Create Fluent Bit decoder
-	dec := output.NewDecoder(data, int(length))
+	dec := NewDecoder(data, int(length))
 
 	// Iterate Records
 	for {
@@ -90,6 +90,8 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
 		return RecordExportingFailed(records)
+	case "prometheus.metrics.otelcollector", "prometheus.metrics.prometheus", "prometheus.metrics.targetallocator":
+		return SendPrometheusMetricsToAppInsights(records)
 	default:
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)

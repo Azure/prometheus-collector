@@ -45,7 +45,7 @@ DEFINE_OPTION(FLB_IN_PODMAN_METRICS           "Enable Podman Metrics input plugi
 DEFINE_OPTION(FLB_IN_PROCESS_EXPORTER_METRICS "Enable process exporter metrics input plugin" OFF)
 DEFINE_OPTION(FLB_IN_PROC                     "Enable Process input plugin"                  OFF)
 DEFINE_OPTION(FLB_IN_PROMETHEUS_REMOTE_WRITE  "Enable prometheus remote write input plugin"  OFF)
-DEFINE_OPTION(FLB_IN_PROMETHEUS_SCRAPE        "Enable Prometheus Scrape input plugin"        OFF)
+DEFINE_OPTION(FLB_IN_PROMETHEUS_SCRAPE        "Enable Prometheus Scrape input plugin"        ON)
 DEFINE_OPTION(FLB_IN_RANDOM                   "Enable random input plugin"                   OFF)
 DEFINE_OPTION(FLB_IN_SERIAL                   "Enable Serial input plugin"                   OFF)
 DEFINE_OPTION(FLB_IN_SPLUNK                   "Enable Splunk HTTP HEC input plugin"          OFF)
