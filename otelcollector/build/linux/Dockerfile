@@ -68,6 +68,39 @@ RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; fi
 
+ARG TARGETARCH
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 AS fluent-bit-binary-builder
+WORKDIR /
+# Install with the same exact dependencies and code source that Mariner uses
+RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
+    gnutls-devel graphviz libpq-devel libyaml-devel luajit-devel make openssl-devel pkgconfig \
+    systemd-devel systemd-rpm-macros zlib-devel build-essential -y
+ARG FLUENT_BIT_VERSION
+RUN wget https://github.com/fluent/fluent-bit/archive/refs/tags/v${FLUENT_BIT_VERSION}.tar.gz
+RUN tar -xvf v${FLUENT_BIT_VERSION}.tar.gz
+# Add a file with settings to build only the plugins we use
+COPY ./plugins_options.cmake /fluent-bit-${FLUENT_BIT_VERSION}/cmake/plugins_options.cmake
+# Make a change that allows Fluent-Bit metrics to flow to our Go output plugin
+RUN sed -i '/out->type  = FLB_OUTPUT_PLUGIN_PROXY;/a \ \ \ \ out->event_type = FLB_OUTPUT_LOGS | FLB_OUTPUT_METRICS;' /fluent-bit-${FLUENT_BIT_VERSION}/src/flb_plugin_proxy.c
+WORKDIR /fluent-bit-${FLUENT_BIT_VERSION}/build
+# Run cmake with the same flags that Mariner uses
+RUN cmake \
+-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+-DFLB_EXAMPLES=Off \
+-DFLB_OUT_SLACK=Off \
+-DFLB_IN_SYSTEMD=On \
+-DFLB_OUT_TD=Off \
+-DFLB_OUT_ES=Off \
+-DFLB_SHARED_LIB=On \
+-DFLB_RELEASE=On \
+-DFLB_DEBUG=Off \
+-DFLB_TLS=On \
+-DFLB_JEMALLOC=On \
+-DFLB_PREFER_SYSTEM_LIBS=On \
+-DFLB_PROXY_GO=On ../
+RUN make
+RUN make install
+
 FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
@@ -106,6 +139,9 @@ COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricex
 COPY ./telegraf/ $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit.conf ./fluent-bit/fluent-bit-daemonset.conf ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
+COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
+COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
+COPY --from=fluent-bit-binary-builder /usr/local/lib/fluent-bit /usr/local/etc/fluent-bit
 COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
@@ -183,6 +219,10 @@ COPY --from=builder /bin/sh /bin/sh
 COPY --from=builder /usr/bin/p11-kit /usr/bin
 COPY --from=builder /usr/bin/trust /usr/bin
 
+COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
+COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
+COPY --from=fluent-bit-binary-builder /usr/local/lib/fluent-bit /usr/local/etc/fluent-bit
+
 # bash dependencies
 COPY --from=builder /lib/libreadline.so.8 /lib/
 COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
@@ -198,7 +238,8 @@ COPY --from=builder /lib/libboost_filesystem.so.1.76.0 /lib/libcpprest.so.2.10  
 COPY --from=builder /lib64/libuuid.so.1 /lib64
 # fluent-bit dependencies
 # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-COPY --from=builder /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libcurl.so.4 /lib/libm.so.6 /lib/libz.so.1 /lib/libzstd.so.1 /lib/libsasl2.so.3 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/liblzma.so.5 /lib/liblz4.so.1  /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libgssapi_krb5.so.2 /lib/libresolv.so.2 /lib/libgpg-error.so.0 /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /lib/
+# COPY --from=builder /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libcurl.so.4 /lib/libm.so.6 /lib/libz.so.1 /lib/libzstd.so.1 /lib/libsasl2.so.3 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/liblzma.so.5 /lib/liblz4.so.1  /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libgssapi_krb5.so.2 /lib/libresolv.so.2 /lib/libgpg-error.so.0 /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /lib/
+COPY --from=fluent-bit-binary-builder /lib/libluajit-5.1.so.2 /lib/libssl.so.1.1 /lib/libcrypto.so.1.1 /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/liblzma.so.5 /lib/libzstd.so.1 /lib/liblz4.so.1 /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libgpg-error.so.0 /lib/
 # telegraf dependencies
 COPY --from=builder /lib/libc.so.6 /lib/
 # mdsd dependencies
