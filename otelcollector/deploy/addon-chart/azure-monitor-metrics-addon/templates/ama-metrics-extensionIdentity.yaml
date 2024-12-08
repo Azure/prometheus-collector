@@ -1,7 +1,8 @@
-{{- if ( .Values.AzureMonitorMetrics.ArcExtension )}}
-{{- if or ( contains "microsoft.kubernetes/connectedclusters" (.Values.Azure.Cluster.ResourceId | lower)) ( contains "microsoft.hybridcontainerservice/provisionedclusters" (.Values.Azure.Cluster.ResourceId | lower)) }}
-#extension model
-{{- if not (empty .Values.Azure.Extension.Name) }}
+{{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
+{{- if $arcExtensionSettings.isArcExtension }}
+  {{- if or ( contains "microsoft.kubernetes/connectedclusters" ($arcExtensionSettings.resourceId | lower)) ( contains "microsoft.hybridcontainerservice/provisionedclusters" ($arcExtensionSettings.resourceId | lower)) }}
+  #extension model
+    {{- if not (empty .Values.Azure.Extension.Name) }}
 apiVersion: clusterconfig.azure.com/v1beta1
 kind: AzureExtensionIdentity
 metadata:
@@ -13,18 +14,18 @@ spec:
       namespace: kube-system
   tokenNamespace: azure-arc
 ---
-{{- end }}
+    {{- end }}
 apiVersion:  clusterconfig.azure.com/v1beta1
 kind: AzureClusterIdentityRequest
 metadata:
   name: ama-metrics-clusteridentityrequest
   namespace: azure-arc
 spec:
-  {{- if eq (.Values.Azure.Cluster.Cloud | lower) "azurepubliccloud" }}
+  {{- if eq $arcExtensionSettings.cloudEnvironment "azurepubliccloud" }}
   audience: https://monitor.azure.com/
-  {{- else if eq (.Values.Azure.Cluster.Cloud | lower) "azurechinacloud" }}
+  {{- else if eq $arcExtensionSettings.cloudEnvironment "azurechinacloud" }}
   audience: https://monitor.azure.cn/
-  {{- else if eq (.Values.Azure.Cluster.Cloud | lower) "azureusgovernmentcloud" }}
+  {{- else if eq $arcExtensionSettings.cloudEnvironment "azureusgovernmentcloud" }}
   audience: https://monitor.azure.us/
   {{- else if .Values.AzureMonitorMetrics.isArcACluster }}
   audience: {{ required "customResourceEndpoint is required in Arc Autonomous" .Values.AzureMonitorMetrics.arcAutonomousSettings.customResourceEndpoint | toString | trim | quote }}
@@ -34,5 +35,5 @@ spec:
   {{- if not (empty .Values.Azure.Extension.Name) }}
   resourceId: {{ .Values.Azure.Extension.Name }}
   {{- end }}
-{{- end }}
+  {{- end }}
 {{- end }}

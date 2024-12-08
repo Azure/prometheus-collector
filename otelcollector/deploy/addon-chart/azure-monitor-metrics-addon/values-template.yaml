@@ -142,8 +142,13 @@ Azure:
           requests:
             cpu: 20m
             memory: 50Mi
+
+# Arc override values for customers
 ClusterDistribution: ""
-CloudEnvironment: "azurepubliccloud"
+CloudEnvironment: ""
+MountCATrustAnchorsDirectory: true
+MountUbuntuCACertDirectory: true
+
 prometheus-node-exporter:
   service:
     enabled: true
