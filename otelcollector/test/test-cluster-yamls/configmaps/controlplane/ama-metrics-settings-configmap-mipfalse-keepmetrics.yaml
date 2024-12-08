@@ -1,0 +1,72 @@
+kind: ConfigMap
+apiVersion: v1
+data:
+  config-version: ver1
+  debug-mode: enabled = false
+  default-scrape-settings-enabled: |-
+    kubelet = true
+    coredns = true
+    cadvisor = true
+    kubeproxy = true
+    apiserver = true
+    kubestate = true
+    nodeexporter = true
+    windowsexporter = true
+    windowskubeproxy = true
+    kappiebasic = true
+    networkobservabilityRetina = true
+    networkobservabilityHubble = true
+    networkobservabilityCilium = true
+    prometheuscollectorhealth = false
+    controlplane-apiserver = true
+    controlplane-cluster-autoscaler = true
+    controlplane-kube-scheduler = true
+    controlplane-kube-controller-manager = true
+    controlplane-etcd = true
+    acstor-capacity-provisioner = true
+    acstor-metrics-exporter = true
+  default-targets-metrics-keep-list: |-
+    kubelet = ""
+    coredns = ""
+    cadvisor = ""
+    kubeproxy = ""
+    apiserver = ""
+    kubestate = ""
+    nodeexporter = ""
+    windowsexporter = ""
+    windowskubeproxy = ""
+    podannotations = ""
+    kappiebasic = ""
+    networkobservabilityRetina = ""
+    networkobservabilityHubble = ""
+    networkobservabilityCilium = ""
+    controlplane-apiserver = "apiserver_request_total"
+    controlplane-cluster-autoscaler = "rest_client_requests_total"
+    controlplane-kube-scheduler = "scheduler_schedule_attempts_total"
+    controlplane-kube-controller-manager = "rest_client_requests_total"
+    controlplane-etcd = "rest_client_requests_total"
+    acstor-capacity-provisioner = ""
+    acstor-metrics-exporter = ""
+    minimalingestionprofile = false
+  default-targets-scrape-interval-settings: |-
+    kubelet = "30s"
+    coredns = "30s"
+    cadvisor = "30s"
+    kubeproxy = "30s"
+    apiserver = "30s"
+    kubestate = "30s"
+    nodeexporter = "30s"
+    windowsexporter = "30s"
+    windowskubeproxy = "30s"
+    kappiebasic = "30s"
+    networkobservabilityRetina = "30s"
+    networkobservabilityHubble = "30s"
+    networkobservabilityCilium = "30s"
+    prometheuscollectorhealth = "30s"
+    podannotations = "30s"
+  pod-annotation-based-scraping: podannotationnamespaceregex = ".*"
+  prometheus-collector-settings: cluster_alias = ""
+  schema-version: v1
+metadata:
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
