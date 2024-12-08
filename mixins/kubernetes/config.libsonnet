@@ -37,19 +37,19 @@
       'apiserver.json': std.md5('apiserver.json'),
       'cluster-total.json': std.md5('cluster-total.json'),
       'controller-manager.json': std.md5('controller-manager.json'),
-      'k8s-resources-cluster.json': 'fd0cac08a3f34e2994cf904627836738',
+      'k8s-resources-cluster.json': 'fd0cac08a3f34e2994cf904627836738', // shipped as default by azure managed prometheus
       'k8s-resources-multicluster.json': std.md5('k8s-resources-multicluster.json'),
-      'k8s-resources-namespace.json': '6385dfe4b7f54710aa1f748b34ba6738',
-      'k8s-resources-node.json': '7857fbef7cd44823a509c7dfbd166738',
-      'k8s-resources-pod.json': 'ac3253a2c4a149d68ccd0a58c7ab6738',
-      'k8s-resources-windows-cluster.json': '6438557df4391b100730f2494baa6738',
-      'k8s-resources-windows-namespace.json': '9f84792794e34121bd0fa99075d96738',
-      'k8s-resources-windows-pod.json': '78070a924a2f4fe4ad515a90f19c6738',
-      'k8s-resources-workload.json': '3151475894614845ba54456099696738',
-      'k8s-resources-workloads-namespace.json': '2745ce2b859a40f7990ff6b85d736738',
-      'k8s-windows-cluster-rsrc-use.json': 'VPLDB6738',
-      'k8s-windows-node-rsrc-use.json': 'YDBDf6738',
-      'kubelet.json': '184244a28b3d478e9c0de82def316738',
+      'k8s-resources-namespace.json': '6385dfe4b7f54710aa1f748b34ba6738', // shipped as default by azure managed prometheus
+      'k8s-resources-node.json': '7857fbef7cd44823a509c7dfbd166738', // shipped as default by azure managed prometheus
+      'k8s-resources-pod.json': 'ac3253a2c4a149d68ccd0a58c7ab6738', // shipped as default by azure managed prometheus
+      'k8s-resources-windows-cluster.json': '6438557df4391b100730f2494baa6738', // shipped as default by azure managed prometheus
+      'k8s-resources-windows-namespace.json': '9f84792794e34121bd0fa99075d96738', // shipped as default by azure managed prometheus
+      'k8s-resources-windows-pod.json': '78070a924a2f4fe4ad515a90f19c6738', // shipped as default by azure managed prometheus
+      'k8s-resources-workload.json': '3151475894614845ba54456099696738', // shipped as default by azure managed prometheus
+      'k8s-resources-workloads-namespace.json': '2745ce2b859a40f7990ff6b85d736738', // shipped as default by azure managed prometheus
+      'k8s-windows-cluster-rsrc-use.json': 'VPLDB6738', // shipped as default by azure managed prometheus
+      'k8s-windows-node-rsrc-use.json': 'YDBDf6738', // shipped as default by azure managed prometheus
+      'kubelet.json': '184244a28b3d478e9c0de82def316738', // shipped as default by azure managed prometheus
       'namespace-by-pod.json': std.md5('namespace-by-pod.json'),
       'namespace-by-workload.json': std.md5('namespace-by-workload.json'),
       'persistentvolumesusage.json': std.md5('persistentvolumesusage.json'),
@@ -66,7 +66,7 @@
     // Config for the Grafana dashboards in the Kubernetes Mixin
     grafanaK8s: {
       dashboardNamePrefix: 'Kubernetes / ',
-      dashboardTags: ['kubernetes-mixin'],
+      dashboardTags: ['kubernetes-mixin', 'Microsoft-managed'],
 
       // For links between grafana dashboards, you need to tell us if your grafana
       // servers under some non-root path.

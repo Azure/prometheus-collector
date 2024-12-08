@@ -408,7 +408,7 @@ local var = g.dashboard.variable;
         ]),
       ];
 
-      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Cluster(Windows)' % $._config.grafanaK8s)
+      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Cluster (Windows)' % $._config.grafanaK8s)
       + g.dashboard.withUid($._config.grafanaDashboardIDs['k8s-resources-windows-cluster.json'])
       + g.dashboard.withTags($._config.grafanaK8s.dashboardTags)
       + g.dashboard.withEditable(false)
@@ -623,7 +623,7 @@ local var = g.dashboard.variable;
         ]),
       ];
 
-      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Namespace(Windows)' % $._config.grafanaK8s)
+      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Namespace (Windows)' % $._config.grafanaK8s)
       + g.dashboard.withUid($._config.grafanaDashboardIDs['k8s-resources-windows-namespace.json'])
       + g.dashboard.withTags($._config.grafanaK8s.dashboardTags)
       + g.dashboard.withEditable(false)
@@ -842,7 +842,7 @@ local var = g.dashboard.variable;
         ]),
       ];
 
-      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Pod(Windows)' % $._config.grafanaK8s)
+      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Pod (Windows)' % $._config.grafanaK8s)
       + g.dashboard.withUid($._config.grafanaDashboardIDs['k8s-resources-windows-pod.json'])
       + g.dashboard.withTags($._config.grafanaK8s.dashboardTags)
       + g.dashboard.withEditable(false)
@@ -928,7 +928,7 @@ local var = g.dashboard.variable;
         ]),
       ];
 
-      g.dashboard.new('%(dashboardNamePrefix)sUSE Method / Cluster(Windows)' % $._config.grafanaK8s)
+      g.dashboard.new('%(dashboardNamePrefix)sUSE Method / Cluster (Windows)' % $._config.grafanaK8s)
       + g.dashboard.withUid($._config.grafanaDashboardIDs['k8s-windows-cluster-rsrc-use.json'])
       + g.dashboard.withTags($._config.grafanaK8s.dashboardTags)
       + g.dashboard.withEditable(false)
@@ -1088,7 +1088,7 @@ local var = g.dashboard.variable;
         ]),
       ];
 
-      g.dashboard.new('%(dashboardNamePrefix)sUSE Method / Node(Windows)' % $._config.grafanaK8s)
+      g.dashboard.new('%(dashboardNamePrefix)sUSE Method / Node (Windows)' % $._config.grafanaK8s)
       + g.dashboard.withUid($._config.grafanaDashboardIDs['k8s-windows-node-rsrc-use.json'])
       + g.dashboard.withTags($._config.grafanaK8s.dashboardTags)
       + g.dashboard.withEditable(false)
