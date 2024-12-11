@@ -1,0 +1,34 @@
+../cidev/prometheus-collector/images:6.8.11-ccp-metrics-updates-05-12-2024-e9c086df
+results: doesn't drop anything
+metric_relabel_configs:
+  - action: hashmod
+    modulus: 10000000000000000000
+    regex: (.+)
+    source_labels:
+    - host
+    target_label: hostalias
+  - regex: ^(localhost|\[::1\]):443$
+    replacement: kube-apiserver
+    source_labels:
+    - host
+    target_label: hostalias
+  - action: replace
+    regex: ^(.+);(.+)$
+    source_labels:
+    - hostalias
+    - host
+    target_label: host
+  - action: drop
+    regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
+    source_labels:
+    - __name__
+  - action: labeldrop
+    regex: hostalias
+  - action: keep
+    regex: apiserver_request_sli_duration_seconds_bucket|go_cpu_classes_gc_mark_dedicated_cpu_seconds_total|apiserver_request_total|apiserver_cache_list_fetched_objects_total|apiserver_cache_list_returned_objects_total|apiserver_flowcontrol_demand_seats_average|apiserver_flowcontrol_current_limit_seats|apiserver_request_sli_duration_seconds_count|apiserver_request_sli_duration_seconds_sum|process_start_time_seconds|apiserver_request_duration_seconds_count|apiserver_request_duration_seconds_sum|apiserver_storage_list_fetched_objects_total|apiserver_storage_list_returned_objects_total|apiserver_current_inflight_requests
+    source_labels:
+    - __name__
+  - action: drop
+    regex: apiserver_request_duration_seconds_bucket|apiserver_request_sli_duration_seconds_bucket <- added this to configmap for testing
+    source_labels:
+    - __name__
