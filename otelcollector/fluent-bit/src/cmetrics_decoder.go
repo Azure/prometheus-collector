@@ -147,6 +147,7 @@ func (cm CMetrics) String() string {
 func SendPrometheusMetricsToAppInsights(records []map[interface{}]interface{}) int {
 	for _, record := range records {
 		cMetrics := ConvertRecordToCMetrics(record)
+		fmt.Printf("cMetrics: %v\n", cMetrics)
 		for _, metric := range cMetrics.Metrics {
 			for _, value := range metric.Values {
 				metricTelemetryItem := appinsights.NewMetricTelemetry(metric.Meta.Opts.Name, value.Value)

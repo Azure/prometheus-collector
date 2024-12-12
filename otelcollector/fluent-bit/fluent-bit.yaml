@@ -1,0 +1,162 @@
+service:
+  flush:        15
+  http_server:   Off
+  daemon:        Off
+  log_level:     debug
+  parsers_file:  /opt/fluent-bit/fluent-bit-parsers.conf
+  log_file:      /opt/fluent-bit/fluent-bit.log
+
+pipeline:
+  inputs:
+    - name: tail
+      tag: prometheus.log.prometheuscollectorcontainer
+      path: /var/log/containers/*prometheus-collector*prometheus-collector*.log,/var/log/containers/*ama-metrics*prometheus-collector*.log
+      exclude_path: /var/log/containers/*prometheus-collector-node*.log,/var/log/containers/*ama-metrics-node*.log
+      parser: cri
+      read_from_head: true
+      mem_buf_limit: 1m
+      path_key: filepath
+      skip_long_lines: On
+      ignore_older: 2m
+
+    - name: tail
+      tag: prometheus.log.addontokenadapter
+      path: /var/log/containers/*prometheus-collector*addon-token-adapter*.log,/var/log/containers/*ama-metrics*addon-token-adapter*.log
+      exclude_path: /var/log/containers/*prometheus-collector-node*addon-token-adapter*.log,/var/log/containers/*ama-metrics-node*addon-token-adapter*.log
+      parser: cri
+      read_from_head: true
+      mem_buf_limit: 1m
+      path_key: filepath
+      skip_long_lines: On
+      ignore_older: 2m
+
+    - name: tail
+      tag: prometheus.otelcollector
+      path: /opt/microsoft/otelcollector/collector-log.txt
+      parser: collector-parser
+      mem_buf_limit: 1m
+      path_key: filepath
+      skip_long_lines: On
+      ignore_older: 2m
+    
+    - name: tail
+      tag: prometheus.metricsextension
+      path: /MetricsExtensionConsoleDebugLog.log
+      parser: me-parser
+      mem_buf_limit: 1m
+      path_key: filepath
+      skip_long_lines: On
+      ignore_older: 2m
+
+    - name: tail
+      tag: prometheus.mdsd
+      path: /opt/microsoft/linuxmonagent/mdsd.err
+      parser: mdsd-parser
+      mem_buf_limit: 1m
+      path_key: filepath
+      skip_long_lines: On
+      ignore_older: 2m
+
+    - name: tail
+      tag: prometheus.log.noconfiguration
+      path: /dev/write-to-traces
+      read_from_head: true
+      parser: no-config-parser
+      mem_buf_limit: 1m
+      path_key: filepath
+      skip_long_lines: On
+      ignore_older: 2m
+    
+    - name: prometheus_scrape
+      host: 0.0.0.0
+      port: 8888
+      tag: prometheus.metrics.otelcollector
+      metrics_path: /metrics
+      scrape_interval: 1m
+      processors:
+        metrics:
+          - name: metrics_selector
+            metric_name: /otelcol_processor_dropped_metric_points|otelcol_receiver_refused_metric_points|otelcol_receiver_accepted_metric_points|otelcol_exporter_sent_metric_points|otelcol_exporter_queue_size|otelcol_exporter_send_failed_metric_points|otelcol_process_memory_rss|otelcol_processor_batch_batch_send_size_bytes_sum|otelcol_processor_batch_batch_send_size_bytes_count/
+            action: include
+
+    - name: prometheus_scrape
+      host: 0.0.0.0
+      port: 9090
+      tag: prometheus.metrics.prometheus
+      metrics_path: /metrics
+      scrape_interval: 1m
+      processors:
+        metrics:
+          - name: metrics_selector
+            metric_name: /prometheus_sd_http_failures_total/
+            action: include
+
+    - name: prometheus_scrape
+      host: ama-metrics-operator-targets.kube-system.svc.cluster.local
+      port: 80
+      tag: prometheus.metrics.targetallocator
+      metrics_path: /metrics
+      scrape_interval: 1m
+      processors:
+        metrics:
+          - name: metrics_selector
+            metric_name: /opentelemetry_allocator_targets|opentelemetry_allocator_collectors_discovered/
+            action: include
+
+
+  filters:
+    - name: rewrite_tag
+      match: prometheus.metricsextension
+      rule: $message .*ProcessedCount.* prometheus.log.processedcount false
+
+    - name: rewrite_tag
+      match: prometheus.metricsextension
+      rule: $message .*EtwEventsDropped.* prometheus.log.diagnosticheartbeat false
+
+    - name: rewrite_tag
+      match: prometheus.metricsextension
+      rule: $message .*EventsProcessedLastPeriod.* prometheus.log.eventsprocessedlastperiod false
+
+    - name: rewrite_tag
+      match: prometheus.metricsextension
+      rule: $message .*\(infinite\).* prometheus.log.infinitemetric false
+
+    - name: rewrite_tag
+      match: prometheus.otelcollector
+      rule: $msg .*Exporting\sfailed.* prometheus.log.exportingfailed true
+
+    - name: grep
+      match: prometheus.metricsextension
+      regex: level (Error|Fatal)
+
+    - name: grep
+      match: prometheus.otelcollector
+      regex: level (error|fatal)
+
+    - name: grep
+      match: prometheus.log.addontokenadapter
+      regex: stream stderr
+
+  outputs:
+    - name: appinsights
+      match_regex: prometheus.log.*|prometheus.metrics.*
+
+    - name: stdout
+      format: json_lines
+      json_date_key: time
+      match: prometheus.metricsextension
+
+    - name: stdout
+      format: json_lines
+      json_date_key: false
+      match: prometheus.otelcollector
+
+    - name: stdout
+      format: json_lines
+      json_date_key: time
+      match: prometheus.mdsd
+
+    - name: stdout
+      format: json_lines
+      json_date_key: time
+      match: prometheus.log.noconfiguration
