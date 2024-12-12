@@ -161,7 +161,7 @@ func SendPrometheusMetricsToAppInsights(records []map[interface{}]interface{}, t
 					value.Value,
 				)
 				for i, labelName := range metric.Meta.Labels {
-					metricTelemetryItem.Properties[labelName] = fmt.Sprintf("%d", value.Labels[i])
+					metricTelemetryItem.Properties[labelName] = fmt.Sprintf("%s", value.Labels[i])
 				}
 				TelemetryClient.Track(metricTelemetryItem)
 			}
