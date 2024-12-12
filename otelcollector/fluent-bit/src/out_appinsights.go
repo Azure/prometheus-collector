@@ -91,7 +91,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	case fluentbitExportingFailedTag:
 		return RecordExportingFailed(records)
 	case "prometheus.metrics.otelcollector", "prometheus.metrics.prometheus", "prometheus.metrics.targetallocator":
-		return SendPrometheusMetricsToAppInsights(records)
+		return SendPrometheusMetricsToAppInsights(records, incomingTag)
 	default:
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)
