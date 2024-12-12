@@ -146,14 +146,18 @@ func (cm CMetrics) String() string {
 	return ret.String()
 }
 
-func SendPrometheusMetricsToAppInsights(records []map[interface{}]interface{}) int {
+func SendPrometheusMetricsToAppInsights(records []map[interface{}]interface{}, tag string) int {
+	telemetryPrefix := "prometheus"
+	if tag == "prometheus.metrics.targetallocator" {
+		telemetryPrefix = "target_allocator"
+	}
 	for _, record := range records {
 		cMetrics := ConvertRecordToCMetrics(record)
 		fmt.Printf("cMetrics: %v\n", cMetrics)
 		for _, metric := range cMetrics.Metrics {
 			for _, value := range metric.Values {
 				metricTelemetryItem := appinsights.NewMetricTelemetry(
-					fmt.Sprintf("%s_%s_%s", metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name),
+					fmt.Sprintf("%s_%s_%s_%s", telemetryPrefix, metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name),
 					value.Value,
 				)
 				for i, labelName := range metric.Meta.Labels {
