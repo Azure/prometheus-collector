@@ -45,7 +45,7 @@ func DetermineConfigFiles(controllerType, clusterOverride string) (string, strin
 			meConfigFile = "/usr/sbin/me.config"
 		}
 	case os.Getenv("OS_TYPE") != "windows":
-		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-daemonset.conf"
+		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-daemonset.yaml"
 		if clusterOverride == "true" {
 			meConfigFile = "/usr/sbin/me_ds_internal.config"
 		} else {
