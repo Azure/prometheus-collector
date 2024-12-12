@@ -77,8 +77,6 @@ pipeline:
     - name: tail
       tag: prometheus.mdsd
       path: /opt/microsoft/linuxmonagent/mdsd.err
-      db: /var/opt/microsoft/state/mdsd.db
-      db_sync: Off
       parser: mdsd-parser
       mem_buf_limit: 1m
       path_key: filepath
@@ -89,8 +87,6 @@ pipeline:
       tag: prometheus.log.noconfiguration
       path: /dev/write-to-traces
       read_from_head: true
-      db: /var/opt/microsoft/state/no-configuration.db
-      db_sync: Off
       parser: no-config-parser
       mem_buf_limit: 1m
       path_key: filepath
