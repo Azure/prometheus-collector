@@ -117,7 +117,7 @@ pipeline:
           - name: labels
             delete: transport
 
-filters:
+    filters:
     - name: rewrite_tag
       match: prometheus.metricsextension
       rule: $message .*ProcessedCount.* prometheus.log.processedcount false
@@ -150,7 +150,7 @@ filters:
       match: prometheus.log.addontokenadapter
       regex: stream stderr
 
-outputs:
+    outputs:
     - name: appinsights
       match: prometheus.log.*
 
