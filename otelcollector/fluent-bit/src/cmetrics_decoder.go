@@ -104,7 +104,8 @@ type CMetrics struct {
 		Meta struct {
 			AggregationType AggregationType `mapstructure:"aggregation_type"`
 			Labels          []string        `mapstructure:"labels"`
-			Opts            struct {
+			/* Formatted full qualified metric name is: namespace_subsystem_name */
+			Opts struct {
 				Desc      string `mapstructure:"desc"`
 				Name      string `mapstructure:"name"`
 				Namespace string `mapstructure:"ns"`
@@ -126,11 +127,12 @@ func (cm CMetrics) String() string {
 	var ret strings.Builder
 
 	for _, metric := range cm.Metrics {
-		ret.WriteString(fmt.Sprintf("# HELP %s %s\n", metric.Meta.Opts.Name, metric.Meta.Opts.Desc))
-		ret.WriteString(fmt.Sprintf("# TYPE %s %s\n", metric.Meta.Opts.Name, metric.Meta.Type))
+		fullMetricName := fmt.Sprintf("%s_%s_%s", metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name)
+		ret.WriteString(fmt.Sprintf("# HELP %s %s\n", fullMetricName, metric.Meta.Opts.Desc))
+		ret.WriteString(fmt.Sprintf("# TYPE %s %s\n", fullMetricName, metric.Meta.Type))
 
 		for _, value := range metric.Values {
-			ret.WriteString(fmt.Sprintf("%s{", metric.Meta.Opts.Name))
+			ret.WriteString(fmt.Sprintf("%s{", fullMetricName))
 			for i, labelName := range metric.Meta.Labels {
 				ret.WriteString(fmt.Sprintf("%s=%s", labelName, value.Labels[i]))
 				if i < len(metric.Meta.Labels)-1 {
@@ -150,7 +152,10 @@ func SendPrometheusMetricsToAppInsights(records []map[interface{}]interface{}) i
 		fmt.Printf("cMetrics: %v\n", cMetrics)
 		for _, metric := range cMetrics.Metrics {
 			for _, value := range metric.Values {
-				metricTelemetryItem := appinsights.NewMetricTelemetry(metric.Meta.Opts.Name, value.Value)
+				metricTelemetryItem := appinsights.NewMetricTelemetry(
+					fmt.Sprintf("%s_%s_%s", metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name),
+					value.Value,
+				)
 				for i, labelName := range metric.Meta.Labels {
 					metricTelemetryItem.Properties[labelName] = fmt.Sprintf("%d", value.Labels[i])
 				}
