@@ -51,9 +51,9 @@ cp -f $TMPDIR/envmdsd /etc/mdsd.d
 mkdir /opt/microsoft/linuxmonagent
 
 # Install telegraf
-echo "Installing telegraf..."
-sudo tdnf install telegraf-1.29.4 -y
-sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.txt
+# echo "Installing telegraf..."
+# sudo tdnf install telegraf-1.29.4 -y
+# sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.txt
 
 # Install fluent-bit
 # echo "Installing fluent-bit..."

@@ -136,7 +136,7 @@ COPY --from=main-builder --chmod=777 /main/main.exe $tmpdir/main
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
-COPY ./telegraf/ $tmpdir/telegraf/
+#COPY ./telegraf/ $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit.conf ./fluent-bit/fluent-bit.yaml ./fluent-bit/fluent-bit-daemonset.conf ./fluent-bit/fluent-bit-daemonset.yaml ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
@@ -206,7 +206,7 @@ COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
 COPY --from=builder /usr/bin/bash /usr/bin/bash
 COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
 #COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
-COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
+#COPY --from=builder /usr/bin/telegraf /usr/bin/telegraf
 COPY --from=builder /usr/sbin/crond /usr/sbin/crond
 COPY --from=builder /usr/bin/vim /usr/bin/vim
 COPY --from=builder /usr/share/vim /usr/share/vim

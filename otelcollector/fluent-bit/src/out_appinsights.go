@@ -49,7 +49,7 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 	}
 
 	// Collect, aggregate, and send CPU and Memory usage telemetry for the processes below
-	processAggregations := InitProcessAggregations([]string{"otelcollector", "MetricsExtension", "fluent-bit", "mdsd", "telegraf"})
+	processAggregations := InitProcessAggregations([]string{"otelcollector", "MetricsExtension"})
 	processAggregations.Run()
 
 	go PushMEProcessedAndReceivedCountToAppInsightsMetrics()
