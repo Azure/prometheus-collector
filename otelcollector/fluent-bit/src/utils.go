@@ -34,8 +34,14 @@ func ReadFileContents(fullPathToFileName string) (string, error) {
 }
 
 // From telegraf codebase
-func findPIDFromExe(process string) ([]int32, error) {
-	buf, err := exec.Command("pgrep", process).Output()
+func findPIDFromExe(process string, os string) ([]int32, error) {
+	var command *exec.Cmd
+	if os == "windows" {
+		command = exec.Command("powershell", "-Command", fmt.Sprintf("Get-Process -Name %s | Select-Object -Expand Id", process))
+	} else {
+		command = exec.Command("pgrep", process)
+	}
+	buf, err := command.Output()
 	if err != nil {
 		return nil, fmt.Errorf("error running %w", err)
 	}

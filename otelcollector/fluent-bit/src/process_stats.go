@@ -78,12 +78,12 @@ type ProcessAggregations struct {
 	mu         sync.Mutex
 }
 
-func InitProcessAggregations(processName []string) *ProcessAggregations {
+func InitProcessAggregations(processName []string, os string) *ProcessAggregations {
 	fmt.Printf("Starting process aggregations")
 
 	processAggregationsMap := make(map[string]*Process)
 	for _, processName := range processName {
-		pids, err := findPIDFromExe(processName)
+		pids, err := findPIDFromExe(processName, os)
 		if err != nil || len(pids) == 0 {
 			fmt.Printf("Error getting PID for process %s\n", processName)
 			continue
