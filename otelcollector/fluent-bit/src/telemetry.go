@@ -727,6 +727,15 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				if AcstorMetricsExporterKeepListRegex != "" {
 					metric.Properties["AcstorMetricsExporterRegex"] = AcstorMetricsExporterKeepListRegex
 				}
+				if NetworkObservabilityCiliumKeepListRegex != "" {
+					metric.Properties["NetworkObservabilityCiliumRegex"] = NetworkObservabilityCiliumKeepListRegex
+				}
+				if NetworkObservabilityHubbleKeepListRegex != "" {
+					metric.Properties["NetworkObservabilityHubbleRegex"] = NetworkObservabilityHubbleKeepListRegex
+				}
+				if NetworkObservabilityRetinaKeepListRegex != "" {
+					metric.Properties["NetworkObservabilityRetinaRegex"] = NetworkObservabilityRetinaKeepListRegex
+				}
 
 				if KubeletScrapeInterval != "" {
 					metric.Properties["KubeletScrapeInterval"] = KubeletScrapeInterval
@@ -769,6 +778,15 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				}
 				if AcstorMetricsExporterScrapeInterval != "" {
 					metric.Properties["AcstorMetricsExporterScrapeInterval"] = AcstorMetricsExporterScrapeInterval
+				}
+				if NetworkObservabilityCiliumScrapeInterval != "" {
+					metric.Properties["NetworkObservabilityCiliumScrapeInterval"] = NetworkObservabilityCiliumScrapeInterval
+				}
+				if NetworkObservabilityHubbleScrapeInterval != "" {
+					metric.Properties["NetworkObservabilityHubbleScrapeInterval"] = NetworkObservabilityHubbleScrapeInterval
+				}
+				if NetworkObservabilityRetinaScrapeInterval != "" {
+					metric.Properties["NetworkObservabilityRetinaScrapeInterval"] = NetworkObservabilityRetinaScrapeInterval
 				}
 			}
 
