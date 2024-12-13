@@ -47,6 +47,13 @@ var replicasetDimensionsNameToEnvVar = map[string]string{
 	"tadapterf":                               "tokenadapterUnhealthyAfterSecs",
 	"setGlobalSettings":                       "AZMON_SET_GLOBAL_SETTINGS",
 	"globalSettingsConfigured":                "AZMON_GLOBAL_SETTINGS_CONFIGURED",
+	"calias":                                  "AZMON_CLUSTER_ALIAS",
+	"clabel":                                  "AZMON_CLUSTER_LABEL",
+	"mip":                                     "MINIMAL_INGESTION_PROFILE",
+	"operatormodel":                           "AZMON_OPERATOR_ENABLED",
+	"operatormodelcfgmapsetting":              "AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING",
+	"operatormodelchartsetting":               "AZMON_OPERATOR_ENABLED_CHART_SETTING",
+	"collectorHpaEnabled":                     "AZMON_COLLECTOR_HPA_ENABLED",
 }
 
 var daemonsetDimensionsNameToEnvVar = map[string]string{
