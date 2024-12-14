@@ -79,7 +79,7 @@ type ProcessAggregations struct {
 }
 
 func InitProcessAggregations(processName []string, os string) *ProcessAggregations {
-	fmt.Printf("Starting process aggregations")
+	fmt.Println("Starting process aggregations")
 
 	processAggregationsMap := make(map[string]*Process)
 	for _, processName := range processName {

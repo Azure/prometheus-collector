@@ -49,7 +49,6 @@ func findPIDFromExe(process string, os string) ([]int32, error) {
 
 	fields := strings.Fields(out)
 
-	fmt.Printf("fields: %v\n", fields)
 	pids := make([]int32, 0, len(fields))
 	for _, field := range fields {
 		pid, err := strconv.ParseInt(field, 10, 32)
