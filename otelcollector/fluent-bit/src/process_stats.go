@@ -85,7 +85,7 @@ func InitProcessAggregations(processName []string, os string) *ProcessAggregatio
 	for _, processName := range processName {
 		pids, err := findPIDFromExe(processName, os)
 		if err != nil || len(pids) == 0 {
-			fmt.Printf("Error getting PID for process %s\n", processName)
+			fmt.Printf("Error getting PID for process %s: %s\n", processName, err.Error())
 			continue
 		}
 
