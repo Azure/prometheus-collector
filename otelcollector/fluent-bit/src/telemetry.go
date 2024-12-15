@@ -812,6 +812,8 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 			meMetricsReceivedCountMapMutex.Unlock()
 		}
 
+		Log("Sent ME Metrics Processed Count to App Insights")
+
 	}
 }
 
@@ -868,7 +870,7 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 					TimeseriesVolumeMutex.Unlock()
 
 				}
-
+				Log("Updated ME Metrics Received Count")
 			}
 		}
 	}
