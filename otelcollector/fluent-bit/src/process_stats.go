@@ -116,7 +116,7 @@ func (pa *ProcessAggregations) Run() {
 }
 
 func (pa *ProcessAggregations) CollectStats() {
-	ticker := time.NewTicker(time.Second * time.Duration(10))
+	ticker := time.NewTicker(time.Second * time.Duration(5))
 	for ; true; <-ticker.C {
 		pa.mu.Lock()
 
@@ -135,6 +135,8 @@ func (pa *ProcessAggregations) CollectStats() {
 				p.memValues.Sort()
 			}
 		}
+
+		Log("Collected process stats")
 
 		pa.mu.Unlock()
 	}
@@ -163,6 +165,8 @@ func (pa *ProcessAggregations) SendToAppInsights() {
 					TelemetryClient.Track(memMetric)
 				}
 			}
+
+			Log(fmt.Sprintf("Sent telemetry for process %s", processName))
 
 			// Clear values for next aggregation period
 			p.cpuValues = sort.Float64Slice{}

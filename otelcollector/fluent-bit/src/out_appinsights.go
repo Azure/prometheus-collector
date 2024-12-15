@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 )
@@ -84,6 +86,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	incomingTag := strings.ToLower(C.GoString(tag))
 
 	// Metrics Extension logs with metrics received, dropped, and processed counts
+	Log(fmt.Sprintf("Received %d records. Tag: %s", len(records), incomingTag))
 	switch incomingTag {
 	case fluentbitEventsProcessedLastPeriodTag:
 		return UpdateMEReceivedMetricsCount(records)
