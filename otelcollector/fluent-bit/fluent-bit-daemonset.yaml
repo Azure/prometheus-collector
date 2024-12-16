@@ -148,7 +148,7 @@ pipeline:
 
     outputs:
     - name: appinsights
-      match: prometheus.log.*|prometheus.metrics.*
+      match_regex: prometheus.log.*|prometheus.metrics.*
 
     - name: stdout
       format: json_lines
