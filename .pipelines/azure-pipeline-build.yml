@@ -1893,39 +1893,6 @@ stages:
                 az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-wcus --cluster-name ci-dev-arc-wcus --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
               retryCountOnTaskFailure: 2
 
-          - task: AzureCLI@2
-            displayName: "Deploy: wait for ci-dev-arc-proxy cluster to be ready"
-            inputs:
-              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
-                  do
-                    state=$(az k8s-extension show --name azuremonitor-metrics --resource-group ci-dev-arc-proxy --cluster-name ci-dev-arc-proxy --cluster-type connectedClusters | jq -r '.provisioningState')
-                    # We want to wait in case the status is 'Creating' or 'Updating' because of another PR merged shortly before the current one.
-                    if [ "$state" = "Succeeded" ] || [ "$state" = "Failed" ]
-                    then
-                      echo "Cluster is ready to install extension"
-                      exit 0
-                    fi
-                    sleep 30
-                  done
-                  echo "Cluster is installing a different version of the extension"
-                  exit 1
-              retryCountOnTaskFailure: 5
-
-          - task: AzureCLI@2
-            displayName: "Deploy: ci-dev-arc-proxy cluster"
-            inputs:
-              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                az config set extension.use_dynamic_install=yes_without_prompt
-                az k8s-extension update --name azuremonitor-metrics --resource-group ci-dev-arc-proxy --cluster-name ci-dev-arc-proxy --cluster-type connectedClusters --version $HELM_SEMVER --release-train pipeline
-              retryCountOnTaskFailure: 2
-
   - deployment: Testkube_ARC
     displayName: "Test: Arc testkube tests"
     environment: Prometheus-Collector
