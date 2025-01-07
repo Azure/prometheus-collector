@@ -64,6 +64,6 @@ scrape_configs:
     source_labels:
     - __name__
   - action: drop
-    regex: apiserver_request_duration_seconds_bucket|apiserver_request_sli_duration_seconds_bucket <- added this to configmap for testing
+    regex: apiserver_request_duration_seconds_bucket|apiserver_request_sli_duration_seconds_bucket
     source_labels:
     - __name__
