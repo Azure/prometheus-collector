@@ -18,7 +18,8 @@ import (
 
 func main() {
 
-	
+	// Handle SIGTERM
+	go handleShutdown()
 
 	controllerType := shared.GetControllerType()
 	cluster := shared.GetEnv("CLUSTER", "")
@@ -267,6 +268,18 @@ func main() {
 	// Expose a health endpoint for liveness probe
 	http.HandleFunc("/health", healthHandler)
 	http.ListenAndServe(":8080", nil)
+}
+
+// handleShutdown listens for SIGTERM signals and handles cleanup.
+func handleShutdown() {
+	shutdownChan := make(chan os.Signal, 1)
+	signal.Notify(shutdownChan, syscall.SIGTERM)
+
+	// Block until a signal is received
+	<-shutdownChan
+	fmt.Println("shutting down")
+	// Perform any cleanup tasks here if needed
+	os.Exit(0) // Exit the application
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
