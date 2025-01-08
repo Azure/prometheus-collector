@@ -1,4 +1,4 @@
-scrape_configs:
+  scrape_configs:
   - job_name: kubelet
     scheme: https
     metrics_path: /metrics
@@ -11,19 +11,14 @@ scrape_configs:
       insecure_skip_verify: true
     bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
     relabel_configs:
-      - source_labels: [__metrics_path__]
-        regex: (.*)
-        target_label: metrics_path
-      - source_labels: [__address__]
-        replacement: '$$NODE_NAME$$'
-        target_label: instance
-      - source_labels: [__address__]
-        replacement: '$$OS_TYPE$$'
-        target_label: "kubernetes_io_os"
-    metric_relabel_configs:
-      - source_labels: [__name__]
-        regex: ".*"  # Matches all metrics
-        action: replace
-        target_label: __name__  # No-op relabeling
+    - source_labels: [__metrics_path__]
+      regex: (.*)
+      target_label: metrics_path
+    - source_labels: [__address__]
+      replacement: '$$NODE_NAME$$'
+      target_label: instance
+    - source_labels: [__address__]
+      replacement: '$$OS_TYPE$$'
+      target_label: "kubernetes_io_os"
     static_configs:
-      - targets: ['$$NODE_IP$$:10250']
+    - targets: ['$$NODE_IP$$:10250']
