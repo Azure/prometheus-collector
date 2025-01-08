@@ -181,8 +181,10 @@ func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
 				// Update or add metric_relabel_configs
 				if metricRelabelCfgs, ok := stringScfgMap["metric_relabel_configs"].([]interface{}); ok {
 					stringScfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
+					fmt.Printf("Updated metric_relabel_configs after append: %+v\n", stringScfgMap["metric_relabel_configs"])
 				} else {
 					stringScfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
+					fmt.Printf("Created new metric_relabel_configs: %+v\n", stringScfgMap["metric_relabel_configs"])
 				}
 
 				// Convert back to map[interface{}]interface{} for YAML marshalling
