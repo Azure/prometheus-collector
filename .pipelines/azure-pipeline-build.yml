@@ -2,6 +2,8 @@ trigger:
   branches:
     include:
     - main
+    - rashmi/jan-2025-upgrades
+    
 pr:
   autoCancel: true
   branches:
