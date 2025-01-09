@@ -44,6 +44,10 @@ Get latest release version and latest prometheusreceiver code:
 	```
 	webHandler        *web.Handler
 	```
+* Pass in the web handler argument to the target allocator's **Start()** function
+	```
+	err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager, r.webHandler)
+	```
 
 * Add webhandler code in initPrometheusComponents() or Start() function
 
