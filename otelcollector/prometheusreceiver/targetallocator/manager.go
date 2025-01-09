@@ -54,6 +54,7 @@ func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, 
 func (m *Manager) Start(ctx context.Context, host component.Host, sm *scrape.Manager, dm *discovery.Manager, wh *web.Handler) error {
 	m.scrapeManager = sm
 	m.discoveryManager = dm
+	m.webHandler = wh
 	err := m.applyCfg()
 	if err != nil {
 		m.settings.Logger.Error("Failed to apply new scrape configuration", zap.Error(err))

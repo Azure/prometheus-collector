@@ -111,6 +111,11 @@ Get latest release version and latest prometheusreceiver code:
 	```
 	func (m *Manager) Start(ctx context.Context, host component.Host, sm *scrape.Manager, dm *discovery.Manager, wh *web.Handler) error {
 	```
+
+* Add this in **Start()** function below m.scrapeManager = sm and m.discoveryManager = dm - 
+	```
+	m.webHandler = wh
+	```
 * Add webhandler code in **applyCfg()** function below m.scrapeManager.ApplyConfig(m.promCfg) - 
 
 	```
