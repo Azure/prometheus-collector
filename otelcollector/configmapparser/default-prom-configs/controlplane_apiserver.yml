@@ -59,7 +59,3 @@ scrape_configs:
     - __name__
   - action: labeldrop
     regex: hostalias
-  - action: drop
-    regex: apiserver_request_duration_seconds_bucket|apiserver_request_sli_duration_seconds_bucket
-    source_labels:
-    - __name__
