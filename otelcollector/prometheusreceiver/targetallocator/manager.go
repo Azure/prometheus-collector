@@ -178,6 +178,10 @@ func (m *Manager) applyCfg() error {
 		return err
 	}
 
+	if err := m.webHandler.ApplyConfig(m.promCfg); err != nil {
+		return err
+	}
+
 	discoveryCfg := make(map[string]discovery.Configs)
 	for _, scrapeConfig := range scrapeConfigs {
 		discoveryCfg[scrapeConfig.JobName] = scrapeConfig.ServiceDiscoveryConfigs

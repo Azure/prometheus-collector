@@ -2,13 +2,13 @@ Here is the shareable screenshare video link for how to upgrade Otel Collector -
 
 Below are details for steps to upgrade Otel Collector.
 
-### Release version
+## Release version
 Get latest release version and latest prometheusreceiver code:
 1. Check for the latest release here: https://github.com/open-telemetry/opentelemetry-collector-contrib/releases
 2. git clone https://github.com/open-telemetry/opentelemetry-collector-contrib.git
 3. git checkout tags/<tag_name> -b <branch_name>   tag name will be in the format of v0.x.x and branch name is your local branch name. You can name it whatever you want
 
-### opentelemetry-collector-builder
+## opentelemetry-collector-builder
 * update go.mod to new collector version for all components
 * If there is a later version than the one you are upgrading to, you may need to run below to force download an earlier version
 	```
@@ -16,7 +16,7 @@ Get latest release version and latest prometheusreceiver code:
 	```
 * update the `Version` field in `main.go` with the new collector version
 
-### prometheus-receiver
+## prometheus-receiver
 * copy over new folder
 * delete testdata directory
 
@@ -26,6 +26,7 @@ Get latest release version and latest prometheusreceiver code:
 ### Prometheus version
 * Find new version of github.com/prometheus/prometheus. Put this version in the file /otelcollector/opentelemetry-collector-builder/PROMETHEUS_VERSION
 
+## web handler changes
 ### metrics_receiver.go: web handler changes to be added 
 * Add extra import packages at the top - 
 	```
@@ -92,21 +93,30 @@ Get latest release version and latest prometheusreceiver code:
 		}()
 	``` 
 
-### opentelemetry-collector-builder - 
+### targetallocator/manager.go: web handler changes to be added 
+* Add webhandler code in applyCfg() function below m.scrapeManager.ApplyConfig(m.promCfg) - 
+
+	```
+	if err := m.webHandler.ApplyConfig(m.promCfg); err != nil {
+		return err
+	}
+	```
+
+## opentelemetry-collector-builder - 
 * go mod tidy
 * make
 
-### prom-config-validator-builder
+## prom-config-validator-builder
 * update go.mod to new collector version for all components
 * copy the second block of go.mod from the latest of go.mod of opentelemetry-collector-builder 
 * try to build to check for any breaking changes to the interfaces used: 
 * Run - go mod tidy
 * Run - make
 
-### golang version
+## golang version
 * Update the `GOLANG_VERSION` variable in `azure-pipeline-build.yaml` to match the golang version used by the otelcollector (see the go.mod files)
 
-### TargetAllocator Update
+## TargetAllocator Update
 Get latest release version and latest prometheusreceiver code:
 1. Check for the latest release here: https://github.com/open-telemetry/opentelemetry-operator/releases (Pick the same version as opentelemetry-collector)
 2. git clone https://github.com/open-telemetry/opentelemetry-operator.git
@@ -120,6 +130,6 @@ go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now -s -
 7. Update go.mod file in the otel-allocator folder with the go.mod of the opentelemetry-operator file.
 8. Run go mod tidy from the otel-allocator directory and then run make.
 
-### Configuration Reader Builder
+## Configuration Reader Builder
 1. Update the version of operator in go.mod of configuration-reader-builder to match versions in go.mod of otel-allocator
 2. Run go mod tidy from configuration-reader-builder directory and then run make
