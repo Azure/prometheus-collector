@@ -172,13 +172,13 @@ stages:
     displayName: "Build: linux golang reference app image"
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    #dependsOn: Image_Tags_and_Ev2_Artifacts
+    dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       skipComponentGovernanceDetection: true
       LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
-    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+    #condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         persistCredentials: true
@@ -261,13 +261,13 @@ stages:
     displayName: "Build: linux python reference app image"
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    #dependsOn: Image_Tags_and_Ev2_Artifacts
+    dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       skipComponentGovernanceDetection: true
       LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
-    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+    #condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         persistCredentials: true
