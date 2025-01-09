@@ -59,10 +59,6 @@ scrape_configs:
     - __name__
   - action: labeldrop
     regex: hostalias
-  - action: keep
-    regex: apiserver_request_sli_duration_seconds_bucket|go_cpu_classes_gc_mark_dedicated_cpu_seconds_total
-    source_labels:
-    - __name__
   - action: drop
     regex: apiserver_request_duration_seconds_bucket|apiserver_request_sli_duration_seconds_bucket
     source_labels:
