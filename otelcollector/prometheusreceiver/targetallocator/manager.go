@@ -21,6 +21,7 @@ import (
 	"github.com/prometheus/prometheus/discovery"
 	promHTTP "github.com/prometheus/prometheus/discovery/http"
 	"github.com/prometheus/prometheus/scrape"
+	"github.com/prometheus/prometheus/web"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
@@ -35,6 +36,7 @@ type Manager struct {
 	initialScrapeConfigs   []*promconfig.ScrapeConfig
 	scrapeManager          *scrape.Manager
 	discoveryManager       *discovery.Manager
+	webHandler             *web.Handler
 	enableNativeHistograms bool
 }
 
@@ -49,7 +51,7 @@ func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, 
 	}
 }
 
-func (m *Manager) Start(ctx context.Context, host component.Host, sm *scrape.Manager, dm *discovery.Manager) error {
+func (m *Manager) Start(ctx context.Context, host component.Host, sm *scrape.Manager, dm *discovery.Manager, wh *web.Handler) error {
 	m.scrapeManager = sm
 	m.discoveryManager = dm
 	err := m.applyCfg()

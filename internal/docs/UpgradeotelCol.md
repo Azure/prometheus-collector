@@ -94,7 +94,20 @@ Get latest release version and latest prometheusreceiver code:
 	``` 
 
 ### targetallocator/manager.go: web handler changes to be added 
-* Add webhandler code in applyCfg() function below m.scrapeManager.ApplyConfig(m.promCfg) - 
+* Add extra import package at the top - 
+	```
+	"github.com/prometheus/prometheus/web"
+	```
+
+* In **type Manager struct** - add 
+	```
+	webHandler             *web.Handler
+	```
+* Pass in web handler parameter to the **Start** function
+	```
+	func (m *Manager) Start(ctx context.Context, host component.Host, sm *scrape.Manager, dm *discovery.Manager, wh *web.Handler) error {
+	```
+* Add webhandler code in **applyCfg()** function below m.scrapeManager.ApplyConfig(m.promCfg) - 
 
 	```
 	if err := m.webHandler.ApplyConfig(m.promCfg); err != nil {
