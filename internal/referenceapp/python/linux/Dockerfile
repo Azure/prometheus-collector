@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM FROM mcr.microsoft.com/azurelinux/base/python:3
+FROM mcr.microsoft.com/azurelinux/base/python:3
 
 # Move to working directory /build
 WORKDIR /build
