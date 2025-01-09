@@ -171,7 +171,7 @@ stages:
     displayName: "Build: linux golang reference app image"
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    dependsOn: Image_Tags_and_Ev2_Artifacts
+    #dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       skipComponentGovernanceDetection: true
       LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
@@ -260,7 +260,7 @@ stages:
     displayName: "Build: linux python reference app image"
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    dependsOn: Image_Tags_and_Ev2_Artifacts
+    #dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       skipComponentGovernanceDetection: true
       LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
