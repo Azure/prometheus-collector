@@ -15,7 +15,7 @@ ARG GOLANG_VERSION
 # Copy and download dependency using go mod
 COPY go.mod .
 COPY go.sum .
-RUN tdnf install -y golang-${GOLANG_VERSION}
+RUN tdnf install -y golang-${GOLANG_VERSION} ca-certificates
 RUN go mod download
 
 # COPY client-cert.pem /etc/prometheus/certs/
