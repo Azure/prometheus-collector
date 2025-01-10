@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
+	"syscall"
 
 	shared "github.com/prometheus-collector/shared"
 	ccpconfigmapsettings "github.com/prometheus-collector/shared/configmap/ccp"
@@ -33,8 +35,8 @@ func main() {
 	}
 
 	if osType == "linux" {
-		outputFile := "/opt/inotifyoutput.txt" 
-		
+		outputFile := "/opt/inotifyoutput.txt"
+
 		if ccpMetricsEnabled != "true" { //data-plane
 
 			if err := shared.Inotify(outputFile, "/etc/config/settings"); err != nil {
@@ -278,8 +280,7 @@ func handleShutdown() {
 	// Block until a signal is received
 	<-shutdownChan
 	fmt.Println("shutting down")
-	// Perform any cleanup tasks here if needed
-	os.Exit(0) // Exit the application
+	os.Exit(0) // Exit the application gracefully
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
