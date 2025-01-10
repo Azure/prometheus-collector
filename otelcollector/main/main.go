@@ -280,7 +280,6 @@ func handleShutdown() {
 	// Block until a signal is received
 	<-shutdownChan
 	fmt.Println("shutting down")
-	os.Exit(0) // Exit the application gracefully
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
