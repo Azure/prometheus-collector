@@ -155,3 +155,7 @@ go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now -s -
 ## Configuration Reader Builder
 1. Update the version of operator in go.mod of configuration-reader-builder to match versions in go.mod of otel-allocator
 2. Run go mod tidy from configuration-reader-builder directory and then run make
+
+
+## Note about $ $$ changes that we need to test
+During upgrades make sure that the environment variable substitution works for the daemonset and shows the substituted value in the prometheus UX as well as in the metrics in Grafana, whereas for the replicaset the environment variable substitution is not expected to work as shows up as ${env:env_var_name} at all places.
