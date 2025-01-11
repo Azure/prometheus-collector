@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
+	"syscall"
 
 	shared "github.com/prometheus-collector/shared"
 	ccpconfigmapsettings "github.com/prometheus-collector/shared/configmap/ccp"
@@ -18,7 +20,8 @@ import (
 
 func main() {
 
-	
+	// Handle SIGTERM
+	go handleShutdown()
 
 	controllerType := shared.GetControllerType()
 	cluster := shared.GetEnv("CLUSTER", "")
@@ -32,8 +35,8 @@ func main() {
 	}
 
 	if osType == "linux" {
-		outputFile := "/opt/inotifyoutput.txt" 
-		
+		outputFile := "/opt/inotifyoutput.txt"
+
 		if ccpMetricsEnabled != "true" { //data-plane
 
 			if err := shared.Inotify(outputFile, "/etc/config/settings"); err != nil {
@@ -267,6 +270,17 @@ func main() {
 	// Expose a health endpoint for liveness probe
 	http.HandleFunc("/health", healthHandler)
 	http.ListenAndServe(":8080", nil)
+}
+
+// handleShutdown listens for SIGTERM signals and handles cleanup.
+func handleShutdown() {
+	shutdownChan := make(chan os.Signal, 1)
+	signal.Notify(shutdownChan, syscall.SIGTERM)
+
+	// Block until a signal is received
+	<-shutdownChan
+	fmt.Println("shutting down")
+	os.Exit(0) // Exit the application
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
