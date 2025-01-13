@@ -140,18 +140,6 @@ func main() {
 	} else {
 		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile)
 	}
-	// ME_PID, err := shared.StartMetricsExtensionForOverlay(meConfigFile)
-	// if err != nil {
-	// 	fmt.Printf("Error starting MetricsExtension: %v\n", err)
-	// 	return
-	// }
-	// fmt.Printf("ME_PID: %d\n", ME_PID)
-
-	// // Modify fluentBitConfigFile using ME_PID
-	// err = shared.ModifyConfigFile(fluentBitConfigFile, ME_PID, "${ME_PID}")
-	// if err != nil {
-	// 	fmt.Printf("Error modifying config file: %v\n", err)
-	// }
 
 	// Start otelcollector
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
@@ -180,18 +168,6 @@ func main() {
 
 	fmt.Println("startCommand otelcollector")
 	_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
-	// OTEL_PID, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
-	// if err != nil {
-	// 	fmt.Printf("Error starting command: %v\n", err)
-	// 	return
-	// }
-	// fmt.Printf("OTEL_PID: %d\n", OTEL_PID)
-
-	// // Modify fluentBitConfigFile using OTEL_PID
-	// err = shared.ModifyConfigFile(fluentBitConfigFile, OTEL_PID, "${OTEL_PID}")
-	// if err != nil {
-	// 	fmt.Printf("Error modifying config file: %v\n", err)
-	// }
 
 	if osType == "linux" {
 		shared.LogVersionInfo()
@@ -202,6 +178,13 @@ func main() {
 		// Run the command and capture the output
 		if osType == "linux" {
 			cmd := exec.Command("fluent-bit", "--version")
+			fluentBitVersion, err := cmd.Output()
+			if err != nil {
+				log.Fatalf("failed to run command: %v", err)
+			}
+			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
+		} else if osType == "windows" {
+			cmd := exec.Command("C:\\opt\\fluent-bit\\bin\\fluent-bit.exe", "--version")
 			fluentBitVersion, err := cmd.Output()
 			if err != nil {
 				log.Fatalf("failed to run command: %v", err)
