@@ -129,6 +129,15 @@ func StartTelegraf() {
 			log.Fatalf("Error installing Telegraf service: %v\n", err)
 		}
 
+		// Print Telegraf version
+		versionCmd := exec.Command(telegrafPath, "--version")
+		versionOutput, err := versionCmd.CombinedOutput()
+		if err != nil {
+			log.Printf("Error fetching Telegraf version: %v\n", err)
+		} else {
+			fmt.Printf("TELEGRAF_VERSION=%s\n", string(versionOutput))
+		}
+
 		// Set delayed start if POD_NAME is set
 		serverName := os.Getenv("POD_NAME")
 		if serverName != "" {
