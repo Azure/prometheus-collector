@@ -156,15 +156,6 @@ func StartTelegraf() {
 			log.Printf("Error starting Telegraf service: %v\n", err)
 		}
 
-		// Print Telegraf version
-		versionCmd := exec.Command("C:\\opt\\telegraf\\telegraf.exe", "--version")
-		versionOutput, err := versionCmd.Output()
-		if err != nil {
-			log.Printf("Error fetching Telegraf version: %v\n", err)
-		} else {
-			fmt.Printf("TELEGRAF_VERSION=%s\n", string(versionOutput))
-		}
-
 		// Check if Telegraf is running, retry if necessary
 		for {
 			statusCmd := exec.Command("sc.exe", "query", "telegraf")
