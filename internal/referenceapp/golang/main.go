@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
@@ -12,6 +13,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/metric"
+	gosdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"google.golang.org/grpc/encoding/gzip"
 )
 
 type TempInfo struct {
@@ -187,27 +196,47 @@ var (
 func recordMetrics() {
 	go func() {
 		i := 0
+
+		ctx := context.Background()
 		for {
 			for location, tempInfoByCity := range locationsToMinTemp {
 				for city, info := range tempInfoByCity {
+					metricAttributes := attribute.NewSet(
+						attribute.String("city", city),
+						attribute.String("location", location),
+					)
+
 					counter.WithLabelValues(city, location).Inc()
+					otlpCounter.Add(ctx, 1, metric.WithAttributeSet(metricAttributes))
 
 					tempRange := info.tempRange
 					minTemp := info.minTemp
 					temperature := float64(rand.Intn(tempRange) + minTemp)
 					gauge.WithLabelValues(city, location).Set(temperature)
+					otlpGauge.Record(ctx, int64(temperature), metric.WithAttributeSet(metricAttributes))
+
 					summary.WithLabelValues(city, location).Observe(temperature)
+
 					histogram.WithLabelValues(city, location).Observe(temperature)
+					otlpHistogram.Record(ctx, int64(temperature), metric.WithAttributeSet(metricAttributes))
 				}
 			}
 
 			for location, rainfallByCity := range locationsToAvgRainfall {
 				for city, rainfall := range rainfallByCity {
+					metricAttributes := attribute.NewSet(
+						attribute.String("city", city),
+						attribute.String("location", location),
+					)
 
 					recordedRainfall := (float64(rand.Intn(10)) + rainfall*100.0) / 100.0
 					rainfallGauge.WithLabelValues(city, location).Set(recordedRainfall)
+					otlpRainfallGauge.Record(ctx, recordedRainfall, metric.WithAttributeSet(metricAttributes))
+
 					rainfallSummary.WithLabelValues(city, location).Observe(recordedRainfall)
+
 					rainfallHistogram.WithLabelValues(city, location).Observe(recordedRainfall)
+					otlpRainfallHistogram.Record(ctx, recordedRainfall, metric.WithAttributeSet(metricAttributes))
 				}
 			}
 
@@ -291,6 +320,12 @@ func createGauges() {
 }
 
 var (
+	otlpCounter           metric.Int64Counter
+	otlpGauge             metric.Int64Gauge
+	otlpRainfallGauge     metric.Float64Gauge
+	otlpHistogram         metric.Int64Histogram
+	otlpRainfallHistogram metric.Float64Histogram
+
 	scrapeIntervalSec = 60
 	metricCount       = 10000
 	gaugeList         = make([]*prometheus.GaugeVec, 0, metricCount)
@@ -349,6 +384,7 @@ var (
 			"location",
 		},
 	)
+
 	summary = promauto.NewSummaryVec(
 		prometheus.SummaryOpts{
 			Name:       "myapp_temperature_summary",
@@ -409,6 +445,7 @@ var (
 			"location",
 		},
 	)
+
 	rainfallHistogram = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "myapp_rainfall_histogram",
@@ -461,6 +498,9 @@ func main() {
 
 	// certFile := "/etc/prometheus/certs/client-cert.pem"
 	// keyFile := "/etc/prometheus/certs/client-key.pem"
+
+	setupOTLP()
+
 	if os.Getenv("RUN_PERF_TEST") == "true" {
 		if os.Getenv("SCRAPE_INTERVAL") != "" {
 			scrapeIntervalSec, _ = strconv.Atoi(os.Getenv("SCRAPE_INTERVAL"))
@@ -491,10 +531,75 @@ func main() {
 	}()
 
 	// Run main server for weather app metrics
-	// err := http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
-	// if err != nil {
-	// 	log.Printf("HTTP server failed to start: %v", err)
-	// }
+	err := http.ListenAndServe(":2112", weatherServer)
+	if err != nil {
+		log.Printf("HTTP server failed to start: %v", err)
+	}
 
 	fmt.Printf("ending main function")
+}
+
+func setupOTLP() {
+	ctx := context.Background()
+
+	var (
+		exporter gosdkmetric.Exporter
+		err      error
+	)
+	if os.Getenv("OTEL_CONSOLE_METRICS") == "true" {
+		exporter, err = stdoutmetric.New()
+	} else {
+		endpoint := os.Getenv("OTEL_EXPORT_ENDPOINT")
+		exporter, err = otlpmetricgrpc.New(ctx,
+			otlpmetricgrpc.WithEndpoint(endpoint),
+			otlpmetricgrpc.WithCompressor(gzip.Name),
+		)
+	}
+	if err != nil {
+		panic(err)
+	}
+
+	reader := gosdkmetric.NewPeriodicReader(
+		exporter,
+		gosdkmetric.WithInterval(15*time.Second),
+	)
+
+	resource, err := resource.New(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	provider := gosdkmetric.NewMeterProvider(
+		gosdkmetric.WithReader(reader),
+		gosdkmetric.WithResource(resource),
+	)
+	otel.SetMeterProvider(provider)
+
+	otlpMeter := provider.Meter("referenceapp")
+
+	otlpCounter, _ = otlpMeter.Int64Counter(
+		"myotelapp.measurements.total",
+		metric.WithUnit("1"),
+		metric.WithDescription("Measurements counter"),
+	)
+	otlpGauge, _ = otlpMeter.Int64Gauge(
+		"myotelapp.temperature",
+		metric.WithUnit("1"),
+		metric.WithDescription("Temperature gauge"),
+	)
+	otlpRainfallGauge, _ = otlpMeter.Float64Gauge(
+		"myotelapp.rainfall",
+		metric.WithUnit("1"),
+		metric.WithDescription("Rainfall gauge"),
+	)
+	otlpHistogram, _ = otlpMeter.Int64Histogram(
+		"myotelapp.temperature.histogram",
+		metric.WithUnit("1"),
+		metric.WithDescription("Temperature histogram"),
+	)
+	otlpRainfallHistogram, _ = otlpMeter.Float64Histogram(
+		"myotelapp.rainfall.histogram",
+		metric.WithUnit("1"),
+		metric.WithDescription("Rainfall histogram"),
+	)
 }
