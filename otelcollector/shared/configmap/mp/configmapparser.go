@@ -141,6 +141,24 @@ func handleEnvFileError(filename string) {
 func Configmapparser() {
 	setConfigFileVersionEnv()
 	setConfigSchemaVersionEnv()
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	filePath := "/etc/config/settings/dataplane-metrics"
+	parsedData, err := ParseMetricsFile(filePath)
+	if err != nil {
+		fmt.Printf("Error parsing file: %v\n", err)
+		return
+	}
+
+	// Print the parsed data
+	fmt.Println("Parsed Data:")
+	fmt.Printf("%+v\n", parsedData)
+
+	// Access specific values
+	fmt.Println("kubelet enabled:", parsedData["default-scrape-settings-enabled"]["kubelet"])
+	fmt.Println("podannotationnamespaceregex:", parsedData["pod-annotation-based-scraping"]["podannotationnamespaceregex"])
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	parseSettingsForPodAnnotations()
 	parsePrometheusCollectorConfig()
 	parseDefaultScrapeSettings()
@@ -254,4 +272,53 @@ func Configmapparser() {
 	}
 
 	fmt.Printf("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
+}
+
+// ParseMetricsFile parses a metrics configuration file into a nested map structure
+func ParseMetricsFile(filePath string) (map[string]map[string]string, error) {
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("error opening file: %w", err)
+	}
+	defer file.Close()
+
+	// Map to store the parsed data
+	parsedData := make(map[string]map[string]string)
+
+	// Scanner to read the file line by line
+	scanner := bufio.NewScanner(file)
+	var currentSection string
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines
+		if line == "" {
+			continue
+		}
+
+		// Check if the line is a new section
+		if strings.HasSuffix(line, ": |-") {
+			// Extract the section name
+			currentSection = strings.TrimSuffix(line, ": |-")
+			parsedData[currentSection] = make(map[string]string)
+			continue
+		}
+
+		// Parse key-value pairs within a section
+		if currentSection != "" && strings.Contains(line, "=") {
+			parts := strings.SplitN(line, "=", 2)
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			parsedData[currentSection][key] = value
+		}
+	}
+
+	// Handle scanner errors
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading file: %w", err)
+	}
+
+	return parsedData, nil
 }

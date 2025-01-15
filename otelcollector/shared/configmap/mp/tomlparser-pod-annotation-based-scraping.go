@@ -15,22 +15,27 @@ const (
 )
 
 func parseConfigMapForPodAnnotations() (map[string]interface{}, error) {
-	file, err := os.Open(configMapMountPathForPodAnnotation)
-	if err != nil {
+	if os.Getenv("AZMON_AGENT_CFG_FILE_VERSION") == "v1" {
+		file, err := os.Open(configMapMountPathForPodAnnotation)
+		if err != nil {
+			return nil, fmt.Errorf("configmap section not mounted, using defaults")
+		}
+		defer file.Close()
+
+		if data, err := os.ReadFile(configMapMountPathForPodAnnotation); err == nil {
+			parsedConfig := make(map[string]interface{})
+			if err := toml.Unmarshal(data, &parsedConfig); err == nil {
+				return parsedConfig, nil
+			} else {
+				return nil, fmt.Errorf("exception while parsing config map for pod annotations: %v, using defaults, please check config map for pod annotations", err)
+			}
+		} else {
+			return nil, fmt.Errorf("error reading config map file: %v", err)
+		}
+	} else if os.Getenv("AZMON_AGENT_CFG_FILE_VERSION") == "v2" {
 		return nil, fmt.Errorf("configmap section not mounted, using defaults")
 	}
-	defer file.Close()
-
-	if data, err := os.ReadFile(configMapMountPathForPodAnnotation); err == nil {
-		parsedConfig := make(map[string]interface{})
-		if err := toml.Unmarshal(data, &parsedConfig); err == nil {
-			return parsedConfig, nil
-		} else {
-			return nil, fmt.Errorf("exception while parsing config map for pod annotations: %v, using defaults, please check config map for pod annotations", err)
-		}
-	} else {
-		return nil, fmt.Errorf("error reading config map file: %v", err)
-	}
+	return nil, fmt.Errorf("unkonwn schema version in config, using defaults")
 }
 
 func isValidRegex(str string) bool {
