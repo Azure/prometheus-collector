@@ -149,8 +149,18 @@ Get latest release version and latest prometheusreceiver code:
 go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now -s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com' -o main . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now -s -X github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring.GroupName=azmonitoring.coreos.com'
 ```
 6. Update main.go to include ARC EULA (lines 69-73)
-7. Update go.mod file in the otel-allocator folder with the go.mod of the opentelemetry-operator file.
-8. Run go mod tidy from the otel-allocator directory and then run make.
+7. In the file - otelcollector/otel-allocator/config/flags.go add the below in the import section.
+```
+import - uberzap "go.uber.org/zap"
+```
+and add the below after *zapCmdLineOpts.BindFlags(zapFlagSet)* in the getFlagSet method.
+```
+	lvl := uberzap.NewAtomicLevelAt(uberzap.PanicLevel)
+	zapCmdLineOpts.Level = &lvl
+```
+
+8. Update go.mod file in the otel-allocator folder with the go.mod of the opentelemetry-operator file.
+9. Run go mod tidy from the otel-allocator directory and then run make.
 
 ## Configuration Reader Builder
 1. Update the version of operator in go.mod of configuration-reader-builder to match versions in go.mod of otel-allocator
