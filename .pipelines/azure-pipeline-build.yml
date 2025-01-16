@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-    - rashmi/mute-ta-logs
+    - rashmi/mute-ta-logs #trigger build
 pr:
   autoCancel: true
   branches:
