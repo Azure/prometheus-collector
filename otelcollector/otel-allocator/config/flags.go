@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/pflag"
+	uberzap "go.uber.org/zap"
 	"k8s.io/client-go/util/homedir"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -53,6 +54,8 @@ func getFlagSet(errorHandling pflag.ErrorHandling) *pflag.FlagSet {
 	flagSet.String(httpsTLSKeyFilePathFlagName, "", "The path to the HTTPS server TLS key file.")
 	zapFlagSet := flag.NewFlagSet("", flag.ErrorHandling(errorHandling))
 	zapCmdLineOpts.BindFlags(zapFlagSet)
+	lvl := uberzap.NewAtomicLevelAt(uberzap.PanicLevel)
+	zapCmdLineOpts.Level = &lvl
 	flagSet.AddGoFlagSet(zapFlagSet)
 	return flagSet
 }
