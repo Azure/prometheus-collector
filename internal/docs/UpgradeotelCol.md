@@ -151,7 +151,7 @@ go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now -s -
 6. Update main.go to include ARC EULA (lines 69-73)
 7. In the file - otelcollector/otel-allocator/config/flags.go add the below in the import section.
 ```
-import - uberzap "go.uber.org/zap"
+uberzap "go.uber.org/zap"
 ```
 and add the below after *zapCmdLineOpts.BindFlags(zapFlagSet)* in the getFlagSet method.
 ```
