@@ -346,10 +346,17 @@ catch {
 
 # Get all DC* objects
 try {
-    $dcraList = Get-AzDataCollectionRuleAssociation -TargetResourceId $ClusterResourceId -ErrorAction Stop -WarningAction silentlyContinue
+    $dcraList = Get-AzDataCollectionRuleAssociation -TargetResourceId $ClusterResourceId -ErrorAction Stop -WarningAction SilentlyContinue
     $prometheusMetricsTuples = @()
 
     foreach ($dcra in $dcraList) {
+
+        # Filter out "configurationAccessEndpoint" entries
+        if ($dcra.Name -eq "configurationAccessEndpoint") {
+            Write-Host "Skipping configurationAccessEndpoint DCRA: $($dcra.Name)" -ForegroundColor Yellow
+            continue
+        }
+
         Write-Output "DCRA ID: $($dcra.Id)"
         Write-Output "DCRA Name: $($dcra.Name)"
         Write-Output "Data Collection Rule ID: $($dcra.DataCollectionRuleId)"
@@ -357,8 +364,20 @@ try {
         Write-Output "Provisioning State: $($dcra.ProvisioningState)"
         Write-Output "Additional Properties:"
         $dcra.Properties | Format-Table -AutoSize
+        
+        # Check if DataCollectionRuleId is not null or empty
+        if ([string]::IsNullOrWhiteSpace($dcra.DataCollectionRuleId)) {
+            Write-Host "Skipping DCRA with no DataCollectionRuleId: $($dcra.Name)" -ForegroundColor Yellow
+            continue
+        }
+
         # Get the Data Collection Rule details based on its ID
-        $dataCollectionRule = Get-AzResource -ResourceId $dcra.DataCollectionRuleId -ErrorAction silentlyContinue
+        $dataCollectionRule = Get-AzResource -ResourceId $dcra.DataCollectionRuleId -ErrorAction SilentlyContinue
+        if ($null -eq $dataCollectionRule) {
+            Write-Host "Unable to fetch Data Collection Rule details for ID: $($dcra.DataCollectionRuleId)" -ForegroundColor Yellow
+            continue
+        }
+
         $dataflows = $dataCollectionRule.Properties.DataFlows
         foreach ($dataflow in $dataflows) {
             $dataflowstream = $dataflow.streams
@@ -377,7 +396,7 @@ try {
     # Check if the map is empty
     if ($prometheusMetricsTuples.Count -eq 0) {
         Write-Host "No entries with Microsoft-PrometheusMetrics found in the Data Collection Rule" -ForegroundColor Red
-        Write-Host("");
+        Write-Host("")
         Stop-Transcript
         exit 1
     }
@@ -389,6 +408,7 @@ catch {
     Stop-Transcript
     exit 1
 }
+
 
 #
 #    Check Agent pods running as expected with HPA
