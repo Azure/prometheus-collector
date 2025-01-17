@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	gosdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"google.golang.org/grpc/encoding/gzip"
 )
@@ -218,7 +219,8 @@ func recordMetrics() {
 					summary.WithLabelValues(city, location).Observe(temperature)
 
 					histogram.WithLabelValues(city, location).Observe(temperature)
-					otlpHistogram.Record(ctx, int64(temperature), metric.WithAttributeSet(metricAttributes))
+					otlpExponentialHistogram.Record(ctx, int64(temperature), metric.WithAttributeSet(metricAttributes))
+					otlpExplicitHistogram.Record(ctx, int64(temperature), metric.WithAttributeSet(metricAttributes))
 				}
 			}
 
@@ -236,7 +238,8 @@ func recordMetrics() {
 					rainfallSummary.WithLabelValues(city, location).Observe(recordedRainfall)
 
 					rainfallHistogram.WithLabelValues(city, location).Observe(recordedRainfall)
-					otlpRainfallHistogram.Record(ctx, recordedRainfall, metric.WithAttributeSet(metricAttributes))
+					otlpExponentialRainfallHistogram.Record(ctx, recordedRainfall, metric.WithAttributeSet(metricAttributes))
+					otlpExplicitRainfallHistogram.Record(ctx, recordedRainfall, metric.WithAttributeSet(metricAttributes))
 				}
 			}
 
@@ -320,11 +323,13 @@ func createGauges() {
 }
 
 var (
-	otlpCounter           metric.Int64Counter
-	otlpGauge             metric.Int64Gauge
-	otlpRainfallGauge     metric.Float64Gauge
-	otlpHistogram         metric.Int64Histogram
-	otlpRainfallHistogram metric.Float64Histogram
+	otlpCounter                      metric.Int64Counter
+	otlpGauge                        metric.Int64Gauge
+	otlpRainfallGauge                metric.Float64Gauge
+	otlpExponentialHistogram         metric.Int64Histogram
+	otlpExplicitHistogram            metric.Int64Histogram
+	otlpExponentialRainfallHistogram metric.Float64Histogram
+	otlpExplicitRainfallHistogram    metric.Float64Histogram
 
 	scrapeIntervalSec = 60
 	metricCount       = 10000
@@ -539,44 +544,105 @@ func main() {
 	fmt.Printf("ending main function")
 }
 
+// UpDown Counters should always be cumulative.
+func deltaSelector(kind gosdkmetric.InstrumentKind) metricdata.Temporality {
+	switch kind {
+	case gosdkmetric.InstrumentKindUpDownCounter,
+		gosdkmetric.InstrumentKindObservableUpDownCounter:
+		return metricdata.CumulativeTemporality
+	default:
+		return metricdata.DeltaTemporality
+	}
+}
+
 func setupOTLP() {
 	ctx := context.Background()
 
 	var (
 		exporter gosdkmetric.Exporter
 		err      error
+		interval int
 	)
+
+	// The default temporality should be cumulative unless specified as delta otherwise
+	deltaTemporality := os.Getenv("OTEL_TEMPORALITY") == "delta"
+
+	// Export as stdout logs instead for debugging
 	if os.Getenv("OTEL_CONSOLE_METRICS") == "true" {
-		exporter, err = stdoutmetric.New()
-	} else {
+		if deltaTemporality {
+			exporter, err = stdoutmetric.New(
+				stdoutmetric.WithPrettyPrint(),
+				stdoutmetric.WithTemporalitySelector(deltaSelector),
+			)
+		} else {
+			exporter, err = stdoutmetric.New(
+				stdoutmetric.WithPrettyPrint(),
+			)
+		}
+	} else { // Default to sending over GRPC
 		endpoint := os.Getenv("OTEL_EXPORT_ENDPOINT")
-		exporter, err = otlpmetricgrpc.New(ctx,
-			otlpmetricgrpc.WithEndpoint(endpoint),
-			otlpmetricgrpc.WithCompressor(gzip.Name),
-		)
+		if deltaTemporality {
+			exporter, err = otlpmetricgrpc.New(ctx,
+				otlpmetricgrpc.WithEndpoint(endpoint),
+				otlpmetricgrpc.WithCompressor(gzip.Name),
+				otlpmetricgrpc.WithTemporalitySelector(deltaSelector),
+			)
+		} else {
+			exporter, err = otlpmetricgrpc.New(ctx,
+				otlpmetricgrpc.WithEndpoint(endpoint),
+				otlpmetricgrpc.WithCompressor(gzip.Name),
+			)
+		}
 	}
 	if err != nil {
 		panic(err)
 	}
 
-	reader := gosdkmetric.NewPeriodicReader(
-		exporter,
-		gosdkmetric.WithInterval(15*time.Second),
+	// Views modify metrics for settings that aren't allowed when creating the metric.
+	// Modify metrics named myotelapp.*.exponential.histogram to use exponential buckets
+	exponentialHistogramView := gosdkmetric.NewView(
+		// Instrument identities which metric(s) should be modified
+		gosdkmetric.Instrument{
+			Name: "myotelapp.*.exponential.histogram", // Supports wildcard
+		},
+		// Stream specifies how to modify the metric
+		gosdkmetric.Stream{
+			Aggregation: gosdkmetric.AggregationBase2ExponentialHistogram{
+				MaxSize:  160,
+				MaxScale: 20,
+			},
+		},
 	)
 
+	// Interval to export metrics
+	if os.Getenv("OTEL_INTERVAL") != "" {
+		interval, err = strconv.Atoi(os.Getenv("OTEL_INTERVAL"))
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		interval = 15
+	}
+
+	// Extra attributes can be added here if needed
 	resource, err := resource.New(ctx)
 	if err != nil {
 		panic(err)
 	}
 
+	// Create the meter provider that ties together the interval, exporter, and the view from above
 	provider := gosdkmetric.NewMeterProvider(
-		gosdkmetric.WithReader(reader),
+		gosdkmetric.WithReader(gosdkmetric.NewPeriodicReader(
+			exporter,
+			gosdkmetric.WithInterval(time.Duration(interval)*time.Second),
+		)),
 		gosdkmetric.WithResource(resource),
+		gosdkmetric.WithView(exponentialHistogramView),
 	)
 	otel.SetMeterProvider(provider)
 
+	// Actually register metrics with the meter provider. These will then be used to record values
 	otlpMeter := provider.Meter("referenceapp")
-
 	otlpCounter, _ = otlpMeter.Int64Counter(
 		"myotelapp.measurements.total",
 		metric.WithUnit("1"),
@@ -592,14 +658,26 @@ func setupOTLP() {
 		metric.WithUnit("1"),
 		metric.WithDescription("Rainfall gauge"),
 	)
-	otlpHistogram, _ = otlpMeter.Int64Histogram(
-		"myotelapp.temperature.histogram",
+	otlpExponentialHistogram, _ = otlpMeter.Int64Histogram(
+		"myotelapp.temperature.exponential.histogram",
 		metric.WithUnit("1"),
-		metric.WithDescription("Temperature histogram"),
+		metric.WithDescription("Temperature exponential histogram"),
 	)
-	otlpRainfallHistogram, _ = otlpMeter.Float64Histogram(
-		"myotelapp.rainfall.histogram",
+	otlpExplicitHistogram, _ = otlpMeter.Int64Histogram(
+		"myotelapp.temperature.explicit.histogram",
 		metric.WithUnit("1"),
-		metric.WithDescription("Rainfall histogram"),
+		metric.WithDescription("Temperature explicit histogram"),
+		metric.WithExplicitBucketBoundaries(0, 10, 20, 30, 40, 50, 60, 70, 80, 90),
+	)
+	otlpExponentialRainfallHistogram, _ = otlpMeter.Float64Histogram(
+		"myotelapp.rainfall.exponential.histogram",
+		metric.WithUnit("1"),
+		metric.WithDescription("Rainfall exponential histogram"),
+	)
+	otlpExplicitRainfallHistogram, _ = otlpMeter.Float64Histogram(
+		"myotelapp.rainfall.explicit.histogram",
+		metric.WithUnit("1"),
+		metric.WithDescription("Rainfall explicit histogram"),
+		metric.WithExplicitBucketBoundaries(0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45),
 	)
 }
