@@ -6,7 +6,7 @@
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
 * AKS and Arc Container Images:
    * Add support for global settings (https://github.com/Azure/prometheus-collector/pull/1003)
-   * Arc: configuration settings for GA (https://github.com/Azure/prometheus-collector/pull/1016)
+   * Sign flagged binaries for windows containers (https://github.com/Azure/prometheus-collector/pull/1001)
    * fix hubble & cilium regex-es for minimal ingestion profile (https://github.com/Azure/prometheus-collector/pull/1017)
    * Fix for CCP configmap processing issue (https://github.com/Azure/prometheus-collector/pull/1023)
    * fix keeplist in ccp, when minimalingestionprofile=false (https://github.com/Azure/prometheus-collector/pull/1024)
@@ -19,6 +19,8 @@
    * fix troubleshooting script for hpa and remove uneeded login check (https://github.com/Azure/prometheus-collector/pull/1044)
    * fix telegraf version print to be only for windows (linux already done) (https://github.com/Azure/prometheus-collector/pull/1045)
    * Log only log with level panic and above for TA (https://github.com/Azure/prometheus-collector/pull/1046)
+* Arc Extension Chart:
+  - Arc: configuration settings for GA (https://github.com/Azure/prometheus-collector/pull/1016)
 * Pipeline/Docs/Templates Updates
   - doc: change example for pod annotations namespace regex filter (https://github.com/Azure/prometheus-collector/pull/1042)
   - docs: Add explicit step to check configmap applies for controlPlane to buildandrelease docs (https://github.com/Azure/prometheus-collector/pull/1022)
