@@ -1,4 +1,29 @@
 # Azure Monitor Metrics for AKS clusters
+## Release 01-16-2025
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* AKS and Arc Container Images:
+   * Add support for global settings (https://github.com/Azure/prometheus-collector/pull/1003)
+   * Arc: configuration settings for GA (https://github.com/Azure/prometheus-collector/pull/1016)
+   * fix hubble & cilium regex-es for minimal ingestion profile (https://github.com/Azure/prometheus-collector/pull/1017)
+   * Fix for CCP configmap processing issue (https://github.com/Azure/prometheus-collector/pull/1023)
+   * fix keeplist in ccp, when minimalingestionprofile=false (https://github.com/Azure/prometheus-collector/pull/1024)
+   * Fix dashboard links in Azure managed Prometheus dashboards (https://github.com/Azure/prometheus-collector/pull/1025)
+   * Upgrade otelcollector and TA from 0.109 to 0.116 (https://github.com/Azure/prometheus-collector/pull/1034)
+   * CCP scrape config + adding metrics_relabel_config to end of the config (https://github.com/Azure/prometheus-collector/pull/1035)
+   * build: use new azure linux images for building the reference app (https://github.com/Azure/prometheus-collector/pull/1036)
+   * Handle SIGTERM and exit when encountered restarting the pod (https://github.com/Azure/prometheus-collector/pull/1037)
+   * Print fluent-bit and telegraf version for windows (https://github.com/Azure/prometheus-collector/pull/1043)
+   * fix troubleshooting script for hpa and remove uneeded login check (https://github.com/Azure/prometheus-collector/pull/1044)
+   * fix telegraf version print to be only for windows (linux already done) (https://github.com/Azure/prometheus-collector/pull/1045)
+   * Log only log with level panic and above for TA (https://github.com/Azure/prometheus-collector/pull/1046)
+* Pipeline/Docs/Templates Updates
+  - doc: change example for pod annotations namespace regex filter (https://github.com/Azure/prometheus-collector/pull/1042)
+  - docs: Add explicit step to check configmap applies for controlPlane to buildandrelease docs (https://github.com/Azure/prometheus-collector/pull/1022)
+  - Update HPA doc to add min=max behavior (https://github.com/Azure/prometheus-collector/pull/1009)
+  - doc: readme update for backdoor deployment (https://github.com/Azure/prometheus-collector/pull/1006)
 
 ## Release 12-05-2024 (hot-fix for ccp config map issue ) - CCP release only - 
 * CCP image - 
