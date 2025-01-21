@@ -428,7 +428,7 @@ try {
     if ($null -eq $hpa) {
         $rsPod = kubectl get deployments ama-metrics -n kube-system -o json | ConvertFrom-Json
         if ($null -eq $rsPod) {
-            Write-Host( "ama-metrics replicaset pod not scheduled or failed to scheduled.") -ForegroundColor Red
+            Write-Host("ama-metrics replicaset pod not scheduled or failed to schedule.") -ForegroundColor Red
             Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
             Write-Host($AksOptInLink) -ForegroundColor Red
             Write-Host($contactUSMessage)
@@ -437,18 +437,20 @@ try {
         }
 
         $rsPodStatus = $rsPod.status
-        if ((($rsPodStatus.availableReplicas -eq 1) -and
-                ($rsPodStatus.readyReplicas -eq 1 ) -and
-                ($rsPodStatus.replicas -eq 1 )) -eq $false
+        if ((($rsPodStatus.availableReplicas -ge 2) -and
+            ($rsPodStatus.readyReplicas -ge 2) -and
+            ($rsPodStatus.replicas -ge 2)) -eq $false
         ) {
-            Write-Host("ama-metrics replicaset pod not scheduled or failed to scheduled.") -ForegroundColor Red
+            Write-Host("ama-metrics replicaset pods not scheduled or failed to schedule.") -ForegroundColor Red
             Write-Host("Available ama-metrics replicas:", $rsPodStatus.availableReplicas)
             Write-Host("Ready ama-metrics replicas:", $rsPodStatus.readyReplicas)
             Write-Host("Total ama-metrics replicas:", $rsPodStatus.replicas)
             Write-Host($rsPod) -ForegroundColor Red
             Write-Host("get ama-metrics rs pod details ...")
-            $amaMetricsRsPod = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
-            Write-Host("status of the ama-metrics rs pod is :", $amaMetricsRsPod.Items[0].status.conditions) -ForegroundColor Red
+            $amaMetricsRsPods = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
+            foreach ($pod in $amaMetricsRsPods.items) {
+                Write-Host("status of the ama-metrics rs pod is:", $pod.status.conditions) -ForegroundColor Red
+            }
             Write-Host("successfully got ama-metrics rs pod details ...")
             Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
             Write-Host($AksOptInLink) -ForegroundColor Red
@@ -457,37 +459,34 @@ try {
             exit 1
         }
 
-        $amaMetricsRsPod = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
-        $podName = $amaMetricsRsPod.Items[0].metadata.name
-        # Copy MetricsExtensionConsoleDebugLog.log from container to debuglogs directory
-        kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
-        Write-Host("MetricsExtensionConsoleDebugLog$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+        # Fetch all ama-metrics pods
+        $amaMetricsRsPods = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
+        foreach ($pod in $amaMetricsRsPods.items) {
+            $podName = $pod.metadata.name
 
-        # Copy MDSD log from container to debuglogs directory
-        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.qos ./$debuglogsDir/mdsd_qos_$($podName).log
-        Write-Host("mdsd_qos_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+            # Copy MetricsExtensionConsoleDebugLog.log from container to debuglogs directory
+            kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
+            Write-Host("MetricsExtensionConsoleDebugLog_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
 
-        # Copy MDSD log from container to debuglogs directory
-        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.info ./$debuglogsDir/mdsd_info_$($podName).log
-        Write-Host("mdsd_info_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+            # Copy MDSD logs from container to debuglogs directory
+            $logFiles = @("mdsd.qos", "mdsd.info", "mdsd.warn", "mdsd.err")
+            foreach ($logFile in $logFiles) {
+                kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/$logFile ./$debuglogsDir/$($logFile)_$($podName).log
+                Write-Host("$($logFile)_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+            }
 
-        # Copy MDSD log from container to debuglogs directory
-        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.warn ./$debuglogsDir/mdsd_warn_$($podName).log
-        Write-Host("mdsd_warn_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+            # Get logs from prometheus-collector container and store in a file
+            $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
+            kubectl logs $($podName) -n kube-system -c prometheus-collector > $promCollectorLogPath
 
-        # Copy MDSD log from container to debuglogs directory
-        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.err ./$debuglogsDir/mdsd_err_$($podName).log
-        Write-Host("mdsd_err_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+            # Get logs from addon-token-adapter container and store in a file
+            $addonTokenAdapterLogPath = "$debuglogsDir/$($podName)_addontokenadapter.log"
+            kubectl logs $($podName) -n kube-system -c addon-token-adapter > $addonTokenAdapterLogPath
 
-        # Get logs from prometheus-collector container and store in a file
-        $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
-        kubectl logs $($amaMetricsRsPod.Items[0].metadata.name) -n kube-system -c prometheus-collector > $promCollectorLogPath
+            Write-Host("Logs for pod $($podName) copied successfully.") -ForegroundColor Green
+        }
 
-        # Get logs from prometheus-collector container and store in a file
-        $promCollectorLogPath = "$debuglogsDir/$($podName)_addontokenadapter.log"
-        kubectl logs $($podName) -n kube-system -c addon-token-adapter > $promCollectorLogPath
-
-        Write-Host( "ama-metrics replicaset pod running OK.") -ForegroundColor Green
+        Write-Host("All ama-metrics replicaset pods are running OK.") -ForegroundColor Green
     }
     else {
         Write-Host("Fetching HPA status for ama-metrics...")
