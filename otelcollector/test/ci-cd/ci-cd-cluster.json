@@ -4,50 +4,49 @@
   "parameters": {
     "azureMonitorWorkspaceLocation": {
       "type": "string",
-      "defaultValue": "eastus",
+      "defaultValue": "WestUS2",
       "allowedValues": [
-        "eastus2euap",
-        "northcentralus",
-        "eastus",
-        "australiacentral",
-        "australiasoutheast",
-        "brazilsouth",
-        "canadacentral",
-        "centralindia",
-        "centralus",
-        "eastasia",
-        "eastus2",
-        "northeurope",
-        "norwayeast",
-        "southafricanorth",
-        "southcentralus",
-        "southeastasia",
-        "uaenorth",
-        "uksouth",
-        "westcentralus",
-        "westeurope",
-        "westus",
-        "westus2",
-        "francesouth",
-        "germanywestcentral",
-        "israelcentral",
-        "italynorth",
-        "japanwest",
-        "koreacentral",
-        "switzerlandnorth",
-        "brazilsoutheast",
-        "francecentral",
-        "ukwest",
-        "koreasouth",
-        "switzerlandwest",
-        "japaneast",
-        "swedencentral",
-        "canadaeast",
-        "norwaywest",
-        "southindia",
-        "australiaeast",
-        "swedensouth",
-        "usgovvirginia"
+        "EastUS",
+        "AustraliaCentral",
+        "AustraliaCentral2",
+        "AustraliaEast",
+        "AustraliaSoutheast",
+        "BrazilSouth",
+        "CanadaCentral",
+        "CanadaEast",
+        "CentralIndia",
+        "CentralUS",
+        "EastAsia",
+        "EastUS2",
+        "FranceCentral",
+        "GermanyWestCentral",
+        "IsraelCentral",
+        "ItalyNorth",
+        "JapanEast",
+        "JapanWest",
+        "KoreaCentral",
+        "KoreaSouth",
+        "MexicoCentral",
+        "NorthEurope",
+        "NorwayEast",
+        "SouthAfricaNorth",
+        "SouthCentralUS",
+        "SoutheastAsia",
+        "SouthIndia",
+        "SpainCentral",
+        "SwedenCentral",
+        "SwitzerlandNorth",
+        "TaiwanNorth",
+        "TaiwanNorthWest",
+        "UAENorth",
+        "UAECentral",
+        "UKSouth",
+        "UKWest",
+        "WestCentralUS",
+        "WestEurope",
+        "WestUS",
+        "WestUS2",
+        "WestUS3"
       ]
     },
     "metricLabelsAllowlist": {
@@ -66,17 +65,131 @@
       }
     },
     "clusterLocation": {
-      "type": "string",
-      "defaultValue": "eastus",
+      "defaultValue": "WestUS2",
+      "type": "String",
+      "allowedValues": [
+            "AustraliaCentral",
+            "AustraliaCentral2",
+            "AustraliaEast",
+            "AustraliaSoutheast",
+            "BrazilSouth",
+            "BrazilSoutheast",
+            "CanadaCentral",
+            "CanadaEast",
+            "CentralIndia",
+            "CentralUS",
+            "EastAsia",
+            "EastUS",
+            "EastUS2",
+            "FranceCentral",
+            "FranceSouth",
+            "GermanyNorth",
+            "GermanyWestCentral",
+            "IsraelCentral",
+            "ItalyNorth",
+            "JapanEast",
+            "JapanWest",
+            "JioIndiaCentral",
+            "JioIndiaWest",
+            "KoreaCentral",
+            "KoreaSouth",
+            "MexicoCentral",
+            "NorthCentralUS",
+            "NorthEurope",
+            "NorwayEast",
+            "NorwayWest",
+            "PolandCentral",
+            "QatarCentral",
+            "SouthAfricaNorth",
+            "SouthAfricaWest",
+            "SouthCentralUS",
+            "SouthIndia",
+            "SoutheastAsia",
+            "SpainCentral",
+            "SwedenCentral",
+            "SwitzerlandNorth",
+            "SwitzerlandWest",
+            "UAECentral",
+            "UAENorth",
+            "UKSouth",
+            "UKWest",
+            "WestCentralUS",
+            "WestEurope",
+            "WestUS",
+            "WestUS2",
+            "WestUS3"                ],
       "metadata": {
-        "description": "The location of the Managed Cluster resource."
+          "description": "The location of the Managed Cluster resource."
+      }
+    },
+    "clusterApiVersion": {
+      "type": "string",
+      "defaultValue": "2024-01-01",
+      "metadata": {
+        "description": "apiVersion for Microsoft.ContainerService/managedClusters"
+      }
+    },    
+    "availabilityZones": {
+      "type": "array",
+      "defaultValue": ["1", "2", "3"],
+      "metadata": {
+        "description":"[ 1, 2, 3 ]"
+      }
+    },
+    "agentPoolVmSize": {
+        "type": "string",
+        "defaultValue": "Standard_D4s_v3",
+        "metadata": {
+          "description": "VM size for specified agent pool"
+      }
+    },
+    "marinerVmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D4s_v3",
+      "metadata": {
+        "description": "VM size for specified agent pool"
+      }
+    },
+    "arm64VmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D4pds_v5",
+      "metadata": {
+        "description": "VM size for specified agent pool"
+      }
+    },
+    "marinerarm64VmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D4pds_v5",
+      "metadata": {
+        "description": "VM size for specified agent pool"
+      }
+    },
+    "win22VmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "metadata": {
+        "description": "VM size for specified agent pool"
+      }
+    },
+    "win19VmSize": {
+      "type": "string",
+      "defaultValue": "Standard_DS3_v2",
+      "metadata": {
+        "description": "VM size for specified agent pool"
       }
     },
     "windowsAdminPassword": {
-      "type": "secureString",
+      "type": "securestring",
       "defaultValue": "[newGuid()]",
       "metadata": {
         "description": "The password of the Windows Admin user."
+      }
+    },
+    "actionGroupId": {
+      "type": "string",
+      "defaultValue": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup",
+      "metadata": {
+        "description": "Action group used for alerts"
       }
     }
   },
@@ -110,7 +223,7 @@
     },
     {
       "type": "Microsoft.ContainerService/managedClusters",
-      "apiVersion": "2024-01-01",
+      "apiVersion": "[parameters('clusterApiVersion')]",
       "name": "[parameters('clusterName')]",
       "location": "[parameters('clusterLocation')]",
       "identity": {
@@ -144,16 +257,12 @@
           {
               "name": "agentpool",
               "count": 3,
-              "vmSize": "Standard_D4s_v3",
+              "vmSize": "[parameters('agentPoolVmSize')]",
               "osDiskType": "Managed",
               "kubeletDiskType": "OS",
               "maxPods": 110,
               "type": "VirtualMachineScaleSets",
-              "availabilityZones": [
-                  "1",
-                  "2",
-                  "3"
-              ],
+              "availabilityZones": "[parameters('availabilityZones')]",
               "enableAutoScaling": false,
               "enableNodePublicIP": false,
               "mode": "System",
@@ -162,49 +271,41 @@
               "enableFIPS": false
           },
           {
-            "name": "agentpool",
-            "count": 1,
-            "vmSize": "Standard_D4s_v3",
-            "osDiskType": "Managed",
-            "kubeletDiskType": "OS",
-            "maxPods": 110,
-            "type": "VirtualMachineScaleSets",
-            "availabilityZones": [
-                "1",
-                "2",
-                "3"
-            ],
-            "enableAutoScaling": false,
-            "enableNodePublicIP": false,
-            "mode": "System",
-            "osType": "Linux",
-            "osSKU": "Ubuntu",
-            "enableFIPS": true
-        },
+              "name": "agentpool1",
+              "count": 1,
+              "vmSize": "[parameters('agentPoolVmSize')]",
+              "osDiskType": "Managed",
+              "kubeletDiskType": "OS",
+              "maxPods": 110,
+              "type": "VirtualMachineScaleSets",
+              "availabilityZones": "[parameters('availabilityZones')]",
+              "enableAutoScaling": false,
+              "enableNodePublicIP": false,
+              "mode": "System",
+              "osType": "Linux",
+              "osSKU": "Ubuntu",
+              "enableFIPS": true
+          },
           {
-            "name": "mariner",
-            "count": 1,
-            "vmSize": "Standard_D4s_v3",
-            "osDiskType": "Managed",
-            "kubeletDiskType": "OS",
-            "maxPods": 110,
-            "type": "VirtualMachineScaleSets",
-            "availabilityZones": [
-                "1",
-                "2",
-                "3"
-            ],
-            "enableAutoScaling": false,
-            "enableNodePublicIP": false,
-            "mode": "System",
-            "osType": "Linux",
-            "osSKU": "Mariner",
-            "enableFIPS": false
+              "name": "mariner",
+              "count": 1,
+              "vmSize": "[parameters('marinerVmSize')]",
+              "osDiskType": "Managed",
+              "kubeletDiskType": "OS",
+              "maxPods": 110,
+              "type": "VirtualMachineScaleSets",
+              "availabilityZones": "[parameters('availabilityZones')]",
+              "enableAutoScaling": false,
+              "enableNodePublicIP": false,
+              "mode": "System",
+              "osType": "Linux",
+              "osSKU": "Mariner",
+              "enableFIPS": false
           },
           {
               "name": "arm64",
               "count": 3,
-              "vmSize": "Standard_D4pds_v5",
+              "vmSize": "[parameters('arm64VmSize')]",
               "osDiskType": "Ephemeral",
               "kubeletDiskType": "OS",
               "maxPods": 30,
@@ -217,24 +318,24 @@
               "enableFIPS": false
           },
           {
-            "name": "marinerarm64",
-            "count": 3,
-            "vmSize": "Standard_D4pds_v5",
-            "osDiskType": "Ephemeral",
-            "kubeletDiskType": "OS",
-            "maxPods": 30,
-            "type": "VirtualMachineScaleSets",
-            "enableAutoScaling": false,
-            "mode": "User",
-            "osType": "Linux",
-            "osSKU": "Mariner",
-            "upgradeSettings": {},
-            "enableFIPS": false
-        },
+              "name": "marinerarm64",
+              "count": 3,
+              "vmSize": "[parameters('marinerarm64VmSize')]",
+              "osDiskType": "Ephemeral",
+              "kubeletDiskType": "OS",
+              "maxPods": 30,
+              "type": "VirtualMachineScaleSets",
+              "enableAutoScaling": false,
+              "mode": "User",
+              "osType": "Linux",
+              "osSKU": "Mariner",
+              "upgradeSettings": {},
+              "enableFIPS": false
+          },
           {
               "name": "win22",
               "count": 1,
-              "vmSize": "Standard_D2s_v3",
+              "vmSize": "[parameters('win22VmSize')]",
               "osDiskType": "Managed",
               "kubeletDiskType": "OS",
               "workloadRuntime": "OCIContainer",
@@ -254,7 +355,7 @@
           {
               "name": "win19",
               "count": 2,
-              "vmSize": "Standard_DS3_v2",
+              "vmSize": "[parameters('win19VmSize')]",
               "osDiskType": "Ephemeral",
               "kubeletDiskType": "OS",
               "maxPods": 30,
@@ -266,7 +367,16 @@
               "osSKU": "Windows2019",
               "enableFIPS": false
           }
-        ]
+        ],
+        "azureMonitorProfile": {
+          "metrics": {
+            "enabled": true,
+            "kubeStateMetrics": {
+              "metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
+              "metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
+            }
+          }
+        }
       }
     },
     {
@@ -354,49 +464,16 @@
         "parameters": {}
       }
     },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "[Concat('azuremonitormetrics-profile-', '-',  uniqueString(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))))]",
-      "apiVersion": "2017-05-10",
-      "dependsOn": [
-        "[Concat('azuremonitormetrics-dcra', '-',  uniqueString(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))))]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "parameters": {},
-          "variables": {},
-          "resources": [
-            {
-              "name": "[parameters('clusterName')]",
-              "type": "Microsoft.ContainerService/managedClusters",
-              "location": "[parameters('clusterLocation')]",
-              "apiVersion": "2023-01-01",
-              "properties": {
-                "mode": "Incremental",
-                "id": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]",
-                "azureMonitorProfile": {
-                  "metrics": {
-                    "enabled": false,
-                    "kubeStateMetrics": {
-                      "metricLabelsAllowlist": "[parameters('metricLabelsAllowlist')]",
-                      "metricAnnotationsAllowList": "[parameters('metricAnnotationsAllowList')]"
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        "parameters": {}
-      }
-    },
+
+
     {
       "name": "[variables('nodeRecordingRuleGroupName')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
-      "apiVersion": "2023-03-01",
+      "apiVersion": "2023-03-01",    
+      "dependsOn": [
+        "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+      ],        
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "properties": {
         "description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
@@ -458,6 +535,10 @@
       "name": "[variables('kubernetesRecordingRuleGroupName')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
       "apiVersion": "2023-03-01",
+      "dependsOn": [
+        "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+      ],      
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "properties": {
         "description": "[concat(variables('kubernetesRecordingRuleGroupDescription'), variables('version'))]",
@@ -563,6 +644,10 @@
       "name": "[variables('nodeRecordingRuleGroupNameWin')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
       "apiVersion": "2023-03-01",
+      "dependsOn": [
+        "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+      ],      
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
@@ -641,6 +726,10 @@
       "name": "[variables('nodeAndKubernetesRecordingRuleGroupNameWin')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
       "apiVersion": "2023-03-01",
+      "dependsOn": [
+        "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+      ],      
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
       "properties": {
         "description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
@@ -723,13 +812,19 @@
         ]
       }
     },
+
+
     {
       "name": "[Concat(parameters('clusterName'), '-dev-alerts')]",
       "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
       "apiVersion": "2023-03-01",
       "location": "[parameters('azureMonitorWorkspaceLocation')]",
+      "dependsOn": [
+        "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
+      ],         
       "properties": {
-          "description": "[Concat('Rule group for cluster', parameters('clusterName'), 'in the workspace', variables('azureMonitorWorkspaceName')]",
+          "description": "[Concat('Rule group for cluster', parameters('clusterName'), 'in the workspace', variables('azureMonitorWorkspaceName'))]",
           "scopes": [
               "[resourceId('microsoft.monitor/accounts/', variables('azureMonitorWorkspaceName'))]",
               "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]"
@@ -751,7 +846,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -769,7 +864,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -787,7 +882,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -805,7 +900,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -823,7 +918,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -841,7 +936,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -859,7 +954,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -877,7 +972,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -895,7 +990,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -913,7 +1008,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -931,7 +1026,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -949,7 +1044,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               },
@@ -967,7 +1062,7 @@
                   },
                   "actions": [
                       {
-                          "actionGroupId": "/subscriptions/13d371f9-5a39-46d5-8e1b-60158c49db84/resourceGroups/ContainerInsightsPrometheusCollector-Prod/providers/microsoft.insights/actiongroups/AMA-PrometheusCollectorAlertGroup"
+                          "actionGroupId": "[parameters('actionGroupId')]"
                       }
                   ]
               }
