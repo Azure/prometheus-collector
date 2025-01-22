@@ -36,6 +36,9 @@ spec:
       - name: targetallocator
         args:
         - --enable-prometheus-cr-watcher
+        # - --zap-log-level=error
+        #- --zap-encoder=json
+        # - --zap-stacktrace-level=panic
         image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:
