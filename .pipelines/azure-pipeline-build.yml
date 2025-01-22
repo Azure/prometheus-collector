@@ -1940,7 +1940,7 @@ stages:
               kubectl apply -f ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows=configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
 
@@ -2191,7 +2191,7 @@ stages:
               kubectl apply -f ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows=configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
 
