@@ -1,0 +1,26 @@
+parameters:
+- name: azureSubscription
+  type: string
+  default: 'ContainerInsights_Dev_Grace'
+- name: resourceGroup
+  type: string
+  default: 'rg'
+- name: deployParameters
+  type: string
+
+steps:
+- task: AzureCLI@2
+  displayName: "Deploy AKS cluster"
+  inputs:
+    azureSubscription: ${{ parameters.azureSubscription }}
+    scriptType: ps
+    scriptLocation: inlineScript
+    inlineScript: |+
+      az --version
+      az account show
+      az deployment group create `
+          --resource-group ${{ parameters.resourceGroup }} `
+          --name ClusterDeployment `
+          --template-file ".\otelcollector\test\ci-cd\ci-cd-cluster.json" `
+          --parameters ${{ parameters.deployParameters }}  
+          

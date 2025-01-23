@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/prometheus-collector/shared"
@@ -257,18 +256,17 @@ func Configmapparser() {
 		}
 
 		// Source prom_config_validator_env_var
-		cmd := exec.Command("bash", "-c", "source /opt/microsoft/prom_config_validator_env_var && env")
-		if err := cmd.Run(); err != nil {
-			shared.EchoError("Error sourcing env file:" + err.Error())
-			return
-		}
+		filename := "/opt/microsoft/prom_config_validator_env_var"
+	  err = shared.SetEnvVarsFromFile(filename)
+	  if err != nil {
+		  fmt.Printf("Error when settinng env for /opt/microsoft/prom_config_validator_env_var: %v\n", err)
+	  }
 
-		// Source envvars.env
-		cmd = exec.Command("bash", "-c", "source /opt/envvars.env && env")
-		if err := cmd.Run(); err != nil {
-			shared.EchoError("Error sourcing envvars.env:" + err.Error())
-			return
-		}
+		filename = "/opt/envvars.env"
+	  err = shared.SetEnvVarsFromFile(filename)
+	  if err != nil {
+		  fmt.Printf("Error when settinng env for /opt/envvars.env: %v\n", err)
+	  }		
 	}
 
 	fmt.Printf("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))

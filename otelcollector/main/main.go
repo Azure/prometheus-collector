@@ -56,7 +56,7 @@ func main() {
 		shared.StartCommand("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\opt\\scripts\\filesystemwatcher.ps1")
 	}
 
-	if ccpMetricsEnabled != "true" {
+	if ccpMetricsEnabled != "true" && osType == "linux" {
 		if err := shared.SetupArcEnvironment(); err != nil {
 			shared.EchoError(err.Error())
 		}
@@ -194,14 +194,15 @@ func main() {
 
 		shared.StartTelegraf()
 		// Print Telegraf version
-		versionCmd := exec.Command("C:\\opt\\telegraf\\telegraf.exe", "--version")
-		versionOutput, err := versionCmd.Output()
-		if err != nil {
-			log.Printf("Error fetching Telegraf version: %v\n", err)
-		} else {
-			fmt.Printf("TELEGRAF_VERSION=%s\n", string(versionOutput))
+		if osType == "windows" {
+			versionCmd := exec.Command("C:\\opt\\telegraf\\telegraf.exe", "--version")
+			versionOutput, err := versionCmd.Output()
+			if err != nil {
+				log.Printf("Error fetching Telegraf version: %v\n", err)
+			} else {
+				fmt.Printf("TELEGRAF_VERSION=%s\n", string(versionOutput))
+			}
 		}
-
 	}
 
 	if osType == "linux" {
