@@ -56,7 +56,7 @@ func main() {
 		shared.StartCommand("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\opt\\scripts\\filesystemwatcher.ps1")
 	}
 
-	if ccpMetricsEnabled != "true" {
+	if ccpMetricsEnabled != "true" && osType == "linux" {
 		if err := shared.SetupArcEnvironment(); err != nil {
 			shared.EchoError(err.Error())
 		}
