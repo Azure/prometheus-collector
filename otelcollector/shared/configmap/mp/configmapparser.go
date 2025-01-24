@@ -360,7 +360,7 @@ func ParseV1Config(configDir string) (map[string]map[string]string, error) {
 
 	// Iterate over each file in the directory
 	for _, file := range files {
-		if file.IsDir() {
+		if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
 			continue
 		}
 
