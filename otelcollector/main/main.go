@@ -261,7 +261,7 @@ func main() {
 
 	// Expose a health endpoint for liveness probe
 	http.HandleFunc("/health", healthHandler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8085", nil)
 }
 
 // handleShutdown listens for SIGTERM signals and handles cleanup.

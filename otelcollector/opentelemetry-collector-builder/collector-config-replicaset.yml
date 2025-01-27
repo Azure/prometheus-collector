@@ -1,6 +1,7 @@
 exporters:
   prometheus:
     endpoint: "127.0.0.1:9091"
+    listen_address: "0.0.0.0:8080"
     const_labels:
       cluster: ${env:AZMON_CLUSTER_LABEL}
   otlp:
