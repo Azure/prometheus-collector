@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-
-	"github.com/pelletier/go-toml"
 )
 
 const (
@@ -13,30 +11,6 @@ const (
 	envVariableTemplateName           = "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"
 	envVariableAnnotationsEnabledName = "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"
 )
-
-func parseConfigMapForPodAnnotations() (map[string]interface{}, error) {
-	if os.Getenv("AZMON_AGENT_CFG_FILE_VERSION") == "v1" {
-		file, err := os.Open(configMapMountPathForPodAnnotation)
-		if err != nil {
-			return nil, fmt.Errorf("configmap section not mounted, using defaults")
-		}
-		defer file.Close()
-
-		if data, err := os.ReadFile(configMapMountPathForPodAnnotation); err == nil {
-			parsedConfig := make(map[string]interface{})
-			if err := toml.Unmarshal(data, &parsedConfig); err == nil {
-				return parsedConfig, nil
-			} else {
-				return nil, fmt.Errorf("exception while parsing config map for pod annotations: %v, using defaults, please check config map for pod annotations", err)
-			}
-		} else {
-			return nil, fmt.Errorf("error reading config map file: %v", err)
-		}
-	} else if os.Getenv("AZMON_AGENT_CFG_FILE_VERSION") == "v2" {
-		return nil, fmt.Errorf("configmap section not mounted, using defaults")
-	}
-	return nil, fmt.Errorf("unkonwn schema version in config, using defaults")
-}
 
 func isValidRegex(str string) bool {
 	_, err := regexp.Compile(str)
@@ -73,12 +47,8 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 	return nil
 }
 
-func configurePodAnnotationSettings() error {
-	parsedConfig, err := parseConfigMapForPodAnnotations()
-	if err != nil || parsedConfig == nil {
-		return err
-	}
-	podannotationNamespaceRegex, err := populatePodAnnotationNamespaceFromConfigMap(parsedConfig)
+func configurePodAnnotationSettings(parsedData map[string]map[string]string) error {
+	podannotationNamespaceRegex, err := populatePodAnnotationNamespaceFromConfigMap(parsedData)
 	if err != nil {
 		return err
 	}
@@ -88,17 +58,25 @@ func configurePodAnnotationSettings() error {
 	return nil
 }
 
-func populatePodAnnotationNamespaceFromConfigMap(parsedConfig map[string]interface{}) (string, error) {
-	regex, ok := parsedConfig["podannotationnamespaceregex"]
-	if !ok || regex == nil {
-		fmt.Printf("Pod annotation namespace regex does not have a value")
-		return "", fmt.Errorf("Pod annotation namespace regex does not have a value")
+func populatePodAnnotationNamespaceFromConfigMap(parsedData map[string]map[string]string) (string, error) {
+	// Access the nested map and value
+	innerMap, ok := parsedData["pod-annotation-based-scraping"]
+	if !ok {
+		fmt.Println("Pod annotation namespace regex configuration not found")
+		return "", fmt.Errorf("pod annotation namespace regex configuration not found")
 	}
-	regexString := regex.(string)
-	if isValidRegex(regexString) {
-		fmt.Printf("Using configmap namespace regex for podannotations: %s\n", regexString)
-		return regexString, nil
+
+	regex, ok := innerMap["podannotationnamespaceregex"]
+	if !ok || regex == "" {
+		fmt.Println("Pod annotation namespace regex does not have a value")
+		return "", fmt.Errorf("pod annotation namespace regex does not have a value")
+	}
+
+	// Validate the regex
+	if isValidRegex(regex) {
+		fmt.Printf("Using configmap namespace regex for pod annotations: %s\n", regex)
+		return regex, nil
 	} else {
-		return "", fmt.Errorf("Invalid namespace regex for podannotations: %s\n", regexString)
+		return "", fmt.Errorf("invalid namespace regex for pod annotations: %s", regex)
 	}
 }

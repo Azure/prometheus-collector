@@ -55,9 +55,9 @@ func setConfigFileVersionEnv() {
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion, true)
 }
 
-func parseSettingsForPodAnnotations() {
+func parseSettingsForPodAnnotations(parsedData map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseSettingsForPodAnnotations")
-	if err := configurePodAnnotationSettings(); err != nil {
+	if err := configurePodAnnotationSettings(parsedData); err != nil {
 		fmt.Printf("%v\n", err)
 		return
 	}
@@ -107,23 +107,23 @@ func handlePodAnnotationsFile(filename string) {
 	}
 }
 
-func parsePrometheusCollectorConfig() {
+func parsePrometheusCollectorConfig(parsedData map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parsePrometheusCollectorConfig")
-	parseConfigAndSetEnvInFile()
+	parseConfigAndSetEnvInFile(parsedData)
 	handleEnvFileError(collectorSettingsEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parsePrometheusCollectorConfig")
 }
 
-func parseDefaultScrapeSettings() {
+func parseDefaultScrapeSettings(parsedData map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseDefaultScrapeSettings")
-	tomlparserDefaultScrapeSettings()
+	tomlparserDefaultScrapeSettings(parsedData)
 	handleEnvFileError(defaultSettingsEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseDefaultScrapeSettings")
 }
 
-func parseDebugModeSettings() {
+func parseDebugModeSettings(parsedData map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseDebugModeSettings")
-	if err := ConfigureDebugModeSettings(); err != nil {
+	if err := ConfigureDebugModeSettings(parsedData); err != nil {
 		shared.EchoError(err.Error())
 		return
 	}
@@ -143,39 +143,39 @@ func Configmapparser() {
 	setConfigSchemaVersionEnv()
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	var parsedData map[string]map[string]string
+	var err error
 	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
 		filePath := "/etc/config/settings/dataplane-metrics"
-		parsedData, err := ParseMetricsFile(filePath)
+		parsedData, err = ParseMetricsFile(filePath)
 		if err != nil {
 			fmt.Printf("Error parsing file: %v\n", err)
 			return
 		}
 
 		// Print the parsed data
-		fmt.Println("Parsed Data:")
-		fmt.Printf("%+v\n", parsedData)
+		// fmt.Println("Parsed Data:")
+		// fmt.Printf("%+v\n", parsedData)
 
-		// Access specific values
 		fmt.Println("kubelet enabled:", parsedData["default-scrape-settings-enabled"]["kubelet"])
 		fmt.Println("podannotationnamespaceregex:", parsedData["pod-annotation-based-scraping"]["podannotationnamespaceregex"])
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
 		configDir := "/etc/config/settings"
-		parsedData, err := ParseV1Config(configDir)
+		parsedData, err = ParseV1Config(configDir)
 		if err != nil {
 			fmt.Printf("Error parsing config: %v\n", err)
 			return
 		}
 
-		// Print the parsed data
-		fmt.Println("Parsed Data:")
-		for section, values := range parsedData {
-			fmt.Printf("Section: %s\n", section)
-			for key, value := range values {
-				fmt.Printf("  %s = %s\n", key, value)
-			}
-		}
+		// // Print the parsed data
+		// fmt.Println("Parsed Data:")
+		// for section, values := range parsedData {
+		// 	fmt.Printf("Section: %s\n", section)
+		// 	for key, value := range values {
+		// 		fmt.Printf("  %s = %s\n", key, value)
+		// 	}
+		// }
 
-		// Example: Access specific values
 		if settings, ok := parsedData["default-scrape-settings-enabled"]; ok {
 			fmt.Println("kubelet enabled:", settings["kubelet"])
 		}
@@ -184,13 +184,13 @@ func Configmapparser() {
 	}
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	parseSettingsForPodAnnotations()
-	parsePrometheusCollectorConfig()
-	parseDefaultScrapeSettings()
-	parseDebugModeSettings()
+	parseSettingsForPodAnnotations(parsedData)
+	parsePrometheusCollectorConfig(parsedData)
+	parseDefaultScrapeSettings(parsedData)
+	parseDebugModeSettings(parsedData)
 
-	tomlparserTargetsMetricsKeepList()
-	tomlparserScrapeInterval()
+	tomlparserTargetsMetricsKeepList(parsedData)
+	tomlparserScrapeInterval(parsedData)
 
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 	containerType := os.Getenv("CONTAINER_TYPE")

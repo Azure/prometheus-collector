@@ -39,7 +39,6 @@ data:
       networkobservabilityRetina = ""
       networkobservabilityHubble = ""
       networkobservabilityCilium = ""
-      minimalingestionprofile = true
     minimal-ingestion-profile: |-
       enabled = true
     default-targets-scrape-interval-settings: |-
