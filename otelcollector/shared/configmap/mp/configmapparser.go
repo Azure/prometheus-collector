@@ -155,6 +155,8 @@ func Configmapparser() {
 
 		// Print the parsed data
 		fmt.Println("kubelet enabled:", parsedData["default-scrape-settings-enabled"]["kubelet"])
+		fmt.Println("kubelet keep list:", parsedData["default-targets-metrics-keep-list"]["kubelet"])
+		fmt.Println("kubelet scrape interval:", parsedData["default-targets-scrape-interval-settings"]["kubelet"])
 		fmt.Println("podannotationnamespaceregex:", parsedData["pod-annotation-based-scraping"]["podannotationnamespaceregex"])
 		fmt.Println("cluster_alias:", parsedData["prometheus-collector-settings"]["cluster_alias"])
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
