@@ -28,7 +28,7 @@ func checkDuration(duration string) string {
 }
 
 func getParsedDataValue(parsedData map[string]map[string]string, key string) string {
-	if value, exists := parsedData["scrape-intervals"][key]; exists {
+	if value, exists := parsedData["default-targets-scrape-interval-settings"][key]; exists {
 		return checkDuration(value)
 	}
 	return defaultScrapeInterval
@@ -61,9 +61,6 @@ func processConfigMap(parsedData map[string]map[string]string) map[string]string
 
 		return intervalHash
 	}
-
-	// If parsedData is empty or schema version doesn't match, use default
-	fmt.Printf("Error or unsupported config schema version. Using default scrape interval settings\n")
 
 	// Set each value in intervalHash to "30s" from default
 	keys := []string{
