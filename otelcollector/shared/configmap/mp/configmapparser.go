@@ -147,7 +147,7 @@ func Configmapparser() {
 	var err error
 	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
 		filePaths := []string{"/etc/config/settings/dataplane-metrics", "/etc/config/settings/shared"}
-		parsedData, err := ParseMetricsFiles(filePaths)
+		parsedData, err = ParseMetricsFiles(filePaths)
 		if err != nil {
 			fmt.Printf("Error parsing files: %v\n", err)
 			return
