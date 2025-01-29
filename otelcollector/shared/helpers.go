@@ -283,3 +283,12 @@ func GetMcsEndpoints(customEnvironment string) (string, string) {
 	}
 	return mcsEndpoint, mcsGlobalEndpoint
 }
+
+// Helper function to remove surrounding quotes from a string
+func RemoveQuotes(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
+		return s[1 : len(s)-1]
+	}
+	return s
+}

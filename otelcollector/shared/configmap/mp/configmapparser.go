@@ -347,7 +347,7 @@ func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error)
 			if currentSection != "" && strings.Contains(line, "=") {
 				parts := strings.SplitN(line, "=", 2)
 				key := strings.TrimSpace(parts[0])
-				value := strings.TrimSpace(parts[1])
+				value := shared.RemoveQuotes(strings.TrimSpace(parts[1]))
 				parsedData[currentSection][key] = value
 			}
 		}
@@ -405,7 +405,7 @@ func ParseV1Config(configDir string) (map[string]map[string]string, error) {
 			if strings.Contains(line, "=") {
 				parts := strings.SplitN(line, "=", 2)
 				key := strings.TrimSpace(parts[0])
-				value := strings.TrimSpace(parts[1])
+				value := shared.RemoveQuotes(strings.TrimSpace(parts[1]))
 				sectionData[key] = value
 			}
 		}
