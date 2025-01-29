@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
@@ -12,6 +13,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/metric"
+	gosdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"google.golang.org/grpc/encoding/gzip"
 )
 
 type TempInfo struct {
@@ -187,27 +197,49 @@ var (
 func recordMetrics() {
 	go func() {
 		i := 0
+
+		ctx := context.Background()
 		for {
 			for location, tempInfoByCity := range locationsToMinTemp {
 				for city, info := range tempInfoByCity {
+					metricAttributes := attribute.NewSet(
+						attribute.String("city", city),
+						attribute.String("location", location),
+					)
+
 					counter.WithLabelValues(city, location).Inc()
+					otlpCounter.Add(ctx, 1, metric.WithAttributeSet(metricAttributes))
 
 					tempRange := info.tempRange
 					minTemp := info.minTemp
 					temperature := float64(rand.Intn(tempRange) + minTemp)
 					gauge.WithLabelValues(city, location).Set(temperature)
+					otlpGauge.Record(ctx, int64(temperature), metric.WithAttributeSet(metricAttributes))
+
 					summary.WithLabelValues(city, location).Observe(temperature)
+
 					histogram.WithLabelValues(city, location).Observe(temperature)
+					otlpExponentialHistogram.Record(ctx, int64(temperature), metric.WithAttributeSet(metricAttributes))
+					otlpExplicitHistogram.Record(ctx, int64(temperature), metric.WithAttributeSet(metricAttributes))
 				}
 			}
 
 			for location, rainfallByCity := range locationsToAvgRainfall {
 				for city, rainfall := range rainfallByCity {
+					metricAttributes := attribute.NewSet(
+						attribute.String("city", city),
+						attribute.String("location", location),
+					)
 
 					recordedRainfall := (float64(rand.Intn(10)) + rainfall*100.0) / 100.0
 					rainfallGauge.WithLabelValues(city, location).Set(recordedRainfall)
+					otlpRainfallGauge.Record(ctx, recordedRainfall, metric.WithAttributeSet(metricAttributes))
+
 					rainfallSummary.WithLabelValues(city, location).Observe(recordedRainfall)
+
 					rainfallHistogram.WithLabelValues(city, location).Observe(recordedRainfall)
+					otlpExponentialRainfallHistogram.Record(ctx, recordedRainfall, metric.WithAttributeSet(metricAttributes))
+					otlpExplicitRainfallHistogram.Record(ctx, recordedRainfall, metric.WithAttributeSet(metricAttributes))
 				}
 			}
 
@@ -291,6 +323,14 @@ func createGauges() {
 }
 
 var (
+	otlpCounter                      metric.Int64Counter
+	otlpGauge                        metric.Int64Gauge
+	otlpRainfallGauge                metric.Float64Gauge
+	otlpExponentialHistogram         metric.Int64Histogram
+	otlpExplicitHistogram            metric.Int64Histogram
+	otlpExponentialRainfallHistogram metric.Float64Histogram
+	otlpExplicitRainfallHistogram    metric.Float64Histogram
+
 	scrapeIntervalSec = 60
 	metricCount       = 10000
 	gaugeList         = make([]*prometheus.GaugeVec, 0, metricCount)
@@ -349,6 +389,7 @@ var (
 			"location",
 		},
 	)
+
 	summary = promauto.NewSummaryVec(
 		prometheus.SummaryOpts{
 			Name:       "myapp_temperature_summary",
@@ -409,6 +450,7 @@ var (
 			"location",
 		},
 	)
+
 	rainfallHistogram = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "myapp_rainfall_histogram",
@@ -461,6 +503,9 @@ func main() {
 
 	// certFile := "/etc/prometheus/certs/client-cert.pem"
 	// keyFile := "/etc/prometheus/certs/client-key.pem"
+
+	setupOTLP()
+
 	if os.Getenv("RUN_PERF_TEST") == "true" {
 		if os.Getenv("SCRAPE_INTERVAL") != "" {
 			scrapeIntervalSec, _ = strconv.Atoi(os.Getenv("SCRAPE_INTERVAL"))
@@ -491,10 +536,148 @@ func main() {
 	}()
 
 	// Run main server for weather app metrics
-	// err := http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
-	// if err != nil {
-	// 	log.Printf("HTTP server failed to start: %v", err)
-	// }
+	err := http.ListenAndServe(":2112", weatherServer)
+	if err != nil {
+		log.Printf("HTTP server failed to start: %v", err)
+	}
 
 	fmt.Printf("ending main function")
+}
+
+// UpDown Counters should always be cumulative.
+func deltaSelector(kind gosdkmetric.InstrumentKind) metricdata.Temporality {
+	switch kind {
+	case gosdkmetric.InstrumentKindUpDownCounter,
+		gosdkmetric.InstrumentKindObservableUpDownCounter:
+		return metricdata.CumulativeTemporality
+	default:
+		return metricdata.DeltaTemporality
+	}
+}
+
+func setupOTLP() {
+	ctx := context.Background()
+
+	var (
+		exporter gosdkmetric.Exporter
+		err      error
+		interval int
+	)
+
+	// The default temporality should be cumulative unless specified as delta otherwise
+	deltaTemporality := os.Getenv("OTEL_TEMPORALITY") == "delta"
+
+	// Export as stdout logs instead for debugging
+	if os.Getenv("OTEL_CONSOLE_METRICS") == "true" {
+		if deltaTemporality {
+			exporter, err = stdoutmetric.New(
+				stdoutmetric.WithPrettyPrint(),
+				stdoutmetric.WithTemporalitySelector(deltaSelector),
+			)
+		} else {
+			exporter, err = stdoutmetric.New(
+				stdoutmetric.WithPrettyPrint(),
+			)
+		}
+	} else { // Default to sending over GRPC
+		endpoint := os.Getenv("OTEL_EXPORT_ENDPOINT")
+		if deltaTemporality {
+			exporter, err = otlpmetricgrpc.New(ctx,
+				otlpmetricgrpc.WithEndpoint(endpoint),
+				otlpmetricgrpc.WithCompressor(gzip.Name),
+				otlpmetricgrpc.WithTemporalitySelector(deltaSelector),
+			)
+		} else {
+			exporter, err = otlpmetricgrpc.New(ctx,
+				otlpmetricgrpc.WithEndpoint(endpoint),
+				otlpmetricgrpc.WithCompressor(gzip.Name),
+			)
+		}
+	}
+	if err != nil {
+		panic(err)
+	}
+
+	// Views modify metrics for settings that aren't allowed when creating the metric.
+	// Modify metrics named myotelapp.*.exponential.histogram to use exponential buckets
+	exponentialHistogramView := gosdkmetric.NewView(
+		// Instrument identities which metric(s) should be modified
+		gosdkmetric.Instrument{
+			Name: "myotelapp.*.exponential.histogram", // Supports wildcard
+		},
+		// Stream specifies how to modify the metric
+		gosdkmetric.Stream{
+			Aggregation: gosdkmetric.AggregationBase2ExponentialHistogram{
+				MaxSize:  160,
+				MaxScale: 20,
+			},
+		},
+	)
+
+	// Interval to export metrics
+	if os.Getenv("OTEL_INTERVAL") != "" {
+		interval, err = strconv.Atoi(os.Getenv("OTEL_INTERVAL"))
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		interval = 15
+	}
+
+	// Extra attributes can be added here if needed
+	resource, err := resource.New(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// Create the meter provider that ties together the interval, exporter, and the view from above
+	provider := gosdkmetric.NewMeterProvider(
+		gosdkmetric.WithReader(gosdkmetric.NewPeriodicReader(
+			exporter,
+			gosdkmetric.WithInterval(time.Duration(interval)*time.Second),
+		)),
+		gosdkmetric.WithResource(resource),
+		gosdkmetric.WithView(exponentialHistogramView),
+	)
+	otel.SetMeterProvider(provider)
+
+	// Actually register metrics with the meter provider. These will then be used to record values
+	otlpMeter := provider.Meter("referenceapp")
+	otlpCounter, _ = otlpMeter.Int64Counter(
+		"myotelapp.measurements.total",
+		metric.WithUnit("1"),
+		metric.WithDescription("Measurements counter"),
+	)
+	otlpGauge, _ = otlpMeter.Int64Gauge(
+		"myotelapp.temperature",
+		metric.WithUnit("1"),
+		metric.WithDescription("Temperature gauge"),
+	)
+	otlpRainfallGauge, _ = otlpMeter.Float64Gauge(
+		"myotelapp.rainfall",
+		metric.WithUnit("1"),
+		metric.WithDescription("Rainfall gauge"),
+	)
+	otlpExponentialHistogram, _ = otlpMeter.Int64Histogram(
+		"myotelapp.temperature.exponential.histogram",
+		metric.WithUnit("1"),
+		metric.WithDescription("Temperature exponential histogram"),
+	)
+	otlpExplicitHistogram, _ = otlpMeter.Int64Histogram(
+		"myotelapp.temperature.explicit.histogram",
+		metric.WithUnit("1"),
+		metric.WithDescription("Temperature explicit histogram"),
+		metric.WithExplicitBucketBoundaries(0, 10, 20, 30, 40, 50, 60, 70, 80, 90),
+	)
+	otlpExponentialRainfallHistogram, _ = otlpMeter.Float64Histogram(
+		"myotelapp.rainfall.exponential.histogram",
+		metric.WithUnit("1"),
+		metric.WithDescription("Rainfall exponential histogram"),
+	)
+	otlpExplicitRainfallHistogram, _ = otlpMeter.Float64Histogram(
+		"myotelapp.rainfall.explicit.histogram",
+		metric.WithUnit("1"),
+		metric.WithDescription("Rainfall explicit histogram"),
+		metric.WithExplicitBucketBoundaries(0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45),
+	)
 }
