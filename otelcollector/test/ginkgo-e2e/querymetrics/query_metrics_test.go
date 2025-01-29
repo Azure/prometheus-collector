@@ -293,6 +293,14 @@ var _ = Describe("Query Metrics Test Suite", func() {
 			"external_label_1":   "external_label_value",
 			"external_label_123": "external_label_value",
 		}),
+		Entry("External labels are applied from DaemonSet Configmap", "node-configmap", "up", map[string]string{
+			"external_label_1":   "external_label_value",
+			"external_label_123": "external_label_value",
+		}),
+		Entry("External labels are applied from Windows DaemonSet Configmap", "windows-node-configmap", "up", map[string]string{
+			"external_label_1":   "external_label_value",
+			"external_label_123": "external_label_value",
+		}),
 	)
 
 	Context("When querying metrics", func() {

@@ -84,6 +84,10 @@ stages:
           WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
           WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
 
+          #Truncating this to 123 characters to add the conf prefix
+          ARC_CONFORMANCE_TAG_SUFFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-123)
+          ARC_CONFORMANCE_IMAGE_TAG=conf-$ARC_CONFORMANCE_TAG_SUFFIX
+
           LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
           TARGET_ALLOCATOR_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_IMAGE_TAG
           LINUX_CONFIG_READER_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CONFIG_READER_IMAGE_TAG
@@ -95,6 +99,7 @@ stages:
           LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_PYTHON_IMAGE_TAG
           WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
           WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_PYTHON_IMAGE_TAG
+          ARC_CONFORMANCE_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$ARC_CONFORMANCE_IMAGE_TAG
 
           echo "##vso[build.updatebuildnumber]$SEMVER"
           echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
@@ -116,6 +121,8 @@ stages:
           echo "##vso[task.setvariable variable=ARC_HELM_CHART_NAME;isOutput=true]$ARC_HELM_CHART_NAME"
           echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
           echo "##vso[task.setvariable variable=ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$ARC_HELM_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=ARC_CONFORMANCE_FULL_IMAGE_NAME;isOutput=true]$ARC_CONFORMANCE_FULL_IMAGE_NAME"
+
         displayName: 'Build: set image registry, repo, and tags'
         name: setup
 
@@ -509,6 +516,31 @@ stages:
         workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
         displayName: "Download, install Oras and run oras attach"
         condition: succeeded()        
+
+  - job: Arc_Conformace_Test_Image
+    displayName: "Build: Arc Conformance Test Image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      skipComponentGovernanceDetection: true
+      ARC_CONFORMANCE_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_CONFORMANCE_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+    steps:
+      - checkout: self
+        persistCredentials: true
+      - bash: |
+          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+          
+          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx inspect --bootstrap
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker buildx build . -f arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --push
+          docker pull $(ARC_CONFORMANCE_FULL_IMAGE_NAME)  
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+        displayName: "Build: build and push Arc conformance test image to dev ACR"
 
   - job: SDL_Policheck_Scan
     displayName: "SDL: policheck scanning"
