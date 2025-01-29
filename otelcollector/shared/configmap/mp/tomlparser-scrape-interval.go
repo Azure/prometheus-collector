@@ -39,7 +39,7 @@ func processConfigMap(parsedData map[string]map[string]string) map[string]string
 
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 
-	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
+	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
 		// Use parsedData instead of reading from file
 		intervalHash["KUBELET_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "kubelet")
 		intervalHash["COREDNS_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "coredns")
