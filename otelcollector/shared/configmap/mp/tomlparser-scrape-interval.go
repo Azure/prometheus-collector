@@ -21,16 +21,32 @@ var (
 )
 
 func checkDuration(duration string) string {
+	// Debug log: Print the input duration
+	fmt.Printf("Debug: Checking duration: %s\n", duration)
+
 	if !MATCHER.MatchString(duration) || duration == "" {
+		// Debug log: Print if the duration is invalid or empty
+		fmt.Printf("Debug: Invalid or empty duration. Using default: %s\n", defaultScrapeInterval)
 		return defaultScrapeInterval
 	}
+
+	// Debug log: Print the valid duration
+	fmt.Printf("Debug: Valid duration: %s\n", duration)
 	return duration
 }
 
 func getParsedDataValue(parsedData map[string]map[string]string, key string) string {
+	// Debug log: Print the key being looked up
+	fmt.Printf("Debug: Looking up key '%s' in parsedData\n", key)
+
 	if value, exists := parsedData["default-targets-scrape-interval-settings"][key]; exists {
+		// Debug log: Print the value found for the key
+		fmt.Printf("Debug: Found value '%s' for key '%s'\n", value, key)
 		return checkDuration(value)
 	}
+
+	// Debug log: Print if the key does not exist
+	fmt.Printf("Debug: Key '%s' not found. Using default: %s\n", key, defaultScrapeInterval)
 	return defaultScrapeInterval
 }
 
@@ -59,6 +75,12 @@ func processConfigMap(parsedData map[string]map[string]string) map[string]string
 		intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "acstor-capacity-provisioner")
 		intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "acstor-metrics-exporter")
 
+		// Debug log: Print the intervalHash before returning
+		fmt.Println("Debug: intervalHash before returning:")
+		for key, value := range intervalHash {
+			fmt.Printf("%s: %s\n", key, value)
+		}
+
 		return intervalHash
 	}
 
@@ -76,6 +98,12 @@ func processConfigMap(parsedData map[string]map[string]string) map[string]string
 
 	for _, key := range keys {
 		intervalHash[key] = defaultScrapeInterval
+	}
+
+	// Debug log: Print the intervalHash before returning
+	fmt.Println("Debug: intervalHash before returning (default values):")
+	for key, value := range intervalHash {
+		fmt.Printf("%s: %s\n", key, value)
 	}
 
 	return intervalHash
