@@ -159,6 +159,16 @@ func Configmapparser() {
 		fmt.Println("kubelet scrape interval:", parsedData["default-targets-scrape-interval-settings"]["kubelet"])
 		fmt.Println("podannotationnamespaceregex:", parsedData["pod-annotation-based-scraping"]["podannotationnamespaceregex"])
 		fmt.Println("cluster_alias:", parsedData["prometheus-collector-settings"]["cluster_alias"])
+
+		// Debug log: Print everything in parsedData
+		fmt.Println("configmapparser::Debug: Printing everything in parsedData:")
+		for section, keyValuePairs := range parsedData {
+			fmt.Printf("Section: %s\n", section)
+			for key, value := range keyValuePairs {
+				fmt.Printf("  %s: %s\n", key, value)
+			}
+		}
+
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
 		configDir := "/etc/config/settings"
 		parsedData, err = ParseV1Config(configDir)

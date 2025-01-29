@@ -124,6 +124,14 @@ func writeIntervalHashToFile(intervalHash map[string]string, filePath string) er
 
 func tomlparserScrapeInterval(parsedData map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - tomlparserScrapeInterval")
+	// Debug log: Print everything in parsedData
+	fmt.Println("tomlparserScrapeInterval::Debug: Printing everything in parsedData:")
+	for section, keyValuePairs := range parsedData {
+		fmt.Printf("Section: %s\n", section)
+		for key, value := range keyValuePairs {
+			fmt.Printf("  %s: %s\n", key, value)
+		}
+	}
 	intervalHash := processConfigMap(parsedData)
 	err := writeIntervalHashToFile(intervalHash, scrapeIntervalEnvVarPath)
 	if err != nil {
