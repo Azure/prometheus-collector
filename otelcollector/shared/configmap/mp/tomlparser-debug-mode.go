@@ -82,9 +82,9 @@ func populateSettingValuesFromConfigMap(parsedData map[string]map[string]string)
 		return false
 	}
 
-	debugSettings, ok := parsedData["debug-mode-config"]
+	debugSettings, ok := parsedData["debug-mode"]
 	if !ok {
-		fmt.Println("The 'debug-mode-config' section is not present in the parsed data. Using default value: false")
+		fmt.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
 		return false
 	}
 
