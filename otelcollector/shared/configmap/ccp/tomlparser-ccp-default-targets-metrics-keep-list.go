@@ -49,6 +49,17 @@ func parseConfigMapForKeepListRegex(parsedData map[string]map[string]string, sch
 				}
 			}
 		}
+
+		// Handle minimalingestionprofile for v1
+		if settings, ok := parsedData["default-targets-metrics-keep-list"]; ok {
+			if minimalProfile, ok := settings["minimalingestionprofile"]; ok {
+				configMap["minimalingestionprofile"] = minimalProfile
+			} else {
+				configMap["minimalingestionprofile"] = "true" // Setting the default value
+			}
+		} else {
+			configMap["minimalingestionprofile"] = "true" // Setting the default value
+		}
 	} else if schemaVersion == "v2" {
 		// For v2, control plane jobs are under "controlplane-metrics" without "controlplane-" prefix
 		if settings, ok := parsedData["controlplane-metrics"]; ok {
@@ -65,6 +76,18 @@ func parseConfigMapForKeepListRegex(parsedData map[string]map[string]string, sch
 					configMap[v1Key] = value
 				}
 			}
+
+			// Handle minimal-ingestion-profile for v2
+			if minimalProfileSection, ok := parsedData["minimal-ingestion-profile"]; ok {
+				if enabledValue, ok := minimalProfileSection["enabled"]; ok {
+					configMap["minimalingestionprofile"] = enabledValue
+				} else {
+					configMap["minimalingestionprofile"] = "true" // Setting the default value
+				}
+			} else {
+				configMap["minimalingestionprofile"] = "true" // Setting the default value
+			}
+
 		}
 	}
 

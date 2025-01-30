@@ -143,7 +143,7 @@ func Configmapparserforccp() {
 	}
 
 	// Parse the settings for default targets metrics keep list config
-	tomlparserCCPTargetsMetricsKeepList()
+	tomlparserCCPTargetsMetricsKeepList(parsedData)
 
 	prometheusCcpConfigMerger()
 

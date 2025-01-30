@@ -174,7 +174,7 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(parsedData map[string]map[
 }
 
 // TomlparserCCPDefaultScrapeSettings initializes the configurator and processes the configuration.
-func TomlparserCCPDefaultScrapeSettings(parsedData map[string]map[string]string) {
+func tomlparserCCPDefaultScrapeSettings(parsedData map[string]map[string]string) {
 	configurator := &Configurator{
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/default-scrape-settings-enabled"},
 		ConfigWriter:   &FileConfigWriter{},
