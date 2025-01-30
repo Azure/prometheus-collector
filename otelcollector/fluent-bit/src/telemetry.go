@@ -72,6 +72,12 @@ var (
 	AcstorCapacityProvisionerKeepListRegex string
 	// ACStor Metrics Exporter keep list regex
 	AcstorMetricsExporterKeepListRegex string
+	// Network Observability Cilium metrics keep list regex
+	NetworkObservabilityCiliumKeepListRegex string
+	// Network Observability Hubble metrics keep list regex
+	NetworkObservabilityHubbleKeepListRegex string
+	// Network Observability Retina metrics keep list regex
+	NetworkObservabilityRetinaKeepListRegex string
 
 	// Kubelet scrape interval
 	KubeletScrapeInterval string
@@ -97,10 +103,16 @@ var (
 	PodAnnotationScrapeInterval string
 	// Kappie Basic scrape interval
 	KappieBasicScrapeInterval string
-	// ACStor Capacity Provisioner keep list regex
+	// ACStor Capacity Provisioner scrape interval
 	AcstorCapacityProvisionerScrapeInterval string
-	// ACStor Metrics Exporter keep list regex
+	// ACStor Metrics Exporter scrape interval
 	AcstorMetricsExporterScrapeInterval string
+	// Network Observability Cilium metrics scrape interval
+	NetworkObservabilityCiliumScrapeInterval string
+	// Network Observability Hubble metrics scrape interval
+	NetworkObservabilityHubbleScrapeInterval string
+	// Network Observability Retina metrics scrape interval
+	NetworkObservabilityRetinaScrapeInterval string
 
 	// meMetricsProcessedCount map, which holds references to metrics per metric account
 	meMetricsProcessedCountMap = make(map[string]*meMetricsProcessedCount)
@@ -302,6 +314,9 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			KappieBasicKeepListRegex = regexHash["KAPPIEBASIC_METRICS_KEEP_LIST_REGEX"]
 			AcstorCapacityProvisionerKeepListRegex = regexHash["ACSTORCAPACITYPROVISONER_KEEP_LIST_REGEX"]
 			AcstorMetricsExporterKeepListRegex = regexHash["ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX"]
+			NetworkObservabilityCiliumKeepListRegex = regexHash["NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX"]
+			NetworkObservabilityHubbleKeepListRegex = regexHash["NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX"]
+			NetworkObservabilityRetinaKeepListRegex = regexHash["NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX"]
 		}
 	}
 
@@ -329,7 +344,10 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 			PodAnnotationScrapeInterval = intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"]
 			KappieBasicScrapeInterval = intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"]
 			AcstorCapacityProvisionerScrapeInterval = intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"]
-			AcstorMetricsExporterScrapeInterval = intervalHash["ACSTORMETRICSEXPORTER_KEEP_LIST_REGEX"]
+			AcstorMetricsExporterScrapeInterval = intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"]
+			NetworkObservabilityCiliumScrapeInterval = intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"]
+			NetworkObservabilityHubbleScrapeInterval = intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"]
+			NetworkObservabilityRetinaScrapeInterval = intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"]
 		}
 	}
 
@@ -709,6 +727,15 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				if AcstorMetricsExporterKeepListRegex != "" {
 					metric.Properties["AcstorMetricsExporterRegex"] = AcstorMetricsExporterKeepListRegex
 				}
+				if NetworkObservabilityCiliumKeepListRegex != "" {
+					metric.Properties["NetworkObservabilityCiliumRegex"] = NetworkObservabilityCiliumKeepListRegex
+				}
+				if NetworkObservabilityHubbleKeepListRegex != "" {
+					metric.Properties["NetworkObservabilityHubbleRegex"] = NetworkObservabilityHubbleKeepListRegex
+				}
+				if NetworkObservabilityRetinaKeepListRegex != "" {
+					metric.Properties["NetworkObservabilityRetinaRegex"] = NetworkObservabilityRetinaKeepListRegex
+				}
 
 				if KubeletScrapeInterval != "" {
 					metric.Properties["KubeletScrapeInterval"] = KubeletScrapeInterval
@@ -752,6 +779,15 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 				if AcstorMetricsExporterScrapeInterval != "" {
 					metric.Properties["AcstorMetricsExporterScrapeInterval"] = AcstorMetricsExporterScrapeInterval
 				}
+				if NetworkObservabilityCiliumScrapeInterval != "" {
+					metric.Properties["NetworkObservabilityCiliumScrapeInterval"] = NetworkObservabilityCiliumScrapeInterval
+				}
+				if NetworkObservabilityHubbleScrapeInterval != "" {
+					metric.Properties["NetworkObservabilityHubbleScrapeInterval"] = NetworkObservabilityHubbleScrapeInterval
+				}
+				if NetworkObservabilityRetinaScrapeInterval != "" {
+					metric.Properties["NetworkObservabilityRetinaScrapeInterval"] = NetworkObservabilityRetinaScrapeInterval
+				}
 			}
 
 			TelemetryClient.Track(metric)
@@ -775,6 +811,8 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 
 			meMetricsReceivedCountMapMutex.Unlock()
 		}
+
+		Log("Sent ME Metrics Processed Count to App Insights")
 
 	}
 }
@@ -832,7 +870,7 @@ func UpdateMEReceivedMetricsCount(records []map[interface{}]interface{}) int {
 					TimeseriesVolumeMutex.Unlock()
 
 				}
-
+				Log("Updated ME Metrics Received Count")
 			}
 		}
 	}

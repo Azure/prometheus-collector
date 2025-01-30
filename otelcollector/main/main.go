@@ -192,17 +192,8 @@ func main() {
 			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 		}
 
-		shared.StartTelegraf()
-		// Print Telegraf version
-		if osType == "windows" {
-			versionCmd := exec.Command("C:\\opt\\telegraf\\telegraf.exe", "--version")
-			versionOutput, err := versionCmd.Output()
-			if err != nil {
-				log.Printf("Error fetching Telegraf version: %v\n", err)
-			} else {
-				fmt.Printf("TELEGRAF_VERSION=%s\n", string(versionOutput))
-			}
-		}
+		//shared.StartTelegraf()
+
 	}
 
 	if osType == "linux" {

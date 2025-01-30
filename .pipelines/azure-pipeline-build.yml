@@ -26,6 +26,7 @@ variables:
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.22.7'
+  FLUENT_BIT_VERSION: '3.2.2'
 
 stages:
 - stage: Build
@@ -634,7 +635,7 @@ stages:
           
           docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
           docker buildx inspect --bootstrap
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
+          docker buildx build . --platform=linux/amd64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
           docker pull $(LINUX_FULL_IMAGE_NAME)
           docker system prune --all -f
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
