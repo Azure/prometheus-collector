@@ -21,11 +21,13 @@ data:
       networkobservabilityRetina = true
       networkobservabilityHubble = true
       networkobservabilityCilium = true
+      acstor-capacity-provisioner = true
+      acstor-metrics-exporter = true
       prometheuscollectorhealth = false
     pod-annotation-based-scraping: |-
       podannotationnamespaceregex = ""
     default-targets-metrics-keep-list: |-
-      kubelet = ""
+      kubelet = "kubelet_node_startup_pre_kubelet_duration_seconds"
       coredns = ""
       cadvisor = ""
       kubeproxy = ""
@@ -39,10 +41,12 @@ data:
       networkobservabilityRetina = ""
       networkobservabilityHubble = ""
       networkobservabilityCilium = ""
+      acstor-capacity-provisioner = ""
+      acstor-metrics-exporter = ""
     minimal-ingestion-profile: |-
       enabled = true
     default-targets-scrape-interval-settings: |-
-      kubelet = "30s"
+      kubelet = "60s"
       coredns = "30s"
       cadvisor = "30s"
       kubeproxy = "30s"
@@ -55,6 +59,8 @@ data:
       networkobservabilityRetina = "30s"
       networkobservabilityHubble = "30s"
       networkobservabilityCilium = "30s"
+      acstor-capacity-provisioner = "30s"
+      acstor-metrics-exporter = "30s"
       prometheuscollectorhealth = "30s"
       podannotations = "30s"
     debug-mode: |-
