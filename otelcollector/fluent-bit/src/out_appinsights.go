@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 )
@@ -86,7 +84,6 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	incomingTag := strings.ToLower(C.GoString(tag))
 
 	// Metrics Extension logs with metrics received, dropped, and processed counts
-	Log(fmt.Sprintf("Received %d records. Tag: %s", len(records), incomingTag))
 	switch incomingTag {
 	case fluentbitEventsProcessedLastPeriodTag:
 		return UpdateMEReceivedMetricsCount(records)
@@ -98,6 +95,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
 		return RecordExportingFailed(records)
+	// Prometheus metrics from otelcollector, Prometheus UX, and targetallocator
 	case "prometheus.metrics.otelcollector", "prometheus.metrics.prometheus", "prometheus.metrics.targetallocator":
 		return SendPrometheusMetricsToAppInsights(records, incomingTag)
 	default:

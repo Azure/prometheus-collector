@@ -50,15 +50,6 @@ cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
 mkdir /opt/microsoft/linuxmonagent
 
-# Install telegraf
-# echo "Installing telegraf..."
-# sudo tdnf install telegraf-1.29.4 -y
-# sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.txt
-
-# Install fluent-bit
-# echo "Installing fluent-bit..."
-# sudo tdnf install fluent-bit -y
-
 # Setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
