@@ -3,6 +3,8 @@ exporters:
     endpoint: "127.0.0.1:9091"
     const_labels:
       cluster: ${env:AZMON_CLUSTER_LABEL}
+  prometheus/telemetry:
+    endpoint: "127.0.0.1:9095"
   otlp:
     endpoint: 127.0.0.1:55680
     tls:
@@ -27,6 +29,10 @@ processors:
     - key: instance
       from_attribute: service.instance.id
       action: insert
+  filter/telemetry:
+    metrics:
+      metric:
+        - 'name != "scrape_samples_post_metric_relabeling"'
 receivers:
     prometheus:
       config:
@@ -39,6 +45,10 @@ service:
       receivers: [prometheus]
       exporters: [otlp]
       processors: [batch,resource]
+    metrics/telemetry:
+      receivers: [prometheus]
+      exporters: [prometheus/telemetry]
+      processors: [filter/telemetry]
   telemetry:
     logs:
       level: warn

@@ -5,8 +5,6 @@ exporters:
       cluster: ${env:AZMON_CLUSTER_LABEL}
   prometheus/telemetry:
     endpoint: "127.0.0.1:9095"
-    # const_labels:
-    #   cluster: ${env:AZMON_CLUSTER_LABEL}
   otlp:
     endpoint: 127.0.0.1:55680
     tls:
