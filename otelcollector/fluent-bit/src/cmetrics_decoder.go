@@ -146,24 +146,58 @@ func (cm CMetrics) String() string {
 	return ret.String()
 }
 
+func SendPrometheusMetricsToAppInsightsAfterAgg(records []map[interface{}]interface{}, aggregationLabel string) int {
+	for _, record := range records {
+		cMetrics := ConvertRecordToCMetrics(record)
+		for _, metric := range cMetrics.Metrics {
+			for _, value := range metric.Values {
+				for i, labelName := range metric.Meta.Labels {
+					if strings.ToLower(labelName) == aggregationLabel {
+						if _, ok := eventsPerJob[value.Labels[i]]; !ok {
+							eventsPerJob[value.Labels[i]] = value.Value
+						} else {
+							eventsPerJob[value.Labels[i]] += value.Value
+						}
+					}
+				}
+			}
+		}
+		for labelName, eventCount := range eventsPerJob {
+			metricTelemetryItem := appinsights.NewMetricTelemetry(
+				fmt.Sprintf("%s_%s", telemetryPrefix, metric.Meta.Opts.Name),
+				value.Value,
+			)
+			metricTelemetryItem.Properties[aggregationLabel] = fmt.Sprintf("%s", labelName)
+			TelemetryClient.Track(metricTelemetryItem)
+			Log(fmt.Sprintf("Sent telemetry for %s_%s", telemetryPrefix, metric.Meta.Opts.Name))
+		}
+	}
+}
+
 func SendPrometheusMetricsToAppInsights(records []map[interface{}]interface{}, tag string) int {
 	telemetryPrefix := "prometheus"
 	if tag == "prometheus.metrics.targetallocator" {
 		telemetryPrefix = "target_allocator"
 	}
-	for _, record := range records {
-		cMetrics := ConvertRecordToCMetrics(record)
-		for _, metric := range cMetrics.Metrics {
-			for _, value := range metric.Values {
-				metricTelemetryItem := appinsights.NewMetricTelemetry(
-					fmt.Sprintf("%s_%s_%s_%s", telemetryPrefix, metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name),
-					value.Value,
-				)
-				for i, labelName := range metric.Meta.Labels {
-					metricTelemetryItem.Properties[labelName] = fmt.Sprintf("%s", value.Labels[i])
+	eventsPerJob := make(map[string]int)
+
+	if tag == "prometheus.metrics.volume" {
+		SendPrometheusMetricsToAppInsightsAfterAgg(records, "job")
+	} else {
+		for _, record := range records {
+			cMetrics := ConvertRecordToCMetrics(record)
+			for _, metric := range cMetrics.Metrics {
+				for _, value := range metric.Values {
+					metricTelemetryItem := appinsights.NewMetricTelemetry(
+						fmt.Sprintf("%s_%s_%s_%s", telemetryPrefix, metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name),
+						value.Value,
+					)
+					for i, labelName := range metric.Meta.Labels {
+						metricTelemetryItem.Properties[labelName] = fmt.Sprintf("%s", value.Labels[i])
+					}
+					TelemetryClient.Track(metricTelemetryItem)
+					Log(fmt.Sprintf("Sent telemetry for %s_%s_%s_%s", telemetryPrefix, metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name))
 				}
-				TelemetryClient.Track(metricTelemetryItem)
-				Log(fmt.Sprintf("Sent telemetry for %s_%s_%s_%s", telemetryPrefix, metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name))
 			}
 		}
 	}
