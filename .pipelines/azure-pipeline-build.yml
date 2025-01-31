@@ -606,7 +606,7 @@ stages:
     dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
-    This is necessary because of: https://github.com/moby/moby/issues/37965
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
     steps:
       - checkout: self
@@ -623,7 +623,7 @@ stages:
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
-          Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+          # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
           sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
           docker system prune --all -f
           docker images -q --filter "dangling=true" | xargs docker rmi
