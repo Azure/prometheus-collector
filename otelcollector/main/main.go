@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
+	"syscall"
 
 	shared "github.com/prometheus-collector/shared"
 	ccpconfigmapsettings "github.com/prometheus-collector/shared/configmap/ccp"
@@ -17,6 +19,10 @@ import (
 )
 
 func main() {
+
+	// Handle SIGTERM
+	go handleShutdown()
+
 	controllerType := shared.GetControllerType()
 	cluster := shared.GetEnv("CLUSTER", "")
 	clusterOverride := shared.GetEnv("CLUSTER_OVERRIDE", "")
@@ -30,15 +36,27 @@ func main() {
 
 	if osType == "linux" {
 		outputFile := "/opt/inotifyoutput.txt"
-		if err := shared.Inotify(outputFile, "/etc/config/settings", "/etc/prometheus/certs"); err != nil {
-			log.Fatal(err)
+
+		if ccpMetricsEnabled != "true" { //data-plane
+
+			if err := shared.Inotify(outputFile, "/etc/config/settings"); err != nil {
+				log.Fatal(err)
+			}
+
+			if err := shared.Inotify(outputFile, "/etc/prometheus/certs"); err != nil {
+				log.Fatal(err)
+			}
+		} else { //control-plane
+			if err := shared.InotifyCCP(outputFile, "/etc/config/settings"); err != nil {
+				log.Fatal(err)
+			}
 		}
 	} else if osType == "windows" {
 		fmt.Println("Starting filesystemwatcher.ps1")
 		shared.StartCommand("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\opt\\scripts\\filesystemwatcher.ps1")
 	}
 
-	if ccpMetricsEnabled != "true" {
+	if ccpMetricsEnabled != "true" && osType == "linux" {
 		if err := shared.SetupArcEnvironment(); err != nil {
 			shared.EchoError(err.Error())
 		}
@@ -122,18 +140,6 @@ func main() {
 	} else {
 		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile)
 	}
-	// ME_PID, err := shared.StartMetricsExtensionForOverlay(meConfigFile)
-	// if err != nil {
-	// 	fmt.Printf("Error starting MetricsExtension: %v\n", err)
-	// 	return
-	// }
-	// fmt.Printf("ME_PID: %d\n", ME_PID)
-
-	// // Modify fluentBitConfigFile using ME_PID
-	// err = shared.ModifyConfigFile(fluentBitConfigFile, ME_PID, "${ME_PID}")
-	// if err != nil {
-	// 	fmt.Printf("Error modifying config file: %v\n", err)
-	// }
 
 	// Start otelcollector
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
@@ -162,18 +168,6 @@ func main() {
 
 	fmt.Println("startCommand otelcollector")
 	_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
-	// OTEL_PID, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
-	// if err != nil {
-	// 	fmt.Printf("Error starting command: %v\n", err)
-	// 	return
-	// }
-	// fmt.Printf("OTEL_PID: %d\n", OTEL_PID)
-
-	// // Modify fluentBitConfigFile using OTEL_PID
-	// err = shared.ModifyConfigFile(fluentBitConfigFile, OTEL_PID, "${OTEL_PID}")
-	// if err != nil {
-	// 	fmt.Printf("Error modifying config file: %v\n", err)
-	// }
 
 	if osType == "linux" {
 		shared.LogVersionInfo()
@@ -189,10 +183,26 @@ func main() {
 				log.Fatalf("failed to run command: %v", err)
 			}
 			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
+		} else if osType == "windows" {
+			cmd := exec.Command("C:\\opt\\fluent-bit\\bin\\fluent-bit.exe", "--version")
+			fluentBitVersion, err := cmd.Output()
+			if err != nil {
+				log.Fatalf("failed to run command: %v", err)
+			}
+			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 		}
 
 		//shared.StartTelegraf()
-
+		// Print Telegraf version
+		// if osType == "windows" {
+		// 	versionCmd := exec.Command("C:\\opt\\telegraf\\telegraf.exe", "--version")
+		// 	versionOutput, err := versionCmd.Output()
+		// 	if err != nil {
+		// 		log.Printf("Error fetching Telegraf version: %v\n", err)
+		// 	} else {
+		// 		fmt.Printf("TELEGRAF_VERSION=%s\n", string(versionOutput))
+		// 	}
+		// }
 	}
 
 	if osType == "linux" {
@@ -213,6 +223,9 @@ func main() {
 			"--daemon",
 			"--outfile", outputFile,
 			"--event", "ATTRIB",
+			"--event", "create",
+			"--event", "delete",
+			"--event", "modify",
 			"--format", "%e : %T",
 			"--timefmt", "+%s",
 		)
@@ -249,6 +262,17 @@ func main() {
 	// Expose a health endpoint for liveness probe
 	http.HandleFunc("/health", healthHandler)
 	http.ListenAndServe(":8080", nil)
+}
+
+// handleShutdown listens for SIGTERM signals and handles cleanup.
+func handleShutdown() {
+	shutdownChan := make(chan os.Signal, 1)
+	signal.Notify(shutdownChan, syscall.SIGTERM)
+
+	// Block until a signal is received
+	<-shutdownChan
+	fmt.Println("shutting down")
+	os.Exit(0) // Exit the application
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {

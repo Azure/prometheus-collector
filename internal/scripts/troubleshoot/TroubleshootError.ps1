@@ -239,29 +239,6 @@ if (($null -eq $azAksModule) -or ($null -eq $azARGModule) -or ($null -eq $azAcco
         }
     }
 }
-#
-# login
-#
-try {
-    Write-Host("")
-    Write-Host("Trying to get the current Az login context...")
-    $account = Get-AzContext -ErrorAction Stop
-    Write-Host("Successfully fetched current Az context...") -ForegroundColor Green
-    # Check if the context's token expiration time has passed
-    if ($account.Account.ExpiresOn -lt (Get-Date)) {
-        Write-Host "Azure context has expired."
-        $account = $null
-    }
-    else {
-        Write-Host "Azure context is still valid."
-    }
-    Write-Host("")
-}
-catch {
-    Write-Host("")
-    Write-Host("Could not fetch AzContext..." ) -ForegroundColor Red
-    Write-Host("")
-}
 
 $ClusterSubscriptionId = $ClusterResourceId.split("/")[2]
 $ClusterResourceGroupName = $ClusterResourceId.split("/")[4]
@@ -369,10 +346,17 @@ catch {
 
 # Get all DC* objects
 try {
-    $dcraList = Get-AzDataCollectionRuleAssociation -TargetResourceId $ClusterResourceId -ErrorAction Stop -WarningAction silentlyContinue
+    $dcraList = Get-AzDataCollectionRuleAssociation -TargetResourceId $ClusterResourceId -ErrorAction Stop -WarningAction SilentlyContinue
     $prometheusMetricsTuples = @()
 
     foreach ($dcra in $dcraList) {
+
+        # Filter out "configurationAccessEndpoint" entries
+        if ($dcra.Name -eq "configurationAccessEndpoint") {
+            Write-Host "Skipping configurationAccessEndpoint DCRA: $($dcra.Name)" -ForegroundColor Yellow
+            continue
+        }
+
         Write-Output "DCRA ID: $($dcra.Id)"
         Write-Output "DCRA Name: $($dcra.Name)"
         Write-Output "Data Collection Rule ID: $($dcra.DataCollectionRuleId)"
@@ -380,8 +364,20 @@ try {
         Write-Output "Provisioning State: $($dcra.ProvisioningState)"
         Write-Output "Additional Properties:"
         $dcra.Properties | Format-Table -AutoSize
+        
+        # Check if DataCollectionRuleId is not null or empty
+        if ([string]::IsNullOrWhiteSpace($dcra.DataCollectionRuleId)) {
+            Write-Host "Skipping DCRA with no DataCollectionRuleId: $($dcra.Name)" -ForegroundColor Yellow
+            continue
+        }
+
         # Get the Data Collection Rule details based on its ID
-        $dataCollectionRule = Get-AzResource -ResourceId $dcra.DataCollectionRuleId -ErrorAction silentlyContinue
+        $dataCollectionRule = Get-AzResource -ResourceId $dcra.DataCollectionRuleId -ErrorAction SilentlyContinue
+        if ($null -eq $dataCollectionRule) {
+            Write-Host "Unable to fetch Data Collection Rule details for ID: $($dcra.DataCollectionRuleId)" -ForegroundColor Yellow
+            continue
+        }
+
         $dataflows = $dataCollectionRule.Properties.DataFlows
         foreach ($dataflow in $dataflows) {
             $dataflowstream = $dataflow.streams
@@ -400,7 +396,7 @@ try {
     # Check if the map is empty
     if ($prometheusMetricsTuples.Count -eq 0) {
         Write-Host "No entries with Microsoft-PrometheusMetrics found in the Data Collection Rule" -ForegroundColor Red
-        Write-Host("");
+        Write-Host("")
         Stop-Transcript
         exit 1
     }
@@ -413,87 +409,155 @@ catch {
     exit 1
 }
 
+
 #
-#    Check Agent pods running as expected
+#    Check Agent pods running as expected with or without HPA
 #
 try {
     Write-Host("Getting Kubeconfig of the cluster...")
     Import-AzAksCredential -Id $ClusterResourceId -Force -ErrorAction Stop
     Write-Host("Successfully got the Kubeconfig of the cluster.")
 
-    Write-Host("Switch to cluster context to:", $ClusterName )
+    Write-Host("Switching to cluster context:", $ClusterName)
     kubectl config use-context $ClusterName
     Write-Host("Successfully switched current context of the k8s cluster to:", $ClusterName)
 
-    Write-Host("Check whether the ama-metrics replicaset pod running correctly ...")
-    $rsPod = kubectl get deployments ama-metrics -n kube-system -o json | ConvertFrom-Json
-    if ($null -eq $rsPod) {
-        Write-Host( "ama-metrics replicaset pod not scheduled or failed to scheduled.") -ForegroundColor Red
-        Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
-        Write-Host($AksOptInLink) -ForegroundColor Red
-        Write-Host($contactUSMessage)
-        Stop-Transcript
-        exit 1
+    Write-Host("Checking if HPA is configured for ama-metrics deployment...")
+    $hpa = kubectl get hpa ama-metrics-hpa -n kube-system -o json 2>$null | ConvertFrom-Json
+
+    if ($null -eq $hpa) {
+        $rsPod = kubectl get deployments ama-metrics -n kube-system -o json | ConvertFrom-Json
+        if ($null -eq $rsPod) {
+            Write-Host("ama-metrics replicaset pod not scheduled or failed to schedule.") -ForegroundColor Red
+            Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
+            Write-Host($AksOptInLink) -ForegroundColor Red
+            Write-Host($contactUSMessage)
+            Stop-Transcript
+            exit 1
+        }
+
+        $rsPodStatus = $rsPod.status
+        if ((($rsPodStatus.availableReplicas -ge 2) -and
+            ($rsPodStatus.readyReplicas -ge 2) -and
+            ($rsPodStatus.replicas -ge 2)) -eq $false
+        ) {
+            Write-Host("ama-metrics replicaset pods not scheduled or failed to schedule.") -ForegroundColor Red
+            Write-Host("Available ama-metrics replicas:", $rsPodStatus.availableReplicas)
+            Write-Host("Ready ama-metrics replicas:", $rsPodStatus.readyReplicas)
+            Write-Host("Total ama-metrics replicas:", $rsPodStatus.replicas)
+            Write-Host($rsPod) -ForegroundColor Red
+            Write-Host("get ama-metrics rs pod details ...")
+            $amaMetricsRsPods = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
+            foreach ($pod in $amaMetricsRsPods.items) {
+                Write-Host("status of the ama-metrics rs pod is:", $pod.status.conditions) -ForegroundColor Red
+            }
+            Write-Host("successfully got ama-metrics rs pod details ...")
+            Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
+            Write-Host($AksOptInLink) -ForegroundColor Red
+            Write-Host($contactUSMessage)
+            Stop-Transcript
+            exit 1
+        }
+
+        # Fetch all ama-metrics pods
+        $amaMetricsRsPods = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
+        foreach ($pod in $amaMetricsRsPods.items) {
+            $podName = $pod.metadata.name
+
+            # Copy MetricsExtensionConsoleDebugLog.log from container to debuglogs directory
+            kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
+            Write-Host("MetricsExtensionConsoleDebugLog_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+
+            # Copy MDSD logs from container to debuglogs directory
+            $logFiles = @("mdsd.qos", "mdsd.info", "mdsd.warn", "mdsd.err")
+            foreach ($logFile in $logFiles) {
+                kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/$logFile ./$debuglogsDir/$($logFile)_$($podName).log
+                Write-Host("$($logFile)_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
+            }
+
+            # Get logs from prometheus-collector container and store in a file
+            $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
+            kubectl logs $($podName) -n kube-system -c prometheus-collector > $promCollectorLogPath
+
+            # Get logs from addon-token-adapter container and store in a file
+            $addonTokenAdapterLogPath = "$debuglogsDir/$($podName)_addontokenadapter.log"
+            kubectl logs $($podName) -n kube-system -c addon-token-adapter > $addonTokenAdapterLogPath
+
+            Write-Host("Logs for pod $($podName) copied successfully.") -ForegroundColor Green
+        }
+
+        Write-Host("All ama-metrics replicaset pods are running OK.") -ForegroundColor Green
+    }
+    else {
+        Write-Host("Fetching HPA status for ama-metrics...")
+        $hpaStatus = $hpa.status
+        $currentReplicas = $hpaStatus.currentReplicas
+        $desiredReplicas = $hpaStatus.desiredReplicas
+
+        Write-Host("Current replicas:", $currentReplicas)
+        Write-Host("Desired replicas:", $desiredReplicas)
+
+        # Check if current replicas do not match desired replicas
+        if ($currentReplicas -ne $desiredReplicas) {
+            Write-Error "Mismatch detected! Current replicas ($currentReplicas) do not match desired replicas ($desiredReplicas)."
+        }
+        else {
+            Write-Host "Replica counts match. No issues detected."
+        }
+
+        if ($currentReplicas -lt $hpa.spec.minReplicas) {
+            Write-Host("Current replicas are less than the minimum replicas configured.") -ForegroundColor Red
+            exit 1
+        }
+
+        Write-Host("Checking the status of pods for ama-metrics deployment...")
+        $rsPods = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
+        if ($null -eq $rsPods.Items -or $rsPods.Items.Count -lt $currentReplicas) {
+            Write-Host("Not all ama-metrics pods are scheduled or running.") -ForegroundColor Red
+            Write-Host("Expected replicas:", $currentReplicas)
+            Write-Host("Scheduled pods:", $rsPods.Items.Count)
+            exit 1
+        }
+
+        foreach ($pod in $rsPods.Items) {
+            $podStatus = $pod.status.conditions
+            if (-not ($podStatus | Where-Object { $_.type -eq "Ready" -and $_.status -eq "True" })) {
+                Write-Host("Pod $($pod.metadata.name) is not ready.") -ForegroundColor Red
+                exit 1
+            }
+        }
+
+        Write-Host("All ama-metrics pods are running as expected.") -ForegroundColor Green
     }
 
-    $rsPodStatus = $rsPod.status
-    if ((($rsPodStatus.availableReplicas -eq 1) -and
-                ($rsPodStatus.readyReplicas -eq 1 ) -and
-                ($rsPodStatus.replicas -eq 1 )) -eq $false
-    ) {
-        Write-Host("ama-metrics replicaset pod not scheduled or failed to scheduled.") -ForegroundColor Red
-        Write-Host("Available ama-metrics replicas:", $rsPodStatus.availableReplicas)
-        Write-Host("Ready ama-metrics replicas:", $rsPodStatus.readyReplicas)
-        Write-Host("Total ama-metrics replicas:", $rsPodStatus.replicas)
-        Write-Host($rsPod) -ForegroundColor Red
-        Write-Host("get ama-metrics rs pod details ...")
-        $amaMetricsRsPod = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
-        Write-Host("status of the ama-metrics rs pod is :", $amaMetricsRsPod.Items[0].status.conditions) -ForegroundColor Red
-        Write-Host("successfully got ama-metrics rs pod details ...")
-        Write-Host("Please refer to the following documentation to onboard and validate:") -ForegroundColor Red
-        Write-Host($AksOptInLink) -ForegroundColor Red
-        Write-Host($contactUSMessage)
-        Stop-Transcript
-        exit 1
+    Write-Host("Collecting logs for debugging...")
+    foreach ($pod in $rsPods.Items) {
+        $podName = $pod.metadata.name
+
+        # Copy logs from the pod to debuglogs directory
+        kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
+        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.qos ./$debuglogsDir/mdsd_qos_$($podName).log
+        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.info ./$debuglogsDir/mdsd_info_$($podName).log
+        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.warn ./$debuglogsDir/mdsd_warn_$($podName).log
+        kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.err ./$debuglogsDir/mdsd_err_$($podName).log
+
+        # Collect prometheus-collector container logs
+        $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
+        kubectl logs $($podName) -n kube-system -c prometheus-collector > $promCollectorLogPath
+
+        # Collect addon-token-adapter container logs
+        $addonTokenLogPath = "$debuglogsDir/$($podName)_addontokenadapter.log"
+        kubectl logs $($podName) -n kube-system -c addon-token-adapter > $addonTokenLogPath
     }
 
-    $amaMetricsRsPod = kubectl get pods -n kube-system -l rsName=ama-metrics -o json | ConvertFrom-Json
-    $podName = $amaMetricsRsPod.Items[0].metadata.name
-    # Copy MetricsExtensionConsoleDebugLog.log from container to debuglogs directory
-    kubectl cp kube-system/$($podName):/MetricsExtensionConsoleDebugLog.log ./$debuglogsDir/MetricsExtensionConsoleDebugLog_$($podName).log
-    Write-Host("MetricsExtensionConsoleDebugLog$($podName).log copied to debuglogs directory.") -ForegroundColor Green
-
-    # Copy MDSD log from container to debuglogs directory
-    kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.qos ./$debuglogsDir/mdsd_qos_$($podName).log
-    Write-Host("mdsd_qos_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
-
-    # Copy MDSD log from container to debuglogs directory
-    kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.info ./$debuglogsDir/mdsd_info_$($podName).log
-    Write-Host("mdsd_info_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
-
-    # Copy MDSD log from container to debuglogs directory
-    kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.warn ./$debuglogsDir/mdsd_warn_$($podName).log
-    Write-Host("mdsd_warn_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
-
-    # Copy MDSD log from container to debuglogs directory
-    kubectl cp kube-system/$($podName):/opt/microsoft/linuxmonagent/mdsd.err ./$debuglogsDir/mdsd_err_$($podName).log
-    Write-Host("mdsd_err_$($podName).log copied to debuglogs directory.") -ForegroundColor Green
-
-    # Get logs from prometheus-collector container and store in a file
-    $promCollectorLogPath = "$debuglogsDir/$($podName)_promcollector.log"
-    kubectl logs $($amaMetricsRsPod.Items[0].metadata.name) -n kube-system -c prometheus-collector > $promCollectorLogPath
-
-    # Get logs from prometheus-collector container and store in a file
-    $promCollectorLogPath = "$debuglogsDir/$($podName)_addontokenadapter.log"
-    kubectl logs $($podName) -n kube-system -c addon-token-adapter > $promCollectorLogPath
-
-    Write-Host( "ama-metrics replicaset pod running OK.") -ForegroundColor Green
+    Write-Host("Logs for all ama-metrics pods have been successfully copied.") -ForegroundColor Green
 }
 catch {
-    Write-Host ("Failed to get ama-metrics replicatset pod info using kubectl get rs  : '" + $Error[0] + "' ") -ForegroundColor Red
-    Stop-Transcript
+    Write-Host("Failed to validate ama-metrics pods: '" + $Error[0] + "'") -ForegroundColor Red
     exit 1
 }
+
+
 
 Write-Host("Checking whether the ama-metrics-node linux daemonset pod running correctly ...")
 try {

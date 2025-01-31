@@ -1,3 +1,4 @@
+{{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -34,7 +35,7 @@ rules:
   - apiGroups: ["clusterconfig.azure.com"]
     resources: ["azureclusteridentityrequests", "azureclusteridentityrequests/status"]
     verbs: ["get", "update", "list", "create"]
-{{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
+{{- if $arcExtensionSettings.operatorEnabled }}
   - apiGroups:
     - azmonitoring.coreos.com
     resources:
