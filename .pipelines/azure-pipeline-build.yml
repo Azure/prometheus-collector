@@ -598,10 +598,10 @@ stages:
         displayName: 'SDL: run brakeman'
         retryCountOnTaskFailure: 1
 
-  - job: Linux_Prometheus_Collector
-    displayName: "Build: linux prometheus-collector image"
+  - job: Linux_Prometheus_Collector_ARM64
+    displayName: 'Build: linux ARM64 prometheus-collector image'
     pool:
-      name: Azure-Pipelines-CI-Test-EO
+      name: Azure-Pipelines-ARM-CI-Test-EO
     dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
@@ -623,9 +623,96 @@ stages:
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
           # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+          # sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+          # docker system prune --all -f
+          # docker images -q --filter "dangling=true" | xargs docker rmi
+          # docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          # docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+          
+          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx inspect --bootstrap
+          docker buildx build . --platform=linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push --cache-to type=registry,ref=$(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64,mode=max
+          docker pull $(LINUX_FULL_IMAGE_NAME)
+          # docker system prune --all -f
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: 'Build: build and push image to dev ACR'
+
+  - job: Linux_Prometheus_Collector_AMD64
+    displayName: 'Build: linux AMD64 prometheus-collector image'
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+    steps:
+      - checkout: self
+        submodules: true
+
+      - task: CodeQL3000Init@0
+        displayName: 'SDL: init codeql'
+
+      - task: GoTool@0
+        displayName: 'Build: specify golang version'
+        inputs:
+          version: $(GOLANG_VERSION)
+
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/linux
+
+          # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+          # sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+          # docker system prune --all -f
+          # docker images -q --filter "dangling=true" | xargs docker rmi
+          # docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          # docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+          
+          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx inspect --bootstrap
+          docker buildx build . --platform=linux/amd64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push --cache-to type=registry,ref=$(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64,mode=max
+          docker pull $(LINUX_FULL_IMAGE_NAME)
+          # docker system prune --all -f
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: "Build: build and push image to dev ACR"
+
+  - job: Linux_Prometheus_Collector
+    displayName: 'Build: linux prometheus-collector image'
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn:
+    - Image_Tags_and_Ev2_Artifacts
+    - Linux_Prometheus_Collector_AMD64
+    - Linux_Prometheus_Collector_ARM64
+    variables:
+      LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+    steps:
+      - checkout: self
+        submodules: true
+
+      - task: CodeQL3000Init@0
+        displayName: 'SDL: init codeql'
+
+      - task: GoTool@0
+        displayName: 'Build: specify golang version'
+        inputs:
+          version: $(GOLANG_VERSION)
+
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/linux
+
+          # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
           sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
           docker system prune --all -f
-          docker images -q --filter "dangling=true" | xargs docker rmi
+          docker images -q --filter 'dangling=true' | xargs docker rmi
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
@@ -634,11 +721,11 @@ stages:
           
           docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
           docker buildx inspect --bootstrap
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg 'GOLANG_VERSION=$(GOLANG_VERSION)' --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push --cache-from type=registry,ref=$(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64 --cache-from type=registry,ref=$(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64
           docker pull $(LINUX_FULL_IMAGE_NAME)
           docker system prune --all -f
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-        displayName: "Build: build and push image to dev ACR"
+        displayName: 'Build: build and push image to dev ACR'
 
       - bash: |
           MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
@@ -648,7 +735,7 @@ stages:
           {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
           EOF
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-        displayName: "Build: Set values in payload.json for signing"
+        displayName: 'Build: Set values in payload.json for signing'
         condition: succeeded()
 
       - task: EsrpCodeSigning@5
