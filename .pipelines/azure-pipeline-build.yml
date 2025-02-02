@@ -687,7 +687,7 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           
-          docker buildx create --name dockerbuilder --driver docker-container #--driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx create --name dockerbuilder --driver docker-container --use #--driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
           docker buildx inspect --bootstrap
           docker buildx build . --platform=linux/amd64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push --cache-to type=registry,ref=$(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64,mode=max
           docker pull $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64
@@ -732,7 +732,7 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           
-          docker buildx create --name dockerbuilder --driver docker-container #--driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
           docker buildx inspect --bootstrap
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg 'GOLANG_VERSION=$(GOLANG_VERSION)' --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push --cache-from type=registry,ref=$(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64 --cache-from type=registry,ref=$(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64
           docker pull $(LINUX_FULL_IMAGE_NAME)
