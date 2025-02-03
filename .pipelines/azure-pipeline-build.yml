@@ -1097,8 +1097,8 @@ stages:
 
           mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
-          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+          sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
         displayName: "Build: build and push target allocator image to dev ACR"
         condition: succeeded()
