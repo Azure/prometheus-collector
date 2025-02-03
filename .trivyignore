@@ -1,0 +1,11 @@
+# CRITICAL
+# HIGH
+# otelcollector
+CVE-2024-45338 # golang.org/x/net
+# promconfigvalidator
+CVE-2024-45338 # golang.org/x/net
+# configurationreader
+CVE-2024-45338 # golang.org/x/net
+# targetallocator
+CVE-2024-45338 # golang.org/x/net
+# MEDIUM
