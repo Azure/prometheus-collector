@@ -645,9 +645,9 @@ stages:
           sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           sudo docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           
-          sudo docker buildx create --name dockerbuilder --driver docker-container --use #--driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
-          sudo docker buildx inspect --bootstrap
-          sudo docker buildx build . --platform=linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          # sudo docker buildx create --name dockerbuilder --driver docker-container --use #--driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          # sudo docker buildx inspect --bootstrap
+          sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           # sudo docker pull $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64
           # docker system prune --all -f
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -687,9 +687,10 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           
-          docker buildx create --name dockerbuilder --driver docker-container --use #--driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
-          docker buildx inspect --bootstrap
-          docker buildx build . --platform=linux/amd64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          # docker buildx create --name dockerbuilder --driver docker-container --use #--driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          # docker buildx inspect --bootstrap
+          # docker buildx build . --platform=linux/amd64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          docker build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           # docker pull $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64
           # docker system prune --all -f
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
