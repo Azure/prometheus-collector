@@ -25,7 +25,7 @@ variables:
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.22'
+  GOLANG_VERSION: '1.22.11'
   FLUENT_BIT_VERSION: '3.2.2'
 
 stages:
@@ -1131,7 +1131,7 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-amd64 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64
           docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-          
+
           docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
           MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
           DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
