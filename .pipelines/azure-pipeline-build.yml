@@ -1036,8 +1036,8 @@ stages:
           GdnBreakGdnToolSemmle: true
           GdnBreakGdnToolSemmleSeverity: 'Warning'
 
-  - job: Linux_Target_Allocator
-    displayName: "Build: target allocator image"
+  - job: Linux_Target_Allocator_AMD64
+    displayName: "Build: AMD64 target allocator image"
     pool:
       name: Azure-Pipelines-CI-Test-EO
     dependsOn: Image_Tags_and_Ev2_Artifacts
@@ -1058,18 +1058,80 @@ stages:
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
-          # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
-          sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
-          docker system prune --all -f
-
-          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-          
-          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
-          docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
+          docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
+        displayName: "Build: build and push target allocator image to dev ACR"
+        condition: succeeded()
+
+  - job: Linux_Target_Allocator_ARM64
+    displayName: "Build: ARM64 target allocator image"
+    pool:
+      name: Azure-Pipelines-ARM-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+      skipComponentGovernanceDetection: true
+    steps:
+      - checkout: self
+        persistCredentials: true
+
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: $(GOLANG_VERSION)
+  
+      - bash: |
+          # Add Docker's official GPG key:
+          sudo apt-get update
+          sudo apt-get install ca-certificates curl -y
+          sudo install -m 0755 -d /etc/apt/keyrings
+          sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+          sudo chmod a+r /etc/apt/keyrings/docker.asc
+          # Add the repository to Apt sources:
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+
+          mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
+        displayName: "Build: build and push target allocator image to dev ACR"
+        condition: succeeded()
+
+  - job: Linux_Target_Allocator
+    displayName: "Build: target allocator image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn:
+    - Image_Tags_and_Ev2_Artifacts
+    - Linux_Target_Allocator_ARM64
+    - Linux_Target_Allocator_AMD64
+    variables:
+      TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+      skipComponentGovernanceDetection: true
+    steps:
+      - checkout: self
+        persistCredentials: true
+
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: $(GOLANG_VERSION)
+  
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+          
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-amd64 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64
+          docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+          
           docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
           MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
           DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
