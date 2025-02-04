@@ -248,7 +248,7 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 
 	if os.Getenv("DEBUG_MODE_ENABLED") == "true" {
 		otelConfig.Service.Pipelines.Metrics.Exporters = []interface{}{"otlp", "prometheus"}
-		if os.Getenv("CCP_METRICS_ENABLED") != "true" { {
+		if os.Getenv("CCP_METRICS_ENABLED") != "true" {
 			otelConfig.Service.Pipelines.MetricsTelemetry.Receivers = []interface{}{"prometheus"}
 			otelConfig.Service.Pipelines.Metrics.Exporters = []interface{}{"prometheus/telemetry"}
 			otelConfig.Service.Pipelines.Metrics.Processors = []interface{}{"filter/telemetry"}
