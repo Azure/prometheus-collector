@@ -38,14 +38,14 @@ func DetermineConfigFiles(controllerType, clusterOverride string) (string, strin
 
 	switch {
 	case strings.ToLower(controllerType) == "replicaset":
-		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit.conf"
+		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit.yaml"
 		if clusterOverride == "true" {
 			meConfigFile = "/usr/sbin/me_internal.config"
 		} else {
 			meConfigFile = "/usr/sbin/me.config"
 		}
 	case os.Getenv("OS_TYPE") != "windows":
-		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit.conf"
+		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-daemonset.yaml"
 		if clusterOverride == "true" {
 			meConfigFile = "/usr/sbin/me_ds_internal.config"
 		} else {

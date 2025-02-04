@@ -1,45 +1,25 @@
 # CRITICAL
-# telegraf
-CVE-2024-41110
 # kube-state-metrics
-CVE-2024-24790
+CVE-2024-45337 # golang.org/x/crypto
+CVE-2024-24790 # stdlib
 # HIGH
-# telegraf
-GHSA-7jwh-3vrq-q3m8
-CVE-2024-27289
-CVE-2024-27304
+# otelcollector
+CVE-2024-45338 # golang.org/x/net
+# promconfigvalidator
+CVE-2024-45338 # golang.org/x/net
+# configurationreader
+CVE-2024-45338 # golang.org/x/net
+# targetallocator
+CVE-2024-45338 # golang.org/x/net
 # kube-state-metrics
-CVE-2024-34156
-# node-exporter
-CVE-2023-39325
-CVE-2023-29403
-CVE-2023-39325
-CVE-2023-45283
+CVE-2024-45338 # golang.org/x/net
+CVE-2024-34156 # stdlib
 # MEDIUM
-# telegraf
-CVE-2024-35255
-CVE-2024-28110
-CVE-2024-24557
-CVE-2024-29018
-CVE-2023-45288
-CVE-2024-24786
 # kube-state-metrics
-CVE-2024-24789
-CVE-2024-24791
-CVE-2024-34155
-CVE-2024-34158
-# node-exporter
-CVE-2023-48795
-CVE-2023-3978
-CVE-2023-44487
-CVE-2023-29406
-CVE-2023-29409
-CVE-2023-39318
-CVE-2023-39319
-CVE-2023-39326
-CVE-2023-45284
-CVE-2023-45289 
-CVE-2023-45290
-CVE-2024-24783
-CVE-2024-24784
-CVE-2024-24785
+CVE-2023-45288 # stdlib
+CVE-2024-24789 # stdlib
+CVE-2024-24791 # stdlib
+CVE-2024-34155 # stdlib
+CVE-2024-34158 # stdlib
+CVE-2024-45336 # stdlib
+CVE-2024-45341 # stdlib
