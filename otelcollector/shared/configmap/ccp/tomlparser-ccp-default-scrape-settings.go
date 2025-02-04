@@ -216,7 +216,7 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(parsedData map[string]map[
 	}
 
 	// Populate and print setting values
-	c.ConfigParser.PopulateSettingValues(defaultSettings)
+	c.ConfigParser.PopulateSettingValues(defaultSettings, configSchemaVersion)
 
 	// Set cluster alias
 	if mac := os.Getenv("MAC"); mac != "" && strings.TrimSpace(mac) == "true" {
