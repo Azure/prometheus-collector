@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"io/ioutil"
+	"log"
 
 	// "prometheus-collector/shared"
 	"github.com/prometheus-collector/shared"
@@ -122,7 +124,7 @@ func Configmapparserforccp() {
 			}
 		}
 	} else {
-		fmt.Println("Invalid schema version. Using defaults.")
+		fmt.Println("Invalid schema version or no configmap present. Using defaults.")
 	}
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -162,6 +164,15 @@ func Configmapparserforccp() {
 		if err != nil {
 			fmt.Printf("Error copying file: %v\n", err)
 		} else {
+			// DEBUG
+			// Read file contents
+      data, err := ioutil.ReadFile("/opt/microsoft/otelcollector/ccp-collector-config-default.yml")
+			if err != nil {
+				log.Fatalf("Error reading file: %v", err)
+			}
+      // Print file contents
+      fmt.Println("File contents of /opt/microsoft/otelcollector/ccp-collector-config-default.yml:")
+      fmt.Println(string(data))
 			fmt.Println("File copied successfully.")
 		}
 	}

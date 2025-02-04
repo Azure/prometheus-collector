@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"syscall"
+	"io/ioutil"
 
 	shared "github.com/prometheus-collector/shared"
 	ccpconfigmapsettings "github.com/prometheus-collector/shared/configmap/ccp"
@@ -276,6 +277,26 @@ func handleShutdown() {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
+	// DEBUG
+	// Read file contents
+  data, err := ioutil.ReadFile("/opt/microsoft/otelcollector/collector-log.txt")
+	if err != nil {
+		log.Fatalf("Error reading file: %v", err)
+	}
+  // Print file contents
+  fmt.Println("File contents of /opt/microsoft/otelcollector/collector-log.txt:")
+  fmt.Println(string(data))
+
+	// DEBUG
+	// Read file contents
+  data, err = ioutil.ReadFile("/MetricsExtensionConsoleDebugLog.log")
+	if err != nil {
+		log.Fatalf("Error reading file: %v", err)
+	}
+  // Print file contents
+  fmt.Println("File contents of /opt/microsoft/otelcollector/collector-log.txt:")
+  fmt.Println(string(data))
+	
 	osType := os.Getenv("OS_TYPE")
 	status := http.StatusOK
 	message := "prometheuscollector is running."
