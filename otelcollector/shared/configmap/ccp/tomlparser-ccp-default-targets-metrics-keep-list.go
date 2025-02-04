@@ -111,13 +111,54 @@ func parseConfigMapForKeepListRegex(parsedData map[string]map[string]string, sch
 
 // populateSettingValuesFromConfigMap populates settings from the parsed configuration.
 func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (RegexValues, error) {
-	regexValues := RegexValues{
-		ControlplaneKubeControllerManager: getStringValue(parsedConfig["controlplane-kube-controller-manager"]),
-		ControlplaneKubeScheduler:         getStringValue(parsedConfig["controlplane-kube-scheduler"]),
-		ControlplaneApiserver:             getStringValue(parsedConfig["controlplane-apiserver"]),
-		ControlplaneClusterAutoscaler:     getStringValue(parsedConfig["controlplane-cluster-autoscaler"]),
-		ControlplaneEtcd:                  getStringValue(parsedConfig["controlplane-etcd"]),
-		MinimalIngestionProfile:           getStringValue(parsedConfig["minimalingestionprofile"]),
+	regexValues := RegexValues{}
+
+	// v2ToV1KeyMap for mapping v2 keys to v1 keys
+	v2ToV1KeyMap := map[string]string{
+		"apiserver":                  "controlplane-apiserver",
+		"cluster-autoscaler":         "controlplane-cluster-autoscaler",
+		"kube-scheduler":             "controlplane-kube-scheduler",
+		"kube-controller-manager":    "controlplane-kube-controller-manager",
+		"etcd":                       "controlplane-etcd",
+		"minimalingestionprofile":    "minimalingestionprofile",
+	}
+
+	// Populate regex values based on the keys, mapping v2 keys to v1 if needed
+	for key, value := range parsedConfig {
+		// Check if the key exists in the v2ToV1KeyMap and use the v1 key if found
+		if mappedKey, exists := v2ToV1KeyMap[key]; exists {
+			// Set the value for the corresponding v1 key
+			switch mappedKey {
+			case "controlplane-kube-controller-manager":
+				regexValues.ControlplaneKubeControllerManager = getStringValue(value)
+			case "controlplane-kube-scheduler":
+				regexValues.ControlplaneKubeScheduler = getStringValue(value)
+			case "controlplane-apiserver":
+				regexValues.ControlplaneApiserver = getStringValue(value)
+			case "controlplane-cluster-autoscaler":
+				regexValues.ControlplaneClusterAutoscaler = getStringValue(value)
+			case "controlplane-etcd":
+				regexValues.ControlplaneEtcd = getStringValue(value)
+			case "minimalingestionprofile":
+				regexValues.MinimalIngestionProfile = getStringValue(value)
+			}
+		} else {
+			// Handle the v1 keys directly
+			switch key {
+			case "controlplane-kube-controller-manager":
+				regexValues.ControlplaneKubeControllerManager = getStringValue(value)
+			case "controlplane-kube-scheduler":
+				regexValues.ControlplaneKubeScheduler = getStringValue(value)
+			case "controlplane-apiserver":
+				regexValues.ControlplaneApiserver = getStringValue(value)
+			case "controlplane-cluster-autoscaler":
+				regexValues.ControlplaneClusterAutoscaler = getStringValue(value)
+			case "controlplane-etcd":
+				regexValues.ControlplaneEtcd = getStringValue(value)
+			case "minimalingestionprofile":
+				regexValues.MinimalIngestionProfile = getStringValue(value)
+			}
+		}
 	}
 
 	fmt.Printf("populateSettingValuesFromConfigMap::Initial regexValues: %+v\n", regexValues)

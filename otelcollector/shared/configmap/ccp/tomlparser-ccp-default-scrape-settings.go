@@ -91,34 +91,65 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(parsed
 }
 
 // PopulateSettingValues populates settings from the parsed configuration.
-func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string) {
+func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string, schemaVersion string) {
 	fmt.Println("PopulateSettingValues::Populating settings from parsed configuration")
 
-	if val, ok := parsedConfig["controlplane-kube-controller-manager"]; ok && val != "" {
-		cp.ControlplaneKubeControllerManager = val
-		fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-kube-controller-manager: %v\n", cp.ControlplaneKubeControllerManager)
+	// Handle both v1 and v2 schemas
+	if schemaVersion == "v1" {
+		// v1 specific configuration
+		if val, ok := parsedConfig["controlplane-kube-controller-manager"]; ok && val != "" {
+			cp.ControlplaneKubeControllerManager = val
+			fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-kube-controller-manager: %v\n", cp.ControlplaneKubeControllerManager)
+		}
+
+		if val, ok := parsedConfig["controlplane-kube-scheduler"]; ok && val != "" {
+			cp.ControlplaneKubeScheduler = val
+			fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-kube-scheduler: %v\n", cp.ControlplaneKubeScheduler)
+		}
+
+		if val, ok := parsedConfig["controlplane-apiserver"]; ok && val != "" {
+			cp.ControlplaneApiserver = val
+			fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-apiserver: %v\n", cp.ControlplaneApiserver)
+		}
+
+		if val, ok := parsedConfig["controlplane-cluster-autoscaler"]; ok && val != "" {
+			cp.ControlplaneClusterAutoscaler = val
+			fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-cluster-autoscaler: %v\n", cp.ControlplaneClusterAutoscaler)
+		}
+
+		if val, ok := parsedConfig["controlplane-etcd"]; ok && val != "" {
+			cp.ControlplaneEtcd = val
+			fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-etcd: %v\n", cp.ControlplaneEtcd)
+		}
+	} else if schemaVersion == "v2" {
+		// v2 specific configuration
+		if val, ok := parsedConfig["apiserver"]; ok && val != "" {
+			cp.ControlplaneApiserver = val
+			fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-apiserver: %v\n", cp.ControlplaneApiserver)
+		}
+
+		if val, ok := parsedConfig["cluster-autoscaler"]; ok && val != "" {
+			cp.ControlplaneClusterAutoscaler = val
+			fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-cluster-autoscaler: %v\n", cp.ControlplaneClusterAutoscaler)
+		}
+
+		if val, ok := parsedConfig["kube-scheduler"]; ok && val != "" {
+			cp.ControlplaneKubeScheduler = val
+			fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-kube-scheduler: %v\n", cp.ControlplaneKubeScheduler)
+		}
+
+		if val, ok := parsedConfig["kube-controller-manager"]; ok && val != "" {
+			cp.ControlplaneKubeControllerManager = val
+			fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-kube-controller-manager: %v\n", cp.ControlplaneKubeControllerManager)
+		}
+
+		if val, ok := parsedConfig["etcd"]; ok && val != "" {
+			cp.ControlplaneEtcd = val
+			fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-etcd: %v\n", cp.ControlplaneEtcd)
+		}
 	}
 
-	if val, ok := parsedConfig["controlplane-kube-scheduler"]; ok && val != "" {
-		cp.ControlplaneKubeScheduler = val
-		fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-kube-scheduler: %v\n", cp.ControlplaneKubeScheduler)
-	}
-
-	if val, ok := parsedConfig["controlplane-apiserver"]; ok && val != "" {
-		cp.ControlplaneApiserver = val
-		fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-apiserver: %v\n", cp.ControlplaneApiserver)
-	}
-
-	if val, ok := parsedConfig["controlplane-cluster-autoscaler"]; ok && val != "" {
-		cp.ControlplaneClusterAutoscaler = val
-		fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-cluster-autoscaler: %v\n", cp.ControlplaneClusterAutoscaler)
-	}
-
-	if val, ok := parsedConfig["controlplane-etcd"]; ok && val != "" {
-		cp.ControlplaneEtcd = val
-		fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-etcd: %v\n", cp.ControlplaneEtcd)
-	}
-
+	// Check advanced mode
 	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
 		fmt.Println("PopulateSettingValues::Advanced mode detected")
 		controllerType := os.Getenv("CONTROLLER_TYPE")
@@ -138,6 +169,7 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string)
 		fmt.Println("PopulateSettingValues::No default scrape configs enabled")
 	}
 }
+
 
 // WriteDefaultScrapeSettingsToFile writes the configuration settings to a file.
 func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, cp *ConfigProcessor) error {
