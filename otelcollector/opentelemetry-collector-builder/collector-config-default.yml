@@ -45,10 +45,6 @@ service:
       receivers: [prometheus]
       exporters: [otlp]
       processors: [batch,resource]
-    metrics/telemetry:
-      receivers: [prometheus]
-      exporters: [prometheus/telemetry]
-      processors: [filter/telemetry]
   telemetry:
     logs:
       level: warn
