@@ -277,25 +277,26 @@ func handleShutdown() {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	// DEBUG
-	// Read file contents
-  data, err := ioutil.ReadFile("/opt/microsoft/otelcollector/collector-log.txt")
-	if err != nil {
-		log.Fatalf("Error reading file: %v", err)
-	}
-  // Print file contents
-  fmt.Println("File contents of /opt/microsoft/otelcollector/collector-log.txt:")
-  fmt.Println(string(data))
+	// Check if file exists before reading
+  filePaths := []string{
+	  "/opt/microsoft/otelcollector/collector-log.txt",
+	  "/MetricsExtensionConsoleDebugLog.log",
+  }
 
-	// DEBUG
-	// Read file contents
-  data, err = ioutil.ReadFile("/MetricsExtensionConsoleDebugLog.log")
-	if err != nil {
-		log.Fatalf("Error reading file: %v", err)
-	}
-  // Print file contents
-  fmt.Println("File contents of /opt/microsoft/otelcollector/collector-log.txt:")
-  fmt.Println(string(data))
+  for _, filePath := range filePaths {
+  	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+  			// DEBUG: Read file contents
+  			data, err := ioutil.ReadFile(filePath)
+  			if err != nil {
+  					log.Fatalf("Error reading file %s: %v", filePath, err)
+  			}
+  			// Print file contents
+  			fmt.Printf("File contents of %s:\n", filePath)
+  			fmt.Println(string(data))
+  	} else {
+  			fmt.Printf("File %s does not exist\n", filePath)
+  	}
+  }
 	
 	osType := os.Getenv("OS_TYPE")
 	status := http.StatusOK
