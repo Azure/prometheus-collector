@@ -36,10 +36,10 @@ type OtelConfig struct {
 				Receivers  interface{} `yaml:"receivers"`
 			} `yaml:"metrics"`
 			MetricsTelemetry struct {
-				Exporters  interface{} `yaml:"exporters"`
-				Processors interface{} `yaml:"processors"`
-				Receivers  interface{} `yaml:"receivers"`
-			} `yaml:"metrics/telemetry"`
+				Exporters  interface{} `yaml:"exporters,omitempty"`
+				Processors interface{} `yaml:"processors,omitempty"`
+				Receivers  interface{} `yaml:"receivers,omitempty"`
+			} `yaml:"metrics/telemetry,omitempty"`
 		} `yaml:"pipelines"`
 		Telemetry struct {
 			Logs struct {
@@ -250,8 +250,8 @@ func generateOtelConfig(promFilePath string, outputFilePath string, otelConfigTe
 		otelConfig.Service.Pipelines.Metrics.Exporters = []interface{}{"otlp", "prometheus"}
 		if os.Getenv("CCP_METRICS_ENABLED") != "true" {
 			otelConfig.Service.Pipelines.MetricsTelemetry.Receivers = []interface{}{"prometheus"}
-			otelConfig.Service.Pipelines.Metrics.Exporters = []interface{}{"prometheus/telemetry"}
-			otelConfig.Service.Pipelines.Metrics.Processors = []interface{}{"filter/telemetry"}
+			otelConfig.Service.Pipelines.MetricsTelemetry.Exporters = []interface{}{"prometheus/telemetry"}
+			otelConfig.Service.Pipelines.MetricsTelemetry.Processors = []interface{}{"filter/telemetry"}
 		}
 	}
 

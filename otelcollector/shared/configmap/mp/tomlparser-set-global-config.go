@@ -27,10 +27,10 @@ type OtelConfig struct {
 				Receivers  interface{} `yaml:"receivers"`
 			} `yaml:"metrics"`
 			MetricsTelemetry struct {
-				Exporters  interface{} `yaml:"exporters"`
-				Processors interface{} `yaml:"processors"`
-				Receivers  interface{} `yaml:"receivers"`
-			} `yaml:"metrics/telemetry"`
+				Exporters  interface{} `yaml:"exporters,omitempty"`
+				Processors interface{} `yaml:"processors,omitempty"`
+				Receivers  interface{} `yaml:"receivers,omitempty"`
+			} `yaml:"metrics/telemetry,omitempty"`
 		} `yaml:"pipelines"`
 		Telemetry struct {
 			Logs struct {
