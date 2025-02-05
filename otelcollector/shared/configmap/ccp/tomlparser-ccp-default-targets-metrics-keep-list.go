@@ -25,6 +25,9 @@ var (
 
 // getStringValue checks the type of the value and returns it as a string if possible.
 func getStringValue(value interface{}) string {
+	if value == nil {
+		return ""
+	}
 	switch v := value.(type) {
 	case string:
 		return v
@@ -71,7 +74,7 @@ func parseConfigMapForKeepListRegex(parsedData map[string]map[string]string, sch
 	} else if schemaVersion == "v2" {
 		fmt.Println("parseConfigMapForKeepListRegex::Processing v2 schema")
 		// For v2, control plane jobs are under "controlplane-metrics" without "controlplane-" prefix
-		if settings, ok := parsedData["controlplane-metrics"]; ok {
+		if settings, ok := parsedData["default-targets-metrics-keep-list"]; ok {
 			fmt.Println("parseConfigMapForKeepListRegex::Found controlplane-metrics section")
 			// Map v2 keys to v1 keys
 			v2ToV1KeyMap := map[string]string{
