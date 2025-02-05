@@ -15,6 +15,40 @@ const (
 	loggingPrefix = "debug-mode-config"
 )
 
+type OtelConfig struct {
+	Exporters  interface{} `yaml:"exporters"`
+	Processors interface{} `yaml:"processors"`
+	Extensions interface{} `yaml:"extensions"`
+	Receivers  struct {
+		Prometheus struct {
+			Config          interface{} `yaml:"config"`
+			TargetAllocator interface{} `yaml:"target_allocator"`
+		} `yaml:"prometheus"`
+	} `yaml:"receivers"`
+	Service struct {
+		Extensions interface{} `yaml:"extensions"`
+		Pipelines  struct {
+			Metrics struct {
+				Exporters  interface{} `yaml:"exporters"`
+				Processors interface{} `yaml:"processors"`
+				Receivers  interface{} `yaml:"receivers"`
+			} `yaml:"metrics"`
+			MetricsTelemetry struct {
+				Exporters  interface{} `yaml:"exporters,omitempty"`
+				Processors interface{} `yaml:"processors,omitempty"`
+				Receivers  interface{} `yaml:"receivers,omitempty"`
+			} `yaml:"metrics/telemetry,omitempty"`
+		} `yaml:"pipelines"`
+		Telemetry struct {
+			Logs struct {
+				Level       interface{} `yaml:"level"`
+				Encoding    interface{} `yaml:"encoding"`
+				OutputPaths []string    `yaml:"output_paths"`
+			} `yaml:"logs"`
+		} `yaml:"telemetry"`
+	} `yaml:"service"`
+}
+
 // ConfigureDebugModeSettings reads debug mode settings from a config map,
 // sets default values if necessary, writes environment variables to a file,
 // and modifies a YAML configuration file based on debug mode settings.
@@ -50,7 +84,7 @@ func ConfigureDebugModeSettings() error {
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType != "" && controllerType == "ReplicaSet" {
 			fmt.Println("Setting prometheus in the exporter metrics for service pipeline since debug mode is enabled ...")
-			var config map[string]interface{}
+			var config OtelConfig
 			content, err := os.ReadFile(replicaSetCollectorConfig)
 			if err != nil {
 				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
@@ -61,17 +95,11 @@ func ConfigureDebugModeSettings() error {
 				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
 			}
 
-			if config != nil {
-				exporters := []string{"otlp", "prometheus"}
-				config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"] = exporters
-				if os.Getenv("CCP_METRICS_ENABLED") != "true" {
-					telemetryReceivers := []string{"prometheus"}
-					telemetryExporters := []string{"prometheus/telemetry"}
-					telemetryProcessors := []string{"filter/telemetry"}
-					config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics/telemetry"].(map[interface{}]interface{})["receivers"] = telemetryReceivers
-					config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics/telemetry"].(map[interface{}]interface{})["exporters"] = telemetryExporters
-					config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics/telemetry"].(map[interface{}]interface{})["processors"] = telemetryProcessors
-				}
+			config.Service.Pipelines.Metrics.Exporters = []interface{}{"otlp", "prometheus"}
+			if os.Getenv("CCP_METRICS_ENABLED") != "true" {
+				config.Service.Pipelines.MetricsTelemetry.Receivers = []interface{}{"prometheus"}
+				config.Service.Pipelines.MetricsTelemetry.Exporters = []interface{}{"prometheus/telemetry"}
+				config.Service.Pipelines.MetricsTelemetry.Processors = []interface{}{"filter/telemetry"}
 			}
 			cfgYamlWithDebugModeSettings, err := yaml.Marshal(config)
 			if err != nil {
