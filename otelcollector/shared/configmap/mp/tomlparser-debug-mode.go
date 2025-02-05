@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	loggingPrefix             = "debug-mode-config"
+	loggingPrefix = "debug-mode-config"
 )
 
 // ConfigureDebugModeSettings reads debug mode settings from a config map,
@@ -39,43 +39,51 @@ func ConfigureDebugModeSettings() error {
 	defer file.Close()
 
 	//if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
-		//file.WriteString(fmt.Sprintf("export DEBUG_MODE_ENABLED=%v\n", defaultEnabled))
+	//file.WriteString(fmt.Sprintf("export DEBUG_MODE_ENABLED=%v\n", defaultEnabled))
 	//} else {
-		file.WriteString(fmt.Sprintf("DEBUG_MODE_ENABLED=%v\n", enabled))
+	file.WriteString(fmt.Sprintf("DEBUG_MODE_ENABLED=%v\n", enabled))
 
-		fmt.Printf("Setting debug mode environment variable: %v\n", enabled)
+	fmt.Printf("Setting debug mode environment variable: %v\n", enabled)
 	//}
 
 	if enabled {
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType != "" && controllerType == "ReplicaSet" {
-			fmt.Println("Setting otlp in the exporter metrics for service pipeline since debug mode is enabled ...")
+			fmt.Println("Setting prometheus in the exporter metrics for service pipeline since debug mode is enabled ...")
 			var config map[string]interface{}
 			content, err := os.ReadFile(replicaSetCollectorConfig)
 			if err != nil {
-				return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
 			}
 
 			err = yaml.Unmarshal(content, &config)
 			if err != nil {
-				return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
 			}
 
 			if config != nil {
 				exporters := []string{"otlp", "prometheus"}
 				config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"] = exporters
-
-				cfgYamlWithDebugModeSettings, err := yaml.Marshal(config)
-				if err != nil {
-					return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
-				}
-
-				err = os.WriteFile(replicaSetCollectorConfig, []byte(cfgYamlWithDebugModeSettings), fs.FileMode(0644))
-				if err != nil {
-					return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+				if os.Getenv("CCP_METRICS_ENABLED") != "true" {
+					telemetryReceivers := []string{"prometheus"}
+					telemetryExporters := []string{"prometheus/telemetry"}
+					telemetryProcessors := []string{"filter/telemetry"}
+					config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics/telemetry"].(map[interface{}]interface{})["receivers"] = telemetryReceivers
+					config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics/telemetry"].(map[interface{}]interface{})["exporters"] = telemetryExporters
+					config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics/telemetry"].(map[interface{}]interface{})["processors"] = telemetryProcessors
 				}
 			}
-			fmt.Println("Done setting otlp in the exporter metrics for service pipeline.")
+			cfgYamlWithDebugModeSettings, err := yaml.Marshal(config)
+			if err != nil {
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+			}
+
+			err = os.WriteFile(replicaSetCollectorConfig, []byte(cfgYamlWithDebugModeSettings), fs.FileMode(0644))
+			if err != nil {
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+			}
+
+			fmt.Println("Done setting prometheus in the exporter metrics for service pipeline.")
 		}
 	}
 
