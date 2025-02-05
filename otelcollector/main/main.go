@@ -191,9 +191,6 @@ func main() {
 			}
 			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
 		}
-
-		//shared.StartTelegraf()
-
 	}
 
 	if osType == "linux" {

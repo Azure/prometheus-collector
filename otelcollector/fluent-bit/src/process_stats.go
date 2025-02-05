@@ -54,6 +54,10 @@ var replicasetDimensionsNameToEnvVar = map[string]string{
 	"operatormodelcfgmapsetting":              "AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING",
 	"operatormodelchartsetting":               "AZMON_OPERATOR_ENABLED_CHART_SETTING",
 	"collectorHpaEnabled":                     "AZMON_COLLECTOR_HPA_ENABLED",
+	"isarcextension":                          "$IS_ARC_EXTENSION",
+	"arcdistribution":                         "$ARC_DISTRIBUTION",
+	"mountmarinercerts":                       "$MOUNT_MARINER_CERTS",
+	"mountubuntucerts":                        "$MOUNT_UBUNTU_CERTS",
 }
 
 var daemonsetDimensionsNameToEnvVar = map[string]string{
@@ -202,6 +206,9 @@ func getExtraDimensions(processName string) map[string]string {
 }
 
 func createProcessMetric(processName string, metricName string, percentile int, values sort.Float64Slice) *appinsights.MetricTelemetry {
+	if len(values) == 0 {
+		return nil
+	}
 	return appinsights.NewMetricTelemetry(
 		fmt.Sprintf("%s_%s_0%d", strings.ToLower(processName), metricName, percentile),
 		float64(values[int(math.Round(float64(len(values)-1)*float64(percentile)/100.0))]),
