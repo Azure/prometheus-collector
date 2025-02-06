@@ -57,6 +57,15 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 	processAggregations := InitProcessAggregations(processNames, osType)
 	processAggregations.Run()
 
+	// Collect, aggregate, and send CPU and Memory usage telemetry for the processes below
+	osType := os.Getenv("OS_TYPE")
+	processNames := []string{"otelcollector", "MetricsExtension"}
+	if osType == "windows" {
+		processNames = []string{"otelcollector", "MetricsExtension.Native"}
+	}
+	processAggregations := InitProcessAggregations(processNames, osType)
+	processAggregations.Run()
+
 	go PushMEProcessedAndReceivedCountToAppInsightsMetrics()
 
 	return output.FLB_OK
@@ -95,6 +104,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
 		return RecordExportingFailed(records)
+	// Prometheus metrics from otelcollector, Prometheus UX, and targetallocator
 	case "prometheus.metrics.otelcollector", "prometheus.metrics.prometheus", "prometheus.metrics.targetallocator", "prometheus.metrics.volume":
 		return SendPrometheusMetricsToAppInsights(records, incomingTag)
 	default:

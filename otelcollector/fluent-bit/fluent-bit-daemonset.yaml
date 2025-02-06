@@ -112,7 +112,7 @@ pipeline:
             delete: service_version
           - name: labels
             delete: transport
-    
+
     - name: prometheus_scrape
       host: 127.0.0.1
       port: 9095

@@ -1,5 +1,6 @@
 
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 as builder
+ARG GOLANG_VERSION
+FROM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as builder
 
 # Set necessary environmet variables needed for our image
 ENV GO111MODULE=on \
@@ -10,12 +11,10 @@ ENV GO111MODULE=on \
 # Move to working directory /build
 WORKDIR /build
 
-ARG GOLANG_VERSION
-
 # Copy and download dependency using go mod
 COPY go.mod .
 COPY go.sum .
-RUN tdnf install -y golang-${GOLANG_VERSION} ca-certificates
+#RUN tdnf install -y golang-${GOLANG_VERSION} ca-certificates
 RUN go mod download
 
 # COPY client-cert.pem /etc/prometheus/certs/
