@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.21
+FROM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION}
 
 RUN go install -v github.com/onsi/ginkgo/v2/ginkgo@latest
 
