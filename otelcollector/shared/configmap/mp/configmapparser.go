@@ -130,6 +130,16 @@ func parseDebugModeSettings() {
 	shared.EchoSectionDivider("End Processing - parseDebugModeSettings")
 }
 
+func parseOpentelemetryMetricsSettings() {
+	shared.EchoSectionDivider("Start Processing - parseOpentelemetryMetricsSettings")
+	if err := ConfigureOpentelemetryMetricsSettings(); err != nil {
+		shared.EchoError(err.Error())
+		return
+	}
+	handleEnvFileError(opentelemetryMetricsEnvVarPath)
+	shared.EchoSectionDivider("End Processing - parseOpentelemetryMetricsSettings")
+}
+
 func handleEnvFileError(filename string) {
 	err := shared.SetEnvVarsFromFile(filename)
 	if err != nil {
@@ -144,6 +154,7 @@ func Configmapparser() {
 	parsePrometheusCollectorConfig()
 	parseDefaultScrapeSettings()
 	parseDebugModeSettings()
+	parseOpentelemetryMetricsSettings()
 
 	tomlparserTargetsMetricsKeepList()
 	tomlparserScrapeInterval()
@@ -239,16 +250,16 @@ func Configmapparser() {
 
 		// Source prom_config_validator_env_var
 		filename := "/opt/microsoft/prom_config_validator_env_var"
-	  err = shared.SetEnvVarsFromFile(filename)
-	  if err != nil {
-		  fmt.Printf("Error when settinng env for /opt/microsoft/prom_config_validator_env_var: %v\n", err)
-	  }
+		err = shared.SetEnvVarsFromFile(filename)
+		if err != nil {
+			fmt.Printf("Error when settinng env for /opt/microsoft/prom_config_validator_env_var: %v\n", err)
+		}
 
 		filename = "/opt/envvars.env"
-	  err = shared.SetEnvVarsFromFile(filename)
-	  if err != nil {
-		  fmt.Printf("Error when settinng env for /opt/envvars.env: %v\n", err)
-	  }		
+		err = shared.SetEnvVarsFromFile(filename)
+		if err != nil {
+			fmt.Printf("Error when settinng env for /opt/envvars.env: %v\n", err)
+		}
 	}
 
 	fmt.Printf("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
