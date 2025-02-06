@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - rashmi/telemetry
 pr:
   autoCancel: true
   branches:
