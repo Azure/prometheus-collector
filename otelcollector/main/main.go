@@ -87,6 +87,7 @@ func main() {
 
 	var meConfigFile string
 	var fluentBitConfigFile string
+	otlpEnabled := strings.ToLower(shared.GetEnv("AZMON_FULL_OTLP_ENABLED", "false"))
 
 	meConfigFile, fluentBitConfigFile = shared.DetermineConfigFiles(controllerType, clusterOverride)
 	fmt.Println("meConfigFile:", meConfigFile)
@@ -112,25 +113,28 @@ func main() {
 	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
 	time.Sleep(10 * time.Second)
 
-	if ccpMetricsEnabled != "true" {
-		if osType == "linux" {
-			fmt.Println("Starting MDSD")
-			shared.StartMdsdForOverlay()
+	// Start MDSD only if OTLP is not enabled
+	if otlpEnabled != "true" {
+		if ccpMetricsEnabled != "true" {
+			if osType == "linux" {
+				fmt.Println("Starting MDSD")
+				shared.StartMdsdForOverlay()
+			} else {
+				fmt.Println("Starting MA")
+				shared.StartMA()
+			}
 		} else {
-			fmt.Println("Starting MA")
-			shared.StartMA()
+			shared.StartMdsdForUnderlay()
 		}
-	} else {
-		shared.StartMdsdForUnderlay()
-	}
 
-	if osType == "linux" {
-		// update this to use color coding
-		shared.PrintMdsdVersion()
-	}
+		if osType == "linux" {
+			// update this to use color coding
+			shared.PrintMdsdVersion()
+		}
 
-	fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
-	time.Sleep(30 * time.Second)
+		fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
+		time.Sleep(30 * time.Second)
+	}
 
 	fmt.Println("Starting Metrics Extension with config overrides")
 	if ccpMetricsEnabled != "true" {

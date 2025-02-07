@@ -307,7 +307,7 @@ func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
 
 	switch osType {
 	case "linux":
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/me", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
 
 	case "windows":
 		// Prepare the command and its arguments
@@ -315,9 +315,8 @@ func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
 			"C:\\opt\\metricextension\\MetricsExtension\\MetricsExtension.Native.exe",
 			"-Logger", "File",
 			"-LogLevel", "Info",
-			"-LocalControlChannel",
 			"-TokenSource", "AMCS",
-			"-DataDirectory", "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\metricsextension\\",
+			"-DataDirectory", "C:\\opt\\genevamonitoringagent\\datadirectory\\mcs\\me\\",
 			"-Input", "otlp_grpc_prom",
 			"-ConfigOverridesFilePath", meConfigFile,
 		)
@@ -334,7 +333,7 @@ func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
 }
 
 func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string) {
-	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/metricsextension", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/me", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 
 	// Create a file to store the stdoutput
 	// metricsextension_stdout_file, err := os.Create("metricsextension_stdout.log")
