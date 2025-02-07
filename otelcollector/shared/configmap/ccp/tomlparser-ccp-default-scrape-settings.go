@@ -10,25 +10,20 @@ import (
 // SetDefaultScrapeSettings sets the default values for control plane scrape settings.
 func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string, error) {
 	config := make(map[string]string)
+
 	// Set default values
+	fmt.Println("SetDefaultScrapeSettings::Setting default scrape settings:")
 	config["controlplane-apiserver"] = "true"
 	config["controlplane-cluster-autoscaler"] = "false"
 	config["controlplane-kube-scheduler"] = "false"
 	config["controlplane-kube-controller-manager"] = "false"
 	config["controlplane-etcd"] = "true"
 
-	fmt.Println("SetDefaultScrapeSettings::Setting default scrape settings:")
-	fmt.Printf("controlplane-apiserver: %s\n", config["controlplane-apiserver"])
-	fmt.Printf("controlplane-cluster-autoscaler: %s\n", config["controlplane-cluster-autoscaler"])
-	fmt.Printf("controlplane-kube-scheduler: %s\n", config["controlplane-kube-scheduler"])
-	fmt.Printf("controlplane-kube-controller-manager: %s\n", config["controlplane-kube-controller-manager"])
-	fmt.Printf("controlplane-etcd: %s\n", config["controlplane-etcd"])
-
 	return config, nil
 }
 
-// ParseConfigMapForDefaultScrapeSettings extracts the control plane scrape settings from parsedData.
-func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(parsedData map[string]map[string]string, schemaVersion string) (map[string]string, error) {
+// ParseConfigMapForDefaultScrapeSettings extracts the control plane scrape settings from metricsConfigBySection.
+func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string, schemaVersion string) (map[string]string, error) {
 	config := make(map[string]string)
 	// Set default values
 	config["controlplane-apiserver"] = "true"
@@ -37,19 +32,11 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(parsed
 	config["controlplane-kube-controller-manager"] = "false"
 	config["controlplane-etcd"] = "true"
 
-	fmt.Printf("ParseConfigMapForDefaultScrapeSettings::Schema version: %s\n", schemaVersion)
-	fmt.Println("ParseConfigMapForDefaultScrapeSettings::Default scrape settings:")
-	fmt.Printf("controlplane-apiserver: %s\n", config["controlplane-apiserver"])
-	fmt.Printf("controlplane-cluster-autoscaler: %s\n", config["controlplane-cluster-autoscaler"])
-	fmt.Printf("controlplane-kube-scheduler: %s\n", config["controlplane-kube-scheduler"])
-	fmt.Printf("controlplane-kube-controller-manager: %s\n", config["controlplane-kube-controller-manager"])
-	fmt.Printf("controlplane-etcd: %s\n", config["controlplane-etcd"])
-
-	// Override defaults with values from parsedData
+	// Override defaults with values from metricsConfigBySection
 	if schemaVersion == "v1" {
 		fmt.Println("ParseConfigMapForDefaultScrapeSettings::Processing v1 schema")
 		// For v1, control plane jobs are under "default-scrape-settings-enabled" with "controlplane-" prefix
-		if settings, ok := parsedData["default-scrape-settings-enabled"]; ok {
+		if settings, ok := metricsConfigBySection["default-scrape-settings-enabled"]; ok {
 			fmt.Println("ParseConfigMapForDefaultScrapeSettings::Found default-scrape-settings-enabled section")
 			for key, value := range settings {
 				if strings.HasPrefix(key, "controlplane-") {
@@ -61,7 +48,7 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(parsed
 	} else if schemaVersion == "v2" {
 		fmt.Println("ParseConfigMapForDefaultScrapeSettings::Processing v2 schema")
 		// For v2, control plane jobs are under "controlplane-metrics" without "controlplane-" prefix
-		if settings, ok := parsedData["default-scrape-settings-enabled"]; ok {
+		if settings, ok := metricsConfigBySection["default-scrape-settings-enabled"]; ok {
 			fmt.Println("ParseConfigMapForDefaultScrapeSettings::Found default scrape settings section")
 			// Map v2 keys to v1 keys
 			v2ToV1KeyMap := map[string]string{
@@ -114,7 +101,6 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string,
 		cp.ControlplaneEtcd = val
 		fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-etcd: %v\n", cp.ControlplaneEtcd)
 	}
-	
 
 	// Check advanced mode
 	if os.Getenv("MODE") == "" && strings.ToLower(strings.TrimSpace(os.Getenv("MODE"))) == "advanced" {
@@ -136,7 +122,6 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string,
 		fmt.Println("PopulateSettingValues::No default scrape configs enabled")
 	}
 }
-
 
 // WriteDefaultScrapeSettingsToFile writes the configuration settings to a file.
 func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, cp *ConfigProcessor) error {
@@ -160,7 +145,7 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 }
 
 // ConfigureDefaultScrapeSettings processes the configuration and writes it to a file.
-func (c *Configurator) ConfigureDefaultScrapeSettings(parsedData map[string]map[string]string) {
+func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	fmt.Printf("ConfigureDefaultScrapeSettings::Config schema version: %s\n", configSchemaVersion)
 
@@ -171,7 +156,7 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(parsedData map[string]map[
 	var err error
 	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
 		fmt.Println("ConfigureDefaultScrapeSettings::Loading settings from config map")
-		defaultSettings, err = c.ConfigLoader.ParseConfigMapForDefaultScrapeSettings(parsedData, configSchemaVersion)
+		defaultSettings, err = c.ConfigLoader.ParseConfigMapForDefaultScrapeSettings(metricsConfigBySection, configSchemaVersion)
 	} else {
 		fmt.Println("ConfigureDefaultScrapeSettings::Loading default settings")
 		defaultSettings, err = c.ConfigLoader.SetDefaultScrapeSettings()
@@ -213,7 +198,7 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(parsedData map[string]map[
 }
 
 // TomlparserCCPDefaultScrapeSettings initializes the configurator and processes the configuration.
-func tomlparserCCPDefaultScrapeSettings(parsedData map[string]map[string]string) {
+func tomlparserCCPDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
 	fmt.Println("tomlparserCCPDefaultScrapeSettings::Start ccp-default-scrape-settings Processing")
 
 	configurator := &Configurator{
@@ -223,6 +208,6 @@ func tomlparserCCPDefaultScrapeSettings(parsedData map[string]map[string]string)
 		ConfigParser:   &ConfigProcessor{},
 	}
 
-	configurator.ConfigureDefaultScrapeSettings(parsedData)
+	configurator.ConfigureDefaultScrapeSettings(metricsConfigBySection)
 	fmt.Println("tomlparserCCPDefaultScrapeSettings::End ccp-default-scrape-settings Processing")
 }

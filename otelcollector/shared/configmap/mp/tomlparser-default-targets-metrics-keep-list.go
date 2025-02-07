@@ -50,10 +50,10 @@ func getStringValue(value interface{}) string {
 	}
 }
 
-// populateKeepList initializes the regex keep list with values from parsedData.
-func populateKeepList(parsedData map[string]map[string]string) (RegexValues, error) {
+// populateKeepList initializes the regex keep list with values from metricsConfigBySection.
+func populateKeepList(metricsConfigBySection map[string]map[string]string) (RegexValues, error) {
 
-	keeplist := parsedData["default-targets-metrics-keep-list"]
+	keeplist := metricsConfigBySection["default-targets-metrics-keep-list"]
 
 	minimalingestionprofile_value := "true"
 
@@ -61,7 +61,7 @@ func populateKeepList(parsedData map[string]map[string]string) (RegexValues, err
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
 		minimalingestionprofile_value = getStringValue(keeplist["minimalingestionprofile"])
 	} else if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v2" {
-		minimalingestionprofile_value = getStringValue(parsedData["minimal-ingestion-profile"]["enabled"])
+		minimalingestionprofile_value = getStringValue(metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
 	} else {
 		return RegexValues{}, fmt.Errorf("unsupported/missing config schema version - '%s', using defaults, please use supported schema version", configSchemaVersion)
 	}
@@ -167,13 +167,13 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 	}
 }
 
-func tomlparserTargetsMetricsKeepList(parsedData map[string]map[string]string) {
+func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[string]string) {
 	configSchemaVersion = os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	shared.EchoSectionDivider("Start Processing - tomlparserTargetsMetricsKeepList")
 
 	var regexValues RegexValues
 
-	regexValues, err := populateKeepList(parsedData)
+	regexValues, err := populateKeepList(metricsConfigBySection)
 	populateRegexValuesWithMinimalIngestionProfile(regexValues)
 
 	// Write settings to a YAML file.

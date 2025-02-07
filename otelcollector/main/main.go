@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"syscall"
-	"io/ioutil"
 
 	shared "github.com/prometheus-collector/shared"
 	ccpconfigmapsettings "github.com/prometheus-collector/shared/configmap/ccp"
@@ -265,27 +264,6 @@ func handleShutdown() {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	// Check if file exists before reading
-  filePaths := []string{
-	  "/opt/microsoft/otelcollector/collector-log.txt",
-	  "/MetricsExtensionConsoleDebugLog.log",
-  }
-
-  for _, filePath := range filePaths {
-  	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
-  			// DEBUG: Read file contents
-  			data, err := ioutil.ReadFile(filePath)
-  			if err != nil {
-  					log.Fatalf("Error reading file %s: %v", filePath, err)
-  			}
-  			// Print file contents
-  			fmt.Printf("File contents of %s:\n", filePath)
-  			fmt.Println(string(data))
-  	} else {
-  			fmt.Printf("File %s does not exist\n", filePath)
-  	}
-  }
-	
 	osType := os.Getenv("OS_TYPE")
 	status := http.StatusOK
 	message := "prometheuscollector is running."

@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedData map[string]map[string]string) {
+func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) {
 	// Populate default metric account name
-	if settings, ok := parsedData["prometheus-collector-settings"]; ok {
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 		if value, ok := settings["default_metric_account_name"]; ok {
 			cp.DefaultMetricAccountName = value
 			fmt.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
@@ -17,7 +17,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedData map[str
 	}
 
 	// Populate cluster alias
-	if settings, ok := parsedData["prometheus-collector-settings"]; ok {
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 		if value, ok := settings["cluster_alias"]; ok {
 			cp.ClusterAlias = strings.TrimSpace(value)
 			fmt.Printf("Got configmap setting for cluster_alias: %s\n", cp.ClusterAlias)
@@ -32,7 +32,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedData map[str
 	// Populate operator settings
 	if operatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED"); operatorEnabled != "" && strings.ToLower(operatorEnabled) == "true" {
 		cp.IsOperatorEnabledChartSetting = true
-		if settings, ok := parsedData["prometheus-collector-settings"]; ok {
+		if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 			if value, ok := settings["operator_enabled"]; ok {
 				cp.IsOperatorEnabled = value == "true"
 				fmt.Printf("Configmap setting enabling operator: %t\n", cp.IsOperatorEnabled)
@@ -62,13 +62,13 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 	return nil
 }
 
-func (c *Configurator) Configure(parsedData map[string]map[string]string) {
+func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]string) {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	fmt.Printf("Configure:Print the value of AZMON_AGENT_CFG_SCHEMA_VERSION: %s\n", configSchemaVersion)
 
 	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
-		if len(parsedData) > 0 {
-			c.ConfigParser.PopulateSettingValuesFromConfigMap(parsedData)
+		if len(metricsConfigBySection) > 0 {
+			c.ConfigParser.PopulateSettingValuesFromConfigMap(metricsConfigBySection)
 		}
 	} else {
 		if _, err := os.Stat(c.ConfigLoader.ConfigMapMountPath); err == nil {
@@ -98,7 +98,7 @@ func (c *Configurator) Configure(parsedData map[string]map[string]string) {
 	}
 }
 
-func parseConfigAndSetEnvInFile(parsedData map[string]map[string]string) {
+func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string) {
 	configurator := &Configurator{
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
 		ConfigParser:   &ConfigProcessor{},
@@ -106,5 +106,5 @@ func parseConfigAndSetEnvInFile(parsedData map[string]map[string]string) {
 		ConfigFilePath: collectorSettingsEnvVarPath,
 	}
 
-	configurator.Configure(parsedData)
+	configurator.Configure(metricsConfigBySection)
 }

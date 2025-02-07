@@ -30,7 +30,7 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	return config, nil
 }
 
-func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(parsedData map[string]map[string]string) (map[string]string, error) {
+func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) (map[string]string, error) {
 	config := make(map[string]string)
 	// Set default values
 	config["kubelet"] = "true"
@@ -51,8 +51,8 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(parsed
 	config["acstor-capacity-provisioner"] = "true"
 	config["acstor-metrics-exporter"] = "true"
 
-	// Override defaults with values from parsedData
-	if settings, ok := parsedData["default-scrape-settings-enabled"]; ok {
+	// Override defaults with values from metricsConfigBySection
+	if settings, ok := metricsConfigBySection["default-scrape-settings-enabled"]; ok {
 		for key, value := range settings {
 			if _, ok := config[key]; ok {
 				config[key] = value
@@ -190,7 +190,7 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	return nil
 }
 
-func (c *Configurator) ConfigureDefaultScrapeSettings(parsedData map[string]map[string]string) {
+func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 
 	fmt.Printf("Start prometheus-collector-settings Processing\n")
@@ -199,7 +199,7 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(parsedData map[string]map[
 	var defaultSettings map[string]string
 	var err error
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
-		defaultSettings, err = c.ConfigLoader.ParseConfigMapForDefaultScrapeSettings(parsedData)
+		defaultSettings, err = c.ConfigLoader.ParseConfigMapForDefaultScrapeSettings(metricsConfigBySection)
 	} else {
 		defaultSettings, err = c.ConfigLoader.SetDefaultScrapeSettings()
 	}
@@ -236,7 +236,7 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(parsedData map[string]map[
 	fmt.Printf("End prometheus-collector-settings Processing\n")
 }
 
-func tomlparserDefaultScrapeSettings(parsedData map[string]map[string]string) {
+func tomlparserDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
 	configurator := &Configurator{
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: defaultSettingsMountPath},
 		ConfigWriter:   &FileConfigWriter{},
@@ -244,5 +244,5 @@ func tomlparserDefaultScrapeSettings(parsedData map[string]map[string]string) {
 		ConfigParser:   &ConfigProcessor{},
 	}
 
-	configurator.ConfigureDefaultScrapeSettings(parsedData)
+	configurator.ConfigureDefaultScrapeSettings(metricsConfigBySection)
 }

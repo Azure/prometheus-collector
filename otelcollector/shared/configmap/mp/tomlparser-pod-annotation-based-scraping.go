@@ -47,8 +47,8 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 	return nil
 }
 
-func configurePodAnnotationSettings(parsedData map[string]map[string]string) error {
-	podannotationNamespaceRegex, err := populatePodAnnotationNamespaceFromConfigMap(parsedData)
+func configurePodAnnotationSettings(metricsConfigBySection map[string]map[string]string) error {
+	podannotationNamespaceRegex, err := populatePodAnnotationNamespaceFromConfigMap(metricsConfigBySection)
 	if err != nil {
 		return err
 	}
@@ -58,9 +58,9 @@ func configurePodAnnotationSettings(parsedData map[string]map[string]string) err
 	return nil
 }
 
-func populatePodAnnotationNamespaceFromConfigMap(parsedData map[string]map[string]string) (string, error) {
+func populatePodAnnotationNamespaceFromConfigMap(metricsConfigBySection map[string]map[string]string) (string, error) {
 	// Access the nested map and value
-	innerMap, ok := parsedData["pod-annotation-based-scraping"]
+	innerMap, ok := metricsConfigBySection["pod-annotation-based-scraping"]
 	if !ok {
 		fmt.Println("Pod annotation namespace regex configuration not found")
 		return "", fmt.Errorf("pod annotation namespace regex configuration not found")
@@ -77,6 +77,6 @@ func populatePodAnnotationNamespaceFromConfigMap(parsedData map[string]map[strin
 		fmt.Printf("Using configmap namespace regex for pod annotations: %s\n", regex)
 		return regex, nil
 	} else {
-		return "", fmt.Errorf("invalid namespace regex for pod annotations: %s", regex)
+		return "", fmt.Errorf("Invalid namespace regex for pod annotations: %s", regex)
 	}
 }

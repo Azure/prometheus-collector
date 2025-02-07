@@ -1,14 +1,10 @@
 package ccpconfigmapsettings
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
-	"io/ioutil"
-	"log"
 
 	// "prometheus-collector/shared"
 	"github.com/prometheus-collector/shared"
@@ -71,65 +67,28 @@ func Configmapparserforccp() {
 		fmt.Println("Configmapparserforccp schemaversion file doesn't exist. or configmap doesn't exist:", configSchemaPath)
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	var parsedData map[string]map[string]string
+	var metricsConfigBySection map[string]map[string]string
 	var err error
 	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
 		filePaths := []string{"/etc/config/settings/controlplane-metrics", "/etc/config/settings/shared"}
-		parsedData, err = ParseMetricsFiles(filePaths)
+		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
 			fmt.Printf("Error parsing files: %v\n", err)
 			return
 		}
-
-		// // Print the parsed data
-		// fmt.Println("kubelet enabled:", parsedData["default-scrape-settings-enabled"]["kubelet"])
-		// fmt.Println("kubelet keep list:", parsedData["default-targets-metrics-keep-list"]["kubelet"])
-		// fmt.Println("kubelet scrape interval:", parsedData["default-targets-scrape-interval-settings"]["kubelet"])
-		// fmt.Println("podannotationnamespaceregex:", parsedData["pod-annotation-based-scraping"]["podannotationnamespaceregex"])
-		// fmt.Println("cluster_alias:", parsedData["prometheus-collector-settings"]["cluster_alias"])
-
-		// Debug log: Print everything in parsedData
-		fmt.Println("configmapparser::Debug: Printing everything in parsedData:")
-		for section, keyValuePairs := range parsedData {
-			fmt.Printf("Section: %s\n", section)
-			for key, value := range keyValuePairs {
-				fmt.Printf("  %s: %s\n", key, value)
-			}
-		}
-
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
 		configDir := "/etc/config/settings"
-		parsedData, err = ParseV1Config(configDir)
+		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
 			fmt.Printf("Error parsing config: %v\n", err)
 			return
 		}
-
-		// // Print the parsed data
-		// fmt.Println("Parsed Data:")
-		// for section, values := range parsedData {
-		// 	fmt.Printf("Section: %s\n", section)
-		// 	for key, value := range values {
-		// 		fmt.Printf("  %s = %s\n", key, value)
-		// 	}
-		// }
-
-		// Debug log: Print everything in parsedData
-		fmt.Println("configmapparser::Debug: Printing everything in parsedData:")
-		for section, keyValuePairs := range parsedData {
-			fmt.Printf("Section: %s\n", section)
-			for key, value := range keyValuePairs {
-				fmt.Printf("  %s: %s\n", key, value)
-			}
-		}
 	} else {
 		fmt.Println("Invalid schema version or no configmap present. Using defaults.")
 	}
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings
-	parseConfigAndSetEnvInFile(parsedData)
+	parseConfigAndSetEnvInFile(metricsConfigBySection)
 	filename := "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
 	err = shared.SetEnvVarsFromFile(filename)
 	if err != nil {
@@ -137,7 +96,7 @@ func Configmapparserforccp() {
 	}
 
 	// Parse the settings for default scrape configs
-	tomlparserCCPDefaultScrapeSettings(parsedData)
+	tomlparserCCPDefaultScrapeSettings(metricsConfigBySection)
 	filename = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
 	err = shared.SetEnvVarsFromFile(filename)
 	if err != nil {
@@ -145,7 +104,7 @@ func Configmapparserforccp() {
 	}
 
 	// Parse the settings for default targets metrics keep list config
-	tomlparserCCPTargetsMetricsKeepList(parsedData)
+	tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection)
 
 	prometheusCcpConfigMerger()
 
@@ -164,129 +123,7 @@ func Configmapparserforccp() {
 		if err != nil {
 			fmt.Printf("Error copying file: %v\n", err)
 		} else {
-			// DEBUG
-			// Read file contents
-      data, err := ioutil.ReadFile("/opt/microsoft/otelcollector/ccp-collector-config-default.yml")
-			if err != nil {
-				log.Fatalf("Error reading file: %v", err)
-			}
-      // Print file contents
-      fmt.Println("File contents of /opt/microsoft/otelcollector/ccp-collector-config-default.yml:")
-      fmt.Println(string(data))
 			fmt.Println("File copied successfully.")
 		}
 	}
-}
-
-// ParseMetricsFiles parses multiple metrics configuration files into a nested map structure
-func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error) {
-	// Map to store the parsed data
-	parsedData := make(map[string]map[string]string)
-
-	for _, filePath := range filePaths {
-		// Open the file
-		file, err := os.Open(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("error opening file %s: %w", filePath, err)
-		}
-		defer file.Close()
-
-		// Scanner to read the file line by line
-		scanner := bufio.NewScanner(file)
-		var currentSection string
-
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-
-			// Skip empty lines
-			if line == "" {
-				continue
-			}
-
-			// Check if the line is a new section
-			if strings.HasSuffix(line, ": |-") {
-				// Extract the section name
-				currentSection = strings.TrimSuffix(line, ": |-")
-				if parsedData[currentSection] == nil {
-					parsedData[currentSection] = make(map[string]string)
-				}
-				continue
-			}
-
-			// Parse key-value pairs within a section
-			if currentSection != "" && strings.Contains(line, "=") {
-				parts := strings.SplitN(line, "=", 2)
-				key := strings.TrimSpace(parts[0])
-				value := shared.RemoveQuotes(strings.TrimSpace(parts[1]))
-				parsedData[currentSection][key] = value
-			}
-		}
-
-		// Handle scanner errors
-		if err := scanner.Err(); err != nil {
-			return nil, fmt.Errorf("error reading file %s: %w", filePath, err)
-		}
-	}
-
-	return parsedData, nil
-}
-
-// ParseV1Config parses the v1 configuration from individual files into a nested map structure
-func ParseV1Config(configDir string) (map[string]map[string]string, error) {
-	// Map to store the parsed data
-	parsedData := make(map[string]map[string]string)
-
-	// Read all files in the configuration directory
-	files, err := os.ReadDir(configDir)
-	if err != nil {
-		return nil, fmt.Errorf("error reading config directory: %w", err)
-	}
-
-	// Iterate over each file in the directory
-	for _, file := range files {
-		if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
-			continue
-		}
-
-		filePath := filepath.Join(configDir, file.Name())
-		fileName := file.Name()
-
-		// Open the file
-		f, err := os.Open(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("error opening file %s: %w", filePath, err)
-		}
-		defer f.Close()
-
-		// Initialize a map for this section
-		sectionData := make(map[string]string)
-
-		// Read the file line by line
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-
-			// Skip empty lines
-			if line == "" {
-				continue
-			}
-
-			// Parse key-value pairs
-			if strings.Contains(line, "=") {
-				parts := strings.SplitN(line, "=", 2)
-				key := strings.TrimSpace(parts[0])
-				value := shared.RemoveQuotes(strings.TrimSpace(parts[1]))
-				sectionData[key] = value
-			}
-		}
-
-		if err := scanner.Err(); err != nil {
-			return nil, fmt.Errorf("error reading file %s: %w", filePath, err)
-		}
-
-		// Add the section data to the parsed data map
-		parsedData[fileName] = sectionData
-	}
-
-	return parsedData, nil
 }

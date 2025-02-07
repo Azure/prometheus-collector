@@ -17,12 +17,12 @@ const (
 // ConfigureDebugModeSettings reads debug mode settings from the parsed config map,
 // sets default values if necessary, writes environment variables to a file,
 // and modifies a YAML configuration file based on debug mode settings.
-func ConfigureDebugModeSettings(parsedData map[string]map[string]string) error {
-	if parsedData == nil {
+func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]string) error {
+	if metricsConfigBySection == nil {
 		return fmt.Errorf("parsed config map data is nil")
 	}
 
-	enabled := populateSettingValuesFromConfigMap(parsedData)
+	enabled := populateSettingValuesFromConfigMap(metricsConfigBySection)
 
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
@@ -76,13 +76,13 @@ func ConfigureDebugModeSettings(parsedData map[string]map[string]string) error {
 	return nil
 }
 
-func populateSettingValuesFromConfigMap(parsedData map[string]map[string]string) bool {
-	if len(parsedData) == 0 {
+func populateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) bool {
+	if len(metricsConfigBySection) == 0 {
 		fmt.Println("Parsed config map is empty. Using default debug mode value: false")
 		return false
 	}
 
-	debugSettings, ok := parsedData["debug-mode"]
+	debugSettings, ok := metricsConfigBySection["debug-mode"]
 	if !ok {
 		fmt.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
 		return false

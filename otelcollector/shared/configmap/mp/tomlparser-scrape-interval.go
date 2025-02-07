@@ -21,65 +21,43 @@ var (
 )
 
 func checkDuration(duration string) string {
-	// Debug log: Print the input duration
-	fmt.Printf("Debug: Checking duration: %s\n", duration)
-
 	if !MATCHER.MatchString(duration) || duration == "" {
-		// Debug log: Print if the duration is invalid or empty
-		fmt.Printf("Debug: Invalid or empty duration. Using default: %s\n", defaultScrapeInterval)
 		return defaultScrapeInterval
 	}
-
-	// Debug log: Print the valid duration
-	fmt.Printf("Debug: Valid duration: %s\n", duration)
 	return duration
 }
 
-func getParsedDataValue(parsedData map[string]map[string]string, key string) string {
-	// Debug log: Print the key being looked up
-	fmt.Printf("Debug: Looking up key '%s' in parsedData\n", key)
-
-	if value, exists := parsedData["default-targets-scrape-interval-settings"][key]; exists {
-		// Debug log: Print the value found for the key
-		fmt.Printf("Debug: Found value '%s' for key '%s'\n", value, key)
+func getParsedDataValue(metricsConfigBySection map[string]map[string]string, key string) string {
+	if value, exists := metricsConfigBySection["default-targets-scrape-interval-settings"][key]; exists {
 		return checkDuration(value)
 	}
-
-	// Debug log: Print if the key does not exist
-	fmt.Printf("Debug: Key '%s' not found. Using default: %s\n", key, defaultScrapeInterval)
 	return defaultScrapeInterval
 }
 
-func processConfigMap(parsedData map[string]map[string]string) map[string]string {
+func processConfigMap(metricsConfigBySection map[string]map[string]string) map[string]string {
 	intervalHash := make(map[string]string)
 
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 
 	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
-		// Use parsedData instead of reading from file
-		intervalHash["KUBELET_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "kubelet")
-		intervalHash["COREDNS_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "coredns")
-		intervalHash["CADVISOR_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "cadvisor")
-		intervalHash["KUBEPROXY_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "kubeproxy")
-		intervalHash["APISERVER_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "apiserver")
-		intervalHash["KUBESTATE_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "kubestate")
-		intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "nodeexporter")
-		intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "windowsexporter")
-		intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "windowskubeproxy")
-		intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "prometheuscollectorhealth")
-		intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "podannotations")
-		intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "kappiebasic")
-		intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "networkobservabilityRetina")
-		intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "networkobservabilityHubble")
-		intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "networkobservabilityCilium")
-		intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "acstor-capacity-provisioner")
-		intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"] = getParsedDataValue(parsedData, "acstor-metrics-exporter")
-
-		// Debug log: Print the intervalHash before returning
-		fmt.Println("Debug: intervalHash before returning:")
-		for key, value := range intervalHash {
-			fmt.Printf("%s: %s\n", key, value)
-		}
+		// Use metricsConfigBySection instead of reading from file
+		intervalHash["KUBELET_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "kubelet")
+		intervalHash["COREDNS_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "coredns")
+		intervalHash["CADVISOR_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "cadvisor")
+		intervalHash["KUBEPROXY_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "kubeproxy")
+		intervalHash["APISERVER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "apiserver")
+		intervalHash["KUBESTATE_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "kubestate")
+		intervalHash["NODEEXPORTER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "nodeexporter")
+		intervalHash["WINDOWSEXPORTER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "windowsexporter")
+		intervalHash["WINDOWSKUBEPROXY_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "windowskubeproxy")
+		intervalHash["PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "prometheuscollectorhealth")
+		intervalHash["POD_ANNOTATION_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "podannotations")
+		intervalHash["KAPPIEBASIC_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "kappiebasic")
+		intervalHash["NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "networkobservabilityRetina")
+		intervalHash["NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "networkobservabilityHubble")
+		intervalHash["NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "networkobservabilityCilium")
+		intervalHash["ACSTORCAPACITYPROVISIONER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "acstor-capacity-provisioner")
+		intervalHash["ACSTORMETRICSEXPORTER_SCRAPE_INTERVAL"] = getParsedDataValue(metricsConfigBySection, "acstor-metrics-exporter")
 
 		return intervalHash
 	}
@@ -100,12 +78,6 @@ func processConfigMap(parsedData map[string]map[string]string) map[string]string
 		intervalHash[key] = defaultScrapeInterval
 	}
 
-	// Debug log: Print the intervalHash before returning
-	fmt.Println("Debug: intervalHash before returning (default values):")
-	for key, value := range intervalHash {
-		fmt.Printf("%s: %s\n", key, value)
-	}
-
 	return intervalHash
 }
 
@@ -122,17 +94,9 @@ func writeIntervalHashToFile(intervalHash map[string]string, filePath string) er
 	return nil
 }
 
-func tomlparserScrapeInterval(parsedData map[string]map[string]string) {
+func tomlparserScrapeInterval(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - tomlparserScrapeInterval")
-	// Debug log: Print everything in parsedData
-	fmt.Println("tomlparserScrapeInterval::Debug: Printing everything in parsedData:")
-	for section, keyValuePairs := range parsedData {
-		fmt.Printf("Section: %s\n", section)
-		for key, value := range keyValuePairs {
-			fmt.Printf("  %s: %s\n", key, value)
-		}
-	}
-	intervalHash := processConfigMap(parsedData)
+	intervalHash := processConfigMap(metricsConfigBySection)
 	err := writeIntervalHashToFile(intervalHash, scrapeIntervalEnvVarPath)
 	if err != nil {
 		fmt.Printf("Error writing to file: %v\n", err)

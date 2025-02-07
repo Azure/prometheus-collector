@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/prometheus-collector/shared"
@@ -55,9 +54,9 @@ func setConfigFileVersionEnv() {
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion, true)
 }
 
-func parseSettingsForPodAnnotations(parsedData map[string]map[string]string) {
+func parseSettingsForPodAnnotations(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseSettingsForPodAnnotations")
-	if err := configurePodAnnotationSettings(parsedData); err != nil {
+	if err := configurePodAnnotationSettings(metricsConfigBySection); err != nil {
 		fmt.Printf("%v\n", err)
 		return
 	}
@@ -107,23 +106,23 @@ func handlePodAnnotationsFile(filename string) {
 	}
 }
 
-func parsePrometheusCollectorConfig(parsedData map[string]map[string]string) {
+func parsePrometheusCollectorConfig(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parsePrometheusCollectorConfig")
-	parseConfigAndSetEnvInFile(parsedData)
+	parseConfigAndSetEnvInFile(metricsConfigBySection)
 	handleEnvFileError(collectorSettingsEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parsePrometheusCollectorConfig")
 }
 
-func parseDefaultScrapeSettings(parsedData map[string]map[string]string) {
+func parseDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseDefaultScrapeSettings")
-	tomlparserDefaultScrapeSettings(parsedData)
+	tomlparserDefaultScrapeSettings(metricsConfigBySection)
 	handleEnvFileError(defaultSettingsEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseDefaultScrapeSettings")
 }
 
-func parseDebugModeSettings(parsedData map[string]map[string]string) {
+func parseDebugModeSettings(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseDebugModeSettings")
-	if err := ConfigureDebugModeSettings(parsedData); err != nil {
+	if err := ConfigureDebugModeSettings(metricsConfigBySection); err != nil {
 		shared.EchoError(err.Error())
 		return
 	}
@@ -142,65 +141,33 @@ func Configmapparser() {
 	setConfigFileVersionEnv()
 	setConfigSchemaVersionEnv()
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	var parsedData map[string]map[string]string
+	var metricsConfigBySection map[string]map[string]string
 	var err error
 	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
 		filePaths := []string{"/etc/config/settings/dataplane-metrics", "/etc/config/settings/shared"}
-		parsedData, err = ParseMetricsFiles(filePaths)
+		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
 			fmt.Printf("Error parsing files: %v\n", err)
 			return
 		}
-
-		// Print the parsed data
-		fmt.Println("kubelet enabled:", parsedData["default-scrape-settings-enabled"]["kubelet"])
-		fmt.Println("kubelet keep list:", parsedData["default-targets-metrics-keep-list"]["kubelet"])
-		fmt.Println("kubelet scrape interval:", parsedData["default-targets-scrape-interval-settings"]["kubelet"])
-		fmt.Println("podannotationnamespaceregex:", parsedData["pod-annotation-based-scraping"]["podannotationnamespaceregex"])
-		fmt.Println("cluster_alias:", parsedData["prometheus-collector-settings"]["cluster_alias"])
-
-		// Debug log: Print everything in parsedData
-		fmt.Println("configmapparser::Debug: Printing everything in parsedData:")
-		for section, keyValuePairs := range parsedData {
-			fmt.Printf("Section: %s\n", section)
-			for key, value := range keyValuePairs {
-				fmt.Printf("  %s: %s\n", key, value)
-			}
-		}
-
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
 		configDir := "/etc/config/settings"
-		parsedData, err = ParseV1Config(configDir)
+		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
 			fmt.Printf("Error parsing config: %v\n", err)
 			return
 		}
-
-		// // Print the parsed data
-		// fmt.Println("Parsed Data:")
-		// for section, values := range parsedData {
-		// 	fmt.Printf("Section: %s\n", section)
-		// 	for key, value := range values {
-		// 		fmt.Printf("  %s = %s\n", key, value)
-		// 	}
-		// }
-
-		if settings, ok := parsedData["default-scrape-settings-enabled"]; ok {
-			fmt.Println("kubelet enabled:", settings["kubelet"])
-		}
 	} else {
 		fmt.Println("Invalid schema version. Using defaults.")
 	}
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	parseSettingsForPodAnnotations(parsedData)
-	parsePrometheusCollectorConfig(parsedData)
-	parseDefaultScrapeSettings(parsedData)
-	parseDebugModeSettings(parsedData)
+	parseSettingsForPodAnnotations(metricsConfigBySection)
+	parsePrometheusCollectorConfig(metricsConfigBySection)
+	parseDefaultScrapeSettings(metricsConfigBySection)
+	parseDebugModeSettings(metricsConfigBySection)
 
-	tomlparserTargetsMetricsKeepList(parsedData)
-	tomlparserScrapeInterval(parsedData)
+	tomlparserTargetsMetricsKeepList(metricsConfigBySection)
+	tomlparserScrapeInterval(metricsConfigBySection)
 
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 	containerType := os.Getenv("CONTAINER_TYPE")
@@ -306,117 +273,4 @@ func Configmapparser() {
 	}
 
 	fmt.Printf("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
-}
-
-// ParseMetricsFiles parses multiple metrics configuration files into a nested map structure
-func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error) {
-	// Map to store the parsed data
-	parsedData := make(map[string]map[string]string)
-
-	for _, filePath := range filePaths {
-		// Open the file
-		file, err := os.Open(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("error opening file %s: %w", filePath, err)
-		}
-		defer file.Close()
-
-		// Scanner to read the file line by line
-		scanner := bufio.NewScanner(file)
-		var currentSection string
-
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-
-			// Skip empty lines
-			if line == "" {
-				continue
-			}
-
-			// Check if the line is a new section
-			if strings.HasSuffix(line, ": |-") {
-				// Extract the section name
-				currentSection = strings.TrimSuffix(line, ": |-")
-				if parsedData[currentSection] == nil {
-					parsedData[currentSection] = make(map[string]string)
-				}
-				continue
-			}
-
-			// Parse key-value pairs within a section
-			if currentSection != "" && strings.Contains(line, "=") {
-				parts := strings.SplitN(line, "=", 2)
-				key := strings.TrimSpace(parts[0])
-				value := shared.RemoveQuotes(strings.TrimSpace(parts[1]))
-				parsedData[currentSection][key] = value
-			}
-		}
-
-		// Handle scanner errors
-		if err := scanner.Err(); err != nil {
-			return nil, fmt.Errorf("error reading file %s: %w", filePath, err)
-		}
-	}
-
-	return parsedData, nil
-}
-
-// ParseV1Config parses the v1 configuration from individual files into a nested map structure
-func ParseV1Config(configDir string) (map[string]map[string]string, error) {
-	// Map to store the parsed data
-	parsedData := make(map[string]map[string]string)
-
-	// Read all files in the configuration directory
-	files, err := os.ReadDir(configDir)
-	if err != nil {
-		return nil, fmt.Errorf("error reading config directory: %w", err)
-	}
-
-	// Iterate over each file in the directory
-	for _, file := range files {
-		if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
-			continue
-		}
-
-		filePath := filepath.Join(configDir, file.Name())
-		fileName := file.Name()
-
-		// Open the file
-		f, err := os.Open(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("error opening file %s: %w", filePath, err)
-		}
-		defer f.Close()
-
-		// Initialize a map for this section
-		sectionData := make(map[string]string)
-
-		// Read the file line by line
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-
-			// Skip empty lines
-			if line == "" {
-				continue
-			}
-
-			// Parse key-value pairs
-			if strings.Contains(line, "=") {
-				parts := strings.SplitN(line, "=", 2)
-				key := strings.TrimSpace(parts[0])
-				value := shared.RemoveQuotes(strings.TrimSpace(parts[1]))
-				sectionData[key] = value
-			}
-		}
-
-		if err := scanner.Err(); err != nil {
-			return nil, fmt.Errorf("error reading file %s: %w", filePath, err)
-		}
-
-		// Add the section data to the parsed data map
-		parsedData[fileName] = sectionData
-	}
-
-	return parsedData, nil
 }

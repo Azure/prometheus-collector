@@ -8,9 +8,9 @@ import (
 )
 
 // PopulateSettingValuesFromConfigMap populates settings from the parsed configuration.
-func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedData map[string]map[string]string) {
+func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) {
 	// Extract the prometheus-collector-settings section
-	if settings, ok := parsedData["prometheus-collector-settings"]; ok {
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 		if value, ok := settings["default_metric_account_name"]; ok {
 			cp.DefaultMetricAccountName = value
 			fmt.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
@@ -36,7 +36,8 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedData map[str
 			cp.IsOperatorEnabledChartSetting = false
 		}
 	} else {
-		fmt.Println("prometheus-collector-settings section not found in parsedData, using defaults")
+		cp.IsOperatorEnabledChartSetting = false
+		fmt.Println("prometheus-collector-settings section not found in metricsConfigBySection, using defaults")
 	}
 }
 
@@ -61,14 +62,14 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 }
 
 // Configure processes the configuration and writes it to a file.
-func (c *Configurator) Configure(parsedData map[string]map[string]string) {
+func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]string) {
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 
 	fmt.Printf("Start prometheus-collector-settings Processing\n")
 
 	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
-		if len(parsedData) > 0 {
-			c.ConfigParser.PopulateSettingValuesFromConfigMap(parsedData)
+		if len(metricsConfigBySection) > 0 {
+			c.ConfigParser.PopulateSettingValuesFromConfigMap(metricsConfigBySection)
 		}
 	} else {
 		if _, err := os.Stat(c.ConfigLoader.ConfigMapMountPath); err == nil {
@@ -101,7 +102,7 @@ func (c *Configurator) Configure(parsedData map[string]map[string]string) {
 }
 
 // parseConfigAndSetEnvInFile initializes the configurator and processes the configuration.
-func parseConfigAndSetEnvInFile(parsedData map[string]map[string]string) {
+func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string) {
 	configurator := &Configurator{
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/prometheus-collector-settings"},
 		ConfigParser:   &ConfigProcessor{},
@@ -109,5 +110,5 @@ func parseConfigAndSetEnvInFile(parsedData map[string]map[string]string) {
 		ConfigFilePath: "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var",
 	}
 
-	configurator.Configure(parsedData)
+	configurator.Configure(metricsConfigBySection)
 }

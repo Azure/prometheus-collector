@@ -39,8 +39,8 @@ func getStringValue(value interface{}) string {
 	}
 }
 
-// parseConfigMapForKeepListRegex extracts the control plane metrics keep list from parsedData.
-func parseConfigMapForKeepListRegex(parsedData map[string]map[string]string, schemaVersion string) map[string]interface{} {
+// parseConfigMapForKeepListRegex extracts the control plane metrics keep list from metricsConfigBySection.
+func parseConfigMapForKeepListRegex(metricsConfigBySection map[string]map[string]string, schemaVersion string) map[string]interface{} {
 	configMap := make(map[string]interface{})
 
 	fmt.Printf("parseConfigMapForKeepListRegex::schemaVersion: %s\n", schemaVersion)
@@ -48,7 +48,7 @@ func parseConfigMapForKeepListRegex(parsedData map[string]map[string]string, sch
 	if schemaVersion == "v1" {
 		fmt.Println("parseConfigMapForKeepListRegex::Processing v1 schema")
 		// For v1, control plane jobs are under "default-targets-metrics-keep-list" with "controlplane-" prefix
-		if settings, ok := parsedData["default-targets-metrics-keep-list"]; ok {
+		if settings, ok := metricsConfigBySection["default-targets-metrics-keep-list"]; ok {
 			fmt.Println("parseConfigMapForKeepListRegex::Found default-targets-metrics-keep-list section")
 			for key, value := range settings {
 				if strings.HasPrefix(key, "controlplane-") {
@@ -59,7 +59,7 @@ func parseConfigMapForKeepListRegex(parsedData map[string]map[string]string, sch
 		}
 
 		// Handle minimalingestionprofile for v1
-		if settings, ok := parsedData["default-targets-metrics-keep-list"]; ok {
+		if settings, ok := metricsConfigBySection["default-targets-metrics-keep-list"]; ok {
 			if minimalProfile, ok := settings["minimalingestionprofile"]; ok {
 				fmt.Printf("parseConfigMapForKeepListRegex::Found minimalingestionprofile: %s\n", minimalProfile)
 				configMap["minimalingestionprofile"] = minimalProfile
@@ -74,8 +74,8 @@ func parseConfigMapForKeepListRegex(parsedData map[string]map[string]string, sch
 	} else if schemaVersion == "v2" {
 		fmt.Println("parseConfigMapForKeepListRegex::Processing v2 schema")
 		// For v2, control plane jobs are under "controlplane-metrics" without "controlplane-" prefix
-		if settings, ok := parsedData["default-targets-metrics-keep-list"]; ok {
-			fmt.Println("parseConfigMapForKeepListRegex::Found controlplane-metrics section")
+		if settings, ok := metricsConfigBySection["default-targets-metrics-keep-list"]; ok {
+			fmt.Println("parseConfigMapForKeepListRegex::Found default-targets-metrics-keep-list section")
 			// Map v2 keys to v1 keys
 			v2ToV1KeyMap := map[string]string{
 				"apiserver":               "controlplane-apiserver",
@@ -92,7 +92,7 @@ func parseConfigMapForKeepListRegex(parsedData map[string]map[string]string, sch
 			}
 
 			// Handle minimal-ingestion-profile for v2
-			if minimalProfileSection, ok := parsedData["minimal-ingestion-profile"]; ok {
+			if minimalProfileSection, ok := metricsConfigBySection["minimal-ingestion-profile"]; ok {
 				if enabledValue, ok := minimalProfileSection["enabled"]; ok {
 					fmt.Printf("parseConfigMapForKeepListRegex::Found minimal-ingestion-profile enabled: %s\n", enabledValue)
 					configMap["minimalingestionprofile"] = enabledValue
@@ -118,12 +118,12 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 
 	// v2ToV1KeyMap for mapping v2 keys to v1 keys
 	v2ToV1KeyMap := map[string]string{
-		"apiserver":                  "controlplane-apiserver",
-		"cluster-autoscaler":         "controlplane-cluster-autoscaler",
-		"kube-scheduler":             "controlplane-kube-scheduler",
-		"kube-controller-manager":    "controlplane-kube-controller-manager",
-		"etcd":                       "controlplane-etcd",
-		"minimalingestionprofile":    "minimalingestionprofile",
+		"apiserver":               "controlplane-apiserver",
+		"cluster-autoscaler":      "controlplane-cluster-autoscaler",
+		"kube-scheduler":          "controlplane-kube-scheduler",
+		"kube-controller-manager": "controlplane-kube-controller-manager",
+		"etcd":                    "controlplane-etcd",
+		"minimalingestionprofile": "minimalingestionprofile",
 	}
 
 	// Populate regex values based on the keys, mapping v2 keys to v1 if needed
@@ -208,14 +208,6 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 		controlplaneApiserverRegex += regexValues.ControlplaneApiserver
 		controlplaneClusterAutoscalerRegex += regexValues.ControlplaneClusterAutoscaler
 		controlplaneEtcdRegex += regexValues.ControlplaneEtcd
-
-		// Print the updated regex strings after appending values
-		fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Regex Strings for CCP targets: collecting ONLY below metrics for targets")
-		fmt.Println("ControlplaneKubeControllerManagerRegex:", controlplaneKubeControllerManagerRegex)
-		fmt.Println("ControlplaneKubeSchedulerRegex:", controlplaneKubeSchedulerRegex)
-		fmt.Println("ControlplaneApiserverRegex:", controlplaneApiserverRegex)
-		fmt.Println("ControlplaneClusterAutoscalerRegex:", controlplaneClusterAutoscalerRegex)
-		fmt.Println("ControlplaneEtcdRegex:", controlplaneEtcdRegex)
 	} else { // else accounts for "true" and any other values including "nil" (meaning no configmap or no minimal setting in the configmap)
 		fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is true or not set, appending minimal metrics")
 		controlplaneKubeControllerManagerRegex += regexValues.ControlplaneKubeControllerManager + "|" + controlplaneKubeControllerManagerMinMac
@@ -227,7 +219,7 @@ func populateRegexValuesWithMinimalIngestionProfile(regexValues RegexValues) {
 }
 
 // tomlparserCCPTargetsMetricsKeepList processes the configuration and writes it to a file.
-func tomlparserCCPTargetsMetricsKeepList(parsedData map[string]map[string]string) {
+func tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection map[string]map[string]string) {
 	configSchemaVersion = os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	fmt.Println("Start default-targets-metrics-keep-list Processing")
 
@@ -235,7 +227,7 @@ func tomlparserCCPTargetsMetricsKeepList(parsedData map[string]map[string]string
 
 	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
 		fmt.Printf("tomlparserCCPTargetsMetricsKeepList::Processing with schema version: %s\n", configSchemaVersion)
-		configMapSettings := parseConfigMapForKeepListRegex(parsedData, configSchemaVersion)
+		configMapSettings := parseConfigMapForKeepListRegex(metricsConfigBySection, configSchemaVersion)
 		if configMapSettings != nil {
 			var err error
 			regexValues, err = populateSettingValuesFromConfigMap(configMapSettings) // Capture the returned RegexValues
