@@ -57,15 +57,6 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 	processAggregations := InitProcessAggregations(processNames, osType)
 	processAggregations.Run()
 
-	// Collect, aggregate, and send CPU and Memory usage telemetry for the processes below
-	osType := os.Getenv("OS_TYPE")
-	processNames := []string{"otelcollector", "MetricsExtension"}
-	if osType == "windows" {
-		processNames = []string{"otelcollector", "MetricsExtension.Native"}
-	}
-	processAggregations := InitProcessAggregations(processNames, osType)
-	processAggregations.Run()
-
 	go PushMEProcessedAndReceivedCountToAppInsightsMetrics()
 
 	return output.FLB_OK
