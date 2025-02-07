@@ -269,7 +269,7 @@ func copyOutputFile(src io.Reader, file *os.File) {
 }
 
 func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
-	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/me", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/me", "-Input", "otlp_grpc_prom,otlp_grpc", "-ConfigOverridesFilePath", meConfigFile)
 	// Set environment variables from os.Environ()
 	cmd.Env = append(os.Environ())
 	// Start the command
@@ -281,7 +281,7 @@ func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
 }
 
 func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string) {
-	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/me", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/me", "-Input", "otlp_grpc_prom,otlp_grpc", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 
 	// Create a file to store the stdoutput
 	// metricsextension_stdout_file, err := os.Create("metricsextension_stdout.log")
