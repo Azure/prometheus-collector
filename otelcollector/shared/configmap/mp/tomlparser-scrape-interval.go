@@ -62,6 +62,7 @@ func processConfigMap(metricsConfigBySection map[string]map[string]string) map[s
 		return intervalHash
 	}
 
+	fmt.Printf("Setting default scrape interval (%s) for all jobs as no config map is present \n", defaultScrapeInterval)
 	// Set each value in intervalHash to "30s" from default
 	keys := []string{
 		"KUBELET_SCRAPE_INTERVAL", "COREDNS_SCRAPE_INTERVAL", "CADVISOR_SCRAPE_INTERVAL",

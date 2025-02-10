@@ -295,114 +295,135 @@ func RemoveQuotes(s string) string {
 	return s
 }
 
-// ParseMetricsFiles parses multiple metrics configuration files into a nested map structure
+// ParseMetricsFiles parses multiple metrics configuration files into a nested map structure.
 func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error) {
-	// Map to store the parsed data
 	metricsConfigBySection := make(map[string]map[string]string)
 
 	for _, filePath := range filePaths {
-		// Open the file
+		// Open the file with deferred closure to ensure proper resource cleanup
 		file, err := os.Open(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("error opening file %s: %w", filePath, err)
+			return nil, fmt.Errorf("failed to open file %s: %w", filePath, err)
 		}
-		defer file.Close()
+		defer func() {
+			if cerr := file.Close(); cerr != nil {
+				log.Printf("warning: failed to close file %s: %v", filePath, cerr)
+			}
+		}()
 
-		// Scanner to read the file line by line
 		scanner := bufio.NewScanner(file)
 		var currentSection string
 
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
 
-			// Skip empty lines
-			if line == "" {
+			// Skip empty lines and comments
+			if line == "" || strings.HasPrefix(line, "#") {
 				continue
 			}
 
-			// Check if the line is a new section
+			// Detect and process section headers
 			if strings.HasSuffix(line, ": |-") {
-				// Extract the section name
 				currentSection = strings.TrimSuffix(line, ": |-")
-				if metricsConfigBySection[currentSection] == nil {
+				if _, exists := metricsConfigBySection[currentSection]; !exists {
 					metricsConfigBySection[currentSection] = make(map[string]string)
 				}
 				continue
 			}
 
-			// Parse key-value pairs within a section
+			// Process key-value pairs
 			if currentSection != "" && strings.Contains(line, "=") {
 				parts := strings.SplitN(line, "=", 2)
+				if len(parts) < 2 {
+					log.Printf("warning: skipping malformed line in file %s: %q", filePath, line)
+					continue
+				}
+
 				key := strings.TrimSpace(parts[0])
 				value := RemoveQuotes(strings.TrimSpace(parts[1]))
+
+				if key == "" {
+					log.Printf("warning: skipping empty key in file %s: %q", filePath, line)
+					continue
+				}
+
 				metricsConfigBySection[currentSection][key] = value
 			}
 		}
 
-		// Handle scanner errors
 		if err := scanner.Err(); err != nil {
-			return nil, fmt.Errorf("error reading file %s: %w", filePath, err)
+			return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
 		}
 	}
 
 	return metricsConfigBySection, nil
 }
 
-// ParseV1Config parses the v1 configuration from individual files into a nested map structure
+// ParseV1Config parses the v1 configuration from individual files into a nested map structure.
 func ParseV1Config(configDir string) (map[string]map[string]string, error) {
-	// Map to store the parsed data
 	metricsConfigBySection := make(map[string]map[string]string)
 
-	// Read all files in the configuration directory
 	files, err := os.ReadDir(configDir)
 	if err != nil {
-		return nil, fmt.Errorf("error reading config directory: %w", err)
+		return nil, fmt.Errorf("failed to read config directory %s: %w", configDir, err)
 	}
 
-	// Iterate over each file in the directory
 	for _, file := range files {
 		if file.IsDir() || strings.HasPrefix(file.Name(), ".") {
 			continue
 		}
 
 		filePath := filepath.Join(configDir, file.Name())
-		fileName := file.Name()
 
-		// Open the file
+		// Open the file safely with closure for proper cleanup
 		f, err := os.Open(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("error opening file %s: %w", filePath, err)
+			log.Printf("error: unable to open file %s: %v", filePath, err)
+			continue
 		}
-		defer f.Close()
+		defer func() {
+			if cerr := f.Close(); cerr != nil {
+				log.Printf("warning: failed to close file %s: %v", filePath, cerr)
+			}
+		}()
 
-		// Initialize a map for this section
 		sectionData := make(map[string]string)
-
-		// Read the file line by line
 		scanner := bufio.NewScanner(f)
+
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
 
-			// Skip empty lines
-			if line == "" {
+			// Skip empty lines and comments
+			if line == "" || strings.HasPrefix(line, "#") {
 				continue
 			}
 
-			// Parse key-value pairs
+			// Process key-value pairs
 			if strings.Contains(line, "=") {
 				parts := strings.SplitN(line, "=", 2)
+				if len(parts) < 2 {
+					log.Printf("warning: skipping malformed line in file %s: %q", filePath, line)
+					continue
+				}
+
 				key := strings.TrimSpace(parts[0])
 				value := RemoveQuotes(strings.TrimSpace(parts[1]))
+
+				if key == "" {
+					log.Printf("warning: skipping empty key in file %s: %q", filePath, line)
+					continue
+				}
+
 				sectionData[key] = value
 			}
 		}
 
 		if err := scanner.Err(); err != nil {
-			return nil, fmt.Errorf("error reading file %s: %w", filePath, err)
+			log.Printf("error: failed to read file %s: %v", filePath, err)
+			continue
 		}
 
-		// Add the section data to the parsed data map
-		metricsConfigBySection[fileName] = sectionData
+		metricsConfigBySection[file.Name()] = sectionData
 	}
 
 	return metricsConfigBySection, nil

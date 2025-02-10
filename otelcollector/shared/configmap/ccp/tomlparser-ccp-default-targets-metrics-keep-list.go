@@ -113,7 +113,7 @@ func parseConfigMapForKeepListRegex(metricsConfigBySection map[string]map[string
 }
 
 // populateSettingValuesFromConfigMap populates settings from the parsed configuration.
-func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (RegexValues, error) {
+func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}, schemaVersion string) (RegexValues, error) {
 	regexValues := RegexValues{}
 
 	// v2ToV1KeyMap for mapping v2 keys to v1 keys
@@ -126,41 +126,25 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) (Re
 		"minimalingestionprofile": "minimalingestionprofile",
 	}
 
-	// Populate regex values based on the keys, mapping v2 keys to v1 if needed
 	for key, value := range parsedConfig {
-		// Check if the key exists in the v2ToV1KeyMap and use the v1 key if found
-		if mappedKey, exists := v2ToV1KeyMap[key]; exists {
-			// Set the value for the corresponding v1 key
-			switch mappedKey {
-			case "controlplane-kube-controller-manager":
-				regexValues.ControlplaneKubeControllerManager = getStringValue(value)
-			case "controlplane-kube-scheduler":
-				regexValues.ControlplaneKubeScheduler = getStringValue(value)
-			case "controlplane-apiserver":
-				regexValues.ControlplaneApiserver = getStringValue(value)
-			case "controlplane-cluster-autoscaler":
-				regexValues.ControlplaneClusterAutoscaler = getStringValue(value)
-			case "controlplane-etcd":
-				regexValues.ControlplaneEtcd = getStringValue(value)
-			case "minimalingestionprofile":
-				regexValues.MinimalIngestionProfile = getStringValue(value)
-			}
-		} else {
-			// Handle the v1 keys directly
-			switch key {
-			case "controlplane-kube-controller-manager":
-				regexValues.ControlplaneKubeControllerManager = getStringValue(value)
-			case "controlplane-kube-scheduler":
-				regexValues.ControlplaneKubeScheduler = getStringValue(value)
-			case "controlplane-apiserver":
-				regexValues.ControlplaneApiserver = getStringValue(value)
-			case "controlplane-cluster-autoscaler":
-				regexValues.ControlplaneClusterAutoscaler = getStringValue(value)
-			case "controlplane-etcd":
-				regexValues.ControlplaneEtcd = getStringValue(value)
-			case "minimalingestionprofile":
-				regexValues.MinimalIngestionProfile = getStringValue(value)
-			}
+		// Map v2 key to v1 if schemaVersion == v2
+		if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v2" {
+			key = v2ToV1KeyMap[key]
+		}
+
+		switch key {
+		case "controlplane-kube-controller-manager":
+			regexValues.ControlplaneKubeControllerManager = getStringValue(value)
+		case "controlplane-kube-scheduler":
+			regexValues.ControlplaneKubeScheduler = getStringValue(value)
+		case "controlplane-apiserver":
+			regexValues.ControlplaneApiserver = getStringValue(value)
+		case "controlplane-cluster-autoscaler":
+			regexValues.ControlplaneClusterAutoscaler = getStringValue(value)
+		case "controlplane-etcd":
+			regexValues.ControlplaneEtcd = getStringValue(value)
+		case "minimalingestionprofile":
+			regexValues.MinimalIngestionProfile = getStringValue(value)
 		}
 	}
 
@@ -230,7 +214,7 @@ func tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection map[string]map[s
 		configMapSettings := parseConfigMapForKeepListRegex(metricsConfigBySection, configSchemaVersion)
 		if configMapSettings != nil {
 			var err error
-			regexValues, err = populateSettingValuesFromConfigMap(configMapSettings) // Capture the returned RegexValues
+			regexValues, err = populateSettingValuesFromConfigMap(configMapSettings, configSchemaVersion) // Capture the returned RegexValues
 			if err != nil {
 				fmt.Printf("Error populating setting values: %v\n", err)
 				return

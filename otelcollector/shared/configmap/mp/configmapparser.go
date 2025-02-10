@@ -147,15 +147,13 @@ func Configmapparser() {
 		filePaths := []string{"/etc/config/settings/dataplane-metrics", "/etc/config/settings/shared"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
-			fmt.Printf("Error parsing files: %v\n", err)
-			return
+			fmt.Printf("Using defaults as error parsing files: %v\n", err)
 		}
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
 		configDir := "/etc/config/settings"
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
-			fmt.Printf("Error parsing config: %v\n", err)
-			return
+			fmt.Printf("Using defaults as error parsing config: %v\n", err)
 		}
 	} else {
 		fmt.Println("Invalid schema version. Using defaults.")
