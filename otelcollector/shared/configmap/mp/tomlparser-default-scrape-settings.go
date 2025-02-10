@@ -198,7 +198,7 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map
 	// Load default settings based on the schema version
 	var defaultSettings map[string]string
 	var err error
-	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
+	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
 		defaultSettings, err = c.ConfigLoader.ParseConfigMapForDefaultScrapeSettings(metricsConfigBySection)
 	} else {
 		defaultSettings, err = c.ConfigLoader.SetDefaultScrapeSettings()
