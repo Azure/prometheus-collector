@@ -268,8 +268,13 @@ func copyOutputFile(src io.Reader, file *os.File) {
 	}
 }
 
-func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
-	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/me", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+func StartMetricsExtensionForOverlay(meConfigFile string, meDCRConfigDirectory string, meLocalControl bool) (int, error) {
+	var cmd *exec.Cmd
+	if meLocalControl {
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+	} else {
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+	}
 	// Set environment variables from os.Environ()
 	cmd.Env = append(os.Environ())
 	// Start the command
@@ -280,8 +285,13 @@ func StartMetricsExtensionForOverlay(meConfigFile string) (int, error) {
 	return cmd.Process.Pid, nil
 }
 
-func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string) {
-	cmd := exec.Command("/usr/sbin/MetricsExtension", "-Logger", "Console", "-LogLevel", "Error", "-TokenSource", "AMCS", "-DataDirectory", "/etc/mdsd.d/config-cache/me", "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string, meDCRConfigDirectory string, meLocalControl bool) {
+	var cmd *exec.Cmd
+	if meLocalControl {
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+	} else {
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+	}
 
 	// Create a file to store the stdoutput
 	// metricsextension_stdout_file, err := os.Create("metricsextension_stdout.log")

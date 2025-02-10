@@ -33,8 +33,17 @@ func IsValidRegex(input string) bool {
 	return err == nil
 }
 
-func DetermineConfigFiles(controllerType, clusterOverride string) (string, string) {
-	var meConfigFile, fluentBitConfigFile string
+func DetermineConfigFiles(controllerType, clusterOverride string, otlpEnabled bool) (string, string, string, bool) {
+	var meConfigFile, fluentBitConfigFile, meDCRConfigDirectory string
+	var meLocalControl bool
+
+	if otlpEnabled {
+		meDCRConfigDirectory = "/etc/mdsd.d/config-cache/me"
+		meLocalControl = false
+	} else {
+		meDCRConfigDirectory = "/etc/mdsd.d/config-cache/metricsextension"
+		meLocalControl = true
+	}
 
 	switch {
 	case strings.ToLower(controllerType) == "replicaset":
@@ -60,7 +69,7 @@ func DetermineConfigFiles(controllerType, clusterOverride string) (string, strin
 		}
 	}
 
-	return meConfigFile, fluentBitConfigFile
+	return meConfigFile, fluentBitConfigFile, meDCRConfigDirectory, meLocalControl
 }
 
 func LogVersionInfo() {
