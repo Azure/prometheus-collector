@@ -20,12 +20,13 @@ variables:
   MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
   KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.12.0'
-  NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.6.0'
+  NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.8.2'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.22.7'
+  GOLANG_VERSION: '1.22.11'
+  FLUENT_BIT_VERSION: '3.2.2'
 
 stages:
 - stage: Build
@@ -85,6 +86,10 @@ stages:
           WINDOWS_2019_BASE_IMAGE_VERSION=ltsc2019
           WINDOWS_2022_BASE_IMAGE_VERSION=ltsc2022
 
+          #Truncating this to 123 characters to add the conf prefix
+          ARC_CONFORMANCE_TAG_SUFFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-123)
+          ARC_CONFORMANCE_IMAGE_TAG=conf-$ARC_CONFORMANCE_TAG_SUFFIX
+
           LINUX_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_IMAGE_TAG
           TARGET_ALLOCATOR_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_IMAGE_TAG
           LINUX_CONFIG_READER_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_CONFIG_READER_IMAGE_TAG
@@ -96,6 +101,7 @@ stages:
           LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_REF_APP_PYTHON_IMAGE_TAG
           WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
           WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_PYTHON_IMAGE_TAG
+          ARC_CONFORMANCE_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$ARC_CONFORMANCE_IMAGE_TAG
 
           echo "##vso[build.updatebuildnumber]$SEMVER"
           echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
@@ -117,6 +123,8 @@ stages:
           echo "##vso[task.setvariable variable=ARC_HELM_CHART_NAME;isOutput=true]$ARC_HELM_CHART_NAME"
           echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
           echo "##vso[task.setvariable variable=ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$ARC_HELM_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=ARC_CONFORMANCE_FULL_IMAGE_NAME;isOutput=true]$ARC_CONFORMANCE_FULL_IMAGE_NAME"
+
         displayName: 'Build: set image registry, repo, and tags'
         name: setup
 
@@ -511,6 +519,31 @@ stages:
         displayName: "Download, install Oras and run oras attach"
         condition: succeeded()        
 
+  - job: Arc_Conformace_Test_Image
+    displayName: "Build: Arc Conformance Test Image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      skipComponentGovernanceDetection: true
+      ARC_CONFORMANCE_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_CONFORMANCE_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+    steps:
+      - checkout: self
+        persistCredentials: true
+      - bash: |
+          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+          
+          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+          docker buildx inspect --bootstrap
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker buildx build . -f arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --push
+          docker pull $(ARC_CONFORMANCE_FULL_IMAGE_NAME)  
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+        displayName: "Build: build and push Arc conformance test image to dev ACR"
+
   - job: SDL_Policheck_Scan
     displayName: "SDL: policheck scanning"
     pool:
@@ -598,10 +631,10 @@ stages:
         displayName: 'SDL: run brakeman'
         retryCountOnTaskFailure: 1
 
-  - job: Linux_Prometheus_Collector
-    displayName: "Build: linux prometheus-collector image"
+  - job: Linux_Prometheus_Collector_ARM64
+    displayName: 'Build: linux ARM64 prometheus-collector image'
     pool:
-      name: Azure-Pipelines-CI-Test-EO
+      name: Azure-Pipelines-ARM-CI-Test-EO
     dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
@@ -620,25 +653,86 @@ stages:
           version: $(GOLANG_VERSION)
 
       - bash: |
+          # Add Docker's official GPG key:
+          sudo apt-get update
+          sudo apt-get install ca-certificates curl -y
+          sudo install -m 0755 -d /etc/apt/keyrings
+          sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+          sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+          # Add the repository to Apt sources:
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
-          # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
-          sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-          docker system prune --all -f
-          docker images -q --filter "dangling=true" | xargs docker rmi
-          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: 'Build: build and push image to dev ACR'
+
+  - job: Linux_Prometheus_Collector_AMD64
+    displayName: 'Build: linux AMD64 prometheus-collector image'
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+    steps:
+      - checkout: self
+        submodules: true
+
+      - task: CodeQL3000Init@0
+        displayName: 'SDL: init codeql'
+
+      - task: GoTool@0
+        displayName: 'Build: specify golang version'
+        inputs:
+          version: $(GOLANG_VERSION)
+
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-          
-          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
-          docker buildx inspect --bootstrap
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollector
-          docker pull $(LINUX_FULL_IMAGE_NAME)
-          docker system prune --all -f
+          docker build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build and push image to dev ACR"
+
+  - job: Linux_Prometheus_Collector
+    displayName: 'Build: linux prometheus-collector image'
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn:
+    - Image_Tags_and_Ev2_Artifacts
+    - Linux_Prometheus_Collector_AMD64
+    - Linux_Prometheus_Collector_ARM64
+    variables:
+      LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+    steps:
+      - checkout: self
+        submodules: true
+
+      - task: CodeQL3000Init@0
+        displayName: 'SDL: init codeql'
+
+      - task: GoTool@0
+        displayName: 'Build: specify golang version'
+        inputs:
+          version: $(GOLANG_VERSION)
+
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/linux
+
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker manifest create $(LINUX_FULL_IMAGE_NAME) $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64
+          docker manifest push $(LINUX_FULL_IMAGE_NAME)
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+        displayName: 'Build: build and push image to dev ACR'
 
       - bash: |
           MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
@@ -648,7 +742,7 @@ stages:
           {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
           EOF
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-        displayName: "Build: Set values in payload.json for signing"
+        displayName: 'Build: Set values in payload.json for signing'
         condition: succeeded()
 
       - task: EsrpCodeSigning@5
@@ -707,7 +801,7 @@ stages:
           export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
           for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
             for i in {1..5}; do
-              trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image > trivy_output.log 2>&1
+              trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image > trivy_output.log 2>&1
               TRIVY_EXIT_CODE=$?
               if [ $TRIVY_EXIT_CODE -eq 0 ]; then
                 cat trivy_output.log
@@ -823,7 +917,7 @@ stages:
           
           docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
           docker buildx inspect --bootstrap
-          docker buildx build . --platform=linux/amd64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
+          docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
           docker pull $(LINUX_CCP_FULL_IMAGE_NAME)
           docker system prune --all -f
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
@@ -895,7 +989,7 @@ stages:
           export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
           export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
           for i in {1..5}; do
-            trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CCP_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+            trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CCP_FULL_IMAGE_NAME) > trivy_output.log 2>&1
             TRIVY_EXIT_CODE=$?
             if [ $TRIVY_EXIT_CODE -eq 0 ]; then
               cat trivy_output.log
@@ -974,8 +1068,8 @@ stages:
           GdnBreakGdnToolSemmle: true
           GdnBreakGdnToolSemmleSeverity: 'Warning'
 
-  - job: Linux_Target_Allocator
-    displayName: "Build: target allocator image"
+  - job: Linux_Target_Allocator_AMD64
+    displayName: "Build: AMD64 target allocator image"
     pool:
       name: Azure-Pipelines-CI-Test-EO
     dependsOn: Image_Tags_and_Ev2_Artifacts
@@ -996,18 +1090,80 @@ stages:
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
-          # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
-          sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
-          docker system prune --all -f
-
-          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-          
-          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
-          docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
+          docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
+        displayName: "Build: build and push target allocator image to dev ACR"
+        condition: succeeded()
+
+  - job: Linux_Target_Allocator_ARM64
+    displayName: "Build: ARM64 target allocator image"
+    pool:
+      name: Azure-Pipelines-ARM-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+      skipComponentGovernanceDetection: true
+    steps:
+      - checkout: self
+        persistCredentials: true
+
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: $(GOLANG_VERSION)
+  
+      - bash: |
+          # Add Docker's official GPG key:
+          sudo apt-get update
+          sudo apt-get install ca-certificates curl -y
+          sudo install -m 0755 -d /etc/apt/keyrings
+          sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+          sudo chmod a+r /etc/apt/keyrings/docker.asc
+          # Add the repository to Apt sources:
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+
+          mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+
+          sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
+        displayName: "Build: build and push target allocator image to dev ACR"
+        condition: succeeded()
+
+  - job: Linux_Target_Allocator
+    displayName: "Build: target allocator image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn:
+    - Image_Tags_and_Ev2_Artifacts
+    - Linux_Target_Allocator_ARM64
+    - Linux_Target_Allocator_AMD64
+    variables:
+      TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+      skipComponentGovernanceDetection: true
+    steps:
+      - checkout: self
+        persistCredentials: true
+
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: $(GOLANG_VERSION)
+  
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+          
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-amd64 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64
+          docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+
           docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
           MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
           DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
@@ -1024,7 +1180,7 @@ stages:
           export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
           export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
           for i in {1..5}; do
-            trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+            trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) > trivy_output.log 2>&1
             TRIVY_EXIT_CODE=$?
             if [ $TRIVY_EXIT_CODE -eq 0 ]; then
               cat trivy_output.log
@@ -1141,7 +1297,7 @@ stages:
           export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
           export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
           for i in {1..5}; do
-            trivy image --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+            trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) > trivy_output.log 2>&1
             TRIVY_EXIT_CODE=$?
             if [ $TRIVY_EXIT_CODE -eq 0 ]; then
               cat trivy_output.log
@@ -1941,7 +2097,7 @@ stages:
               kubectl apply -f ./testkube/testkube-test-crs-ci-dev-arc-wcus.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows=configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
 
@@ -2192,7 +2348,7 @@ stages:
               kubectl apply -f ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows=configmap.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
               kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
 
