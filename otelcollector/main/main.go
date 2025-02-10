@@ -87,9 +87,11 @@ func main() {
 
 	var meConfigFile string
 	var fluentBitConfigFile string
-	otlpEnabled := strings.ToLower(shared.GetEnv("AZMON_FULL_OTLP_ENABLED", "false"))
+	var meDCRConfigDirectory string
+	var meLocalControl bool
+	otlpEnabled := strings.ToLower(shared.GetEnv("AZMON_FULL_OTLP_ENABLED", "false")) == "true"
 
-	meConfigFile, fluentBitConfigFile = shared.DetermineConfigFiles(controllerType, clusterOverride)
+	meConfigFile, fluentBitConfigFile, meDCRConfigDirectory, meLocalControl = shared.DetermineConfigFiles(controllerType, clusterOverride, otlpEnabled)
 	fmt.Println("meConfigFile:", meConfigFile)
 	fmt.Println("fluentBitConfigFile:", fluentBitConfigFile)
 
@@ -114,7 +116,7 @@ func main() {
 	time.Sleep(10 * time.Second)
 
 	// Start MDSD only if OTLP is not enabled
-	if otlpEnabled != "true" {
+	if !otlpEnabled {
 		if ccpMetricsEnabled != "true" {
 			if osType == "linux" {
 				fmt.Println("Starting MDSD")
@@ -138,11 +140,11 @@ func main() {
 
 	fmt.Println("Starting Metrics Extension with config overrides")
 	if ccpMetricsEnabled != "true" {
-		if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile); err != nil {
+		if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile, meDCRConfigDirectory, meLocalControl); err != nil {
 			log.Fatalf("Error starting MetricsExtension: %v\n", err)
 		}
 	} else {
-		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile)
+		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile, meDCRConfigDirectory, meLocalControl)
 	}
 
 	// Start otelcollector
