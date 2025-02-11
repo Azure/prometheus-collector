@@ -271,6 +271,7 @@ func handleShutdown() {
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	osType := os.Getenv("OS_TYPE")
+	otlpEnabled := strings.ToLower(shared.GetEnv("AZMON_FULL_OTLP_ENABLED", "false")) == "true"
 	status := http.StatusOK
 	message := "prometheuscollector is running."
 	processToCheck := ""
@@ -331,15 +332,17 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			goto response
 		}
 
-		processToCheck = "/usr/sbin/mdsd"
-		if osType == "windows" {
-			processToCheck = "MonAgentLauncher.exe"
-		}
-		if !shared.IsProcessRunning(processToCheck) {
-			status = http.StatusServiceUnavailable
-			message = "mdsd not running (configuration exists)"
-			fmt.Println(message)
-			goto response
+		if !otlpEnabled {
+			processToCheck = "/usr/sbin/mdsd"
+			if osType == "windows" {
+				processToCheck = "MonAgentLauncher.exe"
+			}
+			if !shared.IsProcessRunning(processToCheck) {
+				status = http.StatusServiceUnavailable
+				message = "mdsd not running (configuration exists)"
+				fmt.Println(message)
+				goto response
+			}
 		}
 	}
 	if osType == "linux" {
