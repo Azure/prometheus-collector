@@ -1,0 +1,11 @@
+{
+          
+            "type": "Microsoft.ContainerService/managedClusters/providers/dataCollectionRuleAssociations",
+            "name": "dcra-vishwa-eue2euap-otlp",
+            "location": "eastus2euap",
+            "properties": {
+              "description": "Association of data collection rule. Deleting this association will break the data collection for this AKS Cluster.",
+              "dataCollectionRuleId": "/subscriptions/<subid>/resourceGroups/vishwa-otlp-eus2euap/providers/Microsoft.Insights/dataCollectionRules/vishwa-eue2euap-otlp-dcr"
+            }
+   
+}
