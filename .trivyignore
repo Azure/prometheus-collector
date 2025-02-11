@@ -11,6 +11,7 @@ CVE-2024-45338 # golang.org/x/net
 CVE-2024-45338 # golang.org/x/net
 # targetallocator
 CVE-2024-45338 # golang.org/x/net
+CVE-2025-22866 # stdlib
 # kube-state-metrics
 CVE-2024-45338 # golang.org/x/net
 CVE-2024-34156 # stdlib
