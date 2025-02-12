@@ -271,9 +271,9 @@ func copyOutputFile(src io.Reader, file *os.File) {
 func StartMetricsExtensionForOverlay(meConfigFile string, meDCRConfigDirectory string, meLocalControl bool) (int, error) {
 	var cmd *exec.Cmd
 	if meLocalControl {
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc", "-ConfigOverridesFilePath", meConfigFile)
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
 	} else {
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", meConfigFile)
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc", "-ConfigOverridesFilePath", meConfigFile)
 	}
 	// Set environment variables from os.Environ()
 	cmd.Env = append(os.Environ())
@@ -288,9 +288,9 @@ func StartMetricsExtensionForOverlay(meConfigFile string, meDCRConfigDirectory s
 func StartMetricsExtensionWithConfigOverridesForUnderlay(configOverrides string, meDCRConfigDirectory string, meLocalControl bool) {
 	var cmd *exec.Cmd
 	if meLocalControl {
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-LocalControlChannel", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 	} else {
-		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
+		cmd = exec.Command("/usr/sbin/MetricsExtension", "-Logger", "File", "-LogLevel", "Info", "-TokenSource", "AMCS", "-DataDirectory", meDCRConfigDirectory, "-Input", "otlp_grpc_prom,otlp_grpc", "-ConfigOverridesFilePath", "/usr/sbin/me.config")
 	}
 
 	// Create a file to store the stdoutput
