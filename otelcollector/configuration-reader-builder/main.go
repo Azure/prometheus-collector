@@ -24,6 +24,7 @@ type Config struct {
 	AllocationStrategy string                             `yaml:"allocation_strategy,omitempty"`
 	PrometheusCR       allocatorconfig.PrometheusCRConfig `yaml:"prometheus_cr,omitempty"`
 	FilterStrategy     string                             `yaml:"filter_strategy,omitempty"`
+	HTTPS              allocatorconfig.HTTPSServerConfig  `yaml:"https,omitempty"`
 }
 
 type OtelConfig struct {
@@ -154,6 +155,12 @@ func updateTAConfigFile(configFilePath string) {
 		PrometheusCR: allocatorconfig.PrometheusCRConfig{
 			ServiceMonitorSelector: &metav1.LabelSelector{},
 			PodMonitorSelector:     &metav1.LabelSelector{},
+		},
+		HTTPS: allocatorconfig.HTTPSServerConfig{
+			Enabled:         true,
+			CAFilePath:      "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+			TLSCertFilePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+			TLSKeyFilePath:  "/var/run/secrets/kubernetes.io/serviceaccount/token",
 		},
 	}
 

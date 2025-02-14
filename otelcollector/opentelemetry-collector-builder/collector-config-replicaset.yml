@@ -36,9 +36,13 @@ processors:
 receivers:
     prometheus:
       target_allocator:
-        endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
+        endpoint: https://ama-metrics-operator-targets.kube-system.svc.cluster.local
         interval: 30s
         collector_id: "${env:POD_NAME}"
+        tls:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          cert_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          key_file: /var/run/secrets/kubernetes.io/serviceaccount/token
 service:
   pipelines:
     metrics:
