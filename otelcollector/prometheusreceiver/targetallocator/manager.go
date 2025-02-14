@@ -36,8 +36,8 @@ type Manager struct {
 	initialScrapeConfigs   []*promconfig.ScrapeConfig
 	scrapeManager          *scrape.Manager
 	discoveryManager       *discovery.Manager
-	webHandler             *web.Handler
 	enableNativeHistograms bool
+	webHandler             *web.Handler
 }
 
 func NewManager(set receiver.Settings, cfg *Config, promCfg *promconfig.Config, enableNativeHistograms bool) *Manager {
