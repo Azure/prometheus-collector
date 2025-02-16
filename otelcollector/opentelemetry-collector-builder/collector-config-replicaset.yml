@@ -40,9 +40,9 @@ receivers:
         interval: 30s
         collector_id: "${env:POD_NAME}"
         tls:
-          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          cert_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          key_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          ca_file: /etc/prometheus/certs/ca-cert.pem
+          cert_file: /etc/prometheus/certs/client-cert.pem
+          key_file: /etc/prometheus/certs/client-key.pem
 service:
   pipelines:
     metrics:

@@ -158,9 +158,9 @@ func updateTAConfigFile(configFilePath string) {
 		},
 		HTTPS: allocatorconfig.HTTPSServerConfig{
 			Enabled:         true,
-			CAFilePath:      "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
-			TLSCertFilePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
-			TLSKeyFilePath:  "/var/run/secrets/kubernetes.io/serviceaccount/token",
+			CAFilePath:      "/etc/prometheus/certs/ca-cert.pem",
+			TLSCertFilePath: "/etc/prometheus/certs/server-cert.pem",
+			TLSKeyFilePath:  "/etc/prometheus/certs/server-key.pem",
 		},
 	}
 

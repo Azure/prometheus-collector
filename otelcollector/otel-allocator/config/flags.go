@@ -54,7 +54,7 @@ func getFlagSet(errorHandling pflag.ErrorHandling) *pflag.FlagSet {
 	flagSet.String(httpsTLSKeyFilePathFlagName, "", "The path to the HTTPS server TLS key file.")
 	zapFlagSet := flag.NewFlagSet("", flag.ErrorHandling(errorHandling))
 	zapCmdLineOpts.BindFlags(zapFlagSet)
-	lvl := uberzap.NewAtomicLevelAt(uberzap.PanicLevel)
+	lvl := uberzap.NewAtomicLevelAt(uberzap.ErrorLevel)
 	zapCmdLineOpts.Level = &lvl
 	flagSet.AddGoFlagSet(zapFlagSet)
 	return flagSet
