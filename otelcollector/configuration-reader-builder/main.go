@@ -158,7 +158,7 @@ func updateTAConfigFile(configFilePath string) {
 		},
 		HTTPS: allocatorconfig.HTTPSServerConfig{
 			Enabled:         true,
-			CAFilePath:      "/etc/prometheus/certs/ca-cert.pem",
+			CAFilePath:      "/etc/prometheus/certs/client-ca-cert.pem",
 			TLSCertFilePath: "/etc/prometheus/certs/server-cert.pem",
 			TLSKeyFilePath:  "/etc/prometheus/certs/server-key.pem",
 		},
