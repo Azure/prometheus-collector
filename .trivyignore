@@ -1,4 +1,5 @@
 # CRITICAL
+CVE-2022-48174
 # kube-state-metrics
 CVE-2024-45337 # golang.org/x/crypto
 CVE-2024-24790 # stdlib
