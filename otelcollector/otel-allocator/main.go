@@ -205,6 +205,7 @@ func main() {
 		func() error {
 			err := srv.Start()
 			setupLog.Info("Server failed to start")
+			setupLog.Error(err, "Error on server start")
 			return err
 		},
 		func(_ error) {
