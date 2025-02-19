@@ -40,9 +40,9 @@ receivers:
         interval: 30s
         collector_id: "${env:POD_NAME}"
         tls:
-          ca_file: /etc/prometheus/certs/server-ca-cert.pem
-          cert_file: /etc/prometheus/certs/client-cert.pem
-          key_file: /etc/prometheus/certs/client-key.pem
+          ca_file: /etc/prometheus/certs/server-ca.crt
+          cert_file: /etc/prometheus/certs/client.crt
+          key_file: /etc/prometheus/certs/client.key
 service:
   pipelines:
     metrics:
