@@ -36,7 +36,7 @@ processors:
 receivers:
     prometheus:
       target_allocator:
-        endpoint: https://ama-metrics-operator-targets.kube-system.svc.cluster.local
+        endpoint: https://ama-metrics-operator-targets.kube-system.svc.cluster.local:8443
         interval: 30s
         collector_id: "${env:POD_NAME}"
         tls:
