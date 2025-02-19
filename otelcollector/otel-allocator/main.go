@@ -219,6 +219,7 @@ func main() {
 			func() error {
 				err := srv.StartHTTPS()
 				setupLog.Info("HTTPS Server failed to start")
+				setupLog.Error(err, "Error on HTTPS server start")
 				return err
 			},
 			func(_ error) {
