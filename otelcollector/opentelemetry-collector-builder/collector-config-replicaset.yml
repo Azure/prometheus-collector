@@ -36,13 +36,13 @@ processors:
 receivers:
     prometheus:
       target_allocator:
-        endpoint: https://ama-metrics-operator-targets.kube-system.svc.cluster.local:8443
+        endpoint: https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443
         interval: 30s
         collector_id: "${env:POD_NAME}"
         tls:
           ca_file: /etc/prometheus/certs/server-ca.crt
-          cert_file: /etc/prometheus/certs/client.crt
-          key_file: /etc/prometheus/certs/client.key
+          cert_file: /etc/prometheus/certs/client-cert.pem
+          key_file: /etc/prometheus/certs/client-key.pem
 service:
   pipelines:
     metrics:
