@@ -111,7 +111,7 @@ func main() {
 		httpOptions = append(httpOptions, server.WithTLSConfig(tlsConfig, cfg.HTTPS.ListenAddr))
 	}
 	srv := server.NewServer(log, allocator, cfg.ListenAddr, httpOptions...)
-	fmt.Printf("listenaddress: %v", cfg.ListenAddr)
+	fmt.Printf("listenaddress: %v", cfg.HTTPS.ListenAddr)
 
 	discoveryCtx, discoveryCancel := context.WithCancel(ctx)
 	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(prometheus.DefaultRegisterer)
