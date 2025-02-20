@@ -8,6 +8,7 @@
   - Add scrape_samples_scraped metric to telemetry when debug mode is enabled (https://github.com/Azure/prometheus-collector/pull/1055)
   - fix: set proxy the old way for mdsd in golang (https://github.com/Azure/prometheus-collector/pull/1062)
   - fix: add cluster scope to recording rules in policy (https://github.com/Azure/prometheus-collector/pull/1064)
+  - upgrade: Upgrade otelcollector and targetallocator to 0.117.0 (https://github.com/Azure/prometheus-collector/pull/1063)
 * Arc Extension Chart:
 
 * Pipeline/Docs/Templates Updates:
