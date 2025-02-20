@@ -538,7 +538,7 @@ stages:
           docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
           docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . -f arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --push
+          docker buildx build . -f arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --push
           docker pull $(ARC_CONFORMANCE_FULL_IMAGE_NAME)  
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
         displayName: "Build: build and push Arc conformance test image to dev ACR"
