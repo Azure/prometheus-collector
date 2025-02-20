@@ -158,6 +158,7 @@ func updateTAConfigFile(configFilePath string) {
 		},
 		HTTPS: allocatorconfig.HTTPSServerConfig{
 			Enabled:         true,
+			ListenAddr:      ":8443",
 			CAFilePath:      "/etc/prometheus/certs/client-ca.crt",
 			TLSCertFilePath: "/etc/prometheus/certs/server.crt",
 			TLSKeyFilePath:  "/etc/prometheus/certs/server.key",
