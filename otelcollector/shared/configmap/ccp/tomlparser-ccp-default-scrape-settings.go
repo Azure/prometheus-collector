@@ -48,7 +48,7 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	} else if schemaVersion == "v2" {
 		fmt.Println("ParseConfigMapForDefaultScrapeSettings::Processing v2 schema")
 		// For v2, control plane jobs are under "controlplane-metrics" without "controlplane-" prefix
-		if settings, ok := metricsConfigBySection["default-scrape-settings-enabled"]; ok {
+		if settings, ok := metricsConfigBySection["default-targets-scrape-enabled"]; ok {
 			fmt.Println("ParseConfigMapForDefaultScrapeSettings::Found default scrape settings section")
 			// Map v2 keys to v1 keys
 			v2ToV1KeyMap := map[string]string{
@@ -201,8 +201,14 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map
 func tomlparserCCPDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
 	fmt.Println("tomlparserCCPDefaultScrapeSettings::Start ccp-default-scrape-settings Processing")
 
+	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+	configLoaderPath := "/etc/config/settings/default-targets-scrape-enabled"
+	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v2" {
+		configLoaderPath = "/etc/config/settings/default-targets-scrape-enabled"
+	}
+
 	configurator := &Configurator{
-		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/default-scrape-settings-enabled"},
+		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: configLoaderPath},
 		ConfigWriter:   &FileConfigWriter{},
 		ConfigFilePath: "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var",
 		ConfigParser:   &ConfigProcessor{},

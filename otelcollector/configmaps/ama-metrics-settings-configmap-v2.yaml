@@ -8,7 +8,7 @@ data:
     #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
     ver1
   dataplane-metrics: |-
-    default-scrape-settings-enabled: |-
+    default-targets-scrape-enabled: |-
       kubelet = true
       coredns = false
       cadvisor = true
@@ -63,10 +63,8 @@ data:
       acstor-metrics-exporter = "30s"
       prometheuscollectorhealth = "30s"
       podannotations = "30s"
-    debug-mode: |-
-      enabled = false 
   controlplane-metrics: |-
-    default-scrape-settings-enabled: |-
+    default-targets-scrape-enabled: |-
       apiserver = true
       cluster-autoscaler = false
       kube-scheduler = false
@@ -83,6 +81,7 @@ data:
   shared: |-
     prometheus-collector-settings: |-
       cluster_alias = ""
+      debug-mode = "true"
 metadata:
   name: ama-metrics-settings-configmap
   namespace: kube-system

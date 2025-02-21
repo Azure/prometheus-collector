@@ -237,8 +237,15 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map
 }
 
 func tomlparserDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
+
+	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+	configLoaderPath := defaultSettingsMountPath
+	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v2" {
+		configLoaderPath = defaultSettingsMountPathv2
+	}
+
 	configurator := &Configurator{
-		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: defaultSettingsMountPath},
+		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: configLoaderPath},
 		ConfigWriter:   &FileConfigWriter{},
 		ConfigFilePath: defaultSettingsEnvVarPath,
 		ConfigParser:   &ConfigProcessor{},
