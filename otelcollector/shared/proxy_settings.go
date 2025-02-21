@@ -76,7 +76,7 @@ func ConfigureEnvironment() error {
 	setHTTPProxyEnabled()
 
 	// Process additional settings for Arc cluster with enabled HTTP proxy
-	if os.Getenv("IS_ARC_CLUSTER") == "true" && os.Getenv("HTTP_PROXY_ENABLED") == "true" {
+	if os.Getenv("HTTP_PROXY_ENABLED") == "true" {
 		proxyProtocol := strings.ToLower(strings.Split(os.Getenv("HTTPS_PROXY"), "://")[0])
 		if proxyProtocol != "http" && proxyProtocol != "https" {
 			fmt.Println("HTTP Proxy specified does not include http:// or https://")

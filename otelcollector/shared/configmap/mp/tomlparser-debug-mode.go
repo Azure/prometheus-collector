@@ -37,39 +37,46 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 	}
 	defer file.Close()
 
+	//if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+	//file.WriteString(fmt.Sprintf("export DEBUG_MODE_ENABLED=%v\n", defaultEnabled))
+	//} else {
 	file.WriteString(fmt.Sprintf("DEBUG_MODE_ENABLED=%v\n", enabled))
+
 	fmt.Printf("Setting debug mode environment variable: %v\n", enabled)
+	//}
 
 	if enabled {
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType != "" && controllerType == "ReplicaSet" {
-			fmt.Println("Setting otlp in the exporter metrics for service pipeline since debug mode is enabled ...")
-			var config map[string]interface{}
+			fmt.Println("Setting prometheus in the exporter metrics for service pipeline since debug mode is enabled ...")
+			var config OtelConfig
 			content, err := os.ReadFile(replicaSetCollectorConfig)
 			if err != nil {
-				return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
 			}
 
 			err = yaml.Unmarshal(content, &config)
 			if err != nil {
-				return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
 			}
 
-			if config != nil {
-				exporters := []string{"otlp", "prometheus"}
-				config["service"].(map[interface{}]interface{})["pipelines"].(map[interface{}]interface{})["metrics"].(map[interface{}]interface{})["exporters"] = exporters
-
-				cfgYamlWithDebugModeSettings, err := yaml.Marshal(config)
-				if err != nil {
-					return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
-				}
-
-				err = os.WriteFile(replicaSetCollectorConfig, []byte(cfgYamlWithDebugModeSettings), fs.FileMode(0644))
-				if err != nil {
-					return fmt.Errorf("Exception while setting otlp in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
-				}
+			config.Service.Pipelines.Metrics.Exporters = []interface{}{"otlp", "prometheus"}
+			if os.Getenv("CCP_METRICS_ENABLED") != "true" {
+				config.Service.Pipelines.MetricsTelemetry.Receivers = []interface{}{"prometheus"}
+				config.Service.Pipelines.MetricsTelemetry.Exporters = []interface{}{"prometheus/telemetry"}
+				config.Service.Pipelines.MetricsTelemetry.Processors = []interface{}{"filter/telemetry"}
 			}
-			fmt.Println("Done setting otlp in the exporter metrics for service pipeline.")
+			cfgYamlWithDebugModeSettings, err := yaml.Marshal(config)
+			if err != nil {
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+			}
+
+			err = os.WriteFile(replicaSetCollectorConfig, []byte(cfgYamlWithDebugModeSettings), fs.FileMode(0644))
+			if err != nil {
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+			}
+
+			fmt.Println("Done setting prometheus in the exporter metrics for service pipeline.")
 		}
 	}
 
@@ -77,7 +84,6 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 }
 
 func populateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) bool {
-	if len(metricsConfigBySection) == 0 {
 		fmt.Println("Parsed config map is empty. Using default debug mode value: false")
 		return false
 	}
