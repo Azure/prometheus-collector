@@ -5,8 +5,8 @@ data:
     global:
       scrape_interval: 15s
       external_labels:
-        ext_lbl_ds_win: value1
-        ext_lb2_ds_win: value2
+        custom_label1: custom_value1
+        custom_label2: custom_value2
     scrape_configs:
     - job_name: custom-kubelet-win
       scheme: https
