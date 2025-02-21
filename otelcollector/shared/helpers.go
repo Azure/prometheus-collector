@@ -300,7 +300,6 @@ func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error)
 	metricsConfigBySection := make(map[string]map[string]string)
 
 	for _, filePath := range filePaths {
-		// Open the file with deferred closure to ensure proper resource cleanup
 		file, err := os.Open(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open file %s: %w", filePath, err)
@@ -322,7 +321,7 @@ func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error)
 				continue
 			}
 
-			// Detect and process section headers
+			// Detect section headers (supports top-level keys)
 			if strings.HasSuffix(line, ": |-") {
 				currentSection = strings.TrimSuffix(line, ": |-")
 				if _, exists := metricsConfigBySection[currentSection]; !exists {
@@ -331,10 +330,10 @@ func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error)
 				continue
 			}
 
-			// Process key-value pairs
+			// Process key-value pairs within sections
 			if currentSection != "" && strings.Contains(line, "=") {
 				parts := strings.SplitN(line, "=", 2)
-				if len(parts) < 2 {
+				if len(parts) != 2 {
 					log.Printf("warning: skipping malformed line in file %s: %q", filePath, line)
 					continue
 				}

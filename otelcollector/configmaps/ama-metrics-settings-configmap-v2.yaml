@@ -78,10 +78,9 @@ data:
       etcd = ""
     minimal-ingestion-profile: |-
       enabled = true
-  shared: |-
-    prometheus-collector-settings: |-
-      cluster_alias = ""
-      debug-mode = "true"
+  prometheus-collector-settings: |-
+    cluster_alias = ""
+    debug-mode = "true"
 metadata:
   name: ama-metrics-settings-configmap
   namespace: kube-system
