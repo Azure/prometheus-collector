@@ -9,9 +9,11 @@
   - fix: set proxy the old way for mdsd in golang (https://github.com/Azure/prometheus-collector/pull/1062)
   - fix: add cluster scope to recording rules in policy (https://github.com/Azure/prometheus-collector/pull/1064)
   - upgrade: Upgrade otelcollector and targetallocator to 0.117.0 (https://github.com/Azure/prometheus-collector/pull/1063)
-* Arc Extension Chart:
 
 * Pipeline/Docs/Templates Updates:
+   * fix: add cluster scope to recording rules in policy (https://github.com/Azure/prometheus-collector/pull/1064) 
+   * Add job labels to monitoring alerts (https://github.com/Azure/prometheus-collector/pull/1065)
+   * fix: arc conformance build in pipeline (https://github.com/Azure/prometheus-collector/pull/1066)
 
 ## Release 01-16-2025
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe`
