@@ -58,7 +58,7 @@ var replicasetDimensionsNameToEnvVar = map[string]string{
 	"arcdistribution":                         "$ARC_DISTRIBUTION",
 	"mountmarinercerts":                       "$MOUNT_MARINER_CERTS",
 	"mountubuntucerts":                        "$MOUNT_UBUNTU_CERTS",
-	"configschemaversion":                     "AZMON_AGENT_CFG_SCHEMA_VERSION",
+	"settingsconfigschemaversion":                     "AZMON_AGENT_CFG_SCHEMA_VERSION",
 }
 
 var daemonsetDimensionsNameToEnvVar = map[string]string{
