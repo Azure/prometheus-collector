@@ -70,7 +70,7 @@ func Configmapparserforccp() {
 	var metricsConfigBySection map[string]map[string]string
 	var err error
 	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
-		filePaths := []string{"/etc/config/settings/controlplane-metrics", "/etc/config/settings/shared"}
+		filePaths := []string{"/etc/config/settings/controlplane-metrics", "/etc/config/settings/prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
 			fmt.Printf("Error parsing files: %v\n", err)
