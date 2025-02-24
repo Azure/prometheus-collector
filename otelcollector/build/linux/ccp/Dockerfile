@@ -85,8 +85,7 @@ RUN tdnf repolist --refresh
 RUN tdnf update -y
 # RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
 RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
-RUN wget --no-check-certificate -P /usr/sbin/ https://github.com/Azure/prometheus-collector/releases/download/metricsext2-2.2024.1023.2033/metricsext2-2.2024.1023.2033-1.azl3.x86_64.rpm
-RUN tdnf install -y /usr/sbin/metricsext2-2.2024.1023.2033-1.azl3.x86_64.rpm
+RUN tdnf install -y metricsext2
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
