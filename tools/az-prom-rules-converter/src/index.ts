@@ -1,6 +1,6 @@
 import yaml2json from './steps/yaml2json'
 import StepResult from './types/step-result'
-import   validatePromSchema  from './steps/validate-prom-schemas'
+import validatePromSchema  from './steps/validate-prom-schemas'
 import validateArmTemplate from './steps/validate-arm-template'
 import toArmTemplate from './steps/to-arm-template'
 import validateInputNotEmpty from './steps/validate-input-not-empty'

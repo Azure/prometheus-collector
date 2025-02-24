@@ -68,7 +68,6 @@ const getArmTemplateFormat = (params) => {
         resources: []
     };
     ['clusterName', 'actionGroupId', 'azureMonitorWorkspace', 'location'].forEach((paramName) => {
-        console.log(paramName, params[paramName]);
         if (params[paramName]) {
             result.parameters[paramName].defaultValue = params[paramName];
         }

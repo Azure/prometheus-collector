@@ -9,6 +9,8 @@
 {{- $amaMetricsHpaName := "ama-metrics-hpa" }}
 {{- $amaMetricsAutoscaleMin := 2 -}}
 {{- $amaMetricsAutoscaleMax := 12 -}}
+{{- $amaMetricsAutoscaleMaxPrevious := 8 -}}
+
 
 amaMetricsMinReplicasFromHelper: 2
 amaMetricsMaxReplicasFromHelper: 12
@@ -28,7 +30,8 @@ amaMetricsMinReplicasFromHelper: {{ $amaMetricsMinReplicasFromCurrentSpec }}
   {{- end }}
 
   {{- if and ($amaMetricsMaxReplicasFromCurrentSpec) (gt (int $amaMetricsMaxReplicasFromCurrentSpec) 0) }}
-    {{- if le (int $amaMetricsMaxReplicasFromCurrentSpec) $amaMetricsAutoscaleMax }}
+{{/* Adding this check to make sure the previous default max is updated with the new update  */}}
+    {{- if  and (le (int $amaMetricsMaxReplicasFromCurrentSpec) $amaMetricsAutoscaleMax) (ne (int $amaMetricsMaxReplicasFromCurrentSpec) $amaMetricsAutoscaleMaxPrevious) }}
 amaMetricsMaxReplicasFromHelper: {{ $amaMetricsMaxReplicasFromCurrentSpec }}
     {{- end }}
   {{- end }}

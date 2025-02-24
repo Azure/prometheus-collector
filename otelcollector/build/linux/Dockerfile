@@ -69,6 +69,72 @@ RUN apt-get update && apt-get install gcc-aarch64-linux-gnu -y
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; fi
 
+ARG TARGETARCH
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 AS fluent-bit-binary-builder
+WORKDIR /
+# Install with the same exact dependencies and code source that Mariner uses
+RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
+    gnutls-devel graphviz libpq-devel libyaml-devel luajit-devel make openssl-devel pkgconfig \
+    systemd-devel systemd-rpm-macros zlib-devel build-essential -y
+ARG FLUENT_BIT_VERSION
+RUN wget https://github.com/fluent/fluent-bit/archive/refs/tags/v${FLUENT_BIT_VERSION}.tar.gz
+RUN tar -xvf v${FLUENT_BIT_VERSION}.tar.gz
+# Add a file with settings to build only the plugins we use
+COPY ./fluent-bit/plugins_options.cmake /fluent-bit-${FLUENT_BIT_VERSION}/cmake/plugins_options.cmake
+# Make a change that allows Fluent-Bit metrics to flow to our Go output plugin
+RUN sed -i '/out->type  = FLB_OUTPUT_PLUGIN_PROXY;/a \ \ \ \ out->event_type = FLB_OUTPUT_LOGS | FLB_OUTPUT_METRICS;' /fluent-bit-${FLUENT_BIT_VERSION}/src/flb_plugin_proxy.c
+WORKDIR /fluent-bit-${FLUENT_BIT_VERSION}/build
+# Run cmake with the same flags that Mariner uses
+RUN cmake \
+-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+-DFLB_EXAMPLES=Off \
+-DFLB_OUT_SLACK=Off \
+-DFLB_IN_SYSTEMD=On \
+-DFLB_OUT_TD=Off \
+-DFLB_OUT_ES=Off \
+-DFLB_SHARED_LIB=On \
+-DFLB_RELEASE=On \
+-DFLB_DEBUG=Off \
+-DFLB_TLS=On \
+-DFLB_JEMALLOC=On \
+-DFLB_PREFER_SYSTEM_LIBS=On \
+-DFLB_PROXY_GO=On ../
+RUN make
+RUN make install
+
+ARG TARGETARCH
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 AS fluent-bit-binary-builder
+WORKDIR /
+# Install with the same exact dependencies and code source that Mariner uses
+RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
+    gnutls-devel graphviz libpq-devel libyaml-devel luajit-devel make openssl-devel pkgconfig \
+    systemd-devel systemd-rpm-macros zlib-devel build-essential -y
+ARG FLUENT_BIT_VERSION
+RUN wget https://github.com/fluent/fluent-bit/archive/refs/tags/v${FLUENT_BIT_VERSION}.tar.gz
+RUN tar -xvf v${FLUENT_BIT_VERSION}.tar.gz
+# Add a file with settings to build only the plugins we use
+COPY ./fluent-bit/plugins_options.cmake /fluent-bit-${FLUENT_BIT_VERSION}/cmake/plugins_options.cmake
+# Make a change that allows Fluent-Bit metrics to flow to our Go output plugin
+RUN sed -i '/out->type  = FLB_OUTPUT_PLUGIN_PROXY;/a \ \ \ \ out->event_type = FLB_OUTPUT_LOGS | FLB_OUTPUT_METRICS;' /fluent-bit-${FLUENT_BIT_VERSION}/src/flb_plugin_proxy.c
+WORKDIR /fluent-bit-${FLUENT_BIT_VERSION}/build
+# Run cmake with the same flags that Mariner uses
+RUN cmake \
+-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+-DFLB_EXAMPLES=Off \
+-DFLB_OUT_SLACK=Off \
+-DFLB_IN_SYSTEMD=On \
+-DFLB_OUT_TD=Off \
+-DFLB_OUT_ES=Off \
+-DFLB_SHARED_LIB=On \
+-DFLB_RELEASE=On \
+-DFLB_DEBUG=Off \
+-DFLB_TLS=On \
+-DFLB_JEMALLOC=On \
+-DFLB_PREFER_SYSTEM_LIBS=On \
+-DFLB_PROXY_GO=On ../
+RUN make
+RUN make install
+
 FROM mcr.microsoft.com/azurelinux/base/core:3.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
@@ -104,9 +170,11 @@ COPY --from=main-builder --chmod=777 /main/main.exe $tmpdir/main
 
 COPY ./scripts/*.sh $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
-COPY ./telegraf/ $tmpdir/telegraf/
-COPY ./fluent-bit/fluent-bit.conf ./fluent-bit/fluent-bit-daemonset.conf ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
+COPY ./fluent-bit/fluent-bit.yaml ./fluent-bit/fluent-bit-daemonset.yaml ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY --from=fluent-bit-builder /src/out_appinsights.so $tmpdir/fluent-bit/bin/
+COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
+COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
+COPY --from=fluent-bit-binary-builder /usr/local/lib/fluent-bit /usr/local/etc/fluent-bit
 COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
@@ -125,7 +193,7 @@ RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
 # If wanting to run without distroless, uncomment this line and comment everything after
-ENTRYPOINT [ "./opt/main" ]
+# ENTRYPOINT ["./opt/main"]
 
 # FROM mcr.microsoft.com/azurelinux/distroless/base:3.0
 # # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource

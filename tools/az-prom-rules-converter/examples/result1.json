@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "clusterName": {
+      "type": "string",
+      "metadata": {
+        "description": "Cluster name"
+      }
+    },
+    "actionGroupId": {
+      "type": "string",
+      "metadata": {
+        "description": "Action Group ResourceId"
+      }
+    },
+    "azureMonitorWorkspace": {
+      "type": "string",
+      "metadata": {
+        "description": "ResourceId of Azure monitor workspace to associate to"
+      }
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "name": "example",
+      "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+      "apiVersion": "2023-03-01",
+      "location": "[parameters('location')]",
+      "properties": {
+        "interval": "PT2M",
+        "scopes": ["[parameters('azureMonitorWorkspace')]"],
+        "clusterName": "[parameters('clusterName')]",
+        "rules": [
+          {
+            "record": "job:http_inprogress_requests:sum",
+            "expression": "sum by (job) (http_inprogress_requests)"
+          },
+          {
+            "severity": 3,
+            "resolveConfiguration": {
+              "autoResolved": true,
+              "timeToResolve": "PT10M"
+            },
+            "actions": [
+              {
+                "actionGroupId": "[parameters('actionGroupId')]"
+              }
+            ],
+            "alert": "alert name",
+            "expression": "sum by (job) (http_inprogress_requests)"
+          }
+        ]
+      }
+    }
+  ]
+}

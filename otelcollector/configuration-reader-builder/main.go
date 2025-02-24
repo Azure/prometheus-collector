@@ -44,6 +44,11 @@ type OtelConfig struct {
 				Processors interface{} `yaml:"processors"`
 				Receivers  interface{} `yaml:"receivers"`
 			} `yaml:"metrics"`
+			MetricsTelemetry struct {
+				Exporters  interface{} `yaml:"exporters,omitempty"`
+				Processors interface{} `yaml:"processors,omitempty"`
+				Receivers  interface{} `yaml:"receivers,omitempty"`
+			} `yaml:"metrics/telemetry,omitempty"`
 		} `yaml:"pipelines"`
 		Telemetry struct {
 			Logs struct {
@@ -245,6 +250,7 @@ func main() {
 	_, err := os.Create("/opt/inotifyoutput.txt")
 	if err != nil {
 		log.Fatalf("Error creating output file: %v\n", err)
+		fmt.Println("Error creating inotify output file:", err)
 	}
 
 	// Define the command to start inotify for config reader's liveness probe
@@ -254,7 +260,8 @@ func main() {
 		"--daemon",
 		"--recursive",
 		"--outfile", "/opt/inotifyoutput.txt",
-		"--event", "create,delete",
+		"--event", "create",
+		"--event", "delete",
 		"--format", "%e : %T",
 		"--timefmt", "+%s",
 	)
@@ -263,6 +270,7 @@ func main() {
 	err = inotifyCommandCfg.Start()
 	if err != nil {
 		log.Fatalf("Error starting inotify process for config reader's liveness probe: %v\n", err)
+		fmt.Println("Error starting inotify process:", err)
 	}
 
 	configmapsettings.Configmapparser()

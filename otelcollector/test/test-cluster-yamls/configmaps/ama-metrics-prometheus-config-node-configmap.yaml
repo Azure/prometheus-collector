@@ -2,6 +2,10 @@ kind: ConfigMap
 apiVersion: v1
 data:
   prometheus-config: |-
+    global:
+      external_labels:
+        external_label_1: "external_label_value"
+        external_label_123: "external_label_value"
     scrape_configs:
     - job_name: node-configmap
       scrape_interval: 30s
