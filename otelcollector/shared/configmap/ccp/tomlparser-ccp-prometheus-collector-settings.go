@@ -10,7 +10,7 @@ import (
 // PopulateSettingValuesFromConfigMap populates settings from the parsed configuration.
 func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) {
 	// Extract the prometheus-collector-settings section
-	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
+	if settings, ok := metricsConfigBySection["cluster_alias"]; ok {
 		if value, ok := settings["default_metric_account_name"]; ok {
 			cp.DefaultMetricAccountName = value
 			fmt.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)

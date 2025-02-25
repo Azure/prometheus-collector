@@ -148,8 +148,6 @@ func Configmapparser() {
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
 			fmt.Printf("Using defaults as error parsing files: %v\n", err)
-		} else if os.Getenv("DEBUG_MODE_ENABLED") == "true" {
-			fmt.Printf("Parsed metrics configuration: %+v\n", metricsConfigBySection)
 		}
 	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
 		configDir := "/etc/config/settings"
@@ -160,6 +158,8 @@ func Configmapparser() {
 	} else {
 		fmt.Println("Invalid schema version. Using defaults.")
 	}
+
+	fmt.Printf("Parsed metrics configuration: %+v\n", metricsConfigBySection)
 
 	parseSettingsForPodAnnotations(metricsConfigBySection)
 	parsePrometheusCollectorConfig(metricsConfigBySection)
