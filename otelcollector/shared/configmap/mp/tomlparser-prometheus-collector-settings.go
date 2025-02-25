@@ -9,7 +9,7 @@ import (
 
 func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) {
 	// Populate default metric account name
-	if settings, ok := metricsConfigBySection["default_metric_account_name"]; ok {
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 		if value, ok := settings["default_metric_account_name"]; ok {
 			cp.DefaultMetricAccountName = value
 			fmt.Printf("Using configmap setting for default metric account name: %s\n", cp.DefaultMetricAccountName)
@@ -17,7 +17,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 	}
 
 	// Populate cluster alias
-	if settings, ok := metricsConfigBySection["cluster_alias"]; ok {
+	if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 		if value, ok := settings["cluster_alias"]; ok {
 			cp.ClusterAlias = strings.TrimSpace(value)
 			fmt.Printf("Got configmap setting for cluster_alias: %s\n", cp.ClusterAlias)
@@ -32,7 +32,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 	// Populate operator settings
 	if operatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED"); operatorEnabled != "" && strings.ToLower(operatorEnabled) == "true" {
 		cp.IsOperatorEnabledChartSetting = true
-		if settings, ok := metricsConfigBySection["operator_enable"]; ok {
+		if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 			if value, ok := settings["operator_enabled"]; ok {
 				cp.IsOperatorEnabled = value == "true"
 				fmt.Printf("Configmap setting enabling operator: %t\n", cp.IsOperatorEnabled)

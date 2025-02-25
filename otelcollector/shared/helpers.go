@@ -331,7 +331,7 @@ func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error)
 			}
 
 			// Process key-value pairs within sections
-			if currentSection != "" && strings.Contains(line, "=") {
+			if strings.Contains(line, "=") {
 				parts := strings.SplitN(line, "=", 2)
 				if len(parts) != 2 {
 					log.Printf("warning: skipping malformed line in file %s: %q", filePath, line)
@@ -344,6 +344,14 @@ func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error)
 				if key == "" {
 					log.Printf("warning: skipping empty key in file %s: %q", filePath, line)
 					continue
+				}
+
+				// Handle top-level keys in a separate section
+				if currentSection == "" {
+					currentSection = "prometheus-collector-settings"
+					if _, exists := metricsConfigBySection[currentSection]; !exists {
+						metricsConfigBySection[currentSection] = make(map[string]string)
+					}
 				}
 
 				metricsConfigBySection[currentSection][key] = value

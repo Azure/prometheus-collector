@@ -84,9 +84,9 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 }
 
 func populateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) bool {
-	debugSettings, ok := metricsConfigBySection["debug-mode"]
+	debugSettings, ok := metricsConfigBySection["prometheus-collector-settings"]
 	if !ok {
-		fmt.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
+		fmt.Println("The 'prometheus-collector-settings' section is not present in the parsed data. Using default value: false")
 		return false
 	}
 
