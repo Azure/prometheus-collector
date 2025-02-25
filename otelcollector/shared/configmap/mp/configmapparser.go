@@ -159,8 +159,6 @@ func Configmapparser() {
 		fmt.Println("Invalid schema version. Using defaults.")
 	}
 
-	fmt.Printf("Parsed metrics configuration: %+v\n", metricsConfigBySection)
-
 	parseSettingsForPodAnnotations(metricsConfigBySection)
 	parsePrometheusCollectorConfig(metricsConfigBySection)
 	parseDefaultScrapeSettings(metricsConfigBySection)
