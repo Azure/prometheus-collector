@@ -1,0 +1,38 @@
+prometheus:
+  prometheusSpec:
+    containers:
+    - env:
+      - name: INGESTION_URL
+        value: https://kaveeshtest-jlot.eastus2euap-1.metrics.canary.ingest.monitor.azure.com/dataCollectionRules/dcr-e547dceb6083489abdb2ba798100b2e2/streams/Microsoft-PrometheusMetrics/api/v1/write?api-version=2023-04-24
+      - name: LISTENING_PORT
+        value: "8081"
+      - name: IDENTITY_TYPE
+        value: userAssigned
+      - name: AZURE_CLIENT_ID
+        value: $AZURE_CLIENT_ID
+      - name: TRACE_LOGGING
+        value: "true"
+      - name: CLUSTER
+        value: kaveeshtest
+      image: mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20250214.1  # Updated image
+      imagePullPolicy: Always
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: rw-port
+        initialDelaySeconds: 30
+        timeoutSeconds: 30
+      name: prom-remotewrite
+      ports:
+      - containerPort: 8081
+        name: rw-port
+      readinessProbe:
+        httpGet:
+          path: /ready
+          port: rw-port
+        initialDelaySeconds: 30
+        timeoutSeconds: 30
+    externalLabels:
+      cluster: kaveeshtest
+    remoteWrite:
+    - url: http://localhost:8081/api/v1/write
