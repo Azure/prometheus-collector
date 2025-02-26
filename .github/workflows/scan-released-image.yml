@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run-trivy-scanner-on-last-released-docker-image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.29.0
         with:
           image-ref: "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:5.0.0-main-09-15-2022-c5d54419"
           format: 'table'
