@@ -14,7 +14,7 @@ prometheus:
         value: "true"
       - name: CLUSTER
         value: kaveeshtest
-      image: mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20250214.1  # Updated image
+      image: mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20240617.1  # Updated image
       imagePullPolicy: Always
       livenessProbe:
         httpGet:
