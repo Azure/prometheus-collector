@@ -1,4 +1,4 @@
-ARG GOLANG_VERSION=1.22.7
+ARG GOLANG_VERSION
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as fluent-bit-builder
 WORKDIR /src
 COPY ./fluent-bit/src/go.mod ./fluent-bit/src/go.sum .
@@ -70,7 +70,7 @@ ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=exe -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o main.exe ./main.go ; fi
 
 ARG TARGETARCH
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 AS fluent-bit-binary-builder
+FROM mcr.microsoft.com/azurelinux/base/core:3.0 AS fluent-bit-binary-builder
 WORKDIR /
 # Install with the same exact dependencies and code source that Mariner uses
 RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
@@ -103,7 +103,7 @@ RUN make
 RUN make install
 
 ARG TARGETARCH
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 AS fluent-bit-binary-builder
+FROM mcr.microsoft.com/azurelinux/base/core:3.0 AS fluent-bit-binary-builder
 WORKDIR /
 # Install with the same exact dependencies and code source that Mariner uses
 RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
@@ -193,7 +193,7 @@ RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
 # If wanting to run without distroless, uncomment this line and comment everything after
-# ENTRYPOINT ["./opt/main"]
+ENTRYPOINT ["./opt/main"]
 
 # FROM mcr.microsoft.com/azurelinux/distroless/base:3.0
 # # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
