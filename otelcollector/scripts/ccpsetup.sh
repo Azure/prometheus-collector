@@ -27,7 +27,7 @@ sudo tdnf repolist --refresh
 sudo tdnf install inotify-tools -y
 
 echo "Installing mdsd..."
-sudo tdnf install -y azure-mdsd
+sudo tdnf install -y azure-mdsd-1.33.3
 
 cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
@@ -42,4 +42,4 @@ sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversi
 rm -f $TMPDIR/metricsext2*.rpm
 rm -f $TMPDIR/azure-mdsd*.rpm
 # Remove mdsd's telegraf
-# rm /usr/sbin/telegraf
+rm /usr/sbin/telegraf
