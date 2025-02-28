@@ -1,14 +1,19 @@
 # Azure Monitor Metrics for AKS clusters
-## Release TBD
-* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
-* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
-* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
-* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+## Release 02-21-2025
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c-cfg`
 * AKS and Arc Container Images:
   - Add scrape_samples_scraped metric to telemetry when debug mode is enabled (https://github.com/Azure/prometheus-collector/pull/1055)
-* Arc Extension Chart:
+  - fix: set proxy the old way for mdsd in golang (https://github.com/Azure/prometheus-collector/pull/1062)
+  - fix: add cluster scope to recording rules in policy (https://github.com/Azure/prometheus-collector/pull/1064)
+  - upgrade: Upgrade otelcollector and targetallocator to 0.117.0 (https://github.com/Azure/prometheus-collector/pull/1063)
 
 * Pipeline/Docs/Templates Updates:
+   * fix: add cluster scope to recording rules in policy (https://github.com/Azure/prometheus-collector/pull/1064) 
+   * Add job labels to monitoring alerts (https://github.com/Azure/prometheus-collector/pull/1065)
+   * fix: arc conformance build in pipeline (https://github.com/Azure/prometheus-collector/pull/1066)
 
 ## Release 01-16-2025
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe`
