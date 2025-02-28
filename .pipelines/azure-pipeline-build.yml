@@ -176,6 +176,25 @@ stages:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
 
+  - job: CreateSidecarArtifact
+    displayName: "Create Sidecar YAML Artifact for Remote Write"
+    pool:
+      vmImage: 'ubuntu-latest'  # Change if using a different agent
+    
+    steps:
+      - task: CopyFiles@2
+        displayName: "Copy sidecar.yaml to artifact staging directory"
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
+          Contents: 'sidecar.yaml'
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
+
+      - task: PublishBuildArtifacts@1
+        displayName: "Publish sidecar.yaml as an artifact"
+        inputs:
+          pathToPublish: '$(Build.ArtifactStagingDirectory)/drop'
+          artifactName: 'drop'
+
   - job: Linux_Golang_Reference_App
     displayName: "Build: linux golang reference app image"
     pool:
