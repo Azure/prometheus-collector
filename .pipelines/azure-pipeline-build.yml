@@ -3,7 +3,6 @@ trigger:
     include:
     - main
     - ngotina/linux-3.0-upgrade
-
 pr:
   autoCancel: true
   branches:
@@ -654,7 +653,6 @@ stages:
         inputs:
           version: $(GOLANG_VERSION)
 
-      # re add linux/arm64 when official ME package comes out 
       - bash: |
           # Add Docker's official GPG key:
           sudo apt-get update

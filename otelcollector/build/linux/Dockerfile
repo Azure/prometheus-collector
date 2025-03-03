@@ -19,7 +19,6 @@ COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceive
 WORKDIR /src/prometheusreceiver
 RUN go mod download
 WORKDIR /src/opentelemetry-collector-builder
-
 RUN go mod download
 COPY ./opentelemetry-collector-builder /src/opentelemetry-collector-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
@@ -102,39 +101,6 @@ RUN cmake \
 RUN make
 RUN make install
 
-ARG TARGETARCH
-FROM mcr.microsoft.com/azurelinux/base/core:3.0 AS fluent-bit-binary-builder
-WORKDIR /
-# Install with the same exact dependencies and code source that Mariner uses
-RUN tdnf install wget tar ca-certificates bison cmake cyrus-sasl-devel doxygen flex gcc-c++ \
-    gnutls-devel graphviz libpq-devel libyaml-devel luajit-devel make openssl-devel pkgconfig \
-    systemd-devel systemd-rpm-macros zlib-devel build-essential -y
-ARG FLUENT_BIT_VERSION
-RUN wget https://github.com/fluent/fluent-bit/archive/refs/tags/v${FLUENT_BIT_VERSION}.tar.gz
-RUN tar -xvf v${FLUENT_BIT_VERSION}.tar.gz
-# Add a file with settings to build only the plugins we use
-COPY ./fluent-bit/plugins_options.cmake /fluent-bit-${FLUENT_BIT_VERSION}/cmake/plugins_options.cmake
-# Make a change that allows Fluent-Bit metrics to flow to our Go output plugin
-RUN sed -i '/out->type  = FLB_OUTPUT_PLUGIN_PROXY;/a \ \ \ \ out->event_type = FLB_OUTPUT_LOGS | FLB_OUTPUT_METRICS;' /fluent-bit-${FLUENT_BIT_VERSION}/src/flb_plugin_proxy.c
-WORKDIR /fluent-bit-${FLUENT_BIT_VERSION}/build
-# Run cmake with the same flags that Mariner uses
-RUN cmake \
--DCMAKE_BUILD_TYPE=RelWithDebInfo \
--DFLB_EXAMPLES=Off \
--DFLB_OUT_SLACK=Off \
--DFLB_IN_SYSTEMD=On \
--DFLB_OUT_TD=Off \
--DFLB_OUT_ES=Off \
--DFLB_SHARED_LIB=On \
--DFLB_RELEASE=On \
--DFLB_DEBUG=Off \
--DFLB_TLS=On \
--DFLB_JEMALLOC=On \
--DFLB_PREFER_SYSTEM_LIBS=On \
--DFLB_PROXY_GO=On ../
-RUN make
-RUN make install
-
 FROM mcr.microsoft.com/azurelinux/base/core:3.0 as builder
 LABEL description="Azure Monitor Prometheus metrics collector"
 LABEL maintainer="ciprometheus@microsoft.com"
@@ -178,118 +144,120 @@ COPY --from=fluent-bit-binary-builder /usr/local/lib/fluent-bit /usr/local/etc/f
 COPY ./react /static/react
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
-COPY ./mdsd/envmdsd $tmpdir/ 
-COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/ 
+COPY ./mdsd/envmdsd $tmpdir/
+COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 
 ARG TARGETARCH
 RUN tdnf clean all
 RUN tdnf repolist --refresh
 RUN tdnf update -y
-RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl ruby
+RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 /etc/cron.daily/logrotate
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
 # If wanting to run without distroless, uncomment this line and comment everything after
-# ENTRYPOINT ["./opt/main"]
-
-FROM mcr.microsoft.com/azurelinux/distroless/base:3.0
-# Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
-# Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_USGOVERNMENT ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5
-# Below is for ContainerInsightsPrometheusCollector-Mooncake AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4
-# Below is for ContainerInsightsPrometheusCollector-USSec AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
-# Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
-ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
-# Set environment variables for mdsd
-ENV MDSD_LOG="/opt/microsoft/linuxmonagent"
-ENV SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
-ENV MDSD_FLUENT_SOCKET_PORT="28230"
-ENV ENABLE_MCS="true"
-ENV MONITORING_USE_GENEVA_CONFIG_SERVICE="false"
-ENV MDSD_USE_LOCAL_PERSISTENCY="false"
-ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
-ENV TELEMETRY_DISABLED false
-# Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
-ENV MALLOC_ARENA_MAX=2
-ENV PATH="/busybin:${PATH}"
-ENV OS_TYPE "linux"
-
-# files
-COPY --from=builder /opt /opt
-COPY --from=builder /etc /etc
-COPY --from=builder /busybin /busybin
-COPY --from=builder /static/react /static/react
-COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_internal.config /usr/sbin/
-# removed /var from the path cause it couldnt find file with it
-COPY --from=builder /opt/microsoft /opt/microsoft
-COPY --from=builder /var/lib/logrotate /var/lib/logrotate
-COPY --from=builder /var/spool/cron /var/spool/cron
-COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
-COPY --from=builder /usr/share/pki/ /usr/share/pki
-COPY --from=builder /opt/microsoft/liveness /opt/microsoft/liveness
-COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparser
-
-# executables
-COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
-COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
-COPY --from=builder /usr/bin/bash /usr/bin/bash
-COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
-COPY --from=builder /usr/bin/fluent-bit /usr/bin/fluent-bit
-COPY --from=builder /usr/sbin/crond /usr/sbin/crond
-COPY --from=builder /usr/bin/vim /usr/bin/vim
-COPY --from=builder /usr/share/vim /usr/share/vim
-COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
-COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
-COPY --from=builder /usr/bin/gzip /usr/bin/
-COPY --from=builder /usr/bin/curl /usr/bin/
-COPY --from=builder /usr/bin/update-ca-trust /usr/bin
-COPY --from=builder /bin/sh /bin/sh
-COPY --from=builder /usr/bin/p11-kit /usr/bin
-COPY --from=builder /usr/bin/trust /usr/bin
-
-# bash dependencies
-COPY --from=builder /lib/libreadline.so.8 /lib/
-COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
-# inotifywait dependencies
-COPY --from=builder /lib/libinotifytools.so.0 /lib/
-# crond dependencies
-COPY --from=builder /usr/lib/libselinux.so.1 /usr/lib/libpam.so.0 /usr/lib/libc.so.6 /usr/lib/libaudit.so.1 /usr/lib/libcap-ng.so.0/ /usr/lib/
-# vim dependencies
-COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
-# metricsextension dependencies
-# libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-COPY --from=builder /usr/lib/libboost_filesystem.so.1.83.0 /usr/lib/libcpprest.so.2.10 /usr/lib/libuuid.so.1 /usr/lib/libstdc++.so.6 /usr/lib/libm.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libboost_atomic.so.1.83.0 /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlienc.so.1 /usr/lib/libz.so.1 /usr/lib/libbrotlicommon.so.1 /usr/lib/
-# fluent-bit dependencies
-# libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-COPY --from=builder /usr/lib/libyaml-0.so.2 /usr/lib/libsystemd.so.0 /usr/lib/libcurl.so.4 /usr/lib/libm.so.6 /usr/lib/libz.so.1 /usr/lib/libzstd.so.1 /usr/lib/libsasl2.so.3 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/liblzma.so.5 /usr/lib/liblz4.so.1 /usr/lib/libcap.so.2 /usr/lib/libnghttp2.so.14 /usr/lib/libssh2.so.1 /usr/lib/libgssapi_krb5.so.2 /usr/lib/libresolv.so.2 /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 usr/lib/
-# mdsd dependencies
-COPY --from=builder /opt/microsoft/azure-mdsd/lib/libtcmalloc_minimal.so.4 /opt/microsoft/azure-mdsd/lib/
-COPY --from=builder /usr/sbin/../lib/libpthread.so.0 /usr/sbin/../lib/libdl.so.2 /usr/sbin/../lib/libsymcrypt.so.103 /usr/sbin/../lib/librt.so.1 /usr/sbin/../lib/libm.so.6 /usr/sbin/../lib/libc.so.6 /usr/sbin/../lib/libstdc++.so.6 /usr/sbin/../lib/libgcc_s.so.1 /usr/sbin/../lib/
-# logrotate dependencies
-COPY --from=builder /usr/lib/libpopt.so.0 /usr/lib/libc.so.6 /usr/lib/
-# curl dependencies
-# libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
-COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
-COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
-# sh dependencies
-COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /lib/
-# update-ca-trust dependencies
-COPY --from=builder /usr/lib64/pkcs11 /usr/lib64
-COPY --from=builder /usr/lib/pkcs11 /usr/lib/
-COPY --from=builder /usr/libexec/p11-kit /usr/libexec
-COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/libffi.so.8 /lib/
-COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
-COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
-
-RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
-RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
-RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
-RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
-
-# Run the Go executable, entrypoint
 ENTRYPOINT ["./opt/main"]
+
+# FROM mcr.microsoft.com/azurelinux/distroless/base:3.0
+# # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_PUBLIC MWNkYTMxMTItYWY1Ni00ZmNiLWI4MDQtZjg5NDVhYTFjYjMy
+# # Below is for ContainerInsightsPrometheusCollector-Fairfax AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_USGOVERNMENT ZmRjMTE0MmUtY2U0YS1mNTFmLWE4M2EtODBjM2ZjNDYwNGE5
+# # Below is for ContainerInsightsPrometheusCollector-Mooncake AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_CHINACLOUD ZTcyY2ZjOTYtNjY3Zi1jZGYwLTkwOWMtNzhiZjAwZjQ0NDg4
+# # Below is for ContainerInsightsPrometheusCollector-USSec AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_USSEC ZTg4MzFlZGYtNWQ1ZC0wYjZmLTk3MGUtNDkxNTgyYjliMDFl
+# # Below is for ContainerInsightsPrometheusCollector-USNat AppInsights Resource
+# ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhNzIw
+# # Set environment variables for mdsd
+# ENV MDSD_LOG="/opt/microsoft/linuxmonagent"
+# ENV SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH="true"
+# ENV MDSD_FLUENT_SOCKET_PORT="28230"
+# ENV ENABLE_MCS="true"
+# ENV MONITORING_USE_GENEVA_CONFIG_SERVICE="false"
+# ENV MDSD_USE_LOCAL_PERSISTENCY="false"
+# ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
+# ENV TELEMETRY_DISABLED false
+# # Needed for ME, see https://github.com/microsoft/cpprestsdk/issues/1481
+# ENV MALLOC_ARENA_MAX=2
+# ENV PATH="/busybin:${PATH}"
+# ENV OS_TYPE "linux"
+
+# # files
+# COPY --from=builder /opt /opt
+# COPY --from=builder /etc /etc
+# COPY --from=builder /busybin /busybin
+# COPY --from=builder /static/react /static/react
+# COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_internal.config /usr/sbin/
+# COPY --from=builder /var/opt/microsoft /var/opt/microsoft
+# COPY --from=builder /var/lib/logrotate /var/lib/logrotate
+# COPY --from=builder /var/spool/cron /var/spool/cron
+# COPY --from=builder /usr/share/p11-kit /usr/share/p11-kit
+# COPY --from=builder /usr/share/pki/ /usr/share/pki
+# COPY --from=builder /opt/microsoft/liveness /opt/microsoft/liveness
+# COPY --from=builder /opt/microsoft/configmapparser /opt/microsoft/configmapparser
+
+# # executables
+# COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
+# COPY --from=builder /usr/bin/inotifywait /usr/bin/inotifywait
+# COPY --from=builder /usr/bin/bash /usr/bin/bash
+# COPY --from=builder /usr/sbin/busybox /usr/sbin/busybox
+# COPY --from=builder /usr/sbin/crond /usr/sbin/crond
+# COPY --from=builder /usr/bin/vim /usr/bin/vim
+# COPY --from=builder /usr/share/vim /usr/share/vim
+# COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
+# COPY --from=builder /usr/sbin/logrotate /usr/sbin/logrotate
+# COPY --from=builder /usr/bin/gzip /usr/bin/
+# COPY --from=builder /usr/bin/curl /usr/bin/
+# COPY --from=builder /usr/bin/update-ca-trust /usr/bin
+# COPY --from=builder /bin/sh /bin/sh
+# COPY --from=builder /usr/bin/p11-kit /usr/bin
+# COPY --from=builder /usr/bin/trust /usr/bin
+
+# COPY --from=fluent-bit-binary-builder /usr/local/bin/fluent-bit /usr/local/bin/fluent-bit
+# COPY --from=fluent-bit-binary-builder /usr/local/etc/fluent-bit /usr/local/etc/fluent-bit
+# COPY --from=fluent-bit-binary-builder /usr/local/lib/fluent-bit /usr/local/etc/fluent-bit
+
+# # bash dependencies
+# COPY --from=builder /lib/libreadline.so.8 /lib/
+# COPY --from=builder /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
+# # inotifywait dependencies
+# COPY --from=builder /lib/libinotifytools.so.0 /lib/
+# # crond dependencies
+# COPY --from=builder /lib/libselinux.so.1 /lib/libpam.so.0 /lib/libc.so.6 /lib/libpcre.so.1 /lib/libaudit.so.1 /lib/libcap-ng.so.0/ /lib/
+# # vim dependencies
+# COPY --from=builder /lib/libm.so.6 /lib/libtinfo.so.6 /lib/
+# # metricsextension dependencies
+# # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
+# COPY --from=builder /lib/libboost_filesystem.so.1.76.0 /lib/libcpprest.so.2.10  /lib/libstdc++.so.6 /lib/libm.so.6 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/libbrotlidec.so.1 /lib/libbrotlienc.so.1 /lib/libz.so.1 /lib/libbrotlicommon.so.1 /lib/
+# COPY --from=builder /lib64/libuuid.so.1 /lib64
+# # fluent-bit dependencies
+# # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
+# COPY --from=fluent-bit-binary-builder /lib/libluajit-5.1.so.2 /lib/libyaml-0.so.2 /lib/libsystemd.so.0 /lib/libgcc_s.so.1 /lib/libc.so.6 /lib/liblzma.so.5 /lib/libzstd.so.1 /lib/liblz4.so.1 /lib/libcap.so.2 /lib/libgcrypt.so.20 /lib/libgpg-error.so.0 /lib/
+# # mdsd dependencies
+# COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.so.0 /usr/lib/libm.so.6 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/
+# # logrotate dependencies
+# COPY --from=builder /lib/libselinux.so.1 /lib/libpopt.so.0 /lib/libpcre.so.1 /lib/
+# # curl dependencies
+# # libssl.so.1.1 & libcrypto.so.1.1 are already available with openssl in distroless and copying them over causes FIPS HMAC verification failures
+# COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1   /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
+# COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
+# # sh dependencies
+# COPY --from=builder /lib/libreadline.so.8 /lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /lib/
+# # update-ca-trust dependencies
+# COPY --from=builder /usr/lib64/pkcs11 /usr/lib64
+# COPY --from=builder /usr/lib/pkcs11 /usr/lib/
+# COPY --from=builder /usr/libexec/p11-kit /usr/libexec
+# COPY --from=builder /lib/libp11-kit.so.0 /lib/libtasn1.so.6 /lib/libc.so.6 /lib/libffi.so.8 /lib/
+# COPY --from=builder /usr/lib/p11-kit-trust.so /usr/lib/p11-kit-proxy.so /usr/lib/libp11-kit.so.0.3.0 /usr/lib/libnssckbi.so /usr/lib/
+# COPY --from=builder /usr/lib/pkcs11/p11-kit-trust.so /usr/lib/pkcs11/
+
+# RUN [ "/bin/bash", "-c", "chmod 644 /etc/crontab" ]
+# RUN [ "/bin/bash", "-c", "chown root.root /etc/crontab" ]
+# RUN [ "/bin/bash", "-c", "chmod 755 /etc/cron.daily/logrotate" ]
+# RUN [ "/bin/bash", "-c", "chmod 644 /etc/logrotate.d/prometheus-collector" ]
+
+# # Run the Go executable, entrypoint
+# ENTRYPOINT ["./opt/main"]
