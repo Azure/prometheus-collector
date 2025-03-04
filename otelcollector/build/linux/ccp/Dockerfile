@@ -85,7 +85,6 @@ RUN tdnf repolist --refresh
 RUN tdnf update -y
 # RUN tdnf install -y wget sudo net-tools cronie vim ruby-devel logrotate procps-ng busybox diffutils curl
 RUN tdnf install -y wget sudo net-tools cronie vim logrotate procps-ng busybox diffutils curl
-RUN tdnf install -y metricsext2
 RUN mkdir /busybin && busybox --install /busybin
 RUN chmod 775 $tmpdir/*.sh;
 RUN sync;

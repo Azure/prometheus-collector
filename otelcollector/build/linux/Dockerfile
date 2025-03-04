@@ -223,7 +223,7 @@ COPY --from=fluent-bit-binary-builder /usr/local/lib/fluent-bit /usr/local/etc/f
 # bash dependencies
 COPY --from=builder /usr/lib/libreadline.so.8 /usr/lib/libc.so.6 /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6 /usr/lib/
 # inotifywait dependencies
-COPY --from=builder /usr/lib/libinotifytools.so.0 /usr/lib/libstdc++.so.6/usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libm.so.6 /usr/lib/
+COPY --from=builder /usr/lib/libinotifytools.so.0 /usr/lib/libstdc++.so.6 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libm.so.6 /usr/lib/
 # crond dependencies
 COPY --from=builder usr/lib/libselinux.so.1 /usr/lib/libpam.so.0 /usr/lib/libc.so.6 /usr/lib/
 # vim dependencies
