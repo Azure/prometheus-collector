@@ -54,6 +54,11 @@ resources:
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
+    pool:
+      name: Azure-Pipelines-Windows-CI-Test-EO
+      os: windows
+    customBuildTags:
+    - ES365AIMigrationTooling
     stages:
     - stage: Build
       jobs:
