@@ -55,7 +55,8 @@ extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
     pool:
-      name: Azure-Pipelines-Windows-CI-Test-EO
+      name: Azure-Pipelines-1ESPT-ExDShared
+      image: windows-latest
       os: windows
     customBuildTags:
     - ES365AIMigrationTooling
