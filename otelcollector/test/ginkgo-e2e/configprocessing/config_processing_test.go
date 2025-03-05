@@ -1,7 +1,9 @@
-package containerstatus
+package configprocessing
 
 import (
+	"encoding/json"
 	"prometheus-collector/otelcollector/test/utils"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -129,4 +131,30 @@ var _ = DescribeTable("The container logs should not contain errors",
 	// Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
 	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel)),
 	// Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
+)
+
+/*
+ * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
+ */
+// All targets disabled
+var _ = DescribeTable("The Prometheus UI API should return empty config",
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
+		time.Sleep(120 * time.Second)
+		var apiResponse utils.APIResponse
+		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apiResponse.Data).NotTo(BeNil())
+
+		var prometheusConfigResult v1.ConfigResult
+		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		Expect(prometheusConfigResult).NotTo(BeNil())
+		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+
+		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prometheusConfig).To(BeNil())
+	},
+	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true),
+	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true),
+	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.WindowsLabel)),
 )
