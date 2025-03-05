@@ -1,12 +1,12 @@
 trigger:
   branches:
     include:
-    - main
-pr:
-  autoCancel: true
-  branches:
-    include:
-    - main
+    - rashmi/config-tests
+# pr:
+#   autoCancel: true
+#   branches:
+#     include:
+#     - main
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -835,7 +835,7 @@ stages:
     environment: Prometheus-Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart')), eq(variables['System.StageAttempt'], 1)))
+    condition: and((not(succeeded('Deploy_AKS_Chart')), eq(variables['System.StageAttempt'], 1)))
     variables:
       HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
       HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -883,8 +883,8 @@ stages:
             displayName: "Check images are pushed to dev MCR"
             retryCountOnTaskFailure: 5
           - bash: |
-              export AKS_REGION="eastus"
-              export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourceGroups/ci-dev-aks-mac-eus-rg/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-mac-eus"
+              export AKS_REGION="centralus"
+              export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-tests/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-tests"
               export ARC_EXTENSION="false"
               envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
               ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
@@ -892,12 +892,12 @@ stages:
               helm dependency update
             displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
           - task: HelmDeploy@0
-            displayName: "Deploy: ci-dev-aks-mac-eus cluster"
+            displayName: "Deploy: ci-dev-aks-tests cluster"
             inputs:
               connectionType: 'Azure Resource Manager'
               azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-              azureResourceGroup: 'ci-dev-aks-mac-eus-rg'
-              kubernetesCluster: 'ci-dev-aks-mac-eus'
+              azureResourceGroup: 'ci-dev-aks-tests'
+              kubernetesCluster: 'ci-dev-aks-tests'
               namespace: 'default'
               command: 'upgrade'
               chartType: 'FilePath'
@@ -912,7 +912,7 @@ stages:
     dependsOn: Deploy_AKS_Chart
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+    condition: (succeeded())
     variables:
       HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
       HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -942,20 +942,20 @@ stages:
             inputs:
               azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
               scriptLocation: 'inlineScript'
-              inlineScript: 'az aks get-credentials -g ci-dev-aks-mac-eus-rg -n ci-dev-aks-mac-eus'
+              inlineScript: 'az aks get-credentials -g ci-dev-aks-tests -n ci-dev-aks-tests'
           
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-eus-mac-mih6.eastus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="c7f895bb-c4f6-45af-be82-2273a424e237"
+              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
+              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
 
-              envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
+              envsubst < ./testkube/testkube-config-test-crs.yaml > ./testkube/testkube-config-test-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/api-server-permissions.yaml
-              kubectl apply -f ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows=configmap.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
-              kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
+              kubectl apply -f ./testkube/testkube-config-test-crs-ci-dev-aks-tests.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-all-targets-disabled.yaml
+              # kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+              # kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows=configmap.yaml
+              # kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+              # kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
 
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
@@ -969,10 +969,10 @@ stages:
 
           - bash: |
               # Run the full test suite
-              kubectl testkube run testsuite e2e-tests-merge --verbose
+              kubectl testkube run testsuite e2e-config-tests-nightly --verbose
 
               # Get the current id of the test suite now running
-              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-config-tests-nightly --limit 1 | grep e2e-tests | awk '{print $1}')
 
               # Watch until the all the tests in the test suite finish
               kubectl testkube watch testsuiteexecution $execution_id
