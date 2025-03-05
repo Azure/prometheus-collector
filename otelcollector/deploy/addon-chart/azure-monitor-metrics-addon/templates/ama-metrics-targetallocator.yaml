@@ -36,6 +36,7 @@ spec:
       - name: targetallocator
         args:
         - --enable-prometheus-cr-watcher
+        - --listen-addr-https=:8443
         image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:
@@ -75,6 +76,14 @@ spec:
         volumeMounts:
         - mountPath: /conf
           name: ta-config-shared
+        - mountPath: /etc/prometheus/certs
+          name: ama-metrics-tls-secret-volume
+          readOnly: true
+        ports:
+        # - containerPort: 8080
+        #   name: http
+        - containerPort: 8443
+          name: https
         livenessProbe:
           httpGet:
             path: /health-ta
@@ -164,10 +173,15 @@ spec:
             readOnly: true
           - mountPath: /ta-configuration
             name: ta-config-shared
-        securityContext:
-          capabilities:
-            drop:
-              - ALL
+        # securityContext:
+        #   allowPrivilegeEscalation: false
+        #   runAsUser: 0
+        # securityContext:
+        #   capabilities:
+        #     drop:
+        #       - ALL
+        #     add:
+        #       - CAP_NET_BIND_SERVICE
         livenessProbe:
           httpGet:
             path: /health
