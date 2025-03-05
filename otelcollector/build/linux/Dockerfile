@@ -236,7 +236,7 @@ COPY --from=builder /usr/lib/libboost_filesystem.so.1.83.0 /usr/lib/libcpprest.s
 COPY --from=fluent-bit-binary-builder /usr/lib/libm.so.6 /usr/lib/libyaml-0.so.2 /usr/lib/libsystemd.so.0 /usr/lib/libgcc_s.so.1 /usr/lib/libc.so.6 /usr/lib/libcap.so.2 /usr/lib/liblz4.so.1 /usr/lib/liblzma.so.5 /usr/lib/libzstd.so.1 /usr/lib/
 # mdsd dependencies
 COPY --from=builder /opt/microsoft/azure-mdsd/lib/libtcmalloc_minimal.so.4 /opt/microsoft/azure-mdsd/lib/
-COPY --from=builder /usr/sbin/mdsd/usr/lib/libpthread.so.0 /usr/sbin/mdsd/usr/lib/libdl.so.2 /usr/sbin/mdsd/usr/lib/libsymcrypt.so.103 /usr/sbin/mdsd/usr/lib/librt.so.1 /usr/sbin/mdsd/usr/lib/libm.so.6 /usr/sbin/mdsd/usr/lib/libc.so.6 /usr/sbin/mdsd/usr/lib/libstdc++.so.6 /usr/sbin/mdsd/usr/lib/libgcc_s.so.1 /usr/sbin/mdsd/usr/lib/
+COPY --from=builder /usr/sbin/../lib/libpthread.so.0 /usr/sbin/../lib/libdl.so.2 /usr/sbin/../lib/libsymcrypt.so.103 /usr/sbin/../lib/librt.so.1 /usr/sbin/../lib/libm.so.6 /usr/sbin/../lib/libc.so.6 /usr/sbin/../lib/libstdc++.so.6 /usr/sbin/../lib/libgcc_s.so.1 /usr/sbin/../lib/
 # logrotate dependencies
 COPY --from=builder /usr/lib/libpopt.so.0 /usr/lib/libc.so.6 /usr/lib/
 # curl dependencies
