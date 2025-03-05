@@ -212,38 +212,6 @@ stages:
         displayName: "Build: Set values in payload.json for signing"
         condition: succeeded()
 
-      - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus Linux"
-        inputs:
-          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
-          AuthAKVName: 'ESRPPrometheusKVProd'
-          AuthCertName: 'ESRPContainerImageSignCert'
-          AuthSignCertName: 'ESRPReqPrometheusProdCert'
-          FolderPath: '$(Build.ArtifactStagingDirectory)/linux/'
-          Pattern: '*.json'
-          signConfigType: 'inlineSignParams'
-          inlineOperation: |
-            [
-              {
-                  "keyCode": "CP-469451",
-                  "operationSetCode": "NotaryCoseSign",
-                  "parameters": [
-                    {
-                      "parameterName": "CoseFlags",
-                      "parameterValue": "chainunprotected"
-                    }
-                  ],
-                  "toolName": "sign",
-                  "toolVersion": "1.0"
-              }
-            ]
-          SessionTimeout: '60'
-          MaxConcurrency: '50'
-          MaxRetryAttempts: '5'
-          PendingAnalysisWaitTimeoutMinutes: '5'  
-
       - bash: |
           set -euxo pipefail
           curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
@@ -419,38 +387,6 @@ stages:
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
 
-      - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for TargetAllocator"
-        inputs:
-          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
-          AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPContainerImageSignCert'
-          AuthSignCertName:    'ESRPReqPrometheusProdCert'
-          FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
-          Pattern: "*.json"
-          signConfigType: inlineSignParams
-          inlineOperation: |
-            [
-              {
-                  "keyCode": "CP-469451",
-                  "operationSetCode": "NotaryCoseSign",
-                  "parameters": [
-                    {
-                      "parameterName": "CoseFlags",
-                      "parameterValue": "chainunprotected"
-                    }
-                  ],
-                  "toolName": "sign",
-                  "toolVersion": "1.0"
-              }
-            ]
-          SessionTimeout: '60'
-          MaxConcurrency: '50'
-          MaxRetryAttempts: '5'
-          PendingAnalysisWaitTimeoutMinutes: '5' 
-
       - bash: |
           set -euxo pipefail
           curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
@@ -533,38 +469,6 @@ stages:
           fi
         workingDirectory: $(Build.SourcesDirectory)
         displayName: "Build: run trivy scan"
-
-      - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Config Reader"
-        inputs:
-          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
-          AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPContainerImageSignCert'
-          AuthSignCertName: 'ESRPReqPrometheusProdCert'
-          FolderPath: $(Build.ArtifactStagingDirectory)/linuxcfgreader/
-          Pattern: "*.json"
-          signConfigType: inlineSignParams
-          inlineOperation: |
-            [
-              {
-                  "keyCode": "CP-469451",
-                  "operationSetCode": "NotaryCoseSign",
-                  "parameters": [
-                    {
-                      "parameterName": "CoseFlags",
-                      "parameterValue": "chainunprotected"
-                    }
-                  ],
-                  "toolName": "sign",
-                  "toolVersion": "1.0"
-              }
-            ]
-          SessionTimeout: '60'
-          MaxConcurrency: '50'
-          MaxRetryAttempts: '5'
-          PendingAnalysisWaitTimeoutMinutes: '5' 
 
       - bash: |
           set -euxo pipefail
@@ -764,39 +668,7 @@ stages:
         workingDirectory: $(Build.ArtifactStagingDirectory)/windows
         displayName: "Build the payload json file"
         condition: succeeded()
-
-      - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Windows Multi-Arch Prometheus"
-        inputs:
-          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
-          AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPContainerImageSignCert'
-          AuthSignCertName: 'ESRPReqPrometheusProdCert'
-          FolderPath: $(Build.ArtifactStagingDirectory)/windows/
-          Pattern: "*.json"
-          signConfigType: inlineSignParams
-          inlineOperation: |
-            [
-              {
-                  "keyCode": "CP-469451",
-                  "operationSetCode": "NotaryCoseSign",
-                  "parameters": [
-                    {
-                      "parameterName": "CoseFlags",
-                      "parameterValue": "chainunprotected"
-                    }
-                  ],
-                  "toolName": "sign",
-                  "toolVersion": "1.0"
-              }
-            ]
-          SessionTimeout: '60'
-          MaxConcurrency: '50'
-          MaxRetryAttempts: '5'
-          PendingAnalysisWaitTimeoutMinutes: '5' 
-
+        
       - powershell: |
           curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
           $currentDirectory = Get-Location
@@ -827,7 +699,7 @@ stages:
 
   - deployment: Deploy_AKS_Chart
     displayName: "Deploy: AKS dev cluster"
-    environment: Prometheus-Collector
+    environment: Prometheus-Collector-Tests
     pool:
       name: Azure-Pipelines-CI-Test-EO
     #condition: and((not(succeeded('Deploy_AKS_Chart'))), eq(variables['System.StageAttempt'], 1)))
@@ -903,7 +775,7 @@ stages:
 
   - deployment: Testkube
     displayName: "Test: AKS testkube tests"
-    environment: Prometheus-Collector
+    environment: Prometheus-Collector-Tests
     dependsOn: Deploy_AKS_Chart
     pool:
       name: Azure-Pipelines-CI-Test-EO
