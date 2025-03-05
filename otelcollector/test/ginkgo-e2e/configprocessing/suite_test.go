@@ -1,4 +1,4 @@
-package containerstatus
+package configprocessing
 
 import (
 	"testing"
@@ -18,7 +18,7 @@ import (
 var K8sClient *kubernetes.Clientset
 var Cfg *rest.Config
 
-func TestContainerStatus(t *testing.T) {
+func TestConfigProcessing(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecs(t, "Config Processing Test Suite")
