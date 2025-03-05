@@ -47,7 +47,7 @@ data:
     controlplane-etcd = ""
     acstor-capacity-provisioner = ""
     acstor-metrics-exporter = ""
-    minimalingestionprofile = true
+    minimalingestionprofile = false
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
     coredns = "30s"
