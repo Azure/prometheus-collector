@@ -2,11 +2,6 @@ trigger:
   branches:
     include:
     - rashmi/config-tests
-# pr:
-#   autoCancel: true
-#   branches:
-#     include:
-#     - main
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
