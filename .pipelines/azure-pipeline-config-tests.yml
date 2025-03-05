@@ -907,7 +907,7 @@ stages:
     dependsOn: Deploy_AKS_Chart
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    condition: (succeeded())
+    #condition: (succeeded())
     variables:
       HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
       HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
