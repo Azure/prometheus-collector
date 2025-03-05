@@ -122,7 +122,7 @@ COPY --from=builder /usr/lib/libboost_filesystem.so.1.83.0 /usr/lib/libcpprest.s
 # mdsd dependencies
 COPY --from=builder /usr/sbin/mdsd /usr/sbin/mdsd
 COPY --from=builder /opt/microsoft/azure-mdsd/lib/libtcmalloc_minimal.so.4 /opt/microsoft/azure-mdsd/lib/
-COPY --from=builder /usr/sbin/../lib/libpthread.so.0 /usr/sbin/../lib/libdl.so.2 /usr/sbin/../lib/libsymcrypt.so.103 /usr/sbin/../lib/librt.so.1 /usr/sbin/../lib/libm.so.6 /usr/sbin/../lib/libc.so.6 /usr/sbin/../lib/libstdc++.so.6 /usr/sbin/../lib/lib/libgcc_s.so.1 /usr/sbin/../lib/
+COPY --from=builder /usr/sbin/../lib/libpthread.so.0 /usr/sbin/../lib/libdl.so.2 /usr/sbin/../lib/libsymcrypt.so.103 /usr/sbin/../lib/librt.so.1 /usr/sbin/../lib/libm.so.6 /usr/sbin/../lib/libc.so.6 /usr/sbin/../lib/libstdc++.so.6 /usr/sbin/../lib/libgcc_s.so.1 /usr/sbin/../lib/
 
 # debug image
 # COPY --from=builder /busybin /busybin
