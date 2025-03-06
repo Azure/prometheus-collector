@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 )
 
 /*
@@ -145,15 +146,24 @@ var _ = DescribeTable("The Prometheus UI API should return empty config",
 		Expect(err).NotTo(HaveOccurred())
 		Expect(apiResponse.Data).NotTo(BeNil())
 
-		// var prometheusConfigResult v1.ConfigResult
-		var prometheusConfigResult map[string]interface{}
+		// // var prometheusConfigResult v1.ConfigResult
+		// var prometheusConfigResult map[string]interface{}
+		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		// Expect(prometheusConfigResult).NotTo(BeNil())
+		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
+		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+		// Expect(err).NotTo(HaveOccurred())
+		// Expect(scrapeConfigs).NotTo(BeNil())
+
+		var prometheusConfigResult v1.ConfigResult
 		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
 		Expect(prometheusConfigResult).NotTo(BeNil())
-		//Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
-		scrapeConfigs := prometheusConfigResult["scrape_configs"]
-		//prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+
+		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(scrapeConfigs).NotTo(BeNil())
+		Expect(prometheusConfig).NotTo(BeNil())
 	},
 	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true),
 	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true),
