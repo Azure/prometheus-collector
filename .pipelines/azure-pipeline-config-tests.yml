@@ -671,7 +671,7 @@ stages:
                 done
 
                 # Explicitly fail the ADO task since at least one test failed
-                exit 0
+                exit 1
               fi
 
               exit 0
