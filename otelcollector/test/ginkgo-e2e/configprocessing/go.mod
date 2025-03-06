@@ -1,8 +1,6 @@
 module prometheus-collector/otelcollector/test/containerstatus
 
-go 1.22.7
-
-toolchain go1.23.7
+go 1.21.0
 
 replace prometheus-collector/otelcollector/test/utils => ../utils
 
