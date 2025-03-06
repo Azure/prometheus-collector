@@ -12,6 +12,7 @@ New-Item -Type Directory -Path /opt/microsoft/liveness -ErrorAction SilentlyCont
 New-Item -Type Directory -Path /opt/genevamonitoringagent -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/genevamonitoringagent/datadirectory -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /etc/genevamonitoringagent
+New-Item -Type Directory -Path /static/react -Force -ErrorAction SilentlyContinue
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
@@ -31,7 +32,7 @@ Write-Host ('Installing Fluent Bit');
 try {
     # Keep version in sync with linux in setup.sh file
     # $fluentBitUri = 'https://github.com/microsoft/OMS-docker/releases/download/winakslogagent/td-agent-bit-1.4.0-win64.zip'
-    $fluentBitUri = 'https://releases.fluentbit.io/2.1/fluent-bit-2.1.10-win64.zip'
+    $fluentBitUri = 'https://releases.fluentbit.io/3.0/fluent-bit-3.0.7-win64.zip'
     Invoke-WebRequest -Uri $fluentBitUri -OutFile /installation/fluent-bit.zip
     Expand-Archive -Path /installation/fluent-bit.zip -Destination /installation/fluent-bit
     Move-Item -Path /installation/fluent-bit/*/bin/* -Destination /opt/fluent-bit/bin/ -ErrorAction SilentlyContinue
@@ -71,15 +72,6 @@ catch {
     exit 1
 }
 Write-Host ('Finished downloading Telegraf')
-############################################################################################
-#Remove gemfile.lock for http_parser gem 0.6.0
-#see  - https://github.com/fluent/fluentd/issues/3374 https://github.com/tmm1/http_parser.rb/issues/70
-$gemfile = "\ruby26\lib\ruby\gems\2.6.0\gems\http_parser.rb-0.6.0\Gemfile.lock"
-$gemfileFullPath = $Env:SYSTEMDRIVE + "\" + $gemfile
-If (Test-Path -Path $gemfile ) {
-    Write-Host ("Renaming unused gemfile.lock for http_parser 0.6.0")
-    Rename-Item -Path $gemfileFullPath -NewName  "renamed_Gemfile_lock.renamed"
-}
 ############################################################################################
 Write-Host ('Installing GenevaMonitoringAgent');
 try {

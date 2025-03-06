@@ -1,4 +1,5 @@
-{{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
+{{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
+{{- if $arcExtensionSettings.operatorEnabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -56,8 +57,8 @@ spec:
             fieldRef:
               fieldPath: spec.nodeName
         - name: CLUSTER
-          {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-          value: "{{ .Values.Azure.Cluster.ResourceId }}"
+          {{- if $arcExtensionSettings.isArcExtension }}
+          value: "{{ $arcExtensionSettings.resourceId }}"
           {{- else }}
           value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
           {{- end }}
@@ -94,16 +95,16 @@ spec:
             memory: {{ .Values.AzureMonitorMetrics.CfgReaderMemoryRequest }}
         env:
         - name: CLUSTER
-          {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-          value: "{{ .Values.Azure.Cluster.ResourceId }}"
+          {{- if $arcExtensionSettings.isArcExtension }}
+          value: "{{ $arcExtensionSettings.resourceId }}"
           {{- else }}
           value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
           {{- end }}
         - name: AKSREGION
-          {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+          {{- if $arcExtensionSettings.isArcExtension }}
           value: "{{ .Values.Azure.Cluster.Region }}"
           {{- else }}
-          value: "{{ .Values.global.commonGlobals.Region }}"
+          value: "{{ $arcExtensionSettings.region}}"
           {{- end }}
         - name: NODE_IP
           valueFrom:
@@ -132,16 +133,16 @@ spec:
         - name: NODE_EXPORTER_NAME
           value: "" # Replace this with the node exporter shipped out of box with AKS
         - name: NODE_EXPORTER_TARGETPORT
-          {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-          value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
+          {{- if $arcExtensionSettings.isArcExtension }}
+          value: "{{ $arcExtensionSettings.nodeExporterTargetPort }}"
           {{- else }}
           value: "19100"
           {{- end }}
         - name: customEnvironment
           {{- if .Values.AzureMonitorMetrics.isArcACluster }}
           value: "arcautonomous"
-          {{- else if .Values.AzureMonitorMetrics.ArcExtension }}
-          value: "{{ lower .Values.Azure.Cluster.Cloud }}"
+          {{- else if $arcExtensionSettings.isArcExtension }}
+          value: "{{ $arcExtensionSettings.cloudEnvironment }}"
           {{- else }}
           value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
           {{- end }}
@@ -210,7 +211,7 @@ spec:
                     operator: NotIn
                     values:
                       - virtual-kubelet
-                  {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
+                  {{- if not $arcExtensionSettings.isArcExtension }}
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
                   {{- end }}

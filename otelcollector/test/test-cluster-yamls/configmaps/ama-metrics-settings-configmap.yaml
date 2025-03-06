@@ -18,6 +18,13 @@ data:
     networkobservabilityHubble = true
     networkobservabilityCilium = true
     prometheuscollectorhealth = false
+    controlplane-apiserver = true
+    controlplane-cluster-autoscaler = true
+    controlplane-kube-scheduler = true
+    controlplane-kube-controller-manager = true
+    controlplane-etcd = true
+    acstor-capacity-provisioner = true
+    acstor-metrics-exporter = true
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""
@@ -33,6 +40,13 @@ data:
     networkobservabilityRetina = ""
     networkobservabilityHubble = ""
     networkobservabilityCilium = ""
+    controlplane-apiserver = ""
+    controlplane-cluster-autoscaler = ""
+    controlplane-kube-scheduler = ""
+    controlplane-kube-controller-manager = ""
+    controlplane-etcd = ""
+    acstor-capacity-provisioner = ""
+    acstor-metrics-exporter = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"

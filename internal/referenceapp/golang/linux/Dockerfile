@@ -1,5 +1,6 @@
+
 ARG GOLANG_VERSION
-FROM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION}
+FROM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as builder
 
 # Set necessary environmet variables needed for our image
 ENV GO111MODULE=on \
@@ -13,8 +14,8 @@ WORKDIR /build
 # Copy and download dependency using go mod
 COPY go.mod .
 COPY go.sum .
+#RUN tdnf install -y golang-${GOLANG_VERSION} ca-certificates
 RUN go mod download
-
 
 # COPY client-cert.pem /etc/prometheus/certs/
 # COPY client-key.pem /etc/prometheus/certs/
@@ -30,6 +31,11 @@ WORKDIR /dist
 
 # Copy binary from build to main folder
 RUN cp /build/main .
+
+FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
+
+# Copy the binary from the builder stage
+COPY --from=builder /dist/main /dist/main
 
 # Export necessary ports
 EXPOSE 2112 2113

@@ -34,7 +34,7 @@ import (
 
 var _ Allocator = &allocator{}
 
-func newAllocator(log logr.Logger, strategy Strategy, opts ...AllocationOption) Allocator {
+func newAllocator(log logr.Logger, strategy Strategy, opts ...Option) Allocator {
 	chAllocator := &allocator{
 		strategy:                      strategy,
 		collectors:                    make(map[string]*Collector),
@@ -74,6 +74,11 @@ type allocator struct {
 // SetFilter sets the filtering hook to use.
 func (a *allocator) SetFilter(filter Filter) {
 	a.filter = filter
+}
+
+// SetFallbackStrategy sets the fallback strategy to use.
+func (a *allocator) SetFallbackStrategy(strategy Strategy) {
+	a.strategy.SetFallbackStrategy(strategy)
 }
 
 // SetTargets accepts a list of targets that will be used to make
@@ -173,7 +178,7 @@ func (a *allocator) handleTargets(diff diff.Changes[*target.Item]) {
 	}
 
 	// Check for additions
-	assignmentErrors := []error{}
+	var assignmentErrors []error
 	for k, item := range diff.Additions() {
 		// Do nothing if the item is already there
 		if _, ok := a.targetItems[k]; ok {
@@ -292,7 +297,7 @@ func (a *allocator) handleCollectors(diff diff.Changes[*Collector]) {
 	a.strategy.SetCollectors(a.collectors)
 
 	// Re-Allocate all targets
-	assignmentErrors := []error{}
+	var assignmentErrors []error
 	for _, item := range a.targetItems {
 		err := a.addTargetToTargetItems(item)
 		if err != nil {

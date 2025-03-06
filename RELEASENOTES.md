@@ -1,4 +1,74 @@
 # Azure Monitor Metrics for AKS clusters
+## Release 02-21-2025
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c-cfg`
+* AKS and Arc Container Images:
+  - Add scrape_samples_scraped metric to telemetry when debug mode is enabled (https://github.com/Azure/prometheus-collector/pull/1055)
+  - fix: set proxy the old way for mdsd in golang (https://github.com/Azure/prometheus-collector/pull/1062)
+  - fix: add cluster scope to recording rules in policy (https://github.com/Azure/prometheus-collector/pull/1064)
+  - upgrade: Upgrade otelcollector and targetallocator to 0.117.0 (https://github.com/Azure/prometheus-collector/pull/1063)
+
+* Pipeline/Docs/Templates Updates:
+   * fix: add cluster scope to recording rules in policy (https://github.com/Azure/prometheus-collector/pull/1064) 
+   * Add job labels to monitoring alerts (https://github.com/Azure/prometheus-collector/pull/1065)
+   * fix: arc conformance build in pipeline (https://github.com/Azure/prometheus-collector/pull/1066)
+
+## Release 01-16-2025
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe-cfg`
+* AKS and Arc Container Images:
+   * Add support for global settings (https://github.com/Azure/prometheus-collector/pull/1003)
+   * Sign flagged binaries for windows containers (https://github.com/Azure/prometheus-collector/pull/1001)
+   * fix hubble & cilium regex-es for minimal ingestion profile (https://github.com/Azure/prometheus-collector/pull/1017)
+   * Fix for CCP configmap processing issue (https://github.com/Azure/prometheus-collector/pull/1023)
+   * fix keeplist in ccp, when minimalingestionprofile=false (https://github.com/Azure/prometheus-collector/pull/1024)
+   * Fix dashboard links in Azure managed Prometheus dashboards (https://github.com/Azure/prometheus-collector/pull/1025)
+   * Upgrade otelcollector and TA from 0.109 to 0.116 (https://github.com/Azure/prometheus-collector/pull/1034)
+   * CCP scrape config + adding metrics_relabel_config to end of the config (https://github.com/Azure/prometheus-collector/pull/1035)
+   * build: use new azure linux images for building the reference app (https://github.com/Azure/prometheus-collector/pull/1036)
+   * Handle SIGTERM and exit when encountered restarting the pod (https://github.com/Azure/prometheus-collector/pull/1037)
+   * Print fluent-bit and telegraf version for windows (https://github.com/Azure/prometheus-collector/pull/1043)
+   * fix troubleshooting script for hpa and remove uneeded login check (https://github.com/Azure/prometheus-collector/pull/1044)
+   * fix telegraf version print to be only for windows (linux already done) (https://github.com/Azure/prometheus-collector/pull/1045)
+   * Log only log with level panic and above for TA (https://github.com/Azure/prometheus-collector/pull/1046)
+* Arc Extension Chart:
+  - Arc: configuration settings for GA (https://github.com/Azure/prometheus-collector/pull/1016)
+* Pipeline/Docs/Templates Updates
+  - doc: change example for pod annotations namespace regex filter (https://github.com/Azure/prometheus-collector/pull/1042)
+  - docs: Add explicit step to check configmap applies for controlPlane to buildandrelease docs (https://github.com/Azure/prometheus-collector/pull/1022)
+  - Update HPA doc to add min=max behavior (https://github.com/Azure/prometheus-collector/pull/1009)
+  - doc: readme update for backdoor deployment (https://github.com/Azure/prometheus-collector/pull/1006)
+
+## Release 12-05-2024 (hot-fix for ccp config map issue ) - CCP release only - 
+* CCP image - 
+
+* Changelog -
+  - Fix for CCP Config map processing issue - (https://github.com/Azure/prometheus-collector/pull/1017)
+  - Fix a bug where by with miminal ingestion profile is false, keep list wasn't effective - (https://github.com/Azure/prometheus-collector/pull/1024)
+
+## Release 10-21-2024
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.11.0-main-10-21-2024-91ec49e3`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.11.0-main-10-21-2024-91ec49e3-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.11.0-main-10-21-2024-91ec49e3-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.11.0-main-10-21-2024-91ec49e3-cfg`
+* AKS and Arc Container Images:
+   * Upgrades for CVE fixes (https://github.com/Azure/prometheus-collector/pull/979)
+     - Golang: 1.21.5 -> 1.22.7
+     - OtelCollector/Operator: 0.99.0 -> 0.109.0
+     - Telegraf: 1.28.5 -> 1.29.4
+   * Add AcStor scrape config support (https://github.com/Azure/prometheus-collector/pull/976)
+* Arc Extension Chart:
+  - Enable operator (https://github.com/Azure/prometheus-collector/pull/977)
+  - Upgrade node-exporter chart 4.26.0 -> 4.39.0 (https://github.com/Azure/prometheus-collector/pull/982)
+  - Arc-A: Add support to override image registry for custom environment (https://github.com/Azure/prometheus-collector/pull/983)
+* Pipeline/Docs/Templates Updates
+  - Pipeline reliability and test fixes (https://github.com/Azure/prometheus-collector/pull/998)
+  - Terraform private link support (https://github.com/Azure/prometheus-collector/pull/991)
+  - Doc Prometheus Equivalent metrics for CI Custom metrics (https://github.com/Azure/prometheus-collector/pull/978)
 
 ## Release 10-15-2024 (CCP release only)
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.10.2-main-10-15-2024-06b20de5`

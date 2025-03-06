@@ -65,22 +65,52 @@ func appendMetricRelabelConfig(yamlConfigFile, keepListRegex string) {
 	}
 
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
-		for _, scfg := range scrapeConfigs {
+		for i, scfg := range scrapeConfigs {
+			// Ensure scfg is a map with string keys
 			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
-				if metricRelabelCfgs, ok := scfgMap["metric_relabel_configs"].([]interface{}); ok {
-					scfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
-				} else {
-					scfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
+				// Convert to map[string]interface{}
+				stringScfgMap := make(map[string]interface{})
+				for k, v := range scfgMap {
+					if key, ok := k.(string); ok {
+						stringScfgMap[key] = v
+					} else {
+						fmt.Printf("Encountered non-string key in scrape config map: %v\n", k)
+						return
+					}
 				}
+
+				// Update or add metric_relabel_configs
+				if metricRelabelCfgs, ok := stringScfgMap["metric_relabel_configs"].([]interface{}); ok {
+					stringScfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
+				} else {
+					stringScfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
+				}
+
+				// Convert back to map[interface{}]interface{} for YAML marshalling
+				interfaceScfgMap := make(map[interface{}]interface{})
+				for k, v := range stringScfgMap {
+					interfaceScfgMap[k] = v
+				}
+
+				// Update the scrape_configs list
+				scrapeConfigs[i] = interfaceScfgMap
 			}
 		}
 
-		if cfgYamlWithMetricRelabelConfig, err := yaml.Marshal(config); err == nil {
-			if err := os.WriteFile(yamlConfigFile, []byte(cfgYamlWithMetricRelabelConfig), fs.FileMode(0644)); err != nil {
-				fmt.Printf("Error writing to file %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
-			}
-		} else {
+		// Write updated scrape_configs back to config
+		config["scrape_configs"] = scrapeConfigs
+
+		// Marshal the updated config to YAML
+		cfgYamlWithMetricRelabelConfig, err := yaml.Marshal(config)
+		if err != nil {
 			fmt.Printf("Error marshalling YAML for %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
+			return
+		}
+
+		// Write the updated YAML back to the file
+		if err := os.WriteFile(yamlConfigFile, cfgYamlWithMetricRelabelConfig, fs.FileMode(0644)); err != nil {
+			fmt.Printf("Error writing to file %s: %v. The keep list regex will not be used\n", yamlConfigFile, err)
+			return
 		}
 	} else {
 		fmt.Printf("No 'scrape_configs' found in the YAML. The keep list regex will not be used.\n")

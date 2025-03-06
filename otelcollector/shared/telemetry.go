@@ -45,35 +45,17 @@ func SetupTelemetry(customEnvironment string) {
 	}
 
 	// Export APPLICATIONINSIGHTS_AUTH
-	err := SetEnvAndSourceBashrc("APPLICATIONINSIGHTS_AUTH", encodedAIKey, false)
+	err := SetEnvAndSourceBashrcOrPowershell("APPLICATIONINSIGHTS_AUTH", encodedAIKey, false)
 	if err != nil {
 		fmt.Println("Error setting APPLICATIONINSIGHTS_AUTH environment variable:", err)
 		return
 	}
 
-	// Append export commands to .bashrc file
-	bashrcPath := os.Getenv("HOME") + "/.bashrc"
-	bashrcFile, err := os.OpenFile(bashrcPath, os.O_APPEND|os.O_WRONLY, 0644)
+	// Export APPLICATIONINSIGHTS_ENDPOINT
+	err = SetEnvAndSourceBashrcOrPowershell("APPLICATIONINSIGHTS_ENDPOINT", aiEndpoint , false)
 	if err != nil {
-		fmt.Println("Error opening .bashrc file:", err)
+		fmt.Println("Error setting APPLICATIONINSIGHTS_ENDPOINT environment variable:", err)
 		return
-	}
-	defer bashrcFile.Close()
-
-	exportAIKeyCommand := fmt.Sprintf("export APPLICATIONINSIGHTS_AUTH=%s\n", encodedAIKey)
-	_, err = bashrcFile.WriteString(exportAIKeyCommand)
-	if err != nil {
-		fmt.Println("Error writing to .bashrc file:", err)
-		return
-	}
-
-	if aiEndpoint != "" {
-		exportEndpointCommand := fmt.Sprintf("export APPLICATIONINSIGHTS_ENDPOINT=\"%s\"\n", aiEndpoint)
-		_, err = bashrcFile.WriteString(exportEndpointCommand)
-		if err != nil {
-			fmt.Println("Error writing to .bashrc file:", err)
-			return
-		}
 	}
 
 	// Setting TELEMETRY_APPLICATIONINSIGHTS_KEY
@@ -84,16 +66,10 @@ func SetupTelemetry(customEnvironment string) {
 	}
 	aiKey = string(aiKeyBytes)
 
-	err = SetEnvAndSourceBashrc("TELEMETRY_APPLICATIONINSIGHTS_KEY", aiKey, false)
+	err = SetEnvAndSourceBashrcOrPowershell("TELEMETRY_APPLICATIONINSIGHTS_KEY", aiKey, false)
 	if err != nil {
 		fmt.Println("Error setting TELEMETRY_APPLICATIONINSIGHTS_KEY environment variable:", err)
 		return
 	}
 
-	exportTelegrafCommand := fmt.Sprintf("export TELEMETRY_APPLICATIONINSIGHTS_KEY=%s\n", aiKey)
-	_, err = bashrcFile.WriteString(exportTelegrafCommand)
-	if err != nil {
-		fmt.Println("Error writing to .bashrc file:", err)
-		return
-	}
 }

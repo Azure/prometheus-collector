@@ -1,8 +1,14 @@
 kind: ConfigMap
 apiVersion: v1
 data:
-  config-version: ver1
-  debug-mode: enabled = false
+  schema-version:
+    #string.used by agent to parse config. supported versions are {v1}. Configs with other schema versions will be rejected by the agent.
+    v1
+  config-version:
+    #string.used by customer to keep track of this config file's version in their source control/repository (max allowed 10 chars, other chars will be truncated)
+    ver1
+  prometheus-collector-settings: |-
+    cluster_alias = ""
   default-scrape-settings-enabled: |-
     kubelet = false
     coredns = false
@@ -25,6 +31,11 @@ data:
     controlplane-etcd = false
     acstor-capacity-provisioner = false
     acstor-metrics-exporter = false
+  # Regex for which namespaces to scrape through pod annotation based scraping.
+  # This is none by default.
+  # Ex: Use 'namespace1|namespace2' to scrape the pods in the namespaces 'namespace1' and 'namespace2'.
+  pod-annotation-based-scraping: |-
+    podannotationnamespaceregex = ""
   default-targets-metrics-keep-list: |-
     kubelet = ""
     coredns = ""
@@ -40,6 +51,13 @@ data:
     networkobservabilityRetina = ""
     networkobservabilityHubble = ""
     networkobservabilityCilium = ""
+    controlplane-apiserver = ""
+    controlplane-cluster-autoscaler = ""
+    controlplane-kube-scheduler = ""
+    controlplane-kube-controller-manager = ""
+    controlplane-etcd = ""
+    acstor-capacity-provisioner = ""
+    acstor-metrics-exporter = ""
     minimalingestionprofile = true
   default-targets-scrape-interval-settings: |-
     kubelet = "30s"
@@ -56,10 +74,11 @@ data:
     networkobservabilityHubble = "30s"
     networkobservabilityCilium = "30s"
     prometheuscollectorhealth = "30s"
+    acstor-capacity-provisioner = "30s"
+    acstor-metrics-exporter = "30s"
     podannotations = "30s"
-  pod-annotation-based-scraping: podannotationnamespaceregex = ""
-  prometheus-collector-settings: cluster_alias = ""
-  schema-version: v1
+  debug-mode: |-
+    enabled = false
 metadata:
   name: ama-metrics-settings-configmap
   namespace: kube-system

@@ -1,12 +1,13 @@
 package shared
 
 import (
+	"fmt"
+	"log"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
-	"log"
-	"os/exec"
-	"fmt"
+	"time"
 )
 
 func GetEnv(key, defaultValue string) string {
@@ -37,14 +38,14 @@ func DetermineConfigFiles(controllerType, clusterOverride string) (string, strin
 
 	switch {
 	case strings.ToLower(controllerType) == "replicaset":
-		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit.conf"
+		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit.yaml"
 		if clusterOverride == "true" {
 			meConfigFile = "/usr/sbin/me_internal.config"
 		} else {
 			meConfigFile = "/usr/sbin/me.config"
 		}
 	case os.Getenv("OS_TYPE") != "windows":
-		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit.conf"
+		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-daemonset.yaml"
 		if clusterOverride == "true" {
 			meConfigFile = "/usr/sbin/me_ds_internal.config"
 		} else {
@@ -53,9 +54,9 @@ func DetermineConfigFiles(controllerType, clusterOverride string) (string, strin
 	default:
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-windows.conf"
 		if clusterOverride == "true" {
-			meConfigFile = "/usr/sbin/me_ds_internal_win.config"
+			meConfigFile = "/opt/metricextension/me_ds_internal_win.config"
 		} else {
-			meConfigFile = "/usr/sbin/me_ds_win.config"
+			meConfigFile = "/opt/metricextension/me_ds_win.config"
 		}
 	}
 
@@ -92,29 +93,193 @@ func StartTelegraf() {
 	fmt.Println("Starting Telegraf")
 
 	if telemetryDisabled := os.Getenv("TELEMETRY_DISABLED"); telemetryDisabled != "true" {
-		controllerType := os.Getenv("CONTROLLER_TYPE")
-		azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
+		if os.Getenv("OS_TYPE") == "linux" {
+			controllerType := os.Getenv("CONTROLLER_TYPE")
+			azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 
-		var telegrafConfig string
+			var telegrafConfig string
 
-		switch {
-		case controllerType == "ReplicaSet" && azmonOperatorEnabled == "true":
-			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector-ta-enabled.conf"
-		case controllerType == "ReplicaSet":
-			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector.conf"
-		default:
-			telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector-ds.conf"
+			switch {
+			case controllerType == "ReplicaSet" && azmonOperatorEnabled == "true":
+				telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector-ta-enabled.conf"
+			case controllerType == "ReplicaSet":
+				telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector.conf"
+			default:
+				telegrafConfig = "/opt/telegraf/telegraf-prometheus-collector-ds.conf"
+			}
+
+			telegrafCmd := exec.Command("/usr/bin/telegraf", "--config", telegrafConfig)
+			telegrafCmd.Stdout = os.Stdout
+			telegrafCmd.Stderr = os.Stderr
+			if err := telegrafCmd.Start(); err != nil {
+				fmt.Println("Error starting telegraf:", err)
+				return
+			}
+
+			telegrafVersion, _ := os.ReadFile("/opt/telegrafversion.txt")
+			fmt.Printf("TELEGRAF_VERSION=%s\n", string(telegrafVersion))
+		}
+	} else {
+		telegrafPath := "C:\\opt\\telegraf\\telegraf.exe"
+		configPath := "C:\\opt\\telegraf\\telegraf-prometheus-collector-windows.conf"
+
+		// Install Telegraf service
+		installCmd := exec.Command(telegrafPath, "--service", "install", "--config", configPath)
+		if err := installCmd.Run(); err != nil {
+			log.Fatalf("Error installing Telegraf service: %v\n", err)
 		}
 
-		telegrafCmd := exec.Command("/usr/bin/telegraf", "--config", telegrafConfig)
-		telegrafCmd.Stdout = os.Stdout
-		telegrafCmd.Stderr = os.Stderr
-		if err := telegrafCmd.Start(); err != nil {
-			fmt.Println("Error starting telegraf:", err)
-			return
+		// Set delayed start if POD_NAME is set
+		serverName := os.Getenv("POD_NAME")
+		if serverName != "" {
+			setDelayCmd := exec.Command("sc.exe", fmt.Sprintf("\\\\%s", serverName), "config", "telegraf", "start= delayed-auto")
+			if err := setDelayCmd.Run(); err != nil {
+				log.Printf("Failed to set delayed start for Telegraf: %v\n", err)
+			} else {
+				fmt.Println("Successfully set delayed start for Telegraf")
+			}
+		} else {
+			fmt.Println("Failed to get environment variable POD_NAME to set delayed Telegraf start")
 		}
 
-		telegrafVersion, _ := os.ReadFile("/opt/telegrafversion.txt")
-		fmt.Printf("TELEGRAF_VERSION=%s\n", string(telegrafVersion))
+		// Run Telegraf in test mode
+		testCmd := exec.Command(telegrafPath, "--config", configPath, "--test")
+		testCmd.Stdout = os.Stdout
+		testCmd.Stderr = os.Stderr
+		if err := testCmd.Run(); err != nil {
+			log.Printf("Error running Telegraf in test mode: %v\n", err)
+		}
+
+		// Start Telegraf service
+		startCmd := exec.Command(telegrafPath, "--service", "start")
+		if err := startCmd.Run(); err != nil {
+			log.Printf("Error starting Telegraf service: %v\n", err)
+		}
+
+		// Check if Telegraf is running, retry if necessary
+		for {
+			statusCmd := exec.Command("sc.exe", "query", "telegraf")
+			output, err := statusCmd.CombinedOutput()
+			if err != nil {
+				log.Printf("Error checking Telegraf service status: %v\n", err)
+				time.Sleep(30 * time.Second)
+				continue
+			}
+
+			if string(output) != "" {
+				fmt.Println("Telegraf is running")
+				break
+			}
+
+			fmt.Println("Trying to start Telegraf again in 30 seconds, since it might not have been ready...")
+			time.Sleep(30 * time.Second)
+			startCmd := exec.Command(telegrafPath, "--service", "start")
+			if err := startCmd.Run(); err != nil {
+				log.Printf("Error starting Telegraf service again: %v\n", err)
+			}
+		}
 	}
+}
+
+func SetEnvVariablesForWindows() {
+	// Set Windows version (Microsoft Windows Server 2019 Datacenter or 2022 Datacenter)
+	out, err := exec.Command("wmic", "os", "get", "Caption").Output()
+	if err != nil {
+		log.Fatalf("Failed to get Windows version: %v", err)
+	}
+	windowsVersion := strings.TrimSpace(string(out))
+	windowsVersion = strings.Split(windowsVersion, "\n")[1] // Extract version name
+
+	// Set environment variables for process and machine
+	os.Setenv("windowsVersion", windowsVersion)
+	SetEnvAndSourceBashrcOrPowershell("windowsVersion", windowsVersion, true)
+
+	// Resource ID override
+	mac := os.Getenv("MAC")
+	cluster := os.Getenv("CLUSTER")
+	nodeName := os.Getenv("NODE_NAME")
+	if mac == "" {
+		if cluster == "" {
+			fmt.Printf("CLUSTER is empty or not set. Using %s as CLUSTER\n", nodeName)
+			os.Setenv("customResourceId", nodeName)
+			SetEnvAndSourceBashrcOrPowershell("customResourceId", nodeName, true)
+		} else {
+			os.Setenv("customResourceId", cluster)
+			SetEnvAndSourceBashrcOrPowershell("customResourceId", cluster, true)
+		}
+	} else {
+		SetEnvAndSourceBashrcOrPowershell("customResourceId", cluster, true)
+
+		aksRegion := os.Getenv("AKSREGION")
+		SetEnvAndSourceBashrcOrPowershell("customRegion", aksRegion, true)
+
+		// Set variables for Telegraf
+		SetTelegrafVariables(aksRegion, cluster)
+	}
+
+	// Set monitoring-related variables
+	SetMonitoringVariables()
+
+	// Handle custom environment settings
+	customEnvironment := strings.ToLower(os.Getenv("customEnvironment"))
+	mcsEndpoint, mcsGlobalEndpoint := GetMcsEndpoints(customEnvironment)
+
+	// Set MCS endpoint environment variables
+	SetEnvAndSourceBashrcOrPowershell("MCS_AZURE_RESOURCE_ENDPOINT", mcsEndpoint, true)
+	SetEnvAndSourceBashrcOrPowershell("MCS_GLOBAL_ENDPOINT", mcsGlobalEndpoint, true)
+}
+
+func SetTelegrafVariables(aksRegion, cluster string) {
+	SetEnvAndSourceBashrcOrPowershell("AKSREGION", aksRegion, true)
+	SetEnvAndSourceBashrcOrPowershell("CLUSTER", cluster, true)
+	azmonClusterAlias := os.Getenv("AZMON_CLUSTER_ALIAS")
+	SetEnvAndSourceBashrcOrPowershell("AZMON_CLUSTER_ALIAS", azmonClusterAlias, true)
+}
+
+func SetMonitoringVariables() {
+	SetEnvAndSourceBashrcOrPowershell("MONITORING_ROLE_INSTANCE", "cloudAgentRoleInstanceIdentity", true)
+	SetEnvAndSourceBashrcOrPowershell("MA_RoleEnvironment_OsType", "Windows", true)
+	SetEnvAndSourceBashrcOrPowershell("MONITORING_VERSION", "2.0", true)
+	SetEnvAndSourceBashrcOrPowershell("MONITORING_ROLE", "cloudAgentRoleIdentity", true)
+	SetEnvAndSourceBashrcOrPowershell("MONITORING_IDENTITY", "use_ip_address", true)
+	SetEnvAndSourceBashrcOrPowershell("MONITORING_USE_GENEVA_CONFIG_SERVICE", "false", true)
+	SetEnvAndSourceBashrcOrPowershell("SKIP_IMDS_LOOKUP_FOR_LEGACY_AUTH", "true", true)
+	SetEnvAndSourceBashrcOrPowershell("ENABLE_MCS", "true", true)
+	SetEnvAndSourceBashrcOrPowershell("MDSD_USE_LOCAL_PERSISTENCY", "false", true)
+	SetEnvAndSourceBashrcOrPowershell("MA_RoleEnvironment_Location", os.Getenv("AKSREGION"), true)
+	SetEnvAndSourceBashrcOrPowershell("MA_RoleEnvironment_ResourceId", os.Getenv("CLUSTER"), true)
+	SetEnvAndSourceBashrcOrPowershell("MCS_CUSTOM_RESOURCE_ID", os.Getenv("CLUSTER"), true)
+}
+
+func GetMcsEndpoints(customEnvironment string) (string, string) {
+	var mcsEndpoint, mcsGlobalEndpoint string
+
+	switch customEnvironment {
+	case "azurepubliccloud":
+		aksRegion := strings.ToLower(os.Getenv("AKSREGION"))
+		if aksRegion == "eastus2euap" || aksRegion == "centraluseuap" {
+			mcsEndpoint = "https://monitor.azure.com/"
+			mcsGlobalEndpoint = "https://global.handler.canary.control.monitor.azure.com"
+		} else {
+			mcsEndpoint = "https://monitor.azure.com/"
+			mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.com"
+		}
+	case "azureusgovernmentcloud":
+		mcsEndpoint = "https://monitor.azure.us/"
+		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.us"
+	case "azurechinacloud":
+		mcsEndpoint = "https://monitor.azure.cn/"
+		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.cn"
+	case "usnat":
+		mcsEndpoint = "https://monitor.azure.eaglex.ic.gov/"
+		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.eaglex.ic.gov"
+	case "ussec":
+		mcsEndpoint = "https://monitor.azure.microsoft.scloud/"
+		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.microsoft.scloud/"
+	default:
+		fmt.Printf("Unknown customEnvironment: %s, setting mcs endpoint to default azurepubliccloud values\n", customEnvironment)
+		mcsEndpoint = "https://monitor.azure.com/"
+		mcsGlobalEndpoint = "https://global.handler.control.monitor.azure.com"
+	}
+	return mcsEndpoint, mcsGlobalEndpoint
 }

@@ -51,8 +51,8 @@ func addNoProxy(target string) {
 	noProxy := os.Getenv("NO_PROXY")
 	noProxy = strings.TrimSpace(noProxy)
 	noProxy += "," + target
-	SetEnvAndSourceBashrc("NO_PROXY", noProxy, true)
-	SetEnvAndSourceBashrc("no_proxy", noProxy, true)
+	SetEnvAndSourceBashrcOrPowershell("NO_PROXY", noProxy, true)
+	SetEnvAndSourceBashrcOrPowershell("no_proxy", noProxy, true)
 }
 
 func setHTTPProxyEnabled() {
@@ -60,7 +60,7 @@ func setHTTPProxyEnabled() {
 	if os.Getenv("HTTP_PROXY") != "" {
 		httpProxyEnabled = "true"
 	}
-	SetEnvAndSourceBashrc("HTTP_PROXY_ENABLED", httpProxyEnabled, true)
+	SetEnvAndSourceBashrcOrPowershell("HTTP_PROXY_ENABLED", httpProxyEnabled, true)
 }
 
 func ConfigureEnvironment() error {
@@ -69,14 +69,14 @@ func ConfigureEnvironment() error {
 	// Remove trailing '/' character from HTTP_PROXY and HTTPS_PROXY
 	proxyVariables := []string{"http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"}
 	for _, v := range proxyVariables {
-		SetEnvAndSourceBashrc(v, removeTrailingSlash(os.Getenv(v)), true)
+		SetEnvAndSourceBashrcOrPowershell(v, removeTrailingSlash(os.Getenv(v)), true)
 	}
 
 	addNoProxy("ama-metrics-operator-targets.kube-system.svc.cluster.local")
 	setHTTPProxyEnabled()
 
 	// Process additional settings for Arc cluster with enabled HTTP proxy
-	if os.Getenv("IS_ARC_CLUSTER") == "true" && os.Getenv("HTTP_PROXY_ENABLED") == "true" {
+	if os.Getenv("HTTP_PROXY_ENABLED") == "true" {
 		proxyProtocol := strings.ToLower(strings.Split(os.Getenv("HTTPS_PROXY"), "://")[0])
 		if proxyProtocol != "http" && proxyProtocol != "https" {
 			fmt.Println("HTTP Proxy specified does not include http:// or https://")
@@ -92,11 +92,11 @@ func ConfigureEnvironment() error {
 		password := base64.StdEncoding.EncodeToString([]byte(strings.SplitN(urlParts[0], ":", 2)[1]))
 		os.WriteFile("/opt/microsoft/proxy_password", []byte(password), 0644)
 
-		SetEnvAndSourceBashrc("MDSD_PROXY_MODE", "application", true)
-		SetEnvAndSourceBashrc("MDSD_PROXY_ADDRESS", os.Getenv("HTTPS_PROXY"), true)
+		SetEnvAndSourceBashrcOrPowershell("MDSD_PROXY_MODE", "application", true)
+		SetEnvAndSourceBashrcOrPowershell("MDSD_PROXY_ADDRESS", os.Getenv("HTTPS_PROXY"), true)
 		if user := strings.SplitN(urlParts[0], ":", 2)[0]; user != "" {
-			SetEnvAndSourceBashrc("MDSD_PROXY_USERNAME", user, true)
-			SetEnvAndSourceBashrc("MDSD_PROXY_PASSWORD_FILE", "/opt/microsoft/proxy_password", true)
+			SetEnvAndSourceBashrcOrPowershell("MDSD_PROXY_USERNAME", user, true)
+			SetEnvAndSourceBashrcOrPowershell("MDSD_PROXY_PASSWORD_FILE", "/opt/microsoft/proxy_password", true)
 		}
 	}
 

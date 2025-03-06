@@ -36,7 +36,6 @@ import (
 const (
 	defaultGCInterval = 2 * time.Minute
 	gcIntervalDelta   = 1 * time.Minute
-
 	// Use same settings as Prometheus web server
 	maxConnections     = 512
 	readTimeoutMinutes = 10
@@ -120,7 +119,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 	if r.discoveryManager == nil {
 		// NewManager can sometimes return nil if it encountered an error, but
 		// the error message is logged separately.
-		return fmt.Errorf("failed to create discovery manager")
+		return errors.New("failed to create discovery manager")
 	}
 
 	go func() {

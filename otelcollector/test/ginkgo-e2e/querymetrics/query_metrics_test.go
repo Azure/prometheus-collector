@@ -248,35 +248,58 @@ var _ = Describe("Query Metrics Test Suite", func() {
 	)
 
 	DescribeTable("should return the expected labels for specified metrics in each job",
-		func(job string, metric string, labels []string) {
-			for _, label := range labels {
-				query := fmt.Sprintf("%s{job=\"%s\"}", metric, job)
+		func(job string, metric string, labels map[string]string) {
+			query := fmt.Sprintf("%s{job=\"%s\"}", metric, job)
 
-				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, query)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(warnings).To(BeEmpty())
+			warnings, result, err := utils.InstantQuery(PrometheusQueryClient, query)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(warnings).To(BeEmpty())
 
-				vectorResult, ok := result.(model.Vector)
-				Expect(ok).To(BeTrue(), "result should be of type model.Vector for metric %s", metric)
-				Expect(vectorResult).NotTo(BeEmpty(), "Metric %s is missing", metric)
+			vectorResult, ok := result.(model.Vector)
+			Expect(ok).To(BeTrue(), "result should be of type model.Vector for metric %s", metric)
+			Expect(vectorResult).NotTo(BeEmpty(), "Metric %s is missing", metric)
 
-				for _, sample := range vectorResult {
+			for _, sample := range vectorResult {
+				for label, expectedValue := range labels {
 					val, ok := sample.Metric[model.LabelName(label)]
-					Expect(ok).To(BeTrue(), fmt.Sprintf("Expected label %q not found in metric %q", label, metric))
-					Expect(val).NotTo(BeEmpty(), fmt.Sprintf("Label %q is empty in metric %q", label, metric))
-					Expect(sample.Value.String()).To(Equal("1"))
+					Expect(ok).To(BeTrue(), fmt.Sprintf("Expected label %q not found in metric %q for the job %s", label, metric, job))
+					Expect(string(val)).To(MatchRegexp(expectedValue), fmt.Sprintf("Label %q in metric %q for job %s has unexpected value: %s", label, metric, job, val))
 				}
 			}
 		},
-		Entry("Metric relabeling with dollar signs", "prometheus_ref_app", "up", []string{
-			"double_dollar_sign",
-			"single_dollar_sign",
+		Entry("Relabeling with dollar signs", "prometheus_ref_app", "up", map[string]string{
+			"double_dollar_sign": "prometheus-reference-app", // Legacy backwards compatibility for $$1 when single $ was not supported
+			"single_dollar_sign": "prometheus-reference-app",
 		}),
-		Entry("Metric relabeling with $NODE_NAME and $NODE_IP", "node-configmap", "up", []string{
-			"node_name_single_dollar_sign",
-			"node_ip_single_dollar_sign",
-			"node_name_double_dollar_sign",
-			"node_ip_double_dollar_sign",
+		Entry("Relabeling with $NODE_NAME and $NODE_IP", "node-configmap", "up", map[string]string{
+			"node_name_single_dollar_sign": ".+", // Node Name and IP env var substitution is only for daemonset
+			"node_ip_single_dollar_sign":   "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}",
+			"node_name_double_dollar_sign": ".+",                                        // Legacy backwards compatibility for $$NODE_NAME when single $ was not supported
+			"node_ip_double_dollar_sign":   "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}", // Legacy backwards compatibility for $$NODE_IP when single $ was not supported
+		}),
+		Entry("Relabeling with dollar signs & external labels for PodMonitor", "default/referenceapp", "up", map[string]string{
+			"double_dollar_sign": "\\$1",                     // PodMonitor does not have the legacy backwards compatibility for $$1
+			"single_dollar_sign": "prometheus-reference-app", // $1 does work for PodMonitor
+			"external_label_1":   "external_label_value",
+			"external_label_123": "external_label_value",
+		}),
+		Entry("Relabeling with dollar signs & external labels for ServiceMonitor", "prometheus-reference-service", "up", map[string]string{
+			"double_dollar_sign": "\\$1",                     // ServiceMonitor does not have the legacy backwards compatibility for $$1
+			"single_dollar_sign": "prometheus-reference-app", // $1 does work for ServiceMonitor
+			"external_label_1":   "external_label_value",
+			"external_label_123": "external_label_value",
+		}),
+		Entry("External labels are applied from ReplicaSet Configmap", "prometheus_ref_app", "up", map[string]string{
+			"external_label_1":   "external_label_value",
+			"external_label_123": "external_label_value",
+		}),
+		Entry("External labels are applied from DaemonSet Configmap", "node-configmap", "up", map[string]string{
+			"external_label_1":   "external_label_value",
+			"external_label_123": "external_label_value",
+		}),
+		Entry("External labels are applied from Windows DaemonSet Configmap", "windows-node-configmap", "up", map[string]string{
+			"external_label_1":   "external_label_value",
+			"external_label_123": "external_label_value",
 		}),
 	)
 

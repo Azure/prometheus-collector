@@ -37,7 +37,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -81,7 +81,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/98e54027a2724ab1d4c45666c1fa6738/k8s-resources-windows-namespace?${datasource:queryparam}&var-cluster=$cluster&var-namespace=${__data.fields.Namespace}"
+                              "url": "/d/9f84792794e34121bd0fa99075d96738/k8s-resources-windows-namespace?${datasource:queryparam}&var-cluster=$cluster&var-namespace=${__data.fields.Namespace}"
                            }
                         ]
                      }
@@ -96,7 +96,7 @@
             "y": 7
          },
          "id": 2,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -227,7 +227,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -272,7 +272,7 @@
             "y": 21
          },
          "id": 4,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -403,7 +403,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {

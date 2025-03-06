@@ -2,6 +2,11 @@ trigger:
   branches:
     include:
     - rashmi/config-tests
+# pr:
+#   autoCancel: true
+#   branches:
+#     include:
+#     - main
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -233,7 +238,7 @@ stages:
   #       displayName: "Build: specify golang version"
   #       inputs:
   #         version: $(GOLANG_VERSION)
-  
+
   #     - bash: |
   #         mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
@@ -325,7 +330,7 @@ stages:
   #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
   #       displayName: "Build: build WS2019 image"
   #       retryCountOnTaskFailure: 2
-
+  
   #     - powershell: |
   #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
   #         docker push $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)
@@ -604,7 +609,7 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install testkube CLI"
-          
+
           - task: GoTool@0
             displayName: "Build: specify golang version"
             inputs:
