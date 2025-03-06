@@ -1,4 +1,4 @@
-// package containerstatus
+package configprocessing
 
 // import (
 // 	"prometheus-collector/otelcollector/test/utils"
