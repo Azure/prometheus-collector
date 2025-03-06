@@ -306,6 +306,53 @@ func recordPerfMetrics() {
 	}()
 }
 
+func recordTestMetrics() {
+	go func() {
+		i := 0
+
+		ctx := context.Background()
+		metricAttributes := attribute.NewSet(
+			attribute.String("label.1", "label.1-value"),
+			attribute.String("label.2", "label.2-value"),
+		)
+		for {
+			otlpIntCounterTest.Add(ctx, 1, metric.WithAttributeSet(metricAttributes))
+			otlpFloatCounterTest.Add(ctx, 1.8, metric.WithAttributeSet(metricAttributes))
+
+			// Add 2 on even loop, subtract 1 on odd loop
+			if i%2 == 0 {
+				otlpIntGaugeTest.Record(ctx, 2, metric.WithAttributeSet(metricAttributes))
+				otlpFloatGaugeTest.Record(ctx, 2.8, metric.WithAttributeSet(metricAttributes))
+
+				otlpIntUpDownCounterTest.Add(ctx, 2, metric.WithAttributeSet(metricAttributes))
+				otlpFloatUpDownCounterTest.Add(ctx, 2.8, metric.WithAttributeSet(metricAttributes))
+
+				otlpIntExponentialHistogramTest.Record(ctx, 1, metric.WithAttributeSet(metricAttributes))
+				otlpFloatExponentialHistogramTest.Record(ctx, 0.8, metric.WithAttributeSet(metricAttributes))
+
+				otlpIntExplicitHistogramTest.Record(ctx, 1, metric.WithAttributeSet(metricAttributes))
+				otlpFloatExplicitHistogramTest.Record(ctx, 0.8, metric.WithAttributeSet(metricAttributes))
+
+			} else {
+				otlpIntGaugeTest.Record(ctx, 1, metric.WithAttributeSet(metricAttributes))
+				otlpFloatGaugeTest.Record(ctx, 1.8, metric.WithAttributeSet(metricAttributes))
+
+				otlpIntUpDownCounterTest.Add(ctx, -1, metric.WithAttributeSet(metricAttributes))
+				otlpFloatUpDownCounterTest.Add(ctx, -1.8, metric.WithAttributeSet(metricAttributes))
+
+				otlpIntExponentialHistogramTest.Record(ctx, 2, metric.WithAttributeSet(metricAttributes))
+				otlpFloatExponentialHistogramTest.Record(ctx, 1.8, metric.WithAttributeSet(metricAttributes))
+
+				otlpIntExplicitHistogramTest.Record(ctx, 2, metric.WithAttributeSet(metricAttributes))
+				otlpFloatExplicitHistogramTest.Record(ctx, 1.8, metric.WithAttributeSet(metricAttributes))
+			}
+
+			i++
+			time.Sleep(60 * time.Second)
+		}
+	}()
+}
+
 func createGauges() {
 	for i := 0; i < metricCount; i++ {
 		name := fmt.Sprintf("myapp_temperature_%d", i)
@@ -330,6 +377,17 @@ var (
 	otlpExplicitHistogram            metric.Int64Histogram
 	otlpExponentialRainfallHistogram metric.Float64Histogram
 	otlpExplicitRainfallHistogram    metric.Float64Histogram
+
+	otlpIntCounterTest                metric.Int64Counter
+	otlpFloatCounterTest              metric.Float64Counter
+	otlpIntGaugeTest                  metric.Int64Gauge
+	otlpFloatGaugeTest                metric.Float64Gauge
+	otlpIntUpDownCounterTest          metric.Int64UpDownCounter
+	otlpFloatUpDownCounterTest        metric.Float64UpDownCounter
+	otlpIntExponentialHistogramTest   metric.Int64Histogram
+	otlpFloatExponentialHistogramTest metric.Float64Histogram
+	otlpIntExplicitHistogramTest      metric.Int64Histogram
+	otlpFloatExplicitHistogramTest    metric.Float64Histogram
 
 	scrapeIntervalSec = 60
 	metricCount       = 10000
@@ -516,7 +574,8 @@ func main() {
 		createGauges()
 		recordPerfMetrics()
 	} else {
-		recordMetrics()
+		//recordMetrics()
+		recordTestMetrics()
 	}
 
 	untypedServer := http.NewServeMux()
@@ -643,6 +702,49 @@ func setupOTLP() {
 
 	// Actually register metrics with the meter provider. These will then be used to record values
 	otlpMeter := provider.Meter("referenceapp")
+	otlpIntCounterTest, _ = otlpMeter.Int64Counter(
+		"otlpapp.intcounter.total",
+		metric.WithUnit("1"),
+	)
+	otlpFloatCounterTest, _ = otlpMeter.Float64Counter(
+		"otlpapp.floatcounter.total",
+		metric.WithUnit("1"),
+	)
+	otlpIntGaugeTest, _ = otlpMeter.Int64Gauge(
+		"otlpapp.intgauge",
+		metric.WithUnit("1"),
+	)
+	otlpFloatGaugeTest, _ = otlpMeter.Float64Gauge(
+		"otlpapp.floatgauge",
+		metric.WithUnit("1"),
+	)
+	otlpIntUpDownCounterTest, _ = otlpMeter.Int64UpDownCounter(
+		"otlpapp.intupdowncounter",
+		metric.WithUnit("1"),
+	)
+	otlpFloatUpDownCounterTest, _ = otlpMeter.Float64UpDownCounter(
+		"otlpapp.floatupdowncounter",
+		metric.WithUnit("1"),
+	)
+	otlpIntExponentialHistogramTest, _ = otlpMeter.Int64Histogram(
+		"otlpapp.intexponentialhistogram",
+		metric.WithUnit("1"),
+	)
+	otlpFloatExponentialHistogramTest, _ = otlpMeter.Float64Histogram(
+		"otlpapp.floatexponentialhistogram",
+		metric.WithUnit("1"),
+	)
+	otlpIntExplicitHistogramTest, _ = otlpMeter.Int64Histogram(
+		"otlpapp.intexplicithistogram",
+		metric.WithUnit("1"),
+		metric.WithExplicitBucketBoundaries(0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+	)
+	otlpFloatExplicitHistogramTest, _ = otlpMeter.Float64Histogram(
+		"otlpapp.floatexplicithistogram",
+		metric.WithUnit("1"),
+		metric.WithExplicitBucketBoundaries(0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25),
+	)
+
 	otlpCounter, _ = otlpMeter.Int64Counter(
 		"myotelapp.measurements.total",
 		metric.WithUnit("1"),
