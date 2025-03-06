@@ -640,7 +640,7 @@ stages:
               kubectl testkube run testsuite e2e-config-tests-nightly --verbose
 
               # Get the current id of the test suite now running
-              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-config-tests-nightly --limit 1 | grep e2e-tests | awk '{print $1}')
+              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-config-tests-nightly --limit 1 | grep e2e-config-tests | awk '{print $1}')
 
               # Watch until the all the tests in the test suite finish
               kubectl testkube watch testsuiteexecution $execution_id
