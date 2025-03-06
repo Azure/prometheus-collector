@@ -5,8 +5,6 @@ import (
 	"prometheus-collector/otelcollector/test/utils"
 	"time"
 
-	"github.com/prometheus/prometheus/config"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -151,11 +149,11 @@ var _ = DescribeTable("The Prometheus UI API should return empty config",
 		var prometheusConfigResult map[string]interface{}
 		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
 		Expect(prometheusConfigResult).NotTo(BeNil())
-		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
-
-		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+		//Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+		scrapeConfigs := prometheusConfigResult["scrape_configs"]
+		//prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
 		Expect(err).NotTo(HaveOccurred())
-		//Expect(prometheusConfig).To(BeNil())
+		Expect(scrapeConfigs).NotTo(BeNil())
 	},
 	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true),
 	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true),
