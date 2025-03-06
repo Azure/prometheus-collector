@@ -604,6 +604,11 @@ stages:
               exit 0
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Install testkube CLI"
+          
+          - task: GoTool@0
+            displayName: "Build: specify golang version"
+            inputs:
+              version: '1.22.7'
 
           - task: AzureCLI@1
             displayName: Get kubeconfig
