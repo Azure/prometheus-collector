@@ -5,6 +5,7 @@ import (
 	"prometheus-collector/otelcollector/test/utils"
 	"time"
 
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/prometheus/config"
 
 	. "github.com/onsi/ginkgo/v2"
