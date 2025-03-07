@@ -19,10 +19,12 @@ var (
 )
 
 const (
-	OperatorLabel              = "operator"
-	ArcExtensionLabel          = "arc-extension"
-	WindowsLabel               = "windows"
-	ARM64Label                 = "arm64"
-	FIPSLabel                  = "fips"
-	LinuxDaemonsetCustomConfig = "linux-daemonset-custom-config"
+	OperatorLabel                      = "operator"
+	ArcExtensionLabel                  = "arc-extension"
+	WindowsLabel                       = "windows"
+	ARM64Label                         = "arm64"
+	FIPSLabel                          = "fips"
+	LinuxDaemonsetCustomConfig         = "linux-daemonset-custom-config"
+	ConfigProcessingCommon             = "config-processing-common"
+	ConfigProcessingAllTargetsDisabled = "config-processing-all-targets-disabled"
 )

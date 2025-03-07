@@ -26,8 +26,8 @@ spec:
         value: "$AZURE_CLIENT_ID"
         type: basic
     args:
-      # - "--label-filter"
-      # - "!(arc-extension,linux-daemonset-custom-config)"
+      - "--label-filter"
+      - "(config-processing-common)"
       - "./configprocessing"
     executePostRunScriptBeforeScraping: false
 ---
@@ -60,9 +60,9 @@ spec:
         value: "$AZURE_CLIENT_ID"
         type: basic
     args:
-      # - "--label-filter"
-      # - "!(arc-extension,linux-daemonset-custom-config)"
-      - "./configprocessingalltargetsdisabled"
+      - "--label-filter"
+      - "(config-processing-all-targets-disabled)"
+      - "./configprocessing"
     executePostRunScriptBeforeScraping: false
 ---
 apiVersion: tests.testkube.io/v3
