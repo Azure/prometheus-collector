@@ -3,12 +3,14 @@ trigger:
     include:
     - main
     - feature/otlpmain
+    - grace/ref-app-update-march
 
 pr:
   autoCancel: true
   branches:
     include:
     - main
+    - feature/otlpmain
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
