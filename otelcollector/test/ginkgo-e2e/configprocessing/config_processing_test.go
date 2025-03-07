@@ -1,14 +1,10 @@
 package configprocessing
 
 import (
-	"encoding/json"
 	"prometheus-collector/otelcollector/test/utils"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/prometheus/prometheus/config"
 	_ "github.com/prometheus/prometheus/discovery/install" // Register service discovery implementations.
 )
 
@@ -140,38 +136,38 @@ var _ = DescribeTable("The container logs should not contain errors",
  * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
  */
 // All targets disabled
-var _ = DescribeTable("The Prometheus UI API should return empty config",
-	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
-		time.Sleep(120 * time.Second)
-		var apiResponse utils.APIResponse
-		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(apiResponse.Data).NotTo(BeNil())
+// var _ = DescribeTable("The Prometheus UI API should return empty config",
+// 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
+// 		time.Sleep(120 * time.Second)
+// 		var apiResponse utils.APIResponse
+// 		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
+// 		Expect(err).NotTo(HaveOccurred())
+// 		Expect(apiResponse.Data).NotTo(BeNil())
 
-		// // var prometheusConfigResult v1.ConfigResult
-		// var prometheusConfigResult map[string]interface{}
-		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
-		// Expect(prometheusConfigResult).NotTo(BeNil())
-		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
-		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
-		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
-		// Expect(err).NotTo(HaveOccurred())
-		// Expect(scrapeConfigs).NotTo(BeNil())
+// 		// // var prometheusConfigResult v1.ConfigResult
+// 		// var prometheusConfigResult map[string]interface{}
+// 		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+// 		// Expect(prometheusConfigResult).NotTo(BeNil())
+// 		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+// 		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
+// 		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+// 		// Expect(err).NotTo(HaveOccurred())
+// 		// Expect(scrapeConfigs).NotTo(BeNil())
 
-		var prometheusConfigResult v1.ConfigResult
-		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
-		Expect(prometheusConfigResult).NotTo(BeNil())
-		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+// 		var prometheusConfigResult v1.ConfigResult
+// 		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+// 		Expect(prometheusConfigResult).NotTo(BeNil())
+// 		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
 
-		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(prometheusConfig).NotTo(BeNil())
-		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
-		Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 1))
-		Expect(prometheusConfig.ScrapeConfigs[0].JobName).To(Equal("empty_job"))
+// 		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+// 		Expect(err).NotTo(HaveOccurred())
+// 		Expect(prometheusConfig).NotTo(BeNil())
+// 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
+// 		Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 1))
+// 		Expect(prometheusConfig.ScrapeConfigs[0].JobName).To(Equal("empty_job"))
 
-	},
-	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true),
-	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true),
-	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.WindowsLabel)),
-)
+// 	},
+// 	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true),
+// 	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true),
+// 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.WindowsLabel)),
+// )

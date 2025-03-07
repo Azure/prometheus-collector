@@ -1,4 +1,4 @@
-module prometheus-collector/otelcollector/test/prometheusui
+module prometheus-collector/otelcollector/test/configprocessing
 
 go 1.23.0
 

@@ -1,7 +1,7 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: alltargetsdisabled
+  name: configprocessingcommon
   namespace: testkube
   labels:
     executor: ginkgo-executor
@@ -31,6 +31,40 @@ spec:
       - "./configprocessing"
     executePostRunScriptBeforeScraping: false
 ---
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: alltargetsdisabled
+  namespace: testkube
+  labels:
+    executor: ginkgo-executor
+    test-type: ginkgo-test
+spec:
+  type: ginkgo/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/Azure/prometheus-collector
+      branch: rashmi/config-tests
+      path: otelcollector/test/ginkgo-e2e
+  executionRequest:
+    variables:
+      AMW_QUERY_ENDPOINT:
+        name: AMW_QUERY_ENDPOINT
+        value: "$AMW_QUERY_ENDPOINT"
+        type: basic
+      AZURE_CLIENT_ID:
+        name: AZURE_CLIENT_ID
+        value: "$AZURE_CLIENT_ID"
+        type: basic
+    args:
+      # - "--label-filter"
+      # - "!(arc-extension,linux-daemonset-custom-config)"
+      - "./configprocessingalltargetsdisabled"
+    executePostRunScriptBeforeScraping: false
+---
 apiVersion: tests.testkube.io/v3
 kind: TestSuite
 metadata:
@@ -40,10 +74,10 @@ spec:
   steps:
   - stopOnFailure: false
     execute:
-    - test: alltargetsdisabled
+    - test: configprocessingcommon
   # - stopOnFailure: false
   #   execute:
   #   - delay: 2m0s
-  # - stopOnFailure: false
-  #   execute:
-  #   - test: querymetrics
+  - stopOnFailure: false
+    execute:
+    - test: alltargetsdisabled
