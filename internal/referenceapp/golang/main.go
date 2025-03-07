@@ -314,37 +314,38 @@ func recordTestMetrics() {
 		metricAttributes := attribute.NewSet(
 			attribute.String("label.1", "label.1-value"),
 			attribute.String("label.2", "label.2-value"),
+			attribute.String("temporality", temporalityLabel),
 		)
 		for {
 			otlpIntCounterTest.Add(ctx, 1, metric.WithAttributeSet(metricAttributes))
-			otlpFloatCounterTest.Add(ctx, 1.8, metric.WithAttributeSet(metricAttributes))
+			otlpFloatCounterTest.Add(ctx, 1.5, metric.WithAttributeSet(metricAttributes))
 
 			// Add 2 on even loop, subtract 1 on odd loop
 			if i%2 == 0 {
 				otlpIntGaugeTest.Record(ctx, 2, metric.WithAttributeSet(metricAttributes))
-				otlpFloatGaugeTest.Record(ctx, 2.8, metric.WithAttributeSet(metricAttributes))
+				otlpFloatGaugeTest.Record(ctx, 2.5, metric.WithAttributeSet(metricAttributes))
 
 				otlpIntUpDownCounterTest.Add(ctx, 2, metric.WithAttributeSet(metricAttributes))
-				otlpFloatUpDownCounterTest.Add(ctx, 2.8, metric.WithAttributeSet(metricAttributes))
+				otlpFloatUpDownCounterTest.Add(ctx, 2.5, metric.WithAttributeSet(metricAttributes))
 
 				otlpIntExponentialHistogramTest.Record(ctx, 1, metric.WithAttributeSet(metricAttributes))
-				otlpFloatExponentialHistogramTest.Record(ctx, 0.8, metric.WithAttributeSet(metricAttributes))
+				otlpFloatExponentialHistogramTest.Record(ctx, 0.5, metric.WithAttributeSet(metricAttributes))
 
 				otlpIntExplicitHistogramTest.Record(ctx, 1, metric.WithAttributeSet(metricAttributes))
-				otlpFloatExplicitHistogramTest.Record(ctx, 0.8, metric.WithAttributeSet(metricAttributes))
+				otlpFloatExplicitHistogramTest.Record(ctx, 0.5, metric.WithAttributeSet(metricAttributes))
 
 			} else {
 				otlpIntGaugeTest.Record(ctx, 1, metric.WithAttributeSet(metricAttributes))
-				otlpFloatGaugeTest.Record(ctx, 1.8, metric.WithAttributeSet(metricAttributes))
+				otlpFloatGaugeTest.Record(ctx, 1.5, metric.WithAttributeSet(metricAttributes))
 
 				otlpIntUpDownCounterTest.Add(ctx, -1, metric.WithAttributeSet(metricAttributes))
-				otlpFloatUpDownCounterTest.Add(ctx, -1.8, metric.WithAttributeSet(metricAttributes))
+				otlpFloatUpDownCounterTest.Add(ctx, -1.5, metric.WithAttributeSet(metricAttributes))
 
 				otlpIntExponentialHistogramTest.Record(ctx, 2, metric.WithAttributeSet(metricAttributes))
-				otlpFloatExponentialHistogramTest.Record(ctx, 1.8, metric.WithAttributeSet(metricAttributes))
+				otlpFloatExponentialHistogramTest.Record(ctx, 1.5, metric.WithAttributeSet(metricAttributes))
 
 				otlpIntExplicitHistogramTest.Record(ctx, 2, metric.WithAttributeSet(metricAttributes))
-				otlpFloatExplicitHistogramTest.Record(ctx, 1.8, metric.WithAttributeSet(metricAttributes))
+				otlpFloatExplicitHistogramTest.Record(ctx, 1.5, metric.WithAttributeSet(metricAttributes))
 			}
 
 			i++
@@ -388,6 +389,8 @@ var (
 	otlpFloatExponentialHistogramTest metric.Float64Histogram
 	otlpIntExplicitHistogramTest      metric.Int64Histogram
 	otlpFloatExplicitHistogramTest    metric.Float64Histogram
+
+	temporalityLabel string
 
 	scrapeIntervalSec = 60
 	metricCount       = 10000
@@ -625,6 +628,10 @@ func setupOTLP() {
 
 	// The default temporality should be cumulative unless specified as delta otherwise
 	deltaTemporality := os.Getenv("OTEL_TEMPORALITY") == "delta"
+	temporalityLabel = "cumulative"
+	if deltaTemporality {
+		temporalityLabel = "delta"
+	}
 
 	// Export as stdout logs instead for debugging
 	if os.Getenv("OTEL_CONSOLE_METRICS") == "true" {
