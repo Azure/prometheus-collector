@@ -35,7 +35,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: alltargetsdisabled
+  name: noconfigmaps
   namespace: testkube
   labels:
     executor: ginkgo-executor
@@ -68,7 +68,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: TestSuite
 metadata:
-  name: e2e-config-tests-nightly
+  name: config-tests-no-configmaps
   namespace: testkube
 spec:
   steps:
@@ -80,4 +80,4 @@ spec:
   #   - delay: 2m0s
   - stopOnFailure: false
     execute:
-    - test: alltargetsdisabled
+    - test: noconfigmaps
