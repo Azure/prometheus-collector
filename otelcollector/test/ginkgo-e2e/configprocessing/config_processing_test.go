@@ -7,6 +7,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/prometheus/config"
 	_ "github.com/prometheus/prometheus/discovery/install" // Register service discovery implementations.
 )
 
