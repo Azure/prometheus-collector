@@ -167,7 +167,7 @@ var _ = DescribeTable("The Prometheus UI API should return empty config",
 		Expect(err).NotTo(HaveOccurred())
 		Expect(prometheusConfig).NotTo(BeNil())
 		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
-		Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("=", 1))
+		Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 1))
 		Expect(prometheusConfig.ScrapeConfigs[0].JobName).To(Equal("empty_job"))
 
 	},
