@@ -629,7 +629,7 @@ stages:
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-no-configmaps-crs.yaml > ./testkube/testkube-config-test-no-configmaps-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/api-server-permissions.yaml
-              kubectl apply -f ./testkube/config-processing-test-crs/testkube-config-test-no-configmaps-crs-ci-dev-aks-tests.yaml
+              kubectl apply -f ./testkube/testkube-config-test-no-configmaps-crs-ci-dev-aks-tests.yaml
               # Delete all the configmaps to test the no configmaps case
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
               kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
@@ -688,7 +688,7 @@ stages:
               export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-targets-disabled-crs.yaml > ./testkube/testkube-config-test-all-targets-disabled-crs-ci-dev-aks-tests.yaml
-              kubectl apply -f ./testkube/config-processing-test-crs/testkube-config-test-all-targets-disabled-crs-ci-dev-aks-tests.yaml
+              kubectl apply -f ./testkube/testkube-config-test-all-targets-disabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-all-targets-disabled.yaml
 
               exit 0
