@@ -311,3 +311,174 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, Label(utils.ConfigProcessingNoConfigMaps)),
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingNoConfigMaps)),
 )
+
+/*
+ * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
+ */
+// All Rs targets turned on in settings configmap
+var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
+		time.Sleep(120 * time.Second)
+		var apiResponse utils.APIResponse
+		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apiResponse.Data).NotTo(BeNil())
+
+		// // var prometheusConfigResult v1.ConfigResult
+		// var prometheusConfigResult map[string]interface{}
+		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		// Expect(prometheusConfigResult).NotTo(BeNil())
+		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
+		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+		// Expect(err).NotTo(HaveOccurred())
+		// Expect(scrapeConfigs).NotTo(BeNil())
+
+		var prometheusConfigResult v1.ConfigResult
+		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		Expect(prometheusConfigResult).NotTo(BeNil())
+		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+
+		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prometheusConfig).NotTo(BeNil())
+		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
+
+		if controllerLabelValue == "ama-metrics" {
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 6))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
+			}
+		} else if controllerLabelValue == "ama-metrics-node" {
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 7))
+			linuxDsJobs := []string{"kubelet", "cadvisor", "node", "kappie-basic", "networkobservability-retina", "networkobservability-hubble", "networkobservability-cilium"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(linuxDsJobs).To(ContainElement(scrapeJob.JobName))
+			}
+		} else if controllerLabelValue == "ama-metrics-win-node" {
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 3))
+			windowsDsJobs := []string{"kubelet", "kappie-basic", "networkobservability-retina"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(windowsDsJobs).To(ContainElement(scrapeJob.JobName))
+			}
+		}
+	},
+	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, Label(utils.ConfigProcessingRsTargetsEnabled)),
+	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, Label(utils.ConfigProcessingRsTargetsEnabled)),
+	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingRsTargetsEnabled)),
+)
+
+/*
+ * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
+ */
+// All ds targets turned on in settings configmap
+var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
+		time.Sleep(120 * time.Second)
+		var apiResponse utils.APIResponse
+		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apiResponse.Data).NotTo(BeNil())
+
+		// // var prometheusConfigResult v1.ConfigResult
+		// var prometheusConfigResult map[string]interface{}
+		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		// Expect(prometheusConfigResult).NotTo(BeNil())
+		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
+		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+		// Expect(err).NotTo(HaveOccurred())
+		// Expect(scrapeConfigs).NotTo(BeNil())
+
+		var prometheusConfigResult v1.ConfigResult
+		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		Expect(prometheusConfigResult).NotTo(BeNil())
+		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+
+		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prometheusConfig).NotTo(BeNil())
+		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
+
+		if controllerLabelValue == "ama-metrics" {
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 3))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
+			}
+		} else if controllerLabelValue == "ama-metrics-node" {
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 7))
+			linuxDsJobs := []string{"kubelet", "cadvisor", "node", "kappie-basic", "networkobservability-retina", "networkobservability-hubble", "networkobservability-cilium"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(linuxDsJobs).To(ContainElement(scrapeJob.JobName))
+			}
+		} else if controllerLabelValue == "ama-metrics-win-node" {
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 5))
+			windowsDsJobs := []string{"kubelet", "kappie-basic", "networkobservability-retina", "windows-exporter", "kube-proxy-windows"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(windowsDsJobs).To(ContainElement(scrapeJob.JobName))
+			}
+		}
+	},
+	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, Label(utils.ConfigProcessingDsTargetsEnabled)),
+	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, Label(utils.ConfigProcessingDsTargetsEnabled)),
+	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingDsTargetsEnabled)),
+)
+
+/*
+ * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
+ */
+// All Rs and ds targets turned on in settings configmap
+var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
+	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
+		time.Sleep(120 * time.Second)
+		var apiResponse utils.APIResponse
+		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apiResponse.Data).NotTo(BeNil())
+
+		// // var prometheusConfigResult v1.ConfigResult
+		// var prometheusConfigResult map[string]interface{}
+		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		// Expect(prometheusConfigResult).NotTo(BeNil())
+		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
+		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+		// Expect(err).NotTo(HaveOccurred())
+		// Expect(scrapeConfigs).NotTo(BeNil())
+
+		var prometheusConfigResult v1.ConfigResult
+		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
+		Expect(prometheusConfigResult).NotTo(BeNil())
+		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
+
+		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prometheusConfig).NotTo(BeNil())
+		Expect(prometheusConfig.ScrapeConfigs).NotTo(BeNil())
+
+		if controllerLabelValue == "ama-metrics" {
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 6))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics", "kube-dns", "kube-proxy", "kube-apiserver"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
+			}
+		} else if controllerLabelValue == "ama-metrics-node" {
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 7))
+			linuxDsJobs := []string{"kubelet", "cadvisor", "node", "kappie-basic", "networkobservability-retina", "networkobservability-hubble", "networkobservability-cilium"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(linuxDsJobs).To(ContainElement(scrapeJob.JobName))
+			}
+		} else if controllerLabelValue == "ama-metrics-win-node" {
+			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 5))
+			windowsDsJobs := []string{"kubelet", "kappie-basic", "networkobservability-retina", "windows-exporter", "kube-proxy-windows"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(windowsDsJobs).To(ContainElement(scrapeJob.JobName))
+			}
+		}
+	},
+	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, Label(utils.ConfigProcessingAllTargetsEnabled)),
+	Entry("when called inside the ama-metrics-node pod", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector", true, Label(utils.ConfigProcessingAllTargetsEnabled)),
+	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingAllTargetsEnabled)),
+)

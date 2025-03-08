@@ -31,4 +31,7 @@ const (
 	ConfigProcessingNoConfigMaps          = "config-processing-no-config-maps"
 	ConfigProcessingAllTargetsDisabled    = "config-processing-all-targets-disabled"
 	ConfigProcessingDefaultTargetsEnabled = "config-processing-default-targets-enabled"
+	ConfigProcessingRsTargetsEnabled      = "config-processing-rs-targets-enabled"
+	ConfigProcessingDsTargetsEnabled      = "config-processing-ds-targets-enabled"
+	ConfigProcessingAllTargetsEnabled     = "config-processing-all-targets-enabled"
 )
