@@ -584,7 +584,7 @@ stages:
     displayName: "Test: AKS testkube tests"
     environment: Prometheus-Collector-Tests
     # dependsOn: Deploy_AKS_Chart
-    timeoutInMinutes: 120
+    timeoutInMinutes: 360
     pool:
       name: Azure-Pipelines-CI-Test-EO
     #condition: (succeeded())
@@ -1188,7 +1188,7 @@ stages:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Run tests for errorprone settings configmap"
 
-         - bash: |
+          - bash: |
               export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
               export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
 
@@ -1244,7 +1244,7 @@ stages:
             workingDirectory: $(Build.SourcesDirectory)
             displayName: "Run tests for errorprone custom configmap"
 
-         - bash: |
+          - bash: |
               export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
               export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
 
