@@ -19,14 +19,16 @@ var (
 )
 
 const (
-	OperatorLabel                          = "operator"
-	ArcExtensionLabel                      = "arc-extension"
-	WindowsLabel                           = "windows"
-	ARM64Label                             = "arm64"
-	FIPSLabel                              = "fips"
-	LinuxDaemonsetCustomConfig             = "linux-daemonset-custom-config"
-	ConfigProcessingCommon                 = "config-processing-common"
-	ConfigProcessingNoConfigMaps           = "config-processing-no-config-maps"
-	ConfigProcessingAllTargetsDisabled     = "config-processing-all-targets-disabled"
-	ConfigProcessingDefaultSettingsEnabled = "config-processing-default-settings-enabled"
+	OperatorLabel                         = "operator"
+	ArcExtensionLabel                     = "arc-extension"
+	WindowsLabel                          = "windows"
+	ARM64Label                            = "arm64"
+	FIPSLabel                             = "fips"
+	LinuxDaemonsetCustomConfig            = "linux-daemonset-custom-config"
+	ConfigProcessingCommonNoConfigMaps    = "config-processing-common-no-config-maps"
+	ConfigProcessingCommonWithConfigMaps  = "config-processing-common-with-config-maps"
+	ConfigProcessingCommon                = "config-processing-common"
+	ConfigProcessingNoConfigMaps          = "config-processing-no-config-maps"
+	ConfigProcessingAllTargetsDisabled    = "config-processing-all-targets-disabled"
+	ConfigProcessingDefaultTargetsEnabled = "config-processing-default-targets-enabled"
 )

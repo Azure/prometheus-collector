@@ -27,7 +27,7 @@ spec:
         type: basic
     args:
       - "--label-filter"
-      - "(config-processing-common)"
+      - "(config-processing-common, config-processing-common-with-config-maps)"
       - "./configprocessing"
     executePostRunScriptBeforeScraping: false
 ---
@@ -61,14 +61,14 @@ spec:
         type: basic
     args:
       - "--label-filter"
-      - "(config-processing-default-settings-enabled)"
+      - "(config-processing-default-targets-enabled)"
       - "./configprocessing"
     executePostRunScriptBeforeScraping: false
 ---
 apiVersion: tests.testkube.io/v3
 kind: TestSuite
 metadata:
-  name: config-tests-def-settings-on-configmap
+  name: config-tests-def-targets-on-configmap
   namespace: testkube
 spec:
   steps:

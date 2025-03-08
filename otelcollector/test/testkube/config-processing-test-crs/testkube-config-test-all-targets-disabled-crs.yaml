@@ -27,7 +27,7 @@ spec:
         type: basic
     args:
       - "--label-filter"
-      - "(config-processing-common)"
+      - "(config-processing-common, config-processing-common-with-config-maps)"
       - "./configprocessing"
     executePostRunScriptBeforeScraping: false
 ---
