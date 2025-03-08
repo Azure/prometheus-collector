@@ -171,17 +171,22 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 
 		if controllerLabelValue == "ama-metrics" {
 			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 3))
-			for index, scrapeJob := range prometheusConfig.ScrapeConfigs {
-				Expect(scrapeJob.JobName).To(Equal("acstor-capacity-provisioner" | "acstor-metrics-exporter" | "kube-state-metrics"))
+			rsJobs := []string{"acstor-capacity-provisioner", "acstor-metrics-exporter", "kube-state-metrics"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(rsJobs).To(ContainElement(scrapeJob.JobName))
 			}
 		} else if controllerLabelValue == "ama-metrics-node" {
 			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 7))
-			for index, scrapeJob := range prometheusConfig.ScrapeConfigs {
-				Expect(scrapeJob.JobName).To(Equal("kubelet" | "cadvisor" | "node" | "kappie-basic" | "networkobservability-retina" | "networkobservability-hubble" | "networkobservability-cilium"))
+			linuxDsJobs := []string{"kubelet", "cadvisor", "node", "kappie-basic", "networkobservability-retina", "networkobservability-hubble", "networkobservability-cilium"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(linuxDsJobs).To(ContainElement(scrapeJob.JobName))
 			}
 		} else if controllerLabelValue == "ama-metrics-win-node" {
 			Expect(len(prometheusConfig.ScrapeConfigs)).To(BeNumerically("==", 3))
-			Expect(scrapeJob.JobName).To(Equal("kubelet" | "kappie-basic" | "networkobservability-retina"))
+			windowsDsJobs := []string{"kubelet", "kappie-basic", "networkobservability-retina"}
+			for _, scrapeJob := range prometheusConfig.ScrapeConfigs {
+				Expect(windowsDsJobs).To(ContainElement(scrapeJob.JobName))
+			}
 		}
 	},
 	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, Label(utils.ConfigProcessingNoConfigMaps)),
