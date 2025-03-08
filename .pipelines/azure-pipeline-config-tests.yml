@@ -584,7 +584,7 @@ stages:
     displayName: "Test: AKS testkube tests"
     environment: Prometheus-Collector-Tests
     # dependsOn: Deploy_AKS_Chart
-    timeoutInMinutes: 360
+    timeoutInMinutes: 120
     pool:
       name: Azure-Pipelines-CI-Test-EO
     #condition: (succeeded())
