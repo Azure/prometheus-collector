@@ -26,5 +26,6 @@ const (
 	FIPSLabel                          = "fips"
 	LinuxDaemonsetCustomConfig         = "linux-daemonset-custom-config"
 	ConfigProcessingCommon             = "config-processing-common"
+	ConfigProcessingNoConfigMaps       = "config-processing-no-config-maps"
 	ConfigProcessingAllTargetsDisabled = "config-processing-all-targets-disabled"
 )
