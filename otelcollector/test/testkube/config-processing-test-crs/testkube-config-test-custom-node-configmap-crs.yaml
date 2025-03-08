@@ -68,7 +68,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: TestSuite
 metadata:
-  name: config-tests-no-configmaps
+  name: config-tests-node-configmaps
   namespace: testkube
 spec:
   steps:

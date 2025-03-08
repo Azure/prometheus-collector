@@ -31,7 +31,6 @@ spec:
       - "./configprocessing"
     executePostRunScriptBeforeScraping: false
 ---
----
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
