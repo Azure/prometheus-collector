@@ -5,6 +5,9 @@ data:
     global:
       evaluation_interval: 60s
       scrape_interval: 60s
+    external_labels:
+      extlabel1: extlabel1
+      extlabel2: extlabel2
     scrape_configs:
     - job_name: job-replace
       scheme: http
