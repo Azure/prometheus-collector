@@ -640,7 +640,7 @@ stages:
             displayName: "Apply TestKube CRs for no configmaps"
 
           - bash: |
-              sleep 90
+              sleep 120
 
               exit 0
             displayName: "Wait for config to get picked up"
@@ -696,7 +696,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for all targets disabled"
 
           - bash: |
-              sleep 90
+              sleep 120
 
               exit 0
             displayName: "Wait for cluster to be ready"
@@ -752,7 +752,7 @@ stages:
             displayName: "Apply TestKube CRs, scrape configs for all default targets in setting configmap enabled"
 
           - bash: |
-              sleep 90
+              sleep 120
 
               exit 0
             displayName: "Wait for cluster to be ready"
