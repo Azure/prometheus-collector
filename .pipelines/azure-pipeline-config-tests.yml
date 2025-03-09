@@ -1088,7 +1088,7 @@ stages:
               kubectl apply -f ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-
+              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
             displayName: "Apply TestKube CRs, scrape configs for custom node configmap enabled"
