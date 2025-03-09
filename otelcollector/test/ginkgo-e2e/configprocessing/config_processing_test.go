@@ -585,7 +585,7 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		}
 		if controllerLabelValue == "ama-metrics" {
 			ext := prometheusConfig.GlobalConfig.ExternalLabels
-			Expect(ext.String()).To(Equal("{extlabel1=\"extlabel1\", extlabel2=\"extlabel2\"}"))
+			Expect(ext.String()).To(Equal("{external_label_1=\"external_label_value\", external_label_123=\"external_label_value\"}"))
 		}
 	},
 	Entry("when called inside ama-metrics replica pod", "kube-system", "rsName", "ama-metrics", "prometheus-collector", true, Label(utils.ConfigProcessingGlobalSettings)),
