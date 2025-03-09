@@ -1204,7 +1204,8 @@ stages:
               kubectl apply -f ./testkube/testkube-config-test-custom-configmap-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-with-error.yaml
-
+              kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map-node/ama-metrics-prometheus-config-node-configmap-errors.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map-win/ama-metrics-prometheus-config-node-windows-configmap-errors.yaml
               exit 0
             workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
             displayName: "Apply TestKube CRs, scrape configs for errorprone custom configmap"
@@ -1259,6 +1260,7 @@ stages:
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-global-ext-labels-error-crs.yaml > ./testkube/testkube-config-test-global-ext-labels-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-global-ext-labels-error-crs-ci-dev-aks-tests.yaml
+              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
               kubectl apply -f ./test-cluster-yamls/configmaps/global-settings/ama-metrics-prometheus-config-configmap-with-global-error.yaml
 
               exit 0

@@ -140,7 +140,7 @@ var _ = DescribeTable("The container logs should not contain errors",
 var _ = DescribeTable("The container logs should contain errors",
 	func(namespace string, controllerLabelName string, controllerLabelValue string) {
 		err := utils.CheckContainerLogsForErrors(K8sClient, namespace, controllerLabelName, controllerLabelValue)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(HaveOccurred())
 	},
 	Entry("when checking the ama-metrics replica pods", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingCommonWithErrorConfigMap)),
 	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingCommonWithErrorConfigMap)),
