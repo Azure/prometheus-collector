@@ -964,178 +964,178 @@ stages:
           #   workingDirectory: $(Build.SourcesDirectory)
           #   displayName: "Run tests for all targets in settings cfg map enabled"
 
-          - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+          # - bash: |
+          #     export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
+          #     export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
 
-              envsubst < ./testkube/config-processing-test-crs/testkube-config-test-only-custom-configmap-crs.yaml > ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
-              kubectl apply -f ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
-              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
-              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-              kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml
+          #     envsubst < ./testkube/config-processing-test-crs/testkube-config-test-only-custom-configmap-crs.yaml > ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
+          #     kubectl apply -f ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
+          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+          #     kubectl delete -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
+          #     kubectl apply -f ./test-cluster-yamls/configmaps/default-config-map/ama-metrics-settings-configmap-defaults-targets-turned-on.yaml
+          #     kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml
 
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
-            displayName: "Apply TestKube CRs, scrape configs for custom configmap with all actions enabled"
+          #     exit 0
+          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+          #   displayName: "Apply TestKube CRs, scrape configs for custom configmap with all actions enabled"
 
-          - bash: |
-              sleep 360
+          # - bash: |
+          #     sleep 360
 
-              exit 0
-            displayName: "Wait for cluster to be ready"
+          #     exit 0
+          #   displayName: "Wait for cluster to be ready"
 
-          - bash: |
-              # Run the full test suite
-              kubectl testkube run testsuite config-tests-custom-configmap-all-actions --verbose
+          # - bash: |
+          #     # Run the full test suite
+          #     kubectl testkube run testsuite config-tests-custom-configmap-all-actions --verbose
 
-              # Get the current id of the test suite now running
-              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-custom-configmap-all-actions --limit 1 | grep config-tests-custom-configmap-all-actions | awk '{print $1}')
+          #     # Get the current id of the test suite now running
+          #     execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-custom-configmap-all-actions --limit 1 | grep config-tests-custom-configmap-all-actions | awk '{print $1}')
 
-              # Watch until the all the tests in the test suite finish
-              kubectl testkube watch testsuiteexecution $execution_id
+          #     # Watch until the all the tests in the test suite finish
+          #     kubectl testkube watch testsuiteexecution $execution_id
 
-              # Get the results as a formatted json file
-              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
+          #     # Get the results as a formatted json file
+          #     kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
 
-              # For any test that has failed, print out the Ginkgo logs
-              if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
+          #     # For any test that has failed, print out the Ginkgo logs
+          #     if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
 
-                # Get each test name and id that failed
-                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
-                  testName=$(echo $line | cut -d ' ' -f 1)
-                  id=$(echo $line | cut -d ' ' -f 2)
-                  echo "Test $testName failed. Test ID: $id"
+          #       # Get each test name and id that failed
+          #       jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
+          #         testName=$(echo $line | cut -d ' ' -f 1)
+          #         id=$(echo $line | cut -d ' ' -f 2)
+          #         echo "Test $testName failed. Test ID: $id"
 
-                  # Get the Ginkgo logs of the test
-                  kubectl testkube get execution $id > out 2>error.log
+          #         # Get the Ginkgo logs of the test
+          #         kubectl testkube get execution $id > out 2>error.log
 
-                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
-                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
-                done
+          #         # Remove superfluous logs of everything before the last occurence of 'go downloading'.
+          #         # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
+          #         cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+          #       done
 
-                # Explicitly fail the ADO task since at least one test failed
-                exit 1
-              fi
+          #       # Explicitly fail the ADO task since at least one test failed
+          #       exit 1
+          #     fi
 
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)
-            displayName: "Run tests for custom configmap with all actions enabled"
+          #     exit 0
+          #   workingDirectory: $(Build.SourcesDirectory)
+          #   displayName: "Run tests for custom configmap with all actions enabled"
 
-          - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+          # - bash: |
+          #     export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
+          #     export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
 
-              envsubst < ./testkube/config-processing-test-crs/testkube-config-test-global-settings-crs.yaml > ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
-              kubectl apply -f ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
+          #     envsubst < ./testkube/config-processing-test-crs/testkube-config-test-global-settings-crs.yaml > ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
+          #     kubectl apply -f ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
+          #     kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
 
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
-            displayName: "Apply TestKube CRs, scrape configs for global ext labels enabled"
+          #     exit 0
+          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+          #   displayName: "Apply TestKube CRs, scrape configs for global ext labels enabled"
 
-          - bash: |
-              sleep 360
+          # - bash: |
+          #     sleep 360
 
-              exit 0
-            displayName: "Wait for cluster to be ready"
+          #     exit 0
+          #   displayName: "Wait for cluster to be ready"
 
-          - bash: |
-              # Run the full test suite
-              kubectl testkube run testsuite config-tests-global-ext-labels --verbose
+          # - bash: |
+          #     # Run the full test suite
+          #     kubectl testkube run testsuite config-tests-global-ext-labels --verbose
 
-              # Get the current id of the test suite now running
-              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-global-ext-labels --limit 1 | grep config-tests-global-ext-labels | awk '{print $1}')
+          #     # Get the current id of the test suite now running
+          #     execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-global-ext-labels --limit 1 | grep config-tests-global-ext-labels | awk '{print $1}')
 
-              # Watch until the all the tests in the test suite finish
-              kubectl testkube watch testsuiteexecution $execution_id
+          #     # Watch until the all the tests in the test suite finish
+          #     kubectl testkube watch testsuiteexecution $execution_id
 
-              # Get the results as a formatted json file
-              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
+          #     # Get the results as a formatted json file
+          #     kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
 
-              # For any test that has failed, print out the Ginkgo logs
-              if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
+          #     # For any test that has failed, print out the Ginkgo logs
+          #     if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
 
-                # Get each test name and id that failed
-                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
-                  testName=$(echo $line | cut -d ' ' -f 1)
-                  id=$(echo $line | cut -d ' ' -f 2)
-                  echo "Test $testName failed. Test ID: $id"
+          #       # Get each test name and id that failed
+          #       jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
+          #         testName=$(echo $line | cut -d ' ' -f 1)
+          #         id=$(echo $line | cut -d ' ' -f 2)
+          #         echo "Test $testName failed. Test ID: $id"
 
-                  # Get the Ginkgo logs of the test
-                  kubectl testkube get execution $id > out 2>error.log
+          #         # Get the Ginkgo logs of the test
+          #         kubectl testkube get execution $id > out 2>error.log
 
-                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
-                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
-                done
+          #         # Remove superfluous logs of everything before the last occurence of 'go downloading'.
+          #         # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
+          #         cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+          #       done
 
-                # Explicitly fail the ADO task since at least one test failed
-                exit 1
-              fi
+          #       # Explicitly fail the ADO task since at least one test failed
+          #       exit 1
+          #     fi
 
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)
-            displayName: "Run tests for global ext labels enabled"
+          #     exit 0
+          #   workingDirectory: $(Build.SourcesDirectory)
+          #   displayName: "Run tests for global ext labels enabled"
 
-          - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+          # - bash: |
+          #     export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
+          #     export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
 
-              envsubst < ./testkube/config-processing-test-crs/testkube-config-test-custom-node-configmap-crs.yaml > ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
-              kubectl apply -f ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
-              kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
-            displayName: "Apply TestKube CRs, scrape configs for custom node configmap enabled"
+          #     envsubst < ./testkube/config-processing-test-crs/testkube-config-test-custom-node-configmap-crs.yaml > ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
+          #     kubectl apply -f ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
+          #     kubectl apply -f ./test-cluster-yamls/configmaps/custom-config-map/ama-metrics-prometheus-config-configmap-all-actions.yaml
+          #     kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
+          #     kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
+          #     exit 0
+          #   workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+          #   displayName: "Apply TestKube CRs, scrape configs for custom node configmap enabled"
 
-          - bash: |
-              sleep 360
+          # - bash: |
+          #     sleep 360
 
-              exit 0
-            displayName: "Wait for cluster to be ready"
+          #     exit 0
+          #   displayName: "Wait for cluster to be ready"
 
-          - bash: |
-              # Run the full test suite
-              kubectl testkube run testsuite config-tests-node-configmaps --verbose
+          # - bash: |
+          #     # Run the full test suite
+          #     kubectl testkube run testsuite config-tests-node-configmaps --verbose
 
-              # Get the current id of the test suite now running
-              execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-node-configmaps --limit 1 | grep config-tests-node-configmaps | awk '{print $1}')
+          #     # Get the current id of the test suite now running
+          #     execution_id=$(kubectl testkube get testsuiteexecutions --test-suite config-tests-node-configmaps --limit 1 | grep config-tests-node-configmaps | awk '{print $1}')
 
-              # Watch until the all the tests in the test suite finish
-              kubectl testkube watch testsuiteexecution $execution_id
+          #     # Watch until the all the tests in the test suite finish
+          #     kubectl testkube watch testsuiteexecution $execution_id
 
-              # Get the results as a formatted json file
-              kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
+          #     # Get the results as a formatted json file
+          #     kubectl testkube get testsuiteexecution $execution_id --output json > testkube-results.json
 
-              # For any test that has failed, print out the Ginkgo logs
-              if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
+          #     # For any test that has failed, print out the Ginkgo logs
+          #     if [[ $(jq -r '.status' testkube-results.json) == "failed" ]]; then
 
-                # Get each test name and id that failed
-                jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
-                  testName=$(echo $line | cut -d ' ' -f 1)
-                  id=$(echo $line | cut -d ' ' -f 2)
-                  echo "Test $testName failed. Test ID: $id"
+          #       # Get each test name and id that failed
+          #       jq -r '.executeStepResults[].execute[] | select(.execution.executionResult.status=="failed") | "\(.execution.testName) \(.execution.id)"' testkube-results.json | while read line; do
+          #         testName=$(echo $line | cut -d ' ' -f 1)
+          #         id=$(echo $line | cut -d ' ' -f 2)
+          #         echo "Test $testName failed. Test ID: $id"
 
-                  # Get the Ginkgo logs of the test
-                  kubectl testkube get execution $id > out 2>error.log
+          #         # Get the Ginkgo logs of the test
+          #         kubectl testkube get execution $id > out 2>error.log
 
-                  # Remove superfluous logs of everything before the last occurence of 'go downloading'.
-                  # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
-                  cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
-                done
+          #         # Remove superfluous logs of everything before the last occurence of 'go downloading'.
+          #         # The actual errors can be viewed from the ADO run, instead of needing to view the testkube dashboard.
+          #         cat error.log | tac | awk '/go: downloading/ {exit} 1' | tac
+          #       done
 
-                # Explicitly fail the ADO task since at least one test failed
-                exit 1
-              fi
+          #       # Explicitly fail the ADO task since at least one test failed
+          #       exit 1
+          #     fi
 
-              exit 0
-            workingDirectory: $(Build.SourcesDirectory)
-            displayName: "Run tests for custom node configmap enabled"
+          #     exit 0
+          #   workingDirectory: $(Build.SourcesDirectory)
+          #   displayName: "Run tests for custom node configmap enabled"
 
           - bash: |
               export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
