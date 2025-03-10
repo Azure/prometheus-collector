@@ -1,6 +1,3 @@
-trigger:
-  enabled: false
-name: $(Date:yyyyMMdd).$(Rev:r)
 variables:
 - name: ACRRegistry
   value: containerinsights.azurecr.io
