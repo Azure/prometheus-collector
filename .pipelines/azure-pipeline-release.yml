@@ -716,7 +716,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -971,7 +977,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -1226,7 +1238,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -1481,7 +1499,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -1736,7 +1760,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -1991,7 +2021,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
@@ -2246,7 +2282,13 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        buildType: current
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
         container: host
