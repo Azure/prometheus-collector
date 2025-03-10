@@ -224,7 +224,6 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
         buildType: specific
         project: $(resources.pipeline._Azureprometheus-collector.projectID)
         definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
@@ -308,8 +307,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/ServiceGroupRoot/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -436,8 +435,8 @@ stages:
     - task: Bash@3
       inputs:
         targetType: inline
-        script: "cd $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/arc-chart/\nCHART_TAG=$(jq '.\"image.name\"' metadata.json | tr -d '\"' | cut -d':' -f2)\necho $CHART_TAG\nset +x\necho \"##vso[task.setvariable variable=ChartTag;]$CHART_TAG\"\nset -x\nLINUX_TAG=$CHART_TAG\necho $LINUX_TAG\nset +x\necho \"##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG\"\nset -x\nWINDOWS_TAG=$LINUX_TAG-win\necho $WINDOWS_TAG\nset +x\necho \"##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG\"\nset -x\ncd $(System.DefaultWorkingDirectory)\nfor i in 1 2 3 4 5 6 7 8 9 10         \n    do            \n    sleep 30\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$LINUX_TAG\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$WINDOWS_TAG\n    echo $(MCRRegistry)$(ProdMCRChartRepository):$CHART_TAG\n    output1=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRAgentRepository)/tags/list)\n    output2=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRArcChartRepository)/tags/list)\n     if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)\n     then\n             echo \"Images and chart are published to mcr\"\n             exit 0\n      fi\ndone          \necho \"Images and chart are not published to mcr within 5 minutes\"\nexit 1"
-        workingDirectory: $(System.DefaultWorkingDirectory)
+        script: "CHART_TAG=$(jq '.\"image.name\"' metadata.json | tr -d '\"' | cut -d':' -f2)\necho $CHART_TAG\nset +x\necho \"##vso[task.setvariable variable=ChartTag;]$CHART_TAG\"\nset -x\nLINUX_TAG=$CHART_TAG\necho $LINUX_TAG\nset +x\necho \"##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG\"\nset -x\nWINDOWS_TAG=$LINUX_TAG-win\necho $WINDOWS_TAG\nset +x\necho \"##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG\"\nset -x\ncd $(Pipeline.Workspace)/ev2Artifact\nfor i in 1 2 3 4 5 6 7 8 9 10         \n    do            \n    sleep 30\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$LINUX_TAG\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$WINDOWS_TAG\n    echo $(MCRRegistry)$(ProdMCRChartRepository):$CHART_TAG\n    output1=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRAgentRepository)/tags/list)\n    output2=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRArcChartRepository)/tags/list)\n     if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)\n     then\n             echo \"Images and chart are published to mcr\"\n             exit 0\n      fi\ndone          \necho \"Images and chart are not published to mcr within 5 minutes\"\nexit 1"
+        workingDirectory: $(Pipeline.Workspace)/ev2Artifact/drop/arc-chart
       target:
         container: host
       displayName: Check images and ARC chart are pushed to MCR
@@ -485,10 +484,10 @@ stages:
         namespace: default
         command: upgrade
         chartType: FilePath
-        chartPath: $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/azure-monitor-metrics-addon/
+        chartPath: $(Pipeline.Workspace)/ev2Artifact/drop/azure-monitor-metrics-addon/
         releaseName: ama-metrics
         waitForExecution: false
-        arguments: --values $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/azure-monitor-metrics-addon/values.yaml --dependency-update
+        arguments: --values $(Pipeline.Workspace)/ev2Artifact/drop/azure-monitor-metrics-addon/values.yaml --dependency-update
       target:
         container: host
       displayName: Deploy to ci-prod-aks-mac-weu
@@ -720,7 +719,6 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
         buildType: current
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
@@ -798,8 +796,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/arc-extension/release/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/arc-extension/release/ServiceGroupRoot/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -976,7 +974,6 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
         buildType: current
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
@@ -1232,7 +1229,6 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
         buildType: current
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
@@ -1488,7 +1484,6 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
         buildType: current
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
@@ -1744,7 +1739,6 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
         buildType: current
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
@@ -2000,7 +1994,6 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
         buildType: current
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
@@ -2256,7 +2249,6 @@ stages:
     - task: DownloadPipelineArtifact@2
       displayName: ⏬ Pipeline Artifact Download
       inputs:
-        artifactName: myArtifact
         buildType: current
         targetPath: $(Pipeline.Workspace)/ev2Artifact
       target:
