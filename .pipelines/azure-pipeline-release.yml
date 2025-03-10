@@ -239,7 +239,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -260,7 +260,7 @@ stages:
       target:
         container: host
       env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         IsProduction: True
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
@@ -273,7 +273,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -734,7 +734,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -995,7 +995,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -1029,7 +1029,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -1060,8 +1060,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1256,7 +1256,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -1277,7 +1277,7 @@ stages:
       target:
         container: host
       env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         IsProduction: True
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
@@ -1290,7 +1290,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -1321,8 +1321,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1517,7 +1517,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -1538,7 +1538,7 @@ stages:
       target:
         container: host
       env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         IsProduction: True
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
@@ -1551,7 +1551,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -1582,8 +1582,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1778,7 +1778,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -1799,7 +1799,7 @@ stages:
       target:
         container: host
       env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         IsProduction: True
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
@@ -1812,7 +1812,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -1843,8 +1843,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -2039,7 +2039,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -2060,7 +2060,7 @@ stages:
       target:
         container: host
       env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         IsProduction: True
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
@@ -2073,7 +2073,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -2104,8 +2104,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -2300,7 +2300,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -2321,7 +2321,7 @@ stages:
       target:
         container: host
       env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         IsProduction: True
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
@@ -2334,7 +2334,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
+        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -2365,8 +2365,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
