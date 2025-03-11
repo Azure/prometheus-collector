@@ -205,66 +205,66 @@ stages:
         workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
         displayName: "Build: build and push reference app golang linux image to dev ACR"
 
-  #     - bash: |
-  #         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-  #         DIGEST=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-  #         SIZE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-  #         cat <<EOF >>$(Build.ArtifactStagingDirectory)/refappgolanglinux/payload.json
-  #         {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-  #         EOF
-  #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
-  #       displayName: "Build: Set values in payload.json for signing"
-  #       condition: succeeded()
+      - bash: |
+          MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+          DIGEST=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+          SIZE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+          cat <<EOF >>$(Build.ArtifactStagingDirectory)/refappgolanglinux/payload.json
+          {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+          EOF
+        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+        displayName: "Build: Set values in payload.json for signing"
+        condition: succeeded()
 
-  #     - task: EsrpCodeSigning@5
-  #       displayName: "ESRP CodeSigning for Prometheus Golang Linux Reference App"
-  #       inputs:
-  #         ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-  #         AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-  #         AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
-  #         AuthAKVName: 'ESRPPrometheusKVProd' 
-  #         AuthCertName: 'ESRPContainerImageSignCert'
-  #         AuthSignCertName: ESRPReqPrometheusProdCert      
-  #         FolderPath: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
-  #         Pattern: "*.json"
-  #         signConfigType: inlineSignParams
-  #         inlineOperation: |
-  #           [
-  #             {
-  #                 "keyCode": "CP-469451",
-  #                 "operationSetCode": "NotaryCoseSign",
-  #                 "parameters": [
-  #                   {
-  #                     "parameterName": "CoseFlags",
-  #                     "parameterValue": "chainunprotected"
-  #                   }
-  #                 ],
-  #                 "toolName": "sign",
-  #                 "toolVersion": "1.0"
-  #             }
-  #           ]
-  #         SessionTimeout: '60'
-  #         MaxConcurrency: '50'
-  #         MaxRetryAttempts: '5'
-  #         PendingAnalysisWaitTimeoutMinutes: '5' 
+      - task: EsrpCodeSigning@5
+        displayName: "ESRP CodeSigning for Prometheus Golang Linux Reference App"
+        inputs:
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName: ESRPReqPrometheusProdCert      
+          FolderPath: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
+          Pattern: "*.json"
+          signConfigType: inlineSignParams
+          inlineOperation: |
+            [
+              {
+                  "keyCode": "CP-469451",
+                  "operationSetCode": "NotaryCoseSign",
+                  "parameters": [
+                    {
+                      "parameterName": "CoseFlags",
+                      "parameterValue": "chainunprotected"
+                    }
+                  ],
+                  "toolName": "sign",
+                  "toolVersion": "1.0"
+              }
+            ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
-  #     - bash: |
-  #         set -euxo pipefail
-  #         curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
-  #         mkdir -p oras-install/
-  #         tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
-  #         sudo mv oras-install/oras /usr/local/bin/
-  #         rm -rf oras_1.0.0_*.tar.gz oras-install/
-  #         oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
-  #           --artifact-type 'application/vnd.cncf.notary.signature' \
-  #           ./payload.json:application/cose \
-  #           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-  #         oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
-  #           --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-  #           --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
-  #       workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
-  #       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/refappgolanglinux/"
-  #       condition: succeeded()          
+      - bash: |
+          set -euxo pipefail
+          curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+          mkdir -p oras-install/
+          tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+          sudo mv oras-install/oras /usr/local/bin/
+          rm -rf oras_1.0.0_*.tar.gz oras-install/
+          oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.cncf.notary.signature' \
+            ./payload.json:application/cose \
+            -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+          oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
+            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
+        workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
+        displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/refappgolanglinux/"
+        condition: succeeded()          
 
   # - job: Linux_Python_Reference_App
   #   displayName: "Build: linux python reference app image"
