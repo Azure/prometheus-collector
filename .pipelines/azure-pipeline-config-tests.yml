@@ -544,7 +544,7 @@ stages:
     timeoutInMinutes: 360
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    condition: (succeeded())
+    condition: succeeded()
     variables:
       skipComponentGovernanceDetection: true
     strategy:
