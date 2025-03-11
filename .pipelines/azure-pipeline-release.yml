@@ -254,17 +254,17 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
+    # - task: 1ESGPTRunTask@3.0.314
+    #   displayName: Validate Source Build (1ES PT)
+    #   continueOnError: false
+    #   target:
+    #     container: host
+    #   env:
+    #     BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+    #     IsProduction: True
+    #   inputs:
+    #     repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
+    #     path: validate_source_build.py
     - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
       displayName: "\U0001F6E1 Guardian: CodeSign Validation"
       target:
