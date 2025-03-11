@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - ngotina/linux-3.0-upgrade
 pr:
   autoCancel: true
   branches:
