@@ -1,0 +1,47 @@
+prometheus:
+  prometheusSpec:
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: kubernetes.io/arch
+              operator: In
+              values:
+              - amd64
+    containers:
+    - env:
+      - name: INGESTION_URL
+        value: https://monitoring-metrics-amw-eus2euap-n06q.eastus2euap-1.metrics.canary.ingest.monitor.azure.com/dataCollectionRules/dcr-c1eee14b5a5d42cb892f4f8da52f68d3/streams/Microsoft-PrometheusMetrics/api/v1/write?api-version=2023-04-24
+      - name: LISTENING_PORT
+        value: "8081"
+      - name: IDENTITY_TYPE
+        value: userAssigned
+      - name: AZURE_CLIENT_ID
+        value: $AZURE_CLIENT_ID
+      - name: TRACE_LOGGING
+        value: "true"
+      - name: CLUSTER
+        value: monitoring-metrics-prod-aks-eus2euap
+      image: mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-$RemoteWriteTag
+      imagePullPolicy: Always
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: rw-port
+        initialDelaySeconds: 30
+        timeoutSeconds: 30
+      name: prom-remotewrite
+      ports:
+      - containerPort: 8081
+        name: rw-port
+      readinessProbe:
+        httpGet:
+          path: /ready
+          port: rw-port
+        initialDelaySeconds: 30
+        timeoutSeconds: 30
+    externalLabels:
+      cluster: monitoring-metrics-prod-aks-eus2euap
+    remoteWrite:
+    - url: http://localhost:8081/api/v1/write
