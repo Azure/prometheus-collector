@@ -158,7 +158,7 @@ RUN chmod 775 $tmpdir/*.sh;
 RUN sync;
 RUN $tmpdir/setup.sh ${TARGETARCH}
 # If wanting to run without distroless, uncomment this line and comment everything after
-ENTRYPOINT ["./opt/main"]
+# ENTRYPOINT ["./opt/main"]
 
 FROM mcr.microsoft.com/azurelinux/distroless/base:3.0
 # Below is for ContainerInsightsPrometheusCollector-Prod AppInsights Resource
