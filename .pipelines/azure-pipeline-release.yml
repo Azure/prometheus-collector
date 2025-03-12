@@ -291,6 +291,50 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: check_csv_results.ps1
+    - bash: |
+        LINUX_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $LINUX_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG"
+        set -x
+        
+        WINDOWS_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-win
+        echo $WINDOWS_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG"
+        set -x
+        
+        CHART_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+        echo $CHART_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ChartTag;]$CHART_TAG"
+        set -x
+        
+        TARGETALLOCATOR_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-targetallocator
+        echo $TARGETALLOCATOR_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=TargetAllocatorTag;]$TARGETALLOCATOR_TAG"
+        set -x
+        
+        CONFIGREADER_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-cfg
+        echo $CONFIGREADER_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=ConfigReaderTag;]$CONFIGREADER_TAG"
+        set -x
+        
+        LINUX_CCP_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)-ccp
+        echo $LINUX_CCP_TAG
+        
+        set +x
+        echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
+        set -x
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/drop/arc-chart/'
+      displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
       inputs:
