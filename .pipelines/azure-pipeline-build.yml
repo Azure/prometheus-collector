@@ -551,7 +551,7 @@ stages:
       name: Azure-Pipelines-Windows-CI-Test-EO
     variables:
       skipComponentGovernanceDetection: true
-    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+    #condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         submodules: true
@@ -569,7 +569,7 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
     variables:
       skipComponentGovernanceDetection: true
-    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+    #condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         submodules: true
@@ -866,7 +866,7 @@ stages:
 
       - task: PublishBuildArtifacts@1
         displayName: "Ev2: Publish image artifacts"
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
@@ -1053,7 +1053,7 @@ stages:
 
       - task: PublishBuildArtifacts@1
         displayName: "Ev2: Publish image artifacts"
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
@@ -1879,7 +1879,7 @@ stages:
         condition: succeeded()
 
       - task: PublishBuildArtifacts@1
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         displayName: "Ev2: publish image artifacts"
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
@@ -1939,7 +1939,7 @@ stages:
 
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: publish helm chart artifacts"
-      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+      #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
