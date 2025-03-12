@@ -3,7 +3,7 @@ trigger:
     include:
     - rashmi/config-tests
 
-# YAML file in the new-feature-branch
+# schedule to run everyday
 schedules:
 - cron: '0 6 * * *'
   displayName: Daily midnight build and config processing test run
