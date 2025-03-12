@@ -305,7 +305,7 @@ stages:
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
         ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/ServiceGroupRoot/RolloutSpecs.json
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -800,7 +800,7 @@ stages:
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
         ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/arc-extension/release/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/arc-extension/release/ServiceGroupRoot/RolloutSpecs.json
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/arc-extension/release/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1061,7 +1061,7 @@ stages:
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
         ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1322,7 +1322,7 @@ stages:
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
         ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1583,7 +1583,7 @@ stages:
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
         ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1844,7 +1844,7 @@ stages:
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
         ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -2105,7 +2105,7 @@ stages:
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
         ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -2366,7 +2366,7 @@ stages:
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
         ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs.json
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
