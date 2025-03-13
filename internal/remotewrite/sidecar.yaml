@@ -45,3 +45,8 @@ prometheus:
       cluster: monitoring-metrics-prod-aks-eus2euap
     remoteWrite:
     - url: http://localhost:8081/api/v1/write
+    - url: https://remotewritemonitor-eus2-lzt0.eastus2-1.metrics.ingest.monitor.azure.com/dataCollectionRules/dcr-c61eca33833b44fa8eddd257a0baa02a/streams/Microsoft-PrometheusMetrics/api/v1/write?api-version=2023-04-24
+      azureAd:
+        cloud: AzurePublic
+        managedIdentity:
+          clientId: $USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID

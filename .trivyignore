@@ -19,4 +19,9 @@ CVE-2024-45341 # stdlib
 # targetallocator
 # config-reader
 CVE-2025-22866 # stdlib
+CVE-2025-22870 # golang.org/x/net
+#otelcollector
+CVE-2025-22870 # golang.org/x/net
+#promconfigvalidator
+CVE-2025-22870 # golang.org/x/net
 
