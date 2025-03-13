@@ -48,6 +48,9 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 }
 
 func configurePodAnnotationSettings(metricsConfigBySection map[string]map[string]string) error {
+	if metricsConfigBySection == nil {
+		return fmt.Errorf("configmap section not mounted, using defaults")
+	}
 	podannotationNamespaceRegex, err := populatePodAnnotationNamespaceFromConfigMap(metricsConfigBySection)
 	if err != nil {
 		return err

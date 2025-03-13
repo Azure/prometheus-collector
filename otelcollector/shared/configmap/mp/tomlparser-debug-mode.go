@@ -19,7 +19,7 @@ const (
 // and modifies a YAML configuration file based on debug mode settings.
 func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]string) error {
 	if metricsConfigBySection == nil {
-		return fmt.Errorf("parsed config map data is nil")
+		return fmt.Errorf("configmap section not mounted, using defaults")
 	}
 
 	enabled := populateSettingValuesFromConfigMap(metricsConfigBySection)
