@@ -24,7 +24,7 @@ variables:
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.23.7'
+  GOLANG_VERSION: '1.22.11'
   TESTKUBE_GOLANG_VERSION: '1.23.2'
   FLUENT_BIT_VERSION: '3.2.2'
 
