@@ -1,4 +1,15 @@
 # Azure Monitor Metrics for AKS clusters
+## Release <TBD>
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<TBD>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<TBD>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<TBD>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<TBD>-cfg`
+* AKS and Arc Container Images:
+  * 
+
+* Pipeline/Docs/Templates Updates:
+   * ci/cd: update remote write sidecar to write to eastus2 workspace (https://github.com/Azure/prometheus-collector/pull/1090) 
+   
 ## Release 02-21-2025
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c-win`
