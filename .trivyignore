@@ -7,8 +7,6 @@ CVE-2024-24790 # stdlib
 CVE-2024-45338 # golang.org/x/net
 CVE-2024-34156 # stdlib
 # MEDIUM
-# main
-CVE-2025-22870
 # kube-state-metrics
 CVE-2023-45288 # stdlib
 CVE-2024-24789 # stdlib
