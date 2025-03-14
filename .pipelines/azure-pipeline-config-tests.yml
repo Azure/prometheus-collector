@@ -476,11 +476,11 @@ stages:
       # IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
       # IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
       # IMAGE_TAG: '6.15.0-main-02-21-2025-4acb2b4c'
-      IMAGE_TAG: '6.15.0-kaveesh-configmap-v2-02-25-2025-299ffa9a'
-      IMAGE_TAG_WINDOWS: '6.15.0-kaveesh-configmap-v2-02-25-2025-299ffa9a-win'
+      IMAGE_TAG: '6.15.0-kaveesh-configmap-v2-03-14-2025-e34d0759'
+      IMAGE_TAG_WINDOWS: '6.15.0-kaveesh-configmap-v2-03-14-2025-e34d0759-win'
       # HELM_FULL_IMAGE_NAME: 'containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector:6.15.0'
-      IMAGE_TAG_TARGET_ALLOCATOR: '6.15.0-kaveesh-configmap-v2-02-25-2025-299ffa9a-targetallocator'
-      IMAGE_TAG_CONFIG_READER: '6.15.0-kaveesh-configmap-v2-02-25-2025-299ffa9a-cfg'
+      IMAGE_TAG_TARGET_ALLOCATOR: '6.15.0-kaveesh-configmap-v2-03-14-2025-e34d0759-targetallocator'
+      IMAGE_TAG_CONFIG_READER: '6.15.0-kaveesh-configmap-v2-03-14-2025-e34d0759-cfg'
       skipComponentGovernanceDetection: true
     strategy:
       runOnce:
