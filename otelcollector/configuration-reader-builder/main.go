@@ -254,6 +254,18 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func createTLSCertificates()
+{
+	// Create CA cert, server cert and server key
+
+}
+
+func createTLSSecret()
+{
+// Code to create secret from the ca cert, server cert and server key
+
+}
+
 func main() {
 	_, err := os.Create("/opt/inotifyoutput.txt")
 	if err != nil {
