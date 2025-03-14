@@ -28,8 +28,8 @@ variables:
   GOLANG_VERSION: '1.22.7'
 
 stages:
-# - stage: Build
-#   jobs:
+- stage: Build
+  jobs:
 #   - job: Image_Tags_and_Ev2_Artifacts
 #     displayName: "Build: Set image tags and publish Ev2 artifacts"
 #     pool:
