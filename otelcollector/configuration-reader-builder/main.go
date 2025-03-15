@@ -1,6 +1,10 @@
 package main
 
 import (
+	"context"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 	"io/fs"
 	"log"
@@ -15,7 +19,27 @@ import (
 
 	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 	yaml "gopkg.in/yaml.v2"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+)
+
+const (
+	// DefaultValidityYears is the duration for regular certificates, SSL etc. 2 years.
+	ServerValidityYears = 2
+
+	// CaValidityYears is the duration for CA certificates. 30 years.
+	CaValidityYears = 30
+
+	// ClockSkewDuration is the allowed clock skews.
+	ClockSkewDuration = time.Minute * 10
+
+	// KeyRetryCount is the number of retries for certificate generation.
+	KeyRetryCount    = 3
+	KeyRetryInterval = time.Microsecond * 5
+	KeyRetryTimeout  = time.Second * 10
 )
 
 type Config struct {
@@ -157,11 +181,14 @@ func updateTAConfigFile(configFilePath string) {
 			PodMonitorSelector:     &metav1.LabelSelector{},
 		},
 		HTTPS: allocatorconfig.HTTPSServerConfig{
-			Enabled:         true,
-			ListenAddr:      ":8443",
-			CAFilePath:      "/etc/prometheus/certs/client-ca.crt",
-			TLSCertFilePath: "/etc/prometheus/certs/server.crt",
-			TLSKeyFilePath:  "/etc/prometheus/certs/server.key",
+			Enabled:    true,
+			ListenAddr: ":8443",
+			// CAFilePath:      "/etc/prometheus/certs/client-ca.crt",
+			// TLSCertFilePath: "/etc/prometheus/certs/server.crt",
+			// TLSKeyFilePath:  "/etc/prometheus/certs/server.key",
+			// CAFilePath:      "/etc/prometheus/certs/client-ca.crt",
+			TLSCertFilePath: "/etc/operator-targets/certs/server.crt",
+			TLSKeyFilePath:  "/etc/operator-targets/certs/server.key",
 		},
 	}
 
@@ -254,16 +281,144 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func createTLSCertificates()
-{
-	// Create CA cert, server cert and server key
+func createCACertificate() (*x509.Certificate, string, *rsa.PrivateKey, string, error) {
+	now := time.Now()
+	notBefore := now.Add(ClockSkewDuration)
+	notAfter := now.AddDate(CaValidityYears, 0, 0)
 
+	caCSR := &x509.Certificate{
+		Subject:               pkix.Name{CommonName: "ca"},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	caCert, caCertPem, caKey, caKeyPem, err := certOperator.CreateSelfSignedCertificateKeyPair(caCSR)
+
+	if err != nil {
+		fmt.Println("CreateSelfSignedCertificateKeyPair for ca failed: %s", err)
+		return nil, "", nil, "", err
+	}
+
+	return caCert, caCertPem, caKey, caKeyPem, nil
 }
 
-func createTLSSecret()
-{
-// Code to create secret from the ca cert, server cert and server key
+func createServerCertificate(caCert *x509.Certificate,
+	caKey *rsa.PrivateKey) (string, string, *retry.Error) {
+	dnsNames := []string{
+		"localhost",
+		"ama-metrics-operator-targets.kube-system.svc.cluster.local",
+	}
+	now := time.Now()
+	notBefore := now.Add(ClockSkewDuration)
+	notAfter := now.AddDate(CaValidityYears, 0, 0)
 
+	csr := &x509.Certificate{
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		BasicConstraintsValid: true,
+		Subject:               pkix.Name{CommonName: "apiserver"},
+		DNSNames:              dnsNames,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+
+	serverCertPem, serverKeyPem, rerr := certOperator.CreateCertificateKeyPair(csr, caCert, caKey)
+	if rerr != nil {
+		fmt.Println("CreateCertificateKeyPair for api server failed: %s", rerr)
+		return "", "", rerr
+	}
+	fmt.Println("Server certificate is generated successfully")
+	return serverCertPem, serverKeyPem, nil
+}
+
+func writeServerCertAndKeyToFile(serverCertPem string, serverKeyPem string) error {
+	if err := os.WriteFile("/etc/operator-targets/certs/server.crt", []byte(serverCertPem), fs.FileMode(0644)); err != nil {
+		fmt.Println("Error writing server cert to file: %v\n", err)
+		return err
+	}
+	if err := os.WriteFile("/etc/operator-targets/certs/server.key", []byte(serverKeyPem), fs.FileMode(0644)); err != nil {
+		fmt.Println("Error writing server key to file: %v\n", err)
+		return err
+	}
+	return nil
+}
+
+func generateSecretWithCACert(caCertPem string) error {
+	// Code to create secret from the ca cert, server cert and server key
+	secretName := "ama-metrics-operator-targets-tls-secret"
+	namespace := "kube-system"
+
+	// Create the secret data
+	secretData := map[string][]byte{
+		"ca.crt": []byte(caCertPem),
+	}
+
+	// Create the secret object
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Data: secretData,
+		Type: corev1.SecretTypeOpaque,
+	}
+
+	// Create the Kubernetes client
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		logFatalError(fmt.Sprintf("Unable to create in-cluster config: %v", err))
+		return err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		logFatalError(fmt.Sprintf("Unable to create Kubernetes client: %v", err))
+		return err
+	}
+
+	// Create or update the secret in the kube-system namespace
+	_, err = clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+			if err != nil {
+				logFatalError(fmt.Sprintf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err))
+				return err
+			}
+		} else {
+			logFatalError(fmt.Sprintf("Unable to create secret %s in namespace %s: %v", secretName, namespace, err))
+			return err
+		}
+	}
+
+	log.Printf("Secret %s created/updated successfully in namespace %s", secretName, namespace)
+	return nil
+}
+
+func createTLSCertificatesAndSecret() (error, error, error, error) {
+	// Create CA cert, server cert and server key
+	caCert, caCertPem, caKey, _, caErr := createCACertificate()
+	if caErr != nil {
+		fmt.Println("Error creating CA certificate: %v\n", caErr)
+	}
+	serverCertPem, serverKeyPem, serErr := createServerCertificate(caCert, caKey)
+	if serErr != nil {
+		fmt.Println("Error creating server certificate: %v\n", serErr)
+	}
+
+	writeErr := writeServerCertAndKeyToFile(serverCertPem, serverKeyPem)
+	if writeErr != nil {
+		fmt.Println("Error writing server cert and key to file: %v\n", writeErr)
+	}
+
+	gErr := generateSecretWithCACert(caCertPem)
+	if gErr != nil {
+		fmt.Println("Error generating secret with CA cert: %v\n", gErr)
+	}
+	return caErr, serErr, writeErr, gErr
 }
 
 func main() {
@@ -308,5 +463,28 @@ func main() {
 	http.HandleFunc("/health-ta", taHealthHandler)
 
 	http.ListenAndServe(":8081", nil)
+
+	caErr, serErr, writeErr, gErr := createTLSCertificatesAndSecret()
+
+	if caErr != nil || serErr != nil || writeErr != nil || gErr != nil {
+		fmt.Println("Error creating TLS certificates and secret, retrying in 5 seconds")
+		time.Sleep(5 * time.Second)
+		caErr1, serErr1, writeErr1, gErr1 := createTLSCertificatesAndSecret()
+		if caErr1 != nil || serErr1 != nil || writeErr1 != nil || gErr1 != nil {
+			fmt.Println("Error creating TLS certificates and secret, during retry, not trying again")
+			if caErr1 != nil {
+				fmt.Println("Error during ca cert creation: %v\n", caErr1)
+			}
+			if serErr1 != nil {
+				fmt.Println("Error during server cert creation: %v\n", serErr1)
+			}
+			if writeErr1 != nil {
+				fmt.Println("Error writing server cert and key to file: %v\n", writeErr1)
+			}
+			if gErr1 != nil {
+				fmt.Println("Error generating secret with CA cert: %v\n", gErr1)
+			}
+		}
+	}
 
 }
