@@ -8,6 +8,9 @@ replace github.com/prometheus-collector/shared => ../shared
 
 replace github.com/prometheus-collector/shared/configmap/mp => ../shared/configmap/mp
 
+replace github.com/prometheus-collector/certoperator => ./certoperator
+
+
 require (
 	github.com/open-telemetry/opentelemetry-operator v0.117.0
 	github.com/prometheus-collector/shared/configmap/mp v0.0.0-00010101000000-000000000000
