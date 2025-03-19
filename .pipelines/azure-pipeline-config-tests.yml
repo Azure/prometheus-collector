@@ -24,8 +24,9 @@ variables:
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
+  GOLANG_VERSION: '1.23.7'
   TESTKUBE_GOLANG_VERSION: '1.23.2'
-  GOLANG_VERSION: '1.22.7'
+  FLUENT_BIT_VERSION: '3.2.2'
 
 stages:
 - stage: Build
@@ -216,7 +217,7 @@ stages:
           docker buildx create --name dockerbuilder
           docker buildx use dockerbuilder
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --platform=linux/amd64,linux/arm64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
+          docker buildx build . --platform=linux/amd64 --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:targetallocator
           docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
           MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
           DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
