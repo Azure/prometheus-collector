@@ -15,12 +15,47 @@ steps:
     azureSubscription: ${{ parameters.azureSubscription }}
     scriptType: ps
     scriptLocation: inlineScript
-    inlineScript: |+
+    inlineScript: |
+      $p = ${{ parameters.deployParameters }} 
+      "Input Parameters: $p"
+
+      $p2 = $p -replace "\\""", """"
+
+      "Conforming input parameters: $p2"
+      $j = $p2 | convertfrom-json
+
+      $rg = (az group show -g ${env:RESOURCE-GROUP} | convertfrom-json)
+      write-host "Resource group '$($rg.name)' location '$($rg.location)'."
+      $nestedObject = [PSCustomObject]@{
+          value = "$($rg.location)"
+      }
+
+      # Does the property exist?
+      if (($j.azureMonitorWorkspaceLocation -eq $null) -or ($j.azureMonitorWorkspaceLocation.value -eq $null)) {
+        write-host "'azureMonitorWorkspaceLocation.value' not provided..."
+
+        write-host "Using location '$($rg.location)' from '$($rg.name)"
+        write-host "Adding new 'azureMonitorWorkspaceLocation' property..."
+
+        $j | Add-Member -name "azureMonitorWorkspaceLocation" -MemberType NoteProperty -value $nestedObject -Force
+        $j | fl
+      } elseif ([string]::IsNullOrEmpty($j.azureMonitorWorkspaceLocation.value)) {
+        write-host "'azureMonitorWorkspaceLocation.value' is provided, but it's empty."
+        write-host "Updating to '$($rg.location)'."
+        $j.azureMonitorWorkspaceLocation.value = $rg.location
+      } else {
+         write-host "'azureMonitorWorkspaceLocation.value' provided: $($j.azureMonitorWorkspaceLocation.value)"
+      }
+
+      $parmFinal = ($j | convertto-json -Compress)
+      $parmFinal = $parmFinal -replace """", "\"""
+      "Final parameters: $parmFinal"
+
       az --version
       az account show
       az deployment group create `
           --resource-group ${{ parameters.resourceGroup }} `
           --name ClusterDeployment `
           --template-file ".\otelcollector\test\ci-cd\ci-cd-cluster.json" `
-          --parameters ${{ parameters.deployParameters }}  
+          --parameters $parmFinal 
           
