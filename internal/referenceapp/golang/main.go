@@ -306,6 +306,35 @@ func recordPerfMetrics() {
 	}()
 }
 
+func recordOtelPerfMetrics() {
+	go func() {
+		i := 0
+		for {
+			for _, gauge := range otelGaugeList {
+				for location, tempInfoByCity := range locationsToMinTempPerf {
+					for city, info := range tempInfoByCity {
+						metricAttributes := attribute.NewSet(
+							attribute.String("city", city),
+							attribute.String("location", location),
+						)
+
+						tempRange := info.tempRange
+						minTemp := info.minTemp
+						temperature := float64(rand.Intn(tempRange) + minTemp)
+						gauge.Record(context.Background(), int64(temperature), metric.WithAttributeSet(metricAttributes))
+					}
+				}
+
+				i++
+				// Wait the scrape interval
+				for j := 0; j < otelScrapeIntervalSec; j++ {
+					time.Sleep(1 * time.Second)
+				}
+			}
+		}
+	}()
+}
+
 func recordTestMetrics() {
 	go func() {
 		i := 0
@@ -389,6 +418,10 @@ var (
 	otlpFloatExponentialHistogramTest metric.Float64Histogram
 	otlpIntExplicitHistogramTest      metric.Int64Histogram
 	otlpFloatExplicitHistogramTest    metric.Float64Histogram
+
+	otelMetricCount       = 1000
+	otelGaugeList         = []metric.Int64Gauge{}
+	otelScrapeIntervalSec = 15
 
 	temporalityLabel string
 
@@ -565,6 +598,11 @@ func main() {
 	// certFile := "/etc/prometheus/certs/client-cert.pem"
 	// keyFile := "/etc/prometheus/certs/client-key.pem"
 
+	if os.Getenv("RUN_OTEL_PERF_TEST") == "true" {
+		otelMetricCount, _ = strconv.Atoi(os.Getenv("OTEL_METRIC_COUNT"))
+		otelScrapeIntervalSec, _ = strconv.Atoi(os.Getenv("OTEL_INTERVAL"))
+	}
+
 	setupOTLP()
 
 	if os.Getenv("RUN_PERF_TEST") == "true" {
@@ -576,8 +614,10 @@ func main() {
 		}
 		createGauges()
 		recordPerfMetrics()
+	} else if os.Getenv("RUN_OTEL_PERF_TEST") == "true" {
+		recordOtelPerfMetrics()
 	} else {
-		//recordMetrics()
+		recordMetrics()
 		recordTestMetrics()
 	}
 
@@ -789,4 +829,15 @@ func setupOTLP() {
 		metric.WithDescription("Rainfall explicit histogram"),
 		metric.WithExplicitBucketBoundaries(0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45),
 	)
+
+	otelGaugeList = make([]metric.Int64Gauge, 0, otelMetricCount)
+	for i := 0; i < otelMetricCount; i++ {
+		name := fmt.Sprintf("myotelapp_temperature_%d", i)
+		gauge, _ := otlpMeter.Int64Gauge(
+			name,
+			metric.WithUnit("1"),
+			metric.WithDescription("Temperature gauge"),
+		)
+		otelGaugeList = append(otelGaugeList, gauge)
+	}
 }
