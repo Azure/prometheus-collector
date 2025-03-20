@@ -308,29 +308,31 @@ func recordPerfMetrics() {
 
 func recordOtelPerfMetrics() {
 	go func() {
+		fmt.Printf("Starting to record %d OTLP metrics\n", otelMetricCount)
 		i := 0
 		for {
-			for _, gauge := range otelGaugeList {
-				for location, tempInfoByCity := range locationsToMinTempPerf {
-					for city, info := range tempInfoByCity {
-						metricAttributes := attribute.NewSet(
-							attribute.String("city", city),
-							attribute.String("location", location),
-						)
+			for location, tempInfoByCity := range locationsToMinTempPerf {
+				for city, info := range tempInfoByCity {
+					metricAttributes := attribute.NewSet(
+						attribute.String("city", city),
+						attribute.String("location", location),
+					)
 
+					fmt.Printf("City: %s, Location: %s\n", city, location)
+
+					for _, gauge := range otelGaugeList {
 						tempRange := info.tempRange
 						minTemp := info.minTemp
 						temperature := float64(rand.Intn(tempRange) + minTemp)
 						gauge.Record(context.Background(), int64(temperature), metric.WithAttributeSet(metricAttributes))
 					}
 				}
-
-				i++
-				// Wait the scrape interval
-				for j := 0; j < otelScrapeIntervalSec; j++ {
-					time.Sleep(1 * time.Second)
-				}
 			}
+			i++
+			// Wait the scrape interval
+			time.Sleep(time.Duration(otelScrapeIntervalSec) * time.Second)
+
+			fmt.Printf("i: %d\n", i)
 		}
 	}()
 }
