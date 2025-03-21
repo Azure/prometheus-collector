@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Azure/webhook-tls-manager/toolkit/certificates/certgenerator"
+	"github.com/prometheus-collector/certgenerator"
 	"k8s.io/legacy-cloud-providers/azure/retry"
 )
 
@@ -16,9 +16,23 @@ type certOperatorImp struct {
 	certGenerator certgenerator.CertGenerator
 }
 
-func NewCertOperator(certGenerator certgenerator.CertGenerator) CertOperator {
-	return &certOperatorImp{certGenerator: certGenerator}
-}
+// type CertOperator interface {
+// 	certificateToPem(ctx context.Context, cert *x509.Certificate) ([]byte, error)
+// 	privateKeyToPem(ctx context.Context, privateKey *rsa.PrivateKey) ([]byte, error)
+// 	pemToCertificate(ctx context.Context, raw string) (*x509.Certificate, error)
+// 	pemToPrivateKey(ctx context.Context, raw string) (*rsa.PrivateKey, error)
+// 	CreateCertificateKeyPair(ctx context.Context,
+// 		csr *x509.Certificate,
+// 		caCert *x509.Certificate,
+// 		caKey *rsa.PrivateKey) (string, string, *retry.Error)
+// 	CreateSelfSignedCertificateKeyPair(
+// 		ctx context.Context,
+// 		csr *x509.Certificate) (*x509.Certificate, string, *rsa.PrivateKey, string, *retry.Error)
+// }
+
+// func NewCertOperator(certGenerator certgenerator.CertGenerator) CertOperator {
+// 	return &certOperatorImp{certGenerator: certGenerator}
+// }
 
 var encodeFunc = pem.Encode
 

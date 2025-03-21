@@ -1,14 +1,13 @@
 package certcreator
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"math/big"
 
-	"github.com/Azure/webhook-tls-manager/toolkit/log"
 	"k8s.io/legacy-cloud-providers/azure/retry"
 )
 
@@ -31,26 +30,26 @@ func (c *CertCreatorImp) ParseCertificate(derBytes []byte) (*x509.Certificate, e
 	return x509.ParseCertificate(derBytes)
 }
 
-func (c *CertCreatorImp) CreateCertificateWithPublicKey(ctx context.Context, csr *x509.Certificate, publicKey *rsa.PublicKey, caCert *x509.Certificate, caKey *rsa.PrivateKey) (*x509.Certificate, *retry.Error) {
+func (c *CertCreatorImp) CreateCertificateWithPublicKey(csr *x509.Certificate, publicKey *rsa.PublicKey, caCert *x509.Certificate, caKey *rsa.PrivateKey) (*x509.Certificate, *retry.Error) {
 	sn, err := c.GenerateSN()
 	if err != nil {
-		log.MustGetLogger(ctx).Errorf("generate serial number failed: %s", err)
+		fmt.Println("generate serial number failed: %s", err)
 		return nil, retry.NewError(false, err)
 	}
 	csr.SerialNumber = sn
 
 	certDerBytes, err := c.CreateCertificate(rand.Reader, csr, caCert, publicKey, caKey)
 	if err != nil {
-		log.MustGetLogger(ctx).Errorf("createCertificateFunc failed: %s", err)
+		fmt.Println("createCertificateFunc failed: %s", err)
 		return nil, retry.NewError(false, err)
 	}
 
 	certificate, err := c.ParseCertificate(certDerBytes)
 	if err != nil {
-		log.MustGetLogger(ctx).Errorf("parseCertificateFunc failed: %s", err)
+		fmt.Println("parseCertificateFunc failed: %s", err)
 		return nil, retry.NewError(false, err)
 	}
 
-	log.MustGetLogger(ctx).Info("certificate created successfully")
+	fmt.Println("certificate created successfully")
 	return certificate, nil
 }

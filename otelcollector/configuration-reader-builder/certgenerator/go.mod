@@ -1,4 +1,4 @@
-module github.com/prometheus-collector/certoperator
+module github.com/prometheus-collector/certgenerator
 
 go 1.23.7
 
@@ -7,7 +7,7 @@ require (
 	k8s.io/legacy-cloud-providers v0.29.0
 )
 
-replace github.com/prometheus-collector/certgenerator => ../certgenerator
+replace github.com/prometheus-collector/certcreator => ../certcreator
 
 require (
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
