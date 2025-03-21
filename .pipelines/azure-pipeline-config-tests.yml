@@ -12,7 +12,6 @@ schedules:
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
-  ARC_HELM_CHART_NAME: 'ama-metrics-arc'
   ACR_REGISTRY: 'containerinsightsprod.azurecr.io'
   ACR_REPOSITORY: '/public/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   ACR_REPOSITORY_HELM: '/public/azuremonitor/containerinsights/cidev'
@@ -20,8 +19,8 @@ variables:
   MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
-  KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.12.0'
-  NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.8.2'
+  #KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.12.0'
+  #NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.8.2'
   # IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   # IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   BUILD_WINDOWS: true
@@ -117,12 +116,7 @@ stages:
           export AKS_REGION="centralus"
           export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-tests/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-tests"
           envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
-        displayName: 'Ev2: package artifacts.tar.gz for prod release'
-
-      - bash: |
-          cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
-          tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
-        displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
+        displayName: 'Ev2: package artifacts.tar.gz for test release'
 
       - task: CredScan@3
         displayName: "SDL : Run credscan"
