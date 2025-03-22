@@ -9,30 +9,27 @@ import (
 	"fmt"
 
 	"github.com/prometheus-collector/certgenerator"
-	"k8s.io/legacy-cloud-providers/azure/retry"
 )
 
 type certOperatorImp struct {
 	certGenerator certgenerator.CertGenerator
 }
 
-// type CertOperator interface {
-// 	certificateToPem(ctx context.Context, cert *x509.Certificate) ([]byte, error)
-// 	privateKeyToPem(ctx context.Context, privateKey *rsa.PrivateKey) ([]byte, error)
-// 	pemToCertificate(ctx context.Context, raw string) (*x509.Certificate, error)
-// 	pemToPrivateKey(ctx context.Context, raw string) (*rsa.PrivateKey, error)
-// 	CreateCertificateKeyPair(ctx context.Context,
-// 		csr *x509.Certificate,
-// 		caCert *x509.Certificate,
-// 		caKey *rsa.PrivateKey) (string, string, *retry.Error)
-// 	CreateSelfSignedCertificateKeyPair(
-// 		ctx context.Context,
-// 		csr *x509.Certificate) (*x509.Certificate, string, *rsa.PrivateKey, string, *retry.Error)
-// }
+type CertOperator interface {
+	certificateToPem(cert *x509.Certificate) ([]byte, error)
+	privateKeyToPem(privateKey *rsa.PrivateKey) ([]byte, error)
+	pemToCertificate(raw string) (*x509.Certificate, error)
+	pemToPrivateKey(raw string) (*rsa.PrivateKey, error)
+	CreateCertificateKeyPair(csr *x509.Certificate,
+		caCert *x509.Certificate,
+		caKey *rsa.PrivateKey) (string, string, error)
+	CreateSelfSignedCertificateKeyPair(
+		csr *x509.Certificate) (*x509.Certificate, string, *rsa.PrivateKey, string, error)
+}
 
-// func NewCertOperator(certGenerator certgenerator.CertGenerator) CertOperator {
-// 	return &certOperatorImp{certGenerator: certGenerator}
-// }
+func NewCertOperator(certGenerator certgenerator.CertGenerator) CertOperator {
+	return &certOperatorImp{certGenerator: certGenerator}
+}
 
 var encodeFunc = pem.Encode
 
@@ -46,7 +43,7 @@ func (o *certOperatorImp) pemToPrivateKey(raw string) (*rsa.PrivateKey, error) {
 }
 
 func (o *certOperatorImp) CreateSelfSignedCertificateKeyPair(
-	csr *x509.Certificate) (*x509.Certificate, string, *rsa.PrivateKey, string, *retry.Error) {
+	csr *x509.Certificate) (*x509.Certificate, string, *rsa.PrivateKey, string, error) {
 
 	cert, key, rerr := o.certGenerator.CreateSelfSignedCertificateKeyPair(csr)
 	if rerr != nil {
@@ -56,7 +53,8 @@ func (o *certOperatorImp) CreateSelfSignedCertificateKeyPair(
 	certPem, keyPem, err := o.getCertKeyAsPem(cert, key)
 	if err != nil {
 		fmt.Println("certKeyToPem failed: %s", err)
-		return nil, "", nil, "", retry.NewError(false, err)
+		// return nil, "", nil, "", retry.NewError(false, err)
+		return nil, "", nil, "", err
 	}
 	fmt.Println("self signed certificate '%v' is generated successfully", csr.Subject.CommonName)
 	return cert, certPem, key, keyPem, nil
@@ -105,7 +103,7 @@ func (o *certOperatorImp) privateKeyToPem(privateKey *rsa.PrivateKey) ([]byte, e
 func (o *certOperatorImp) CreateCertificateKeyPair(
 	csr *x509.Certificate,
 	caCert *x509.Certificate,
-	caKey *rsa.PrivateKey) (string, string, *retry.Error) {
+	caKey *rsa.PrivateKey) (string, string, error) {
 	cert, key, rerr := o.certGenerator.CreateCertificateKeyPair(csr, caCert, caKey)
 	if rerr != nil {
 		fmt.Println("CreateCertificateKeyPair failed: %v", rerr)
@@ -114,7 +112,8 @@ func (o *certOperatorImp) CreateCertificateKeyPair(
 	certPem, keyPem, err := o.getCertKeyAsPem(cert, key)
 	if err != nil {
 		fmt.Println("getCertKeyAsPem failed: %s", err)
-		return "", "", retry.NewError(false, err)
+		// return "", "", retry.NewError(false, err)
+		return "", "", err
 	}
 	fmt.Println("certificate %v is generated successfully", csr.Subject.CommonName)
 	return certPem, keyPem, nil
@@ -124,11 +123,12 @@ func (o *certOperatorImp) CreateCertificate(
 	csr *x509.Certificate,
 	keyPem string,
 	caCert *x509.Certificate,
-	caKey *rsa.PrivateKey) (string, *retry.Error) {
+	caKey *rsa.PrivateKey) (string, error) {
 	key, err := o.pemToPrivateKey(keyPem)
 	if err != nil {
 		fmt.Println("PemToPrivateKey failed: %s", err)
-		return "", retry.NewError(false, err)
+		// return "", retry.NewError(false, err)
+		return "", err
 	}
 
 	cert, rerr := o.certGenerator.CreateCertificate(csr, key, caCert, caKey)
@@ -140,7 +140,8 @@ func (o *certOperatorImp) CreateCertificate(
 	certBytes, err := o.certificateToPem(cert)
 	if err != nil {
 		fmt.Println("CertificateToPem failed: %s", err)
-		return "", retry.NewError(false, err)
+		// return "", retry.NewError(false, err)
+		return "", err
 	}
 	fmt.Println("certificate %v is generated successfully", csr.Subject.CommonName)
 	return string(certBytes), nil

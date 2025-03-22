@@ -18,6 +18,8 @@ import (
 	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
 
 	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
+	certCreator "github.com/prometheus-collector/certcreator"
+	certGenerator "github.com/prometheus-collector/certgenerator"
 	certOperator "github.com/prometheus-collector/certoperator"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -282,7 +284,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func createCACertificate() (*x509.Certificate, string, *rsa.PrivateKey, string, error) {
+func createCACertificate(co certOperator.CertOperator) (*x509.Certificate, string, *rsa.PrivateKey, string, error) {
 	now := time.Now()
 	notBefore := now.Add(ClockSkewDuration)
 	notAfter := now.AddDate(CaValidityYears, 0, 0)
@@ -296,7 +298,7 @@ func createCACertificate() (*x509.Certificate, string, *rsa.PrivateKey, string, 
 		IsCA:                  true,
 	}
 
-	caCert, caCertPem, caKey, caKeyPem, err := certOperator.CreateSelfSignedCertificateKeyPair(caCSR)
+	caCert, caCertPem, caKey, caKeyPem, err := co.CreateSelfSignedCertificateKeyPair(caCSR)
 
 	if err != nil {
 		fmt.Println("CreateSelfSignedCertificateKeyPair for ca failed: %s", err)
@@ -306,8 +308,8 @@ func createCACertificate() (*x509.Certificate, string, *rsa.PrivateKey, string, 
 	return caCert, caCertPem, caKey, caKeyPem, nil
 }
 
-func createServerCertificate(caCert *x509.Certificate,
-	caKey *rsa.PrivateKey) (string, string, *retry.Error) {
+func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certificate,
+	caKey *rsa.PrivateKey) (string, string, error) {
 	dnsNames := []string{
 		"localhost",
 		"ama-metrics-operator-targets.kube-system.svc.cluster.local",
@@ -326,7 +328,7 @@ func createServerCertificate(caCert *x509.Certificate,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}
 
-	serverCertPem, serverKeyPem, rerr := certOperator.CreateCertificateKeyPair(csr, caCert, caKey)
+	serverCertPem, serverKeyPem, rerr := co.CreateCertificateKeyPair(csr, caCert, caKey)
 	if rerr != nil {
 		fmt.Println("CreateCertificateKeyPair for api server failed: %s", rerr)
 		return "", "", rerr
@@ -400,12 +402,15 @@ func generateSecretWithCACert(caCertPem string) error {
 }
 
 func createTLSCertificatesAndSecret() (error, error, error, error) {
+	certCreator := certCreator.NewCertCreator()
+	certGenerator := certGenerator.NewCertGenerator(certCreator)
+	certOperator := certOperator.NewCertOperator(certGenerator)
 	// Create CA cert, server cert and server key
-	caCert, caCertPem, caKey, _, caErr := createCACertificate()
+	caCert, caCertPem, caKey, _, caErr := createCACertificate(certOperator)
 	if caErr != nil {
 		fmt.Println("Error creating CA certificate: %v\n", caErr)
 	}
-	serverCertPem, serverKeyPem, serErr := createServerCertificate(caCert, caKey)
+	serverCertPem, serverKeyPem, serErr := createServerCertificate(certOperator, caCert, caKey)
 	if serErr != nil {
 		fmt.Println("Error creating server certificate: %v\n", serErr)
 	}

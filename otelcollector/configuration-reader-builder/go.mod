@@ -8,8 +8,14 @@ replace github.com/prometheus-collector/shared/configmap/mp => ../shared/configm
 
 replace github.com/prometheus-collector/certoperator => ./certoperator
 
+replace github.com/prometheus-collector/certgenerator => ./certgenerator
+
+replace github.com/prometheus-collector/certcreator => ./certcreator
+
 require (
 	github.com/open-telemetry/opentelemetry-operator v0.117.0
+	github.com/prometheus-collector/certcreator v0.0.0-00010101000000-000000000000
+	github.com/prometheus-collector/certgenerator v0.0.0-00010101000000-000000000000
 	github.com/prometheus-collector/certoperator v0.0.0-00010101000000-000000000000
 	github.com/prometheus-collector/shared/configmap/mp v0.0.0-00010101000000-000000000000
 	gopkg.in/yaml.v2 v2.4.0
@@ -28,14 +34,6 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5 v5.7.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v4 v4.3.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
-	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
-	github.com/Azure/go-autorest/autorest v0.11.29 // indirect
-	github.com/Azure/go-autorest/autorest/adal v0.9.23 // indirect
-	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
-	github.com/Azure/go-autorest/autorest/mocks v0.4.2 // indirect
-	github.com/Azure/go-autorest/logger v0.2.1 // indirect
-	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
-	github.com/Azure/webhook-tls-manager v1.0.9 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2 // indirect
 	github.com/Code-Hex/go-generics-cache v1.5.1 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
@@ -71,7 +69,6 @@ require (
 	github.com/go-resty/resty/v2 v2.13.1 // indirect
 	github.com/go-zookeeper/zk v1.0.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
@@ -135,7 +132,6 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/prometheus/prometheus v0.55.1 // indirect
 	github.com/scaleway/scaleway-sdk-go v1.0.0-beta.30 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/vultr/govultr/v2 v2.17.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
@@ -171,7 +167,6 @@ require (
 	k8s.io/apiextensions-apiserver v0.31.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240903163716-9e1beecbcb38 // indirect
-	k8s.io/legacy-cloud-providers v0.29.0 // indirect
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6 // indirect
 	sigs.k8s.io/controller-runtime v0.19.3 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
