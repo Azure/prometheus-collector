@@ -1223,13 +1223,13 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
     #condition: and((not(succeeded('Deploy_AKS_Chart'))), eq(variables['System.StageAttempt'], 1)))
     variables:
-      HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
-      HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-      IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-      IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
-      HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
-      IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
-      IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+      HELM_CHART_NAME: $[ dependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+      HELM_SEMVER: $[ dependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ dependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG_WINDOWS: $[ dependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      HELM_FULL_IMAGE_NAME: $[ dependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+      IMAGE_TAG_TARGET_ALLOCATOR: $[ dependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
+      IMAGE_TAG_CONFIG_READER: $[ dependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
       # IMAGE_TAG: '6.15.0-main-02-21-2025-4acb2b4c'
       # IMAGE_TAG: '6.15.0-kaveesh-configmap-v2-03-17-2025-477c354a'
       # IMAGE_TAG_WINDOWS: '6.15.0-kaveesh-configmap-v2-03-17-2025-477c354a-win'
