@@ -285,6 +285,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func createCACertificate(co certOperator.CertOperator) (*x509.Certificate, string, *rsa.PrivateKey, string, error) {
+	log.Println("Creating CA certificate")
 	now := time.Now()
 	notBefore := now.Add(ClockSkewDuration)
 	notAfter := now.AddDate(CaValidityYears, 0, 0)
@@ -301,15 +302,16 @@ func createCACertificate(co certOperator.CertOperator) (*x509.Certificate, strin
 	caCert, caCertPem, caKey, caKeyPem, err := co.CreateSelfSignedCertificateKeyPair(caCSR)
 
 	if err != nil {
-		fmt.Println("CreateSelfSignedCertificateKeyPair for ca failed: %s", err)
+		log.Println("CreateSelfSignedCertificateKeyPair for ca failed: %s", err)
 		return nil, "", nil, "", err
 	}
-
+	log.Println("CA certificate is generated successfully")
 	return caCert, caCertPem, caKey, caKeyPem, nil
 }
 
 func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certificate,
 	caKey *rsa.PrivateKey) (string, string, error) {
+	log.Println("Creating server certificate")
 	dnsNames := []string{
 		"localhost",
 		"ama-metrics-operator-targets.kube-system.svc.cluster.local",
@@ -330,26 +332,29 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 
 	serverCertPem, serverKeyPem, rerr := co.CreateCertificateKeyPair(csr, caCert, caKey)
 	if rerr != nil {
-		fmt.Println("CreateCertificateKeyPair for api server failed: %s", rerr)
+		log.Println("CreateCertificateKeyPair for api server failed: %s", rerr)
 		return "", "", rerr
 	}
-	fmt.Println("Server certificate is generated successfully")
+	log.Println("Server certificate is generated successfully")
 	return serverCertPem, serverKeyPem, nil
 }
 
 func writeServerCertAndKeyToFile(serverCertPem string, serverKeyPem string) error {
+	log.Println("Writing server cert and key to file")
 	if err := os.WriteFile("/etc/operator-targets/certs/server.crt", []byte(serverCertPem), fs.FileMode(0644)); err != nil {
-		fmt.Println("Error writing server cert to file: %v\n", err)
+		log.Println("Error writing server cert to file: %v\n", err)
 		return err
 	}
 	if err := os.WriteFile("/etc/operator-targets/certs/server.key", []byte(serverKeyPem), fs.FileMode(0644)); err != nil {
-		fmt.Println("Error writing server key to file: %v\n", err)
+		log.Println("Error writing server key to file: %v\n", err)
 		return err
 	}
+	log.Println("Server cert and key written to file successfully")
 	return nil
 }
 
 func generateSecretWithCACert(caCertPem string) error {
+	log.Println("Generating secret with CA cert")
 	// Code to create secret from the ca cert, server cert and server key
 	secretName := "ama-metrics-operator-targets-tls-secret"
 	namespace := "kube-system"
@@ -402,28 +407,30 @@ func generateSecretWithCACert(caCertPem string) error {
 }
 
 func createTLSCertificatesAndSecret() (error, error, error, error) {
+	log.Println("Generating TLS certificates and secret")
 	certCreator := certCreator.NewCertCreator()
 	certGenerator := certGenerator.NewCertGenerator(certCreator)
 	certOperator := certOperator.NewCertOperator(certGenerator)
 	// Create CA cert, server cert and server key
 	caCert, caCertPem, caKey, _, caErr := createCACertificate(certOperator)
 	if caErr != nil {
-		fmt.Println("Error creating CA certificate: %v\n", caErr)
+		log.Println("Error creating CA certificate: %v\n", caErr)
 	}
 	serverCertPem, serverKeyPem, serErr := createServerCertificate(certOperator, caCert, caKey)
 	if serErr != nil {
-		fmt.Println("Error creating server certificate: %v\n", serErr)
+		log.Println("Error creating server certificate: %v\n", serErr)
 	}
 
 	writeErr := writeServerCertAndKeyToFile(serverCertPem, serverKeyPem)
 	if writeErr != nil {
-		fmt.Println("Error writing server cert and key to file: %v\n", writeErr)
+		log.Println("Error writing server cert and key to file: %v\n", writeErr)
 	}
 
 	gErr := generateSecretWithCACert(caCertPem)
 	if gErr != nil {
-		fmt.Println("Error generating secret with CA cert: %v\n", gErr)
+		log.Println("Error generating secret with CA cert: %v\n", gErr)
 	}
+	log.Println("TLS certificates and secret generated successfully")
 	return caErr, serErr, writeErr, gErr
 }
 
@@ -431,7 +438,7 @@ func main() {
 	_, err := os.Create("/opt/inotifyoutput.txt")
 	if err != nil {
 		log.Fatalf("Error creating output file: %v\n", err)
-		fmt.Println("Error creating inotify output file:", err)
+		log.Println("Error creating inotify output file:", err)
 	}
 
 	// Define the command to start inotify for config reader's liveness probe
@@ -473,22 +480,22 @@ func main() {
 	caErr, serErr, writeErr, gErr := createTLSCertificatesAndSecret()
 
 	if caErr != nil || serErr != nil || writeErr != nil || gErr != nil {
-		fmt.Println("Error creating TLS certificates and secret, retrying in 5 seconds")
+		log.Println("Error creating TLS certificates and secret, retrying in 5 seconds")
 		time.Sleep(5 * time.Second)
 		caErr1, serErr1, writeErr1, gErr1 := createTLSCertificatesAndSecret()
 		if caErr1 != nil || serErr1 != nil || writeErr1 != nil || gErr1 != nil {
-			fmt.Println("Error creating TLS certificates and secret, during retry, not trying again")
+			log.Println("Error creating TLS certificates and secret, during retry, not trying again")
 			if caErr1 != nil {
-				fmt.Println("Error during ca cert creation: %v\n", caErr1)
+				log.Println("Error during ca cert creation: %v\n", caErr1)
 			}
 			if serErr1 != nil {
-				fmt.Println("Error during server cert creation: %v\n", serErr1)
+				log.Println("Error during server cert creation: %v\n", serErr1)
 			}
 			if writeErr1 != nil {
-				fmt.Println("Error writing server cert and key to file: %v\n", writeErr1)
+				log.Println("Error writing server cert and key to file: %v\n", writeErr1)
 			}
 			if gErr1 != nil {
-				fmt.Println("Error generating secret with CA cert: %v\n", gErr1)
+				log.Println("Error generating secret with CA cert: %v\n", gErr1)
 			}
 		}
 	}
