@@ -75,9 +75,6 @@ spec:
   - stopOnFailure: false
     execute:
     - test: configprocessingcommon
-  # - stopOnFailure: false
-  #   execute:
-  #   - delay: 2m0s
   - stopOnFailure: false
     execute:
     - test: alltargetsdisabled

@@ -14,8 +14,7 @@ import (
 
 /*
  * For each of the pods that we deploy in our chart, ensure each container within that pod has status 'Running'.
- * The replicaset, daemonset, and kube-state-metrics are always deployed.
- * The operator-targets and node-exporter workloads are checked if the 'operator' or 'arc-extension' label is included in the test run.
+ * The replicaset, daemonset, and operator-targets are always deployed.
  * The label and values are provided to get a list of pods only with that label.
  */
 var _ = DescribeTable("The containers should be running",
@@ -26,42 +25,11 @@ var _ = DescribeTable("The containers should be running",
 	Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingCommon)),
 	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingCommon)),
 	Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.ConfigProcessingCommon)),
-	// Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
 	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.ConfigProcessingCommon)),
-	// Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
 )
-
-// /*
-//  * For each of the DS pods that we deploy in our chart, ensure that all nodes have been used to schedule these pods.
-//  * The label and values are provided to get a list of pods only with that label.
-//  * The osLabel is provided to check on all DS pods based on the OS.
-//  */
-// var _ = DescribeTable("The pods should be scheduled in all nodes",
-// 	func(namespace string, controllerLabelName string, controllerLabelValue string, osLabel string) {
-// 		err := utils.CheckIfAllPodsScheduleOnNodes(K8sClient, namespace, controllerLabelName, controllerLabelValue, osLabel)
-// 		Expect(err).NotTo(HaveOccurred())
-// 	},
-// 	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", "linux"),
-// 	Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", "windows", Label(utils.WindowsLabel)),
-// )
-
-// /*
-//  * For each of the DS pods that we deploy in our chart, ensure that all specific nodes like ARM64,FIPS have been used to schedule these pods.
-//  * The label and values are provided to get a list of pods only with that label.
-//  */
-// var _ = DescribeTable("The pods should be scheduled in all Fips and ARM64 nodes",
-// 	func(namespace string, controllerLabelName string, controllerLabelValue string, nodeLabelKey string, nodeLabelValue string) {
-// 		err := utils.CheckIfAllPodsScheduleOnSpecificNodesLabels(K8sClient, namespace, controllerLabelName, controllerLabelValue, nodeLabelKey, nodeLabelValue)
-// 		Expect(err).NotTo(HaveOccurred())
-// 	},
-// 	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", "kubernetes.azure.com/fips_enabled", "true", Label(utils.FIPSLabel)),
-// 	Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", "kubernetes.azure.com/fips_enabled", "true", Label(utils.WindowsLabel), Label(utils.FIPSLabel)),
-// 	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", "kubernetes.io/arch", "arm64", Label(utils.ARM64Label)),
-// )
 
 /*
  * For each of the pods that have the prometheus-collector container, check otelcollector running.
- * The linux replicaset and daemonset will should have the same processes running.
  */
 var _ = DescribeTable("otelcollector is running",
 	func(namespace, labelName, labelValue, containerName string, processes []string) {
@@ -70,24 +38,12 @@ var _ = DescribeTable("otelcollector is running",
 	},
 	Entry("when checking the ama-metrics replica pod(s)", "kube-system", "rsName", "ama-metrics", "prometheus-collector",
 		[]string{
-			// "fluent-bit",
 			"otelcollector",
-			// "mdsd -a -A -e",
-			// "MetricsExtension",
-			// "inotifywait /etc/config/settings",
-			// "inotifywait /etc/mdsd.d",
-			// "crond",
 		}, Label(utils.ConfigProcessingCommon),
 	),
 	Entry("when checking the ama-metrics-node daemonset pods", "kube-system", "dsName", "ama-metrics-node", "prometheus-collector",
 		[]string{
-			// "fluent-bit",
 			"otelcollector",
-			// "mdsd -a -A -e",
-			// "MetricsExtension",
-			// "inotifywait /etc/config/settings",
-			// "inotifywait /etc/mdsd.d",
-			// "crond",
 		},
 		Label(utils.ConfigProcessingCommon),
 	),
@@ -103,13 +59,7 @@ var _ = DescribeTable("otelcollector is running",
 	},
 	Entry("when checking the ama-metrics-win-node daemonset pods", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector",
 		[]string{
-			// "fluent-bit",
 			"otelcollector",
-			// "MetricsExtension",
-			// "MonAgentLauncher",
-			// "MonAgentHost",
-			// "MonAgentManager",
-			// "MonAgentCore",
 		},
 		Label(utils.ConfigProcessingCommon),
 		FlakeAttempts(3),
@@ -117,9 +67,8 @@ var _ = DescribeTable("otelcollector is running",
 )
 
 /*
-- For each of the pods that we deploy in our chart, ensure each container within that pod doesn't have errors in the logs.
-- The replicaset, daemonset, and kube-state-metrics are always deployed.
-- The operator-targets and node-exporter workloads are checked if the 'operator' or 'arc-extension' label is included in the test run.
+- For each of the pods that we deploy in our chart, ensure each container within that pod doesn't have errors in the logs except for configmap section not mounted.
+- The replicaset, daemonset, and operator-targets are always deployed.
 - The label and values are provided to get a list of pods only with that label.
 */
 var _ = DescribeTable("The container logs should not contain errors",
@@ -132,11 +81,14 @@ var _ = DescribeTable("The container logs should not contain errors",
 	Entry("when checking the ama-metrics replica pods", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingCommonNoConfigMaps)),
 	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingCommonNoConfigMaps)),
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.ConfigProcessingCommonNoConfigMaps)),
-	// Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
 	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.ConfigProcessingCommonNoConfigMaps)),
-	// Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
 )
 
+/*
+- For each of the pods that we deploy in our chart, ensure each container within that pod has errors in the logs.
+- The replicaset, daemonset, and operator-targets are always deployed.
+- The label and values are provided to get a list of pods only with that label.
+*/
 var _ = DescribeTable("The container logs should contain errors",
 	func(namespace string, controllerLabelName string, controllerLabelValue string) {
 		err := utils.CheckContainerLogsForErrors(K8sClient, namespace, controllerLabelName, controllerLabelValue)
@@ -147,9 +99,7 @@ var _ = DescribeTable("The container logs should contain errors",
 	Entry("when checking the ama-metrics replica pods", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingCommonWithErrorConfigMap)),
 	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingCommonWithErrorConfigMap)),
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.ConfigProcessingCommonWithErrorConfigMap)),
-	// Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
 	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.ConfigProcessingCommonWithErrorConfigMap)),
-	// Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
 )
 
 /*
@@ -168,15 +118,14 @@ var _ = DescribeTable("The container logs should not contain errors",
 	Entry("when checking the ama-metrics replica pods", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingCommonWithConfigMap)),
 	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingCommonWithConfigMap)),
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", Label(utils.ConfigProcessingCommonWithConfigMap)),
-	// Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
 	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.ConfigProcessingCommonWithConfigMap)),
-	// Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
 )
 
 /*
- * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
+ * Following tests make sure the Prometheus config as seen by otelcollector can be unmarshaled and only contain jobs we expect
  */
-// No configmaps
+
+// Test case for No configmaps
 var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
 		time.Sleep(120 * time.Second)
@@ -184,16 +133,6 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(apiResponse.Data).NotTo(BeNil())
-
-		// // var prometheusConfigResult v1.ConfigResult
-		// var prometheusConfigResult map[string]interface{}
-		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
-		// Expect(prometheusConfigResult).NotTo(BeNil())
-		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
-		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
-		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
-		// Expect(err).NotTo(HaveOccurred())
-		// Expect(scrapeConfigs).NotTo(BeNil())
 
 		var prometheusConfigResult v1.ConfigResult
 		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
@@ -230,9 +169,6 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingNoConfigMaps)),
 )
 
-/*
- * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
- */
 // All targets disabled
 var _ = DescribeTable("The Prometheus UI API should return 1 job in config",
 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
@@ -241,16 +177,6 @@ var _ = DescribeTable("The Prometheus UI API should return 1 job in config",
 		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(apiResponse.Data).NotTo(BeNil())
-
-		// // var prometheusConfigResult v1.ConfigResult
-		// var prometheusConfigResult map[string]interface{}
-		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
-		// Expect(prometheusConfigResult).NotTo(BeNil())
-		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
-		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
-		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
-		// Expect(err).NotTo(HaveOccurred())
-		// Expect(scrapeConfigs).NotTo(BeNil())
 
 		var prometheusConfigResult v1.ConfigResult
 		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
@@ -270,9 +196,6 @@ var _ = DescribeTable("The Prometheus UI API should return 1 job in config",
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingAllTargetsDisabled)),
 )
 
-/*
- * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
- */
 // Default settings turned on in settings configmap
 var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
@@ -281,16 +204,6 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(apiResponse.Data).NotTo(BeNil())
-
-		// // var prometheusConfigResult v1.ConfigResult
-		// var prometheusConfigResult map[string]interface{}
-		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
-		// Expect(prometheusConfigResult).NotTo(BeNil())
-		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
-		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
-		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
-		// Expect(err).NotTo(HaveOccurred())
-		// Expect(scrapeConfigs).NotTo(BeNil())
 
 		var prometheusConfigResult v1.ConfigResult
 		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
@@ -327,9 +240,6 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingNoConfigMaps)),
 )
 
-/*
- * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
- */
 // All Rs targets turned on in settings configmap
 var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
@@ -338,16 +248,6 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(apiResponse.Data).NotTo(BeNil())
-
-		// // var prometheusConfigResult v1.ConfigResult
-		// var prometheusConfigResult map[string]interface{}
-		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
-		// Expect(prometheusConfigResult).NotTo(BeNil())
-		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
-		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
-		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
-		// Expect(err).NotTo(HaveOccurred())
-		// Expect(scrapeConfigs).NotTo(BeNil())
 
 		var prometheusConfigResult v1.ConfigResult
 		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
@@ -384,9 +284,6 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingRsTargetsEnabled)),
 )
 
-/*
- * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
- */
 // All ds targets turned on in settings configmap
 var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
@@ -395,16 +292,6 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(apiResponse.Data).NotTo(BeNil())
-
-		// // var prometheusConfigResult v1.ConfigResult
-		// var prometheusConfigResult map[string]interface{}
-		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
-		// Expect(prometheusConfigResult).NotTo(BeNil())
-		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
-		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
-		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
-		// Expect(err).NotTo(HaveOccurred())
-		// Expect(scrapeConfigs).NotTo(BeNil())
 
 		var prometheusConfigResult v1.ConfigResult
 		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
@@ -441,9 +328,6 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 	Entry("when checking the ama-metrics-win-node", "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", false, Label(utils.ConfigProcessingDsTargetsEnabled)),
 )
 
-/*
- * Test that the Prometheus UI /config API endpoint returns a Prometheus config that can be unmarshaled.
- */
 // All Rs and ds targets turned on in settings configmap
 var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 	func(namespace string, controllerLabelName string, controllerLabelValue string, containerName string, isLinux bool) {
@@ -452,16 +336,6 @@ var _ = DescribeTable("The Prometheus UI API should return some jobs in config",
 		err := utils.QueryPromUIFromPod(K8sClient, Cfg, namespace, controllerLabelName, controllerLabelValue, containerName, "/api/v1/status/config", isLinux, &apiResponse)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(apiResponse.Data).NotTo(BeNil())
-
-		// // var prometheusConfigResult v1.ConfigResult
-		// var prometheusConfigResult map[string]interface{}
-		// json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
-		// Expect(prometheusConfigResult).NotTo(BeNil())
-		// //Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
-		// scrapeConfigs := prometheusConfigResult["scrape_configs"]
-		// //prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
-		// Expect(err).NotTo(HaveOccurred())
-		// Expect(scrapeConfigs).NotTo(BeNil())
 
 		var prometheusConfigResult v1.ConfigResult
 		json.Unmarshal([]byte(apiResponse.Data), &prometheusConfigResult)
