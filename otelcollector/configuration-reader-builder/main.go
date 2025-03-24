@@ -472,11 +472,6 @@ func main() {
 		log.Println("No configs found via configmap, not running config reader")
 	}
 
-	http.HandleFunc("/health", healthHandler)
-	http.HandleFunc("/health-ta", taHealthHandler)
-
-	http.ListenAndServe(":8081", nil)
-
 	caErr, serErr, writeErr, gErr := createTLSCertificatesAndSecret()
 
 	if caErr != nil || serErr != nil || writeErr != nil || gErr != nil {
@@ -499,5 +494,10 @@ func main() {
 			}
 		}
 	}
+
+	http.HandleFunc("/health", healthHandler)
+	http.HandleFunc("/health-ta", taHealthHandler)
+
+	http.ListenAndServe(":8081", nil)
 
 }
