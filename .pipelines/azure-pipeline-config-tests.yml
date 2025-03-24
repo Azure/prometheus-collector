@@ -8,7 +8,7 @@ schedules:
   displayName: Daily midnight build and config processing test run
   branches:
     include:
-    - main
+    - rashmi/config-tests
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -19,10 +19,6 @@ variables:
   MCR_REPOSITORY: '/azuremonitor/containerinsights/cidev/prometheus-collector/images'
   MCR_REPOSITORY_HELM: '/azuremonitor/containerinsights/cidev/prometheus-collector'
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
-  #KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.12.0'
-  #NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.8.2'
-  # IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
-  # IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.23.7'
@@ -81,6 +77,7 @@ stages:
 
           echo "##vso[build.updatebuildnumber]$SEMVER"
           echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
+          echo "##vso[task.setvariable variable=LINUX_IMAGE_TAG;isOutput=true]$LINUX_IMAGE_TAG"
           echo "##vso[task.setvariable variable=LINUX_FULL_IMAGE_NAME;isOutput=true]$LINUX_FULL_IMAGE_NAME"
           echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_IMAGE_TAG;isOutput=true]$TARGET_ALLOCATOR_IMAGE_TAG"
           echo "##vso[task.setvariable variable=LINUX_CONFIG_READER_IMAGE_TAG;isOutput=true]$LINUX_CONFIG_READER_IMAGE_TAG"
@@ -298,34 +295,6 @@ stages:
         workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
         displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
         condition: succeeded()
-
-      # - bash: |
-      #     curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-      #     export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
-      #     export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
-      #     for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
-      #       for i in {1..5}; do
-      #         trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image > trivy_output.log 2>&1
-      #         TRIVY_EXIT_CODE=$?
-      #         if [ $TRIVY_EXIT_CODE -eq 0 ]; then
-      #           cat trivy_output.log
-      #           break
-      #         fi
-      #         if grep -q "TOOMANYREQUESTS" trivy_output.log; then
-      #           echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
-      #           sleep 5
-      #         else
-      #           cat trivy_output.log
-      #           exit 1
-      #         fi
-      #       done
-      #       if [ $TRIVY_EXIT_CODE -ne 0 ]; then
-      #         echo "Error: Trivy scan failed after 5 retries."
-      #         exit 1
-      #       fi
-      #     done
-      #   workingDirectory: $(Build.SourcesDirectory)
-      #   displayName: "Build: run trivy scan"
 
       - task: CodeQL3000Finalize@0
         displayName: 'SDL: run codeql'
@@ -609,32 +578,6 @@ stages:
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build and push configuration reader image to dev ACR"
         condition: succeeded()
-
-      # - bash: |
-      #     curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-      #     export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
-      #     export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
-      #     for i in {1..5}; do
-      #       trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) > trivy_output.log 2>&1
-      #       TRIVY_EXIT_CODE=$?
-      #       if [ $TRIVY_EXIT_CODE -eq 0 ]; then
-      #         cat trivy_output.log
-      #         break
-      #       fi
-      #       if grep -q "TOOMANYREQUESTS" trivy_output.log; then
-      #         echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
-      #         sleep 5
-      #       else
-      #         cat trivy_output.log
-      #         exit 1
-      #       fi
-      #     done
-      #     if [ $TRIVY_EXIT_CODE -ne 0 ]; then
-      #       echo "Error: Trivy scan failed after 5 retries."
-      #       exit 1
-      #     fi
-      #   workingDirectory: $(Build.SourcesDirectory)
-      #   displayName: "Build: run trivy scan"
 
       - task: EsrpCodeSigning@5
         displayName: "ESRP CodeSigning for Config Reader"
@@ -1221,21 +1164,14 @@ stages:
     - WindowsMultiArch_Prometheus_Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    #condition: and((not(succeeded('Deploy_AKS_Chart'))), eq(variables['System.StageAttempt'], 1)))
     variables:
       HELM_CHART_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
       HELM_SEMVER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
-      IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_IMAGE_TAG'] ]
       IMAGE_TAG_WINDOWS: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
       HELM_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
       IMAGE_TAG_TARGET_ALLOCATOR: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
       IMAGE_TAG_CONFIG_READER: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
-      # IMAGE_TAG: '6.15.0-main-02-21-2025-4acb2b4c'
-      # IMAGE_TAG: '6.15.0-kaveesh-configmap-v2-03-17-2025-477c354a'
-      # IMAGE_TAG_WINDOWS: '6.15.0-kaveesh-configmap-v2-03-17-2025-477c354a-win'
-      # # HELM_FULL_IMAGE_NAME: 'containerinsightsprod.azurecr.io/public/azuremonitor/containerinsights/cidev/prometheus-collector:6.15.0'
-      # IMAGE_TAG_TARGET_ALLOCATOR: '6.15.0-kaveesh-configmap-v2-03-17-2025-477c354a-targetallocator'
-      # IMAGE_TAG_CONFIG_READER: '6.15.0-kaveesh-configmap-v2-03-17-2025-477c354a-cfg'
       skipComponentGovernanceDetection: true
     strategy:
       runOnce:
@@ -1244,12 +1180,6 @@ stages:
           - checkout: self
             submodules: true
             persistCredentials: true
-
-          # - bash: |
-          #     git config --global user.name "AzureDevOps Agent"
-          #     git tag "v$(HELM_SEMVER)"
-          #     git push origin "v$(HELM_SEMVER)"
-          #   displayName: Tag commit with semver
 
           - task: HelmInstaller@1
             displayName: Install Helm version
