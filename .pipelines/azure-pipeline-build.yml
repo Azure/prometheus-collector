@@ -177,143 +177,55 @@ stages:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
 
-  - job: Linux_Golang_Reference_App
-    displayName: "Build: linux golang reference app image"
-    pool:
-      name: Azure-Pipelines-CI-Test-EO
-    dependsOn: Image_Tags_and_Ev2_Artifacts
-    variables:
-      skipComponentGovernanceDetection: true
-      LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
-    # This is necessary because of: https://github.com/moby/moby/issues/37965
-      DOCKER_BUILDKIT: 1
-    # condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-    steps:
-      - checkout: self
-        persistCredentials: true
-      
-      - bash: |
-          export DOCKER_BUILDKIT=1
-          mkdir -p $(Build.ArtifactStagingDirectory)/refappgolanglinux
-          docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-          
-          docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
-          docker buildx inspect --bootstrap
-          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
-          docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
-        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
-        displayName: "Build: build and push reference app golang linux image to dev ACR"
-
-      - bash: |
-          MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-          DIGEST=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-          SIZE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-          cat <<EOF >>$(Build.ArtifactStagingDirectory)/refappgolanglinux/payload.json
-          {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-          EOF
-        workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
-        displayName: "Build: Set values in payload.json for signing"
-        condition: succeeded()
-
-      - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus Golang Linux Reference App"
-        inputs:
-          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
-          AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPContainerImageSignCert'
-          AuthSignCertName: ESRPReqPrometheusProdCert      
-          FolderPath: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
-          Pattern: "*.json"
-          signConfigType: inlineSignParams
-          inlineOperation: |
-            [
-              {
-                  "keyCode": "CP-469451",
-                  "operationSetCode": "NotaryCoseSign",
-                  "parameters": [
-                    {
-                      "parameterName": "CoseFlags",
-                      "parameterValue": "chainunprotected"
-                    }
-                  ],
-                  "toolName": "sign",
-                  "toolVersion": "1.0"
-              }
-            ]
-          SessionTimeout: '60'
-          MaxConcurrency: '50'
-          MaxRetryAttempts: '5'
-          PendingAnalysisWaitTimeoutMinutes: '5' 
-
-      - bash: |
-          set -euxo pipefail
-          curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
-          mkdir -p oras-install/
-          tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
-          sudo mv oras-install/oras /usr/local/bin/
-          rm -rf oras_1.0.0_*.tar.gz oras-install/
-          oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
-            --artifact-type 'application/vnd.cncf.notary.signature' \
-            ./payload.json:application/cose \
-            -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-          oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
-            --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
-        workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
-        displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/refappgolanglinux/"
-        condition: succeeded()          
-
-  # - job: Linux_Python_Reference_App
-  #   displayName: "Build: linux python reference app image"
+  # - job: Linux_Golang_Reference_App
+  #   displayName: "Build: linux golang reference app image"
   #   pool:
   #     name: Azure-Pipelines-CI-Test-EO
   #   dependsOn: Image_Tags_and_Ev2_Artifacts
   #   variables:
   #     skipComponentGovernanceDetection: true
-  #     LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+  #     LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
   #   # This is necessary because of: https://github.com/moby/moby/issues/37965
   #     DOCKER_BUILDKIT: 1
-  #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+  #   # condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
   #   steps:
   #     - checkout: self
   #       persistCredentials: true
+      
   #     - bash: |
-  #         mkdir -p $(Build.ArtifactStagingDirectory)/refapppythonlinux
-
+  #         export DOCKER_BUILDKIT=1
+  #         mkdir -p $(Build.ArtifactStagingDirectory)/refappgolanglinux
   #         docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           
   #         docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
   #         docker buildx inspect --bootstrap
   #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-  #         docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
-  #         docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)  
-  #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-  #       displayName: "Build: build and push reference app python linux image to dev ACR"
+  #         docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refappgolanglinux/metadata.json --push
+  #         docker pull $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME)
+  #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+  #       displayName: "Build: build and push reference app golang linux image to dev ACR"
 
   #     - bash: |
-  #         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-  #         DIGEST=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-  #         SIZE=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-  #         cat <<EOF >>$(Build.ArtifactStagingDirectory)/refapppythonlinux/payload.json
+  #         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+  #         DIGEST=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+  #         SIZE=$(docker manifest inspect -v $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+  #         cat <<EOF >>$(Build.ArtifactStagingDirectory)/refappgolanglinux/payload.json
   #         {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
   #         EOF
-  #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+  #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
   #       displayName: "Build: Set values in payload.json for signing"
   #       condition: succeeded()
 
   #     - task: EsrpCodeSigning@5
-  #       displayName: "ESRP CodeSigning for Prometheus Python Linux Reference App"
+  #       displayName: "ESRP CodeSigning for Prometheus Golang Linux Reference App"
   #       inputs:
   #         ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
   #         AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
   #         AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
   #         AuthAKVName: 'ESRPPrometheusKVProd' 
   #         AuthCertName: 'ESRPContainerImageSignCert'
-  #         AuthSignCertName: 'ESRPReqPrometheusProdCert'      
-  #         FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonlinux/
+  #         AuthSignCertName: ESRPReqPrometheusProdCert      
+  #         FolderPath: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
   #         Pattern: "*.json"
   #         signConfigType: inlineSignParams
   #         inlineOperation: |
@@ -343,552 +255,390 @@ stages:
   #         tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
   #         sudo mv oras-install/oras /usr/local/bin/
   #         rm -rf oras_1.0.0_*.tar.gz oras-install/
-  #         oras attach $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) \
+  #         oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
   #           --artifact-type 'application/vnd.cncf.notary.signature' \
   #           ./payload.json:application/cose \
   #           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-  #         oras attach $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) \
+  #         oras attach $(LINUX_REF_APP_GOLANG_FULL_IMAGE_NAME) \
   #           --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
   #           --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
-  #       workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonlinux/
-  #       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/refapppythonlinux/"
+  #       workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolanglinux/
+  #       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/refappgolanglinux/"
   #       condition: succeeded()          
 
-  # - job: Golang_Windows_Reference_App
-  #   displayName: "Build: windows golang reference app image"
-  #   pool:
-  #     name: Azure-Pipelines-Windows-CI-Test-EO
-  #   dependsOn: Image_Tags_and_Ev2_Artifacts
-  #   variables:
-  #     WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
-  #     skipComponentGovernanceDetection: true
-  #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-  #   steps:
-  #     - powershell: |
-  #         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refappgolangwindows" -ItemType "directory"
-  #         docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
-  #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-  #         docker push $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
-  #         docker pull $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
-  #       displayName: "Build: build and push reference app golang windows image to dev ACR"
-  #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+  # # - job: Linux_Python_Reference_App
+  # #   displayName: "Build: linux python reference app image"
+  # #   pool:
+  # #     name: Azure-Pipelines-CI-Test-EO
+  # #   dependsOn: Image_Tags_and_Ev2_Artifacts
+  # #   variables:
+  # #     skipComponentGovernanceDetection: true
+  # #     LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+  # #   # This is necessary because of: https://github.com/moby/moby/issues/37965
+  # #     DOCKER_BUILDKIT: 1
+  # #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+  # #   steps:
+  # #     - checkout: self
+  # #       persistCredentials: true
+  # #     - bash: |
+  # #         mkdir -p $(Build.ArtifactStagingDirectory)/refapppythonlinux
 
-  #     - powershell: |
-  #         $output = docker manifest inspect -v $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) | ConvertFrom-Json
-  #         $firstManifest = $output[0]
-  #         $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
-  #         $DIGEST = $firstManifest.Descriptor.digest
-  #         $SIZE = $firstManifest.Descriptor.size
-  #         $payload = @{
-  #             targetArtifact = @{
-  #                 mediaType = $MEDIA_TYPE
-  #                 digest = $DIGEST
-  #                 size = $SIZE
-  #             }
-  #         } | ConvertTo-Json
-
-  #         $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/refappgolangwindows/payload.json"
-  #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
-  #       displayName: "Build the payload json file"
-  #       condition: succeeded()
-
-  #     - task: EsrpCodeSigning@5
-  #       displayName: "ESRP CodeSigning for Prometheus Golang Windows Reference App"
-  #       inputs:
-  #         ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-  #         AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-  #         AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
-  #         AuthAKVName: 'ESRPPrometheusKVProd' 
-  #         AuthCertName: 'ESRPContainerImageSignCert'
-  #         AuthSignCertName: 'ESRPReqPrometheusProdCert'
-  #         FolderPath: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
-  #         Pattern: "*.json"
-  #         signConfigType: inlineSignParams
-  #         inlineOperation: |
-  #           [
-  #             {
-  #                 "keyCode": "CP-469451",
-  #                 "operationSetCode": "NotaryCoseSign",
-  #                 "parameters": [
-  #                   {
-  #                     "parameterName": "CoseFlags",
-  #                     "parameterValue": "chainunprotected"
-  #                   }
-  #                 ],
-  #                 "toolName": "sign",
-  #                 "toolVersion": "1.0"
-  #             }
-  #           ]
-  #         SessionTimeout: '60'
-  #         MaxConcurrency: '50'
-  #         MaxRetryAttempts: '5'
-  #         PendingAnalysisWaitTimeoutMinutes: '5' 
-
-  #     - powershell: |
-  #         curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
-  #         $currentDirectory = Get-Location
-  #         Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
-  #         New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
-  #         Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
-  #         $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
-  #         oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
-  #         oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
-  #       workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
-  #       displayName: "Download, install Oras and run oras attach"
-  #       condition: succeeded()
-
-  # - job: Windows_Python_Reference_App
-  #   displayName: "Build: windows python reference app image"
-  #   pool:
-  #     name: Azure-Pipelines-Windows-CI-Test-EO
-  #   dependsOn: Image_Tags_and_Ev2_Artifacts
-  #   variables:
-  #     WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
-  #     skipComponentGovernanceDetection: true
-  #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-  #   steps:
-  #     - powershell: |
-  #         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refapppythonwindows" -ItemType "directory"
-  #         docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
-  #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-  #         docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
-  #         docker pull $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
-  #       displayName: "Build: build and push reference app python windows image to dev ACR"
-  #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-
-  #     - powershell: |
-  #         $output = docker manifest inspect -v $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) | ConvertFrom-Json
-  #         $firstManifest = $output[0]
-  #         $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
-  #         $DIGEST = $firstManifest.Descriptor.digest
-  #         $SIZE = $firstManifest.Descriptor.size
-  #         $payload = @{
-  #             targetArtifact = @{
-  #                 mediaType = $MEDIA_TYPE
-  #                 digest = $DIGEST
-  #                 size = $SIZE
-  #             }
-  #         } | ConvertTo-Json
-
-  #         $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/refapppythonwindows/payload.json"
-  #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
-  #       displayName: "Build the payload json file"
-  #       condition: succeeded()
-
-  #     - task: EsrpCodeSigning@5
-  #       displayName: "ESRP CodeSigning for Prometheus Python Windows Reference App"
-  #       inputs:
-  #         ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-  #         AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-  #         AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
-  #         AuthAKVName: 'ESRPPrometheusKVProd' 
-  #         AuthCertName: 'ESRPContainerImageSignCert'
-  #         AuthSignCertName: 'ESRPReqPrometheusProdCert'
-  #         FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
-  #         Pattern: "*.json"
-  #         signConfigType: inlineSignParams
-  #         inlineOperation: |
-  #           [
-  #             {
-  #                 "keyCode": "CP-469451",
-  #                 "operationSetCode": "NotaryCoseSign",
-  #                 "parameters": [
-  #                   {
-  #                     "parameterName": "CoseFlags",
-  #                     "parameterValue": "chainunprotected"
-  #                   }
-  #                 ],
-  #                 "toolName": "sign",
-  #                 "toolVersion": "1.0"
-  #             }
-  #           ]
-  #         SessionTimeout: '60'
-  #         MaxConcurrency: '50'
-  #         MaxRetryAttempts: '5'
-  #         PendingAnalysisWaitTimeoutMinutes: '5' 
-
-  #     - powershell: |
-  #         curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
-  #         $currentDirectory = Get-Location
-  #         Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
-  #         New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
-  #         Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
-  #         $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
-  #         oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
-  #         oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
-  #       workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
-  #       displayName: "Download, install Oras and run oras attach"
-  #       condition: succeeded()        
-
-  # - job: Arc_Conformace_Test_Image
-  #   displayName: "Build: Arc Conformance Test Image"
-  #   pool:
-  #     name: Azure-Pipelines-CI-Test-EO
-  #   dependsOn: Image_Tags_and_Ev2_Artifacts
-  #   variables:
-  #     skipComponentGovernanceDetection: true
-  #     ARC_CONFORMANCE_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_CONFORMANCE_FULL_IMAGE_NAME'] ]
-  #   # This is necessary because of: https://github.com/moby/moby/issues/37965
-  #     DOCKER_BUILDKIT: 1
-  #   condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-  #   steps:
-  #     - checkout: self
-  #       persistCredentials: true
-  #     - bash: |
-  #         docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+  # #         docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           
-  #         docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
-  #         docker buildx inspect --bootstrap
-  #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-  #         docker buildx build . -f arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(TESTKUBE_GOLANG_VERSION)" --push
-  #         docker pull $(ARC_CONFORMANCE_FULL_IMAGE_NAME)  
-  #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
-  #       displayName: "Build: build and push Arc conformance test image to dev ACR"
+  # #         docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+  # #         docker buildx inspect --bootstrap
+  # #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  # #         docker buildx build . --file linux/Dockerfile -t $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/refapppythonlinux/metadata.json --push
+  # #         docker pull $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME)  
+  # #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+  # #       displayName: "Build: build and push reference app python linux image to dev ACR"
 
-  # - job: SDL_Policheck_Scan
-  #   displayName: "SDL: policheck scanning"
+  # #     - bash: |
+  # #         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+  # #         DIGEST=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+  # #         SIZE=$(docker manifest inspect -v $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+  # #         cat <<EOF >>$(Build.ArtifactStagingDirectory)/refapppythonlinux/payload.json
+  # #         {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+  # #         EOF
+  # #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+  # #       displayName: "Build: Set values in payload.json for signing"
+  # #       condition: succeeded()
+
+  # #     - task: EsrpCodeSigning@5
+  # #       displayName: "ESRP CodeSigning for Prometheus Python Linux Reference App"
+  # #       inputs:
+  # #         ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+  # #         AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+  # #         AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+  # #         AuthAKVName: 'ESRPPrometheusKVProd' 
+  # #         AuthCertName: 'ESRPContainerImageSignCert'
+  # #         AuthSignCertName: 'ESRPReqPrometheusProdCert'      
+  # #         FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonlinux/
+  # #         Pattern: "*.json"
+  # #         signConfigType: inlineSignParams
+  # #         inlineOperation: |
+  # #           [
+  # #             {
+  # #                 "keyCode": "CP-469451",
+  # #                 "operationSetCode": "NotaryCoseSign",
+  # #                 "parameters": [
+  # #                   {
+  # #                     "parameterName": "CoseFlags",
+  # #                     "parameterValue": "chainunprotected"
+  # #                   }
+  # #                 ],
+  # #                 "toolName": "sign",
+  # #                 "toolVersion": "1.0"
+  # #             }
+  # #           ]
+  # #         SessionTimeout: '60'
+  # #         MaxConcurrency: '50'
+  # #         MaxRetryAttempts: '5'
+  # #         PendingAnalysisWaitTimeoutMinutes: '5' 
+
+  # #     - bash: |
+  # #         set -euxo pipefail
+  # #         curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+  # #         mkdir -p oras-install/
+  # #         tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+  # #         sudo mv oras-install/oras /usr/local/bin/
+  # #         rm -rf oras_1.0.0_*.tar.gz oras-install/
+  # #         oras attach $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) \
+  # #           --artifact-type 'application/vnd.cncf.notary.signature' \
+  # #           ./payload.json:application/cose \
+  # #           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+  # #         oras attach $(LINUX_REF_APP_PYTHON_FULL_IMAGE_NAME) \
+  # #           --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
+  # #           --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
+  # #       workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonlinux/
+  # #       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/refapppythonlinux/"
+  # #       condition: succeeded()          
+
+  # # - job: Golang_Windows_Reference_App
+  # #   displayName: "Build: windows golang reference app image"
+  # #   pool:
+  # #     name: Azure-Pipelines-Windows-CI-Test-EO
+  # #   dependsOn: Image_Tags_and_Ev2_Artifacts
+  # #   variables:
+  # #     WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME'] ]
+  # #     skipComponentGovernanceDetection: true
+  # #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+  # #   steps:
+  # #     - powershell: |
+  # #         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refappgolangwindows" -ItemType "directory"
+  # #         docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+  # #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  # #         docker push $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+  # #         docker pull $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME)
+  # #       displayName: "Build: build and push reference app golang windows image to dev ACR"
+  # #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+
+  # #     - powershell: |
+  # #         $output = docker manifest inspect -v $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) | ConvertFrom-Json
+  # #         $firstManifest = $output[0]
+  # #         $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
+  # #         $DIGEST = $firstManifest.Descriptor.digest
+  # #         $SIZE = $firstManifest.Descriptor.size
+  # #         $payload = @{
+  # #             targetArtifact = @{
+  # #                 mediaType = $MEDIA_TYPE
+  # #                 digest = $DIGEST
+  # #                 size = $SIZE
+  # #             }
+  # #         } | ConvertTo-Json
+
+  # #         $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/refappgolangwindows/payload.json"
+  # #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/golang
+  # #       displayName: "Build the payload json file"
+  # #       condition: succeeded()
+
+  # #     - task: EsrpCodeSigning@5
+  # #       displayName: "ESRP CodeSigning for Prometheus Golang Windows Reference App"
+  # #       inputs:
+  # #         ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+  # #         AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+  # #         AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+  # #         AuthAKVName: 'ESRPPrometheusKVProd' 
+  # #         AuthCertName: 'ESRPContainerImageSignCert'
+  # #         AuthSignCertName: 'ESRPReqPrometheusProdCert'
+  # #         FolderPath: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
+  # #         Pattern: "*.json"
+  # #         signConfigType: inlineSignParams
+  # #         inlineOperation: |
+  # #           [
+  # #             {
+  # #                 "keyCode": "CP-469451",
+  # #                 "operationSetCode": "NotaryCoseSign",
+  # #                 "parameters": [
+  # #                   {
+  # #                     "parameterName": "CoseFlags",
+  # #                     "parameterValue": "chainunprotected"
+  # #                   }
+  # #                 ],
+  # #                 "toolName": "sign",
+  # #                 "toolVersion": "1.0"
+  # #             }
+  # #           ]
+  # #         SessionTimeout: '60'
+  # #         MaxConcurrency: '50'
+  # #         MaxRetryAttempts: '5'
+  # #         PendingAnalysisWaitTimeoutMinutes: '5' 
+
+  # #     - powershell: |
+  # #         curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
+  # #         $currentDirectory = Get-Location
+  # #         Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
+  # #         New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
+  # #         Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
+  # #         $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
+  # #         oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
+  # #         oras attach $(WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
+  # #       workingDirectory: $(Build.ArtifactStagingDirectory)/refappgolangwindows/
+  # #       displayName: "Download, install Oras and run oras attach"
+  # #       condition: succeeded()
+
+  # # - job: Windows_Python_Reference_App
+  # #   displayName: "Build: windows python reference app image"
+  # #   pool:
+  # #     name: Azure-Pipelines-Windows-CI-Test-EO
+  # #   dependsOn: Image_Tags_and_Ev2_Artifacts
+  # #   variables:
+  # #     WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME'] ]
+  # #     skipComponentGovernanceDetection: true
+  # #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+  # #   steps:
+  # #     - powershell: |
+  # #         New-Item -Path "$(Build.ArtifactStagingDirectory)" -Name "refapppythonwindows" -ItemType "directory"
+  # #         docker build . --isolation=hyperv --file windows/Dockerfile -t $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+  # #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  # #         docker push $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+  # #         docker pull $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME)
+  # #       displayName: "Build: build and push reference app python windows image to dev ACR"
+  # #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+
+  # #     - powershell: |
+  # #         $output = docker manifest inspect -v $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) | ConvertFrom-Json
+  # #         $firstManifest = $output[0]
+  # #         $MEDIA_TYPE = $firstManifest.Descriptor.mediaType
+  # #         $DIGEST = $firstManifest.Descriptor.digest
+  # #         $SIZE = $firstManifest.Descriptor.size
+  # #         $payload = @{
+  # #             targetArtifact = @{
+  # #                 mediaType = $MEDIA_TYPE
+  # #                 digest = $DIGEST
+  # #                 size = $SIZE
+  # #             }
+  # #         } | ConvertTo-Json
+
+  # #         $payload | Out-File -FilePath "$(Build.ArtifactStagingDirectory)/refapppythonwindows/payload.json"
+  # #       workingDirectory: $(Build.SourcesDirectory)/internal/referenceapp/python
+  # #       displayName: "Build the payload json file"
+  # #       condition: succeeded()
+
+  # #     - task: EsrpCodeSigning@5
+  # #       displayName: "ESRP CodeSigning for Prometheus Python Windows Reference App"
+  # #       inputs:
+  # #         ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+  # #         AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+  # #         AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+  # #         AuthAKVName: 'ESRPPrometheusKVProd' 
+  # #         AuthCertName: 'ESRPContainerImageSignCert'
+  # #         AuthSignCertName: 'ESRPReqPrometheusProdCert'
+  # #         FolderPath: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
+  # #         Pattern: "*.json"
+  # #         signConfigType: inlineSignParams
+  # #         inlineOperation: |
+  # #           [
+  # #             {
+  # #                 "keyCode": "CP-469451",
+  # #                 "operationSetCode": "NotaryCoseSign",
+  # #                 "parameters": [
+  # #                   {
+  # #                     "parameterName": "CoseFlags",
+  # #                     "parameterValue": "chainunprotected"
+  # #                   }
+  # #                 ],
+  # #                 "toolName": "sign",
+  # #                 "toolVersion": "1.0"
+  # #             }
+  # #           ]
+  # #         SessionTimeout: '60'
+  # #         MaxConcurrency: '50'
+  # #         MaxRetryAttempts: '5'
+  # #         PendingAnalysisWaitTimeoutMinutes: '5' 
+
+  # #     - powershell: |
+  # #         curl.exe -sLO  "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_windows_amd64.zip"
+  # #         $currentDirectory = Get-Location
+  # #         Expand-Archive -Path $currentDirectory\oras_1.0.0_windows_amd64.zip -DestinationPath . -Force
+  # #         New-Item -ItemType Directory -Force -Path $env:USERPROFILE\bin
+  # #         Copy-Item -Path $currentDirectory\oras.exe -Destination "$env:USERPROFILE\bin\"
+  # #         $env:PATH = "$env:USERPROFILE\bin;$env:PATH"
+  # #         oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type application/vnd.cncf.notary.signature ./payload.json:application/cose -a io.cncf.notary.x509chain.thumbprint#S256=[\""79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\""]
+  # #         oras attach $(WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME) --artifact-type 'application/vnd.microsoft.artifact.lifecycle' --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(powershell -Command "(Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')")"          
+  # #       workingDirectory: $(Build.ArtifactStagingDirectory)/refapppythonwindows/
+  # #       displayName: "Download, install Oras and run oras attach"
+  # #       condition: succeeded()        
+
+  # # - job: Arc_Conformace_Test_Image
+  # #   displayName: "Build: Arc Conformance Test Image"
+  # #   pool:
+  # #     name: Azure-Pipelines-CI-Test-EO
+  # #   dependsOn: Image_Tags_and_Ev2_Artifacts
+  # #   variables:
+  # #     skipComponentGovernanceDetection: true
+  # #     ARC_CONFORMANCE_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_CONFORMANCE_FULL_IMAGE_NAME'] ]
+  # #   # This is necessary because of: https://github.com/moby/moby/issues/37965
+  # #     DOCKER_BUILDKIT: 1
+  # #   condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+  # #   steps:
+  # #     - checkout: self
+  # #       persistCredentials: true
+  # #     - bash: |
+  # #         docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
+          
+  # #         docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+  # #         docker buildx inspect --bootstrap
+  # #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  # #         docker buildx build . -f arc-conformance/Dockerfile -t $(ARC_CONFORMANCE_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(TESTKUBE_GOLANG_VERSION)" --push
+  # #         docker pull $(ARC_CONFORMANCE_FULL_IMAGE_NAME)  
+  # #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
+  # #       displayName: "Build: build and push Arc conformance test image to dev ACR"
+
+  # # - job: SDL_Policheck_Scan
+  # #   displayName: "SDL: policheck scanning"
+  # #   pool:
+  # #     name: Azure-Pipelines-Windows-CI-Test-EO
+  # #   variables:
+  # #     skipComponentGovernanceDetection: true
+  # #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+  # #   steps:
+  # #     - checkout: self
+  # #       submodules: true
+
+  # #     - task: PoliCheck@2
+  # #       displayName: "SDL : Run PoliCheck"
+  # #       inputs:
+  # #         targetType: 'F'
+  # #         targetArgument: '$(Build.SourcesDirectory)'
+
+
+  # # - job: SDL_Binary_Scan
+  # #   displayName: "SDL: linux binary scanning"
+  # #   pool:
+  # #     name: Azure-Pipelines-CI-Test-EO
+  # #   variables:
+  # #     skipComponentGovernanceDetection: true
+  # #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+  # #   steps:
+  # #     - checkout: self
+  # #       submodules: true
+
+  # #     - task: CodeQL3000Init@0
+  # #       displayName: 'SDL: init codeql'
+
+  # #     - task: GoTool@0
+  # #       displayName: "Build: specify golang version"
+  # #       inputs:
+  # #         version: $(GOLANG_VERSION)
+
+  # #     - bash: |
+  # #         sudo apt-get install build-essential -y
+  # #         make
+  # #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
+  # #       displayName: "SDL: build otelcollector, promconfigvalidator, targetallocator, and fluent-bit plugin for scanning"
+  # #       retryCountOnTaskFailure: 1
+
+  # #     - task: BinSkim@4
+  # #       displayName: 'SDL: run binskim'
+  # #       inputs:
+  # #         InputType: 'CommandLine'
+  # #         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
+  # #       retryCountOnTaskFailure: 1
+
+  # #     - task: ESLint@1
+  # #       displayName: 'Run ESLint'
+  # #       inputs:
+  # #         Configuration: required
+  # #         EnableExclusions: false
+  # #       retryCountOnTaskFailure: 1 
+
+  # #     - task: Armory@2
+  # #       displayName: 'Run ARMory'
+  # #       inputs:
+  # #         toolVersion: Latest
+  # #         targetDirectory: '$(Build.SourcesDirectory)'
+  # #       retryCountOnTaskFailure: 1   
+
+  # #     - task: Gosec@1
+  # #       displayName: 'SDL: run gosec'
+  # #       inputs:
+  # #         targetPattern: 'gosecPattern'
+  # #         targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
+  # #       retryCountOnTaskFailure: 1
+
+  # #     - bash: |
+  # #         wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
+  # #         unzip DevSkim_linux_0.6.9.zip
+  # #         chmod 775 DevSkim_linux_0.6.9/devskim
+  # #         ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
+  # #       displayName: 'SDL: run devskim'
+  # #       workingDirectory: $(Build.SourcesDirectory)
+  # #       retryCountOnTaskFailure: 1
+
+  # #     - bash: |
+  # #         sudo gem install brakeman -v 5.4.1
+  # #         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
+  # #       displayName: 'SDL: run brakeman'
+  # #       retryCountOnTaskFailure: 1
+
+  # - job: Linux_Prometheus_Collector_ARM64
+  #   displayName: 'Build: linux ARM64 prometheus-collector image'
   #   pool:
-  #     name: Azure-Pipelines-Windows-CI-Test-EO
-  #   variables:
-  #     skipComponentGovernanceDetection: true
-  #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-  #   steps:
-  #     - checkout: self
-  #       submodules: true
-
-  #     - task: PoliCheck@2
-  #       displayName: "SDL : Run PoliCheck"
-  #       inputs:
-  #         targetType: 'F'
-  #         targetArgument: '$(Build.SourcesDirectory)'
-
-
-  # - job: SDL_Binary_Scan
-  #   displayName: "SDL: linux binary scanning"
-  #   pool:
-  #     name: Azure-Pipelines-CI-Test-EO
-  #   variables:
-  #     skipComponentGovernanceDetection: true
-  #   condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
-  #   steps:
-  #     - checkout: self
-  #       submodules: true
-
-  #     - task: CodeQL3000Init@0
-  #       displayName: 'SDL: init codeql'
-
-  #     - task: GoTool@0
-  #       displayName: "Build: specify golang version"
-  #       inputs:
-  #         version: $(GOLANG_VERSION)
-
-  #     - bash: |
-  #         sudo apt-get install build-essential -y
-  #         make
-  #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
-  #       displayName: "SDL: build otelcollector, promconfigvalidator, targetallocator, and fluent-bit plugin for scanning"
-  #       retryCountOnTaskFailure: 1
-
-  #     - task: BinSkim@4
-  #       displayName: 'SDL: run binskim'
-  #       inputs:
-  #         InputType: 'CommandLine'
-  #         arguments: 'analyze --rich-return-code $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/otelcollector $(Build.SourcesDirectory)/otelcollector/prom-config-validator-builder/promconfigvalidator $(Build.SourcesDirectory)/otelcollector/otel-allocator/targetallocator $(Build.SourcesDirectory)/otelcollector/fluent-bit/src/out_appinsights.so'
-  #       retryCountOnTaskFailure: 1
-
-  #     - task: ESLint@1
-  #       displayName: 'Run ESLint'
-  #       inputs:
-  #         Configuration: required
-  #         EnableExclusions: false
-  #       retryCountOnTaskFailure: 1 
-
-  #     - task: Armory@2
-  #       displayName: 'Run ARMory'
-  #       inputs:
-  #         toolVersion: Latest
-  #         targetDirectory: '$(Build.SourcesDirectory)'
-  #       retryCountOnTaskFailure: 1   
-
-  #     - task: Gosec@1
-  #       displayName: 'SDL: run gosec'
-  #       inputs:
-  #         targetPattern: 'gosecPattern'
-  #         targetGosecPattern: '$(Build.SourcesDirectory)/otelcollector'
-  #       retryCountOnTaskFailure: 1
-
-  #     - bash: |
-  #         wget https://github.com/microsoft/DevSkim/releases/download/v0.6.9/DevSkim_linux_0.6.9.zip
-  #         unzip DevSkim_linux_0.6.9.zip
-  #         chmod 775 DevSkim_linux_0.6.9/devskim
-  #         ./DevSkim_linux_0.6.9/devskim analyze $(Build.SourcesDirectory)/otelcollector --ignore-globs **/deploy/dashboard/**,**/react/static/** --severity critical,important
-  #       displayName: 'SDL: run devskim'
-  #       workingDirectory: $(Build.SourcesDirectory)
-  #       retryCountOnTaskFailure: 1
-
-  #     - bash: |
-  #         sudo gem install brakeman -v 5.4.1
-  #         brakeman $(Build.SourcesDirectory)/otelcollector/configmapparser --force
-  #       displayName: 'SDL: run brakeman'
-  #       retryCountOnTaskFailure: 1
-
-  - job: Linux_Prometheus_Collector_ARM64
-    displayName: 'Build: linux ARM64 prometheus-collector image'
-    pool:
-      name: Azure-Pipelines-ARM-CI-Test-EO
-    dependsOn: Image_Tags_and_Ev2_Artifacts
-    variables:
-      LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
-    # This is necessary because of: https://github.com/moby/moby/issues/37965
-      DOCKER_BUILDKIT: 1
-    steps:
-      - checkout: self
-        submodules: true
-
-      - task: CodeQL3000Init@0
-        displayName: 'SDL: init codeql'
-
-      - task: GoTool@0
-        displayName: "Build: specify golang version"
-        inputs:
-          version: $(GOLANG_VERSION)
-
-      - bash: |
-          # Add Docker's official GPG key:
-          sudo apt-get update
-          sudo apt-get install ca-certificates curl -y
-          sudo install -m 0755 -d /etc/apt/keyrings
-          sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-          sudo chmod a+r /etc/apt/keyrings/docker.asc
-
-          # Add the repository to Apt sources:
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-
-          mkdir -p $(Build.ArtifactStagingDirectory)/linux
-
-          sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
-        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-        displayName: 'Build: build and push image to dev ACR'
-
-  - job: Linux_Prometheus_Collector_AMD64
-    displayName: 'Build: linux AMD64 prometheus-collector image'
-    pool:
-      name: Azure-Pipelines-CI-Test-EO
-    dependsOn: Image_Tags_and_Ev2_Artifacts
-    variables:
-      LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
-    # This is necessary because of: https://github.com/moby/moby/issues/37965
-      DOCKER_BUILDKIT: 1
-    steps:
-      - checkout: self
-        submodules: true
-
-      - task: CodeQL3000Init@0
-        displayName: 'SDL: init codeql'
-
-      - task: GoTool@0
-        displayName: 'Build: specify golang version'
-        inputs:
-          version: $(GOLANG_VERSION)
-
-      - bash: |
-          mkdir -p $(Build.ArtifactStagingDirectory)/linux
-
-          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
-        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-        displayName: "Build: build and push image to dev ACR"
-
-  - job: Linux_Prometheus_Collector
-    displayName: 'Build: linux prometheus-collector image'
-    pool:
-      name: Azure-Pipelines-CI-Test-EO
-    dependsOn:
-    - Image_Tags_and_Ev2_Artifacts
-    - Linux_Prometheus_Collector_AMD64
-    - Linux_Prometheus_Collector_ARM64
-    variables:
-      LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
-    # This is necessary because of: https://github.com/moby/moby/issues/37965
-      DOCKER_BUILDKIT: 1
-    steps:
-      - checkout: self
-        submodules: true
-
-      - task: CodeQL3000Init@0
-        displayName: 'SDL: init codeql'
-
-      - task: GoTool@0
-        displayName: 'Build: specify golang version'
-        inputs:
-          version: $(GOLANG_VERSION)
-
-      - bash: |
-          mkdir -p $(Build.ArtifactStagingDirectory)/linux
-
-          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker manifest create $(LINUX_FULL_IMAGE_NAME) $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64
-          docker manifest push $(LINUX_FULL_IMAGE_NAME)
-        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-        displayName: 'Build: build and push image to dev ACR'
-
-      - bash: |
-          MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-          DIGEST=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-          SIZE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-          cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
-          {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-          EOF
-        workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-        displayName: 'Build: Set values in payload.json for signing'
-        condition: succeeded()
-
-      - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for Prometheus Linux"
-        inputs:
-          ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
-          AuthAKVName: 'ESRPPrometheusKVProd'
-          AuthCertName: 'ESRPContainerImageSignCert'
-          AuthSignCertName: 'ESRPReqPrometheusProdCert'
-          FolderPath: '$(Build.ArtifactStagingDirectory)/linux/'
-          Pattern: '*.json'
-          signConfigType: 'inlineSignParams'
-          inlineOperation: |
-            [
-              {
-                  "keyCode": "CP-469451",
-                  "operationSetCode": "NotaryCoseSign",
-                  "parameters": [
-                    {
-                      "parameterName": "CoseFlags",
-                      "parameterValue": "chainunprotected"
-                    }
-                  ],
-                  "toolName": "sign",
-                  "toolVersion": "1.0"
-              }
-            ]
-          SessionTimeout: '60'
-          MaxConcurrency: '50'
-          MaxRetryAttempts: '5'
-          PendingAnalysisWaitTimeoutMinutes: '5'  
-
-      - bash: |
-          set -euxo pipefail
-          curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
-          mkdir -p oras-install/
-          tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
-          sudo mv oras-install/oras /usr/local/bin/
-          rm -rf oras_1.0.0_*.tar.gz oras-install/
-          oras attach $(LINUX_FULL_IMAGE_NAME) \
-            --artifact-type 'application/vnd.cncf.notary.signature' \
-            ./payload.json:application/cose \
-            -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-          oras attach $(LINUX_FULL_IMAGE_NAME) \
-            --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
-        workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
-        displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
-        condition: succeeded()
-
-      - bash: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
-          export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
-          for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
-            for i in {1..5}; do
-              trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image > trivy_output.log 2>&1
-              TRIVY_EXIT_CODE=$?
-              if [ $TRIVY_EXIT_CODE -eq 0 ]; then
-                cat trivy_output.log
-                break
-              fi
-              if grep -q "TOOMANYREQUESTS" trivy_output.log; then
-                echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
-                sleep 5
-              else
-                cat trivy_output.log
-                exit 1
-              fi
-            done
-            if [ $TRIVY_EXIT_CODE -ne 0 ]; then
-              echo "Error: Trivy scan failed after 5 retries."
-              exit 1
-            fi
-          done
-        workingDirectory: $(Build.SourcesDirectory)
-        displayName: "Build: run trivy scan"
-
-      - task: CodeQL3000Finalize@0
-        displayName: 'SDL: run codeql'
-
-      - task: ComponentGovernanceComponentDetection@0
-        displayName: "SDL: run component governance"
-        inputs:
-          scanType: 'Register'
-          verbosity: 'Verbose'
-          dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
-          alertWarningLevel: 'High'
-          sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
-          ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
-
-      - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-        displayName: "Ev2: Generate image artifacts"
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-        inputs:
-          BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
-          DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
-
-      - task: SdtReport@2
-        displayName: 'SDL: generate report'
-        inputs:
-          GdnExportAllTools: false
-          GdnExportGdnToolBinSkim: true
-          GdnExportGdnToolBinSkimSeverity: 'Note'
-          GdnExportGdnToolGosec: true
-          GdnExportGdnToolGosecSeverity: 'Note'
-          GdnExportGdnToolSemmle: true
-          GdnExportGdnToolSemmleSeverity: 'Note'
-
-      - task: PublishSecurityAnalysisLogs@3
-        displayName: 'SDL: publish report'
-        inputs:
-          ArtifactName: 'CodeAnalysisLogs'
-          ArtifactType: 'Container'
-          PublishProcessedResults: true
-          AllTools: true
-          ToolLogsNotFoundAction: 'Standard'
-
-      - task: PublishBuildArtifacts@1
-        displayName: "Ev2: Publish image artifacts"
-        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-        inputs:
-          pathToPublish: '$(Build.ArtifactStagingDirectory)'
-          artifactName: drop
-
-      - task: PostAnalysis@2
-        displayName: 'SDL: Post-Build Analysis'
-        inputs:
-          GdnBreakAllTools: false
-          GdnBreakGdnToolBinSkim: true
-          GdnBreakGdnToolBinSkimSeverity: 'Warning'
-          GdnBreakGdnToolGosec: true
-          GdnBreakGdnToolGosecSeverity: 'Warning'
-          GdnBreakGdnToolSemmle: true
-          GdnBreakGdnToolSemmleSeverity: 'Warning'
-
-  # - job: Linux_CCP_Prometheus_Collector
-  #   displayName: "Build: linux CCP prometheus-collector image"
-  #   pool:
-  #     name: Azure-Pipelines-CI-Test-EO
+  #     name: Azure-Pipelines-ARM-CI-Test-EO
   #   dependsOn: Image_Tags_and_Ev2_Artifacts
   #   variables:
-  #     LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
+  #     LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
   #   # This is necessary because of: https://github.com/moby/moby/issues/37965
   #     DOCKER_BUILDKIT: 1
   #   steps:
@@ -904,49 +654,110 @@ stages:
   #         version: $(GOLANG_VERSION)
 
   #     - bash: |
-  #         mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
+  #         # Add Docker's official GPG key:
+  #         sudo apt-get update
+  #         sudo apt-get install ca-certificates curl -y
+  #         sudo install -m 0755 -d /etc/apt/keyrings
+  #         sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  #         sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-  #         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
-  #         sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-  #         docker system prune --volumes -y
-  #         docker system prune --all -f
-  #         docker images -q --filter "dangling=true" | xargs docker rmi
-  #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-  #         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+  #         # Add the repository to Apt sources:
+  #         echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  #         sudo apt-get update
+  #         sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
-  #         docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
-          
-  #         docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
-  #         docker buildx inspect --bootstrap
-  #         docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
-  #         docker pull $(LINUX_CCP_FULL_IMAGE_NAME)
-  #         docker system prune --all -f
+  #         mkdir -p $(Build.ArtifactStagingDirectory)/linux
+
+  #         sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  #         sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
   #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-  #       displayName: "Build: build and push CCP image to dev ACR"
+  #       displayName: 'Build: build and push image to dev ACR'
+
+  # - job: Linux_Prometheus_Collector_AMD64
+  #   displayName: 'Build: linux AMD64 prometheus-collector image'
+  #   pool:
+  #     name: Azure-Pipelines-CI-Test-EO
+  #   dependsOn: Image_Tags_and_Ev2_Artifacts
+  #   variables:
+  #     LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+  #   # This is necessary because of: https://github.com/moby/moby/issues/37965
+  #     DOCKER_BUILDKIT: 1
+  #   steps:
+  #     - checkout: self
+  #       submodules: true
+
+  #     - task: CodeQL3000Init@0
+  #       displayName: 'SDL: init codeql'
+
+  #     - task: GoTool@0
+  #       displayName: 'Build: specify golang version'
+  #       inputs:
+  #         version: $(GOLANG_VERSION)
 
   #     - bash: |
-  #         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-  #         DIGEST=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-  #         SIZE=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-  #         cat <<EOF >>$(Build.ArtifactStagingDirectory)/linuxccp/payload.json
+  #         mkdir -p $(Build.ArtifactStagingDirectory)/linux
+
+  #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  #         docker build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+  #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+  #       displayName: "Build: build and push image to dev ACR"
+
+  # - job: Linux_Prometheus_Collector
+  #   displayName: 'Build: linux prometheus-collector image'
+  #   pool:
+  #     name: Azure-Pipelines-CI-Test-EO
+  #   dependsOn:
+  #   - Image_Tags_and_Ev2_Artifacts
+  #   - Linux_Prometheus_Collector_AMD64
+  #   - Linux_Prometheus_Collector_ARM64
+  #   variables:
+  #     LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+  #   # This is necessary because of: https://github.com/moby/moby/issues/37965
+  #     DOCKER_BUILDKIT: 1
+  #   steps:
+  #     - checkout: self
+  #       submodules: true
+
+  #     - task: CodeQL3000Init@0
+  #       displayName: 'SDL: init codeql'
+
+  #     - task: GoTool@0
+  #       displayName: 'Build: specify golang version'
+  #       inputs:
+  #         version: $(GOLANG_VERSION)
+
+  #     - bash: |
+  #         mkdir -p $(Build.ArtifactStagingDirectory)/linux
+
+  #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  #         docker manifest create $(LINUX_FULL_IMAGE_NAME) $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64
+  #         docker manifest push $(LINUX_FULL_IMAGE_NAME)
+  #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+  #       displayName: 'Build: build and push image to dev ACR'
+
+  #     - bash: |
+  #         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+  #         DIGEST=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+  #         SIZE=$(docker manifest inspect -v $(LINUX_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+  #         cat <<EOF >>$(Build.ArtifactStagingDirectory)/linux/payload.json
   #         {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
   #         EOF
   #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
-  #       displayName: "Build: Set values in payload.json for signing"
+  #       displayName: 'Build: Set values in payload.json for signing'
   #       condition: succeeded()
 
   #     - task: EsrpCodeSigning@5
-  #       displayName: "ESRP CodeSigning for Prometheus Linux CCP"
+  #       displayName: "ESRP CodeSigning for Prometheus Linux"
   #       inputs:
-  #         ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-  #         AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-  #         AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
-  #         AuthAKVName: 'ESRPPrometheusKVProd' 
+  #         ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
+  #         AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
+  #         AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
+  #         AuthAKVName: 'ESRPPrometheusKVProd'
   #         AuthCertName: 'ESRPContainerImageSignCert'
   #         AuthSignCertName: 'ESRPReqPrometheusProdCert'
-  #         FolderPath: $(Build.ArtifactStagingDirectory)/linuxccp/
-  #         Pattern: "*.json"
-  #         signConfigType: inlineSignParams
+  #         FolderPath: '$(Build.ArtifactStagingDirectory)/linux/'
+  #         Pattern: '*.json'
+  #         signConfigType: 'inlineSignParams'
   #         inlineOperation: |
   #           [
   #             {
@@ -965,7 +776,7 @@ stages:
   #         SessionTimeout: '60'
   #         MaxConcurrency: '50'
   #         MaxRetryAttempts: '5'
-  #         PendingAnalysisWaitTimeoutMinutes: '5' 
+  #         PendingAnalysisWaitTimeoutMinutes: '5'  
 
   #     - bash: |
   #         set -euxo pipefail
@@ -974,40 +785,42 @@ stages:
   #         tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
   #         sudo mv oras-install/oras /usr/local/bin/
   #         rm -rf oras_1.0.0_*.tar.gz oras-install/
-  #         oras attach $(LINUX_CCP_FULL_IMAGE_NAME) \
+  #         oras attach $(LINUX_FULL_IMAGE_NAME) \
   #           --artifact-type 'application/vnd.cncf.notary.signature' \
   #           ./payload.json:application/cose \
   #           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-  #         oras attach $(LINUX_CCP_FULL_IMAGE_NAME) \
+  #         oras attach $(LINUX_FULL_IMAGE_NAME) \
   #           --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-  #           --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"            
-  #       workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
-  #       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
+  #           --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"
+  #       workingDirectory: $(Build.ArtifactStagingDirectory)/linux/
+  #       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linux/"
   #       condition: succeeded()
 
   #     - bash: |
   #         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
   #         export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
   #         export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
-  #         for i in {1..5}; do
-  #           trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CCP_FULL_IMAGE_NAME) > trivy_output.log 2>&1
-  #           TRIVY_EXIT_CODE=$?
-  #           if [ $TRIVY_EXIT_CODE -eq 0 ]; then
-  #             cat trivy_output.log
-  #             break
-  #           fi
-  #           if grep -q "TOOMANYREQUESTS" trivy_output.log; then
-  #             echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
-  #             sleep 5
-  #           else
-  #             cat trivy_output.log
+  #         for image in $(LINUX_FULL_IMAGE_NAME) $(KUBE_STATE_METRICS_IMAGE) $(NODE_EXPORTER_IMAGE); do
+  #           for i in {1..5}; do
+  #             trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $image > trivy_output.log 2>&1
+  #             TRIVY_EXIT_CODE=$?
+  #             if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+  #               cat trivy_output.log
+  #               break
+  #             fi
+  #             if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+  #               echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+  #               sleep 5
+  #             else
+  #               cat trivy_output.log
+  #               exit 1
+  #             fi
+  #           done
+  #           if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+  #             echo "Error: Trivy scan failed after 5 retries."
   #             exit 1
   #           fi
   #         done
-  #         if [ $TRIVY_EXIT_CODE -ne 0 ]; then
-  #           echo "Error: Trivy scan failed after 5 retries."
-  #           exit 1
-  #         fi
   #       workingDirectory: $(Build.SourcesDirectory)
   #       displayName: "Build: run trivy scan"
 
@@ -1019,7 +832,7 @@ stages:
   #       inputs:
   #         scanType: 'Register'
   #         verbosity: 'Verbose'
-  #         dockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
+  #         dockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
   #         alertWarningLevel: 'High'
   #         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
   #         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
@@ -1028,8 +841,8 @@ stages:
   #       displayName: "Ev2: Generate image artifacts"
   #       condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
   #       inputs:
-  #         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linuxccp'
-  #         DockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
+  #         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
+  #         DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
 
   #     - task: SdtReport@2
   #       displayName: 'SDL: generate report'
@@ -1069,188 +882,375 @@ stages:
   #         GdnBreakGdnToolSemmle: true
   #         GdnBreakGdnToolSemmleSeverity: 'Warning'
 
-  - job: Linux_Target_Allocator_AMD64
-    displayName: "Build: AMD64 target allocator image"
-    pool:
-      name: Azure-Pipelines-CI-Test-EO
-    dependsOn: Image_Tags_and_Ev2_Artifacts
-    variables:
-      TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-    # This is necessary because of: https://github.com/moby/moby/issues/37965
-      DOCKER_BUILDKIT: 1
-      skipComponentGovernanceDetection: true
-    steps:
-      - checkout: self
-        persistCredentials: true
+  # # - job: Linux_CCP_Prometheus_Collector
+  # #   displayName: "Build: linux CCP prometheus-collector image"
+  # #   pool:
+  # #     name: Azure-Pipelines-CI-Test-EO
+  # #   dependsOn: Image_Tags_and_Ev2_Artifacts
+  # #   variables:
+  # #     LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
+  # #   # This is necessary because of: https://github.com/moby/moby/issues/37965
+  # #     DOCKER_BUILDKIT: 1
+  # #   steps:
+  # #     - checkout: self
+  # #       submodules: true
 
-      - task: GoTool@0
-        displayName: "Build: specify golang version"
-        inputs:
-          version: $(GOLANG_VERSION)
-  
-      - bash: |
-          mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+  # #     - task: CodeQL3000Init@0
+  # #       displayName: 'SDL: init codeql'
 
-          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
-        workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
-        displayName: "Build: build and push target allocator image to dev ACR"
-        condition: succeeded()
+  # #     - task: GoTool@0
+  # #       displayName: "Build: specify golang version"
+  # #       inputs:
+  # #         version: $(GOLANG_VERSION)
 
-  - job: Linux_Target_Allocator_ARM64
-    displayName: "Build: ARM64 target allocator image"
-    pool:
-      name: Azure-Pipelines-ARM-CI-Test-EO
-    dependsOn: Image_Tags_and_Ev2_Artifacts
-    variables:
-      TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-    # This is necessary because of: https://github.com/moby/moby/issues/37965
-      DOCKER_BUILDKIT: 1
-      skipComponentGovernanceDetection: true
-    steps:
-      - checkout: self
-        persistCredentials: true
+  # #     - bash: |
+  # #         mkdir -p $(Build.ArtifactStagingDirectory)/linuxccp
 
-      - task: GoTool@0
-        displayName: "Build: specify golang version"
-        inputs:
-          version: $(GOLANG_VERSION)
-  
-      - bash: |
-          # Add Docker's official GPG key:
-          sudo apt-get update
-          sudo apt-get install ca-certificates curl -y
-          sudo install -m 0755 -d /etc/apt/keyrings
-          sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-          sudo chmod a+r /etc/apt/keyrings/docker.asc
-          # Add the repository to Apt sources:
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+  # #         # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
+  # #         sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
+  # #         docker system prune --volumes -y
+  # #         docker system prune --all -f
+  # #         docker images -q --filter "dangling=true" | xargs docker rmi
+  # #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  # #         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-          mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
-
-          sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
-        workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
-        displayName: "Build: build and push target allocator image to dev ACR"
-        condition: succeeded()
-
-  - job: Linux_Target_Allocator
-    displayName: "Build: target allocator image"
-    pool:
-      name: Azure-Pipelines-CI-Test-EO
-    dependsOn:
-    - Image_Tags_and_Ev2_Artifacts
-    - Linux_Target_Allocator_ARM64
-    - Linux_Target_Allocator_AMD64
-    variables:
-      TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-    # This is necessary because of: https://github.com/moby/moby/issues/37965
-      DOCKER_BUILDKIT: 1
-      skipComponentGovernanceDetection: true
-    steps:
-      - checkout: self
-        persistCredentials: true
-
-      - task: GoTool@0
-        displayName: "Build: specify golang version"
-        inputs:
-          version: $(GOLANG_VERSION)
-  
-      - bash: |
-          mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+  # #         docker pull mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1
           
-          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-amd64 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64
-          docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+  # #         docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
+  # #         docker buildx inspect --bootstrap
+  # #         docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
+  # #         docker pull $(LINUX_CCP_FULL_IMAGE_NAME)
+  # #         docker system prune --all -f
+  # #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+  # #       displayName: "Build: build and push CCP image to dev ACR"
 
-          docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-          MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-          DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-          SIZE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-          cat <<EOF >>$(Build.ArtifactStagingDirectory)/targetallocator/payload.json
-          {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-          EOF
-        workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
-        displayName: "Build: build and push target allocator image to dev ACR"
-        condition: succeeded()
+  # #     - bash: |
+  # #         MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+  # #         DIGEST=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+  # #         SIZE=$(docker manifest inspect -v $(LINUX_CCP_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+  # #         cat <<EOF >>$(Build.ArtifactStagingDirectory)/linuxccp/payload.json
+  # #         {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+  # #         EOF
+  # #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/
+  # #       displayName: "Build: Set values in payload.json for signing"
+  # #       condition: succeeded()
 
-      - bash: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
-          export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
-          for i in {1..5}; do
-            trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) > trivy_output.log 2>&1
-            TRIVY_EXIT_CODE=$?
-            if [ $TRIVY_EXIT_CODE -eq 0 ]; then
-              cat trivy_output.log
-              break
-            fi
-            if grep -q "TOOMANYREQUESTS" trivy_output.log; then
-              echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
-              sleep 5
-            else
-              cat trivy_output.log
-              exit 1
-            fi
-          done
-          if [ $TRIVY_EXIT_CODE -ne 0 ]; then
-            echo "Error: Trivy scan failed after 5 retries."
-            exit 1
-          fi
-        workingDirectory: $(Build.SourcesDirectory)
-        displayName: "Build: run trivy scan"
+  # #     - task: EsrpCodeSigning@5
+  # #       displayName: "ESRP CodeSigning for Prometheus Linux CCP"
+  # #       inputs:
+  # #         ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+  # #         AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+  # #         AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+  # #         AuthAKVName: 'ESRPPrometheusKVProd' 
+  # #         AuthCertName: 'ESRPContainerImageSignCert'
+  # #         AuthSignCertName: 'ESRPReqPrometheusProdCert'
+  # #         FolderPath: $(Build.ArtifactStagingDirectory)/linuxccp/
+  # #         Pattern: "*.json"
+  # #         signConfigType: inlineSignParams
+  # #         inlineOperation: |
+  # #           [
+  # #             {
+  # #                 "keyCode": "CP-469451",
+  # #                 "operationSetCode": "NotaryCoseSign",
+  # #                 "parameters": [
+  # #                   {
+  # #                     "parameterName": "CoseFlags",
+  # #                     "parameterValue": "chainunprotected"
+  # #                   }
+  # #                 ],
+  # #                 "toolName": "sign",
+  # #                 "toolVersion": "1.0"
+  # #             }
+  # #           ]
+  # #         SessionTimeout: '60'
+  # #         MaxConcurrency: '50'
+  # #         MaxRetryAttempts: '5'
+  # #         PendingAnalysisWaitTimeoutMinutes: '5' 
 
-      - task: EsrpCodeSigning@5
-        displayName: "ESRP CodeSigning for TargetAllocator"
-        inputs:
-          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
-          AuthAKVName: 'ESRPPrometheusKVProd' 
-          AuthCertName: 'ESRPContainerImageSignCert'
-          AuthSignCertName:    'ESRPReqPrometheusProdCert'
-          FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
-          Pattern: "*.json"
-          signConfigType: inlineSignParams
-          inlineOperation: |
-            [
-              {
-                  "keyCode": "CP-469451",
-                  "operationSetCode": "NotaryCoseSign",
-                  "parameters": [
-                    {
-                      "parameterName": "CoseFlags",
-                      "parameterValue": "chainunprotected"
-                    }
-                  ],
-                  "toolName": "sign",
-                  "toolVersion": "1.0"
-              }
-            ]
-          SessionTimeout: '60'
-          MaxConcurrency: '50'
-          MaxRetryAttempts: '5'
-          PendingAnalysisWaitTimeoutMinutes: '5' 
+  # #     - bash: |
+  # #         set -euxo pipefail
+  # #         curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+  # #         mkdir -p oras-install/
+  # #         tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+  # #         sudo mv oras-install/oras /usr/local/bin/
+  # #         rm -rf oras_1.0.0_*.tar.gz oras-install/
+  # #         oras attach $(LINUX_CCP_FULL_IMAGE_NAME) \
+  # #           --artifact-type 'application/vnd.cncf.notary.signature' \
+  # #           ./payload.json:application/cose \
+  # #           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+  # #         oras attach $(LINUX_CCP_FULL_IMAGE_NAME) \
+  # #           --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
+  # #           --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"            
+  # #       workingDirectory: $(Build.ArtifactStagingDirectory)/linuxccp/
+  # #       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/linuxccp/"
+  # #       condition: succeeded()
 
-      - bash: |
-          set -euxo pipefail
-          curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
-          mkdir -p oras-install/
-          tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
-          sudo mv oras-install/oras /usr/local/bin/
-          rm -rf oras_1.0.0_*.tar.gz oras-install/
-          oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
-            --artifact-type 'application/vnd.cncf.notary.signature' \
-            ./payload.json:application/cose \
-            -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-          oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
-            --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"                
-        workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
-        displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
-        condition: succeeded()
+  # #     - bash: |
+  # #         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+  # #         export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+  # #         export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
+  # #         for i in {1..5}; do
+  # #           trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(LINUX_CCP_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+  # #           TRIVY_EXIT_CODE=$?
+  # #           if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+  # #             cat trivy_output.log
+  # #             break
+  # #           fi
+  # #           if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+  # #             echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+  # #             sleep 5
+  # #           else
+  # #             cat trivy_output.log
+  # #             exit 1
+  # #           fi
+  # #         done
+  # #         if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+  # #           echo "Error: Trivy scan failed after 5 retries."
+  # #           exit 1
+  # #         fi
+  # #       workingDirectory: $(Build.SourcesDirectory)
+  # #       displayName: "Build: run trivy scan"
+
+  # #     - task: CodeQL3000Finalize@0
+  # #       displayName: 'SDL: run codeql'
+
+  # #     - task: ComponentGovernanceComponentDetection@0
+  # #       displayName: "SDL: run component governance"
+  # #       inputs:
+  # #         scanType: 'Register'
+  # #         verbosity: 'Verbose'
+  # #         dockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
+  # #         alertWarningLevel: 'High'
+  # #         sourceScanPath: '$(Build.SourcesDirectory)/otelcollector'
+  # #         ignoreDirectories: '$(Build.SourcesDirectory)/mixins,$(Build.SourcesDirectory)/tools,$(Build.SourcesDirectory)/otelcollector/react'
+
+  # #     - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+  # #       displayName: "Ev2: Generate image artifacts"
+  # #       condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+  # #       inputs:
+  # #         BuildDropPath: '$(Build.ArtifactStagingDirectory)/linuxccp'
+  # #         DockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
+
+  # #     - task: SdtReport@2
+  # #       displayName: 'SDL: generate report'
+  # #       inputs:
+  # #         GdnExportAllTools: false
+  # #         GdnExportGdnToolBinSkim: true
+  # #         GdnExportGdnToolBinSkimSeverity: 'Note'
+  # #         GdnExportGdnToolGosec: true
+  # #         GdnExportGdnToolGosecSeverity: 'Note'
+  # #         GdnExportGdnToolSemmle: true
+  # #         GdnExportGdnToolSemmleSeverity: 'Note'
+
+  # #     - task: PublishSecurityAnalysisLogs@3
+  # #       displayName: 'SDL: publish report'
+  # #       inputs:
+  # #         ArtifactName: 'CodeAnalysisLogs'
+  # #         ArtifactType: 'Container'
+  # #         PublishProcessedResults: true
+  # #         AllTools: true
+  # #         ToolLogsNotFoundAction: 'Standard'
+
+  # #     - task: PublishBuildArtifacts@1
+  # #       displayName: "Ev2: Publish image artifacts"
+  # #       condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+  # #       inputs:
+  # #         pathToPublish: '$(Build.ArtifactStagingDirectory)'
+  # #         artifactName: drop
+
+  # #     - task: PostAnalysis@2
+  # #       displayName: 'SDL: Post-Build Analysis'
+  # #       inputs:
+  # #         GdnBreakAllTools: false
+  # #         GdnBreakGdnToolBinSkim: true
+  # #         GdnBreakGdnToolBinSkimSeverity: 'Warning'
+  # #         GdnBreakGdnToolGosec: true
+  # #         GdnBreakGdnToolGosecSeverity: 'Warning'
+  # #         GdnBreakGdnToolSemmle: true
+  # #         GdnBreakGdnToolSemmleSeverity: 'Warning'
+
+  # - job: Linux_Target_Allocator_AMD64
+  #   displayName: "Build: AMD64 target allocator image"
+  #   pool:
+  #     name: Azure-Pipelines-CI-Test-EO
+  #   dependsOn: Image_Tags_and_Ev2_Artifacts
+  #   variables:
+  #     TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+  #   # This is necessary because of: https://github.com/moby/moby/issues/37965
+  #     DOCKER_BUILDKIT: 1
+  #     skipComponentGovernanceDetection: true
+  #   steps:
+  #     - checkout: self
+  #       persistCredentials: true
+
+  #     - task: GoTool@0
+  #       displayName: "Build: specify golang version"
+  #       inputs:
+  #         version: $(GOLANG_VERSION)
+  
+  #     - bash: |
+  #         mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+
+  #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  #         docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+  #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
+  #       displayName: "Build: build and push target allocator image to dev ACR"
+  #       condition: succeeded()
+
+  # - job: Linux_Target_Allocator_ARM64
+  #   displayName: "Build: ARM64 target allocator image"
+  #   pool:
+  #     name: Azure-Pipelines-ARM-CI-Test-EO
+  #   dependsOn: Image_Tags_and_Ev2_Artifacts
+  #   variables:
+  #     TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+  #   # This is necessary because of: https://github.com/moby/moby/issues/37965
+  #     DOCKER_BUILDKIT: 1
+  #     skipComponentGovernanceDetection: true
+  #   steps:
+  #     - checkout: self
+  #       persistCredentials: true
+
+  #     - task: GoTool@0
+  #       displayName: "Build: specify golang version"
+  #       inputs:
+  #         version: $(GOLANG_VERSION)
+  
+  #     - bash: |
+  #         # Add Docker's official GPG key:
+  #         sudo apt-get update
+  #         sudo apt-get install ca-certificates curl -y
+  #         sudo install -m 0755 -d /etc/apt/keyrings
+  #         sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  #         sudo chmod a+r /etc/apt/keyrings/docker.asc
+  #         # Add the repository to Apt sources:
+  #         echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  #         sudo apt-get update
+  #         sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+
+  #         mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+
+  #         sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  #         sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+  #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
+  #       displayName: "Build: build and push target allocator image to dev ACR"
+  #       condition: succeeded()
+
+  # - job: Linux_Target_Allocator
+  #   displayName: "Build: target allocator image"
+  #   pool:
+  #     name: Azure-Pipelines-CI-Test-EO
+  #   dependsOn:
+  #   - Image_Tags_and_Ev2_Artifacts
+  #   - Linux_Target_Allocator_ARM64
+  #   - Linux_Target_Allocator_AMD64
+  #   variables:
+  #     TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+  #   # This is necessary because of: https://github.com/moby/moby/issues/37965
+  #     DOCKER_BUILDKIT: 1
+  #     skipComponentGovernanceDetection: true
+  #   steps:
+  #     - checkout: self
+  #       persistCredentials: true
+
+  #     - task: GoTool@0
+  #       displayName: "Build: specify golang version"
+  #       inputs:
+  #         version: $(GOLANG_VERSION)
+  
+  #     - bash: |
+  #         mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+          
+  #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+  #         docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-amd64 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64
+  #         docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+
+  #         docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+  #         MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+  #         DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+  #         SIZE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+  #         cat <<EOF >>$(Build.ArtifactStagingDirectory)/targetallocator/payload.json
+  #         {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+  #         EOF
+  #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
+  #       displayName: "Build: build and push target allocator image to dev ACR"
+  #       condition: succeeded()
+
+  #     - bash: |
+  #         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+  #         export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+  #         export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
+  #         for i in {1..5}; do
+  #           trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+  #           TRIVY_EXIT_CODE=$?
+  #           if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+  #             cat trivy_output.log
+  #             break
+  #           fi
+  #           if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+  #             echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+  #             sleep 5
+  #           else
+  #             cat trivy_output.log
+  #             exit 1
+  #           fi
+  #         done
+  #         if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+  #           echo "Error: Trivy scan failed after 5 retries."
+  #           exit 1
+  #         fi
+  #       workingDirectory: $(Build.SourcesDirectory)
+  #       displayName: "Build: run trivy scan"
+
+  #     - task: EsrpCodeSigning@5
+  #       displayName: "ESRP CodeSigning for TargetAllocator"
+  #       inputs:
+  #         ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+  #         AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
+  #         AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+  #         AuthAKVName: 'ESRPPrometheusKVProd' 
+  #         AuthCertName: 'ESRPContainerImageSignCert'
+  #         AuthSignCertName:    'ESRPReqPrometheusProdCert'
+  #         FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
+  #         Pattern: "*.json"
+  #         signConfigType: inlineSignParams
+  #         inlineOperation: |
+  #           [
+  #             {
+  #                 "keyCode": "CP-469451",
+  #                 "operationSetCode": "NotaryCoseSign",
+  #                 "parameters": [
+  #                   {
+  #                     "parameterName": "CoseFlags",
+  #                     "parameterValue": "chainunprotected"
+  #                   }
+  #                 ],
+  #                 "toolName": "sign",
+  #                 "toolVersion": "1.0"
+  #             }
+  #           ]
+  #         SessionTimeout: '60'
+  #         MaxConcurrency: '50'
+  #         MaxRetryAttempts: '5'
+  #         PendingAnalysisWaitTimeoutMinutes: '5' 
+
+  #     - bash: |
+  #         set -euxo pipefail
+  #         curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+  #         mkdir -p oras-install/
+  #         tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+  #         sudo mv oras-install/oras /usr/local/bin/
+  #         rm -rf oras_1.0.0_*.tar.gz oras-install/
+  #         oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
+  #           --artifact-type 'application/vnd.cncf.notary.signature' \
+  #           ./payload.json:application/cose \
+  #           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+  #         oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
+  #           --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
+  #           --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"                
+  #       workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
+  #       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
+  #       condition: succeeded()
 
   - job: Linux_Config_Reader
     displayName: "Build: config reader image"
