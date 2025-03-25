@@ -5,7 +5,7 @@
 # schedule to run everyday
 schedules:
 - cron: '0 6 * * *'
-  displayName: Daily midnight build and config processing test run
+  displayName: Daily config processing test run
   branches:
     include:
     - rashmi/config-tests
