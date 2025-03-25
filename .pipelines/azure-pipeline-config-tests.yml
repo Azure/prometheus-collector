@@ -1,7 +1,7 @@
-trigger:
-  branches:
-    include:
-    - rashmi/config-tests
+# trigger:
+#   branches:
+#     include:
+#     - rashmi/config-tests
 # schedule to run everyday
 schedules:
 - cron: '0 6 * * *'
