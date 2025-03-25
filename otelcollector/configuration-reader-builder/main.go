@@ -341,6 +341,12 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 
 func writeServerCertAndKeyToFile(serverCertPem string, serverKeyPem string) error {
 	log.Println("Writing server cert and key to file")
+	if _, err := os.Stat("/etc/operator-targets/certs"); os.IsNotExist(err) {
+		if err := os.MkdirAll("/etc/operator-targets/certs", fs.FileMode(0644)); err != nil {
+			log.Println("Error creating directory for certs: %v\n", err)
+			return err
+		}
+	}
 	if err := os.WriteFile("/etc/operator-targets/certs/server.crt", []byte(serverCertPem), fs.FileMode(0644)); err != nil {
 		log.Println("Error writing server cert to file: %v\n", err)
 		return err
@@ -421,14 +427,20 @@ func createTLSCertificatesAndSecret() (error, error, error, error) {
 		log.Println("Error creating server certificate: %v\n", serErr)
 	}
 
-	writeErr := writeServerCertAndKeyToFile(serverCertPem, serverKeyPem)
-	if writeErr != nil {
-		log.Println("Error writing server cert and key to file: %v\n", writeErr)
+	if caErr == nil || serErr == nil {
+		log.Println("Writing to file to mount as shared volume so that targetallocator container can consume the certs")
+		writeErr := writeServerCertAndKeyToFile(serverCertPem, serverKeyPem)
+		if writeErr != nil {
+			log.Println("Error writing server cert and key to file: %v\n", writeErr)
+		}
 	}
 
-	gErr := generateSecretWithCACert(caCertPem)
-	if gErr != nil {
-		log.Println("Error generating secret with CA cert: %v\n", gErr)
+	if caErr == nil || serErr == nil {
+		log.Println("Generating secret so that replicaset pod can get the CA cert")
+		gErr := generateSecretWithCACert(caCertPem)
+		if gErr != nil {
+			log.Println("Error generating secret with CA cert: %v\n", gErr)
+		}
 	}
 	log.Println("TLS certificates and secret generated successfully")
 	return caErr, serErr, writeErr, gErr
