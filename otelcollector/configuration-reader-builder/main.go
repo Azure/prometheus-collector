@@ -383,13 +383,13 @@ func generateSecretWithCACert(caCertPem string) error {
 	// Create the Kubernetes client
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		logFatalError(fmt.Sprintf("Unable to create in-cluster config: %v", err))
+		log.Printf("Unable to create in-cluster config: %v", err)
 		return err
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		logFatalError(fmt.Sprintf("Unable to create Kubernetes client: %v", err))
+		log.Printf("Unable to create Kubernetes client: %v", err)
 		return err
 	}
 
@@ -399,11 +399,11 @@ func generateSecretWithCACert(caCertPem string) error {
 		if apierrors.IsAlreadyExists(err) {
 			_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 			if err != nil {
-				logFatalError(fmt.Sprintf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err))
+				log.Printf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err)
 				return err
 			}
 		} else {
-			logFatalError(fmt.Sprintf("Unable to create secret %s in namespace %s: %v", secretName, namespace, err))
+			log.Printf("Unable to create secret %s in namespace %s: %v", secretName, namespace, err)
 			return err
 		}
 	}
