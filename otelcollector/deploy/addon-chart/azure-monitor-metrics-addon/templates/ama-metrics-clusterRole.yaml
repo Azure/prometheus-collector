@@ -35,7 +35,7 @@ rules:
     resources: ["secrets"]
     resourceNames: ["ama-metrics-operator-targets-tls-secret"]
     verbs: ["get", "watch", "create", "update", "delete"]
-    namespaces: ["kube-system"]
+    # namespaces: ["kube-system"]
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["create", "patch"]
