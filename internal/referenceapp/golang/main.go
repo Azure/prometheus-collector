@@ -669,7 +669,7 @@ func setupOTLP() {
 	exponentialHistogramView := gosdkmetric.NewView(
 		// Instrument identities which metric(s) should be modified
 		gosdkmetric.Instrument{
-			Name: "myotelapp.*.exponential.histogram", // Supports wildcard
+			Name: "*exponential*", // Supports wildcard
 		},
 		// Stream specifies how to modify the metric
 		gosdkmetric.Stream{
