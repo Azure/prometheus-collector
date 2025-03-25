@@ -427,6 +427,8 @@ func createTLSCertificatesAndSecret() (error, error, error, error) {
 		log.Println("Error creating server certificate: %v\n", serErr)
 	}
 
+	var writeErr error
+	writeErr = nil
 	if caErr == nil || serErr == nil {
 		log.Println("Writing to file to mount as shared volume so that targetallocator container can consume the certs")
 		writeErr := writeServerCertAndKeyToFile(serverCertPem, serverKeyPem)
@@ -435,6 +437,8 @@ func createTLSCertificatesAndSecret() (error, error, error, error) {
 		}
 	}
 
+	var gErr error
+	gErr = nil
 	if caErr == nil || serErr == nil {
 		log.Println("Generating secret so that replicaset pod can get the CA cert")
 		gErr := generateSecretWithCACert(caCertPem)
