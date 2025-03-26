@@ -56,7 +56,7 @@ func (o *certOperatorImp) CreateSelfSignedCertificateKeyPair(
 		// return nil, "", nil, "", retry.NewError(false, err)
 		return nil, "", nil, "", err
 	}
-	fmt.Println("self signed certificate '%v' is generated successfully", csr.Subject.CommonName)
+	fmt.Println("self signed certificate %v is generated successfully", csr.Subject.CommonName)
 	return cert, certPem, key, keyPem, nil
 }
 

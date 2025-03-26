@@ -192,6 +192,7 @@ func updateTAConfigFile(configFilePath string) {
 			// CAFilePath:      "/etc/prometheus/certs/client-ca.crt",
 			TLSCertFilePath: "/etc/operator-targets/certs/server.crt",
 			TLSKeyFilePath:  "/etc/operator-targets/certs/server.key",
+			CAFilePath:      "/etc/operator-targets/certs/ca.crt",
 		},
 	}
 
@@ -339,7 +340,7 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 	return serverCertPem, serverKeyPem, nil
 }
 
-func writeServerCertAndKeyToFile(serverCertPem string, serverKeyPem string) error {
+func writeServerCertCACertAndKeyToFile(serverCertPem string, serverKeyPem string, caCertPem string) error {
 	log.Println("Writing server cert and key to file")
 	if _, err := os.Stat("/etc/operator-targets/certs"); os.IsNotExist(err) {
 		if err := os.MkdirAll("/etc/operator-targets/certs", fs.FileMode(0644)); err != nil {
@@ -353,6 +354,11 @@ func writeServerCertAndKeyToFile(serverCertPem string, serverKeyPem string) erro
 	}
 	if err := os.WriteFile("/etc/operator-targets/certs/server.key", []byte(serverKeyPem), fs.FileMode(0644)); err != nil {
 		log.Println("Error writing server key to file: %v\n", err)
+		return err
+	}
+
+	if err := os.WriteFile("/etc/operator-targets/certs/ca.crt", []byte(caCertPem), fs.FileMode(0644)); err != nil {
+		log.Println("Error writing ca cert to file: %v\n", err)
 		return err
 	}
 	log.Println("Server cert and key written to file successfully")
@@ -429,9 +435,9 @@ func createTLSCertificatesAndSecret() (error, error, error, error) {
 
 	var writeErr error
 	writeErr = nil
-	if caErr == nil || serErr == nil {
+	if caErr == nil && serErr == nil {
 		log.Println("Writing to file to mount as shared volume so that targetallocator container can consume the certs")
-		writeErr := writeServerCertAndKeyToFile(serverCertPem, serverKeyPem)
+		writeErr := writeServerCertCACertAndKeyToFile(serverCertPem, serverKeyPem, caCertPem)
 		if writeErr != nil {
 			log.Println("Error writing server cert and key to file: %v\n", writeErr)
 		}
@@ -439,7 +445,7 @@ func createTLSCertificatesAndSecret() (error, error, error, error) {
 
 	var gErr error
 	gErr = nil
-	if caErr == nil || serErr == nil {
+	if caErr == nil && serErr == nil {
 		log.Println("Generating secret so that replicaset pod can get the CA cert")
 		gErr := generateSecretWithCACert(caCertPem)
 		if gErr != nil {
