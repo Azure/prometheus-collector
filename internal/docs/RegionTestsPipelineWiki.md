@@ -12,18 +12,10 @@ This "AksDeploy" pipeline deploys the AKS cluster, AMW workspace, DCR, DCE, DCRA
 ## "AksDeploy" Pipeline Variables
 
 + **AZURESUBSCRIPTION**
++ **CLUSTERNAME**
 + **RESOURCE-GROUP**
-+ **PARAMETERS**
-
-A typical value for the "PARAMETERS" variable is as follows:
-
->{\"clusterName\":{\"value\":\"demoAksCluster\"},\"actionGroupId\":{\"value\":\"/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/wtd-test/providers/Microsoft.Insights/actiongroups/wtdTestAg\"}}
-
-If the '*azureMonitorWorkspaceLocation*' property is omitted, it defaults to the specified resource group's location.
-
-You can explicitly set the '*azureMonitorWorkspaceLocation*' property as in the following example:
-
->{\"clusterName\":{\"value\":\"demoAksCluster\"},\"actionGroupId\":{\"value\":\"/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/wtd-test/providers/Microsoft.Insights/actiongroups/wtdTestAg\"},\"azureMonitorWorkspaceLocation\":{\"value\":\"taiwannorth\"}}
++ **ACTION-GROUP-ID**
++ **DEFAULT-PARAMETERS**
 
 # **azure-pipeline-regionstest.yml**
 
@@ -42,15 +34,26 @@ The "Integrated" pipeline first deploys the resources and then runs the region t
 ## "Integrated" Pipeline Variables
 
 + **AZURESUBSCRIPTION**
-+ **RESOURCE-GROUP**
-+ **PARAMETERS**
 + **CLUSTERNAME**
++ **RESOURCE-GROUP**
++ **ACTION-GROUP-ID**
++ **DEFAULT-PARAMETERS**
 + **SLEEPTIME_IN_SECONDS**
 
 # **Definition of Pipeline Variables**
 
 + **AZURESUBSCRIPTION** - The name of the subscription where resources are deployed.
-+ **RESOURCE-GROUP** - The name of the resource group where resources are deployed
-+ **PARAMETERS** - A Json object giving parameter values to override defaults in the ci-cd-cluster ARM template.
-+ **CLUSTERNAME** - The name of the AKS cluster.
++ **RESOURCE-GROUP** - The name of the resource group where resources are deployed.
++ **CLUSTERNAME** - The base name of the AKS cluster and AMW-related resources created.
++ **ACTION-GROUP-ID** - The resource id of the action group referenced in the prometheus rules created.
++ **DEFAULT-PARAMETERS** - A Json object giving parameter values to override defaults in the ci-cd-cluster ARM template. These values will be replaced with specific YAML pipeline variables if they are supplied.
 + **SLEEPTIME_IN_SECONDS** - The time in seconds after deploying the cluster and AMW resoures to wait before running the tests. This should default to at least 2 hours.
+
+A typical value for **DEFAULT-PARAMETERS** is as follows:
+
+  >{"clusterName":{"value":"aksCluster"},"actionGroupId":{"value":"/subscriptions/b9842c7c-1a38-4385-8f39-a51314758bcf/resourceGroups/wtd-test/providers/Microsoft.Insights/actiongroups/wtdTestAg"}}
+
+  Values in this Json object will be replaced with the values for the following Pipeline variables if they are supplied:
+
++ **CLUSTERNAME** (clusterName)
++ **ACTION-GROUP-ID** (actionGroupId)
