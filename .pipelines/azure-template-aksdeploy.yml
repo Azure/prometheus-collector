@@ -1,11 +1,13 @@
 parameters:
 - name: azureSubscription
   type: string
-  default: 'ContainerInsights_Dev_Grace'
 - name: resourceGroup
   type: string
-  default: 'rg'
-- name: deployParameters
+- name: clusterName
+  type: string
+- name: actionGroupId
+  type: string
+- name: defaultParameters
   type: string
 
 steps:
@@ -16,36 +18,48 @@ steps:
     scriptType: ps
     scriptLocation: inlineScript
     inlineScript: |
-      $p = ${{ parameters.deployParameters }} 
-      "Input Parameters: $p"
+      $clusterName = $('${{ parameters.clusterName }}').Trim()
+      $resourceGroup = $('${{ parameters.resourceGroup }}').Trim()
+      $actionGroupId = $('${{ parameters.actionGroupId }}').Trim()
+      $defaultParms = $('${{ parameters.defaultParameters }}').Trim()
 
-      $p2 = $p -replace "\\""", """"
-
-      "Conforming input parameters: $p2"
-      $j = $p2 | convertfrom-json
-
-      $rg = (az group show -g ${env:RESOURCE-GROUP} | convertfrom-json)
+      $rg = (az group show -g $resourceGroup | convertfrom-json)
+      if ($rg -eq $null) {
+        throw "Resource group '$resourceGroup' not found"
+      }
       write-host "Resource group '$($rg.name)' location '$($rg.location)'."
-      $nestedObject = [PSCustomObject]@{
-          value = "$($rg.location)"
+
+      $p = $defaultParms
+      if ([string]::IsNullOrEmpty($p)) {
+        $p = "{}"
+      }
+      "Default parameters: $p"
+      $j = $p | convertfrom-json
+
+      $parms = @(
+        @{"name" = "clusterName";
+          "value" = $clusterName},
+        @{"name" = "actionGroupId";
+          "value" = $actionGroupId},
+        @{"name" = "azureMonitorWorkspaceLocation";
+          "value" = $rg.location}
+      )
+
+      "Processing Parameters:"
+      $parms | foreach {
+          write-host "Name = $($_.name); Value = $($_.value)"
+
+          if (![string]::IsNullOrEmpty($_.value.Trim())) {
+            $n = [PSCustomObject]@{
+              value = "$($_.value)"
+            }
+
+            "Updating parameter '$($_.name)' to '$($_.value)'"
+            $j | Add-Member -name $_.name -MemberType NoteProperty -value $n -Force          
+          }
       }
 
-      # Does the property exist?
-      if (($j.azureMonitorWorkspaceLocation -eq $null) -or ($j.azureMonitorWorkspaceLocation.value -eq $null)) {
-        write-host "'azureMonitorWorkspaceLocation.value' not provided..."
-
-        write-host "Using location '$($rg.location)' from '$($rg.name)"
-        write-host "Adding new 'azureMonitorWorkspaceLocation' property..."
-
-        $j | Add-Member -name "azureMonitorWorkspaceLocation" -MemberType NoteProperty -value $nestedObject -Force
-        $j | fl
-      } elseif ([string]::IsNullOrEmpty($j.azureMonitorWorkspaceLocation.value)) {
-        write-host "'azureMonitorWorkspaceLocation.value' is provided, but it's empty."
-        write-host "Updating to '$($rg.location)'."
-        $j.azureMonitorWorkspaceLocation.value = $rg.location
-      } else {
-         write-host "'azureMonitorWorkspaceLocation.value' provided: $($j.azureMonitorWorkspaceLocation.value)"
-      }
+      $j | fl
 
       $parmFinal = ($j | convertto-json -Compress)
       $parmFinal = $parmFinal -replace """", "\"""
@@ -54,7 +68,7 @@ steps:
       az --version
       az account show
       az deployment group create `
-          --resource-group ${{ parameters.resourceGroup }} `
+          --resource-group $resourceGroup `
           --name ClusterDeployment `
           --template-file ".\otelcollector\test\ci-cd\ci-cd-cluster.json" `
           --parameters $parmFinal 
