@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/fix-tag-truncations
 pr:
   autoCancel: true
   branches:
