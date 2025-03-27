@@ -40,7 +40,7 @@ receivers:
         interval: 30s
         collector_id: "${env:POD_NAME}"
         tls:
-          ca_file: /etc/prometheus/certs/server-ca.crt
+          ca_file: /etc/operator-targets/certs/server-ca.crt
           #cert_file: /etc/prometheus/certs/client-cert.pem
           #key_file: /etc/prometheus/certs/client-key.pem
 service:

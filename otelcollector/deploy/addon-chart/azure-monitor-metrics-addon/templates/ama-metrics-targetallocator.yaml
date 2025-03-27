@@ -76,6 +76,8 @@ spec:
         volumeMounts:
         - mountPath: /conf
           name: ta-config-shared
+        - mountPath: /etc/operator-targets/certs
+          name: operator-targets-certs
         - mountPath: /etc/prometheus/certs
           name: ama-metrics-tls-secret-volume
           readOnly: true
@@ -173,6 +175,8 @@ spec:
             readOnly: true
           - mountPath: /ta-configuration
             name: ta-config-shared
+          - mountPath: /etc/operator-targets/certs
+            name: operator-targets-certs
         # securityContext:
         #   allowPrivilegeEscalation: false
         #   runAsUser: 0
@@ -182,14 +186,14 @@ spec:
         #       - ALL
         #     add:
         #       - CAP_NET_BIND_SERVICE
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8081
-          initialDelaySeconds: 60
-          periodSeconds: 15
-          timeoutSeconds: 5
-          failureThreshold: 3
+        # livenessProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 8081
+        #   initialDelaySeconds: 60
+        #   periodSeconds: 15
+        #   timeoutSeconds: 5
+        #   failureThreshold: 3
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -250,5 +254,7 @@ spec:
           secretName: ama-metrics-mtls-secret
           optional: true
       - name: ta-config-shared
+        emptyDir: {}
+      - name: operator-targets-certs
         emptyDir: {}
 {{- end }}
