@@ -306,7 +306,7 @@ func createCACertificate(co certOperator.CertOperator) (*x509.Certificate, strin
 		log.Println("CreateSelfSignedCertificateKeyPair for ca failed: %s", err)
 		return nil, "", nil, "", err
 	}
-	log.Println("CA certificate is generated successfully")
+	log.Println("CA certificate is generated successfully.")
 	return caCert, caCertPem, caKey, caKeyPem, nil
 }
 
