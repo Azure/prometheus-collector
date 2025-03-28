@@ -174,21 +174,24 @@ func main() {
 			fmt.Println("ca.crt file does not exist at path: %s, waiting for 30s", caCertPath)
 			time.Sleep(30 * time.Second) // wait for ca.crt to be available
 			// Check again if ca.crt exists after waiting
-			if _, err := os.Stat(caCertPath); os.IsNotExist(err) {
+			if _, err = os.Stat(caCertPath); os.IsNotExist(err) {
 				log.Fatalf("ca.crt file still does not exist at path: %s, falling back to http", caCertPath)
-				_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+				_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 				// Fallback to start the collector without TLS
 				// _, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 			} else {
 				fmt.Printf("ca.crt file exists at path: %s\n", caCertPath)
-				_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+				_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 			}
 		} else {
 			fmt.Printf("ca.crt file exists at path: %s\n", caCertPath)
-			_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+			_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 		}
 	} else {
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+		if err != nil {
+			fmt.Printf("Error starting otelcollector: %v\n", err)
+		}
 	}
 
 	if osType == "linux" {
@@ -221,7 +224,7 @@ func main() {
 
 		// Create an output file for inotify events
 		outputFile := "/opt/inotifyoutput-mdsd-config.txt"
-		_, err = os.Create(outputFile)
+		_, err := os.Create(outputFile)
 		if err != nil {
 			log.Fatalf("Error creating output file: %v\n", err)
 		}
