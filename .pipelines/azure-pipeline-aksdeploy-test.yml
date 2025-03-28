@@ -13,7 +13,9 @@ stages:
       parameters:
         azureSubscription: $(AZURESUBSCRIPTION)
         resourceGroup: $(RESOURCE-GROUP)
-        deployParameters: ${env:PARAMETERS}
+        clusterName: $(CLUSTERNAME)
+        actionGroupId: $(ACTION-GROUP-ID)
+        defaultParameters: $(DEFAULT-PARAMETERS)
     - task: PowerShell@2
       displayName: "Wait"
       inputs:
