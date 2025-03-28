@@ -1,7 +1,13 @@
 # Azure Monitor managed service for Prometheus remote write
 
+## Release 03-26-2025
+* Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20250326.1`
+* Change log -
+* CVE fixes
+   - CVE-2025-22870
+   - CVE-2025-30204
 
-## Release 01-06-2025
+## Release 02-14-2025
 * Image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-remote-write/images:prom-remotewrite-20250214.1`
 * Change log -
 * CVE fixes
