@@ -97,4 +97,19 @@ https://msazure.visualstudio.com/CloudNativeCompute/_git/aks-rp?path=/toolkit/ve
       - Verify first minimalIngestionProfile scenario by applying [test config enabling all ccp targets, with MIP false, and empty keep list](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/test/test-cluster-yamls/configmaps/controlplane/ama-metrics-settings-configmap-mipfalse-emptykeep.yaml). All the metrics from all targets should have been scraped.
       - Verify second minimalIngestionProfile scenario by applying [test config enabling all ccp targets, with MIP false, and keep list populated](https://github.com/Azure/prometheus-collector/blob/main/otelcollector/test/test-cluster-yamls/configmaps/controlplane/ama-metrics-settings-configmap-mipfalse-emptykeep.yaml). Only the metrics specified in the test config .yaml for each targets' keeplist should be scraped.
   - Post about the candidate image release for the AKS team to update in the [Managed Prometheus (Azure Monitor Metrics addon)](https://teams.microsoft.com/l/channel/19%3Ae9dd234c60824ac5b494dbe3ec7dcb6b%40thread.skype/Managed%20Prometheus%20(Azure%20Monitor%20Metrics%20addon)?groupId=e121dbfd-0ec1-40ea-8af5-26075f6a731b&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47) teams channel
+- **🚀 Remote Write Deployment Steps**
+  - **Skip if Not Releasing**  
+    - If you’re not releasing a new remote write image, leave the default value as is and skip the following steps.  
+
+  - **Get the Latest Image Tag**  
+   - Retrieve the latest image tag from the most recent build in the [Remote Write Release Pipeline](https://msazure.visualstudio.com/InfrastructureInsights/_release?_a=releases&view=mine&definitionId=77).  
+
+  - **Update Prometheus Collector Release**  
+   - While creating the [Prometheus Collector Prod Release](https://github-private.visualstudio.com/azure/_release?_a=releases&view=mine&definitionId=79), update the release variables with the new candidate image tag.  
+
+  - **Deploy Remote Write Image**  
+   - Click **Deploy** in the `Deploy to Remote Write Clusters` step to release the new remote write image to the monitoring cluster.  
+
+  - **Update Pipeline Variables**  
+   - After a successful deployment, update the `RemoteWriteTag` variable in the release pipeline with the new remote write release tag.  
 - **Arc**: Start Arc release to Canary regions. The new version will be automatically deployed to each region batch every 24 hours.
