@@ -676,7 +676,7 @@ stages:
     dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
-      LINUX_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_AMD64_FULL_IMAGE_NAME'] ]
+      LINUX_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_ARM64_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
     steps:
@@ -707,7 +707,7 @@ stages:
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
           sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: 'Build: build and push image to dev ACR'
 
