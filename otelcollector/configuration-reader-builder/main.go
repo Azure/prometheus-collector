@@ -288,12 +288,12 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 func createCACertificate(co certOperator.CertOperator) (*x509.Certificate, string, *rsa.PrivateKey, string, error) {
 	log.Println("Creating CA certificate")
 	now := time.Now()
-	notBefore := now.Add(ClockSkewDuration)
+	//notBefore := now.Add(ClockSkewDuration)
 	notAfter := now.AddDate(CaValidityYears, 0, 0)
 
 	caCSR := &x509.Certificate{
 		Subject:               pkix.Name{CommonName: "ca"},
-		NotBefore:             notBefore,
+		NotBefore:             now,
 		NotAfter:              notAfter,
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		BasicConstraintsValid: true,
@@ -318,11 +318,11 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 		"ama-metrics-operator-targets.kube-system.svc.cluster.local",
 	}
 	now := time.Now()
-	notBefore := now.Add(ClockSkewDuration)
+	//notBefore := now.Add(ClockSkewDuration)
 	notAfter := now.AddDate(CaValidityYears, 0, 0)
 
 	csr := &x509.Certificate{
-		NotBefore:             notBefore,
+		NotBefore:             now,
 		NotAfter:              notAfter,
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		BasicConstraintsValid: true,
