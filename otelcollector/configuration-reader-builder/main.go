@@ -292,7 +292,7 @@ func createCACertificate(co certOperator.CertOperator) (*x509.Certificate, strin
 	notAfter := now.AddDate(CaValidityYears, 0, 0)
 
 	caCSR := &x509.Certificate{
-		Subject:               pkix.Name{CommonName: "ca"},
+		Subject:               pkix.Name{CommonName: "ama-metrics-operator-targets-CA"},
 		NotBefore:             now,
 		NotAfter:              notAfter,
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
@@ -326,7 +326,7 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 		NotAfter:              notAfter,
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		BasicConstraintsValid: true,
-		Subject:               pkix.Name{CommonName: "apiserver"},
+		Subject:               pkix.Name{CommonName: "ama-metrics-operator-targets"},
 		DNSNames:              dnsNames,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}

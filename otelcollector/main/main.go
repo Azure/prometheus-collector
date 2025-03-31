@@ -185,7 +185,23 @@ func main() {
 			}
 		} else {
 			fmt.Printf("ca.crt file exists at path: %s\n", caCertPath)
-			_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+			fmt.Println("Copying ca.crt to trusted store")
+			err = shared.CopyFile(caCertPath, "/etc/pki/ca-trust/source/anchors/ama-metrics-operator-targets-ca.crt")
+			if err != nil {
+				fmt.Printf("Error copying ca.crt to trusted store: %v\n", err)
+				//fall back to starting without https
+			} else {
+				fmt.Printf("Updating ca trust\n")
+				err = shared.StartCommandAndWait("update-ca-trust")
+				if err != nil {
+					fmt.Printf("Error updating ca trust store: %v\n", err)
+					//fall back to starting without https
+				} else {
+					fmt.Printf("Updated ca trust\n")
+					_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+				}
+			}
+			// _, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 		}
 	} else {
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
