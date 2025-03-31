@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/governed-release-yaml
 pr:
   autoCancel: true
   branches:
@@ -74,8 +73,8 @@ stages:
           LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
           LINUX_REF_APP_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-python
 
-          # Truncating to 115 characters as it is required by docker (4 characters used in -win and 9 characters used in -ltsc2019/-ltsc2022)
-          WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-115)
+          # Truncating to 115 characters as it is required by docker (4 characters used in -win, 9 characters used in -ltsc2019/-ltsc2022, 10 characters used in -unsigned)
+          WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-105)
           WINDOWS_IMAGE_TAG=$WINDOWS_IMAGE_TAG_PREFIX-win
 
           #Truncating this to 112 characters to add the targetallocator suffix
@@ -597,7 +596,7 @@ stages:
       name: Azure-Pipelines-Windows-CI-Test-EO
     variables:
       skipComponentGovernanceDetection: true
-    #condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         submodules: true
@@ -615,7 +614,7 @@ stages:
       name: Azure-Pipelines-CI-Test-EO
     variables:
       skipComponentGovernanceDetection: true
-    #condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
+    condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         submodules: true
@@ -891,7 +890,7 @@ stages:
 
       - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
         displayName: "Ev2: Generate image artifacts"
-        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         inputs:
           BuildDropPath: '$(Build.ArtifactStagingDirectory)/linux'
           DockerImagesToScan: '$(LINUX_FULL_IMAGE_NAME)'
@@ -918,7 +917,7 @@ stages:
 
       - task: PublishBuildArtifacts@1
         displayName: "Ev2: Publish image artifacts"
-        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
@@ -1080,7 +1079,7 @@ stages:
 
       - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
         displayName: "Ev2: Generate image artifacts"
-        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         inputs:
           BuildDropPath: '$(Build.ArtifactStagingDirectory)/linuxccp'
           DockerImagesToScan: '$(LINUX_CCP_FULL_IMAGE_NAME)'
@@ -1107,7 +1106,7 @@ stages:
 
       - task: PublishBuildArtifacts@1
         displayName: "Ev2: Publish image artifacts"
-        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
@@ -1879,7 +1878,7 @@ stages:
         displayName: "Build: Windows multi-arch manifest"
 
       - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         displayName: "Ev2: generate image artifacts"
         inputs:
           BuildDropPath: '$(Build.ArtifactStagingDirectory)/windows'
@@ -1952,7 +1951,7 @@ stages:
         condition: succeeded()
 
       - task: PublishBuildArtifacts@1
-        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         displayName: "Ev2: publish image artifacts"
         inputs:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
@@ -2012,7 +2011,7 @@ stages:
 
     - task: PublishBuildArtifacts@1
       displayName: "Ev2: publish helm chart artifacts"
-      #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+      condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: drop
