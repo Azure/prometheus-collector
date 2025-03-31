@@ -25,7 +25,7 @@ variables:
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.22.11'
+  GOLANG_VERSION: '1.23.7'
   TESTKUBE_GOLANG_VERSION: '1.23.2'
   FLUENT_BIT_VERSION: '3.2.2'
 
@@ -57,12 +57,17 @@ stages:
           LINUX_IMAGE_TAG=$SEMVER
           # Truncating to 128 characters as it is required by docker
           LINUX_IMAGE_TAG=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-128)
+
+          #Truncating this to 128 to add the arm/amd suffix
+          LINUX_MULTIARCH_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
                   
           #Truncating this to 124 to add the cfg suffix
           LINUX_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-124)
           LINUX_CONFIG_READER_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-cfg
           LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
           LINUX_CCP_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-ccp
+          LINUX_ARM64_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-arm
+          LINUX_AMD64_IMAGE_TAG=$LINUX_IMAGE_TAG_PREFIX-amd
 
           #Truncating this to 113 to add the ref app suffices
           LINUX_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-113)
@@ -73,10 +78,14 @@ stages:
           WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-115)
           WINDOWS_IMAGE_TAG=$WINDOWS_IMAGE_TAG_PREFIX-win
 
-
           #Truncating this to 112 characters to add the targetallocator suffix
           TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-112)
           TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
+
+          #Truncating this to characters to add the targetallocator-arm/amd suffix
+          TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-108)
+          TARGET_ALLOCATOR_ARM64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-arm
+          TARGET_ALLOCATOR_AMD64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-amd
 
           #Truncating this to 113 to add the ref app suffices
           WIN_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-107)
@@ -103,6 +112,10 @@ stages:
           WINDOWS_REF_APP_GOLANG_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_GOLANG_IMAGE_TAG
           WINDOWS_REF_APP_PYTHON_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$WIN_REF_APP_PYTHON_IMAGE_TAG
           ARC_CONFORMANCE_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$ARC_CONFORMANCE_IMAGE_TAG
+          LINUX_ARM64_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_ARM64_IMAGE_TAG
+          LINUX_AMD64_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$LINUX_AMD64_IMAGE_TAG
+          TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_ARM64_IMAGE_TAG
+          TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME=$ACR_REGISTRY$ACR_REPOSITORY:$TARGET_ALLOCATOR_AMD64_IMAGE_TAG
 
           echo "##vso[build.updatebuildnumber]$SEMVER"
           echo "##vso[task.setvariable variable=SEMVER;isOutput=true]$SEMVER"
@@ -125,6 +138,12 @@ stages:
           echo "##vso[task.setvariable variable=HELM_FULL_IMAGE_NAME;isOutput=true]$HELM_FULL_IMAGE_NAME"
           echo "##vso[task.setvariable variable=ARC_HELM_FULL_IMAGE_NAME;isOutput=true]$ARC_HELM_FULL_IMAGE_NAME"
           echo "##vso[task.setvariable variable=ARC_CONFORMANCE_FULL_IMAGE_NAME;isOutput=true]$ARC_CONFORMANCE_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=LINUX_ARM64_FULL_IMAGE_NAME;isOutput=true]$LINUX_ARM64_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=LINUX_AMD64_FULL_IMAGE_NAME;isOutput=true]$LINUX_AMD64_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_ARM64_IMAGE_TAG;isOutput=true]$TARGET_ALLOCATOR_ARM64_IMAGE_TAG"
+          echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_AMD64_IMAGE_TAG;isOutput=true]$TARGET_ALLOCATOR_AMD64_IMAGE_TAG"
+          echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME"
+          echo "##vso[task.setvariable variable=TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME;isOutput=true]$TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME"
 
         displayName: 'Build: set image registry, repo, and tags'
         name: setup
@@ -177,6 +196,25 @@ stages:
           pathToPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: drop
 
+  - job: CreateSidecarArtifact
+    displayName: "Create Sidecar YAML Artifact for Remote Write"
+    pool:
+      vmImage: 'ubuntu-latest'  # Change if using a different agent
+    
+    steps:
+      - task: CopyFiles@2
+        displayName: "Copy sidecar.yaml to artifact staging directory"
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
+          Contents: 'sidecar.yaml'
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
+
+      - task: PublishBuildArtifacts@1
+        displayName: "Publish sidecar.yaml as an artifact"
+        inputs:
+          pathToPublish: '$(Build.ArtifactStagingDirectory)/drop'
+          artifactName: 'drop'
+
   - job: Linux_Golang_Reference_App
     displayName: "Build: linux golang reference app image"
     pool:
@@ -220,8 +258,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Golang Linux Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: ESRPReqPrometheusProdCert      
@@ -308,8 +348,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Python Linux Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'      
@@ -396,8 +438,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Golang Windows Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -479,8 +523,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Python Windows Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -639,6 +685,7 @@ stages:
     dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+      LINUX_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_ARM64_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
     steps:
@@ -669,7 +716,7 @@ stages:
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
           sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: 'Build: build and push image to dev ACR'
 
@@ -680,6 +727,7 @@ stages:
     dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+      LINUX_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_AMD64_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
     steps:
@@ -698,7 +746,7 @@ stages:
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker build . --file ./build/linux/Dockerfile -t $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          docker build . --file ./build/linux/Dockerfile -t $(LINUX_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build and push image to dev ACR"
 
@@ -712,6 +760,8 @@ stages:
     - Linux_Prometheus_Collector_ARM64
     variables:
       LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
+      LINUX_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_AMD64_FULL_IMAGE_NAME'] ]
+      LINUX_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_ARM64_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
     steps:
@@ -730,7 +780,7 @@ stages:
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
 
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker manifest create $(LINUX_FULL_IMAGE_NAME) $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-amd64 $(LINUX_FULL_IMAGE_NAME)-prometheuscollector-arm64
+          docker manifest create $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
           docker manifest push $(LINUX_FULL_IMAGE_NAME)
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: 'Build: build and push image to dev ACR'
@@ -750,8 +800,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Linux"
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd'
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -939,8 +991,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Linux CCP"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1076,6 +1130,7 @@ stages:
     dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+      TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
       skipComponentGovernanceDetection: true
@@ -1092,7 +1147,7 @@ stages:
           mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-amd64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+          docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
         displayName: "Build: build and push target allocator image to dev ACR"
         condition: succeeded()
@@ -1104,6 +1159,8 @@ stages:
     dependsOn: Image_Tags_and_Ev2_Artifacts
     variables:
       TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+      TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
+      TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
       skipComponentGovernanceDetection: true
@@ -1131,7 +1188,7 @@ stages:
           mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
           sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64 --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+          sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
         displayName: "Build: build and push target allocator image to dev ACR"
         condition: succeeded()
@@ -1146,6 +1203,8 @@ stages:
     - Linux_Target_Allocator_AMD64
     variables:
       TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+      TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
+      TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
       skipComponentGovernanceDetection: true
@@ -1162,7 +1221,7 @@ stages:
           mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
           
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-          docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-amd64 $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)-arm64
+          docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
           docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
 
           docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
@@ -1206,8 +1265,10 @@ stages:
         displayName: "ESRP CodeSigning for TargetAllocator"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName:    'ESRPReqPrometheusProdCert'
@@ -1322,9 +1383,11 @@ stages:
       - task: EsrpCodeSigning@5
         displayName: "ESRP CodeSigning for Config Reader"
         inputs:
-          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1445,8 +1508,10 @@ stages:
       - task: EsrpCodeSigning@5
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1484,8 +1549,10 @@ stages:
       - task: EsrpCodeSigning@5
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1621,8 +1688,10 @@ stages:
       - task: EsrpCodeSigning@5
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1660,8 +1729,10 @@ stages:
       - task: EsrpCodeSigning@5
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3" 
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1837,8 +1908,10 @@ stages:
         displayName: "ESRP CodeSigning for Windows Multi-Arch Prometheus"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3" 
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'

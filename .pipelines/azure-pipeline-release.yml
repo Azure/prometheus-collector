@@ -1,3 +1,4 @@
+trigger: none
 variables:
 - name: ACRRegistry
   value: containerinsights.azurecr.io
