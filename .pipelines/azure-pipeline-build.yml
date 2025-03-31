@@ -73,8 +73,8 @@ stages:
           LINUX_REF_APP_GOLANG_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-golang
           LINUX_REF_APP_PYTHON_IMAGE_TAG=$LINUX_REF_APP_IMAGE_TAG_PREFIX-ref-app-python
 
-          # Truncating to 115 characters as it is required by docker (4 characters used in -win and 9 characters used in -ltsc2019/-ltsc2022)
-          WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-115)
+          # Truncating to 115 characters as it is required by docker (4 characters used in -win, 9 characters used in -ltsc2019/-ltsc2022, 10 characters used in -unsigned)
+          WINDOWS_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-105)
           WINDOWS_IMAGE_TAG=$WINDOWS_IMAGE_TAG_PREFIX-win
 
           #Truncating this to 112 characters to add the targetallocator suffix
@@ -257,8 +257,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Golang Linux Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: ESRPReqPrometheusProdCert      
@@ -345,8 +347,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Python Linux Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'      
@@ -433,8 +437,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Golang Windows Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -516,8 +522,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Python Windows Reference App"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -791,8 +799,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Linux"
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47'
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd'
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -980,8 +990,10 @@ stages:
         displayName: "ESRP CodeSigning for Prometheus Linux CCP"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1252,8 +1264,10 @@ stages:
         displayName: "ESRP CodeSigning for TargetAllocator"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName:    'ESRPReqPrometheusProdCert'
@@ -1368,9 +1382,11 @@ stages:
       - task: EsrpCodeSigning@5
         displayName: "ESRP CodeSigning for Config Reader"
         inputs:
-          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1491,8 +1507,10 @@ stages:
       - task: EsrpCodeSigning@5
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1530,8 +1548,10 @@ stages:
       - task: EsrpCodeSigning@5
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1667,8 +1687,10 @@ stages:
       - task: EsrpCodeSigning@5
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1706,8 +1728,10 @@ stages:
       - task: EsrpCodeSigning@5
         inputs:
           ConnectedServiceName: 'ESRPServiceConnectionPrometheus'
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3'
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3" 
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
@@ -1883,8 +1907,10 @@ stages:
         displayName: "ESRP CodeSigning for Windows Multi-Arch Prometheus"
         inputs:
           ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-          AppRegistrationClientId: '73f8d5f9-b507-497f-b698-4ed00fcba5a3' 
-          AppRegistrationTenantId: '72f988bf-86f1-41af-91ab-2d7cd011db47' 
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3" 
           AuthAKVName: 'ESRPPrometheusKVProd' 
           AuthCertName: 'ESRPContainerImageSignCert'
           AuthSignCertName: 'ESRPReqPrometheusProdCert'
