@@ -86,12 +86,6 @@ stages:
           TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-108)
           TARGET_ALLOCATOR_ARM64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-targetallocator-arm
           TARGET_ALLOCATOR_AMD64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-targetallocator-amd
-
-          #Truncating this to characters to add the targetallocator-arm/amd suffix
-          TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-108)
-          TARGET_ALLOCATOR_ARM64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-arm
-          TARGET_ALLOCATOR_AMD64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-amd
-
           #Truncating this to 113 to add the ref app suffices
           WIN_REF_APP_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-107)
           WIN_REF_APP_GOLANG_IMAGE_TAG=$WIN_REF_APP_IMAGE_TAG_PREFIX-win-ref-app-golang
