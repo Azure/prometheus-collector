@@ -8,6 +8,7 @@
    - Update metrics extension (from: metricsext2-2.2024.419.1535 to:metricsext2-2.2025.123.2222 ) [applies tp widows, Linux & CCP images]
    - Deprecate windows metric `windows_system_system_up_time` and replace it with `windows_system_boot_time_timestamp_seconds` in all dashboards & rec.rules (arm, terraform, bicep, policy templates)
    - Scope ACSTOR discoveries to `acstor` namespace to aviod Target allocator discovering all pods across all namespaces in larger clusters
+   - update version to 6.16.0
 * Pipeline/Docs/Templates Updates:
    * ci/cd: update remote write sidecar to write to eastus2 workspace (https://github.com/Azure/prometheus-collector/pull/1090) 
    
