@@ -82,6 +82,11 @@ stages:
           TARGET_ALLOCATOR_IMAGE_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-112)
           TARGET_ALLOCATOR_IMAGE_TAG=$TARGET_ALLOCATOR_IMAGE_TAG_PREFIX-targetallocator
 
+          #Truncating this 108 to characters to add the targetallocator-arm/amd suffix
+          TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-108)
+          TARGET_ALLOCATOR_ARM64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-targetallocator-arm
+          TARGET_ALLOCATOR_AMD64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-targetallocator-amd
+
           #Truncating this to characters to add the targetallocator-arm/amd suffix
           TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX=$(echo "${LINUX_IMAGE_TAG}" | cut -c1-108)
           TARGET_ALLOCATOR_ARM64_IMAGE_TAG=$TARGET_ALLOCATOR_MULTIARCH_TAG_PREFIX-arm
@@ -717,6 +722,11 @@ stages:
 
           sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           sudo docker build . --file ./build/linux/Dockerfile -t $(LINUX_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          if [ $? -ne 0 ]; then
+            echo "Error: Docker build failed."
+            exit 1
+          fi
+        retryCountOnTaskFailure: 1
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: 'Build: build and push image to dev ACR'
 
@@ -747,6 +757,11 @@ stages:
 
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker build . --file ./build/linux/Dockerfile -t $(LINUX_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
+          if [ $? -ne 0 ]; then
+            echo "Error: Docker build failed."
+            exit 1
+          fi
+        retryCountOnTaskFailure: 1
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build and push image to dev ACR"
 
@@ -782,6 +797,11 @@ stages:
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker manifest create $(LINUX_FULL_IMAGE_NAME) $(LINUX_AMD64_FULL_IMAGE_NAME) $(LINUX_ARM64_FULL_IMAGE_NAME)
           docker manifest push $(LINUX_FULL_IMAGE_NAME)
+          if [ $? -ne 0 ]; then
+            echo "Error: Docker build failed."
+            exit 1
+          fi
+        retryCountOnTaskFailure: 1
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: 'Build: build and push image to dev ACR'
 
@@ -971,8 +991,13 @@ stages:
           docker buildx create --name dockerbuilder --driver docker-container --driver-opt image=mcr.microsoft.com/azuremonitor/containerinsights/cidev/prometheus-collector/images:buildx-stable-1 --use 
           docker buildx inspect --bootstrap
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/ccp/Dockerfile -t $(LINUX_CCP_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linuxccp/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:prometheuscollectorccp
+          if [ $? -ne 0 ]; then
+            echo "Error: Docker build failed."
+            exit 1
+          fi
           docker pull $(LINUX_CCP_FULL_IMAGE_NAME)
           docker system prune --all -f
+        retryCountOnTaskFailure: 1
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build and push CCP image to dev ACR"
 
@@ -1148,6 +1173,11 @@ stages:
 
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+          if [ $? -ne 0 ]; then
+            echo "Error: Docker build failed."
+            exit 1
+          fi
+        retryCountOnTaskFailure: 1
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
         displayName: "Build: build and push target allocator image to dev ACR"
         condition: succeeded()
@@ -1189,6 +1219,11 @@ stages:
 
           sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+          if [ $? -ne 0 ]; then
+            echo "Error: Docker build failed."
+            exit 1
+          fi
+        retryCountOnTaskFailure: 1
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
         displayName: "Build: build and push target allocator image to dev ACR"
         condition: succeeded()
@@ -1343,6 +1378,10 @@ stages:
           docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
+          if [ $? -ne 0 ]; then
+            echo "Error: Docker build failed."
+            exit 1
+          fi
           docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
           MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
           DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
@@ -1350,6 +1389,7 @@ stages:
           cat <<EOF >>$(Build.ArtifactStagingDirectory)/linuxcfgreader/payload.json
           {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
           EOF
+        retryCountOnTaskFailure: 1
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build and push configuration reader image to dev ACR"
         condition: succeeded()
@@ -1457,6 +1497,10 @@ stages:
 
       - powershell: |
           docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
+          if [ $? -ne 0 ]; then
+            echo "Error: Docker build failed."
+            exit 1
+          fi
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build WS2019 image"
         retryCountOnTaskFailure: 2
@@ -1636,6 +1680,10 @@ stages:
 
       - powershell: |
           docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
+          if [ $? -ne 0 ]; then
+            echo "Error: Docker build failed."
+            exit 1
+          fi
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build WS2022 image"
         retryCountOnTaskFailure: 2
