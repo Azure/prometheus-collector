@@ -1,3 +1,18 @@
+# This Yaml Document has been converted by ESAI Yaml Pipeline Conversion Tool.
+# Please make sure to check all the converted content, it is your team's responsibility to make sure that the pipeline is still valid and functions as expected.
+# This pipeline will be extended to the OneESPT template
+# The pool section has been filled with placeholder values, check the following link for guidance: https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/1es-pipeline-templates/onboardingesteams/overview, replace the pool section with your hosted pool, os, and image name. If you are using a Linux image, you must specify an additional windows image for SDL: https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/1es-pipeline-templates/features/sdlanalysis/overview#how-to-specify-a-windows-pool-for-the-sdl-source-analysis-stage
+# Job "Job_2" contains release tasks. Its type has been defined as 'releaseJob'.
+# Job "Job_1" contains release tasks. Its type has been defined as 'releaseJob'.
+# Job "Job_2" contains release tasks. Its type has been defined as 'releaseJob'.
+# Job "Job_2" contains release tasks. Its type has been defined as 'releaseJob'.
+# Job "Job_2" contains release tasks. Its type has been defined as 'releaseJob'.
+# Job "Job_2" contains release tasks. Its type has been defined as 'releaseJob'.
+# Job "Job_2" contains release tasks. Its type has been defined as 'releaseJob'.
+# Job "Job_2" contains release tasks. Its type has been defined as 'releaseJob'.
+# Job "Job_2" contains release tasks. Its type has been defined as 'releaseJob'.
+trigger: none
+name: $(Date:yyyyMMdd).$(Rev:r)
 variables:
 - name: ACRRegistry
   value: containerinsights.azurecr.io
@@ -10,7 +25,7 @@ variables:
 - name: ARCSPNClientID
   value: 9a4c55e9-576a-450a-88bd-53bd634db38d
 - name: ARCSPNSecret
-  value: ''
+  value: 
 - name: ARCSPNTenant
   value: 72f988bf-86f1-41af-91ab-2d7cd011db47
 - name: ChartTag
@@ -18,7 +33,7 @@ variables:
 - name: CI_PROMETHEUS_KV_CLIENTID
   value: 865cdca2-d064-4340-b445-434a01d6436f
 - name: CI_PROMETHEUS_KV_CLIENTSECRET
-  value: ''
+  value: 
 - name: ConfigReaderTag
   value: ''
 - name: DevMCRAgentRepository
@@ -74,7 +89,6 @@ variables:
 - name: WindowsTag
   value: ''
 resources:
-  containers: []
   pipelines:
   - pipeline: '_Azureprometheus-collector'
     project: 'azure'
@@ -84,2339 +98,353 @@ resources:
     type: git
     name: 1ESPipelineTemplates/1ESPipelineTemplates
     ref: refs/tags/release
-stages:
-- stage: Stage_1
-  displayName: Push Images
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-    os: windows
-  jobs:
-  - job: releaseGating
-    displayName: Release Gating
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    steps:
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Branch Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        BUILD_SOURCEBRANCH: $(Build.SourceBranch)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORYPROVIDER: $(Build.Repository.Provider)
-        BUILD_SOURCEVERSION: $(Build.SourceVersion)
-        TASK_MODE: audit
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: release_gating.py
-  - job: approval
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Approval
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
     pool:
-      name: server
-    timeoutInMinutes: 7200
-    dependsOn:
-    - releaseGating
-    steps:
-    - task: ApprovalTask@1
-      inputs:
-        environment: $(ev2Environment)
-        servicetreeguid: 3170cdd2-19f0-4027-912b-1027311691a2
-  - job: Job_2_ev2_rollout
-    displayName: Push to Prod ACR Ev2 Rollout
-    timeoutInMinutes: '0'
-    condition: succeeded()
-    dependsOn:
-    - approval
-    variables:
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: https://azureservicedeploy.msft.net/api/monitorrollout
-    - name: OneESPT.JobType
-      value: releaseJob
-      readonly: true
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    - name: OneES_targetName
-      value: host
-    steps:
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Hosted Pool Information (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        HOST_ARCHITECTURE: amd64
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECT: $(System.TeamProject)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        PIPELINEGOVERNANCESTATUS_AUDITED: variables['PipelineGovernanceStatus_Audited']
-        PIPELINECLASSIFICATION_AUDITED: variables['PipelineClassification_Audited']
-        BUILD_REASON: $(Build.Reason)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validateHostedPool.ps1
-        arguments: -TargetName '' -StepTargets '' -StepsLength 0 -SkipStatelessValidation True -OS windows -IgnoreProductionPoolCheck  -IsOfficialTemplate -IsProductionReleasePipeline
-    - task: DownloadPipelineArtifact@2
-      displayName: ⏬ Pipeline Artifact Download
-      inputs:
-        artifactName: myArtifact
-        buildType: specific
-        project: $(resources.pipeline._Azureprometheus-collector.projectID)
-        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
-        allowFailedBuilds: false
-        buildVersionToDownload: specific
-        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
-        pipeline: _Azureprometheus-collector
-        targetPath: $(Pipeline.Workspace)/ev2Artifact
-      target:
-        container: host
-    - task: AzureArtifacts.drop-validator-task.drop-validator-task.DropValidatorTask@0
-      displayName: "\U0001F6E1 Validate SBoM Manifest (1ES PT)"
-      condition: succeeded()
-      continueOnError: False
-      timeoutInMinutes: 30
-      env:
-        SBOMVALIDATOR_TEMPIGNOREMISSING: true
-      inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-        ValidateSignature: True
-        Verbosity: 'Verbose'
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Post-SBoM Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      condition: succeeded()
-      env:
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
-    - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
-      displayName: "\U0001F6E1 Guardian: CodeSign Validation"
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      continueOnError: true
-      timeoutInMinutes: 10
-      inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
-        MaxThreads: $(OneES_UsableProcessorCount)
-        FailIfNoTargetsFound: false
-        ExcludePassesFromLog: False
-        Targets: f|**\*.dll;f|**\*.exe;f|**\*.sys;f|**\*.ps1;f|**\*.psm1;f|**\*.ps1xml;f|**\*.psc1;f|**\*.psd1;f|**\*.cdxml;f|**\*.vbs;f|**\*.js;f|**\*.wsf;-|.gdn\**;
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: "\U0001F6E1 Guardian: Check CodeSign Validation Results (1ES PT)"
-      continueOnError: true
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      env:
-        OneES_PipelineWorkspace: $(Pipeline.Workspace)
-        OneES_DeleteCodeSignValidationResult: True
-        OneES_CustomPolicyFile: ''
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: check_csv_results.ps1
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-      target:
-        container: host
-    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
-      inputs:
-        UseServerMonitorTask: true
-        EndpointProviderType: ApprovalService
-        ApprovalServiceEnvironment: $(ev2Environment)
-        ServiceRootLocation: LinkedArtifact
-        RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
-        OutputRolloutId: RolloutId
-        OutputServiceGroupName: ServiceGroupName
-        OutputRolloutStatus: RolloutStatus
-        InlineDynamicBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Global",           "bindings": [                       {                   "find": "__ACR_REGISTRY__",                   "replaceWith": "$(ACRRegistry)"               },                           {                   "find": "__PROD_ACR_AGENT_REPOSITORY__",                   "replaceWith": "$(ProdACRAgentRepository)"               },               {                 "find": "__PROD_ACR_CHART_REPOSITORY__",                 "replaceWith": "$(ProdACRChartRepository)"               },               {                 "find": "__PROD_ACR_KSM_REPOSITORY__",                 "replaceWith": "$(ProdACRKSMRepository)"               },               {                 "find": "__PROD_ACR_NE_REPOSITORY__",                 "replaceWith": "$(ProdACRNERepository)"               },               {                 "find": "__MANAGED_IDENTITY__",                 "replaceWith": "$(ManagedIdentity)"               },               {                 "find": "__MCR_REGISTRY__",                 "replaceWith": "$(MCRRegistry)"               },               {                 "find": "__DEV_MCR_AGENT_REPOSITORY__",                 "replaceWith": "$(DevMCRAgentRepository)"               },               {                 "find": "__DEV_MCR_KSM_REPOSITORY__",                 "replaceWith": "$(DevMCRKSMRepository)"               },               {                 "find": "__DEV_MCR_NE_REPOSITORY__",                 "replaceWith": "$(DevMCRNERepository)"               },               {                   "find": "__LINUX_TAG__",                   "replaceWith": "$(LinuxTag)"               }, {           "find": "__LINUX_CCP_TAG__",           "replaceWith": "$(LinuxCCPTag)"         },               {                   "find": "__WINDOWS_TAG__",                   "replaceWith": "$(WindowsTag)"               },               {                 "find": "__TARGETALLOCATOR_TAG__",                 "replaceWith": "$(TargetAllocatorTag)"               },               {                 "find": "__CONFIGREADER_TAG__",                 "replaceWith": "$(ConfigReaderTag)"               },               {                 "find": "__PROD_MCR_AGENT_REPOSITORY__",                 "replaceWith": "$(ProdMCRAgentRepository)"               },               {                 "find": "__DEV_MCR_CHART_REPOSITORY__",                 "replaceWith": "$(DevMCRChartRepository)"               },               {                 "find": "__PROD_MCR_CHART_REPOSITORY__",                 "replaceWith": "$(ProdMCRChartRepository)"               },               {                 "find": "__PROD_MCR_KSM_REPOSITORY__",                 "replaceWith": "$(ProdMCRKSMRepository)"               },               {                 "find": "__PROD_MCR_NE_REPOSITORY__",                 "replaceWith": "$(ProdMCRNERepository)"               },               {                 "find": "__PROD_MCR_REPOSITORY_HELM_DEPENDENCIES__",                 "replaceWith": "$(ProdMCRRepositoryHelmDependencies)"               },               {                 "find": "__CHART_TAG__",                 "replaceWith": "$(ChartTag)"               },               {                 "find": "__PUSH_NEW_KSM_CHART__",                 "replaceWith": "$(PushNewKSMChart)"               },               {                 "find": "__PUSH_NEW_NE_CHART__",                 "replaceWith": "$(PushNewNEChart)"               },               {                 "find": "__KSM_CHART_TAG__",                 "replaceWith": "$(KSMChartTag)"               },               {                 "find": "__NE_CHART_TAG__",                 "replaceWith": "$(NEChartTag)"               },               {                 "find": "__HELM_CHART_NAME__",                 "replaceWith": "$(HelmChartName)"               },               {                 "find": "__ARC_HELM_CHART_NAME__",                 "replaceWith": "$(ARCHelmChartName)"               }           ]       }                                                                                                                                                   ] }'
-      env:
-        ServiceTreeGuid: 3170cdd2-19f0-4027-912b-1027311691a2
-      target:
-        container: host
-      displayName: Ev2 Classic - Deploy
-  - job: Job_2_ev2_monitoring
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Push to Prod ACR Ev2 Monitoring
-    pool:
-      name: server
-    dependsOn:
-    - Job_2_ev2_rollout
-    timeoutInMinutes: '0'
-    steps:
-    - task: vsrm-ev2.vss-server-ev2.1950188C-A844-4040-A014-A326BC8332D3.Ev2Agentless@1
-      displayName: Ev2 - Monitoring
-      inputs:
-        Ev2MonintoringUrl: $(Ev2MonintoringUrl)
-- stage: Stage_2
-  displayName: Deploy to Prod Clusters
-  trigger: manual
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-    os: windows
-  jobs:
-  - job: Job_1
-    displayName: Deploy to Prod Clusters
-    condition: succeeded()
-    timeoutInMinutes: '0'
-    variables:
-    - name: OneESPT.JobType
-      value: releaseJob
-      readonly: true
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    - name: OneES_targetName
-      value: host
-    steps:
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Hosted Pool Information (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        HOST_ARCHITECTURE: amd64
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECT: $(System.TeamProject)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        PIPELINEGOVERNANCESTATUS_AUDITED: variables['PipelineGovernanceStatus_Audited']
-        PIPELINECLASSIFICATION_AUDITED: variables['PipelineClassification_Audited']
-        BUILD_REASON: $(Build.Reason)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validateHostedPool.ps1
-        arguments: -TargetName '' -StepTargets '' -StepsLength 0 -SkipStatelessValidation True -OS windows -IgnoreProductionPoolCheck  -IsOfficialTemplate -IsProductionReleasePipeline
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Branch Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        BUILD_SOURCEBRANCH: $(Build.SourceBranch)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORYPROVIDER: $(Build.Repository.Provider)
-        BUILD_SOURCEVERSION: $(Build.SourceVersion)
-        TASK_MODE: audit
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: release_gating.py
-    - task: HelmInstaller@0
-      inputs:
-        helmVersion: 3.12.3
-        checkLatestHelmVersion: false
-      target:
-        container: host
-      displayName: Install Helm 3.12.3
-    - task: Bash@3
-      inputs:
-        targetType: inline
-        script: "cd $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/arc-chart/\nCHART_TAG=$(jq '.\"image.name\"' metadata.json | tr -d '\"' | cut -d':' -f2)\necho $CHART_TAG\nset +x\necho \"##vso[task.setvariable variable=ChartTag;]$CHART_TAG\"\nset -x\nLINUX_TAG=$CHART_TAG\necho $LINUX_TAG\nset +x\necho \"##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG\"\nset -x\nWINDOWS_TAG=$LINUX_TAG-win\necho $WINDOWS_TAG\nset +x\necho \"##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG\"\nset -x\ncd $(System.DefaultWorkingDirectory)\nfor i in 1 2 3 4 5 6 7 8 9 10         \n    do            \n    sleep 30\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$LINUX_TAG\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$WINDOWS_TAG\n    echo $(MCRRegistry)$(ProdMCRChartRepository):$CHART_TAG\n    output1=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRAgentRepository)/tags/list)\n    output2=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRArcChartRepository)/tags/list)\n     if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)\n     then\n             echo \"Images and chart are published to mcr\"\n             exit 0\n      fi\ndone          \necho \"Images and chart are not published to mcr within 5 minutes\"\nexit 1"
-        workingDirectory: $(System.DefaultWorkingDirectory)
-      target:
-        container: host
-      displayName: Check images and ARC chart are pushed to MCR
-    - task: AzureCLI@2
-      displayName: 'Fetch Service Connection Subscription Id (1ES PT)'
-      continueOnError: true
-      inputs:
-        azureSubscription: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
-        scriptType: 'pscore'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          try {
-            $accountInfo = az account show --query "{subscriptionId:id, tenantId:tenantId}" --only-show-errors --output json | ConvertFrom-Json
-            Write-Host "Subscription ID: $($accountInfo.subscriptionId)"
-            Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID;]$($accountInfo.subscriptionId)"
-            Write-Host "Tenant ID: $($accountInfo.tenantId)"
-            Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_TENANTID;]$($accountInfo.tenantId)"
-          } catch {
-            Write-Host "Failed to fetch subscription id."
-            Write-Host $_.Exception.Message
-            exit 0
-          }
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Service Connection Environment Verification (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
-        SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        IS_PRODUCTION: True
-        TASK_NAME: HelmDeploy@0
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: serviceConnectionEnvironmentVerification.ps1
-    - task: HelmDeploy@0
-      inputs:
-        azureSubscriptionEndpoint: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
-        azureResourceGroup: ci-prod-aks-mac-weu-rg
-        kubernetesCluster: ci-prod-aks-mac-weu
-        useClusterAdmin: true
-        namespace: default
-        command: upgrade
-        chartType: FilePath
-        chartPath: $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/azure-monitor-metrics-addon/
-        releaseName: ama-metrics
-        waitForExecution: false
-        arguments: --values $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/azure-monitor-metrics-addon/values.yaml --dependency-update
-      target:
-        container: host
-      displayName: Deploy to ci-prod-aks-mac-weu
-    - task: AzureCLI@2
-      displayName: 'Fetch Service Connection Subscription Id (1ES PT)'
-      continueOnError: true
-      inputs:
-        azureSubscription: prometheus-arc-dev-release-mi
-        scriptType: 'pscore'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          try {
-            $accountInfo = az account show --query "{subscriptionId:id, tenantId:tenantId}" --only-show-errors --output json | ConvertFrom-Json
-            Write-Host "Subscription ID: $($accountInfo.subscriptionId)"
-            Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID;]$($accountInfo.subscriptionId)"
-            Write-Host "Tenant ID: $($accountInfo.tenantId)"
-            Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_TENANTID;]$($accountInfo.tenantId)"
-          } catch {
-            Write-Host "Failed to fetch subscription id."
-            Write-Host $_.Exception.Message
-            exit 0
-          }
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Service Connection Environment Verification (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
-        SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        IS_PRODUCTION: True
-        TASK_NAME: AzureCLI@2
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: serviceConnectionEnvironmentVerification.ps1
-    - task: AzureCLI@2
-      inputs:
-        connectedServiceNameARM: prometheus-arc-dev-release-mi
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: " # Create JSON request body\ncat <<EOF > \"request.json\"\n        {\n          \"artifactEndpoints\": [\n              {\n                  \"Regions\": [\n                      \"westcentralus\"\n                  ],\n                  \"Releasetrains\": [\n                      \"pipeline\",\"staging\"\n                  ],\n                  \"FullPathToHelmChart\": \"https://mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics-arc\",\n                  \"ExtensionUpdateFrequencyInMinutes\": 5,\n                  \"IsCustomerHidden\": true,\n                  \"ReadyforRollout\": true,\n                  \"RollbackVersion\": null,\n                  \"PackageConfigName\": \"Microsoft.AzureMonitor.Containers.Metrics-Prom041823\"\n              }\n          ]\n        }\nEOF\n      # Send Request\n      export SUBSCRIPTION=\"b9842c7c-1a38-4385-8f39-a51314758bcf\"\n      export RESOURCE_AUDIENCE=\"c699bf69-fb1d-4eaf-999b-99e6b2ae4d85\"\n      export SPN_CLIENT_ID=\"9a4c55e9-576a-450a-88bd-53bd634db38d\"\n      export SPN_TENANT_ID=\"72f988bf-86f1-41af-91ab-2d7cd011db47\"\n      export METHOD=\"PUT\"\n      echo \"Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $(ChartTag), SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID\"\n      #az login --identity --allow-no-subscriptions\n      #if [ $? -eq 0 ]; then\n       # echo \"Logged in successfully\"\n      #else\n       # echo \"-e error failed to login to az with managed identity credentials\"\n        #exit 1\n      #fi    \n      ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)\n      if [ $? -eq 0 ]; then\n        echo \"get access token from resource:$RESOURCE_AUDIENCE successfully.\"\n      else\n        echo \"-e error get access token from resource:$RESOURCE_AUDIENCE failed.\"\n        exit 1\n      fi   \n      ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '\"' | tr -d '\"\\r\\n')\n      echo $ACCESS_TOKEN \n      ARC_API_URL=\"https://eastus2euap.dp.kubernetesconfiguration.azure.com\"\n      EXTENSION_NAME=\"microsoft.azuremonitor.containers.metrics\"\n      API_VERSION=\"2021-05-01\"\n      echo \"start send request\"\n      az rest --method $METHOD --headers \"{\\\"Authorization\\\": \\\"Bearer $ACCESS_TOKEN\\\", \\\"Content-Type\\\": \\\"application/json\\\"}\" --body @request.json --uri $ARC_API_URL/subscriptions/$SUBSCRIPTION/extensionTypeRegistrations/$EXTENSION_NAME/versions/$(ChartTag)?api-version=$API_VERSION\n      if [ $? -eq 0 ]; then\n        echo \"arc extension registered successfully\"\n      else\n        echo \"-e error failed to register arc extension\"\n        exit 1\n      fi"
-      target:
-        container: host
-      displayName: Create Arc staging extension
-    - task: AzureCLI@2
-      displayName: 'Fetch Service Connection Subscription Id (1ES PT)'
-      continueOnError: true
-      inputs:
-        azureSubscription: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
-        scriptType: 'pscore'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          try {
-            $accountInfo = az account show --query "{subscriptionId:id, tenantId:tenantId}" --only-show-errors --output json | ConvertFrom-Json
-            Write-Host "Subscription ID: $($accountInfo.subscriptionId)"
-            Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID;]$($accountInfo.subscriptionId)"
-            Write-Host "Tenant ID: $($accountInfo.tenantId)"
-            Write-Host "##vso[task.setvariable variable=ONEES_SERVICE_CONNECTION_TENANTID;]$($accountInfo.tenantId)"
-          } catch {
-            Write-Host "Failed to fetch subscription id."
-            Write-Host $_.Exception.Message
-            exit 0
-          }
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Service Connection Environment Verification (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
-        SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        IS_PRODUCTION: True
-        TASK_NAME: AzureCLI@2
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: serviceConnectionEnvironmentVerification.ps1
-    - task: AzureCLI@2
-      inputs:
-        connectedServiceNameARM: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: >-
-          az config set extension.use_dynamic_install=yes_without_prompt
-
-          az k8s-extension update --name azuremonitor-metrics --resource-group ci-prod-arc-wcus --cluster-name ci-prod-arc-wcus --cluster-type connectedClusters --version $(ChartTag) --release-train staging
-      target:
-        container: host
-      displayName: Install extension on ci-prod-arc-wcus
-- stage: Stage_3
-  displayName: ARC Small Region Release
-  trigger: manual
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-    os: windows
-  jobs:
-  - job: releaseGating
-    displayName: Release Gating
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    steps:
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Branch Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        BUILD_SOURCEBRANCH: $(Build.SourceBranch)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORYPROVIDER: $(Build.Repository.Provider)
-        BUILD_SOURCEVERSION: $(Build.SourceVersion)
-        TASK_MODE: audit
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: release_gating.py
-  - job: approval
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Approval
-    pool:
-      name: server
-    timeoutInMinutes: 7200
-    dependsOn:
-    - releaseGating
-    steps:
-    - task: ApprovalTask@1
-      inputs:
-        environment: $(ev2Environment)
-        servicetreeguid: 3170cdd2-19f0-4027-912b-1027311691a2
-  - job: Job_2_ev2_rollout
-    displayName: Release Extension Ev2 Rollout
-    timeoutInMinutes: '0'
-    condition: succeeded()
-    dependsOn:
-    - approval
-    variables:
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: https://azureservicedeploy.msft.net/api/monitorrollout
-    - name: OneESPT.JobType
-      value: releaseJob
-      readonly: true
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    - name: OneES_targetName
-      value: host
-    steps:
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Hosted Pool Information (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        HOST_ARCHITECTURE: amd64
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECT: $(System.TeamProject)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        PIPELINEGOVERNANCESTATUS_AUDITED: variables['PipelineGovernanceStatus_Audited']
-        PIPELINECLASSIFICATION_AUDITED: variables['PipelineClassification_Audited']
-        BUILD_REASON: $(Build.Reason)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validateHostedPool.ps1
-        arguments: -TargetName '' -StepTargets '' -StepsLength 0 -SkipStatelessValidation True -OS windows -IgnoreProductionPoolCheck  -IsOfficialTemplate -IsProductionReleasePipeline
-    - task: DownloadPipelineArtifact@2
-      displayName: ⏬ Pipeline Artifact Download
-      inputs:
-        artifactName: myArtifact
-        buildType: current
-        targetPath: $(Pipeline.Workspace)/ev2Artifact
-      target:
-        container: host
-    - task: AzureArtifacts.drop-validator-task.drop-validator-task.DropValidatorTask@0
-      displayName: "\U0001F6E1 Validate SBoM Manifest (1ES PT)"
-      condition: succeeded()
-      continueOnError: False
-      timeoutInMinutes: 30
-      env:
-        SBOMVALIDATOR_TEMPIGNOREMISSING: true
-      inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-        ValidateSignature: True
-        Verbosity: 'Verbose'
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Post-SBoM Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      condition: succeeded()
-      env:
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
-    - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
-      displayName: "\U0001F6E1 Guardian: CodeSign Validation"
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      continueOnError: true
-      timeoutInMinutes: 10
-      inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
-        MaxThreads: $(OneES_UsableProcessorCount)
-        FailIfNoTargetsFound: false
-        ExcludePassesFromLog: False
-        Targets: f|**\*.dll;f|**\*.exe;f|**\*.sys;f|**\*.ps1;f|**\*.psm1;f|**\*.ps1xml;f|**\*.psc1;f|**\*.psd1;f|**\*.cdxml;f|**\*.vbs;f|**\*.js;f|**\*.wsf;-|.gdn\**;
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: "\U0001F6E1 Guardian: Check CodeSign Validation Results (1ES PT)"
-      continueOnError: true
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      env:
-        OneES_PipelineWorkspace: $(Pipeline.Workspace)
-        OneES_DeleteCodeSignValidationResult: True
-        OneES_CustomPolicyFile: ''
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: check_csv_results.ps1
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-      target:
-        container: host
-    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
-      inputs:
-        UseServerMonitorTask: true
-        EndpointProviderType: ApprovalService
-        ApprovalServiceEnvironment: $(ev2Environment)
-        ServiceRootLocation: LinkedArtifact
-        RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
-        OutputRolloutId: RolloutId
-        OutputServiceGroupName: ServiceGroupName
-        OutputRolloutStatus: RolloutStatus
-        InlineDynamicBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "small"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
-      env:
-        ServiceTreeGuid: 3170cdd2-19f0-4027-912b-1027311691a2
-      target:
-        container: host
-      displayName: Ev2 Classic - Deploy
-  - job: Job_2_ev2_monitoring
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Release Extension Ev2 Monitoring
-    pool:
-      name: server
-    dependsOn:
-    - Job_2_ev2_rollout
-    timeoutInMinutes: '0'
-    steps:
-    - task: vsrm-ev2.vss-server-ev2.1950188C-A844-4040-A014-A326BC8332D3.Ev2Agentless@1
-      displayName: Ev2 - Monitoring
-      inputs:
-        Ev2MonintoringUrl: $(Ev2MonintoringUrl)
-- stage: Stage_4
-  displayName: ARC Medium Region Release
-  dependsOn:
-  - Stage_3
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-    os: windows
-  jobs:
-  - job: releaseGating
-    displayName: Release Gating
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    steps:
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Branch Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        BUILD_SOURCEBRANCH: $(Build.SourceBranch)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORYPROVIDER: $(Build.Repository.Provider)
-        BUILD_SOURCEVERSION: $(Build.SourceVersion)
-        TASK_MODE: audit
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: release_gating.py
-  - job: approval
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Approval
-    pool:
-      name: server
-    timeoutInMinutes: 7200
-    dependsOn:
-    - releaseGating
-    steps:
-    - task: ApprovalTask@1
-      inputs:
-        environment: $(ev2Environment)
-        servicetreeguid: 3170cdd2-19f0-4027-912b-1027311691a2
-  - job: Job_2_ev2_rollout
-    displayName: Release Extension Ev2 Rollout
-    timeoutInMinutes: '0'
-    condition: succeeded()
-    dependsOn:
-    - approval
-    variables:
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: https://azureservicedeploy.msft.net/api/monitorrollout
-    - name: OneESPT.JobType
-      value: releaseJob
-      readonly: true
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    - name: OneES_targetName
-      value: host
-    steps:
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Hosted Pool Information (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        HOST_ARCHITECTURE: amd64
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECT: $(System.TeamProject)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        PIPELINEGOVERNANCESTATUS_AUDITED: variables['PipelineGovernanceStatus_Audited']
-        PIPELINECLASSIFICATION_AUDITED: variables['PipelineClassification_Audited']
-        BUILD_REASON: $(Build.Reason)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validateHostedPool.ps1
-        arguments: -TargetName '' -StepTargets '' -StepsLength 0 -SkipStatelessValidation True -OS windows -IgnoreProductionPoolCheck  -IsOfficialTemplate -IsProductionReleasePipeline
-    - task: DownloadPipelineArtifact@2
-      displayName: ⏬ Pipeline Artifact Download
-      inputs:
-        artifactName: myArtifact
-        buildType: current
-        targetPath: $(Pipeline.Workspace)/ev2Artifact
-      target:
-        container: host
-    - task: AzureArtifacts.drop-validator-task.drop-validator-task.DropValidatorTask@0
-      displayName: "\U0001F6E1 Validate SBoM Manifest (1ES PT)"
-      condition: succeeded()
-      continueOnError: False
-      timeoutInMinutes: 30
-      env:
-        SBOMVALIDATOR_TEMPIGNOREMISSING: true
-      inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-        ValidateSignature: True
-        Verbosity: 'Verbose'
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Post-SBoM Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      condition: succeeded()
-      env:
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
-    - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
-      displayName: "\U0001F6E1 Guardian: CodeSign Validation"
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      continueOnError: true
-      timeoutInMinutes: 10
-      inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
-        MaxThreads: $(OneES_UsableProcessorCount)
-        FailIfNoTargetsFound: false
-        ExcludePassesFromLog: False
-        Targets: f|**\*.dll;f|**\*.exe;f|**\*.sys;f|**\*.ps1;f|**\*.psm1;f|**\*.ps1xml;f|**\*.psc1;f|**\*.psd1;f|**\*.cdxml;f|**\*.vbs;f|**\*.js;f|**\*.wsf;-|.gdn\**;
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: "\U0001F6E1 Guardian: Check CodeSign Validation Results (1ES PT)"
-      continueOnError: true
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      env:
-        OneES_PipelineWorkspace: $(Pipeline.Workspace)
-        OneES_DeleteCodeSignValidationResult: True
-        OneES_CustomPolicyFile: ''
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: check_csv_results.ps1
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-      target:
-        container: host
-    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
-      inputs:
-        UseServerMonitorTask: true
-        EndpointProviderType: ApprovalService
-        ApprovalServiceEnvironment: $(ev2Environment)
-        ServiceRootLocation: LinkedArtifact
-        RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
-        OutputRolloutId: RolloutId
-        OutputServiceGroupName: ServiceGroupName
-        OutputRolloutStatus: RolloutStatus
-        InlineDynamicBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "medium"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
-      env:
-        ServiceTreeGuid: 3170cdd2-19f0-4027-912b-1027311691a2
-      target:
-        container: host
-      displayName: Ev2 Classic - Deploy
-  - job: Job_2_ev2_monitoring
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Release Extension Ev2 Monitoring
-    pool:
-      name: server
-    dependsOn:
-    - Job_2_ev2_rollout
-    timeoutInMinutes: '0'
-    steps:
-    - task: vsrm-ev2.vss-server-ev2.1950188C-A844-4040-A014-A326BC8332D3.Ev2Agentless@1
-      displayName: Ev2 - Monitoring
-      inputs:
-        Ev2MonintoringUrl: $(Ev2MonintoringUrl)
-- stage: Stage_5
-  displayName: ARC Large Region Release
-  dependsOn:
-  - Stage_4
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-    os: windows
-  jobs:
-  - job: releaseGating
-    displayName: Release Gating
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    steps:
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Branch Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        BUILD_SOURCEBRANCH: $(Build.SourceBranch)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORYPROVIDER: $(Build.Repository.Provider)
-        BUILD_SOURCEVERSION: $(Build.SourceVersion)
-        TASK_MODE: audit
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: release_gating.py
-  - job: approval
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Approval
-    pool:
-      name: server
-    timeoutInMinutes: 7200
-    dependsOn:
-    - releaseGating
-    steps:
-    - task: ApprovalTask@1
-      inputs:
-        environment: $(ev2Environment)
-        servicetreeguid: 3170cdd2-19f0-4027-912b-1027311691a2
-  - job: Job_2_ev2_rollout
-    displayName: Release Extension Ev2 Rollout
-    timeoutInMinutes: '0'
-    condition: succeeded()
-    dependsOn:
-    - approval
-    variables:
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: https://azureservicedeploy.msft.net/api/monitorrollout
-    - name: OneESPT.JobType
-      value: releaseJob
-      readonly: true
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    - name: OneES_targetName
-      value: host
-    steps:
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Hosted Pool Information (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        HOST_ARCHITECTURE: amd64
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECT: $(System.TeamProject)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        PIPELINEGOVERNANCESTATUS_AUDITED: variables['PipelineGovernanceStatus_Audited']
-        PIPELINECLASSIFICATION_AUDITED: variables['PipelineClassification_Audited']
-        BUILD_REASON: $(Build.Reason)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validateHostedPool.ps1
-        arguments: -TargetName '' -StepTargets '' -StepsLength 0 -SkipStatelessValidation True -OS windows -IgnoreProductionPoolCheck  -IsOfficialTemplate -IsProductionReleasePipeline
-    - task: DownloadPipelineArtifact@2
-      displayName: ⏬ Pipeline Artifact Download
-      inputs:
-        artifactName: myArtifact
-        buildType: current
-        targetPath: $(Pipeline.Workspace)/ev2Artifact
-      target:
-        container: host
-    - task: AzureArtifacts.drop-validator-task.drop-validator-task.DropValidatorTask@0
-      displayName: "\U0001F6E1 Validate SBoM Manifest (1ES PT)"
-      condition: succeeded()
-      continueOnError: False
-      timeoutInMinutes: 30
-      env:
-        SBOMVALIDATOR_TEMPIGNOREMISSING: true
-      inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-        ValidateSignature: True
-        Verbosity: 'Verbose'
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Post-SBoM Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      condition: succeeded()
-      env:
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
-    - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
-      displayName: "\U0001F6E1 Guardian: CodeSign Validation"
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      continueOnError: true
-      timeoutInMinutes: 10
-      inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
-        MaxThreads: $(OneES_UsableProcessorCount)
-        FailIfNoTargetsFound: false
-        ExcludePassesFromLog: False
-        Targets: f|**\*.dll;f|**\*.exe;f|**\*.sys;f|**\*.ps1;f|**\*.psm1;f|**\*.ps1xml;f|**\*.psc1;f|**\*.psd1;f|**\*.cdxml;f|**\*.vbs;f|**\*.js;f|**\*.wsf;-|.gdn\**;
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: "\U0001F6E1 Guardian: Check CodeSign Validation Results (1ES PT)"
-      continueOnError: true
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      env:
-        OneES_PipelineWorkspace: $(Pipeline.Workspace)
-        OneES_DeleteCodeSignValidationResult: True
-        OneES_CustomPolicyFile: ''
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: check_csv_results.ps1
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-      target:
-        container: host
-    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
-      inputs:
-        UseServerMonitorTask: true
-        EndpointProviderType: ApprovalService
-        ApprovalServiceEnvironment: $(ev2Environment)
-        ServiceRootLocation: LinkedArtifact
-        RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
-        OutputRolloutId: RolloutId
-        OutputServiceGroupName: ServiceGroupName
-        OutputRolloutStatus: RolloutStatus
-        InlineDynamicBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "large"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
-      env:
-        ServiceTreeGuid: 3170cdd2-19f0-4027-912b-1027311691a2
-      target:
-        container: host
-      displayName: Ev2 Classic - Deploy
-  - job: Job_2_ev2_monitoring
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Release Extension Ev2 Monitoring
-    pool:
-      name: server
-    dependsOn:
-    - Job_2_ev2_rollout
-    timeoutInMinutes: '0'
-    steps:
-    - task: vsrm-ev2.vss-server-ev2.1950188C-A844-4040-A014-A326BC8332D3.Ev2Agentless@1
-      displayName: Ev2 - Monitoring
-      inputs:
-        Ev2MonintoringUrl: $(Ev2MonintoringUrl)
-- stage: Stage_6
-  displayName: ARC Batch 1 Region Release
-  dependsOn:
-  - Stage_5
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-    os: windows
-  jobs:
-  - job: releaseGating
-    displayName: Release Gating
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    steps:
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Branch Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        BUILD_SOURCEBRANCH: $(Build.SourceBranch)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORYPROVIDER: $(Build.Repository.Provider)
-        BUILD_SOURCEVERSION: $(Build.SourceVersion)
-        TASK_MODE: audit
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: release_gating.py
-  - job: approval
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Approval
-    pool:
-      name: server
-    timeoutInMinutes: 7200
-    dependsOn:
-    - releaseGating
-    steps:
-    - task: ApprovalTask@1
-      inputs:
-        environment: $(ev2Environment)
-        servicetreeguid: 3170cdd2-19f0-4027-912b-1027311691a2
-  - job: Job_2_ev2_rollout
-    displayName: Release Extension Ev2 Rollout
-    timeoutInMinutes: '0'
-    condition: succeeded()
-    dependsOn:
-    - approval
-    variables:
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: https://azureservicedeploy.msft.net/api/monitorrollout
-    - name: OneESPT.JobType
-      value: releaseJob
-      readonly: true
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    - name: OneES_targetName
-      value: host
-    steps:
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Hosted Pool Information (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        HOST_ARCHITECTURE: amd64
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECT: $(System.TeamProject)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        PIPELINEGOVERNANCESTATUS_AUDITED: variables['PipelineGovernanceStatus_Audited']
-        PIPELINECLASSIFICATION_AUDITED: variables['PipelineClassification_Audited']
-        BUILD_REASON: $(Build.Reason)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validateHostedPool.ps1
-        arguments: -TargetName '' -StepTargets '' -StepsLength 0 -SkipStatelessValidation True -OS windows -IgnoreProductionPoolCheck  -IsOfficialTemplate -IsProductionReleasePipeline
-    - task: DownloadPipelineArtifact@2
-      displayName: ⏬ Pipeline Artifact Download
-      inputs:
-        artifactName: myArtifact
-        buildType: current
-        targetPath: $(Pipeline.Workspace)/ev2Artifact
-      target:
-        container: host
-    - task: AzureArtifacts.drop-validator-task.drop-validator-task.DropValidatorTask@0
-      displayName: "\U0001F6E1 Validate SBoM Manifest (1ES PT)"
-      condition: succeeded()
-      continueOnError: False
-      timeoutInMinutes: 30
-      env:
-        SBOMVALIDATOR_TEMPIGNOREMISSING: true
-      inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-        ValidateSignature: True
-        Verbosity: 'Verbose'
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Post-SBoM Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      condition: succeeded()
-      env:
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
-    - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
-      displayName: "\U0001F6E1 Guardian: CodeSign Validation"
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      continueOnError: true
-      timeoutInMinutes: 10
-      inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
-        MaxThreads: $(OneES_UsableProcessorCount)
-        FailIfNoTargetsFound: false
-        ExcludePassesFromLog: False
-        Targets: f|**\*.dll;f|**\*.exe;f|**\*.sys;f|**\*.ps1;f|**\*.psm1;f|**\*.ps1xml;f|**\*.psc1;f|**\*.psd1;f|**\*.cdxml;f|**\*.vbs;f|**\*.js;f|**\*.wsf;-|.gdn\**;
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: "\U0001F6E1 Guardian: Check CodeSign Validation Results (1ES PT)"
-      continueOnError: true
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      env:
-        OneES_PipelineWorkspace: $(Pipeline.Workspace)
-        OneES_DeleteCodeSignValidationResult: True
-        OneES_CustomPolicyFile: ''
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: check_csv_results.ps1
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-      target:
-        container: host
-    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
-      inputs:
-        UseServerMonitorTask: true
-        EndpointProviderType: ApprovalService
-        ApprovalServiceEnvironment: $(ev2Environment)
-        ServiceRootLocation: LinkedArtifact
-        RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
-        OutputRolloutId: RolloutId
-        OutputServiceGroupName: ServiceGroupName
-        OutputRolloutStatus: RolloutStatus
-        InlineDynamicBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "batch1"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
-      env:
-        ServiceTreeGuid: 3170cdd2-19f0-4027-912b-1027311691a2
-      target:
-        container: host
-      displayName: Ev2 Classic - Deploy
-  - job: Job_2_ev2_monitoring
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Release Extension Ev2 Monitoring
-    pool:
-      name: server
-    dependsOn:
-    - Job_2_ev2_rollout
-    timeoutInMinutes: '0'
-    steps:
-    - task: vsrm-ev2.vss-server-ev2.1950188C-A844-4040-A014-A326BC8332D3.Ev2Agentless@1
-      displayName: Ev2 - Monitoring
-      inputs:
-        Ev2MonintoringUrl: $(Ev2MonintoringUrl)
-- stage: Stage_7
-  displayName: ARC Batch 2 Region Release
-  dependsOn:
-  - Stage_6
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-    os: windows
-  jobs:
-  - job: releaseGating
-    displayName: Release Gating
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    steps:
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Branch Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        BUILD_SOURCEBRANCH: $(Build.SourceBranch)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORYPROVIDER: $(Build.Repository.Provider)
-        BUILD_SOURCEVERSION: $(Build.SourceVersion)
-        TASK_MODE: audit
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: release_gating.py
-  - job: approval
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Approval
-    pool:
-      name: server
-    timeoutInMinutes: 7200
-    dependsOn:
-    - releaseGating
-    steps:
-    - task: ApprovalTask@1
-      inputs:
-        environment: $(ev2Environment)
-        servicetreeguid: 3170cdd2-19f0-4027-912b-1027311691a2
-  - job: Job_2_ev2_rollout
-    displayName: Release Extension Ev2 Rollout
-    timeoutInMinutes: '0'
-    condition: succeeded()
-    dependsOn:
-    - approval
-    variables:
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: https://azureservicedeploy.msft.net/api/monitorrollout
-    - name: OneESPT.JobType
-      value: releaseJob
-      readonly: true
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    - name: OneES_targetName
-      value: host
-    steps:
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Hosted Pool Information (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        HOST_ARCHITECTURE: amd64
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECT: $(System.TeamProject)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        PIPELINEGOVERNANCESTATUS_AUDITED: variables['PipelineGovernanceStatus_Audited']
-        PIPELINECLASSIFICATION_AUDITED: variables['PipelineClassification_Audited']
-        BUILD_REASON: $(Build.Reason)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validateHostedPool.ps1
-        arguments: -TargetName '' -StepTargets '' -StepsLength 0 -SkipStatelessValidation True -OS windows -IgnoreProductionPoolCheck  -IsOfficialTemplate -IsProductionReleasePipeline
-    - task: DownloadPipelineArtifact@2
-      displayName: ⏬ Pipeline Artifact Download
-      inputs:
-        artifactName: myArtifact
-        buildType: current
-        targetPath: $(Pipeline.Workspace)/ev2Artifact
-      target:
-        container: host
-    - task: AzureArtifacts.drop-validator-task.drop-validator-task.DropValidatorTask@0
-      displayName: "\U0001F6E1 Validate SBoM Manifest (1ES PT)"
-      condition: succeeded()
-      continueOnError: False
-      timeoutInMinutes: 30
-      env:
-        SBOMVALIDATOR_TEMPIGNOREMISSING: true
-      inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-        ValidateSignature: True
-        Verbosity: 'Verbose'
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Post-SBoM Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      condition: succeeded()
-      env:
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
-    - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
-      displayName: "\U0001F6E1 Guardian: CodeSign Validation"
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      continueOnError: true
-      timeoutInMinutes: 10
-      inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
-        MaxThreads: $(OneES_UsableProcessorCount)
-        FailIfNoTargetsFound: false
-        ExcludePassesFromLog: False
-        Targets: f|**\*.dll;f|**\*.exe;f|**\*.sys;f|**\*.ps1;f|**\*.psm1;f|**\*.ps1xml;f|**\*.psc1;f|**\*.psd1;f|**\*.cdxml;f|**\*.vbs;f|**\*.js;f|**\*.wsf;-|.gdn\**;
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: "\U0001F6E1 Guardian: Check CodeSign Validation Results (1ES PT)"
-      continueOnError: true
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      env:
-        OneES_PipelineWorkspace: $(Pipeline.Workspace)
-        OneES_DeleteCodeSignValidationResult: True
-        OneES_CustomPolicyFile: ''
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: check_csv_results.ps1
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-      target:
-        container: host
-    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
-      inputs:
-        UseServerMonitorTask: true
-        EndpointProviderType: ApprovalService
-        ApprovalServiceEnvironment: $(ev2Environment)
-        ServiceRootLocation: LinkedArtifact
-        RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
-        OutputRolloutId: RolloutId
-        OutputServiceGroupName: ServiceGroupName
-        OutputRolloutStatus: RolloutStatus
-        InlineDynamicBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "batch2"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
-      env:
-        ServiceTreeGuid: 3170cdd2-19f0-4027-912b-1027311691a2
-      target:
-        container: host
-      displayName: Ev2 Classic - Deploy
-  - job: Job_2_ev2_monitoring
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Release Extension Ev2 Monitoring
-    pool:
-      name: server
-    dependsOn:
-    - Job_2_ev2_rollout
-    timeoutInMinutes: '0'
-    steps:
-    - task: vsrm-ev2.vss-server-ev2.1950188C-A844-4040-A014-A326BC8332D3.Ev2Agentless@1
-      displayName: Ev2 - Monitoring
-      inputs:
-        Ev2MonintoringUrl: $(Ev2MonintoringUrl)
-- stage: Stage_8
-  displayName: ARC Batch 3 Region Release
-  dependsOn:
-  - Stage_7
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-    os: windows
-  jobs:
-  - job: releaseGating
-    displayName: Release Gating
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    steps:
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Branch Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        BUILD_SOURCEBRANCH: $(Build.SourceBranch)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORYPROVIDER: $(Build.Repository.Provider)
-        BUILD_SOURCEVERSION: $(Build.SourceVersion)
-        TASK_MODE: audit
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: release_gating.py
-  - job: approval
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Approval
-    pool:
-      name: server
-    timeoutInMinutes: 7200
-    dependsOn:
-    - releaseGating
-    steps:
-    - task: ApprovalTask@1
-      inputs:
-        environment: $(ev2Environment)
-        servicetreeguid: 3170cdd2-19f0-4027-912b-1027311691a2
-  - job: Job_2_ev2_rollout
-    displayName: Release Extension Ev2 Rollout
-    timeoutInMinutes: '0'
-    condition: succeeded()
-    dependsOn:
-    - approval
-    variables:
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: https://azureservicedeploy.msft.net/api/monitorrollout
-    - name: OneESPT.JobType
-      value: releaseJob
-      readonly: true
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    - name: OneES_targetName
-      value: host
-    steps:
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Hosted Pool Information (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        HOST_ARCHITECTURE: amd64
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECT: $(System.TeamProject)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        PIPELINEGOVERNANCESTATUS_AUDITED: variables['PipelineGovernanceStatus_Audited']
-        PIPELINECLASSIFICATION_AUDITED: variables['PipelineClassification_Audited']
-        BUILD_REASON: $(Build.Reason)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validateHostedPool.ps1
-        arguments: -TargetName '' -StepTargets '' -StepsLength 0 -SkipStatelessValidation True -OS windows -IgnoreProductionPoolCheck  -IsOfficialTemplate -IsProductionReleasePipeline
-    - task: DownloadPipelineArtifact@2
-      displayName: ⏬ Pipeline Artifact Download
-      inputs:
-        artifactName: myArtifact
-        buildType: current
-        targetPath: $(Pipeline.Workspace)/ev2Artifact
-      target:
-        container: host
-    - task: AzureArtifacts.drop-validator-task.drop-validator-task.DropValidatorTask@0
-      displayName: "\U0001F6E1 Validate SBoM Manifest (1ES PT)"
-      condition: succeeded()
-      continueOnError: False
-      timeoutInMinutes: 30
-      env:
-        SBOMVALIDATOR_TEMPIGNOREMISSING: true
-      inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-        ValidateSignature: True
-        Verbosity: 'Verbose'
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Post-SBoM Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      condition: succeeded()
-      env:
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
-    - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
-      displayName: "\U0001F6E1 Guardian: CodeSign Validation"
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      continueOnError: true
-      timeoutInMinutes: 10
-      inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
-        MaxThreads: $(OneES_UsableProcessorCount)
-        FailIfNoTargetsFound: false
-        ExcludePassesFromLog: False
-        Targets: f|**\*.dll;f|**\*.exe;f|**\*.sys;f|**\*.ps1;f|**\*.psm1;f|**\*.ps1xml;f|**\*.psc1;f|**\*.psd1;f|**\*.cdxml;f|**\*.vbs;f|**\*.js;f|**\*.wsf;-|.gdn\**;
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: "\U0001F6E1 Guardian: Check CodeSign Validation Results (1ES PT)"
-      continueOnError: true
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      env:
-        OneES_PipelineWorkspace: $(Pipeline.Workspace)
-        OneES_DeleteCodeSignValidationResult: True
-        OneES_CustomPolicyFile: ''
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: check_csv_results.ps1
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-      target:
-        container: host
-    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
-      inputs:
-        UseServerMonitorTask: true
-        EndpointProviderType: ApprovalService
-        ApprovalServiceEnvironment: $(ev2Environment)
-        ServiceRootLocation: LinkedArtifact
-        RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
-        OutputRolloutId: RolloutId
-        OutputServiceGroupName: ServiceGroupName
-        OutputRolloutStatus: RolloutStatus
-        InlineDynamicBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "batch3"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
-      env:
-        ServiceTreeGuid: 3170cdd2-19f0-4027-912b-1027311691a2
-      target:
-        container: host
-      displayName: Ev2 Classic - Deploy
-  - job: Job_2_ev2_monitoring
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Release Extension Ev2 Monitoring
-    pool:
-      name: server
-    dependsOn:
-    - Job_2_ev2_rollout
-    timeoutInMinutes: '0'
-    steps:
-    - task: vsrm-ev2.vss-server-ev2.1950188C-A844-4040-A014-A326BC8332D3.Ev2Agentless@1
-      displayName: Ev2 - Monitoring
-      inputs:
-        Ev2MonintoringUrl: $(Ev2MonintoringUrl)
-- stage: Stage_9
-  displayName: ARC Batch 4 Region Release
-  dependsOn:
-  - Stage_8
-  pool:
-    name: Azure-Pipelines-Windows-CI-Test-EO
-    os: windows
-  jobs:
-  - job: releaseGating
-    displayName: Release Gating
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    steps:
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Branch Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      env:
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        BUILD_SOURCEBRANCH: $(Build.SourceBranch)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORYPROVIDER: $(Build.Repository.Provider)
-        BUILD_SOURCEVERSION: $(Build.SourceVersion)
-        TASK_MODE: audit
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: release_gating.py
-  - job: approval
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Approval
-    pool:
-      name: server
-    timeoutInMinutes: 7200
-    dependsOn:
-    - releaseGating
-    steps:
-    - task: ApprovalTask@1
-      inputs:
-        environment: $(ev2Environment)
-        servicetreeguid: 3170cdd2-19f0-4027-912b-1027311691a2
-  - job: Job_2_ev2_rollout
-    displayName: Release Extension Ev2 Rollout
-    timeoutInMinutes: '0'
-    condition: succeeded()
-    dependsOn:
-    - approval
-    variables:
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: https://azureservicedeploy.msft.net/api/monitorrollout
-    - name: OneESPT.JobType
-      value: releaseJob
-      readonly: true
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    - name: OneES_targetName
-      value: host
-    steps:
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Hosted Pool Information (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        HOST_ARCHITECTURE: amd64
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        SYSTEM_DEFINITIONID: $(System.DefinitionId)
-        SYSTEM_COLLECTIONURI: $(System.CollectionUri)
-        SYSTEM_TEAMPROJECT: $(System.TeamProject)
-        SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
-        BUILD_REPOSITORY_ID: $(Build.Repository.ID)
-        BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
-        PIPELINEGOVERNANCESTATUS_AUDITED: variables['PipelineGovernanceStatus_Audited']
-        PIPELINECLASSIFICATION_AUDITED: variables['PipelineClassification_Audited']
-        BUILD_REASON: $(Build.Reason)
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validateHostedPool.ps1
-        arguments: -TargetName '' -StepTargets '' -StepsLength 0 -SkipStatelessValidation True -OS windows -IgnoreProductionPoolCheck  -IsOfficialTemplate -IsProductionReleasePipeline
-    - task: DownloadPipelineArtifact@2
-      displayName: ⏬ Pipeline Artifact Download
-      inputs:
-        artifactName: myArtifact
-        buildType: current
-        targetPath: $(Pipeline.Workspace)/ev2Artifact
-      target:
-        container: host
-    - task: AzureArtifacts.drop-validator-task.drop-validator-task.DropValidatorTask@0
-      displayName: "\U0001F6E1 Validate SBoM Manifest (1ES PT)"
-      condition: succeeded()
-      continueOnError: False
-      timeoutInMinutes: 30
-      env:
-        SBOMVALIDATOR_TEMPIGNOREMISSING: true
-      inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-        ValidateSignature: True
-        Verbosity: 'Verbose'
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Post-SBoM Validation (1ES PT)
-      continueOnError: true
-      target:
-        container: host
-      condition: succeeded()
-      env:
-        OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: post_sbom_validation.py
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Validate Source Build (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact
-        IsProduction: True
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: validate_source_build.py
-    - task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
-      displayName: "\U0001F6E1 Guardian: CodeSign Validation"
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      continueOnError: true
-      timeoutInMinutes: 10
-      inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact
-        MaxThreads: $(OneES_UsableProcessorCount)
-        FailIfNoTargetsFound: false
-        ExcludePassesFromLog: False
-        Targets: f|**\*.dll;f|**\*.exe;f|**\*.sys;f|**\*.ps1;f|**\*.psm1;f|**\*.ps1xml;f|**\*.psc1;f|**\*.psd1;f|**\*.cdxml;f|**\*.vbs;f|**\*.js;f|**\*.wsf;-|.gdn\**;
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: "\U0001F6E1 Guardian: Check CodeSign Validation Results (1ES PT)"
-      continueOnError: true
-      target:
-        container: host
-      condition: and(succeeded(), ne(variables['ONEES_ENFORCED_CODESIGNVALIDATION_ENABLED'], 'false'))
-      env:
-        OneES_PipelineWorkspace: $(Pipeline.Workspace)
-        OneES_DeleteCodeSignValidationResult: True
-        OneES_CustomPolicyFile: ''
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: check_csv_results.ps1
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-      target:
-        container: host
-    - task: vsrm-ev2.vss-services-ev2.adm-release-task.ExpressV2Internal@1
-      inputs:
-        UseServerMonitorTask: true
-        EndpointProviderType: ApprovalService
-        ApprovalServiceEnvironment: $(ev2Environment)
-        ServiceRootLocation: LinkedArtifact
-        RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ServiceGroupRoot/RolloutSpecs.json
-        OutputRolloutId: RolloutId
-        OutputServiceGroupName: ServiceGroupName
-        OutputRolloutStatus: RolloutStatus
-        InlineDynamicBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "batch4"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
-      env:
-        ServiceTreeGuid: 3170cdd2-19f0-4027-912b-1027311691a2
-      target:
-        container: host
-      displayName: Ev2 Classic - Deploy
-  - job: Job_2_ev2_monitoring
-    variables:
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    - name: OneESPT.Workflow
-      value: ev2-classic
-      readonly: true
-    - name: ev2Environment
-      value: Production
-    - name: Ev2MonintoringUrl
-      value: 'https://azureservicedeploy.msft.net/api/monitorrollout'
-    displayName: Release Extension Ev2 Monitoring
-    pool:
-      name: server
-    dependsOn:
-    - Job_2_ev2_rollout
-    timeoutInMinutes: '0'
-    steps:
-    - task: vsrm-ev2.vss-server-ev2.1950188C-A844-4040-A014-A326BC8332D3.Ev2Agentless@1
-      displayName: Ev2 - Monitoring
-      inputs:
-        Ev2MonintoringUrl: $(Ev2MonintoringUrl)
-- stage: Tag
-  displayName: "\U0001F512 1ES PT Tag"
-  isSkippable: false
-  dependsOn: []
-  pool:
-    vmImage: ubuntu-latest
-  jobs:
-  - job: Tag
-    displayName: "\U0001F512 Tag"
-    variables:
-    - name: runCodesignValidationInjection
-      value: false
-    - name: Codeql.SkipTaskAutoInjection
-      value: true
-    - name: skipComponentGovernanceDetection
-      value: true
-    - name: skipNugetSecurityAnalysis
-      value: true
-    - name: OneESPT
-      value: true
-      readonly: true
-    - name: OneESPT.BuildType
-      value: Official
-      readonly: true
-    - name: OneESPT.OS
-      value: windows
-      readonly: true
-    steps:
-    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
-      condition: false
-      inputs:
-        repository: none
-    - task: 1ESGPTRunTask@3.0.314
-      displayName: Tag build and log custom issues (1ES PT)
-      continueOnError: false
-      target:
-        container: host
-      env:
-        BuildTags: >-
-          [
-            "ES365AIMigrationTooling-Release",
-            "1ES.PT.Official",
-            "1ES.PT.Release.Production"
-          ]
-        LogIssues: '[]'
-        SkipBuildTagsForGitHubPullRequests: ''
-      inputs:
-        repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
-        path: tagBuild.ps1
+        name: Azure-Pipelines-Windows-CI-Test-EO
+        os: windows
+    serviceTreeId: 3170cdd2-19f0-4027-912b-1027311691a2
+    customBuildTags:
+    - ES365AIMigrationTooling-Release
+    stages:
+    - stage: Stage_1
+      displayName: Push Images
+      templateContext:
+        cloud: Public
+        isProduction: true
+        approval:
+          workflow: approvalService
+      jobs:
+      - job: Job_1
+        displayName: Push to Prod ACR
+        condition: succeeded()
+        timeoutInMinutes: 0
+        templateContext:
+          type: releaseJob
+          workflow: ev2-classic
+          inputs:
+            - input: pipelineArtifact
+              pipeline: _Azureprometheus-collector
+              artifactName: Ev2Artifact
+          ev2:
+            useServerMonitorTask: true
+            serviceRootPath: ServiceGroupRoot
+            rolloutSpecPath: RolloutSpecs.json
+            inlineScopeBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Global",           "bindings": [                       {                   "find": "__ACR_REGISTRY__",                   "replaceWith": "$(ACRRegistry)"               },                           {                   "find": "__PROD_ACR_AGENT_REPOSITORY__",                   "replaceWith": "$(ProdACRAgentRepository)"               },               {                 "find": "__PROD_ACR_CHART_REPOSITORY__",                 "replaceWith": "$(ProdACRChartRepository)"               },               {                 "find": "__PROD_ACR_KSM_REPOSITORY__",                 "replaceWith": "$(ProdACRKSMRepository)"               },               {                 "find": "__PROD_ACR_NE_REPOSITORY__",                 "replaceWith": "$(ProdACRNERepository)"               },               {                 "find": "__MANAGED_IDENTITY__",                 "replaceWith": "$(ManagedIdentity)"               },               {                 "find": "__MCR_REGISTRY__",                 "replaceWith": "$(MCRRegistry)"               },               {                 "find": "__DEV_MCR_AGENT_REPOSITORY__",                 "replaceWith": "$(DevMCRAgentRepository)"               },               {                 "find": "__DEV_MCR_KSM_REPOSITORY__",                 "replaceWith": "$(DevMCRKSMRepository)"               },               {                 "find": "__DEV_MCR_NE_REPOSITORY__",                 "replaceWith": "$(DevMCRNERepository)"               },               {                   "find": "__LINUX_TAG__",                   "replaceWith": "$(LinuxTag)"               }, {           "find": "__LINUX_CCP_TAG__",           "replaceWith": "$(LinuxCCPTag)"         },               {                   "find": "__WINDOWS_TAG__",                   "replaceWith": "$(WindowsTag)"               },               {                 "find": "__TARGETALLOCATOR_TAG__",                 "replaceWith": "$(TargetAllocatorTag)"               },               {                 "find": "__CONFIGREADER_TAG__",                 "replaceWith": "$(ConfigReaderTag)"               },               {                 "find": "__PROD_MCR_AGENT_REPOSITORY__",                 "replaceWith": "$(ProdMCRAgentRepository)"               },               {                 "find": "__DEV_MCR_CHART_REPOSITORY__",                 "replaceWith": "$(DevMCRChartRepository)"               },               {                 "find": "__PROD_MCR_CHART_REPOSITORY__",                 "replaceWith": "$(ProdMCRChartRepository)"               },               {                 "find": "__PROD_MCR_KSM_REPOSITORY__",                 "replaceWith": "$(ProdMCRKSMRepository)"               },               {                 "find": "__PROD_MCR_NE_REPOSITORY__",                 "replaceWith": "$(ProdMCRNERepository)"               },               {                 "find": "__PROD_MCR_REPOSITORY_HELM_DEPENDENCIES__",                 "replaceWith": "$(ProdMCRRepositoryHelmDependencies)"               },               {                 "find": "__CHART_TAG__",                 "replaceWith": "$(ChartTag)"               },               {                 "find": "__PUSH_NEW_KSM_CHART__",                 "replaceWith": "$(PushNewKSMChart)"               },               {                 "find": "__PUSH_NEW_NE_CHART__",                 "replaceWith": "$(PushNewNEChart)"               },               {                 "find": "__KSM_CHART_TAG__",                 "replaceWith": "$(KSMChartTag)"               },               {                 "find": "__NE_CHART_TAG__",                 "replaceWith": "$(NEChartTag)"               },               {                 "find": "__HELM_CHART_NAME__",                 "replaceWith": "$(HelmChartName)"               },               {                 "find": "__ARC_HELM_CHART_NAME__",                 "replaceWith": "$(ARCHelmChartName)"               }           ]       }                                                                                                                                                   ] }'
+    - stage: Stage_2
+      displayName: Deploy to Prod Clusters
+      dependsOn: Stage_1
+      jobs:
+      - job: Job_1
+        displayName: Deploy to Prod Clusters
+        condition: succeeded()
+        timeoutInMinutes: 0
+        templateContext:
+          type: releaseJob
+          isProduction: true
+        steps:
+        - task: HelmInstaller@0
+          displayName: Install Helm 3.12.3
+          inputs:
+            helmVersion: 3.12.3
+            checkLatestHelmVersion: false
+        - task: Bash@3
+          displayName: Check images and ARC chart are pushed to MCR
+          inputs:
+            targetType: inline
+            script: |-
+              cd $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/arc-chart/
+              CHART_TAG=$(jq '."image.name"' metadata.json | tr -d '"' | cut -d':' -f2)
+              echo $CHART_TAG
+              set +x
+              echo "##vso[task.setvariable variable=ChartTag;]$CHART_TAG"
+              set -x
+              LINUX_TAG=$CHART_TAG
+              echo $LINUX_TAG
+              set +x
+              echo "##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG"
+              set -x
+              WINDOWS_TAG=$LINUX_TAG-win
+              echo $WINDOWS_TAG
+              set +x
+              echo "##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG"
+              set -x
+              cd $(System.DefaultWorkingDirectory)
+              for i in 1 2 3 4 5 6 7 8 9 10         
+                  do            
+                  sleep 30
+                  echo $(MCRRegistry)$(ProdMCRAgentRepository):$LINUX_TAG
+                  echo $(MCRRegistry)$(ProdMCRAgentRepository):$WINDOWS_TAG
+                  echo $(MCRRegistry)$(ProdMCRChartRepository):$CHART_TAG
+                  output1=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRAgentRepository)/tags/list)
+                  output2=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRArcChartRepository)/tags/list)
+                   if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)
+                   then
+                           echo "Images and chart are published to mcr"
+                           exit 0
+                    fi
+              done          
+              echo "Images and chart are not published to mcr within 5 minutes"
+              exit 1
+            workingDirectory: $(System.DefaultWorkingDirectory)
+        - task: HelmDeploy@0
+          displayName: Deploy to ci-prod-aks-mac-weu
+          inputs:
+            azureSubscriptionEndpoint: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
+            azureResourceGroup: ci-prod-aks-mac-weu-rg
+            kubernetesCluster: ci-prod-aks-mac-weu
+            useClusterAdmin: true
+            namespace: default
+            command: upgrade
+            chartType: FilePath
+            chartPath: $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/azure-monitor-metrics-addon/
+            releaseName: ama-metrics
+            waitForExecution: false
+            arguments: --values $(System.DefaultWorkingDirectory)/_Azure.prometheus-collector/drop/azure-monitor-metrics-addon/values.yaml --dependency-update
+        - task: AzureCLI@2
+          displayName: Create Arc staging extension
+          inputs:
+            connectedServiceNameARM: prometheus-arc-dev-release-mi
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |2-
+               # Create JSON request body
+              cat <<EOF > "request.json"
+                      {
+                        "artifactEndpoints": [
+                            {
+                                "Regions": [
+                                    "westcentralus"
+                                ],
+                                "Releasetrains": [
+                                    "pipeline","staging"
+                                ],
+                                "FullPathToHelmChart": "https://mcr.microsoft.com/azuremonitor/containerinsights/ciprod/ama-metrics-arc",
+                                "ExtensionUpdateFrequencyInMinutes": 5,
+                                "IsCustomerHidden": true,
+                                "ReadyforRollout": true,
+                                "RollbackVersion": null,
+                                "PackageConfigName": "Microsoft.AzureMonitor.Containers.Metrics-Prom041823"
+                            }
+                        ]
+                      }
+              EOF
+                    # Send Request
+                    export SUBSCRIPTION="b9842c7c-1a38-4385-8f39-a51314758bcf"
+                    export RESOURCE_AUDIENCE="c699bf69-fb1d-4eaf-999b-99e6b2ae4d85"
+                    export SPN_CLIENT_ID="9a4c55e9-576a-450a-88bd-53bd634db38d"
+                    export SPN_TENANT_ID="72f988bf-86f1-41af-91ab-2d7cd011db47"
+                    export METHOD="PUT"
+                    echo "Request parameter preparation, SUBSCRIPTION is $SUBSCRIPTION, RESOURCE_AUDIENCE is $RESOURCE_AUDIENCE, CHART_VERSION is $(ChartTag), SPN_CLIENT_ID is $SPN_CLIENT_ID, SPN_TENANT_ID is $SPN_TENANT_ID"
+                    #az login --identity --allow-no-subscriptions
+                    #if [ $? -eq 0 ]; then
+                     # echo "Logged in successfully"
+                    #else
+                     # echo "-e error failed to login to az with managed identity credentials"
+                      #exit 1
+                    #fi    
+                    ACCESS_TOKEN=$(az account get-access-token --resource $RESOURCE_AUDIENCE --query accessToken -o json)
+                    if [ $? -eq 0 ]; then
+                      echo "get access token from resource:$RESOURCE_AUDIENCE successfully."
+                    else
+                      echo "-e error get access token from resource:$RESOURCE_AUDIENCE failed."
+                      exit 1
+                    fi   
+                    ACCESS_TOKEN=$(echo $ACCESS_TOKEN | tr -d '"' | tr -d '"\r\n')
+                    echo $ACCESS_TOKEN 
+                    ARC_API_URL="https://eastus2euap.dp.kubernetesconfiguration.azure.com"
+                    EXTENSION_NAME="microsoft.azuremonitor.containers.metrics"
+                    API_VERSION="2021-05-01"
+                    echo "start send request"
+                    az rest --method $METHOD --headers "{\"Authorization\": \"Bearer $ACCESS_TOKEN\", \"Content-Type\": \"application/json\"}" --body @request.json --uri $ARC_API_URL/subscriptions/$SUBSCRIPTION/extensionTypeRegistrations/$EXTENSION_NAME/versions/$(ChartTag)?api-version=$API_VERSION
+                    if [ $? -eq 0 ]; then
+                      echo "arc extension registered successfully"
+                    else
+                      echo "-e error failed to register arc extension"
+                      exit 1
+                    fi
+        - task: AzureCLI@2
+          displayName: Install extension on ci-prod-arc-wcus
+          inputs:
+            connectedServiceNameARM: ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |-
+              az config set extension.use_dynamic_install=yes_without_prompt
+              az k8s-extension update --name azuremonitor-metrics --resource-group ci-prod-arc-wcus --cluster-name ci-prod-arc-wcus --cluster-type connectedClusters --version $(ChartTag) --release-train staging
+    - stage: Stage_3
+      displayName: ARC Small Region Release
+      trigger: manual
+      templateContext:
+        cloud: Public
+        isProduction: true
+        approval:
+          workflow: approvalService
+      jobs:
+      - job: Job_2
+        displayName: Release Extension
+        condition: succeeded()
+        timeoutInMinutes: 0
+        templateContext:
+          type: releaseJob
+          workflow: ev2-classic
+          inputs:
+            - input: pipelineArtifact
+              pipeline: _Azureprometheus-collector
+              artifactName: Ev2Artifact
+          ev2:
+            useServerMonitorTask: true
+            serviceRootPath: ServiceGroupRoot
+            rolloutSpecPath: RolloutSpecs.json
+            inlineScopeBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "small"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
+    - stage: Stage_4
+      displayName: ARC Medium Region Release
+      dependsOn: Stage_3
+      templateContext:
+        cloud: Public
+        isProduction: true
+        approval:
+          workflow: approvalService
+      jobs:
+      - job: Job_2
+        displayName: Release Extension
+        condition: succeeded()
+        timeoutInMinutes: 0
+        templateContext:
+          type: releaseJob
+          workflow: ev2-classic
+          inputs:
+            - input: pipelineArtifact
+              pipeline: _Azureprometheus-collector
+              artifactName: Ev2Artifact
+          ev2:
+            useServerMonitorTask: true
+            serviceRootPath: ServiceGroupRoot
+            rolloutSpecPath: RolloutSpecs.json
+            inlineScopeBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "medium"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
+    - stage: Stage_5
+      displayName: ARC Large Region Release
+      dependsOn: Stage_4
+      templateContext:
+        cloud: Public
+        isProduction: true
+        approval:
+          workflow: approvalService
+      jobs:
+      - job: Job_2
+        displayName: Release Extension
+        condition: succeeded()
+        timeoutInMinutes: 0
+        templateContext:
+          type: releaseJob
+          workflow: ev2-classic
+          inputs:
+            - input: pipelineArtifact
+              pipeline: _Azureprometheus-collector
+              artifactName: Ev2Artifact
+          ev2:
+            useServerMonitorTask: true
+            serviceRootPath: ServiceGroupRoot
+            rolloutSpecPath: RolloutSpecs.json
+            inlineScopeBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "large"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
+    - stage: Stage_6
+      displayName: ARC Batch 1 Region Release
+      dependsOn: Stage_5
+      templateContext:
+        cloud: Public
+        isProduction: true
+        approval:
+          workflow: approvalService
+      jobs:
+      - job: Job_2
+        displayName: Release Extension
+        condition: succeeded()
+        timeoutInMinutes: 0
+        templateContext:
+          type: releaseJob
+          workflow: ev2-classic
+          inputs:
+            - input: pipelineArtifact
+              pipeline: _Azureprometheus-collector
+              artifactName: Ev2Artifact
+          ev2:
+            useServerMonitorTask: true
+            serviceRootPath: ServiceGroupRoot
+            rolloutSpecPath: RolloutSpecs.json
+            inlineScopeBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "batch1"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
+    - stage: Stage_7
+      displayName: ARC Batch 2 Region Release
+      dependsOn: Stage_6
+      templateContext:
+        cloud: Public
+        isProduction: true
+        approval:
+          workflow: approvalService
+      jobs:
+      - job: Job_2
+        displayName: Release Extension
+        condition: succeeded()
+        timeoutInMinutes: 0
+        templateContext:
+          type: releaseJob
+          workflow: ev2-classic
+          inputs:
+            - input: pipelineArtifact
+              pipeline: _Azureprometheus-collector
+              artifactName: Ev2Artifact
+          ev2:
+            useServerMonitorTask: true
+            serviceRootPath: ServiceGroupRoot
+            rolloutSpecPath: RolloutSpecs.json
+            inlineScopeBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "batch2"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
+    - stage: Stage_8
+      displayName: ARC Batch 3 Region Release
+      dependsOn: Stage_7
+      templateContext:
+        cloud: Public
+        isProduction: true
+        approval:
+          workflow: approvalService
+      jobs:
+      - job: Job_2
+        displayName: Release Extension
+        condition: succeeded()
+        timeoutInMinutes: 0
+        templateContext:
+          type: releaseJob
+          workflow: ev2-classic
+          inputs:
+            - input: pipelineArtifact
+              pipeline: _Azureprometheus-collector
+              artifactName: Ev2Artifact
+          ev2:
+            useServerMonitorTask: true
+            serviceRootPath: ServiceGroupRoot
+            rolloutSpecPath: RolloutSpecs.json
+            inlineScopeBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "batch3"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
+    - stage: Stage_9
+      displayName: ARC Batch 4 Region Release
+      dependsOn: Stage_8
+      templateContext:
+        cloud: Public
+        isProduction: true
+        approval:
+          workflow: approvalService
+      jobs:
+      - job: Job_2
+        displayName: Release Extension
+        condition: succeeded()
+        timeoutInMinutes: 0
+        templateContext:
+          type: releaseJob
+          workflow: ev2-classic
+          inputs:
+            - input: pipelineArtifact
+              pipeline: _Azureprometheus-collector
+              artifactName: Ev2Artifact
+          ev2:
+            useServerMonitorTask: true
+            serviceRootPath: ServiceGroupRoot
+            rolloutSpecPath: RolloutSpecs.json
+            inlineScopeBindingOverrides: '{   "$schema": "https://ev2schema.azure.net/schemas/2020-01-01/scopeBindings.json",   "contentVersion": "0.0.0.1",   "scopeBindings": [              {           "scopeTagName": "Stable",           "bindings": [               {                   "find": "__ADMIN_SUBSCRIPTION_ID__",                   "replaceWith": "$(ARCAdminSubscriptionID)"               },               {                   "find": "__CHART_VERSION__",                   "replaceWith": "$(ChartTag)"               },               {                   "find": "__IS_CUSTOMER_HIDDEN__",                   "replaceWith": "false"               },               {                   "find": "__REGIONS_BATCH_NAME__",                   "replaceWith": "batch4"               },               {                   "find": "__RESOURCE_AUDIENCE__",                   "replaceWith": "$(ARCResourceAudience)"               },               {                   "find": "__SPN_CLIENT_ID__",                   "replaceWith": "$(ARCSPNClientID)"               },               {                   "find": "__SPN_SECRET__",                   "replaceWith": "$(ARCSPNSecret)"               },               {                   "find": "__SPN_TENANT_ID__",                   "replaceWith": "$(ARCSPNTenant)"               },                {                   "find": "__MANAGED_IDENTITY__",                   "replaceWith": "$(ManagedIdentity)"               }           ]       }                                                                                                                                            ] }'
