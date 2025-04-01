@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -185,23 +187,43 @@ func main() {
 			}
 		} else {
 			fmt.Printf("ca.crt file exists at path: %s\n", caCertPath)
-			fmt.Println("Copying ca.crt to trusted store")
-			err = shared.CopyFile(caCertPath, "/etc/pki/ca-trust/source/anchors/ama-metrics-operator-targets-ca.crt")
+			certPEM, err := ioutil.ReadFile(caCertPath)
 			if err != nil {
-				fmt.Printf("Error copying ca.crt to trusted store: %v\n", err)
+				fmt.Printf("Failed to read CA cert file from path: %s\n", caCertPath)
 				//fall back to starting without https
 			} else {
-				fmt.Printf("Updating ca trust\n")
-				err = shared.StartCommandAndWait("update-ca-trust")
-				if err != nil {
-					fmt.Printf("Error updating ca trust store: %v\n", err)
+				rootCAs, _ := x509.SystemCertPool()
+				if rootCAs == nil {
+					// Create a new cert pool
+					rootCAs = x509.NewCertPool()
+				}
+				// Append our cert to the system pool
+				if ok := rootCAs.AppendCertsFromPEM(certPEM); !ok {
+					fmt.Printf("Failed to append %q to RootCAs: %v", caCertPath, err)
+					fmt.Printf("No certs appended, using system certs only")
 					//fall back to starting without https
 				} else {
-					fmt.Printf("Updated ca trust\n")
+					fmt.Printf("Starting otelcollector with https")
 					_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 				}
 			}
-			// _, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+
+			// fmt.Println("Copying ca.crt to trusted store")
+			// err = shared.CopyFile(caCertPath, "/etc/pki/ca-trust/source/anchors/ama-metrics-operator-targets-ca.crt")
+			// if err != nil {
+			// 	fmt.Printf("Error copying ca.crt to trusted store: %v\n", err)
+			// 	//fall back to starting without https
+			// } else {
+			// 	fmt.Printf("Updating ca trust\n")
+			// 	err = shared.StartCommandAndWait("update-ca-trust")
+			// 	if err != nil {
+			// 		fmt.Printf("Error updating ca trust store: %v\n", err)
+			// 		//fall back to starting without https
+			// 	} else {
+			// 		fmt.Printf("Updated ca trust\n")
+			// 		_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+			// 	}
+			// }
 		}
 	} else {
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
