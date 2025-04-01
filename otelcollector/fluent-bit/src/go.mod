@@ -2,13 +2,15 @@ module Docker-Provider/source/plugins/go/src
 
 go 1.23.0
 
+toolchain go1.24.1
+
 require (
 	github.com/fluent/fluent-bit-go v0.0.0-20220311094233-780004bf5562
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/shirou/gopsutil/v4 v4.24.11
-	github.com/ugorji/go/codec v1.1.7
+	github.com/ugorji/go/codec v1.2.12
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.32.3
