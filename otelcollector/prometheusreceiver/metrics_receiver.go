@@ -7,27 +7,29 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
-	"os"
+	"log/slog"
 	"reflect"
 	"regexp"
 	"sync"
 	"time"
 	"unsafe"
+    "net/url"
+	"net"
+	"os"
 
-	"github.com/go-kit/log"
+	"github.com/prometheus/common/version"
+ 	"github.com/prometheus/prometheus/web"
 	"github.com/prometheus/client_golang/prometheus"
 	commonconfig "github.com/prometheus/common/config"
-	"github.com/prometheus/common/version"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
-	"github.com/prometheus/prometheus/web"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componentstatus"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
+	"go.uber.org/zap/exp/zapslog"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
@@ -56,7 +58,7 @@ type pReceiver struct {
 	registerer             prometheus.Registerer
 	unregisterMetrics      func()
 	skipOffsetting         bool // for testing only
-	webHandler             *web.Handler
+	webHandler        *web.Handler
 }
 
 // New creates a new prometheus.Receiver reference.
@@ -86,7 +88,7 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 	discoveryCtx, cancel := context.WithCancel(context.Background())
 	r.cancelFunc = cancel
 
-	logger := internal.NewZapToGokitLogAdapter(r.settings.Logger)
+	logger := slog.New(zapslog.NewHandler(r.settings.Logger.Core()))
 
 	err := r.initPrometheusComponents(discoveryCtx, logger, host)
 	if err != nil {
@@ -106,7 +108,7 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 	return nil
 }
 
-func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Logger, host component.Host) error {
+func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.Logger, host component.Host) error {
 	// Some SD mechanisms use the "refresh" package, which has its own metrics.
 	refreshSdMetrics := discovery.NewRefreshMetrics(r.registerer)
 
@@ -159,6 +161,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 		HTTPClientOptions: []commonconfig.HTTPClientOption{
 			commonconfig.WithUserAgent(r.settings.BuildInfo.Command + "/" + r.settings.BuildInfo.Version),
 		},
+		EnableCreatedTimestampZeroIngestion: true,
 	}
 
 	if enableNativeHistogramsGate.IsEnabled() {
@@ -174,7 +177,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 			Set(reflect.ValueOf(true))
 	}
 
-	scrapeManager, err := scrape.NewManager(opts, logger, store, r.registerer)
+	scrapeManager, err := scrape.NewManager(opts, logger, nil, store, r.registerer)
 	if err != nil {
 		return err
 	}
@@ -198,12 +201,11 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 			componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
 		}
 	}()
-
 	// Setup settings and logger and create Prometheus web handler
 	webOptions := web.Options{
 		ScrapeManager: r.scrapeManager,
 		Context:       ctx,
-		ListenAddress: ":9090",
+		ListenAddresses: []string{":9090"},
 		ExternalURL: &url.URL{
 			Scheme: "http",
 			Host:   "localhost:9090",
@@ -225,19 +227,20 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger log.Log
 		IsAgent:        true,
 		Gatherer:       prometheus.DefaultGatherer,
 	}
-	go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+	go_kit_logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	r.webHandler = web.New(go_kit_logger, &webOptions)
-	listener, err := r.webHandler.Listener()
+	stopCh := make(chan struct{})
+	listener, err := r.webHandler.Listener("tcp", stopCh)
 	if err != nil {
 		return err
 	}
 	// Pass config and let the web handler know the config is ready.
 	// These are needed because Prometheus allows reloading the config without restarting.
 	r.webHandler.ApplyConfig((*promconfig.Config)(r.cfg.PrometheusConfig))
-	r.webHandler.SetReady(true)
+	r.webHandler.SetReady(web.Ready)
 	// Uses the same context as the discovery and scrape managers for shutting down
 	go func() {
-		if err := r.webHandler.Run(ctx, listener, ""); err != nil {
+		if err := r.webHandler.Run(ctx, []net.Listener{listener}, ""); err != nil {
 			r.settings.Logger.Error("Web handler failed", zap.Error(err))
 			componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
 		}
