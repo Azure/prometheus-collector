@@ -524,12 +524,14 @@ func retrieveKsmData() []byte {
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
 
+	nodeName := os.Getenv("NODE_NAME")
+
 	client := &http.Client{
 		Timeout: time.Duration(5) * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				RootCAs:    caCertPool,
-				ServerName: "localhost",
+				ServerName: nodeName,
 				// InsecureSkipVerify: true,
 			},
 		},
