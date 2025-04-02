@@ -13,6 +13,7 @@ data:
       coredns = true
       cadvisor = true
       kubeproxy = true
+      apiserver = true
       kubestate = true
       nodeexporter = true
       windowsexporter = true
