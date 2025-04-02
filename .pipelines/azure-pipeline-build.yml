@@ -1487,10 +1487,6 @@ stages:
 
       - powershell: |
           docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2019_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2019_BASE_IMAGE_VERSION)
-          if [ $? -ne 0 ]; then
-            echo "Error: Docker build failed."
-            exit 1
-          fi
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build WS2019 image"
         retryCountOnTaskFailure: 2
