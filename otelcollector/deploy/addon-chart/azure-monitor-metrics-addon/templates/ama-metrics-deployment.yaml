@@ -230,14 +230,14 @@ spec:
               name: ama-metrics-proxy-cert
               readOnly: true
             {{- end }}
-          # livenessProbe:
-          #   httpGet:
-          #     path: /health
-          #     port: 8080
-          #   initialDelaySeconds: 60
-          #   periodSeconds: 15
-          #   timeoutSeconds: 5
-          #   failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
         {{- if $arcExtensionSettings.isArcExtension }}
         - name: arc-msi-adapter
           imagePullPolicy: IfNotPresent
