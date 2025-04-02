@@ -6,6 +6,16 @@ CVE-2024-24790 # stdlib
 # kube-state-metrics
 CVE-2024-45338 # golang.org/x/net
 CVE-2024-34156 # stdlib
+# targetallocator
+CVE-2025-30204 github.com/golang-jwt/jwt/v5
+# config-reader
+CVE-2025-30204 github.com/golang-jwt/jwt/v5
+# otelcollector
+CVE-2025-30204 github.com/golang-jwt/jwt/v5
+CVE-2025-29786 github.com/expr-lang/expr
+# promconfigvalidator
+CVE-2025-30204 github.com/golang-jwt/jwt/v5
+CVE-2025-29786 github.com/expr-lang/expr
 # MEDIUM
 # kube-state-metrics
 CVE-2023-45288 # stdlib

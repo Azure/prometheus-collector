@@ -282,7 +282,7 @@ resource nodeRecordingRuleGroupNameWin 'Microsoft.AlertsManagement/prometheusRul
     rules: [
       {
         record: 'node:windows_node:sum'
-        expression: 'count (windows_system_system_up_time{job="windows-exporter"})'
+        expression: 'count (windows_system_boot_time_timestamp_seconds{job="windows-exporter"})'
       }
       {
         record: 'node:windows_node_num_cpu:sum'
