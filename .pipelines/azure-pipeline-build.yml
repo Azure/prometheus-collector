@@ -1372,10 +1372,6 @@ stages:
           docker buildx inspect --bootstrap
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker buildx build . --platform=linux/amd64,linux/arm64 --file ./build/linux/configuration-reader/Dockerfile -t $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/configuration-reader/metadata.json --push # --cache-to type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg,mode=max --cache-from type=registry,ref=$(ACR_REGISTRY)$(ACR_REPOSITORY)/cache:cfg
-          if [ $? -ne 0 ]; then
-            echo "Error: Docker build failed."
-            exit 1
-          fi
           docker pull $(LINUX_CONFIG_READER_FULL_IMAGE_NAME)
           MEDIA_TYPE=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
           DIGEST=$(docker manifest inspect -v $(LINUX_CONFIG_READER_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
@@ -1674,10 +1670,6 @@ stages:
 
       - powershell: |
           docker build . --isolation=hyperv --file ./build/windows/Dockerfile -t $(WINDOWS_FULL_IMAGE_NAME)-$(WINDOWS_2022_BASE_IMAGE_VERSION)-unsigned --build-arg WINDOWS_VERSION=$(WINDOWS_2022_BASE_IMAGE_VERSION)
-          if [ $? -ne 0 ]; then
-            echo "Error: Docker build failed."
-            exit 1
-          fi
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/
         displayName: "Build: build WS2022 image"
         retryCountOnTaskFailure: 2
