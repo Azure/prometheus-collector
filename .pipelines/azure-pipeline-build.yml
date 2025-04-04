@@ -2329,6 +2329,83 @@ stages:
               waitForExecution: false
               arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
 
+  - deployment: Deploy_AKS_Chart_Test_Cluster
+    displayName: "Deploy: AKS tests cluster"
+    environment: Prometheus-Collector
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart_Test_Cluster')), eq(variables['System.StageAttempt'], 1)))
+    variables:
+      HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
+      HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
+      IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
+      HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
+      IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
+      IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
+      skipComponentGovernanceDetection: true
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            submodules: true
+            persistCredentials: true
+
+          - bash: |
+              git config --global user.name "AzureDevOps Agent"
+              git tag "v$(HELM_SEMVER)"
+              git push origin "v$(HELM_SEMVER)"
+            displayName: Tag commit with semver
+
+          - task: HelmInstaller@1
+            displayName: Install Helm version
+            inputs:
+              helmVersionToInstall: 3.12.3
+          - bash: |
+              for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+                  do
+                    sleep 30
+                    echo $(IMAGE_TAG)
+                    echo $(IMAGE_TAG_WINDOWS)
+                    echo $(IMAGE_TAG_TARGET_ALLOCATOR)
+                    echo $(IMAGE_TAG_CONFIG_READER)
+                    output=$(curl -s https://$(MCR_REGISTRY)/v2$(MCR_REPOSITORY)/tags/list)
+                    if (echo $output | grep $(IMAGE_TAG_WINDOWS)) && (echo $output | grep $(IMAGE_TAG)) && (echo $output | grep $(IMAGE_TAG_TARGET_ALLOCATOR)) && (echo $output | grep $(IMAGE_TAG_CONFIG_READER))
+                    then
+                      echo "Images are published to mcr"
+                      exit 0
+                    fi
+                  done
+                  echo "Images are not published to mcr within the timeout"
+                  exit 1
+            displayName: "Check images are pushed to dev MCR"
+            retryCountOnTaskFailure: 5
+          - bash: |
+              export AKS_REGION="centralus"
+              export AKS_RESOURCE_ID="/subscriptions/9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb/resourcegroups/ci-dev-aks-tests/providers/Microsoft.ContainerService/managedClusters/ci-dev-aks-tests"
+              export ARC_EXTENSION="false"
+              envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/Chart.yaml && envsubst < $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values-template.yaml > $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+              ls $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+              cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
+              helm dependency update
+            displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
+          - task: HelmDeploy@0
+            displayName: "Deploy: ci-dev-aks-tests cluster"
+            inputs:
+              connectionType: 'Azure Resource Manager'
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              azureResourceGroup: 'ci-dev-aks-tests'
+              kubernetesCluster: 'ci-dev-aks-tests'
+              namespace: 'default'
+              command: 'upgrade'
+              chartType: 'FilePath'
+              chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/'
+              releaseName: 'ama-metrics'
+              waitForExecution: false
+              arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+
+
   - deployment: Testkube
     displayName: "Test: AKS testkube tests"
     environment: Prometheus-Collector
