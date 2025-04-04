@@ -2247,12 +2247,6 @@ stages:
   - deployment: Deploy_AKS_Chart_Test_Cluster
     displayName: "Deploy: AKS tests cluster"
     environment: Prometheus-Collector
-    dependsOn:
-    - Image_Tags_and_Ev2_Artifacts
-    - Linux_Prometheus_Collector
-    - Linux_Target_Allocator
-    - Linux_Config_Reader
-    - WindowsMultiArch_Prometheus_Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
     condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart_Test_Cluster')), eq(variables['System.StageAttempt'], 1)))
