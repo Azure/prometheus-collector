@@ -8,22 +8,22 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/url"
+	"os"
 	"reflect"
 	"regexp"
 	"sync"
 	"time"
 	"unsafe"
-    "net/url"
-	"net"
-	"os"
 
-	"github.com/prometheus/common/version"
- 	"github.com/prometheus/prometheus/web"
 	"github.com/prometheus/client_golang/prometheus"
 	commonconfig "github.com/prometheus/common/config"
+	"github.com/prometheus/common/version"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
+	"github.com/prometheus/prometheus/web"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componentstatus"
 	"go.opentelemetry.io/collector/consumer"
@@ -58,7 +58,7 @@ type pReceiver struct {
 	registerer             prometheus.Registerer
 	unregisterMetrics      func()
 	skipOffsetting         bool // for testing only
-	webHandler        *web.Handler
+	webHandler             *web.Handler
 }
 
 // New creates a new prometheus.Receiver reference.
@@ -203,9 +203,9 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 	}()
 	// Setup settings and logger and create Prometheus web handler
 	webOptions := web.Options{
-		ScrapeManager: r.scrapeManager,
-		Context:       ctx,
-		ListenAddresses: []string{":9090"},
+		ScrapeManager:   r.scrapeManager,
+		Context:         ctx,
+		ListenAddresses: []string{"localhost:9090"},
 		ExternalURL: &url.URL{
 			Scheme: "http",
 			Host:   "localhost:9090",
