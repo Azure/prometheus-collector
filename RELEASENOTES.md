@@ -5,7 +5,7 @@
 * TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<TBD>-targetallocator`
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<TBD>-cfg`
 * AKS and Arc Container Images:
-  * 
+  * upgradeupgrade : upgrade otelcollector and targetallocator to v0.121.0 (https://github.com/Azure/prometheus-collector/pull/1110)
 
 * Pipeline/Docs/Templates Updates:
    * ci/cd: update remote write sidecar to write to eastus2 workspace (https://github.com/Azure/prometheus-collector/pull/1090) 
