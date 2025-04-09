@@ -2,6 +2,7 @@ trigger:
   branches:
     include:
     - main
+    - grace/retina-ci-cd
 
 pr:
   autoCancel: true
@@ -2258,7 +2259,7 @@ stages:
     environment: Prometheus-Collector
     pool:
       name: Azure-Pipelines-CI-Test-EO
-    condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart')), eq(variables['System.StageAttempt'], 1)))
+    #condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart')), eq(variables['System.StageAttempt'], 1)))
     variables:
       HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
       HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2287,6 +2288,10 @@ stages:
             inputs:
               helmVersionToInstall: 3.12.3
           - bash: |
+
+              RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
+              echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
+
               for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                   do
                     sleep 30
@@ -2328,6 +2333,33 @@ stages:
               releaseName: 'ama-metrics'
               waitForExecution: false
               arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+
+          - task: HelmDeploy@0
+            displayName: "Deploy: retina onto ci-dev-aks-mac-eus cluster"
+            inputs:
+              connectionType: 'Azure Resource Manager'
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              azureResourceGroup: 'ci-dev-aks-mac-eus-rg'
+              kubernetesCluster: 'ci-dev-aks-mac-eus'
+              namespace: 'kube-system'
+              command: 'upgrade'
+              chartType: 'Name'
+              chartName: 'oci://ghcr.io/microsoft/retina/charts/retina'
+              releaseName: 'retina'
+              waitForExecution: true
+              arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/values.yaml --skip-crds --version $RETINA_VERSION --set image.tag=$RETINA_VERSION --set operator.tag=$RETINA_VERSION
+
+          - task: AzureCLI@1
+            displayName: Get kubeconfig
+            inputs:
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'az aks get-credentials -g ci-dev-aks-mac-eus-rg -n ci-dev-aks-mac-eus'
+          
+          - bash: |
+              kubectl apply -f network-observability-service.yaml
+            workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/retina
+            displayName: "Apply Retina addon settings"
 
   - deployment: Deploy_AKS_Chart_Test_Cluster
     displayName: "Deploy: AKS tests cluster"
