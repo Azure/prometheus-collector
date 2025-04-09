@@ -1215,7 +1215,7 @@
         "30d"
       ]
     },
-    "timezone": "utc",
+    "timezone": "browser",
     "title": "Node Exporter / Nodes",
     "uid": "D3pVs6738"
   }

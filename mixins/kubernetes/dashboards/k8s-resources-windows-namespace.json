@@ -437,7 +437,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "utc",
+   "timezone": "browser",
    "title": "Kubernetes / Compute Resources / Namespace (Windows)",
    "uid": "9f84792794e34121bd0fa99075d96738"
 }

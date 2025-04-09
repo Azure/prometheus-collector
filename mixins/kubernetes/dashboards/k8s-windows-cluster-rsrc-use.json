@@ -45,7 +45,7 @@
                   "type": "prometheus",
                   "uid": "${datasource}"
                },
-               "expr": "node:windows_node_cpu_utilisation:avg1m{cluster=\"$cluster\"} * node:windows_node_num_cpu:sum{cluster=\"$cluster\"} / scalar(sum(node:windows_node_num_cpu:sum{cluster=\"$cluster\"}))",
+               "expr": "node:windows_node_cpu_utilisation:avg5m{cluster=\"$cluster\"} * node:windows_node_num_cpu:sum{cluster=\"$cluster\"} / scalar(sum(node:windows_node_num_cpu:sum{cluster=\"$cluster\"}))",
                "legendFormat": "{{instance}}"
             }
          ],
@@ -399,7 +399,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "utc",
+   "timezone": "browser",
    "title": "Kubernetes / USE Method / Cluster (Windows)",
    "uid": "VPLDB6738"
 }

@@ -1557,7 +1557,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "UTC",
+   "timezone": "browser",
    "title": "Kubernetes / Compute Resources / Cluster",
    "uid": "fd0cac08a3f34e2994cf904627836738"
 }

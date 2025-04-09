@@ -611,7 +611,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "utc",
+   "timezone": "browser",
    "title": "Kubernetes / USE Method / Node (Windows)",
    "uid": "YDBDf6738"
 }

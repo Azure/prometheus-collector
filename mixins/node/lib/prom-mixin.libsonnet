@@ -497,7 +497,7 @@ local c = import '../config.libsonnet';
         time_from='now-1h',
         uid=(config.grafanaDashboardIDs['nodes.json']),
         tags=(config.dashboardTags),
-        timezone='utc',
+        timezone='browser',
         refresh='30s',
         graphTooltip='shared_crosshair'
       )
@@ -509,7 +509,7 @@ local c = import '../config.libsonnet';
         time_from='now-1h',
         uid=(config.grafanaDashboardIDs['nodes.json']),
         tags=(config.dashboardTags),
-        timezone='utc',
+        timezone='browser',
         refresh='30s',
         graphTooltip='shared_crosshair'
       )

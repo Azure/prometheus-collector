@@ -1190,7 +1190,7 @@
         "30d"
       ]
     },
-    "timezone": "utc",
+    "timezone": "browser",
     "title": "Node Exporter / USE Method / Node",
     "uid": "t6aja6738"
   }
