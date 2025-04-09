@@ -229,8 +229,8 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 	}
 	go_kit_logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	r.webHandler = web.New(go_kit_logger, &webOptions)
-	stopCh := make(chan struct{})
-	listener, err := r.webHandler.Listener("tcp", stopCh)
+	sem := make(chan struct{}, maxConnections)
+	listener, err := r.webHandler.Listener("localhost:9090", sem)
 	if err != nil {
 		return err
 	}
