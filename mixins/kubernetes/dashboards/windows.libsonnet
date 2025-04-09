@@ -68,7 +68,7 @@ local var = g.dashboard.variable;
       + var.query.withDatasourceFromVariable(self.datasource)
       + var.query.queryTypes.withLabelValues(
         'instance',
-        'windows_system_system_up_time{%(clusterLabel)s="$cluster"}' % $._config
+         'up{%(windowsExporterSelector)s, %(clusterLabel)s="$cluster"}' % $._config,
       )
       + var.query.generalOptions.withLabel('instance')
       + var.query.refresh.onTime()

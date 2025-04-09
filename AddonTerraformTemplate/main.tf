@@ -527,7 +527,7 @@ resource "azurerm_monitor_alert_prometheus_rule_group" "node_recording_rules_rul
     enabled    = true
     record     = "node:windows_node:sum"
     expression = <<EOF
-count (windows_system_system_up_time{job="windows-exporter"})
+count (windows_system_boot_time_timestamp_seconds{job="windows-exporter"})
 EOF
   }
   rule {

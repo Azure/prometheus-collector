@@ -5,8 +5,11 @@
 * TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<TBD>-targetallocator`
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<TBD>-cfg`
 * AKS and Arc Container Images:
-  * upgradeupgrade : upgrade otelcollector and targetallocator to v0.121.0 (https://github.com/Azure/prometheus-collector/pull/1110)
-
+   * Update metrics extension (from: metricsext2-2.2024.419.1535 to:metricsext2-2.2025.123.2222 ) [applies tp widows, Linux & CCP images]
+   * Deprecate windows metric `windows_system_system_up_time` and replace it with `windows_system_boot_time_timestamp_seconds` in all dashboards & rec.rules (arm, terraform, bicep, policy templates)
+   * Scope ACSTOR discoveries to `acstor` namespace to aviod Target allocator discovering all pods across all namespaces in larger clusters
+   * update version to 6.16.0
+   * upgradeupgrade : upgrade otelcollector and targetallocator to v0.121.0 (https://github.com/Azure/prometheus-collector/pull/1110)
 * Pipeline/Docs/Templates Updates:
    * ci/cd: update remote write sidecar to write to eastus2 workspace (https://github.com/Azure/prometheus-collector/pull/1090) 
    
