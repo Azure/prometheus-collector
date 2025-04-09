@@ -7,7 +7,6 @@ import (
 
 	"io/fs"
 
-	"github.com/pelletier/go-toml"
 	"gopkg.in/yaml.v2"
 )
 
@@ -15,15 +14,15 @@ const (
 	loggingPrefix = "debug-mode-config"
 )
 
-// ConfigureDebugModeSettings reads debug mode settings from a config map,
+// ConfigureDebugModeSettings reads debug mode settings from the parsed config map,
 // sets default values if necessary, writes environment variables to a file,
 // and modifies a YAML configuration file based on debug mode settings.
-func ConfigureDebugModeSettings() error {
-	configMapSettings, err := parseConfigMapForDebugSettings()
-	if err != nil || configMapSettings == nil {
-		return fmt.Errorf("Error: %v", err)
+func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]string) error {
+	if metricsConfigBySection == nil {
+		return fmt.Errorf("configmap section not mounted, using defaults")
 	}
-	enabled := populateSettingValuesFromConfigMap(configMapSettings)
+
+	enabled := populateSettingValuesFromConfigMap(metricsConfigBySection)
 
 	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
@@ -84,33 +83,20 @@ func ConfigureDebugModeSettings() error {
 	return nil
 }
 
-func parseConfigMapForDebugSettings() (map[string]interface{}, error) {
-	// Check if config map file exists
-	file, err := os.Open(configMapDebugMountPath)
-	if err != nil {
-		return nil, fmt.Errorf("configmap section not mounted, using defaults")
+func populateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) bool {
+	debugSettings, ok := metricsConfigBySection["prometheus-collector-settings"]
+	if !ok {
+		fmt.Println("The 'prometheus-collector-settings' section is not present in the parsed data. Using default value: false")
+		return false
 	}
-	defer file.Close()
 
-	if data, err := os.ReadFile(configMapDebugMountPath); err == nil {
-		parsedConfig := make(map[string]interface{})
-		if err := toml.Unmarshal(data, &parsedConfig); err == nil {
-			return parsedConfig, nil
-		} else {
-			return nil, fmt.Errorf("exception while parsing config map for debug mode: %v, using defaults, please check config map for errors", err)
-		}
-	} else {
-		return nil, fmt.Errorf("error reading config map file: %v", err)
+	val, ok := debugSettings["debug-mode"]
+	if !ok {
+		fmt.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
+		return false
 	}
-}
 
-func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) bool {
-	enabled := false
-	if val, ok := parsedConfig["enabled"]; ok {
-		enabled = val.(bool)
-		fmt.Printf("Using configmap setting for debug mode: %v\n", enabled)
-	} else {
-		fmt.Printf("Debug mode configmap does not have enabled value, using default value: %v\n", enabled)
-	}
+	enabled := strings.ToLower(val) == "true"
+	fmt.Printf("Using configmap setting for debug mode: %v\n", enabled)
 	return enabled
 }

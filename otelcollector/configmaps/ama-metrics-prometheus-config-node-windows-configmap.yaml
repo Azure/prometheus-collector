@@ -4,8 +4,11 @@ data:
   prometheus-config: |-
     global:
       scrape_interval: 15s
+      external_labels:
+        custom_label1: custom_value1
+        custom_label2: custom_value2
     scrape_configs:
-    - job_name: kubelet
+    - job_name: custom-kubelet-win
       scheme: https
       metrics_path: /metrics
       scrape_interval: 30s
