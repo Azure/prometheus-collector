@@ -2334,7 +2334,7 @@ stages:
               waitForExecution: false
               arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
 
-          - task: HelmDeploy@0
+          - task: HelmDeploy@1
             displayName: "Deploy: retina onto ci-dev-aks-mac-eus cluster"
             inputs:
               connectionType: 'Azure Resource Manager'
