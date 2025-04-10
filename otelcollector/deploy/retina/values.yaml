@@ -1,0 +1,22 @@
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
+  - operator: Exists
+    effect: NoExecute
+  - operator: Exists
+    effect: NoSchedule
+fullnameOverride: network-observability
+logLevel: info
+image:
+  pullPolicy: Always
+os:
+  windows: true
+operator:
+  enabled: true
+  enableRetinaEndpoint: true
+enabledPlugin_linux: 
+  - dropreason
+  - packetforward
+  - linuxutil
+  - dns
+  - packetparser
