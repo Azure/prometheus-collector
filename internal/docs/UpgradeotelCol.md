@@ -53,48 +53,49 @@ Get latest release version and latest prometheusreceiver code:
 
 	```
 	// Setup settings and logger and create Prometheus web handler
-		webOptions := web.Options{
-			ScrapeManager: r.scrapeManager,
-			Context:       ctx,
-			ListenAddress: ":9090",
-			ExternalURL: &url.URL{
-				Scheme: "http",
-				Host:   "localhost:9090",
-				Path:   "",
-			},
-			RoutePrefix: "/",
-			ReadTimeout: time.Minute * readTimeoutMinutes,
-			PageTitle:   "Prometheus Receiver",
-			Version: &web.PrometheusVersion{
-				Version:   version.Version,
-				Revision:  version.Revision,
-				Branch:    version.Branch,
-				BuildUser: version.BuildUser,
-				BuildDate: version.BuildDate,
-				GoVersion: version.GoVersion,
-			},
-			Flags:          make(map[string]string),
-			MaxConnections: maxConnections,
-			IsAgent:        true,
-			Gatherer:       prometheus.DefaultGatherer,
+	webOptions := web.Options{
+		ScrapeManager:   r.scrapeManager,
+		Context:         ctx,
+		ListenAddresses: []string{"localhost:9090"},
+		ExternalURL: &url.URL{
+			Scheme: "http",
+			Host:   "localhost:9090",
+			Path:   "",
+		},
+		RoutePrefix: "/",
+		ReadTimeout: time.Minute * readTimeoutMinutes,
+		PageTitle:   "Prometheus Receiver",
+		Version: &web.PrometheusVersion{
+			Version:   version.Version,
+			Revision:  version.Revision,
+			Branch:    version.Branch,
+			BuildUser: version.BuildUser,
+			BuildDate: version.BuildDate,
+			GoVersion: version.GoVersion,
+		},
+		Flags:          make(map[string]string),
+		MaxConnections: maxConnections,
+		IsAgent:        true,
+		Gatherer:       prometheus.DefaultGatherer,
+	}
+	go_kit_logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	r.webHandler = web.New(go_kit_logger, &webOptions)
+	sem := make(chan struct{}, maxConnections)
+	listener, err := r.webHandler.Listener("localhost:9090", sem)
+	if err != nil {
+		return err
+	}
+	// Pass config and let the web handler know the config is ready.
+	// These are needed because Prometheus allows reloading the config without restarting.
+	r.webHandler.ApplyConfig((*promconfig.Config)(r.cfg.PrometheusConfig))
+	r.webHandler.SetReady(web.Ready)
+	// Uses the same context as the discovery and scrape managers for shutting down
+	go func() {
+		if err := r.webHandler.Run(ctx, []net.Listener{listener}, ""); err != nil {
+			r.settings.Logger.Error("Web handler failed", zap.Error(err))
+			componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
 		}
-		go_kit_logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-		r.webHandler = web.New(go_kit_logger, &webOptions)
-		listener, err := r.webHandler.Listener()
-		if err != nil {
-			return err
-		}
-		// Pass config and let the web handler know the config is ready.
-		// These are needed because Prometheus allows reloading the config without restarting.
-		r.webHandler.ApplyConfig((*promconfig.Config)(r.cfg.PrometheusConfig))
-		r.webHandler.SetReady(true)
-		// Uses the same context as the discovery and scrape managers for shutting down
-		go func() {
-			if err := r.webHandler.Run(ctx, listener, ""); err != nil {
-				r.settings.Logger.Error("Web handler failed", zap.Error(err))
-				componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
-			}
-		}()
+	}()
 	``` 
 
 ### targetallocator/manager.go: web handler changes to be added 

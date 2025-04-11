@@ -1,24 +1,16 @@
 {
   "files": {
-    "main.css": "./static/css/main.8f11b0d2.chunk.css",
-    "main.js": "./static/js/main.ffb18a61.chunk.js",
-    "main.js.map": "./static/js/main.ffb18a61.chunk.js.map",
-    "runtime-main.js": "./static/js/runtime-main.9b474c39.js",
-    "runtime-main.js.map": "./static/js/runtime-main.9b474c39.js.map",
-    "static/css/2.cede384b.chunk.css": "./static/css/2.cede384b.chunk.css",
-    "static/js/2.4db762d9.chunk.js": "./static/js/2.4db762d9.chunk.js",
-    "static/js/2.4db762d9.chunk.js.map": "./static/js/2.4db762d9.chunk.js.map",
+    "main.css": "./static/css/main.2d4c75ef.css",
+    "main.js": "./static/js/main.8c123cb9.js",
+    "static/media/codicon.ttf": "./static/media/codicon.b3726f0165bf67ac6849.ttf",
+    "static/media/prometheus_logo_grey.svg": "./static/media/prometheus_logo_grey.3cf697e5443028ca5e5255b93c7906c5.svg",
     "index.html": "./index.html",
-    "static/css/2.cede384b.chunk.css.map": "./static/css/2.cede384b.chunk.css.map",
-    "static/css/main.8f11b0d2.chunk.css.map": "./static/css/main.8f11b0d2.chunk.css.map",
-    "static/js/2.4db762d9.chunk.js.LICENSE.txt": "./static/js/2.4db762d9.chunk.js.LICENSE.txt",
-    "static/media/app.scss": "./static/media/codicon.b3726f01.ttf"
+    "static/media/index.cjs": "./static/media/index.f6d03137e8c9dd0de04c.cjs",
+    "main.2d4c75ef.css.map": "./static/css/main.2d4c75ef.css.map",
+    "main.8c123cb9.js.map": "./static/js/main.8c123cb9.js.map"
   },
   "entrypoints": [
-    "static/js/runtime-main.9b474c39.js",
-    "static/css/2.cede384b.chunk.css",
-    "static/js/2.4db762d9.chunk.js",
-    "static/css/main.8f11b0d2.chunk.css",
-    "static/js/main.ffb18a61.chunk.js"
+    "static/css/main.2d4c75ef.css",
+    "static/js/main.8c123cb9.js"
   ]
 }
