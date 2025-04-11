@@ -5,7 +5,7 @@ tolerations:
     effect: NoExecute
   - operator: Exists
     effect: NoSchedule
-fullnameOverride: network-observability
+#fullnameOverride: network-observability
 logLevel: info
 image:
   pullPolicy: Always
