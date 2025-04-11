@@ -30,8 +30,13 @@ CVE-2024-45341 # stdlib
 # config-reader
 CVE-2025-22866 # stdlib
 CVE-2025-22870 # golang.org/x/net
+CVE-2025-22871 # stdlib 
 #otelcollector
 CVE-2025-22870 # golang.org/x/net
+CVE-2025-22871 # stdlib
 #promconfigvalidator
 CVE-2025-22870 # golang.org/x/net
+CVE-2025-22871 # stdlib
+# ccp
+CVE-2025-22871 # stdlib
 
