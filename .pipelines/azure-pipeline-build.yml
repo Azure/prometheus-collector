@@ -2294,7 +2294,8 @@ stages:
               echo $RETINA_VERSION
               helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina
               ls $(Build.SourcesDirectory)/otelcollector/deploy/retina/retina
-                mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/retina/* $(Build.SourcesDirectory)/otelcollector/deploy/retina/
+              mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/retina/* $(Build.SourcesDirectory)/otelcollector/deploy/retina/
+              mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/templates/
                 #rmdir $(Build.SourcesDirectory)/otelcollector/deploy/retina/retina
 
               # for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
