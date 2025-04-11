@@ -8,7 +8,7 @@ schedules:
   displayName: Daily config processing test run
   branches:
     include:
-    - rashmi/config-tests
+    - main
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -31,7 +31,6 @@ stages:
   - deployment: Testkube
     displayName: "Test: AKS testkube tests"
     environment: Prometheus-Collector-Tests
-    dependsOn: Deploy_AKS_Chart
     timeoutInMinutes: 360
     pool:
       name: Azure-Pipelines-CI-Test-EO
