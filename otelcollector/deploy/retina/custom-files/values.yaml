@@ -64,8 +64,7 @@ apiServer:
 # Supported - debug, info, error, warn, panic, fatal.
 logLevel: info
 
-enabledPlugin_linux: 
-  enabledPlugin_linux: '["dropreason", "packetforward", "linuxutil", "dns", "packetparser"]'
+enabledPlugin_linux: '["dropreason", "packetforward", "linuxutil", "dns", "packetparser"]'
 enabledPlugin_win: '["hnsstats"]'
 
 enableTelemetry: false
