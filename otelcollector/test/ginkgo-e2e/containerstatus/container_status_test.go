@@ -36,8 +36,10 @@ var _ = DescribeTable("The pods should be scheduled in all nodes",
 		err := utils.CheckIfAllPodsScheduleOnNodes(K8sClient, namespace, controllerLabelName, controllerLabelValue, osLabel)
 		Expect(err).NotTo(HaveOccurred())
 	},
-	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", "linux"),
-	Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", "windows", Label(utils.WindowsLabel)),
+	Entry("when checking the ama-metrics-node pods", "kube-system", "dsName", "ama-metrics-node", "linux"),
+	Entry("when checking the ama-metrics-win-node pods", "kube-system", "dsName", "ama-metrics-win-node", "windows", Label(utils.WindowsLabel)),
+	Entry("when checking the retina-agent pods", "kube-system", "k8s-app", "retina", "linux", Label(utils.RetinaLabel)),
+	Entry("when checking the retina-agent-win pods", "kube-system", "k8s-app", "retina", "windows", Label(utils.RetinaLabel), Label(utils.WindowsLabel)),
 )
 
 /*

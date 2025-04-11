@@ -306,7 +306,7 @@ var _ = Describe("Query Metrics Test Suite", func() {
 	Context("When querying metrics", func() {
 		It("should return the expected results for up=1 for all default jobs", func() {
 			// Define a list of default jobs
-			defaultJobs := []string{"kubelet", "cadvisor", "kube-state-metrics", "node"}
+			defaultJobs := []string{"kubelet", "cadvisor", "kube-state-metrics", "node", "networkobservability-retina"}
 
 			for _, job := range defaultJobs {
 				// Run the query for each job
