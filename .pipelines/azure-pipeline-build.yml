@@ -2294,7 +2294,7 @@ stages:
               echo $RETINA_VERSION
               helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
               ls $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina
-              mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/Chart.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina
+              #mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/Chart.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina
               mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/values.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina
               mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
                 #rmdir $(Build.SourcesDirectory)/otelcollector/deploy/retina/retina
@@ -2353,20 +2353,8 @@ stages:
               chartType: 'FilePath'
               chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina'
               releaseName: 'retina'
-              waitForExecution: true
+              waitForExecution: false
               arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION)
-
-          - task: AzureCLI@1
-            displayName: Get kubeconfig
-            inputs:
-              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-              scriptLocation: 'inlineScript'
-              inlineScript: 'az aks get-credentials -g ci-dev-aks-mac-eus-rg -n ci-dev-aks-mac-eus'
-          
-          - bash: |
-              kubectl apply -f network-observability-service.yaml
-            workingDirectory: $(Build.SourcesDirectory)/otelcollector/deploy/retina
-            displayName: "Apply Retina addon settings"
 
   - deployment: Deploy_AKS_Chart_Test_Cluster
     displayName: "Deploy: AKS tests cluster"
