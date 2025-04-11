@@ -2352,7 +2352,7 @@ stages:
               chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina'
               releaseName: 'retina'
               waitForExecution: true
-              arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/values.yaml --skip-crds --version $RETINA_VERSION --set image.tag=$RETINA_VERSION --set operator.tag=$RETINA_VERSION
+              arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION)
 
           - task: AzureCLI@1
             displayName: Get kubeconfig
