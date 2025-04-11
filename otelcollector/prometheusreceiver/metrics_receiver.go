@@ -227,7 +227,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 		IsAgent:        true,
 		Gatherer:       prometheus.DefaultGatherer,
 	}
-	go_kit_logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	go_kit_logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	r.webHandler = web.New(go_kit_logger, &webOptions)
 	sem := make(chan struct{}, maxConnections)
 	listener, err := r.webHandler.Listener("localhost:9090", sem)
