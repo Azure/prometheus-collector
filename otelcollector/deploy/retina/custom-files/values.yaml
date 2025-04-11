@@ -65,11 +65,7 @@ apiServer:
 logLevel: info
 
 enabledPlugin_linux: 
-  - dropreason
-  - packetforward
-  - linuxutil
-  - dns
-  - packetparser
+  enabledPlugin_linux: '["dropreason", "packetforward", "linuxutil", "dns", "packetparser"]'
 enabledPlugin_win: '["hnsstats"]'
 
 enableTelemetry: false
