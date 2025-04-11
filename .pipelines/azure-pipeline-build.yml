@@ -2292,8 +2292,8 @@ stages:
               RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
               echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
               echo $RETINA_VERSION
-              helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
-              ls $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+              helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy
+              ls $(Build.SourcesDirectory)/otelcollector/deploy/retina
 
               # for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
               #     do
@@ -2347,7 +2347,7 @@ stages:
               namespace: 'kube-system'
               command: 'upgrade'
               chartType: 'FilePath'
-              chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart'
+              chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina'
               releaseName: 'retina'
               waitForExecution: true
               arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/values.yaml --skip-crds --version $RETINA_VERSION --set image.tag=$RETINA_VERSION --set operator.tag=$RETINA_VERSION
