@@ -2296,7 +2296,7 @@ stages:
               ls $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina
               mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/Chart.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina
               mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/values.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina
-              mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
+              mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
                 #rmdir $(Build.SourcesDirectory)/otelcollector/deploy/retina/retina
 
               # for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
