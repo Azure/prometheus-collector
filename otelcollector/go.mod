@@ -2,7 +2,7 @@ module prometheus-collector
 
 go 1.23.0
 
-toolchain go1.23.7
+toolchain go1.23.8
 
 replace github.com/prometheus-collector/shared => ./shared
 

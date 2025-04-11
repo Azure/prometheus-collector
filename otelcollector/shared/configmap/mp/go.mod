@@ -3,7 +3,7 @@ module github.com/prometheus-collector/shared/configmap/mp
 replace github.com/prometheus-collector/shared => ../../../shared
 
 go 1.21
-toolchain go1.23.7
+toolchain go1.23.8
 
 require (
 	github.com/onsi/ginkgo/v2 v2.19.0
