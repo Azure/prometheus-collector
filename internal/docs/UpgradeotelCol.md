@@ -77,6 +77,7 @@ Get latest release version and latest prometheusreceiver code:
 		MaxConnections: maxConnections,
 		IsAgent:        true,
 		Gatherer:       prometheus.DefaultGatherer,
+		UseOldUI: true,
 	}
 	go_kit_logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	r.webHandler = web.New(go_kit_logger, &webOptions)

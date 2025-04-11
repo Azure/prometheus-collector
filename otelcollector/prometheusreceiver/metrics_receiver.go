@@ -226,6 +226,7 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 		MaxConnections: maxConnections,
 		IsAgent:        true,
 		Gatherer:       prometheus.DefaultGatherer,
+		UseOldUI: true,
 	}
 	go_kit_logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	r.webHandler = web.New(go_kit_logger, &webOptions)
