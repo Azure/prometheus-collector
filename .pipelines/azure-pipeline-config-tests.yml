@@ -8,7 +8,7 @@ schedules:
   displayName: Daily config processing test run
   branches:
     include:
-    - rashmi/config-tests
+    - main
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -21,7 +21,7 @@ variables:
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.23.7'
+  GOLANG_VERSION: '1.23.8'
   TESTKUBE_GOLANG_VERSION: '1.23.2'
   FLUENT_BIT_VERSION: '3.2.2'
 
@@ -31,7 +31,6 @@ stages:
   - deployment: Testkube
     displayName: "Test: AKS testkube tests"
     environment: Prometheus-Collector-Tests
-    dependsOn: Deploy_AKS_Chart
     timeoutInMinutes: 360
     pool:
       name: Azure-Pipelines-CI-Test-EO
