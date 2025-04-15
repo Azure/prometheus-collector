@@ -1,6 +1,7 @@
 # CRITICAL
 # kube-state-metrics
 CVE-2024-45337 # golang.org/x/crypto
+CVE-2025-22869 # golang.org/x/crypto
 CVE-2024-24790 # stdlib
 # HIGH
 # kube-state-metrics
@@ -40,3 +41,4 @@ CVE-2025-22870 # golang.org/x/net
 CVE-2025-22871 # stdlib
 # ccp
 CVE-2025-22871 # stdlib
+
