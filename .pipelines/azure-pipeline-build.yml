@@ -2039,9 +2039,6 @@ extends:
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
           skipComponentGovernanceDetection: true
-        templateContext:
-          type: releaseJob
-          isProduction: false
         strategy:
           runOnce:
             deploy:
@@ -2113,9 +2110,6 @@ extends:
           IMAGE_TAG_TARGET_ALLOCATOR: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_IMAGE_TAG'] ]
           IMAGE_TAG_CONFIG_READER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_IMAGE_TAG'] ]
           skipComponentGovernanceDetection: true
-        templateContext:
-          type: releaseJob
-          isProduction: true
         strategy:
           runOnce:
             deploy:
@@ -2123,11 +2117,6 @@ extends:
               - checkout: self
                 submodules: true
                 persistCredentials: true
-              - bash: |
-                  git config --global user.name "AzureDevOps Agent"
-                  git tag "v$(HELM_SEMVER)"
-                  git push origin "v$(HELM_SEMVER)"
-                displayName: Tag commit with semver
               - task: HelmInstaller@1
                 displayName: Install Helm version
                 inputs:
@@ -2186,9 +2175,6 @@ extends:
           IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
-        templateContext:
-          type: releaseJob
-          isProduction: false
         strategy:
           runOnce:
             deploy:
