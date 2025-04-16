@@ -76,6 +76,9 @@ extends:
         - checkout: self
           submodules: true
         - bash: |
+            ls
+            ls $(Agent.BuildDirectory)
+            ls $(Pipeline.Workspace)
             if [ $(IS_PR) == "True" ]; then
               BRANCH_NAME=$(System.PullRequest.SourceBranch)
             else
@@ -85,7 +88,7 @@ extends:
             BRANCH_NAME=$(echo $BRANCH_NAME | tr / - | tr . - | tr _ - | cut -c1-90)
             COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
             DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
-            VERSION=$(cat $(Pipeline.Workspace)/otelcollector/VERSION)
+            VERSION=$(cat $(Agent.BuildDirectory)/otelcollector/VERSION)
             SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
             LINUX_IMAGE_TAG=$SEMVER
             # Truncating to 128 characters as it is required by docker
@@ -216,7 +219,7 @@ extends:
         - task: CopyFiles@2
           displayName: "Copy sidecar.yaml to artifact staging directory"
           inputs:
-            SourceFolder: '$(Pipeline.Workspace)/internal/remotewrite'
+            SourceFolder: '$(Agent.BuildDirectory)/internal/remotewrite'
             Contents: 'sidecar.yaml'
             TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
       - job: Linux_Golang_Reference_App
