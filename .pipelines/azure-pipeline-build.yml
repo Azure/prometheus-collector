@@ -57,7 +57,7 @@ extends:
   parameters:
     pool:
       name: Azure-Pipelines-CI-Test-EO
-      os: windows
+      image: ci-1es-managed-windows-2022
     customBuildTags:
     - ES365AIMigrationTooling
     stages:
