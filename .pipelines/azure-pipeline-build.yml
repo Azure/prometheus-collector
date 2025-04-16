@@ -3,7 +3,6 @@ trigger:
     include:
     - main
     - rashmi/upgrade-ne
-
 pr:
   autoCancel: true
   branches:
