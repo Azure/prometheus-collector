@@ -85,6 +85,7 @@ extends:
             pwd
             ls
             echo $(Agent.BuildDirectory)
+            echo $(Build.SourcesDirectory)
             if [ $(IS_PR) == "True" ]; then
               BRANCH_NAME=$(System.PullRequest.SourceBranch)
             else
