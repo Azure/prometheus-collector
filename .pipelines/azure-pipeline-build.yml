@@ -57,7 +57,6 @@ extends:
   parameters:
     pool:
       name: Azure-Pipelines-CI-Test-EO
-      image: ci-1es-managed-ubuntu-2204
     customBuildTags:
     - ES365AIMigrationTooling
     stages:
@@ -65,6 +64,9 @@ extends:
       jobs:
       - job: Image_Tags_and_Ev2_Artifacts
         displayName: "Build: Set image tags and publish Ev2 artifacts"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         variables:
           skipComponentGovernanceDetection: true
         templateContext:
@@ -210,6 +212,9 @@ extends:
             TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
       - job: CreateSidecarArtifact
         displayName: "Create Sidecar YAML Artifact for Remote Write"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         templateContext:
           outputs:
           - output: pipelineArtifact
@@ -225,6 +230,9 @@ extends:
             TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           skipComponentGovernanceDetection: true
@@ -307,6 +315,9 @@ extends:
           condition: succeeded()
       - job: Linux_Python_Reference_App
         displayName: "Build: linux python reference app image"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           skipComponentGovernanceDetection: true
@@ -548,6 +559,9 @@ extends:
           condition: succeeded()
       - job: Arc_Conformace_Test_Image
         displayName: "Build: Arc Conformance Test Image"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           skipComponentGovernanceDetection: true
@@ -583,6 +597,9 @@ extends:
             targetArgument: '$(Build.SourcesDirectory)'
       - job: SDL_Binary_Scan
         displayName: "SDL: linux binary scanning"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         variables:
           skipComponentGovernanceDetection: true
         condition: and(succeeded(), or(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
@@ -679,6 +696,9 @@ extends:
           displayName: 'Build: build and push image to dev ACR'
       - job: Linux_Prometheus_Collector_AMD64
         displayName: 'Build: linux AMD64 prometheus-collector image'
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
@@ -706,6 +726,9 @@ extends:
           displayName: "Build: build and push image to dev ACR"
       - job: Linux_Prometheus_Collector
         displayName: 'Build: linux prometheus-collector image'
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
         - Linux_Prometheus_Collector_AMD64
@@ -871,6 +894,9 @@ extends:
             GdnBreakGdnToolSemmleSeverity: 'Warning'
       - job: Linux_CCP_Prometheus_Collector
         displayName: "Build: linux CCP prometheus-collector image"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           LINUX_CCP_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CCP_FULL_IMAGE_NAME'] ]
@@ -1045,6 +1071,9 @@ extends:
             GdnBreakGdnToolSemmleSeverity: 'Warning'
       - job: Linux_Target_Allocator_AMD64
         displayName: "Build: AMD64 target allocator image"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
@@ -1112,6 +1141,9 @@ extends:
           condition: succeeded()
       - job: Linux_Target_Allocator
         displayName: "Build: target allocator image"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
         - Linux_Target_Allocator_ARM64
@@ -1221,6 +1253,9 @@ extends:
           condition: succeeded()
       - job: Linux_Config_Reader
         displayName: "Build: config reader image"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           LINUX_CONFIG_READER_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_CONFIG_READER_FULL_IMAGE_NAME'] ]
@@ -1808,6 +1843,9 @@ extends:
             DisableRemediation: false
       - job: Arc_Helm_Chart
         displayName: "Package: Arc helm chart"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         dependsOn:
         - Image_Tags_and_Ev2_Artifacts
         - Linux_Prometheus_Collector
@@ -1854,6 +1892,9 @@ extends:
       jobs:
       - deployment: Deploy_Chart_ARC
         displayName: "Deploy: Arc dev cluster"
+        pool:
+          name: Azure-Pipelines-CI-Test-EO
+          image: ci-1es-managed-ubuntu-2204
         condition: and(succeeded(), and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_Chart_ARC')), eq(variables['System.StageAttempt'], 1))))
         environment: Prometheus-Collector
         variables:
