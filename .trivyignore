@@ -26,6 +26,7 @@ CVE-2024-34158 # stdlib
 CVE-2024-45336 # stdlib
 CVE-2024-45341 # stdlib
 CVE-2025-22871 # net/http
+CVE-2025-22869 # golang.org/x/crypto
 # prometheus-collector
 # targetallocator
 # config-reader

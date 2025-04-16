@@ -4,9 +4,9 @@ AzureMonitorMetrics:
     #MetricLabelsAllowlist: "testlabel=[.*]"
     #MetricAnnotationsAllowList: ""
     ImageRegistry: mcr.microsoft.com
-    ImageRepository: "/oss/kubernetes/kube-state-metrics"
-# Kube-state-metrics ImageTag - 2.12.0, corresponds to chart version - 5.19.0
-    ImageTag: "v2.12.0"
+    ImageRepository: "/oss/v2/kubernetes/kube-state-metrics"
+# Kube-state-metrics ImageTag - 2.15.0-4, corresponds to chart version - 5.32.0
+    ImageTag: "v2.15.0-4"
     Collectors:
       - certificatesigningrequests
       - configmaps
