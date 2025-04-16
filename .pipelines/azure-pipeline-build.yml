@@ -85,7 +85,7 @@ extends:
             BRANCH_NAME=$(echo $BRANCH_NAME | tr / - | tr . - | tr _ - | cut -c1-90)
             COMMIT_SHA=$(echo $(Build.SourceVersion) | cut -b -8)
             DATE=$(TZ=America/Los_Angeles date +%m-%d-%Y)
-            VERSION=$(cat $(Build.SourcesDirectory)/otelcollector/VERSION)
+            VERSION=$(cat $(Pipeline.Workspace)/otelcollector/VERSION)
             SEMVER=$VERSION-$BRANCH_NAME-$DATE-$COMMIT_SHA
             LINUX_IMAGE_TAG=$SEMVER
             # Truncating to 128 characters as it is required by docker
@@ -169,7 +169,7 @@ extends:
           displayName: 'Build: set image registry, repo, and tags'
           name: setup
         - bash: |
-            cd $(Build.SourcesDirectory)/.pipelines/deployment/ServiceGroupRoot/Scripts
+            cd $(Pipeline.Workspace)/.pipelines/deployment/ServiceGroupRoot/Scripts
             cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
             cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics-arc -r
             export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
@@ -184,7 +184,7 @@ extends:
             envsubst < ama-metrics-arc/Chart-template.yaml > ama-metrics-arc/Chart.yaml && envsubst < ama-metrics-arc/values-template.yaml > ama-metrics-arc/values.yaml
             tar -czvf ../artifacts.tar.gz pushAgentToAcr.sh pushChartToAcr.sh prometheus-collector ama-metrics-arc
             cd $(Build.ArtifactStagingDirectory)
-            cp $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
+            cp $(Pipeline.Workspace)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon azure-monitor-metrics-addon -r
             export HELM_CHART_NAME="ama-metrics"
             export ARC_EXTENSION=false
             export AKS_REGION="westeurope"
@@ -192,7 +192,7 @@ extends:
             envsubst < azure-monitor-metrics-addon/Chart-template.yaml > azure-monitor-metrics-addon/Chart.yaml && envsubst < azure-monitor-metrics-addon/values-template.yaml > azure-monitor-metrics-addon/values.yaml
           displayName: 'Ev2: package artifacts.tar.gz for prod release'
         - bash: |
-            cd $(Build.SourcesDirectory)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
+            cd $(Pipeline.Workspace)/.pipelines/deployment/arc-extension-release/ServiceGroupRoot/Scripts
             tar -czvf ../extension-artifacts.tar.gz arcExtensionRelease.sh
           displayName: 'Ev2: package extension-artifacts.tar.gz for prod release'
         - task: CredScan@3
@@ -200,7 +200,7 @@ extends:
         - task: CopyFiles@2
           displayName: "Ev2: copy Ev2 deployment artifacts to staging directory"
           inputs:
-            SourceFolder: "$(Build.SourcesDirectory)/.pipelines/deployment"
+            SourceFolder: "$(Pipeline.Workspace)/.pipelines/deployment"
             Contents: |
               **/*
             TargetFolder: '$(Build.ArtifactStagingDirectory)/deploy'
@@ -216,7 +216,7 @@ extends:
         - task: CopyFiles@2
           displayName: "Copy sidecar.yaml to artifact staging directory"
           inputs:
-            SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
+            SourceFolder: '$(Pipeline.Workspace)/internal/remotewrite'
             Contents: 'sidecar.yaml'
             TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
       - job: Linux_Golang_Reference_App
