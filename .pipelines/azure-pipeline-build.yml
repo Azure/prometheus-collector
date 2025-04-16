@@ -1855,9 +1855,6 @@ extends:
         variables:
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
           skipComponentGovernanceDetection: true
-        templateContext:
-          type: releaseJob
-          isProduction: false
         strategy:
           runOnce:
             deploy:
@@ -1957,9 +1954,6 @@ extends:
           IMAGE_TAG_WINDOWS: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.WINDOWS_IMAGE_TAG'] ]
           HELM_FULL_IMAGE_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_FULL_IMAGE_NAME'] ]
           skipComponentGovernanceDetection: true
-        templateContext:
-          type: releaseJob
-          isProduction: false
         strategy:
           runOnce:
             deploy:
