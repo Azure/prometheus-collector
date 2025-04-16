@@ -57,6 +57,7 @@ extends:
   parameters:
     pool:
       name: Azure-Pipelines-CI-Test-EO
+      image: ci-1es-managed-ubuntu-2204
     customBuildTags:
     - ES365AIMigrationTooling
     stages:
@@ -77,6 +78,8 @@ extends:
           submodules: true
         - bash: |
             pwd
+            ls
+            echo $(Agent.BuildDirectory)
             if [ $(IS_PR) == "True" ]; then
               BRANCH_NAME=$(System.PullRequest.SourceBranch)
             else
