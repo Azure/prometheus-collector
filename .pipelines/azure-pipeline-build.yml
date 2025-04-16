@@ -76,9 +76,7 @@ extends:
         - checkout: self
           submodules: true
         - bash: |
-            ls
-            ls $(Agent.BuildDirectory)
-            ls $(Pipeline.Workspace)
+            pwd
             if [ $(IS_PR) == "True" ]; then
               BRANCH_NAME=$(System.PullRequest.SourceBranch)
             else
@@ -172,7 +170,7 @@ extends:
           displayName: 'Build: set image registry, repo, and tags'
           name: setup
         - bash: |
-            cd $(Pipeline.Workspace)/.pipelines/deployment/ServiceGroupRoot/Scripts
+            cd .pipelines/deployment/ServiceGroupRoot/Scripts
             cp ../../../../otelcollector/deploy/chart/prometheus-collector prometheus-collector -r
             cp ../../../../otelcollector/deploy/addon-chart/azure-monitor-metrics-addon ama-metrics-arc -r
             export MCR_REPOSITORY='/azuremonitor/containerinsights/ciprod/prometheus-collector/images'
