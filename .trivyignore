@@ -1,44 +1,16 @@
 # CRITICAL
 # kube-state-metrics
-CVE-2024-45337 # golang.org/x/crypto
-CVE-2024-24790 # stdlib
 # HIGH
 # kube-state-metrics
-CVE-2024-45338 # golang.org/x/net
-CVE-2024-34156 # stdlib
 # targetallocator
-CVE-2025-30204 github.com/golang-jwt/jwt/v5
 # config-reader
-CVE-2025-30204 github.com/golang-jwt/jwt/v5
 # otelcollector
-CVE-2025-30204 github.com/golang-jwt/jwt/v5
-CVE-2025-29786 github.com/expr-lang/expr
 # promconfigvalidator
-CVE-2025-30204 github.com/golang-jwt/jwt/v5
-CVE-2025-29786 github.com/expr-lang/expr
 # MEDIUM
 # kube-state-metrics
-CVE-2023-45288 # stdlib
-CVE-2024-24789 # stdlib
-CVE-2024-24791 # stdlib
-CVE-2024-34155 # stdlib
-CVE-2024-34158 # stdlib
-CVE-2024-45336 # stdlib
-CVE-2024-45341 # stdlib
-CVE-2025-22871 # net/http
-CVE-2025-22869 # golang.org/x/crypto
 # prometheus-collector
 # targetallocator
 # config-reader
-CVE-2025-22866 # stdlib
-CVE-2025-22870 # golang.org/x/net
-CVE-2025-22871 # stdlib 
 #otelcollector
-CVE-2025-22870 # golang.org/x/net
-CVE-2025-22871 # stdlib
 #promconfigvalidator
-CVE-2025-22870 # golang.org/x/net
-CVE-2025-22871 # stdlib
 # ccp
-CVE-2025-22871 # stdlib
-
