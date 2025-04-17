@@ -156,5 +156,5 @@ prometheus-node-exporter:
     targetPort: 9110
   image:
     registry: mcr.microsoft.com
-    repository: oss/prometheus/node-exporter
+    repository: oss/v2/prometheus/node-exporter
 tolerationsOnlyForControlPlane: false
