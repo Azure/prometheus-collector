@@ -40,7 +40,7 @@ variables:
   KUBE_STATE_METRICS_IMAGE: 'mcr.microsoft.com/oss/v2/kubernetes/kube-state-metrics:v2.15.0-4'
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/prometheus/node-exporter:v1.8.2'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
-  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'grace/build-pipeline-governed')]
+  IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'refs/heads/grace/build-pipeline-governed')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.23.8'
