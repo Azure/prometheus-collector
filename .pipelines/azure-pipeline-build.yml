@@ -221,7 +221,7 @@ extends:
           - output: pipelineArtifact
             displayName: 'Publish sidecar.yaml as an artifact'
             targetPath: '$(Build.ArtifactStagingDirectory)/drop'
-            artifactName: 'drop'
+            artifactName: 'remote-write-drop'
         steps:
         - task: CopyFiles@2
           displayName: "Copy sidecar.yaml to artifact staging directory"
