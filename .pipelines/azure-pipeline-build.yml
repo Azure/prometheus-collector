@@ -57,8 +57,13 @@ extends:
   parameters:
     pool:
       name: Azure-Pipelines-CI-Test-EO
-      image: ci-1es-managed-windows-2022
-      os: windows
+      image: ci-1es-managed-ubuntu-2204
+      os: linux
+    sdl:
+      sourceAnalysisPool:
+        name: Azure-Pipelines-CI-Test-EO
+        image: ci-1es-managed-windows-2022
+        os: windows
     customBuildTags:
     - ES365AIMigrationTooling
     stages:
