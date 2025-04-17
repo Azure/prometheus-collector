@@ -26,7 +26,7 @@ variables:
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.23.8'
-  TESTKUBE_GOLANG_VERSION: '1.23.2'
+  TESTKUBE_GOLANG_VERSION: '1.23.8'
   FLUENT_BIT_VERSION: '3.2.2'
 
 stages:
@@ -575,7 +575,7 @@ stages:
       ARC_CONFORMANCE_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.ARC_CONFORMANCE_FULL_IMAGE_NAME'] ]
     # This is necessary because of: https://github.com/moby/moby/issues/37965
       DOCKER_BUILDKIT: 1
-    condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+    condition: and(succeeded(), and(eq(variables.IS_PR, true), eq(variables.IS_MAIN_BRANCH, true)))
     steps:
       - checkout: self
         persistCredentials: true
@@ -2287,6 +2287,13 @@ stages:
             inputs:
               helmVersionToInstall: 3.12.3
           - bash: |
+
+              RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
+              echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
+              echo $RETINA_VERSION
+              helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+              mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
+
               for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                   do
                     sleep 30
@@ -2314,6 +2321,7 @@ stages:
               cd $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon
               helm dependency update
             displayName: "Build: substitute chart version for 3p in Chart.yaml and values.yaml"
+
           - task: HelmDeploy@0
             displayName: "Deploy: ci-dev-aks-mac-eus cluster"
             inputs:
@@ -2328,6 +2336,21 @@ stages:
               releaseName: 'ama-metrics'
               waitForExecution: false
               arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+
+          - task: HelmDeploy@1
+            displayName: "Deploy: retina onto ci-dev-aks-mac-eus cluster"
+            inputs:
+              connectionType: 'Azure Resource Manager'
+              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+              azureResourceGroup: 'ci-dev-aks-mac-eus-rg'
+              kubernetesCluster: 'ci-dev-aks-mac-eus'
+              namespace: 'kube-system'
+              command: 'upgrade'
+              chartType: 'FilePath'
+              chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina'
+              releaseName: 'retina'
+              waitForExecution: false
+              arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
   - deployment: Deploy_AKS_Chart_Test_Cluster
     displayName: "Deploy: AKS tests cluster"
