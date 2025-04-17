@@ -5,12 +5,21 @@
 # targetallocator
 # config-reader
 # otelcollector
+CVE-2025-29786 # github.com/expr-lang/expr
+CVE-2025-30204 # github.com/golang-jwt/jwt/v5
 # promconfigvalidator
+CVE-2025-29786 # github.com/expr-lang/expr
+CVE-2025-30204 # github.com/golang-jwt/jwt/v5
 # MEDIUM
 # kube-state-metrics
 # prometheus-collector
 # targetallocator
+CVE-2025-22872 # golang.org/x/net
 # config-reader
 #otelcollector
+CVE-2025-22870 # golang.org/x/net
+CVE-2025-22872 # golang.org/x/net
 #promconfigvalidator
+CVE-2025-22870 # golang.org/x/net
+CVE-2025-22872 # golang.org/x/net
 # ccp
