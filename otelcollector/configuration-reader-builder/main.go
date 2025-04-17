@@ -36,9 +36,6 @@ const (
 	// CaValidityYears is the duration for CA certificates. 30 years.
 	CaValidityYears = 30
 
-	// ClockSkewDuration is the allowed clock skews.
-	ClockSkewDuration = time.Minute * 10
-
 	// KeyRetryCount is the number of retries for certificate generation.
 	KeyRetryCount    = 3
 	KeyRetryInterval = time.Microsecond * 5
@@ -184,12 +181,8 @@ func updateTAConfigFile(configFilePath string) {
 			PodMonitorSelector:     &metav1.LabelSelector{},
 		},
 		HTTPS: allocatorconfig.HTTPSServerConfig{
-			Enabled:    true,
-			ListenAddr: ":8443",
-			// CAFilePath:      "/etc/prometheus/certs/client-ca.crt",
-			// TLSCertFilePath: "/etc/prometheus/certs/server.crt",
-			// TLSKeyFilePath:  "/etc/prometheus/certs/server.key",
-			// CAFilePath:      "/etc/prometheus/certs/client-ca.crt",
+			Enabled:         true,
+			ListenAddr:      ":8443",
 			TLSCertFilePath: "/etc/operator-targets/certs/server.crt",
 			TLSKeyFilePath:  "/etc/operator-targets/certs/server.key",
 			CAFilePath:      "/etc/operator-targets/certs/ca.crt",
@@ -288,7 +281,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 func createCACertificate(co certOperator.CertOperator) (*x509.Certificate, string, *rsa.PrivateKey, string, error) {
 	log.Println("Creating CA certificate")
 	now := time.Now()
-	//notBefore := now.Add(ClockSkewDuration)
 	notAfter := now.AddDate(CaValidityYears, 0, 0)
 
 	caCSR := &x509.Certificate{
@@ -318,8 +310,7 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 		"ama-metrics-operator-targets.kube-system.svc.cluster.local",
 	}
 	now := time.Now()
-	//notBefore := now.Add(ClockSkewDuration)
-	notAfter := now.AddDate(CaValidityYears, 0, 0)
+	notAfter := now.AddDate(ServerValidityYears, 0, 0)
 
 	csr := &x509.Certificate{
 		NotBefore:             now,
@@ -367,7 +358,7 @@ func writeServerCertCACertAndKeyToFile(serverCertPem string, serverKeyPem string
 
 func generateSecretWithCACert(caCertPem string) error {
 	log.Println("Generating secret with CA cert")
-	// Code to create secret from the ca cert, server cert and server key
+	// Create secret from the ca cert, server cert and server key
 	secretName := "ama-metrics-operator-targets-tls-secret"
 	namespace := "kube-system"
 

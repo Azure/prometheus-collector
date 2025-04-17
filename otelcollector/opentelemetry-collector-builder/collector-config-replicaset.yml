@@ -41,8 +41,6 @@ receivers:
         collector_id: "${env:POD_NAME}"
         tls:
           ca_file: /etc/operator-targets/certs/ca.crt
-          #cert_file: /etc/prometheus/certs/client-cert.pem
-          #key_file: /etc/prometheus/certs/client-key.pem
 service:
   pipelines:
     metrics:

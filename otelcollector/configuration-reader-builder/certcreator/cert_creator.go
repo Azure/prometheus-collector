@@ -39,7 +39,6 @@ func (c *CertCreatorImp) CreateCertificateWithPublicKey(csr *x509.Certificate, p
 	sn, err := c.GenerateSN()
 	if err != nil {
 		fmt.Println("generate serial number failed: %s", err)
-		// return nil, retry.NewError(false, err)
 		return nil, err
 	}
 	csr.SerialNumber = sn
@@ -47,14 +46,12 @@ func (c *CertCreatorImp) CreateCertificateWithPublicKey(csr *x509.Certificate, p
 	certDerBytes, err := c.CreateCertificate(rand.Reader, csr, caCert, publicKey, caKey)
 	if err != nil {
 		fmt.Println("createCertificateFunc failed: %s", err)
-		// return nil, retry.NewError(false, err)
 		return nil, err
 	}
 
 	certificate, err := c.ParseCertificate(certDerBytes)
 	if err != nil {
 		fmt.Println("parseCertificateFunc failed: %s", err)
-		// return nil, retry.NewError(false, err)
 		return nil, err
 	}
 

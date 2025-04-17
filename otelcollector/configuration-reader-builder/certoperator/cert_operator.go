@@ -53,7 +53,6 @@ func (o *certOperatorImp) CreateSelfSignedCertificateKeyPair(
 	certPem, keyPem, err := o.getCertKeyAsPem(cert, key)
 	if err != nil {
 		fmt.Println("certKeyToPem failed: %s", err)
-		// return nil, "", nil, "", retry.NewError(false, err)
 		return nil, "", nil, "", err
 	}
 	fmt.Println("self signed certificate %v is generated successfully", csr.Subject.CommonName)
@@ -112,7 +111,6 @@ func (o *certOperatorImp) CreateCertificateKeyPair(
 	certPem, keyPem, err := o.getCertKeyAsPem(cert, key)
 	if err != nil {
 		fmt.Println("getCertKeyAsPem failed: %s", err)
-		// return "", "", retry.NewError(false, err)
 		return "", "", err
 	}
 	fmt.Println("certificate %v is generated successfully", csr.Subject.CommonName)
@@ -127,7 +125,6 @@ func (o *certOperatorImp) CreateCertificate(
 	key, err := o.pemToPrivateKey(keyPem)
 	if err != nil {
 		fmt.Println("PemToPrivateKey failed: %s", err)
-		// return "", retry.NewError(false, err)
 		return "", err
 	}
 
@@ -140,7 +137,6 @@ func (o *certOperatorImp) CreateCertificate(
 	certBytes, err := o.certificateToPem(cert)
 	if err != nil {
 		fmt.Println("CertificateToPem failed: %s", err)
-		// return "", retry.NewError(false, err)
 		return "", err
 	}
 	fmt.Println("certificate %v is generated successfully", csr.Subject.CommonName)
