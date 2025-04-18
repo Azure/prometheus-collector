@@ -24,6 +24,7 @@ const (
 	WindowsLabel                                      = "windows"
 	ARM64Label                                        = "arm64"
 	FIPSLabel                                         = "fips"
+	RetinaLabel                                       = "retina"
 	LinuxDaemonsetCustomConfig                        = "linux-daemonset-custom-config"
 	ConfigProcessingCommonNoConfigMaps                = "config-processing-common-no-config-maps"
 	ConfigProcessingCommonWithConfigMap               = "config-processing-common-with-config-maps"
