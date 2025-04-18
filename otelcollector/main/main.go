@@ -1,9 +1,7 @@
 package main
 
 import (
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -178,53 +176,76 @@ func main() {
 			// Check again if ca.crt exists after waiting
 			if _, err = os.Stat(caCertPath); os.IsNotExist(err) {
 				log.Fatalf("ca.crt file still does not exist at path: %s, falling back to http", caCertPath)
-				_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
-				// Fallback to start the collector without TLS
-				// _, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+				// Fallback to start the collector without HTTPS
+				shared.SetInsecureInCollectorConfig(collectorConfig)
+				// _, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 			} else {
-				fmt.Printf("ca.crt file exists at path: %s\n", caCertPath)
-				_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+				fmt.Println("CA file exists after wait")
+				shared.CollectorTAHttpsCheck(caCertPath, collectorConfig)
+				// fmt.Printf("ca.crt file exists at path: %s\n", caCertPath)
+				// certPEM, err := ioutil.ReadFile(caCertPath)
+				// if err != nil {
+				// 	fmt.Printf("Failed to read CA cert file from path: %s\n", caCertPath)
+				// 	// Fallback to start the collector without TLS
+				// 	shared.SetInsecureInCollectorConfig(collectorConfig)
+				// } else {
+				// 	// Create a new cert pool
+				// 	rootCAs := x509.NewCertPool()
+				// 	// Append our cert to the new pool
+				// 	if ok := rootCAs.AppendCertsFromPEM(certPEM); !ok {
+				// 		fmt.Printf("Failed to append %q to RootCAs: %v\n", caCertPath, err)
+				// 		// Fallback to starting without HTTPS
+				// 		shared.SetInsecureInCollectorConfig(collectorConfig)
+				// 	} else {
+				// 		fmt.Printf("Pinging Target Allocator endpoint with HTTPS\n")
+				// 		client := &http.Client{
+				// 			Transport: &http.Transport{
+				// 				TLSClientConfig: &tls.Config{
+				// 					RootCAs: rootCAs,
+				// 				},
+				// 			},
+				// 		}
+				// 		resp, err := client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
+				// 		if err != nil || resp.StatusCode != http.StatusOK {
+				// 			fmt.Printf("Failed to ping Target Allocator endpoint: %v\n", err)
+				// 			// Fallback to start the collector without HTTPS
+				// 			shared.SetInsecureInCollectorConfig(collectorConfig)
+				// 		} else {
+				// 			fmt.Printf("Target Allocator endpoint is reachable with HTTPS\n")
+				// 		}
+				// 	}
+				// }
 			}
-		} else {
-			fmt.Printf("ca.crt file exists at path: %s\n", caCertPath)
-			certPEM, err := ioutil.ReadFile(caCertPath)
-			if err != nil {
-				fmt.Printf("Failed to read CA cert file from path: %s\n", caCertPath)
-				//fall back to starting without https
-			} else {
-				rootCAs, _ := x509.SystemCertPool()
-				if rootCAs == nil {
-					// Create a new cert pool
-					rootCAs = x509.NewCertPool()
-				}
-				// Append our cert to the system pool
-				if ok := rootCAs.AppendCertsFromPEM(certPEM); !ok {
-					fmt.Printf("Failed to append %q to RootCAs: %v", caCertPath, err)
-					fmt.Printf("No certs appended, using system certs only")
-					//fall back to starting without https
-				} else {
-					fmt.Printf("Starting otelcollector with https")
-					_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
-				}
-			}
+			// _, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 
-			// fmt.Println("Copying ca.crt to trusted store")
-			// err = shared.CopyFile(caCertPath, "/etc/pki/ca-trust/source/anchors/ama-metrics-operator-targets-ca.crt")
+			// fmt.Printf("ca.crt file exists at path: %s\n", caCertPath)
+			// certPEM, err := ioutil.ReadFile(caCertPath)
 			// if err != nil {
-			// 	fmt.Printf("Error copying ca.crt to trusted store: %v\n", err)
-			// 	//fall back to starting without https
+			// 	fmt.Printf("Failed to read CA cert file from path: %s\n", caCertPath)
+			// 	// Fallback to start the collector without TLS
+			// 	shared.SetInsecureInCollectorConfig(collectorConfig)
 			// } else {
-			// 	fmt.Printf("Updating ca trust\n")
-			// 	err = shared.StartCommandAndWait("update-ca-trust")
-			// 	if err != nil {
-			// 		fmt.Printf("Error updating ca trust store: %v\n", err)
+			// 	rootCAs, _ := x509.SystemCertPool()
+			// 	if rootCAs == nil {
+			// 		// Create a new cert pool
+			// 		rootCAs = x509.NewCertPool()
+			// 	}
+			// 	// Append our cert to the system pool
+			// 	if ok := rootCAs.AppendCertsFromPEM(certPEM); !ok {
+			// 		fmt.Printf("Failed to append %q to RootCAs: %v", caCertPath, err)
+			// 		fmt.Printf("No certs appended, using system certs only")
 			// 		//fall back to starting without https
 			// 	} else {
-			// 		fmt.Printf("Updated ca trust\n")
+			// 		fmt.Printf("Starting otelcollector with https")
 			// 		_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 			// 	}
 			// }
+
+		} else {
+			// CA file exists
+			shared.CollectorTAHttpsCheck(caCertPath, collectorConfig)
 		}
+		_, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 	} else {
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 		if err != nil {

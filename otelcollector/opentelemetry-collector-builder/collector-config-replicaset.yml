@@ -41,6 +41,7 @@ receivers:
         collector_id: "${env:POD_NAME}"
         tls:
           ca_file: /etc/operator-targets/certs/ca.crt
+          #insecure_skip_verify: true
 service:
   pipelines:
     metrics:
