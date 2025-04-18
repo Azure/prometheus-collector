@@ -21,6 +21,7 @@ import (
 	certCreator "github.com/prometheus-collector/certcreator"
 	certGenerator "github.com/prometheus-collector/certgenerator"
 	certOperator "github.com/prometheus-collector/certoperator"
+	"github.com/prometheus/common/model"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,6 +29,29 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
+
+type PrometheusCRConfig struct {
+	Enabled                         bool                  `yaml:"enabled,omitempty"`
+	AllowNamespaces                 []string              `yaml:"allow_namespaces,omitempty"`
+	DenyNamespaces                  []string              `yaml:"deny_namespaces,omitempty"`
+	PodMonitorSelector              *metav1.LabelSelector `yaml:"pod_monitor_selector,omitempty"`
+	PodMonitorNamespaceSelector     *metav1.LabelSelector `yaml:"pod_monitor_namespace_selector,omitempty"`
+	ServiceMonitorSelector          *metav1.LabelSelector `yaml:"service_monitor_selector,omitempty"`
+	ServiceMonitorNamespaceSelector *metav1.LabelSelector `yaml:"service_monitor_namespace_selector,omitempty"`
+	ScrapeConfigSelector            *metav1.LabelSelector `yaml:"scrape_config_selector,omitempty"`
+	ScrapeConfigNamespaceSelector   *metav1.LabelSelector `yaml:"scrape_config_namespace_selector,omitempty"`
+	ProbeSelector                   *metav1.LabelSelector `yaml:"probe_selector,omitempty"`
+	ProbeNamespaceSelector          *metav1.LabelSelector `yaml:"probe_namespace_selector,omitempty"`
+	ScrapeInterval                  model.Duration        `yaml:"scrape_interval,omitempty"`
+}
+
+type HTTPSServerConfig struct {
+	Enabled         bool   `yaml:"enabled,omitempty"`
+	ListenAddr      string `yaml:"listen_addr,omitempty"`
+	CAFilePath      string `yaml:"ca_file_path,omitempty"`
+	TLSCertFilePath string `yaml:"tls_cert_file_path,omitempty"`
+	TLSKeyFilePath  string `yaml:"tls_key_file_path,omitempty"`
+}
 
 const (
 	// DefaultValidityYears is the duration for regular certificates, SSL etc. 2 years.
@@ -43,12 +67,12 @@ const (
 )
 
 type Config struct {
-	CollectorSelector  *metav1.LabelSelector              `yaml:"collector_selector,omitempty"`
-	Config             map[string]interface{}             `yaml:"config"`
-	AllocationStrategy string                             `yaml:"allocation_strategy,omitempty"`
-	PrometheusCR       allocatorconfig.PrometheusCRConfig `yaml:"prometheus_cr,omitempty"`
-	FilterStrategy     string                             `yaml:"filter_strategy,omitempty"`
-	HTTPS              allocatorconfig.HTTPSServerConfig  `yaml:"https,omitempty"`
+	CollectorSelector  *metav1.LabelSelector  `yaml:"collector_selector,omitempty"`
+	Config             map[string]interface{} `yaml:"config"`
+	AllocationStrategy string                 `yaml:"allocation_strategy,omitempty"`
+	PrometheusCR       PrometheusCRConfig     `yaml:"prometheus_cr,omitempty"`
+	FilterStrategy     string                 `yaml:"filter_strategy,omitempty"`
+	HTTPS              HTTPSServerConfig      `yaml:"https,omitempty"`
 }
 
 type OtelConfig struct {
@@ -176,7 +200,7 @@ func updateTAConfigFile(configFilePath string) {
 			},
 		},
 		Config: promScrapeConfig,
-		PrometheusCR: allocatorconfig.PrometheusCRConfig{
+		PrometheusCR: PrometheusCRConfig{
 			ServiceMonitorSelector: &metav1.LabelSelector{},
 			PodMonitorSelector:     &metav1.LabelSelector{},
 		},

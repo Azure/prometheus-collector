@@ -8,7 +8,7 @@ schedules:
   displayName: Daily config processing test run
   branches:
     include:
-    - rashmi/config-tests
+    - main
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -21,12 +21,12 @@ variables:
   MCR_REPOSITORY_HELM_DEPENDENCIES: '/azuremonitor/containerinsights/cidev'
   BUILD_WINDOWS: true
   Codeql.Enabled: true
-  GOLANG_VERSION: '1.23.7'
+  GOLANG_VERSION: '1.23.8'
   TESTKUBE_GOLANG_VERSION: '1.23.2'
   FLUENT_BIT_VERSION: '3.2.2'
 
 stages:
-- stage: Build
+- stage: Deploy
   jobs:
   - job: Image_Tags_and_Ev2_Artifacts
     displayName: "Build: Set image tags and publish Ev2 artifacts"
