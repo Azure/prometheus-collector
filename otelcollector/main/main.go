@@ -246,6 +246,9 @@ func main() {
 			shared.CollectorTAHttpsCheck(caCertPath, collectorConfig)
 		}
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+		if err != nil {
+			fmt.Printf("Error starting otelcollector: %v\n", err)
+		}
 	} else {
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 		if err != nil {
