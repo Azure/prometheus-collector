@@ -17,7 +17,6 @@ import (
 
 	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
 
-	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
 	certCreator "github.com/prometheus-collector/certcreator"
 	certGenerator "github.com/prometheus-collector/certgenerator"
 	certOperator "github.com/prometheus-collector/certoperator"
@@ -204,7 +203,7 @@ func updateTAConfigFile(configFilePath string) {
 			ServiceMonitorSelector: &metav1.LabelSelector{},
 			PodMonitorSelector:     &metav1.LabelSelector{},
 		},
-		HTTPS: allocatorconfig.HTTPSServerConfig{
+		HTTPS: HTTPSServerConfig{
 			Enabled:         true,
 			ListenAddr:      ":8443",
 			TLSCertFilePath: "/etc/operator-targets/certs/server.crt",
