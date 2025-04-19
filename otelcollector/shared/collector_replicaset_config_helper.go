@@ -111,9 +111,13 @@ func CollectorTAHttpsCheck(caCertPath string, collectorConfig string) {
 			}
 			resp, err := client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
 			if err != nil || resp.StatusCode != http.StatusOK {
-				fmt.Printf("Failed to reach Target Allocator endpoint with HTTPS: %v\n", err)
-				// Fallback to start the collector without HTTPS
-				SetInsecureInCollectorConfig(collectorConfig)
+				fmt.Printf("Failed to reach Target Allocator endpoint with HTTPS, retrying: %v\n", err)
+				resp, err = client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
+				if err != nil || resp.StatusCode != http.StatusOK {
+					fmt.Printf("Failed to reach Target Allocator endpoint with HTTPS, after retry, setting insecure: %v\n", err)
+					// Fallback to start the collector without HTTPS
+					SetInsecureInCollectorConfig(collectorConfig)
+				}
 			} else {
 				fmt.Printf("Target Allocator endpoint is reachable with HTTPS\n")
 			}
