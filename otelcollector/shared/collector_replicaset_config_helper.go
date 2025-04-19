@@ -89,6 +89,7 @@ func SetInsecureInCollectorConfig(configpath string) {
 func CollectorTAHttpsCheck(caCertPath string, collectorConfig string) {
 	fmt.Printf("ca.crt file exists at path: %s\n", caCertPath)
 	certPEM, err := ioutil.ReadFile(caCertPath)
+	fmt.Printf("Contents of CA cert file: %s\n", string(certPEM))
 	if err != nil {
 		fmt.Printf("Failed to read CA cert file from path: %s\n", caCertPath)
 		// Fallback to start the collector without TLS
