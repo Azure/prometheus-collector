@@ -380,6 +380,7 @@ func writeServerCertCACertAndKeyToFile(serverCertPem string, serverKeyPem string
 }
 
 func generateSecretWithCACert(caCertPem string) error {
+	fmt.Printf("Contents of CA cert PEM: %s\n", caCertPem)
 	log.Println("Generating secret with CA cert")
 	// Create secret from the ca cert, server cert and server key
 	secretName := "ama-metrics-operator-targets-tls-secret"
@@ -442,6 +443,7 @@ func createTLSCertificatesAndSecret() (error, error, error, error) {
 	if caErr != nil {
 		log.Println("Error creating CA certificate: %v\n", caErr)
 	}
+	// TODO: add delay for TA start
 	serverCertPem, serverKeyPem, serErr := createServerCertificate(certOperator, caCert, caKey)
 	if serErr != nil {
 		log.Println("Error creating server certificate: %v\n", serErr)
