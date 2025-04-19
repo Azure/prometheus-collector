@@ -102,7 +102,7 @@ func CollectorTAHttpsCheck(caCertPath string, collectorConfig string) {
 			// Fallback to starting without HTTPS
 			SetInsecureInCollectorConfig(collectorConfig)
 		} else {
-			fmt.Printf("Pinging Target Allocator endpoint with HTTPS\n")
+			fmt.Printf("[%s] Pinging Target Allocator endpoint with HTTPS\n", time.Now().Format(time.RFC3339))
 			client := &http.Client{
 				Transport: &http.Transport{
 					TLSClientConfig: &tls.Config{
@@ -130,6 +130,8 @@ func CollectorTAHttpsCheck(caCertPath string, collectorConfig string) {
 					resp, err = client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
 				}
 				fmt.Printf("[%s] Target Allocator endpoint is reachable with HTTPS\n", time.Now().Format(time.RFC3339))
+			} else {
+				fmt.Printf("Target Allocator endpoint is reachable with HTTPS\n")
 			}
 		}
 	}
