@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -110,16 +111,25 @@ func CollectorTAHttpsCheck(caCertPath string, collectorConfig string) {
 				},
 			}
 			resp, err := client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
+			// if err != nil || resp.StatusCode != http.StatusOK {
+			// 	fmt.Printf("Failed to reach Target Allocator endpoint with HTTPS, retrying: %v\n", err)
+			// 	resp, err = client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
+			// 	if err != nil || resp.StatusCode != http.StatusOK {
+			// 		fmt.Printf("Failed to reach Target Allocator endpoint with HTTPS, after retry, setting insecure: %v\n", err)
+			// 		// Fallback to start the collector without HTTPS
+			// 		SetInsecureInCollectorConfig(collectorConfig)
+			// 	}
+			// } else {
+			// 	fmt.Printf("Target Allocator endpoint is reachable with HTTPS\n")
+			// }
+			// testing with while loop
 			if err != nil || resp.StatusCode != http.StatusOK {
-				fmt.Printf("Failed to reach Target Allocator endpoint with HTTPS, retrying: %v\n", err)
-				resp, err = client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
-				if err != nil || resp.StatusCode != http.StatusOK {
-					fmt.Printf("Failed to reach Target Allocator endpoint with HTTPS, after retry, setting insecure: %v\n", err)
-					// Fallback to start the collector without HTTPS
-					SetInsecureInCollectorConfig(collectorConfig)
+				for err != nil || resp.StatusCode != http.StatusOK {
+					fmt.Printf("[%s] Failed to reach Target Allocator endpoint with HTTPS, retrying: %v\n", time.Now().Format(time.RFC3339), err)
+					time.Sleep(5 * time.Second)
+					resp, err = client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
 				}
-			} else {
-				fmt.Printf("Target Allocator endpoint is reachable with HTTPS\n")
+				fmt.Printf("[%s] Target Allocator endpoint is reachable with HTTPS\n", time.Now().Format(time.RFC3339))
 			}
 		}
 	}
