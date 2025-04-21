@@ -19,7 +19,7 @@ WORKDIR /src/prometheus-ui
 RUN go mod download
 COPY ./prometheus-ui /src/prometheus-ui
 ARG TARGETOS TARGETARCH
-RUN make
+RUN wget https://github.com/prometheus/prometheus/releases/download/v$(PROMETHEUS_VERSION)/prometheus-web-ui-$(PROMETHEUS_VERSION).tar.gz & tar -xvzf prometheus-web-ui-$(PROMETHEUS_VERSION).tar.gz & rm prometheus-web-ui-$(PROMETHEUS_VERSION).tar.gz
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o prometheusui . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o prometheusui . ; fi
 
 ARG GOLANG_VERSION
