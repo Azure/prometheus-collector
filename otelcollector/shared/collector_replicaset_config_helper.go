@@ -95,25 +95,25 @@ func CollectorTAHttpsCheck(collectorConfig string) {
 		if _, err := os.Stat(caCertPath); os.IsNotExist(err) {
 			if i == retries {
 				fmt.Printf("ca.crt file does not exist at path: %s after %d retries, exiting\n", caCertPath, retries)
-				return
 			}
 			fmt.Printf("ca.crt file does not exist at path: %s, retrying in 30s (%d/%d)\n", caCertPath, i+1, retries)
 			time.Sleep(30 * time.Second)
 		} else {
 			fmt.Printf("ca.crt file exists at path: %s\n", caCertPath)
-			return
+			break
 		}
 	}
 
 	// Checking for HTTPS connection with retries
 	setInsecure := false
 	retries_https := 2
+	fmt.Printf("HTTPS connection check between Collector and TargetAllocator\n")
 	for i := 0; i <= retries_https; i++ {
 		certPEM, err := ioutil.ReadFile(caCertPath)
 		if err != nil {
 			fmt.Printf("Failed to read CA cert file from path: %s - (%d/%d): %v\n", caCertPath, i+1, retries_https)
 			setInsecure = true
-			break
+			// break
 		} else {
 			// Create a new cert pool
 			rootCAs := x509.NewCertPool()
@@ -121,7 +121,7 @@ func CollectorTAHttpsCheck(collectorConfig string) {
 			if ok := rootCAs.AppendCertsFromPEM(certPEM); !ok {
 				fmt.Printf("Failed to append %s to RootCAs- (%d/%d): %v\n", caCertPath, i+1, retries_https, err)
 				setInsecure = true
-				break
+				// break
 			} else {
 				fmt.Printf("[%s] Pinging Target Allocator endpoint with HTTPS\n", time.Now().Format(time.RFC3339))
 				client := &http.Client{
@@ -136,14 +136,13 @@ func CollectorTAHttpsCheck(collectorConfig string) {
 					if i == retries_https {
 						fmt.Printf("Failed to reach Target Allocator endpoint with HTTPS after %d retries, exiting - %v\n", retries_https, err)
 						setInsecure = true
-						return
 					}
 					fmt.Printf("Failed to reach Target Allocator endpoint with HTTPS, retrying in 30s (%d/%d) - %v\n", i+1, retries_https, err)
 					time.Sleep(30 * time.Second)
 				} else {
 					fmt.Printf("Target Allocator endpoint is reachable with HTTPS\n")
 					setInsecure = false
-					return
+					break
 				}
 			}
 		}
