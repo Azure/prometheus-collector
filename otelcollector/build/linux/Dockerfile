@@ -19,6 +19,7 @@ WORKDIR /src/prometheus-ui
 RUN go mod download
 COPY ./prometheus-ui /src/prometheus-ui
 ARG TARGETOS TARGETARCH
+RUN make
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o prometheusui . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o prometheusui . ; fi
 
 ARG GOLANG_VERSION
