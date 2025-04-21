@@ -1233,7 +1233,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "UTC",
+   "timezone": "browser",
    "title": "Kubernetes / Compute Resources / Namespace (Workloads)",
    "uid": "2745ce2b859a40f7990ff6b85d736738"
 }

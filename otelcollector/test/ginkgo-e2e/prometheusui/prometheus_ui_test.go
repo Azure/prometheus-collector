@@ -93,7 +93,7 @@ var _ = DescribeTable("The Prometheus UI API should return a valid config",
 		Expect(prometheusConfigResult).NotTo(BeNil())
 		Expect(prometheusConfigResult.YAML).NotTo(BeEmpty())
 
-		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, true, nil)
+		prometheusConfig, err := config.Load(prometheusConfigResult.YAML, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(prometheusConfig).NotTo(BeNil())
 	},
