@@ -46,6 +46,10 @@ func main() {
 			if err := shared.Inotify(outputFile, "/etc/prometheus/certs"); err != nil {
 				log.Fatal(err)
 			}
+
+			if err := shared.Inotify(outputFile, "/etc/operator-targets/certs"); err != nil {
+				log.Fatal(err)
+			}
 		} else { //control-plane
 			if err := shared.InotifyCCP(outputFile, "/etc/config/settings"); err != nil {
 				log.Fatal(err)
@@ -169,7 +173,7 @@ func main() {
 	fmt.Println("startCommand otelcollector")
 
 	if controllerType == "replicaset" {
-		shared.CollectorTAHttpsCheck(collectorConfig)
+		_ = shared.CollectorTAHttpsCheck(collectorConfig)
 		// if _, err := os.Stat(caCertPath); os.IsNotExist(err) {
 		// 	fmt.Println("ca.crt file does not exist at path: %s, waiting for 30s", caCertPath)
 		// 	time.Sleep(30 * time.Second) // wait for ca.crt to be available

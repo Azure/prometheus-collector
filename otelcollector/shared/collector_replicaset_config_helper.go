@@ -45,17 +45,17 @@ type OtelConfig struct {
 	} `yaml:"service"`
 }
 
-func SetInsecureInCollectorConfig(configpath string) {
+func SetInsecureInCollectorConfig(configpath string) error {
 	configFileContents, err := os.ReadFile(configpath)
 	if err != nil {
 		fmt.Printf("Unable to read file contents from: %s - %v\n", configpath, err)
-		return
+		return err
 	}
 	var otelConfig OtelConfig
 	err = yaml.Unmarshal([]byte(configFileContents), &otelConfig)
 	if err != nil {
 		fmt.Printf("Unable to unmarshal merged otel configuration from: %s - %v\n", configFileContents, err)
-		return
+		return err
 	}
 
 	targetAllocatorConfig := otelConfig.Receivers.Prometheus.TargetAllocator
@@ -73,20 +73,21 @@ func SetInsecureInCollectorConfig(configpath string) {
 	updatedConfigYaml, err := yaml.Marshal(otelConfig)
 	if err != nil {
 		fmt.Printf("Unable to marshal updated otel configuration - %v\n", err)
-		return
+		return err
 	}
 	if err := os.WriteFile(configpath, updatedConfigYaml, 0644); err != nil {
 		fmt.Printf("Unable to write updated configuration to: %s - %v\n", configpath, err)
-		return
+		return err
 	}
 	if err := os.Setenv("TARGETALLOCATOR_INSECURE", "true"); err != nil {
 		fmt.Printf("Unable to set environment variable TARGETALLOCATOR_INSECURE - %v\n", err)
-		return
+		return err
 	}
 	fmt.Println("Updated configuration written to", configpath)
+	return nil
 }
 
-func CollectorTAHttpsCheck(collectorConfig string) {
+func CollectorTAHttpsCheck(collectorConfig string) error {
 	caCertPath := "/etc/operator-targets/certs/ca.crt"
 
 	// Checking for file existence before proceeding.
@@ -150,7 +151,7 @@ func CollectorTAHttpsCheck(collectorConfig string) {
 
 	if setInsecure {
 		// Fallback to starting without HTTPS
-		SetInsecureInCollectorConfig(collectorConfig)
+		_ = SetInsecureInCollectorConfig(collectorConfig)
 	}
 
 	// certPEM, err := ioutil.ReadFile(caCertPath)
@@ -191,4 +192,5 @@ func CollectorTAHttpsCheck(collectorConfig string) {
 
 	// 	}
 	// }
+	return nil
 }
