@@ -18,6 +18,7 @@ require (
 	github.com/prometheus-collector/certgenerator v0.0.0-00010101000000-000000000000
 	github.com/prometheus-collector/certoperator v0.0.0-00010101000000-000000000000
 	github.com/prometheus-collector/shared/configmap/mp v0.0.0-00010101000000-000000000000
+	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
 	github.com/prometheus/common v0.63.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.31.3

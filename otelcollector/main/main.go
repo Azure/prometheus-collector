@@ -47,9 +47,9 @@ func main() {
 				log.Fatal(err)
 			}
 
-			if err := shared.Inotify(outputFile, "/etc/operator-targets/certs"); err != nil {
-				log.Fatal(err)
-			}
+			// if err := shared.Inotify(outputFile, "/etc/operator-targets/certs"); err != nil {
+			// 	log.Fatal(err)
+			// }
 		} else { //control-plane
 			if err := shared.InotifyCCP(outputFile, "/etc/config/settings"); err != nil {
 				log.Fatal(err)
@@ -194,6 +194,10 @@ func main() {
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 		if err != nil {
 			fmt.Printf("Error starting otelcollector: %v\n", err)
+		}
+		// starting inotify here so that it doesnt restart when it is written the first time
+		if err = shared.Inotify(outputFile, "/etc/operator-targets/certs"); err != nil {
+			fmt.Printf(err)
 		}
 	} else {
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
