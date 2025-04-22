@@ -196,8 +196,9 @@ func main() {
 			fmt.Printf("Error starting otelcollector: %v\n", err)
 		}
 		// starting inotify here so that it doesnt restart when it is written the first time
+		outputFile := "/opt/inotifyoutput.txt"
 		if err = shared.Inotify(outputFile, "/etc/operator-targets/certs"); err != nil {
-			fmt.Printf(err)
+			fmt.Printf("Error starting inotify for watching targetallocator certs: %v\n", err)
 		}
 	} else {
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
