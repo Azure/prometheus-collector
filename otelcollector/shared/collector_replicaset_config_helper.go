@@ -70,6 +70,14 @@ func SetInsecureInCollectorConfig(configpath string) error {
 	} else {
 		fmt.Println("TLS settings are nil, not adding insecure")
 	}
+
+	// // Check to make sure ca cert is valid
+	// if !IsCertificateValid(caCertPath) {
+	// 	fmt.Printf("ca cert is invalid, removing tls section")
+	// 	delete(targetAllocatorConfig, "tls")
+	// 	targetAllocatorConfig["endpoint"] = "http://ama-metrics-operator-targets.kube-system.svc.cluster.local:443"
+	// }
+
 	updatedConfigYaml, err := yaml.Marshal(otelConfig)
 	if err != nil {
 		fmt.Printf("Unable to marshal updated otel configuration - %v\n", err)
@@ -152,6 +160,11 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 	if setInsecure {
 		// Fallback to starting without HTTPS
 		_ = SetInsecureInCollectorConfig(collectorConfig)
+	} else {
+		if err := os.Setenv("TARGETALLOCATOR_INSECURE", "false"); err != nil {
+			fmt.Printf("Unable to set environment variable TARGETALLOCATOR_INSECURE - %v\n", err)
+			return err
+		}
 	}
 
 	// certPEM, err := ioutil.ReadFile(caCertPath)

@@ -189,6 +189,52 @@ func updateTAConfigFile(configFilePath string) {
 		}
 	}
 
+	// var targetAllocatorConfig Config
+
+	// if shared.IsCertificateValid("/etc/operator-targets/certs/server.crt") &&
+	// 	shared.IsCertificateValid("/etc/operator-targets/certs/ca.crt") {
+	// 	fmt.Println("Server certificate and ca certificate are valid, setting HTTPS in TargetAllocator config")
+	// 	targetAllocatorConfig = Config{
+	// 		AllocationStrategy: "consistent-hashing",
+	// 		FilterStrategy:     "relabel-config",
+	// 		CollectorSelector: &metav1.LabelSelector{
+	// 			MatchLabels: map[string]string{
+	// 				"rsName":                         "ama-metrics",
+	// 				"kubernetes.azure.com/managedby": "aks",
+	// 			},
+	// 		},
+	// 		Config: promScrapeConfig,
+	// 		PrometheusCR: PrometheusCRConfig{
+	// 			ServiceMonitorSelector: &metav1.LabelSelector{},
+	// 			PodMonitorSelector:     &metav1.LabelSelector{},
+	// 		},
+	// 		HTTPS: HTTPSServerConfig{
+	// 			Enabled:         true,
+	// 			ListenAddr:      ":8443",
+	// 			TLSCertFilePath: "/etc/operator-targets/certs/server.crt",
+	// 			TLSKeyFilePath:  "/etc/operator-targets/certs/server.key",
+	// 			CAFilePath:      "/etc/operator-targets/certs/ca.crt",
+	// 		},
+	// 	}
+	// } else {
+	// 	fmt.Println("Server certificate or ca certificate is invalid, not setting HTTPS in Targetallocator config")
+	// 	targetAllocatorConfig = Config{
+	// 		AllocationStrategy: "consistent-hashing",
+	// 		FilterStrategy:     "relabel-config",
+	// 		CollectorSelector: &metav1.LabelSelector{
+	// 			MatchLabels: map[string]string{
+	// 				"rsName":                         "ama-metrics",
+	// 				"kubernetes.azure.com/managedby": "aks",
+	// 			},
+	// 		},
+	// 		Config: promScrapeConfig,
+	// 		PrometheusCR: PrometheusCRConfig{
+	// 			ServiceMonitorSelector: &metav1.LabelSelector{},
+	// 			PodMonitorSelector:     &metav1.LabelSelector{},
+	// 		},
+	// 	}
+	// }
+
 	targetAllocatorConfig := Config{
 		AllocationStrategy: "consistent-hashing",
 		FilterStrategy:     "relabel-config",
@@ -380,7 +426,6 @@ func writeServerCertCACertAndKeyToFile(serverCertPem string, serverKeyPem string
 }
 
 func generateSecretWithCACert(caCertPem string) error {
-	fmt.Printf("Contents of CA cert PEM: %s\n", caCertPem)
 	log.Println("Generating secret with CA cert")
 	// Create secret from the ca cert, server cert and server key
 	secretName := "ama-metrics-operator-targets-tls-secret"
