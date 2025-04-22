@@ -13,18 +13,14 @@ import (
 	"path"
 	"runtime"
 	"strconv"
-
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/route"
 	"github.com/prometheus/common/server"
-	"github.com/prometheus/common/version"
 	toolkit_web "github.com/prometheus/exporter-toolkit/web"
-	"github.com/prometheus/prometheus/web"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
@@ -86,14 +82,6 @@ func main() {
 		Host:   "localhost:9090",
 		Path:   "",
 	}
-	Version := &web.PrometheusVersion{
-		Version:   version.Version,
-		Revision:  version.Revision,
-		Branch:    version.Branch,
-		BuildUser: version.BuildUser,
-		BuildDate: version.BuildDate,
-		GoVersion: version.GoVersion,
-	}
 	address := ":9092"
 
 	ctx := context.Background()
@@ -130,7 +118,7 @@ func main() {
 		fs.ServeHTTP(w, r)
 	})
 
-	router.Get("/version", Version)
+	//router.Get("/version", Version)
 	router.Get("/metrics", promhttp.Handler().ServeHTTP)
 
 	serveReactApp := func(w http.ResponseWriter, _ *http.Request) {
@@ -152,7 +140,7 @@ func main() {
 		replacedIdx = bytes.ReplaceAll(replacedIdx, []byte("TITLE_PLACEHOLDER"), []byte("Prometheus Receiver"))
 		replacedIdx = bytes.ReplaceAll(replacedIdx, []byte("AGENT_MODE_PLACEHOLDER"), []byte(strconv.FormatBool(IsAgent)))
 		replacedIdx = bytes.ReplaceAll(replacedIdx, []byte("READY_PLACEHOLDER"), []byte(strconv.FormatBool(true)))
-		replacedIdx = bytes.ReplaceAll(replacedIdx, []byte("LOOKBACKDELTA_PLACEHOLDER"), []byte(model.Duration("5m").String()))
+		replacedIdx = bytes.ReplaceAll(replacedIdx, []byte("LOOKBACKDELTA_PLACEHOLDER"), []byte(model.Duration(time.Minute*5).String()))
 		w.Write(replacedIdx)
 	}
 
@@ -228,11 +216,10 @@ func main() {
 	spanNameFormatter := otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 		return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 	})
-
 	httpSrv := &http.Server{
 		Handler:     withStackTracer(otelhttp.NewHandler(mux, "", spanNameFormatter), logger),
 		ErrorLog:    errlog,
-		ReadTimeout: model.Duration("5m").AsDuration(),
+		ReadTimeout: time.Duration(model.Duration(time.Minute * 5)),
 	}
 
 	logger.Info("Start listening for connections", "address", address)
@@ -258,18 +245,18 @@ func main() {
 	}
 }
 
-// withStackTrace logs the stack trace in case the request panics. The function
+// withStackTracer logs the stack trace in case the request panics. The function
 // will re-raise the error which will then be handled by the net/http package.
 // It is needed because the go-kit log package doesn't manage properly the
 // panics from net/http (see https://github.com/go-kit/kit/issues/233).
-func withStackTracer(h http.Handler, l log.Logger) http.Handler {
+func withStackTracer(h http.Handler, l *slog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
 				const size = 64 << 10
 				buf := make([]byte, size)
 				buf = buf[:runtime.Stack(buf, false)]
-				level.Error(l).Log("msg", "panic while serving request", "client", r.RemoteAddr, "url", r.URL, "err", err, "stack", buf)
+				l.Error("panic while serving request", "client", r.RemoteAddr, "url", r.URL, "err", err, "stack", buf)
 				panic(err)
 			}
 		}()
