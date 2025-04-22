@@ -14,10 +14,10 @@ spec:
   - IPv4
   ipFamilyPolicy: SingleStack
   ports:
-  # - name: targetallocation
-  #   port: 80
-  #   protocol: TCP
-  #   targetPort: 8080
+  - name: targetallocation
+    port: 80
+    protocol: TCP
+    targetPort: 8080
   - name: targetallocation-https
     port: 443
     protocol: TCP

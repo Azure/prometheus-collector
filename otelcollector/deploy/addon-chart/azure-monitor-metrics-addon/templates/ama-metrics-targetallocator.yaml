@@ -36,7 +36,7 @@ spec:
       - name: targetallocator
         args:
         - --enable-prometheus-cr-watcher
-        - --listen-addr-https=:8443
+        # - --listen-addr-https=:8443
         image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:
@@ -82,8 +82,8 @@ spec:
           name: ama-metrics-tls-secret-volume
           readOnly: true
         ports:
-        # - containerPort: 8080
-        #   name: http
+        - containerPort: 8080
+          name: http
         - containerPort: 8443
           name: https
         livenessProbe:
