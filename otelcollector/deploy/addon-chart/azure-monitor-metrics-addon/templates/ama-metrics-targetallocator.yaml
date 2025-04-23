@@ -163,6 +163,8 @@ spec:
           value: "true" # only supported value is the string "true"
         - name: AGENT_VERSION
           value: {{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}
+        - name: OPERATOR_TARGETS_HTTPS_ENABLED
+          value: {{ .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
         volumeMounts:
           - mountPath: /etc/config/settings
             name: settings-vol-config

@@ -219,6 +219,8 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
 	CommonProperties["targetallocatorInsecure"] = os.Getenv("TARGETALLOCATOR_INSECURE")
+	CommonProperties["operatorTargetsHttpsEnabledChartSetting"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING")
+	CommonProperties["operatorTargetsHttpsEnabled"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED")
 
 	isMacMode := os.Getenv("MAC")
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {

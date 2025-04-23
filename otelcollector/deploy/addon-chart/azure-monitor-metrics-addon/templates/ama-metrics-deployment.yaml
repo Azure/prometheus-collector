@@ -168,6 +168,8 @@ spec:
             - name: OPERATOR_TARGETS_CFG_READER_IMG_VERSION
               value: "{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
               {{-  end  }}
+            - name: OPERATOR_TARGETS_HTTPS_ENABLED
+              value: "{{ .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}"
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
               value: "{{ $arcExtensionSettings.nodeExporterVersion }}"

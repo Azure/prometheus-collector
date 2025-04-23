@@ -62,6 +62,21 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedConfig map[s
 	} else {
 		cp.IsOperatorEnabledChartSetting = false
 	}
+
+	if operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED"); operatorHttpsEnabled != "" && strings.ToLower(operatorHttpsEnabled) == "true" {
+		cp.TargetallocatorHttpsEnabledChartSetting = true
+		cp.TargetallocatorHttps = true
+		if value, ok := parsedConfig["targetallocator_https"]; ok {
+			if strings.ToLower(value) == "false" {
+				cp.TargetallocatorHttps = false
+			}
+			fmt.Printf("Configmap setting enabling https between TargetAllocator and Replicaset: %s\n", value)
+		}
+		fmt.Printf("Effective value for enabling https between TargetAllocator and Replicaset: %t\n", cp.TargetallocatorHttps)
+	} else {
+		cp.TargetallocatorHttpsEnabledChartSetting = false
+		cp.TargetallocatorHttps = false
+	}
 }
 
 func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *ConfigProcessor) error {
@@ -78,6 +93,8 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED=%t\n", configParser.IsOperatorEnabled))
 		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=%t\n", configParser.IsOperatorEnabled))
 	}
+	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING=%t\n", configParser.TargetallocatorHttpsEnabledChartSetting))
+	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_HTTPS_ENABLED=%t\n", configParser.TargetallocatorHttps))
 	return nil
 }
 func (c *Configurator) Configure() {

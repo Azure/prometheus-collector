@@ -189,74 +189,73 @@ func updateTAConfigFile(configFilePath string) {
 		}
 	}
 
-	// var targetAllocatorConfig Config
+	var targetAllocatorConfig Config
 
-	// if shared.IsCertificateValid("/etc/operator-targets/certs/server.crt") &&
-	// 	shared.IsCertificateValid("/etc/operator-targets/certs/ca.crt") {
-	// 	fmt.Println("Server certificate and ca certificate are valid, setting HTTPS in TargetAllocator config")
-	// 	targetAllocatorConfig = Config{
-	// 		AllocationStrategy: "consistent-hashing",
-	// 		FilterStrategy:     "relabel-config",
-	// 		CollectorSelector: &metav1.LabelSelector{
-	// 			MatchLabels: map[string]string{
-	// 				"rsName":                         "ama-metrics",
-	// 				"kubernetes.azure.com/managedby": "aks",
-	// 			},
-	// 		},
-	// 		Config: promScrapeConfig,
-	// 		PrometheusCR: PrometheusCRConfig{
-	// 			ServiceMonitorSelector: &metav1.LabelSelector{},
-	// 			PodMonitorSelector:     &metav1.LabelSelector{},
-	// 		},
-	// 		HTTPS: HTTPSServerConfig{
-	// 			Enabled:         true,
-	// 			ListenAddr:      ":8443",
-	// 			TLSCertFilePath: "/etc/operator-targets/certs/server.crt",
-	// 			TLSKeyFilePath:  "/etc/operator-targets/certs/server.key",
-	// 			CAFilePath:      "/etc/operator-targets/certs/ca.crt",
-	// 		},
-	// 	}
-	// } else {
-	// 	fmt.Println("Server certificate or ca certificate is invalid, not setting HTTPS in Targetallocator config")
-	// 	targetAllocatorConfig = Config{
-	// 		AllocationStrategy: "consistent-hashing",
-	// 		FilterStrategy:     "relabel-config",
-	// 		CollectorSelector: &metav1.LabelSelector{
-	// 			MatchLabels: map[string]string{
-	// 				"rsName":                         "ama-metrics",
-	// 				"kubernetes.azure.com/managedby": "aks",
-	// 			},
-	// 		},
-	// 		Config: promScrapeConfig,
-	// 		PrometheusCR: PrometheusCRConfig{
-	// 			ServiceMonitorSelector: &metav1.LabelSelector{},
-	// 			PodMonitorSelector:     &metav1.LabelSelector{},
-	// 		},
-	// 	}
-	// }
-
-	targetAllocatorConfig := Config{
-		AllocationStrategy: "consistent-hashing",
-		FilterStrategy:     "relabel-config",
-		CollectorSelector: &metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				"rsName":                         "ama-metrics",
-				"kubernetes.azure.com/managedby": "aks",
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, setting tls config in TargetAllocator")
+		targetAllocatorConfig = Config{
+			AllocationStrategy: "consistent-hashing",
+			FilterStrategy:     "relabel-config",
+			CollectorSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"rsName":                         "ama-metrics",
+					"kubernetes.azure.com/managedby": "aks",
+				},
 			},
-		},
-		Config: promScrapeConfig,
-		PrometheusCR: PrometheusCRConfig{
-			ServiceMonitorSelector: &metav1.LabelSelector{},
-			PodMonitorSelector:     &metav1.LabelSelector{},
-		},
-		HTTPS: HTTPSServerConfig{
-			Enabled:         true,
-			ListenAddr:      ":8443",
-			TLSCertFilePath: "/etc/operator-targets/certs/server.crt",
-			TLSKeyFilePath:  "/etc/operator-targets/certs/server.key",
-			CAFilePath:      "/etc/operator-targets/certs/ca.crt",
-		},
+			Config: promScrapeConfig,
+			PrometheusCR: PrometheusCRConfig{
+				ServiceMonitorSelector: &metav1.LabelSelector{},
+				PodMonitorSelector:     &metav1.LabelSelector{},
+			},
+			HTTPS: HTTPSServerConfig{
+				Enabled:         true,
+				ListenAddr:      ":8443",
+				TLSCertFilePath: "/etc/operator-targets/certs/server.crt",
+				TLSKeyFilePath:  "/etc/operator-targets/certs/server.key",
+				CAFilePath:      "/etc/operator-targets/certs/ca.crt",
+			},
+		}
+	} else {
+		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is not set/false, not setting tls config in TargetAllocator")
+		targetAllocatorConfig = Config{
+			AllocationStrategy: "consistent-hashing",
+			FilterStrategy:     "relabel-config",
+			CollectorSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"rsName":                         "ama-metrics",
+					"kubernetes.azure.com/managedby": "aks",
+				},
+			},
+			Config: promScrapeConfig,
+			PrometheusCR: PrometheusCRConfig{
+				ServiceMonitorSelector: &metav1.LabelSelector{},
+				PodMonitorSelector:     &metav1.LabelSelector{},
+			},
+		}
 	}
+
+	// targetAllocatorConfig := Config{
+	// 	AllocationStrategy: "consistent-hashing",
+	// 	FilterStrategy:     "relabel-config",
+	// 	CollectorSelector: &metav1.LabelSelector{
+	// 		MatchLabels: map[string]string{
+	// 			"rsName":                         "ama-metrics",
+	// 			"kubernetes.azure.com/managedby": "aks",
+	// 		},
+	// 	},
+	// 	Config: promScrapeConfig,
+	// 	PrometheusCR: PrometheusCRConfig{
+	// 		ServiceMonitorSelector: &metav1.LabelSelector{},
+	// 		PodMonitorSelector:     &metav1.LabelSelector{},
+	// 	},
+	// 	HTTPS: HTTPSServerConfig{
+	// 		Enabled:         true,
+	// 		ListenAddr:      ":8443",
+	// 		TLSCertFilePath: "/etc/operator-targets/certs/server.crt",
+	// 		TLSKeyFilePath:  "/etc/operator-targets/certs/server.key",
+	// 		CAFilePath:      "/etc/operator-targets/certs/ca.crt",
+	// 	},
+	// }
 
 	targetAllocatorConfigYaml, _ := yaml.Marshal(targetAllocatorConfig)
 	if err := os.WriteFile(taConfigFilePath, targetAllocatorConfigYaml, 0644); err != nil {
@@ -544,17 +543,6 @@ func main() {
 		fmt.Println("Error starting inotify process:", err)
 	}
 
-	configmapsettings.Configmapparser()
-	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
-		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
-			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
-		}
-	} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
-		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
-	} else {
-		log.Println("No configs found via configmap, not running config reader")
-	}
-
 	caErr, serErr, writeErr, gErr := createTLSCertificatesAndSecret()
 
 	if caErr != nil || serErr != nil || writeErr != nil || gErr != nil {
@@ -576,6 +564,17 @@ func main() {
 				log.Println("Error generating secret with CA cert: %v\n", gErr1)
 			}
 		}
+	}
+
+	configmapsettings.Configmapparser()
+	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
+			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+		}
+	} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
+		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
+	} else {
+		log.Println("No configs found via configmap, not running config reader")
 	}
 
 	http.HandleFunc("/health", healthHandler)

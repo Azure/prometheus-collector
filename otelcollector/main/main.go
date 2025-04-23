@@ -173,32 +173,21 @@ func main() {
 	fmt.Println("startCommand otelcollector")
 
 	if controllerType == "replicaset" {
-		_ = shared.CollectorTAHttpsCheck(collectorConfig)
-		// if _, err := os.Stat(caCertPath); os.IsNotExist(err) {
-		// 	fmt.Println("ca.crt file does not exist at path: %s, waiting for 30s", caCertPath)
-		// 	time.Sleep(30 * time.Second) // wait for ca.crt to be available
-		// 	// Check again if ca.crt exists after waiting
-		// 	if _, err = os.Stat(caCertPath); os.IsNotExist(err) {
-		// 		log.Fatalf("ca.crt file still does not exist at path: %s, falling back to http", caCertPath)
-		// 		// Fallback to start the collector without HTTPS
-		// 		shared.SetInsecureInCollectorConfig(collectorConfig)
-		// 		// _, err = shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
-		// 	} else {
-		// 		fmt.Println("CA file exists after wait")
-		// 		shared.CollectorTAHttpsCheck(caCertPath, collectorConfig)
-		// 	}
-		// } else {
-		// 	// CA file exists
-		// 	shared.CollectorTAHttpsCheck(caCertPath, collectorConfig)
-		// }
+		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+			_ = shared.CollectorTAHttpsCheck(collectorConfig)
+		} else {
+			_ = shared.RemoveHTTPSSettingsInCollectorConfig(collectorConfig)
+		}
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 		if err != nil {
 			fmt.Printf("Error starting otelcollector: %v\n", err)
 		}
-		// starting inotify here so that it doesnt restart when it is written the first time
-		outputFile := "/opt/inotifyoutput.txt"
-		if err = shared.Inotify(outputFile, "/etc/operator-targets/certs"); err != nil {
-			fmt.Printf("Error starting inotify for watching targetallocator certs: %v\n", err)
+		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+			// starting inotify here so that it doesnt restart when it is written the first time
+			outputFile := "/opt/inotifyoutput.txt"
+			if err = shared.Inotify(outputFile, "/etc/operator-targets/certs"); err != nil {
+				fmt.Printf("Error starting inotify for watching targetallocator certs: %v\n", err)
+			}
 		}
 	} else {
 		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
