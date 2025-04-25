@@ -750,7 +750,21 @@ stages:
 
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
-
+  
+          # Set up docker daemon configuration for better performance
+          sudo mkdir -p /etc/docker
+          cat <<EOF | sudo tee /etc/docker/daemon.json
+          {
+            "storage-driver": "overlay2",
+            "storage-opts": [
+              "overlay2.override_kernel_check=true",
+              "overlay2.size=10GB",
+              "metadata-size=1GB"
+            ]
+          }
+          EOF
+          sudo systemctl restart docker || true
+  
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker build . --file ./build/linux/Dockerfile -t $(LINUX_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
           if [ $? -ne 0 ]; then
