@@ -674,6 +674,7 @@ extends:
           name: Azure-Pipelines-ARM-CI-Test-EO
           os: linux
           hostArchitecture: Arm64
+          image: ci-1es-managed-arm64-ubuntu--2204
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           LINUX_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.LINUX_FULL_IMAGE_NAME'] ]
@@ -1124,6 +1125,7 @@ extends:
           name: Azure-Pipelines-ARM-CI-Test-EO
           os: linux
           hostArchitecture: Arm64
+          image: ci-1es-managed-arm64-ubuntu--2204
         dependsOn: Image_Tags_and_Ev2_Artifacts
         variables:
           TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
