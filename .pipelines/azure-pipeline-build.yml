@@ -82,7 +82,7 @@ extends:
           - output: pipelineArtifact
             displayName: 'Ev2: publish Ev2 deployment artifacts'
             targetPath: '$(Build.ArtifactStagingDirectory)'
-            artifactName: drop
+            artifactName: ev2-drop
         steps:
         - checkout: self
           submodules: true
@@ -225,7 +225,7 @@ extends:
           outputs:
           - output: pipelineArtifact
             displayName: 'Publish sidecar.yaml as an artifact'
-            targetPath: '$(Build.ArtifactStagingDirectory)/drop'
+            targetPath: '$(Build.ArtifactStagingDirectory)/remote-write'
             artifactName: 'remote-write-drop'
         steps:
         - task: CopyFiles@2
@@ -233,7 +233,7 @@ extends:
           inputs:
             SourceFolder: '$(Build.SourcesDirectory)/internal/remotewrite'
             Contents: 'sidecar.yaml'
-            TargetFolder: '$(Build.ArtifactStagingDirectory)/drop'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)/remote-write'
       - job: Linux_Golang_Reference_App
         displayName: "Build: linux golang reference app image"
         pool:
@@ -761,7 +761,7 @@ extends:
             displayName: 'Ev2: Publish image artifacts'
             condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
             targetPath: '$(Build.ArtifactStagingDirectory)'
-            artifactName: drop
+            artifactName: linux-drop
         steps:
         - checkout: self
           submodules: true
@@ -924,8 +924,8 @@ extends:
           - output: pipelineArtifact
             displayName: 'Ev2: Publish image artifacts'
             condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-            targetPath: '$(Build.ArtifactStagingDirectory)'
-            artifactName: drop
+            targetPath: '$(Build.ArtifactStagingDirectory)/linuxccp'
+            artifactName: linuxccp-drop
         steps:
         - checkout: self
           submodules: true
@@ -1729,8 +1729,8 @@ extends:
           - output: pipelineArtifact
             displayName: 'Ev2: publish image artifacts'
             condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-            targetPath: '$(Build.ArtifactStagingDirectory)'
-            artifactName: drop
+            targetPath: '$(Build.ArtifactStagingDirectory)/windows'
+            artifactName: windows-drop
         steps:
         - task: GoTool@0
           displayName: "Build: specify golang version"
@@ -1891,8 +1891,8 @@ extends:
           - output: pipelineArtifact
             displayName: 'Ev2: publish helm chart artifacts'
             condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
-            targetPath: '$(Build.ArtifactStagingDirectory)'
-            artifactName: drop
+            targetPath: '$(Build.ArtifactStagingDirectory)/arc-chart'
+            artifactName: arc-drop
         steps:
         - task: HelmInstaller@1
           displayName: 'Build: install Helm version'
