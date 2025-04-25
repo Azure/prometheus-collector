@@ -22,6 +22,7 @@ ARG TARGETOS TARGETARCH PROMETHEUS_VERSION
 RUN echo $PROMETHEUS_VERSION
 RUN wget https://github.com/prometheus/prometheus/releases/download/v$PROMETHEUS_VERSION/prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz
 RUN tar -xvzf prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz
+RUN rm -rf prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz
 RUN if [ "$TARGETARCH" = "arm64" ] ; then CC=aarch64-linux-gnu-gcc CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o prometheusui . ; else CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -buildmode=pie -ldflags '-linkmode external -extldflags=-Wl,-z,now' -o prometheusui . ; fi
 
 ARG GOLANG_VERSION
