@@ -1483,7 +1483,7 @@ stages:
           version: $(GOLANG_VERSION)
 
       - powershell: |
-          ./makefile_windows.ps1
+          ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
         displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 
@@ -1662,7 +1662,7 @@ stages:
           version: $(GOLANG_VERSION)
 
       - powershell: |
-          ./makefile_windows.ps1
+          ./makefile_windows.ps1 -PROMETHEUS_VERSION $(PROMETHEUS_VERSION)
         workingDirectory: $(Build.SourcesDirectory)/otelcollector/opentelemetry-collector-builder/
         displayName: "Build: build otelcollector, promconfigvalidator, and fluent-bit plugin"
 

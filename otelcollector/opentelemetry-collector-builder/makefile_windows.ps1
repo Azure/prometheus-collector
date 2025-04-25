@@ -1,4 +1,8 @@
 # Temporary method to build the OTL collector and fluent-bit for windows
+param(
+    [Parameter()]
+    [string]$PROMETHEUS_VERSION = ""  # Default value if not provided
+)
 
 # building otelcollector
 Write-Output "building otelcollector"
@@ -76,8 +80,7 @@ Write-Output "building prometheusui"
 
 Set-Location ..
 Set-Location prometheus-ui
-
-.\makefile_windows.ps1
+.\makefile_windows.ps1 -PROMETHEUS_VERSION $PROMETHEUS_VERSION
 
 Set-Location ..
 Set-Location opentelemetry-collector-builder
