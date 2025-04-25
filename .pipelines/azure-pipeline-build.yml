@@ -751,7 +751,7 @@ stages:
       - bash: |
           mkdir -p $(Build.ArtifactStagingDirectory)/linux
   
-          docker system prune -a
+          docker system prune --all -f
   
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
           docker build . --file ./build/linux/Dockerfile -t $(LINUX_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --build-arg "FLUENT_BIT_VERSION=$(FLUENT_BIT_VERSION)" --build-arg "PROMETHEUS_VERSION=$(PROMETHEUS_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/linux/metadata.json --push
@@ -978,7 +978,7 @@ stages:
 
           # Necessary due to necessary due to https://stackoverflow.com/questions/60080264/docker-cannot-build-multi-platform-images-with-docker-buildx
           sudo apt-get update && sudo apt-get -y install qemu binfmt-support qemu-user-static
-          docker system prune --volumes -y
+          docker system prune --volumes
           docker system prune --all -f
           docker images -q --filter "dangling=true" | xargs docker rmi
           docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
