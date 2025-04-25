@@ -67,6 +67,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(parsedConfig map[s
 		cp.TargetallocatorHttpsEnabledChartSetting = true
 		cp.TargetallocatorHttpsEnabled = true
 		if value, ok := parsedConfig["targetallocator_https"]; ok {
+			fmt.Printf("value: %s\n", value)
 			if strings.ToLower(value) == "false" {
 				cp.TargetallocatorHttpsEnabled = false
 			}
