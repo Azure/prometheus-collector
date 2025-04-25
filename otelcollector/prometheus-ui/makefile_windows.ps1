@@ -9,6 +9,7 @@ if (Test-Path "prometheusui.exe") {
 Write-Output "========================= Building prometheusui ========================="
 Write-Output "Using Prometheus version: $PROMETHEUS_VERSION"
 Invoke-WebRequest -Uri "https://github.com/prometheus/prometheus/releases/download/v$PROMETHEUS_VERSION/prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz" -OutFile "prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz"
+
 # Verify the downloaded file exists
 Write-Output "Verifying downloaded file..."
 if (Test-Path "prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz") {
@@ -17,8 +18,8 @@ if (Test-Path "prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz") {
     Write-Error "Failed to download prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz"
     exit 1
 }
-# Extract tar.gz using 7-Zip (make sure 7-Zip is installed)
-& 7z x "prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz" -so | & 7z x -si "-ttar" -o ".\prometheus-web-ui-$PROMETHEUS_VERSION"
+
+tar -xvzf "prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz"
 
 # List extracted files/directories to determine extraction path
 Write-Output "Listing files in working directory after extraction:"
