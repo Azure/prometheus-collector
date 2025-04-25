@@ -18,10 +18,12 @@ if (Test-Path "prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz") {
     exit 1
 }
 # Extract tar.gz using 7-Zip (make sure 7-Zip is installed)
-& 7z x "prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz" -so | & 7z x -aoa -si "-ttar"
+& 7z x "prometheus-web-ui-$PROMETHEUS_VERSION.tar.gz" -so | & 7z x -si "-ttar" -o ".\prometheus-web-ui-$PROMETHEUS_VERSION"
+
 # List extracted files/directories to determine extraction path
 Write-Output "Listing files in working directory after extraction:"
 Get-ChildItem -Path . | Select-Object Name, LastWriteTime, @{Name="Type";Expression={if($_.PSIsContainer){"Directory"}else{"File"}}}
+
 # Verify extraction was successful
 Write-Output "Verifying extraction..."
 $uiFolderName = "prometheus-web-ui-$PROMETHEUS_VERSION"
