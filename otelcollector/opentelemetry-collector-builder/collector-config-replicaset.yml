@@ -35,6 +35,10 @@ processors:
         - 'name != "scrape_samples_post_metric_relabeling"'
 receivers:
     prometheus:
+      api_server:
+        enabled: true
+        server_config:
+          endpoint: "localhost:9090"
       target_allocator:
         endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
         interval: 30s
