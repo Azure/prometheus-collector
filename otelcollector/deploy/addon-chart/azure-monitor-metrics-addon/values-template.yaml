@@ -74,7 +74,7 @@ AzureMonitorMetrics:
     ImageRegistry: mcr.microsoft.com
     ImageRepository: "/aks/msi/addon-token-adapter"
     ImageTag: "master.250423.2"
-    ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
+    ImageRepositoryWin: "/aks/msi/addon-token-adapter"
     ImageTagWin: "master.250423.2"
   ArcExtension: ${ARC_EXTENSION}
   ArcEnableOperator: true
