@@ -38,7 +38,7 @@ receivers:
       api_server:
         enabled: true
         server_config:
-          endpoint: "localhost:9090"
+          endpoint: "localhost:9092"
       config:
 service:
   pipelines:

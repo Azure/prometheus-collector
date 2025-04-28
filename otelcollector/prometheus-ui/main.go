@@ -82,7 +82,7 @@ func main() {
 		Host:   "localhost:9090",
 		Path:   "",
 	}
-	address := ":9092"
+	address := ":9090"
 
 	ctx := context.Background()
 	logger := promslog.NewNopLogger()
