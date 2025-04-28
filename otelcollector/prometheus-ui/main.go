@@ -192,7 +192,7 @@ func main() {
 
 	// Route API calls to the port that's hosted by the otelcollector
 	// We need a reverse proxy because norm
-	api, err := url.Parse("http://localhost:9090")
+	api, err := url.Parse("http://localhost:9092")
 	if err != nil {
 		panic(err)
 	}
