@@ -1,13 +1,6 @@
 name: scan-any-public-image
 on:
   workflow_dispatch:
-    inputs:
-      betaVersion:
-        description: 'Beta version: (e.g. v0.123.0)'
-        required: true
-      stableVersion:
-        description: 'Stable version: (e.g. v1.29.0)'
-        required: true
 jobs:
   createPullRequest:
     runs-on: ubuntu-latest
@@ -15,7 +8,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Upgrade otel
         run: |
-          bash -x ./script.sh "${{ github.event.inputs.betaVersion }}" "${{ github.event.inputs.stableVersion }}"
+          bash -x ./check-otel-version.sh
 
       - name: Create Pull Request
         id: cpr
