@@ -4,7 +4,7 @@ go 1.23.0
 
 toolchain go1.24.2
 
-//replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => ../prometheusreceiver
+replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => ../prometheusreceiver
 
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.123.0
