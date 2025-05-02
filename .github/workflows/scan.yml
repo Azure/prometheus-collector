@@ -2,8 +2,11 @@ name: scan-any-public-image
 on:
   workflow_dispatch:
     inputs:
-      releaseVersions:
-        description: 'Release versions'
+      betaVersion:
+        description: 'Beta version'
+        required: true
+      stableVersion:
+        description: 'Stable version'
         required: true
 jobs:
   createPullRequest:
@@ -12,8 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Upgrade otel
         run: |
-          echo "${{ github.event.inputs.releaseVersions }}"
-          bash -x ./script.sh "${{ github.event.inputs.releaseVersions }}"
+          bash -x ./script.sh "${{ github.event.inputs.betaVersion }}" "${{ github.event.inputs.stableVersion }}"
       - name: Configure Git
         run: |
           git config --global user.name "GitHub Actions"
