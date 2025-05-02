@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       releaseVersions:
-        description: 'Full image path in any public registry. ex;- mcr.microsoft.com/azuremonitor/containerinsights/cidev:cidevcfa804a1adeb3eb4e82d78f14569e3238e2f6dbd'
+        description: 'Release versions'
         required: true
 jobs:
   createPullRequest:
@@ -13,7 +13,7 @@ jobs:
       - name: Upgrade otel
         run: |
           echo "${{ github.event.inputs.releaseVersions }}"
-          ./script.sh "${{ github.event.inputs.releaseVersions }}"
+          bash -x ./script.sh "${{ github.event.inputs.releaseVersions }}"
       - name: Configure Git
         run: |
           git config --global user.name "GitHub Actions"
