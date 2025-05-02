@@ -465,14 +465,14 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "basic auth error")
 		return
 	}
-	if u != "rashmi" {
+	if u != "admin" {
 		fmt.Printf("Username provided is incorrect: %s\n", u)
 		w.WriteHeader(401)
 		fmt.Fprintf(w, "username error")
 		return
 	}
 	if p != "pwd" {
-		fmt.Printf("Password provided is incorrect: %s\n", u)
+		fmt.Printf("Password provided is incorrect: %s\n", p)
 		w.WriteHeader(401)
 		fmt.Fprintf(w, "pwd error")
 		return

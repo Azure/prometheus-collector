@@ -164,7 +164,7 @@ spec:
         - name: AGENT_VERSION
           value: {{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}
         - name: OPERATOR_TARGETS_HTTPS_ENABLED
-          value: {{ .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
+          value: "{{ .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}"
         volumeMounts:
           - mountPath: /etc/config/settings
             name: settings-vol-config
@@ -179,23 +179,23 @@ spec:
             name: ta-config-shared
           - mountPath: /etc/operator-targets/certs
             name: operator-targets-certs
-        # securityContext:
-        #   allowPrivilegeEscalation: false
-        #   runAsUser: 0
-        # securityContext:
-        #   capabilities:
-        #     drop:
-        #       - ALL
-        #     add:
-        #       - CAP_NET_BIND_SERVICE
-        # livenessProbe:
-        #   httpGet:
-        #     path: /health
-        #     port: 8081
-        #   initialDelaySeconds: 60
-        #   periodSeconds: 15
-        #   timeoutSeconds: 5
-        #   failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 0
+        securityContext:
+          capabilities:
+            drop:
+              - ALL
+            add:
+              - CAP_NET_BIND_SERVICE
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler

@@ -9,7 +9,7 @@ data:
     ver1
   prometheus-collector-settings: |-
     cluster_alias = ""
-    targetallocator_https = true
+    https_config = true
   default-scrape-settings-enabled: |-
     kubelet = true
     coredns = false

@@ -190,6 +190,10 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 					setInsecure = false
 					break
 				}
+
+				if resp != nil && resp.Body != nil {
+					defer resp.Body.Close()
+				}
 			}
 		}
 	}

@@ -516,6 +516,81 @@ func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMet
 	Log(fmt.Sprintf("Sent container CPU and Mem data for %s", cpuMetricName))
 }
 
+func SendScrapeJobMetadataToApplicationInsights() {
+	scrapeJobTicker := time.NewTicker(5 * time.Minute)
+	defer scrapeJobTicker.Stop()
+
+	for {
+		select {
+		case <-scrapeJobTicker.C:
+			scrapeJobs := getScrapeJobs()
+			if scrapeJobs != nil {
+				// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
+				metricTelemetryItem := appinsights.NewMetricTelemetry(cpuMetricName, cpuUsageNanoCoresLinux)
+
+				// Abbreviated properties to save telemetry cost
+				metricTelemetryItem.Properties[memMetricName] = fmt.Sprintf("%d", int(memoryRssBytesLinux))
+				// Adding the actual pod name from Cadvisor output since the podname environment variable points to the pod on which plugin is running
+				metricTelemetryItem.Properties["PodRefName"] = fmt.Sprintf("%s", podRefName)
+
+				TelemetryClient.Track(metricTelemetryItem)
+
+				Log(fmt.Sprintf("Sent container CPU and Mem data for %s", cpuMetricName))
+			}
+		}
+	}
+
+}
+
+// Get scrape jobs for basic auth and bearer token telemetry
+func getScrapeJobs() []byte {
+	scrapeJobTicker := time.NewTicker(5 * time.Minute)
+	defer scrapeJobTicker.Stop()
+
+	for {
+		select {
+		case <-scrapeJobTicker.C:
+			taEndpoint = "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/scrape_configs"
+			if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+				caCertPath := "/etc/operator-targets/certs/ca.crt"
+				certPEM, err := ioutil.ReadFile(caCertPath)
+				rootCAs := x509.NewCertPool()
+				// Append CA cert to the new pool
+				rootCAs.AppendCertsFromPEM(certPEM)
+				client := &http.Client{
+					Transport: &http.Transport{
+						TLSClientConfig: &tls.Config{
+							RootCAs: rootCAs,
+						},
+					},
+				}
+				taEndpoint = "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs"
+			}
+
+			resp, err := client.Get(taEndpoint)
+			if err != nil || resp.StatusCode != http.StatusOK {
+				fmt.Printf("Failed to reach Target Allocator endpoint - %s\n", taEndpoint)
+				return nil
+			} else {
+				fmt.Printf("Successfully reach Target Allocator endpoint - %s\n", taEndpoint)
+			}
+
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				Log(fmt.Sprintf("Error reading response body: %v", err))
+				SendException(err)
+				return nil
+			}
+
+			if resp != nil && resp.Body != nil {
+				defer resp.Body.Close()
+			}
+
+			return body
+		}
+	}
+}
+
 // Retrieve the JSON payload of Kube state metrics from Cadvisor endpoint
 func retrieveKsmData() []byte {
 	caCert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
