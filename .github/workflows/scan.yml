@@ -18,7 +18,7 @@ jobs:
           committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           author: ${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>
           signoff: false
-          branch: grace/upgrade-bot
+          branch: otelcollector-upgrade-${{ github.event.inputs.betaVersion }}
           delete-branch: true
           title: '[chore]: Upgrade otelcollector to "${{ github.event.inputs.betaVersion }}"'
           body: |
