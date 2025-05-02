@@ -297,7 +297,7 @@ spec:
         {{- if $arcExtensionSettings.mountMarinerCerts }}
         - name: anchors-mariner
           hostPath:
-            path: /etc/pki/ca-trust/anchors/
+            path: /etc/pki/ca-trust/source/anchors/
             type: DirectoryOrCreate
         {{- end }}
         {{- if $arcExtensionSettings.mountUbuntuCerts }}

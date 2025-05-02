@@ -372,7 +372,7 @@ spec:
         {{- if $arcExtensionSettings.mountMarinerCerts }}
         - name: anchors-mariner
           hostPath:
-            path: /etc/pki/ca-trust/anchors/
+            path: /etc/pki/ca-trust/source/anchors/
             type: DirectoryOrCreate
         {{- end }}
         - name: ama-metrics-tls-secret-volume
