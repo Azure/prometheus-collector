@@ -14,13 +14,14 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
-          commit-message: Upgrade otelcollector to "${{ github.event.inputs.betaVersion }}"
+          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
+          commit-message: Upgrade otelcollector"
           committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           author: ${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>
           signoff: false
-          branch: otelcollector-upgrade-${{ github.event.inputs.betaVersion }}
+          branch: otelcollector-upgrade
           delete-branch: true
-          title: '[chore]: Upgrade otelcollector to "${{ github.event.inputs.betaVersion }}"'
+          title: '[chore]: Upgrade otelcollector"'
           body: |
             ...
           draft: true
