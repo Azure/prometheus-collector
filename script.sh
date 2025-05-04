@@ -66,11 +66,31 @@ echo "Looking for Prometheus version in go.sum..."
 PROM_VERSION_IN_GO_SUM=$(grep -m 1 "github.com/prometheus/prometheus v" go.sum | awk '{print $2}')
 # Check if Prometheus version has changed
 echo "Current Prometheus version in PROMETHEUS_VERSION file: $(cat PROMETHEUS_VERSION)"
-echo "$PROM_VERSION_IN_GO_SUM" > PROMETHEUS_VERSION
-echo "Updated PROMETHEUS_VERSION file to $PROM_VERSION_IN_GO_SUM"
-cd "$CURRENT_DIR"
+
+# Convert Prometheus version from go module format to real release version
+echo "Converting Prometheus version from go module format to real release version..."
+if [[ $PROM_VERSION_IN_GO_SUM =~ ^v0\.3[0-9][0-9]\.[0-9]+ ]]; then
+	# Extract the padded minor version and patch version
+	PADDED_MINOR=$(echo $PROM_VERSION_IN_GO_SUM | sed -E 's/^v0\.3([0-9][0-9])\..*/\1/')
+	PATCH_VERSION=$(echo $PROM_VERSION_IN_GO_SUM | sed -E 's/^v0\.3[0-9][0-9]\.([0-9]+).*/\1/')
+	
+	# Remove leading zero from minor version if present
+	MINOR_VERSION=$(echo $PADDED_MINOR | sed 's/^0//')
+	
+	# Create the real Prometheus version
+	REAL_PROM_VERSION="3.${MINOR_VERSION}.${PATCH_VERSION}"
+	echo "Converting Prometheus version from $PROM_VERSION_IN_GO_SUM to $REAL_PROM_VERSION (real release version)"
+	
+	# Store both versions
+	echo "$PROM_VERSION_IN_GO_SUM (go module) -> $REAL_PROM_VERSION (release)"
+	#echo $REAL_PROM_VERSION > PROMETHEUS_VERSION
+else
+	echo "Prometheus version format not recognized: $PROM_VERSION_IN_GO_SUM"
+	#echo $PROM_VERSION_IN_GO_SUM > PROMETHEUS_VERSION
+fi
 
 # Copy prometheus receiver changes into our repo
+cd "$CURRENT_DIR"
 rm -rf otelcollector/prometheusreceiver
 mkdir -p otelcollector/prometheusreceiver
 cp -r opentelemetry-collector-contrib/receiver/prometheusreceiver/* otelcollector/prometheusreceiver/
@@ -86,6 +106,7 @@ echo "Building opentelemetry-collector-builder..."
 cd otelcollector/opentelemetry-collector-builder
 go mod tidy
 make otelcollector
+rm -f otelcollector
 cd "$CURRENT_DIR"
 
 # Step 4: Update and build prom-config-validator-builder
@@ -96,6 +117,7 @@ cp ../opentelemetry-collector-builder/go.mod .
 sed -i '1s#.*#module github.com/microsoft/prometheus-collector/otelcollector/prom-config-validator-builder#' go.mod
 go mod tidy
 make
+rm -f promconfigvalidator
 cd "$CURRENT_DIR"
 
 # Step 5: Update golang version in azure-pipeline-build.yaml
@@ -179,6 +201,7 @@ cp "$CURRENT_DIR/opentelemetry-operator/go.mod" .
 sed -i '1s#.*#module github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator#' go.mod
 go mod tidy
 make
+rm -f targetallocator
 cd "$CURRENT_DIR"
 
 # Step 9: Update Configuration Reader Builder
@@ -189,6 +212,7 @@ PROM_COMMON_VERSION=$(cd "$CURRENT_DIR/otelcollector/otel-allocator" && grep "gi
 sed -i "s#github.com/prometheus/common .*#github.com/prometheus/common $PROM_COMMON_VERSION#g" go.mod
 go mod tidy
 make
+rm -f configurationreader
 cd "$CURRENT_DIR"
 
 # Step 6: Clean up - remove opentelemetry-collector-contrib repo
