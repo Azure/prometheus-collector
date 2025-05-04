@@ -4,13 +4,13 @@
 package config
 
 import (
+	uberzap "go.uber.org/zap"
 	"flag"
 	"path/filepath"
 
 	"github.com/spf13/pflag"
 	"k8s.io/client-go/util/homedir"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	uberzap "go.uber.org/zap"
 )
 
 // Flag names.
