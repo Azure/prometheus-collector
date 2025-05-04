@@ -146,11 +146,45 @@ func (cm CMetrics) String() string {
 	return ret.String()
 }
 
+func SendPrometheusMetricsToAppInsightsAfterAgg(records []map[interface{}]interface{}, aggregationLabel string, telemetryPrefix string, metricName string) {
+	aggregatedValueByLabel := make(map[string]float64)
+
+	for _, record := range records {
+		cMetrics := ConvertRecordToCMetrics(record)
+		for _, metric := range cMetrics.Metrics {
+			for _, value := range metric.Values {
+				for i, labelName := range metric.Meta.Labels {
+					if strings.ToLower(labelName) == aggregationLabel {
+						if _, ok := aggregatedValueByLabel[value.Labels[i]]; !ok {
+							aggregatedValueByLabel[value.Labels[i]] = value.Value
+						} else {
+							aggregatedValueByLabel[value.Labels[i]] += value.Value
+						}
+					}
+				}
+			}
+		}
+		for labelName, value := range aggregatedValueByLabel {
+			metricTelemetryItem := appinsights.NewMetricTelemetry(
+				fmt.Sprintf("%s_%s", telemetryPrefix, metricName),
+				value,
+			)
+			metricTelemetryItem.Properties[aggregationLabel] = fmt.Sprintf("%s", labelName)
+			TelemetryClient.Track(metricTelemetryItem)
+			Log(fmt.Sprintf("Sent telemetry for %s_%s", telemetryPrefix, metricName))
+		}
+	}
+}
+
 func SendPrometheusMetricsToAppInsights(records []map[interface{}]interface{}, tag string) int {
 	telemetryPrefix := "prometheus"
 	if tag == "prometheus.metrics.targetallocator" {
 		telemetryPrefix = "target_allocator"
 	}
+
+	if tag == "prometheus.metrics.volume" {
+		SendPrometheusMetricsToAppInsightsAfterAgg(records, "job", telemetryPrefix, "scrape_samples_post_metric_relabeling")
+	} else {
 	for _, record := range records {
 		cMetrics := ConvertRecordToCMetrics(record)
 		for _, metric := range cMetrics.Metrics {
@@ -166,6 +200,7 @@ func SendPrometheusMetricsToAppInsights(records []map[interface{}]interface{}, t
 				Log(fmt.Sprintf("Sent telemetry for %s_%s_%s_%s", telemetryPrefix, metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name))
 			}
 		}
+	}
 	}
 	return output.FLB_OK
 }

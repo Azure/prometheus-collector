@@ -34,6 +34,7 @@ spec:
         fsGroup: 65534
         runAsGroup: 65534
         runAsUser: 65534
+      dnsPolicy: ClusterFirst
       containers:
       - name: ama-metrics-ksm
         env:
@@ -85,14 +86,16 @@ spec:
           name: "http"
         livenessProbe:
           httpGet:
-            path: /healthz
+            path: /livez
             port: 8080
+            scheme: HTTP
           initialDelaySeconds: 5
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
-            path: /
-            port: 8080
+            path: /readyz
+            port: 8081
+            scheme: HTTP
           initialDelaySeconds: 5
           timeoutSeconds: 5
       nodeSelector:

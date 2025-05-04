@@ -12,7 +12,7 @@ New-Item -Type Directory -Path /opt/microsoft/liveness -ErrorAction SilentlyCont
 New-Item -Type Directory -Path /opt/genevamonitoringagent -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/genevamonitoringagent/datadirectory -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /etc/genevamonitoringagent
-New-Item -Type Directory -Path /static/react -Force -ErrorAction SilentlyContinue
+New-Item -Type Directory -Path /static/react-app -Force -ErrorAction SilentlyContinue
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
 try { 
