@@ -1,9 +1,7 @@
 trigger:
   branches:
     include:
-    - main
-    - feature/otlpmain
-    - grace/ref-app-update-march
+    - vishwa/05022025
 
 pr:
   autoCancel: true
