@@ -1,4 +1,15 @@
 # Azure Monitor Metrics for AKS clusters
+## Release <TBD>
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
+* AKS and Arc Container Images:
+  - feat: Configmap update for CCP (v2 + v1 schema support) (https://github.com/Azure/prometheus-collector/pull/1056)
+* Pipeline/Docs/Templates Updates:
+  - 
+
+
 ## Release 04-15-2025
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.16.0-main-04-15-2025-d78050c6`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.16.0-main-04-15-2025-d78050c6-win`
@@ -29,7 +40,6 @@
   - fix: set proxy the old way for mdsd in golang (https://github.com/Azure/prometheus-collector/pull/1062)
   - fix: add cluster scope to recording rules in policy (https://github.com/Azure/prometheus-collector/pull/1064)
   - upgrade: Upgrade otelcollector and targetallocator to 0.117.0 (https://github.com/Azure/prometheus-collector/pull/1063)
-  - feat: Configmap update for CCP (v2 + v1 schema support) (https://github.com/Azure/prometheus-collector/pull/1056)
 
 * Pipeline/Docs/Templates Updates:
    * fix: add cluster scope to recording rules in policy (https://github.com/Azure/prometheus-collector/pull/1064) 
