@@ -24,6 +24,8 @@ var _ = DescribeTable("The containers should be running",
 	Entry("when checking the ama-metrics-ksm pod", "kube-system", "app.kubernetes.io/name", "ama-metrics-ksm"),
 	Entry("when checking the ama-metrics-operator-targets pod", "kube-system", "rsName", "ama-metrics-operator-targets", Label(utils.OperatorLabel)),
 	Entry("when checking the prometheus-node-exporter pod", "kube-system", "app", "prometheus-node-exporter", Label(utils.ArcExtensionLabel)),
+	Entry("when checking the retina-agent pods", "kube-system", "k8s-app", "retina", Label(utils.RetinaLabel)),
+	Entry("when checking the retina-agent-win pods", "kube-system", "k8s-app", "retina", Label(utils.RetinaLabel), Label(utils.WindowsLabel)),
 )
 
 /*
@@ -36,8 +38,10 @@ var _ = DescribeTable("The pods should be scheduled in all nodes",
 		err := utils.CheckIfAllPodsScheduleOnNodes(K8sClient, namespace, controllerLabelName, controllerLabelValue, osLabel)
 		Expect(err).NotTo(HaveOccurred())
 	},
-	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", "linux"),
-	Entry("when checking the ama-metrics-win-node pod", "kube-system", "dsName", "ama-metrics-win-node", "windows", Label(utils.WindowsLabel)),
+	Entry("when checking the ama-metrics-node pods", "kube-system", "dsName", "ama-metrics-node", "linux"),
+	Entry("when checking the ama-metrics-win-node pods", "kube-system", "dsName", "ama-metrics-win-node", "windows", Label(utils.WindowsLabel)),
+	Entry("when checking the retina-agent pods", "kube-system", "k8s-app", "retina", "linux", Label(utils.RetinaLabel)),
+	Entry("when checking the retina-agent-win pods", "kube-system", "k8s-app", "retina", "windows", Label(utils.RetinaLabel), Label(utils.WindowsLabel)),
 )
 
 /*
