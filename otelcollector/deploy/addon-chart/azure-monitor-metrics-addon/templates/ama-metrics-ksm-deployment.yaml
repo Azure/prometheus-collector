@@ -1,3 +1,4 @@
+{{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -33,6 +34,7 @@ spec:
         fsGroup: 65534
         runAsGroup: 65534
         runAsUser: 65534
+      dnsPolicy: ClusterFirst
       containers:
       - name: ama-metrics-ksm
         env:
@@ -84,19 +86,21 @@ spec:
           name: "http"
         livenessProbe:
           httpGet:
-            path: /healthz
+            path: /livez
             port: 8080
+            scheme: HTTP
           initialDelaySeconds: 5
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
-            path: /
-            port: 8080
+            path: /readyz
+            port: 8081
+            scheme: HTTP
           initialDelaySeconds: 5
           timeoutSeconds: 5
       nodeSelector:
         kubernetes.io/os: linux
-      {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
+      {{- if not $arcExtensionSettings.isArcExtension }}
       affinity:
         nodeAffinity:
           # affinity to schedule on to ephemeral os node if its available
@@ -108,7 +112,7 @@ spec:
                 operator: In
                 values:
                 - system
-          {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
+          {{- if not $arcExtensionSettings.isArcExtension }}
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:

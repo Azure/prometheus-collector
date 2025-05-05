@@ -30,12 +30,11 @@ COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollecto
 COPY ./opentelemetry-collector-builder/otelcollector.exe ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/microsoft/otelcollector/
 COPY ./prom-config-validator-builder/promconfigvalidator.exe $tmpdir/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_win.config ./metricextension/me_ds_internal.config ./metricextension/me_ds_internal_win.config $tmpdir/metricextension/
-COPY ./telegraf/telegraf-prometheus-collector-windows.conf $tmpdir/telegraf/
 COPY ./fluent-bit/fluent-bit-windows.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY ./main/main.exe $tmpdir/microsoft
-COPY ./react /Users/ContainerAdministrator/Documents/static/react
+COPY ./react-app /static/react-app
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 

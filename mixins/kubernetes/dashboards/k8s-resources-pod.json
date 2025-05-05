@@ -89,7 +89,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -195,7 +195,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -237,7 +237,7 @@
             "y": 14
          },
          "id": 3,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -420,7 +420,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -481,7 +481,7 @@
             "y": 28
          },
          "id": 5,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -651,7 +651,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -702,7 +702,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -753,7 +753,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -804,7 +804,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -855,7 +855,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -906,7 +906,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -957,7 +957,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1016,7 +1016,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1075,7 +1075,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1126,7 +1126,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1180,7 +1180,7 @@
             "y": 70
          },
          "id": 16,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1354,7 +1354,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "UTC",
+   "timezone": "browser",
    "title": "Kubernetes / Compute Resources / Pod",
    "uid": "ac3253a2c4a149d68ccd0a58c7ab6738"
 }

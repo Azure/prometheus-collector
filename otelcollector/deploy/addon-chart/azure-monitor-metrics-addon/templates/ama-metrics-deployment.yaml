@@ -1,3 +1,4 @@
+{{- $arcExtensionSettings := include "arc-extension-settings" . | fromYaml }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -9,7 +10,7 @@ metadata:
 spec:
 # New TargetAllocator Enabled scenario
 {{- if .Values.AzureMonitorMetrics.TargetAllocatorEnabled }}
-  {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (.Values.AzureMonitorMetrics.CollectorHPAEnabled) }} # If HPA toggle is enabled, allow HPA to modify the deployment spec
+  {{- if $arcExtensionSettings.hpaEnabled }} # If HPA toggle is enabled, allow HPA to modify the deployment spec
   {{- $currentSpec := (lookup "apps/v1" "Deployment" "kube-system" "ama-metrics").spec }}
     {{- if $currentSpec }}
     # in if check
@@ -53,7 +54,7 @@ spec:
             requests:
               cpu: {{ .Values.AzureMonitorMetrics.RsCPURequest }}
               memory: {{ .Values.AzureMonitorMetrics.RsMemoryRequest }}
-          {{- if and (.Values.AzureMonitorMetrics.ArcExtension) (.Values.Azure.proxySettings.isProxyEnabled) }}
+          {{- if $arcExtensionSettings.isProxyEnabled }}
           envFrom:
             - secretRef:
                 name: ama-metrics-proxy-config
@@ -61,14 +62,14 @@ spec:
           {{- end }}
           env:
             - name: CLUSTER
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ .Values.Azure.Cluster.ResourceId }}"
+              {{- if $arcExtensionSettings.isArcExtension }}
+              value: "{{ $arcExtensionSettings.resourceId }}"
               {{- else }}
               value: "{{ .Values.global.commonGlobals.Customer.AzureResourceID }}"
               {{- end }}
             - name: AKSREGION
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ .Values.Azure.Cluster.Region }}"
+              {{- if $arcExtensionSettings.isArcExtension }}
+              value: "{{ $arcExtensionSettings.region }}"
               {{- else }}
               value: "{{ .Values.global.commonGlobals.Region }}"
               {{- end }}
@@ -77,13 +78,13 @@ spec:
             - name: AZMON_COLLECT_ENV
               value: "false"
             - name: AZMON_OPERATOR_ENABLED
-            {{- if and (or (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.ArcEnableOperator true)) (eq .Values.AzureMonitorMetrics.TargetAllocatorEnabled true) }}
+            {{- if $arcExtensionSettings.operatorEnabled }}
               value: "true"
             {{- else }}
               value: "false"
             {{- end }}
             - name: AZMON_COLLECTOR_HPA_ENABLED
-            {{- if and (ne .Values.AzureMonitorMetrics.ArcExtension true) (eq .Values.AzureMonitorMetrics.CollectorHPAEnabled true) }}
+            {{- if $arcExtensionSettings.hpaEnabled }}
               value: "true"
             {{- else }}
               value: "false"
@@ -91,8 +92,8 @@ spec:
             - name: customEnvironment
               {{- if .Values.AzureMonitorMetrics.isArcACluster }}
               value: "arcautonomous"
-              {{- else if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ lower .Values.CloudEnvironment }}"
+              {{- else if $arcExtensionSettings.isArcExtension }}
+              value: "{{ $arcExtensionSettings.cloudEnvironment }}"
               {{- else }}
               value: "{{ lower .Values.global.commonGlobals.CloudEnvironment }}"
               {{- end }}
@@ -141,8 +142,8 @@ spec:
             - name: NODE_EXPORTER_NAME
               value: "" # Replace this with the node exporter shipped out of box with AKS
             - name: NODE_EXPORTER_TARGETPORT
-              {{- if .Values.AzureMonitorMetrics.ArcExtension }}
-              value: "{{ index .Values "prometheus-node-exporter" "service" "targetPort" }}"
+              {{- if $arcExtensionSettings.isArcExtension }}
+              value: "{{ $arcExtensionSettings.nodeExporterTargetPort }}"
               {{- else }}
               value: "19100"
               {{- end }}
@@ -169,7 +170,7 @@ spec:
               {{-  end  }}
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
-              value: "v1.6.0" # Replace this with the version shipped by default
+              value: "{{ $arcExtensionSettings.nodeExporterVersion }}"
             - name: AGENT_VERSION
               value: {{ .Values.AzureMonitorMetrics.ImageTag }}
             - name: MODE
@@ -178,6 +179,16 @@ spec:
               value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
             - name: MINIMAL_INGESTION_PROFILE
               value: "true" # only supported value is the string "true"
+            {{- if $arcExtensionSettings.isArcExtension }} # Env vars for telemetry purposes
+            - name: IS_ARC_EXTENSION
+              value: "true"
+            - name: ARC_DISTRIBUTION
+              value: "{{ $arcExtensionSettings.distribution }}"
+            - name: MOUNT_MARINER_CERTS
+              value: "{{ $arcExtensionSettings.mountMarinerCerts }}"
+            - name: MOUNT_UBUNTU_CERTS
+              value: "{{ $arcExtensionSettings.mountUbuntuCerts }}"
+            {{- end }}
           securityContext:
             privileged: false
             capabilities:
@@ -201,15 +212,17 @@ spec:
             - name: host-log-pods
               readOnly: true
               mountPath: /var/log/pods
+            {{- if $arcExtensionSettings.mountMarinerCerts }}
             - mountPath: /anchors/mariner
               name: anchors-mariner
               readOnly: true
-            {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
+            {{- end }}
+            {{- if $arcExtensionSettings.mountUbuntuCerts }}
             - mountPath: /anchors/ubuntu
               name: anchors-ubuntu
               readOnly: true
             {{- end }}
-            {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+            {{- if $arcExtensionSettings.isArcExtension }}
             - mountPath: /anchors/proxy
               name: ama-metrics-proxy-cert
               readOnly: true
@@ -222,7 +235,7 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
-        {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+        {{- if $arcExtensionSettings.isArcExtension }}
         - name: arc-msi-adapter
           imagePullPolicy: IfNotPresent
           env:
@@ -295,7 +308,7 @@ spec:
                     operator: NotIn
                     values:
                       - virtual-kubelet
-                  {{- if not .Values.AzureMonitorMetrics.ArcExtension }}
+                  {{- if not $arcExtensionSettings.isArcExtension }}
                   - key: kubernetes.azure.com/cluster
                     operator: Exists
                   {{- end }}
@@ -356,21 +369,23 @@ spec:
         - name: host-log-pods
           hostPath:
             path: /var/log/pods
+        {{- if $arcExtensionSettings.mountMarinerCerts }}
         - name: anchors-mariner
           hostPath:
-            path: /etc/pki/ca-trust/anchors/
+            path: /etc/pki/ca-trust/source/anchors/
             type: DirectoryOrCreate
+        {{- end }}
         - name: ama-metrics-tls-secret-volume
           secret:
             secretName: ama-metrics-mtls-secret
             optional: true
-        {{- if or (ne .Values.AzureMonitorMetrics.ArcExtension true) (and (not (hasPrefix "aks_edge" .Values.ClusterDistribution )) (and (ne .Values.Azure.Cluster.Distribution "aks_edge_k3s") (ne .Values.Azure.Cluster.Distribution "aks_edge_k8s"))) }}
+        {{- if $arcExtensionSettings.mountUbuntuCerts }}
         - name: anchors-ubuntu
           hostPath:
             path: /usr/local/share/ca-certificates/
             type: DirectoryOrCreate
         {{- end }}
-        {{- if .Values.AzureMonitorMetrics.ArcExtension }}
+        {{- if $arcExtensionSettings.isArcExtension }}
         - name: ama-metrics-proxy-cert
           secret:
             secretName: ama-metrics-proxy-cert

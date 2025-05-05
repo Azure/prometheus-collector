@@ -12,18 +12,32 @@ import (
 	"os"
 
 	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
-
-	allocatorconfig "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/config"
+	"github.com/prometheus/common/model"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type PrometheusCRConfig struct {
+	Enabled                         bool                  `yaml:"enabled,omitempty"`
+	AllowNamespaces                 []string              `yaml:"allow_namespaces,omitempty"`
+	DenyNamespaces                  []string              `yaml:"deny_namespaces,omitempty"`
+	PodMonitorSelector              *metav1.LabelSelector `yaml:"pod_monitor_selector,omitempty"`
+	PodMonitorNamespaceSelector     *metav1.LabelSelector `yaml:"pod_monitor_namespace_selector,omitempty"`
+	ServiceMonitorSelector          *metav1.LabelSelector `yaml:"service_monitor_selector,omitempty"`
+	ServiceMonitorNamespaceSelector *metav1.LabelSelector `yaml:"service_monitor_namespace_selector,omitempty"`
+	ScrapeConfigSelector            *metav1.LabelSelector `yaml:"scrape_config_selector,omitempty"`
+	ScrapeConfigNamespaceSelector   *metav1.LabelSelector `yaml:"scrape_config_namespace_selector,omitempty"`
+	ProbeSelector                   *metav1.LabelSelector `yaml:"probe_selector,omitempty"`
+	ProbeNamespaceSelector          *metav1.LabelSelector `yaml:"probe_namespace_selector,omitempty"`
+	ScrapeInterval                  model.Duration        `yaml:"scrape_interval,omitempty"`
+}
+
 type Config struct {
-	CollectorSelector  *metav1.LabelSelector              `yaml:"collector_selector,omitempty"`
-	Config             map[string]interface{}             `yaml:"config"`
-	AllocationStrategy string                             `yaml:"allocation_strategy,omitempty"`
-	PrometheusCR       allocatorconfig.PrometheusCRConfig `yaml:"prometheus_cr,omitempty"`
-	FilterStrategy     string                             `yaml:"filter_strategy,omitempty"`
+	CollectorSelector  *metav1.LabelSelector  `yaml:"collector_selector,omitempty"`
+	Config             map[string]interface{} `yaml:"config"`
+	AllocationStrategy string                 `yaml:"allocation_strategy,omitempty"`
+	PrometheusCR       PrometheusCRConfig     `yaml:"prometheus_cr,omitempty"`
+	FilterStrategy     string                 `yaml:"filter_strategy,omitempty"`
 }
 
 type OtelConfig struct {
@@ -44,6 +58,11 @@ type OtelConfig struct {
 				Processors interface{} `yaml:"processors"`
 				Receivers  interface{} `yaml:"receivers"`
 			} `yaml:"metrics"`
+			MetricsTelemetry struct {
+				Exporters  interface{} `yaml:"exporters,omitempty"`
+				Processors interface{} `yaml:"processors,omitempty"`
+				Receivers  interface{} `yaml:"receivers,omitempty"`
+			} `yaml:"metrics/telemetry,omitempty"`
 		} `yaml:"pipelines"`
 		Telemetry struct {
 			Logs struct {
@@ -146,7 +165,7 @@ func updateTAConfigFile(configFilePath string) {
 			},
 		},
 		Config: promScrapeConfig,
-		PrometheusCR: allocatorconfig.PrometheusCRConfig{
+		PrometheusCR: PrometheusCRConfig{
 			ServiceMonitorSelector: &metav1.LabelSelector{},
 			PodMonitorSelector:     &metav1.LabelSelector{},
 		},
@@ -245,6 +264,7 @@ func main() {
 	_, err := os.Create("/opt/inotifyoutput.txt")
 	if err != nil {
 		log.Fatalf("Error creating output file: %v\n", err)
+		fmt.Println("Error creating inotify output file:", err)
 	}
 
 	// Define the command to start inotify for config reader's liveness probe
@@ -254,7 +274,8 @@ func main() {
 		"--daemon",
 		"--recursive",
 		"--outfile", "/opt/inotifyoutput.txt",
-		"--event", "create,delete",
+		"--event", "create",
+		"--event", "delete",
 		"--format", "%e : %T",
 		"--timefmt", "+%s",
 	)
@@ -263,6 +284,7 @@ func main() {
 	err = inotifyCommandCfg.Start()
 	if err != nil {
 		log.Fatalf("Error starting inotify process for config reader's liveness probe: %v\n", err)
+		fmt.Println("Error starting inotify process:", err)
 	}
 
 	configmapsettings.Configmapparser()

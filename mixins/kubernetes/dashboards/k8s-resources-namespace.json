@@ -22,7 +22,7 @@
          "options": {
             "colorMode": "none"
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -57,7 +57,7 @@
          "options": {
             "colorMode": "none"
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -92,7 +92,7 @@
          "options": {
             "colorMode": "none"
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -127,7 +127,7 @@
          "options": {
             "colorMode": "none"
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -229,7 +229,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -289,7 +289,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/6581e46e4e5c7ba40a07646395ef6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
+                              "url": "/d/ac3253a2c4a149d68ccd0a58c7ab6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
                            }
                         ]
                      }
@@ -304,7 +304,7 @@
             "y": 14
          },
          "id": 6,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -487,7 +487,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -550,7 +550,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/6581e46e4e5c7ba40a07646395ef6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
+                              "url": "/d/ac3253a2c4a149d68ccd0a58c7ab6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
                            }
                         ]
                      }
@@ -565,7 +565,7 @@
             "y": 28
          },
          "id": 8,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -740,7 +740,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/6581e46e4e5c7ba40a07646395ef6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
+                              "url": "/d/ac3253a2c4a149d68ccd0a58c7ab6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
                            }
                         ]
                      }
@@ -755,7 +755,7 @@
             "y": 35
          },
          "id": 9,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -899,7 +899,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -950,7 +950,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1001,7 +1001,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1052,7 +1052,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1103,7 +1103,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1154,7 +1154,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1205,7 +1205,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1256,7 +1256,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1312,7 +1312,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/6581e46e4e5c7ba40a07646395ef6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
+                              "url": "/d/ac3253a2c4a149d68ccd0a58c7ab6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
                            }
                         ]
                      }
@@ -1327,7 +1327,7 @@
             "y": 70
          },
          "id": 18,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1488,7 +1488,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "UTC",
+   "timezone": "browser",
    "title": "Kubernetes / Compute Resources / Namespace (Pods)",
    "uid": "6385dfe4b7f54710aa1f748b34ba6738"
 }

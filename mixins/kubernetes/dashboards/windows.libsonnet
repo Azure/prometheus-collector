@@ -68,7 +68,7 @@ local var = g.dashboard.variable;
       + var.query.withDatasourceFromVariable(self.datasource)
       + var.query.queryTypes.withLabelValues(
         'instance',
-        'windows_system_system_up_time{%(clusterLabel)s="$cluster"}' % $._config
+         'up{%(windowsExporterSelector)s, %(clusterLabel)s="$cluster"}' % $._config,
       )
       + var.query.generalOptions.withLabel('instance')
       + var.query.refresh.onTime()
@@ -408,7 +408,7 @@ local var = g.dashboard.variable;
         ]),
       ];
 
-      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Cluster(Windows)' % $._config.grafanaK8s)
+      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Cluster (Windows)' % $._config.grafanaK8s)
       + g.dashboard.withUid($._config.grafanaDashboardIDs['k8s-resources-windows-cluster.json'])
       + g.dashboard.withTags($._config.grafanaK8s.dashboardTags)
       + g.dashboard.withEditable(false)
@@ -623,7 +623,7 @@ local var = g.dashboard.variable;
         ]),
       ];
 
-      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Namespace(Windows)' % $._config.grafanaK8s)
+      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Namespace (Windows)' % $._config.grafanaK8s)
       + g.dashboard.withUid($._config.grafanaDashboardIDs['k8s-resources-windows-namespace.json'])
       + g.dashboard.withTags($._config.grafanaK8s.dashboardTags)
       + g.dashboard.withEditable(false)
@@ -842,7 +842,7 @@ local var = g.dashboard.variable;
         ]),
       ];
 
-      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Pod(Windows)' % $._config.grafanaK8s)
+      g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Pod (Windows)' % $._config.grafanaK8s)
       + g.dashboard.withUid($._config.grafanaDashboardIDs['k8s-resources-windows-pod.json'])
       + g.dashboard.withTags($._config.grafanaK8s.dashboardTags)
       + g.dashboard.withEditable(false)
@@ -860,7 +860,7 @@ local var = g.dashboard.variable;
         + tsPanel.queryOptions.withTargets([
           prometheus.new(
             '${datasource}',
-            'node:windows_node_cpu_utilisation:avg1m{%(clusterLabel)s="$cluster"} * node:windows_node_num_cpu:sum{%(clusterLabel)s="$cluster"} / scalar(sum(node:windows_node_num_cpu:sum{%(clusterLabel)s="$cluster"}))' % $._config
+            'node:windows_node_cpu_utilisation:avg5m{%(clusterLabel)s="$cluster"} * node:windows_node_num_cpu:sum{%(clusterLabel)s="$cluster"} / scalar(sum(node:windows_node_num_cpu:sum{%(clusterLabel)s="$cluster"}))' % $._config
           )
           + prometheus.withLegendFormat('{{instance}}'),
         ]),
@@ -928,7 +928,7 @@ local var = g.dashboard.variable;
         ]),
       ];
 
-      g.dashboard.new('%(dashboardNamePrefix)sUSE Method / Cluster(Windows)' % $._config.grafanaK8s)
+      g.dashboard.new('%(dashboardNamePrefix)sUSE Method / Cluster (Windows)' % $._config.grafanaK8s)
       + g.dashboard.withUid($._config.grafanaDashboardIDs['k8s-windows-cluster-rsrc-use.json'])
       + g.dashboard.withTags($._config.grafanaK8s.dashboardTags)
       + g.dashboard.withEditable(false)
@@ -1088,7 +1088,7 @@ local var = g.dashboard.variable;
         ]),
       ];
 
-      g.dashboard.new('%(dashboardNamePrefix)sUSE Method / Node(Windows)' % $._config.grafanaK8s)
+      g.dashboard.new('%(dashboardNamePrefix)sUSE Method / Node (Windows)' % $._config.grafanaK8s)
       + g.dashboard.withUid($._config.grafanaDashboardIDs['k8s-windows-node-rsrc-use.json'])
       + g.dashboard.withTags($._config.grafanaK8s.dashboardTags)
       + g.dashboard.withEditable(false)

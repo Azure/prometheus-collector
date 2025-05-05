@@ -50,6 +50,7 @@ func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
 	// Set the environment variable
 	err := os.Setenv(key, value)
 	if err != nil {
+		fmt.Println("error in SetEnvAndSourceBashrcOrPowershell when setting key:", key, ":value:" , value, ":error:", err)
 		return fmt.Errorf("failed to set environment variable: %v", err)
 	}
 

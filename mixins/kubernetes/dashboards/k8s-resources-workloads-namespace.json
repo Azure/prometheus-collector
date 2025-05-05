@@ -89,7 +89,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -149,7 +149,7 @@
                         "value": [
                            {
                               "title": "Drill down to workloads",
-                              "url": "/d/a164a7f0339f99e89cea5cb47e9b6738/k8s-resources-workload?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-type=${__data.fields.Type}&var-workload=${__data.fields.Workload}"
+                              "url": "/d/3151475894614845ba54456099696738/k8s-resources-workload?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-type=${__data.fields.Type}&var-workload=${__data.fields.Workload}"
                            }
                         ]
                      }
@@ -176,7 +176,7 @@
             "y": 7
          },
          "id": 2,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -384,7 +384,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -447,7 +447,7 @@
                         "value": [
                            {
                               "title": "Drill down to workloads",
-                              "url": "/d/a164a7f0339f99e89cea5cb47e9b6738/k8s-resources-workload?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-type=${__data.fields.Type}&var-workload=${__data.fields.Workload}"
+                              "url": "/d/3151475894614845ba54456099696738/k8s-resources-workload?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-type=${__data.fields.Type}&var-workload=${__data.fields.Workload}"
                            }
                         ]
                      }
@@ -474,7 +474,7 @@
             "y": 21
          },
          "id": 4,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -635,7 +635,7 @@
                         "value": [
                            {
                               "title": "Drill down to workloads",
-                              "url": "/d/a164a7f0339f99e89cea5cb47e9b6738/k8s-resources-workload?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-type=${__data.fields.Type}&var-workload=${__data.fields.Workload}"
+                              "url": "/d/3151475894614845ba54456099696738/k8s-resources-workload?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-type=${__data.fields.Type}&var-workload=${__data.fields.Workload}"
                            }
                         ]
                      }
@@ -650,7 +650,7 @@
             "y": 28
          },
          "id": 5,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -794,7 +794,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -845,7 +845,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -896,7 +896,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -947,7 +947,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -998,7 +998,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1049,7 +1049,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1100,7 +1100,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1151,7 +1151,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1233,7 +1233,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "UTC",
+   "timezone": "browser",
    "title": "Kubernetes / Compute Resources / Namespace (Workloads)",
    "uid": "2745ce2b859a40f7990ff6b85d736738"
 }

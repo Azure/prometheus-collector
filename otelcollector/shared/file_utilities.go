@@ -40,12 +40,15 @@ func FmtVar(name, value string) {
 func ExistsAndNotEmpty(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
+		fmt.Println("ExistsAndNotEmpty: file:", filename, "doesn't exist")
 		return false
 	}
 	if err != nil {
+		fmt.Println("ExistsAndNotEmpty: path:", filename, ":error:", err)
 		return false
 	}
 	if info.Size() == 0 {
+		fmt.Println("ExistsAndNotEmpty: file size is 0 for:", filename)
 		return false
 	}
 	return true
@@ -137,24 +140,25 @@ func SetEnvVarsFromFile(filename string) error {
 	return nil
 }
 
-func Inotify(outputFile string, location1 string, location2 string) error {
+func Inotify(outputFile string, location string) error {
 	// Start inotify to watch for changes
 	fmt.Println("Starting inotify for watching config map update")
 
 	_, err := os.Create(outputFile)
 	if err != nil {
 		log.Fatalf("Error creating output file: %v\n", err)
+		fmt.Println("Error creating inotify output file:", err)
 	}
 
 	// Define the command to start inotify
 	inotifyCommand := exec.Command(
 		"inotifywait",
-		location1,
-		location2,
+		location,
 		"--daemon",
 		"--recursive",
 		"--outfile", outputFile,
-		"--event", "create,delete",
+		"--event", "create",
+		"--event", "delete",
 		"--format", "%e : %T",
 		"--timefmt", "+%s",
 	)
@@ -163,6 +167,41 @@ func Inotify(outputFile string, location1 string, location2 string) error {
 	err = inotifyCommand.Start()
 	if err != nil {
 		log.Fatalf("Error starting inotify process: %v\n", err)
+		fmt.Println("Error starting inotify process:", err)
+	}
+
+	return nil
+}
+
+func InotifyCCP(outputFile string, location string) error {
+	// Start inotify to watch for changes
+	fmt.Println("Starting inotify for watching config map update for ccp")
+
+	_, err := os.Create(outputFile)
+	if err != nil {
+		log.Fatalf("Error creating output file: %v\n", err)
+		fmt.Println("Error creating inotify output file:", err)
+	}
+
+	// Define the command to start inotify
+	inotifyCommand := exec.Command(
+		"inotifywait",
+		location,
+		"--daemon",
+		"--recursive",
+		"--outfile", outputFile,
+		"--event", "create",
+		"--event", "delete",
+		"--event", "modify",
+		"--format", "%e : %T",
+		"--timefmt", "+%s",
+	)
+
+	// Start the inotify process
+	err = inotifyCommand.Start()
+	if err != nil {
+		log.Fatalf("Error starting inotify process: %v\n", err)
+		fmt.Println("Error starting inotify process:", err)
 	}
 
 	return nil

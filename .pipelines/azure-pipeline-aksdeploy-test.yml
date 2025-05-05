@@ -1,0 +1,36 @@
+trigger:
+- none
+
+pool:
+  vmImage: windows-latest
+
+stages:
+- stage: Deploy
+  jobs:
+  - job: DeployJob
+    steps:
+    - template: azure-template-aksdeploy.yml
+      parameters:
+        azureSubscription: $(AZURESUBSCRIPTION)
+        resourceGroup: $(RESOURCE-GROUP)
+        deployParameters: ${env:PARAMETERS}
+    - task: PowerShell@2
+      displayName: "Wait"
+      inputs:
+        targetType: 'inline'
+        script: |
+          $sleepTime = ${env:SLEEPTIME_IN_SECONDS}
+          Get-Date
+          Write-host "Allowing cluster to run $sleepTime seconds before testing..."
+          Sleep -Seconds $sleepTime        
+
+- stage: Test
+  dependsOn: Deploy
+  jobs:
+  - job: TestJob
+    steps:
+    - template: azure-template-regionstest.yml
+      parameters:
+        azureSubscription: $(AZURESUBSCRIPTION)
+        resourceGroup: $(RESOURCE-GROUP)
+        clusterName: $(CLUSTERNAME)

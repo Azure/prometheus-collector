@@ -50,21 +50,12 @@ cp -f $TMPDIR/envmdsd /etc/mdsd.d
 # Create the following directory for mdsd logs
 mkdir /opt/microsoft/linuxmonagent
 
-# Install telegraf
-echo "Installing telegraf..."
-sudo tdnf install telegraf-1.29.4 -y
-sudo tdnf list installed | grep telegraf | awk '{print $2}' > telegrafversion.txt
-
-# Install fluent-bit
-echo "Installing fluent-bit..."
-sudo tdnf install fluent-bit-2.1.10 -y
-
 # Setup hourly cron for logrotate
 cp /etc/cron.daily/logrotate /etc/cron.hourly/
 
 # Install ME
 echo "Installing Metrics Extension..."
-sudo tdnf install -y metricsext2-2.2024.823.1539
+sudo tdnf install -y metricsext2-2.2025.123.2222
 sudo tdnf list installed | grep metricsext2 | awk '{print $2}' > metricsextversion.txt
 
 # tdnf does not have an autoremove feature. Only necessary packages are copied over to distroless build. Below reduces the image size if using non-distroless

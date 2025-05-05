@@ -136,7 +136,7 @@ func UpdateScrapeIntervalConfig(yamlConfigFile string, scrapeIntervalSetting str
 }
 
 func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
-	fmt.Printf("Adding keep list regex or minimal ingestion regex for %s\n", yamlConfigFile)
+	fmt.Printf("Starting to append keep list regex or minimal ingestion regex to %s\n", yamlConfigFile)
 
 	content, err := os.ReadFile(yamlConfigFile)
 	if err != nil {
@@ -155,10 +155,10 @@ func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
 	}
 
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
-		for _, scfg := range scrapeConfigs {
-			// Check if the type of scfg is a map with interface{} keys and values
+		for i, scfg := range scrapeConfigs {
+			// Ensure scfg is a map with string keys
 			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
-				// Convert scfgMap to map[string]interface{}
+				// Convert to map[string]interface{}
 				stringScfgMap := make(map[string]interface{})
 				for k, v := range scfgMap {
 					if key, ok := k.(string); ok {
@@ -167,27 +167,39 @@ func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
 						return fmt.Errorf("encountered non-string key in scrape config map: %v", k)
 					}
 				}
+
+				// Update or add metric_relabel_configs
 				if metricRelabelCfgs, ok := stringScfgMap["metric_relabel_configs"].([]interface{}); ok {
 					stringScfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
 				} else {
 					stringScfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
 				}
 
-				// Convert back to map[interface{}]interface{} for yaml.Marshal
+				// Convert back to map[interface{}]interface{} for YAML marshalling
 				interfaceScfgMap := make(map[interface{}]interface{})
 				for k, v := range stringScfgMap {
 					interfaceScfgMap[k] = v
 				}
-				config["scrape_configs"] = []interface{}{interfaceScfgMap}
+
+				// Update the scrape_configs list
+				scrapeConfigs[i] = interfaceScfgMap
 			}
 		}
-		if cfgYamlWithMetricRelabelConfig, err := yaml.Marshal(config); err == nil {
-			if err := os.WriteFile(yamlConfigFile, []byte(cfgYamlWithMetricRelabelConfig), os.ModePerm); err != nil {
-				return fmt.Errorf("error writing to file %s: %v. The keep list regex will not be used", yamlConfigFile, err)
-			}
-		} else {
-			return fmt.Errorf("error marshalling YAML for %s: %v. The keep list regex will not be used", yamlConfigFile, err)
-		}
+
+		// Write updated scrape_configs back to config
+		config["scrape_configs"] = scrapeConfigs
+	} else {
+		fmt.Println("No 'scrape_configs' found in the YAML. Skipping updates.")
+		return nil
+	}
+
+	cfgYamlWithMetricRelabelConfig, err := yaml.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("error marshalling YAML for %s: %v. The keep list regex will not be used", yamlConfigFile, err)
+	}
+
+	if err := os.WriteFile(yamlConfigFile, cfgYamlWithMetricRelabelConfig, os.ModePerm); err != nil {
+		return fmt.Errorf("error writing to file %s: %v. The keep list regex will not be used", yamlConfigFile, err)
 	}
 
 	return nil

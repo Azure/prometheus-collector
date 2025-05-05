@@ -2,8 +2,10 @@ package main
 
 import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
 	"go.opentelemetry.io/collector/extension"
@@ -14,35 +16,27 @@ import (
 )
 
 func components() (otelcol.Factories, error) {
-	var err error
-	factories := otelcol.Factories{}
+	promReceiver := prometheusreceiver.NewFactory()
+	otlpExporter := otlpexporter.NewFactory()
+	promExporter := prometheusexporter.NewFactory()
+	batchProcessor := batchprocessor.NewFactory()
+	resourceProcessor := resourceprocessor.NewFactory()
+	filterProcessor := filterprocessor.NewFactory()
 
-	factories.Extensions, err = extension.MakeFactoryMap()
-	if err != nil {
-		return otelcol.Factories{}, err
-	}
-
-	factories.Receivers, err = receiver.MakeFactoryMap(
-		prometheusreceiver.NewFactory(),
-	)
-	if err != nil {
-		return otelcol.Factories{}, err
-	}
-
-	factories.Exporters, err = exporter.MakeFactoryMap(
-		otlpexporter.NewFactory(),
-		prometheusexporter.NewFactory(),
-	)
-	if err != nil {
-		return otelcol.Factories{}, err
-	}
-
-	factories.Processors, err = processor.MakeFactoryMap(
-		batchprocessor.NewFactory(),
-		resourceprocessor.NewFactory(),
-	)
-	if err != nil {
-		return otelcol.Factories{}, err
+	factories := otelcol.Factories{
+		Extensions: map[component.Type]extension.Factory{},
+		Receivers: map[component.Type]receiver.Factory{
+			promReceiver.Type(): promReceiver,
+		},
+		Exporters: map[component.Type]exporter.Factory{
+			otlpExporter.Type(): otlpExporter,
+			promExporter.Type(): promExporter,
+		},
+		Processors: map[component.Type]processor.Factory{
+			batchProcessor.Type():    batchProcessor,
+			resourceProcessor.Type(): resourceProcessor,
+			filterProcessor.Type():   filterProcessor,
+		},
 	}
 
 	return factories, nil

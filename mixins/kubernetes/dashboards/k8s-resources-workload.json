@@ -37,7 +37,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -81,7 +81,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/6581e46e4e5c7ba40a07646395ef6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
+                              "url": "/d/ac3253a2c4a149d68ccd0a58c7ab6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
                            }
                         ]
                      }
@@ -96,7 +96,7 @@
             "y": 7
          },
          "id": 2,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -227,7 +227,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -274,7 +274,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/6581e46e4e5c7ba40a07646395ef6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
+                              "url": "/d/ac3253a2c4a149d68ccd0a58c7ab6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
                            }
                         ]
                      }
@@ -289,7 +289,7 @@
             "y": 21
          },
          "id": 4,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -425,7 +425,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/6581e46e4e5c7ba40a07646395ef6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
+                              "url": "/d/ac3253a2c4a149d68ccd0a58c7ab6738/k8s-resources-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
                            }
                         ]
                      }
@@ -440,7 +440,7 @@
             "y": 28
          },
          "id": 5,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -584,7 +584,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -635,7 +635,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -686,7 +686,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -737,7 +737,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -788,7 +788,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -839,7 +839,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -890,7 +890,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -941,7 +941,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -1036,7 +1036,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "UTC",
+   "timezone": "browser",
    "title": "Kubernetes / Compute Resources / Workload",
    "uid": "3151475894614845ba54456099696738"
 }

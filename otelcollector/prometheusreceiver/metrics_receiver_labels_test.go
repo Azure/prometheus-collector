@@ -6,12 +6,13 @@ package prometheusreceiver
 import (
 	"testing"
 
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/model/relabel"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
-	semconv "go.opentelemetry.io/collector/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/collector/semconv/v1.27.0"
 )
 
 const targetExternalLabels = `
@@ -232,6 +233,10 @@ test_counter0{label1="value1",label2="value2"} 1
 `
 
 func TestLabelNameLimitConfig(t *testing.T) {
+	scheme := model.NameValidationScheme
+	model.NameValidationScheme = model.UTF8Validation
+	defer func() { model.NameValidationScheme = scheme }()
+
 	targets := []*testData{
 		{
 			name: "target1",
@@ -722,7 +727,6 @@ func verifyRelabelJobInstance(t *testing.T, td *testData, rms []pmetric.Resource
 				},
 			},
 		})(t, rms[0])
-
 }
 
 const targetResourceAttsInTargetInfo = `

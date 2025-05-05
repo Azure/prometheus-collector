@@ -16,9 +16,10 @@ func FLBPluginRegister(ctx unsafe.Pointer) int {
 	return output.FLBPluginRegister(ctx, "appinsights", "AppInsights GO!")
 }
 
-//export FLBPluginInit
 // (fluentbit will call this)
 // ctx (context) pointer to fluentbit context (state/ c code)
+//
+//export FLBPluginInit
 func FLBPluginInit(ctx unsafe.Pointer) int {
 
 	// This will not load the plugin instance. FLBPluginFlush won't be called.
@@ -47,6 +48,15 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 		go SendContainersCpuMemoryToAppInsightsMetrics()
 	}
 
+	// Collect, aggregate, and send CPU and Memory usage telemetry for the processes below
+	osType := os.Getenv("OS_TYPE")
+	processNames := []string{"otelcollector", "MetricsExtension"}
+	if osType == "windows" {
+		processNames = []string{"otelcollector", "MetricsExtension.Native"}
+	}
+	processAggregations := InitProcessAggregations(processNames, osType)
+	processAggregations.Run()
+
 	go PushMEProcessedAndReceivedCountToAppInsightsMetrics()
 
 	return output.FLB_OK
@@ -59,12 +69,12 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	var records []map[interface{}]interface{}
 
 	// Create Fluent Bit decoder
-	dec := output.NewDecoder(data, int(length))
+	dec := NewDecoder(data, int(length))
 
 	// Iterate Records
 	for {
 		// Extract Record
-		ret, _, record = output.GetRecord(dec)
+		ret, _, record = GetRecord(dec)
 		if ret != 0 {
 			break
 		}
@@ -85,6 +95,9 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		return PushInfiniteMetricLogToAppInsightsEvents(records)
 	case fluentbitExportingFailedTag:
 		return RecordExportingFailed(records)
+	// Prometheus metrics from otelcollector, Prometheus UX, and targetallocator
+	case "prometheus.metrics.otelcollector", "prometheus.metrics.prometheus", "prometheus.metrics.targetallocator", "prometheus.metrics.volume":
+		return SendPrometheusMetricsToAppInsights(records, incomingTag)
 	default:
 		// Error messages from metrics extension and otelcollector
 		return PushLogErrorsToAppInsightsTraces(records, appinsights.Information, incomingTag)

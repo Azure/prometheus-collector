@@ -37,7 +37,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -81,7 +81,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/56497a7ea5610e936dc6ed374a7c6738/k8s-resources-windows-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
+                              "url": "/d/78070a924a2f4fe4ad515a90f19c6738/k8s-resources-windows-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
                            }
                         ]
                      }
@@ -96,7 +96,7 @@
             "y": 7
          },
          "id": 2,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -227,7 +227,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -274,7 +274,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/56497a7ea5610e936dc6ed374a7c6738/k8s-resources-windows-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
+                              "url": "/d/78070a924a2f4fe4ad515a90f19c6738/k8s-resources-windows-pod?${datasource:queryparam}&var-cluster=$cluster&var-namespace=$namespace&var-pod=${__data.fields.Pod}"
                            }
                         ]
                      }
@@ -289,7 +289,7 @@
             "y": 21
          },
          "id": 4,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -437,7 +437,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "utc",
+   "timezone": "browser",
    "title": "Kubernetes / Compute Resources / Namespace (Windows)",
    "uid": "9f84792794e34121bd0fa99075d96738"
 }

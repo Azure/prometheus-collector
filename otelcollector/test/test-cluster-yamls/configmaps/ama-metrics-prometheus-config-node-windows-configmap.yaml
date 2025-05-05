@@ -2,10 +2,34 @@ kind: ConfigMap
 apiVersion: v1
 data:
   prometheus-config: |-
+    global:
+      external_labels:
+        external_label_1: "external_label_value"
+        external_label_123: "external_label_value"
     scrape_configs:
-    - job_name: empty
+    - job_name: windows-node-configmap
+      scheme: https
+      metrics_path: /metrics
+      scrape_interval: 30s
+      label_limit: 63
+      label_name_length_limit: 511
+      label_value_length_limit: 1023
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - source_labels: [__metrics_path__]
+        regex: (.*)
+        target_label: metrics_path
+      - source_labels: [__address__]
+        replacement: '$NODE_NAME'
+        target_label: instance
+      - source_labels: [__address__]
+        replacement: '$OS_TYPE'
+        target_label: "kubernetes_io_os"
       static_configs:
-      - targets: []
+      - targets: ['$NODE_IP:10250']
 metadata:
   name: ama-metrics-prometheus-config-node-windows
   namespace: kube-system

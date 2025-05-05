@@ -22,7 +22,7 @@
          "options": {
             "colorMode": "none"
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -57,7 +57,7 @@
          "options": {
             "colorMode": "none"
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -92,7 +92,7 @@
          "options": {
             "colorMode": "none"
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -127,7 +127,7 @@
          "options": {
             "colorMode": "none"
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -162,7 +162,7 @@
          "options": {
             "colorMode": "none"
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -197,7 +197,7 @@
          "options": {
             "colorMode": "none"
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -247,7 +247,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -291,7 +291,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/98e54027a2724ab1d4c45666c1fa6738/k8s-resources-windows-namespace?${datasource:queryparam}&var-cluster=$cluster&var-namespace=${__data.fields.Namespace}"
+                              "url": "/d/9f84792794e34121bd0fa99075d96738/k8s-resources-windows-namespace?${datasource:queryparam}&var-cluster=$cluster&var-namespace=${__data.fields.Namespace}"
                            }
                         ]
                      }
@@ -306,7 +306,7 @@
             "y": 14
          },
          "id": 8,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -437,7 +437,7 @@
                "mode": "single"
             }
          },
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -520,7 +520,7 @@
                         "value": [
                            {
                               "title": "Drill down to pods",
-                              "url": "/d/98e54027a2724ab1d4c45666c1fa6738/k8s-resources-windows-namespace?${datasource:queryparam}&var-cluster=$cluster&var-namespace=${__data.fields.Namespace}"
+                              "url": "/d/9f84792794e34121bd0fa99075d96738/k8s-resources-windows-namespace?${datasource:queryparam}&var-cluster=$cluster&var-namespace=${__data.fields.Namespace}"
                            }
                         ]
                      }
@@ -535,7 +535,7 @@
             "y": 28
          },
          "id": 10,
-         "pluginVersion": "v11.0.0",
+         "pluginVersion": "v11.1.0",
          "targets": [
             {
                "datasource": {
@@ -670,7 +670,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "utc",
+   "timezone": "browser",
    "title": "Kubernetes / Compute Resources / Cluster (Windows)",
    "uid": "6438557df4391b100730f2494baa6738"
 }

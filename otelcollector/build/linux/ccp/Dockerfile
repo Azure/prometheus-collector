@@ -77,7 +77,7 @@ COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/main/
-COPY ./react /static/react
+COPY ./react-app /static/react-app
 
 ARG TARGETARCH
 RUN tdnf clean all
@@ -110,7 +110,7 @@ COPY --from=builder /opt /opt
 COPY --from=builder /etc /etc
 COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_internal.config /usr/sbin/
 COPY --from=builder /var/opt/microsoft /var/opt/microsoft
-COPY --from=builder /static/react /static/react
+COPY --from=builder /static/react-app /static/react-app
 
 # executables
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
@@ -156,9 +156,13 @@ COPY --from=builder /usr/lib/libdl.so.2 /usr/lib/librt.so.1 /usr/lib/libpthread.
 # COPY --from=builder /usr/bin/curl /usr/bin/
 # COPY --from=builder /lib/libcurl.so.4 /lib/libz.so.1 /lib/libc.so.6 /lib/libnghttp2.so.14 /lib/libssh2.so.1 /lib/libgssapi_krb5.so.2 /lib/libzstd.so.1 /lib/
 # COPY --from=builder /usr/lib/libkrb5.so.3 /usr/lib/libk5crypto.so.3 /usr/lib/libcom_err.so.2 /usr/lib/libkrb5support.so.0 /usr/lib/libresolv.so.2 /usr/lib/
+# RUN chmod 777 /opt/;
 
 # Expose the port on which the application listens
 EXPOSE 8080
+
+# Run as root to access /etc
+# USER root
 
 # Run the Go executable, entrypoint
 ENTRYPOINT ["./opt/main/ccpmain"]

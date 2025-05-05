@@ -12,11 +12,12 @@ New-Item -Type Directory -Path /opt/microsoft/liveness -ErrorAction SilentlyCont
 New-Item -Type Directory -Path /opt/genevamonitoringagent -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /opt/genevamonitoringagent/datadirectory -ErrorAction SilentlyContinue
 New-Item -Type Directory -Path /etc/genevamonitoringagent
+New-Item -Type Directory -Path /static/react-app -Force -ErrorAction SilentlyContinue
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
 try {
-    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/metricsext2-2.2024.823.1539/MdmMetricsExtension.2.2024.823.1539.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2024.823.1539.zip
-    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2024.823.1539.zip -Destination /installation/ME/
+    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.14.0-main-01-23-2025-677596d1/MdmMetricsExtension.2.2025.123.2222.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2025.123.2222.zip
+    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2025.123.2222.zip -Destination /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
 catch {
@@ -31,7 +32,7 @@ Write-Host ('Installing Fluent Bit');
 try {
     # Keep version in sync with linux in setup.sh file
     # $fluentBitUri = 'https://github.com/microsoft/OMS-docker/releases/download/winakslogagent/td-agent-bit-1.4.0-win64.zip'
-    $fluentBitUri = 'https://releases.fluentbit.io/2.1/fluent-bit-2.1.10-win64.zip'
+    $fluentBitUri = 'https://releases.fluentbit.io/3.0/fluent-bit-3.0.7-win64.zip'
     Invoke-WebRequest -Uri $fluentBitUri -OutFile /installation/fluent-bit.zip
     Expand-Archive -Path /installation/fluent-bit.zip -Destination /installation/fluent-bit
     Move-Item -Path /installation/fluent-bit/*/bin/* -Destination /opt/fluent-bit/bin/ -ErrorAction SilentlyContinue

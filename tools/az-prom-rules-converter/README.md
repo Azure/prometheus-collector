@@ -36,3 +36,8 @@ Options:
   -l, --location <string>                   Rule group location.
   -h, --help                                display help for command
 ```
+
+## usage with pipeline
+```bash
+Get-Content .\examples\yaml-example1.yml | node az-prom-rules-converter
+```

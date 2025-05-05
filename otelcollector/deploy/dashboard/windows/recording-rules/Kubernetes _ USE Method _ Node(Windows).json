@@ -909,7 +909,7 @@
             "multi": false,
             "name": "instance",
             "options": [ ],
-            "query": "label_values(windows_system_system_up_time, instance)",
+            "query": "label_values(windows_system_boot_time_timestamp_seconds, instance)",
             "refresh": 2,
             "regex": "",
             "sort": 1,
