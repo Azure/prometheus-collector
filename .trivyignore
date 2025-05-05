@@ -1,0 +1,7 @@
+# MEDIUM
+# otelcollector
+CVE-2025-22872 # golang.org/x/net
+# promconfigvalidator
+CVE-2025-22872 # golang.org/x/net
+# prometheusui
+CVE-2025-22872 # golang.org/x/net
