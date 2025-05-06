@@ -295,6 +295,56 @@ func RemoveQuotes(s string) string {
 	return s
 }
 
+// parseConfigLines parses lines from a scanner and adds key-value pairs to the specified section
+func parseConfigLines(scanner *bufio.Scanner, filePath string, currentSection string, metricsConfigBySection map[string]map[string]string) string {
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Detect section headers (supports top-level keys)
+		if strings.HasSuffix(line, ": |-") {
+			currentSection = strings.TrimSuffix(line, ": |-")
+			if _, exists := metricsConfigBySection[currentSection]; !exists {
+				metricsConfigBySection[currentSection] = make(map[string]string)
+			}
+			continue
+		}
+
+		// Process key-value pairs within sections
+		if strings.Contains(line, "=") {
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) != 2 {
+				log.Printf("warning: skipping malformed line in file %s: %q", filePath, line)
+				continue
+			}
+
+			key := strings.TrimSpace(parts[0])
+			value := RemoveQuotes(strings.TrimSpace(parts[1]))
+
+			if key == "" {
+				log.Printf("warning: skipping empty key in file %s: %q", filePath, line)
+				continue
+			}
+
+			// Handle top-level keys in a separate section
+			if currentSection == "" {
+				currentSection = "prometheus-collector-settings"
+				if _, exists := metricsConfigBySection[currentSection]; !exists {
+					metricsConfigBySection[currentSection] = make(map[string]string)
+				}
+			}
+
+			metricsConfigBySection[currentSection][key] = value
+		}
+	}
+
+	return currentSection
+}
+
 // ParseMetricsFiles parses multiple metrics configuration files into a nested map structure.
 func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error) {
 	metricsConfigBySection := make(map[string]map[string]string)
@@ -311,52 +361,7 @@ func ParseMetricsFiles(filePaths []string) (map[string]map[string]string, error)
 		}()
 
 		scanner := bufio.NewScanner(file)
-		var currentSection string
-
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-
-			// Skip empty lines and comments
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-
-			// Detect section headers (supports top-level keys)
-			if strings.HasSuffix(line, ": |-") {
-				currentSection = strings.TrimSuffix(line, ": |-")
-				if _, exists := metricsConfigBySection[currentSection]; !exists {
-					metricsConfigBySection[currentSection] = make(map[string]string)
-				}
-				continue
-			}
-
-			// Process key-value pairs within sections
-			if strings.Contains(line, "=") {
-				parts := strings.SplitN(line, "=", 2)
-				if len(parts) != 2 {
-					log.Printf("warning: skipping malformed line in file %s: %q", filePath, line)
-					continue
-				}
-
-				key := strings.TrimSpace(parts[0])
-				value := RemoveQuotes(strings.TrimSpace(parts[1]))
-
-				if key == "" {
-					log.Printf("warning: skipping empty key in file %s: %q", filePath, line)
-					continue
-				}
-
-				// Handle top-level keys in a separate section
-				if currentSection == "" {
-					currentSection = "prometheus-collector-settings"
-					if _, exists := metricsConfigBySection[currentSection]; !exists {
-						metricsConfigBySection[currentSection] = make(map[string]string)
-					}
-				}
-
-				metricsConfigBySection[currentSection][key] = value
-			}
-		}
+		parseConfigLines(scanner, filePath, "", metricsConfigBySection)
 
 		if err := scanner.Err(); err != nil {
 			return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
@@ -394,43 +399,20 @@ func ParseV1Config(configDir string) (map[string]map[string]string, error) {
 			}
 		}()
 
-		sectionData := make(map[string]string)
 		scanner := bufio.NewScanner(f)
+		sectionData := make(map[string]string)
+		metricsConfigBySection[file.Name()] = sectionData
 
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-
-			// Skip empty lines and comments
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-
-			// Process key-value pairs
-			if strings.Contains(line, "=") {
-				parts := strings.SplitN(line, "=", 2)
-				if len(parts) < 2 {
-					log.Printf("warning: skipping malformed line in file %s: %q", filePath, line)
-					continue
-				}
-
-				key := strings.TrimSpace(parts[0])
-				value := RemoveQuotes(strings.TrimSpace(parts[1]))
-
-				if key == "" {
-					log.Printf("warning: skipping empty key in file %s: %q", filePath, line)
-					continue
-				}
-
-				sectionData[key] = value
-			}
-		}
+		parseConfigLines(scanner, filePath, file.Name(), metricsConfigBySection)
 
 		if err := scanner.Err(); err != nil {
 			log.Printf("error: failed to read file %s: %v", filePath, err)
 			continue
 		}
 
-		metricsConfigBySection[file.Name()] = sectionData
+		if cerr := f.Close(); cerr != nil {
+			log.Printf("warning: failed to close file %s: %v", filePath, cerr)
+		}
 	}
 
 	return metricsConfigBySection, nil

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"prometheus-collector/otelcollector/shared/configmap/core"
 	"strings"
 
 	"github.com/prometheus-collector/shared"
@@ -14,44 +15,21 @@ const (
 	defaultConfigFileVersion   = "ver1"
 )
 
-func setConfigSchemaVersionEnv() {
-	fileInfo, err := os.Stat(schemaVersionFile)
-	if err != nil || fileInfo.Size() == 0 {
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true)
-		return
+func readVersionFromFile(filePath string, defaultValue string) string {
+	version := defaultValue
+	fileInfo, err := os.Stat(filePath)
+	if err == nil && fileInfo.Size() > 0 {
+		if content, err := os.ReadFile(filePath); err == nil {
+			trimmedContent := strings.TrimSpace(string(content))
+			version = strings.ReplaceAll(trimmedContent, " ", "")
+			if len(version) > 10 {
+				version = version[:10]
+			}
+		} else {
+			shared.EchoError("Error reading version file:" + err.Error())
+		}
 	}
-	content, err := os.ReadFile(schemaVersionFile)
-	if err != nil {
-		shared.EchoError("Error reading schema version file:" + err.Error())
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion, true)
-		return
-	}
-	trimmedContent := strings.TrimSpace(string(content))
-	configSchemaVersion := strings.ReplaceAll(trimmedContent, " ", "")
-	if len(configSchemaVersion) > 10 {
-		configSchemaVersion = configSchemaVersion[:10]
-	}
-	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
-}
-
-func setConfigFileVersionEnv() {
-	fileInfo, err := os.Stat(configVersionFile)
-	if err != nil || fileInfo.Size() == 0 {
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true)
-		return
-	}
-	content, err := os.ReadFile(configVersionFile)
-	if err != nil {
-		shared.EchoError("Error reading config version file:" + err.Error())
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion, true)
-		return
-	}
-	trimmedContent := strings.TrimSpace(string(content))
-	configFileVersion := strings.ReplaceAll(trimmedContent, " ", "")
-	if len(configFileVersion) > 10 {
-		configFileVersion = configFileVersion[:10]
-	}
-	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion, true)
+	return version
 }
 
 func parseSettingsForPodAnnotations(metricsConfigBySection map[string]map[string]string) {
@@ -138,18 +116,23 @@ func handleEnvFileError(filename string) {
 }
 
 func Configmapparser() {
-	setConfigFileVersionEnv()
-	setConfigSchemaVersionEnv()
+	// Set Schema Version
+	schemaVersion := readVersionFromFile(schemaVersionFile, defaultConfigSchemaVersion)
+	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", schemaVersion, true)
+
+	// Set File Version
+	configVersion := readVersionFromFile(configVersionFile, defaultConfigFileVersion)
+	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configVersion, true)
 
 	var metricsConfigBySection map[string]map[string]string
 	var err error
-	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
+	if schemaVersion == "v2" {
 		filePaths := []string{"/etc/config/settings/cluster-metrics", "/etc/config/settings/prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
 			fmt.Printf("Using defaults as error parsing files: %v\n", err)
 		}
-	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
+	} else if schemaVersion == "v1" {
 		configDir := "/etc/config/settings"
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
@@ -160,18 +143,24 @@ func Configmapparser() {
 	}
 
 	// Check if /etc/config/settings/config-version exists
-  if _, err := os.Stat("/etc/config/settings/config-version"); os.IsNotExist(err) {
-	  metricsConfigBySection = nil
-	  fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
-  }
+	if _, err := os.Stat("/etc/config/settings/config-version"); os.IsNotExist(err) {
+		metricsConfigBySection = nil
+		fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
+	}
+
+	configManager := core.NewConfigManager("dataplane", schemaVersion, metricsConfigBySection)
+	err = configManager.ProcessDefaultScrapeSettings()
+	err = configManager.ProcessMetricsKeepList()
+	err = configManager.ProcessScrapeIntervals()
+	configManager.MergePrometheusConfigs()
 
 	parseSettingsForPodAnnotations(metricsConfigBySection)
 	parsePrometheusCollectorConfig(metricsConfigBySection)
-	parseDefaultScrapeSettings(metricsConfigBySection)
+	//parseDefaultScrapeSettings(metricsConfigBySection)
 	parseDebugModeSettings(metricsConfigBySection)
 
-	tomlparserTargetsMetricsKeepList(metricsConfigBySection)
-	tomlparserScrapeInterval(metricsConfigBySection)
+	//tomlparserTargetsMetricsKeepList(metricsConfigBySection)
+	//tomlparserScrapeInterval(metricsConfigBySection)
 
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 	containerType := os.Getenv("CONTAINER_TYPE")

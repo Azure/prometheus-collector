@@ -7,112 +7,107 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
+	"time"
 
 	shared "github.com/prometheus-collector/shared"
 	ccpconfigmapsettings "github.com/prometheus-collector/shared/configmap/ccp"
 	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
-
-	"strconv"
-	"strings"
-	"time"
 )
 
 func main() {
-
-	// Handle SIGTERM
+	// Handle SIGTERM in background
 	go handleShutdown()
 
+	// Get environment variables
 	controllerType := shared.GetControllerType()
 	cluster := shared.GetEnv("CLUSTER", "")
 	clusterOverride := shared.GetEnv("CLUSTER_OVERRIDE", "")
 	aksRegion := shared.GetEnv("AKSREGION", "")
 	ccpMetricsEnabled := shared.GetEnv("CCP_METRICS_ENABLED", "false")
 	osType := os.Getenv("OS_TYPE")
+	mode := shared.GetEnv("MODE", "simple")
+	customEnvironment := shared.GetEnv("customEnvironment", "")
+	isDataPlane := ccpMetricsEnabled != "true"
 
+	// Environment setup based on OS type
 	if osType == "windows" {
 		shared.SetEnvVariablesForWindows()
-	}
-
-	if osType == "linux" {
+		fmt.Println("Starting filesystemwatcher.ps1")
+		shared.StartCommand("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\opt\\scripts\\filesystemwatcher.ps1")
+	} else if osType == "linux" {
 		outputFile := "/opt/inotifyoutput.txt"
-
-		if ccpMetricsEnabled != "true" { //data-plane
-
+		if isDataPlane {
 			if err := shared.Inotify(outputFile, "/etc/config/settings"); err != nil {
 				log.Fatal(err)
 			}
-
 			if err := shared.Inotify(outputFile, "/etc/prometheus/certs"); err != nil {
 				log.Fatal(err)
 			}
-		} else { //control-plane
+		} else {
 			if err := shared.InotifyCCP(outputFile, "/etc/config/settings"); err != nil {
 				log.Fatal(err)
 			}
 		}
-	} else if osType == "windows" {
-		fmt.Println("Starting filesystemwatcher.ps1")
-		shared.StartCommand("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\opt\\scripts\\filesystemwatcher.ps1")
 	}
 
-	if ccpMetricsEnabled != "true" && osType == "linux" {
-		if err := shared.SetupArcEnvironment(); err != nil {
-			shared.EchoError(err.Error())
+	// Setup for data plane (overlay)
+	if isDataPlane {
+		if osType == "linux" {
+			if err := shared.SetupArcEnvironment(); err != nil {
+				shared.EchoError(err.Error())
+			}
 		}
-	}
-	// Check if MODE environment variable is empty
-	mode := shared.GetEnv("MODE", "simple")
-	shared.EchoVar("MODE", mode)
-	shared.EchoVar("CONTROLLER_TYPE", shared.GetEnv("CONTROLLER_TYPE", ""))
-	shared.EchoVar("CLUSTER", cluster)
-
-	customEnvironment := shared.GetEnv("customEnvironment", "")
-	if ccpMetricsEnabled != "true" {
 		shared.SetupTelemetry(customEnvironment)
 		if err := shared.ConfigureEnvironment(); err != nil {
 			log.Fatalf("Error configuring environment: %v\n", err)
 		}
 	}
 
-	if ccpMetricsEnabled == "true" {
-		ccpconfigmapsettings.Configmapparserforccp()
-	} else {
+	// Log basic configuration info
+	shared.EchoVar("MODE", mode)
+	shared.EchoVar("CONTROLLER_TYPE", shared.GetEnv("CONTROLLER_TYPE", ""))
+	shared.EchoVar("CLUSTER", cluster)
+
+	// Parse config maps
+	if isDataPlane {
 		configmapsettings.Configmapparser()
+	} else {
+		ccpconfigmapsettings.Configmapparserforccp()
 	}
 
-	if ccpMetricsEnabled != "true" && osType == "linux" {
+	// Start cron daemon if needed
+	if isDataPlane && osType == "linux" {
 		shared.StartCronDaemon()
 	}
 
-	var meConfigFile string
-	var fluentBitConfigFile string
-
-	meConfigFile, fluentBitConfigFile = shared.DetermineConfigFiles(controllerType, clusterOverride)
+	// Determine config files
+	meConfigFile, fluentBitConfigFile := shared.DetermineConfigFiles(controllerType, clusterOverride)
 	fmt.Println("meConfigFile:", meConfigFile)
 	fmt.Println("fluentBitConfigFile:", fluentBitConfigFile)
 
+	// Wait for token adapter
 	shared.WaitForTokenAdapter(ccpMetricsEnabled)
 
-	if ccpMetricsEnabled != "true" {
+	// Set environment variables
+	trimmedRegion := strings.ToLower(strings.ReplaceAll(aksRegion, " ", ""))
+	if isDataPlane {
 		shared.SetEnvAndSourceBashrcOrPowershell("ME_CONFIG_FILE", meConfigFile, true)
 		shared.SetEnvAndSourceBashrcOrPowershell("customResourceId", cluster, true)
+		shared.SetEnvAndSourceBashrcOrPowershell("customRegion", trimmedRegion, true)
 	} else {
 		os.Setenv("ME_CONFIG_FILE", meConfigFile)
 		os.Setenv("customResourceId", cluster)
-	}
-
-	trimmedRegion := strings.ToLower(strings.ReplaceAll(aksRegion, " ", ""))
-	if ccpMetricsEnabled != "true" {
-		shared.SetEnvAndSourceBashrcOrPowershell("customRegion", trimmedRegion, true)
-	} else {
 		os.Setenv("customRegion", trimmedRegion)
 	}
 
-	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running so that it can start serving IMDS requests")
+	fmt.Println("Waiting for 10s for token adapter sidecar to be up and running")
 	time.Sleep(10 * time.Second)
 
-	if ccpMetricsEnabled != "true" {
+	// Start monitoring components
+	if isDataPlane {
 		if osType == "linux" {
 			fmt.Println("Starting MDSD")
 			shared.StartMdsdForOverlay()
@@ -125,15 +120,15 @@ func main() {
 	}
 
 	if osType == "linux" {
-		// update this to use color coding
 		shared.PrintMdsdVersion()
 	}
 
-	fmt.Println("Waiting for 30s for MDSD to get the config and put them in place for ME")
+	fmt.Println("Waiting for 30s for MDSD to get the config")
 	time.Sleep(30 * time.Second)
 
+	// Start metrics extension
 	fmt.Println("Starting Metrics Extension with config overrides")
-	if ccpMetricsEnabled != "true" {
+	if isDataPlane {
 		if _, err := shared.StartMetricsExtensionForOverlay(meConfigFile); err != nil {
 			log.Fatalf("Error starting MetricsExtension: %v\n", err)
 		}
@@ -141,87 +136,92 @@ func main() {
 		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile)
 	}
 
-	// Start otelcollector
+	// Determine and start otel collector
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 	azmonUseDefaultPrometheusConfig := os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG")
+	collectorConfig := determineCollectorConfig(controllerType, azmonOperatorEnabled, 
+		azmonUseDefaultPrometheusConfig, ccpMetricsEnabled)
 
-	var collectorConfig string
+	fmt.Println("Starting otelcollector")
+	shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", 
+		[]string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 
-	if controllerType == "replicaset" && azmonOperatorEnabled == "true" {
-		fmt.Println("Starting otelcollector in replicaset with Target allocator settings")
-		if ccpMetricsEnabled == "true" {
-			collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-replicaset.yml"
-		} else {
-			collectorConfig = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
-			configmapsettings.SetGlobalSettingsInCollectorConfig()
-		}
-	} else if azmonUseDefaultPrometheusConfig == "true" {
-		fmt.Println("Starting otelcollector with only default scrape configs enabled")
-		if ccpMetricsEnabled == "true" {
-			collectorConfig = "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
-		} else {
-			collectorConfig = "/opt/microsoft/otelcollector/collector-config-default.yml"
-		}
-	} else {
-		collectorConfig = "/opt/microsoft/otelcollector/collector-config.yml"
-	}
-
-	fmt.Println("startCommand otelcollector")
-	_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
-
+	// Log version information
 	if osType == "linux" {
 		shared.LogVersionInfo()
 	}
 
-	if ccpMetricsEnabled != "true" {
+	// Start FluentBit for data plane
+	if isDataPlane {
 		shared.StartFluentBit(fluentBitConfigFile)
-		// Run the command and capture the output
-		if osType == "linux" {
-			cmd := exec.Command("fluent-bit", "--version")
-			fluentBitVersion, err := cmd.Output()
-			if err != nil {
-				log.Fatalf("failed to run command: %v", err)
-			}
-			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
-		} else if osType == "windows" {
-			cmd := exec.Command("C:\\opt\\fluent-bit\\bin\\fluent-bit.exe", "--version")
-			fluentBitVersion, err := cmd.Output()
-			if err != nil {
-				log.Fatalf("failed to run command: %v", err)
-			}
-			shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
-		}
+		logFluentBitVersion(osType)
 	}
 
+	// Setup inotify for Linux
 	if osType == "linux" {
-		// Start inotify to watch for changes
-		fmt.Println("Starting inotify for watching mdsd config update")
+		setupMdsdConfigInotify()
+	}
 
-		// Create an output file for inotify events
-		outputFile := "/opt/inotifyoutput-mdsd-config.txt"
-		_, err = os.Create(outputFile)
-		if err != nil {
-			log.Fatalf("Error creating output file: %v\n", err)
+	// Set and record container start time
+	recordContainerStartTime()
+
+	// Start health endpoint
+	http.HandleFunc("/health", healthHandler)
+	http.ListenAndServe(":8080", nil)
+}
+
+func determineCollectorConfig(controllerType, azmonOperatorEnabled, azmonUseDefaultPrometheusConfig, ccpMetricsEnabled string) string {
+	if controllerType == "replicaset" && azmonOperatorEnabled == "true" {
+		fmt.Println("Starting otelcollector in replicaset with Target allocator settings")
+		if ccpMetricsEnabled == "true" {
+			return "/opt/microsoft/otelcollector/ccp-collector-config-replicaset.yml"
+		} 
+		configmapsettings.SetGlobalSettingsInCollectorConfig()
+		return "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
+	} else if azmonUseDefaultPrometheusConfig == "true" {
+		fmt.Println("Starting otelcollector with only default scrape configs enabled")
+		if ccpMetricsEnabled == "true" {
+			return "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
 		}
+		return "/opt/microsoft/otelcollector/collector-config-default.yml"
+	}
+	return "/opt/microsoft/otelcollector/collector-config.yml"
+}
 
-		// Define the command to start inotify
-		inotifyCommand := exec.Command(
-			"inotifywait",
-			"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
-			"--daemon",
-			"--outfile", outputFile,
-			"--event", "ATTRIB",
-			"--event", "create",
-			"--event", "delete",
-			"--event", "modify",
-			"--format", "%e : %T",
-			"--timefmt", "+%s",
-		)
-
-		// Start the inotify process
-		err = inotifyCommand.Start()
+func logFluentBitVersion(osType string) {
+	var cmd *exec.Cmd
+	if osType == "linux" {
+		cmd = exec.Command("fluent-bit", "--version")
+	} else if osType == "windows" {
+		cmd = exec.Command("C:\\opt\\fluent-bit\\bin\\fluent-bit.exe", "--version")
+	}
+	
+	if cmd != nil {
+		fluentBitVersion, err := cmd.Output()
 		if err != nil {
-			log.Fatalf("Error starting inotify process: %v\n", err)
+			log.Fatalf("failed to run command: %v", err)
+		}
+		shared.EchoVar("FLUENT_BIT_VERSION", string(fluentBitVersion))
+	}
+}
+
+func setupMdsdConfigInotify() {
+	fmt.Println("Starting inotify for watching mdsd config update")
+	outputFile := "/opt/inotifyoutput-mdsd-config.txt"
+	
+	_, err := os.Create(outputFile)
+	if err != nil {
+		log.Fatalf("Error creating output file: %v\n", err)
+	}
+
+	inotifyCommand := exec.Command(
+		"inotifywait",
+		"/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json",
+		"--daemon",
+		"--outfile", outputFile,
+		"--event", "ATTRIB", "--event", "create", "--event", "delete", "--event", "modify",
+		"--format", "%e : %T",
+		"
 		}
 	}
 
