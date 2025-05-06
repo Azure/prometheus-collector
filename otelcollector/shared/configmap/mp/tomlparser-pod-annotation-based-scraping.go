@@ -15,22 +15,16 @@ const (
 )
 
 func parseConfigMapForPodAnnotations() (map[string]interface{}, error) {
-	file, err := os.Open(configMapMountPathForPodAnnotation)
+	data, err := os.ReadFile(configMapMountPathForPodAnnotation)
 	if err != nil {
-		return nil, fmt.Errorf("configmap section not mounted, using defaults")
+		return nil, fmt.Errorf("configmap section not mounted or unreadable: %v", err)
 	}
-	defer file.Close()
 
-	if data, err := os.ReadFile(configMapMountPathForPodAnnotation); err == nil {
-		parsedConfig := make(map[string]interface{})
-		if err := toml.Unmarshal(data, &parsedConfig); err == nil {
-			return parsedConfig, nil
-		} else {
-			return nil, fmt.Errorf("exception while parsing config map for pod annotations: %v, using defaults, please check config map for pod annotations", err)
-		}
-	} else {
-		return nil, fmt.Errorf("error reading config map file: %v", err)
+	parsedConfig := make(map[string]interface{})
+	if err := toml.Unmarshal(data, &parsedConfig); err != nil {
+		return nil, fmt.Errorf("exception parsing config map: %v", err)
 	}
+	return parsedConfig, nil
 }
 
 func isValidRegex(str string) bool {
@@ -39,61 +33,50 @@ func isValidRegex(str string) bool {
 }
 
 func writeConfigToFile(podannotationNamespaceRegex string) error {
-	fmt.Printf("Writing configuration to file: %s\n", podAnnotationEnvVarPath)
+	if podannotationNamespaceRegex == "" {
+		return nil
+	}
+
 	file, err := os.Create(podAnnotationEnvVarPath)
 	if err != nil {
-		return fmt.Errorf("error opening file: %v", err)
+		return fmt.Errorf("error creating file: %v", err)
 	}
 	defer file.Close()
 
-	if podannotationNamespaceRegex != "" {
-		linuxPrefix := ""
-		//if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
-		//	linuxPrefix = "export "
-		//}
-		// Writes the variable to the file in the format: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX='value'
-		envVarString := fmt.Sprintf("%s%s='%s'\n", linuxPrefix, envVariableTemplateName, podannotationNamespaceRegex)
-		envVarAnnotationsEnabled := fmt.Sprintf("%s%s=%s\n", linuxPrefix, envVariableAnnotationsEnabledName, "true")
-		fmt.Printf("Writing to file: %s%s", envVarString, envVarAnnotationsEnabled)
+	envVarString := fmt.Sprintf("%s='%s'\n", envVariableTemplateName, podannotationNamespaceRegex)
+	envVarAnnotationsEnabled := fmt.Sprintf("%s=%s\n", envVariableAnnotationsEnabledName, "true")
 
-		if _, err := file.WriteString(envVarString); err != nil {
-			return fmt.Errorf("error writing to file: %v", err)
-		}
-		if _, err := file.WriteString(envVarAnnotationsEnabled); err != nil {
-			return fmt.Errorf("error writing to file: %v", err)
-		}
-
-		fmt.Println("Configuration written to file successfully.")
+	if _, err := file.WriteString(envVarString + envVarAnnotationsEnabled); err != nil {
+		return fmt.Errorf("error writing to file: %v", err)
 	}
+
 	return nil
 }
 
 func configurePodAnnotationSettings() error {
 	parsedConfig, err := parseConfigMapForPodAnnotations()
-	if err != nil || parsedConfig == nil {
+	if err != nil {
 		return err
 	}
+
 	podannotationNamespaceRegex, err := populatePodAnnotationNamespaceFromConfigMap(parsedConfig)
 	if err != nil {
 		return err
 	}
-	if err := writeConfigToFile(podannotationNamespaceRegex); err != nil {
-		return err
-	}
-	return nil
+
+	return writeConfigToFile(podannotationNamespaceRegex)
 }
 
 func populatePodAnnotationNamespaceFromConfigMap(parsedConfig map[string]interface{}) (string, error) {
 	regex, ok := parsedConfig["podannotationnamespaceregex"]
 	if !ok || regex == nil {
-		fmt.Printf("Pod annotation namespace regex does not have a value")
-		return "", fmt.Errorf("Pod annotation namespace regex does not have a value")
+		return "", fmt.Errorf("pod annotation namespace regex not found")
 	}
+
 	regexString := regex.(string)
-	if isValidRegex(regexString) {
-		fmt.Printf("Using configmap namespace regex for podannotations: %s\n", regexString)
-		return regexString, nil
-	} else {
-		return "", fmt.Errorf("Invalid namespace regex for podannotations: %s\n", regexString)
+	if !isValidRegex(regexString) {
+		return "", fmt.Errorf("invalid namespace regex: %s", regexString)
 	}
+
+	return regexString, nil
 }

@@ -2,108 +2,88 @@ package ccpconfigmapsettings
 
 import (
 	"fmt"
-	"strings"
 	"os"
+	"strings"
 	"time"
 
-	// "prometheus-collector/shared"
 	"github.com/prometheus-collector/shared"
 )
 
 func Configmapparserforccp() {
-	fmt.Printf("in configmapparserforccp")
-	fmt.Printf("waiting for 30 secs...")
-    time.Sleep(30 * time.Second) //needed to save a restart at times when config watcher sidecar starts up later than us and hence config map wasn't yet projected into emptydir volume yet during pod startups.
+	fmt.Println("in configmapparserforccp")
+	fmt.Println("waiting for 30 secs...")
+	time.Sleep(30 * time.Second)
 
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"
 
-	entries, er := os.ReadDir("/etc/config/settings")
-    if er != nil {
-        fmt.Println("error listing /etc/config/settings", er)
-    }
- 
-    for _, e := range entries {
-            fmt.Println(e.Name())
-    }
-
-	fmt.Println("done listing /etc/config/settings")
-
-	// Set agent config schema version
-	if shared.ExistsAndNotEmpty(configSchemaPath) {
-		configVersion, err := shared.ReadAndTrim(configVersionPath)
-		if err != nil {
-			fmt.Println("Error reading config version file:", err)
-			return
-		}
-		// Remove all spaces and take the first 10 characters
-		configVersion = strings.ReplaceAll(configVersion, " ", "")
-		if len(configVersion) >= 10 {
-			configVersion = configVersion[:10]
-		}
-		// Set the environment variable
-		fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_FILE_VERSION:", configVersion)
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configVersion, true)
+	// Debug: List directory contents
+	if entries, err := os.ReadDir("/etc/config/settings"); err != nil {
+		fmt.Println("error listing /etc/config/settings:", err)
 	} else {
-		fmt.Println("Configmapparserforccp fileversion file doesn't exist. or configmap doesn't exist:", configVersionPath)
+		for _, e := range entries {
+			fmt.Println(e.Name())
+		}
+		fmt.Println("done listing /etc/config/settings")
 	}
 
-	// Set agent config file version
-	if shared.ExistsAndNotEmpty(configVersionPath) {
-		configSchemaVersion, err := shared.ReadAndTrim(configSchemaPath)
-		if err != nil {
-			fmt.Println("Error reading config schema version file:", err)
-			return
-		}
-		// Remove all spaces and take the first 10 characters
-		configSchemaVersion = strings.ReplaceAll(configSchemaVersion, " ", "")
-		if len(configSchemaVersion) >= 10 {
-			configSchemaVersion = configSchemaVersion[:10]
-		}
-		// Set the environment variable
-		fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_SCHEMA_VERSION:", configSchemaVersion)
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_SCHEMA_VERSION", configSchemaVersion, true)
-	} else {
-		fmt.Println("Configmapparserforccp schemaversion file doesn't exist. or configmap doesn't exist:", configSchemaPath)
-	}
+	// Process config schema and version
+	processConfigFile(configVersionPath, "AZMON_AGENT_CFG_FILE_VERSION")
+	processConfigFile(configSchemaPath, "AZMON_AGENT_CFG_SCHEMA_VERSION")
 
-	// Parse the configmap to set the right environment variables for prometheus collector settings
+	// Parse configurations and set environment variables
 	parseConfigAndSetEnvInFile()
-	filename := "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
-	err := shared.SetEnvVarsFromFile(filename)
-	if err != nil {
-		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var: %v\n", err)
-	}
+	setEnvFromFile("/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var")
 
-	// Parse the settings for default scrape configs
 	tomlparserCCPDefaultScrapeSettings()
-	filename = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
-	err = shared.SetEnvVarsFromFile(filename)
-	if err != nil {
-		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_default_scrape_settings_env_var: %v\n", err)
-	}
+	setEnvFromFile("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var")
 
-	// Parse the settings for default targets metrics keep list config
 	tomlparserCCPTargetsMetricsKeepList()
-
 	prometheusCcpConfigMerger()
 
+	// Set required environment variables
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
-
-	// No need to merge custom prometheus config, only merging in the default configs
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
-	shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
+
+	// Run the command to validate and generate config
+	shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml",
+		"--output", "/opt/ccp-collector-config-with-defaults.yml",
+		"--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
+
+	// Copy the generated config if it exists
 	if !shared.Exists("/opt/ccp-collector-config-with-defaults.yml") {
-		fmt.Printf("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+		fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+	} else if err := shared.CopyFile("/opt/ccp-collector-config-with-defaults.yml",
+		"/opt/microsoft/otelcollector/ccp-collector-config-default.yml"); err != nil {
+		fmt.Printf("Error copying file: %v\n", err)
 	} else {
-		sourcePath := "/opt/ccp-collector-config-with-defaults.yml"
-		destinationPath := "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
-		err := shared.CopyFile(sourcePath, destinationPath)
+		fmt.Println("File copied successfully.")
+	}
+}
+
+func processConfigFile(path, envVar string) {
+	if shared.ExistsAndNotEmpty(path) {
+		value, err := shared.ReadAndTrim(path)
 		if err != nil {
-			fmt.Printf("Error copying file: %v\n", err)
-		} else {
-			fmt.Println("File copied successfully.")
+			fmt.Printf("Error reading file %s: %v\n", path, err)
+			return
 		}
+
+		value = strings.ReplaceAll(value, " ", "")
+		if len(value) >= 10 {
+			value = value[:10]
+		}
+
+		fmt.Printf("Setting env var %s: %s\n", envVar, value)
+		shared.SetEnvAndSourceBashrcOrPowershell(envVar, value, true)
+	} else {
+		fmt.Printf("File doesn't exist or is empty: %s\n", path)
+	}
+}
+
+func setEnvFromFile(filename string) {
+	if err := shared.SetEnvVarsFromFile(filename); err != nil {
+		fmt.Printf("Error setting env vars from %s: %v\n", filename, err)
 	}
 }

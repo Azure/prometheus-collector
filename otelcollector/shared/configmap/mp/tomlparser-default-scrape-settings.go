@@ -10,29 +10,31 @@ import (
 	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
 )
 
-func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string, error) {
+// GetDefaultSettings returns the default scrape configuration
+func GetDefaultSettings() map[string]string {
 	config := make(map[string]string)
-	for jobName := range scrapeConfigs.DefaultScrapeJobs {
-		config[jobName] = strconv.FormatBool(scrapeConfigs.DefaultScrapeJobs[jobName].Enabled)
+	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
+		config[jobName] = strconv.FormatBool(job.Enabled)
 	}
 	config["noDefaultsEnabled"] = "false"
-
-	return config, nil
+	return config
 }
 
-func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map[string]string, error) {
-	config, err := fcl.SetDefaultScrapeSettings()
+// ParseConfigMap reads settings from a config map if available, otherwise uses defaults
+func (fcl *FilesystemConfigLoader) ParseConfigMap() (map[string]string, error) {
+	config := GetDefaultSettings()
 
 	if _, err := os.Stat(fcl.ConfigMapMountPath); os.IsNotExist(err) {
 		fmt.Println("configmap for default scrape settings not mounted, using defaults")
 		return config, nil
 	}
 
-	content, err := os.ReadFile(string(fcl.ConfigMapMountPath))
+	content, err := os.ReadFile(fcl.ConfigMapMountPath)
 	if err != nil {
 		return config, fmt.Errorf("using default values, error reading config map file: %s", err)
 	}
 
+	// Parse config map content
 	lines := strings.Split(string(content), "\n")
 	for _, line := range lines {
 		parts := strings.SplitN(line, "=", 2)
@@ -49,110 +51,106 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings() (map
 	return config, nil
 }
 
-func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string) {
-	for scrapeJobName := range scrapeConfigs.DefaultScrapeJobs {
-		isEnabledString := parsedConfig[scrapeJobName]
-		isEnabled, err := strconv.ParseBool(isEnabledString)
-		if err != nil {
-			fmt.Printf("config::Error converting %s to bool: %v\n", isEnabledString, err)
-			continue
+// ApplySettings applies the parsed configuration to the scrape jobs
+func ApplySettings(parsedConfig map[string]string) bool {
+	// Apply settings to jobs
+	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
+		if value, exists := parsedConfig[jobName]; exists {
+			if enabled, err := strconv.ParseBool(value); err == nil {
+				job.Enabled = enabled
+				scrapeConfigs.DefaultScrapeJobs[jobName] = job
+				fmt.Printf("config::Using configmap setting for if %s is enabled: %v\n", jobName, enabled)
+			} else {
+				fmt.Printf("config::Error converting %s to bool: %v\n", value, err)
+			}
 		}
-		job := scrapeConfigs.DefaultScrapeJobs[scrapeJobName]
-		job.Enabled = isEnabled
-		scrapeConfigs.DefaultScrapeJobs[scrapeJobName] = job
-		fmt.Printf("config::Using configmap setting for if %s is enabled: %v\n", scrapeJobName, isEnabled)
 	}
 
+	// Check if no defaults are enabled
 	controllerType := os.Getenv("CONTROLLER_TYPE")
 	osType := strings.ToLower(os.Getenv("OS_TYPE"))
-	cp.NoDefaultsEnabled = areNoDefaultsEnabled(controllerType, osType)
-
-	if cp.NoDefaultsEnabled {
-		fmt.Printf("No default scrape configs enabled")
-	}
-}
-
-func areNoDefaultsEnabled(controllerType, osType string) bool {
 	noDefaultsEnabled := true
-	for jobName := range scrapeConfigs.DefaultScrapeJobs {
-		if scrapeConfigs.DefaultScrapeJobs[jobName].ControllerType == controllerType &&
-			scrapeConfigs.DefaultScrapeJobs[jobName].OSType == osType &&
-			scrapeConfigs.DefaultScrapeJobs[jobName].Enabled == true {
+
+	for _, job := range scrapeConfigs.DefaultScrapeJobs {
+		if job.ControllerType == controllerType &&
+			job.OSType == osType &&
+			job.Enabled {
 			noDefaultsEnabled = false
-			continue
+			break
 		}
 	}
+
+	if noDefaultsEnabled {
+		fmt.Printf("No default scrape configs enabled\n")
+	}
+
 	return noDefaultsEnabled
 }
 
-func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, cp *ConfigProcessor) error {
+// WriteSettingsToFile writes the current settings to a file
+func WriteSettingsToFile(filename string, noDefaultsEnabled bool) error {
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("Exception while opening file for writing prometheus-collector config environment variables: %s", err)
+		return fmt.Errorf("error opening file: %s", err)
 	}
 	defer file.Close()
 
-	for jobName := range scrapeConfigs.DefaultScrapeJobs {
-		file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_%s_SCRAPING_ENABLED=%v\n", strings.ToUpper(scrapeConfigs.DefaultScrapeJobs[jobName].JobName), DefaultScrapeJobs[jobName].Enabled))
+	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
+		file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_%s_SCRAPING_ENABLED=%v\n",
+			strings.ToUpper(job.JobName), job.Enabled))
 	}
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", cp.NoDefaultsEnabled))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", noDefaultsEnabled))
 
 	return nil
 }
 
-func (c *Configurator) ConfigureDefaultScrapeSettings() {
-	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+// ConfigureDefaultScrapeSettings orchestrates the configuration process
+func ConfigureDefaultScrapeSettings(configMapPath, outputFilePath string) {
+	fmt.Println("Start prometheus-collector-settings Processing")
 
-	fmt.Printf("Start prometheus-collector-settings Processing\n")
-
-	// Load default settings based on the schema version
-	var defaultSettings map[string]string
+	var settings map[string]string
 	var err error
-	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
-		defaultSettings, err = c.ConfigLoader.ParseConfigMapForDefaultScrapeSettings()
+
+	loader := &FilesystemConfigLoader{ConfigMapMountPath: configMapPath}
+
+	// Load settings based on schema version
+	if configSchema := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"); configSchema == "v1" {
+		settings, err = loader.ParseConfigMap()
 	} else {
-		defaultSettings, err = c.ConfigLoader.SetDefaultScrapeSettings()
+		settings = GetDefaultSettings()
 	}
 
 	if err != nil {
-		fmt.Printf("Error loading default settings: %v\n", err)
+		fmt.Printf("Error loading settings: %v\n", err)
 		return
 	}
 
-	// Populate and print setting values
-	c.ConfigParser.PopulateSettingValues(defaultSettings)
+	// Apply settings
+	noDefaultsEnabled := ApplySettings(settings)
 
 	// Set cluster alias
-	if mac := os.Getenv("MAC"); mac != "" && strings.TrimSpace(mac) == "true" {
-		clusterArray := strings.Split(strings.TrimSpace(os.Getenv("CLUSTER")), "/")
-		c.ConfigParser.ClusterAlias = clusterArray[len(clusterArray)-1]
-	} else {
-		c.ConfigParser.ClusterAlias = os.Getenv("CLUSTER")
+	clusterAlias := os.Getenv("CLUSTER")
+	if mac := os.Getenv("MAC"); mac == "true" {
+		parts := strings.Split(clusterAlias, "/")
+		clusterAlias = parts[len(parts)-1]
 	}
 
-	if c.ConfigParser.ClusterAlias != "" && len(c.ConfigParser.ClusterAlias) > 0 {
-		c.ConfigParser.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(c.ConfigParser.ClusterAlias, "_")
-		c.ConfigParser.ClusterAlias = strings.Trim(c.ConfigParser.ClusterAlias, "_")
-		fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", c.ConfigParser.ClusterAlias)
+	if clusterAlias != "" {
+		// Sanitize cluster alias
+		sanitized := regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(clusterAlias, "_")
+		sanitized = strings.Trim(sanitized, "_")
+		fmt.Printf("Sanitized cluster alias: %s\n", sanitized)
 	}
 
-	// Write default scrape settings to file
-	err = c.ConfigWriter.WriteDefaultScrapeSettingsToFile(c.ConfigFilePath, c.ConfigParser)
-	if err != nil {
-		fmt.Printf("Error writing default scrape settings to file: %v\n", err)
+	// Write settings to file
+	if err := WriteSettingsToFile(outputFilePath, noDefaultsEnabled); err != nil {
+		fmt.Printf("Error writing settings to file: %v\n", err)
 		return
 	}
 
-	fmt.Printf("End prometheus-collector-settings Processing\n")
+	fmt.Println("End prometheus-collector-settings Processing")
 }
 
 func tomlparserDefaultScrapeSettings() {
-	configurator := &Configurator{
-		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: defaultSettingsMountPath},
-		ConfigWriter:   &FileConfigWriter{},
-		ConfigFilePath: defaultSettingsEnvVarPath,
-		ConfigParser:   &ConfigProcessor{},
-	}
-
-	configurator.ConfigureDefaultScrapeSettings()
+	ConfigureDefaultScrapeSettings(defaultSettingsMountPath, defaultSettingsEnvVarPath)
 }

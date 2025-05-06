@@ -20,17 +20,16 @@ const (
 	replicasetControllerType         = "replicaset"
 	daemonsetControllerType          = "daemonset"
 	configReaderSidecarContainerType = "configreadersidecar"
-	supportedSchemaVersion           = true
-	sendDSUpMetric                   = false
+	defaultScrapeInterval            = "30s"
 )
 
 var (
-	regexHash    = make(map[string]string)
-	intervalHash = make(map[string]string)
+	regexHash            = make(map[string]string)
+	intervalHash         = make(map[string]string)
+	mergedDefaultConfigs map[interface{}]interface{}
 )
 
-var mergedDefaultConfigs map[interface{}]interface{}
-
+// parseConfigMap reads the prometheus config from the configmap
 func parseConfigMap() string {
 	defer func() {
 		if r := recover(); r != nil {
@@ -45,107 +44,94 @@ func parseConfigMap() string {
 
 	config, err := os.ReadFile(configMapMountPath)
 	if err != nil {
-		shared.EchoError(fmt.Sprintf("Exception while parsing configmap for prometheus config: %s. Custom prometheus config will not be used. Please check configmap for errors", err))
+		shared.EchoError(fmt.Sprintf("Exception while parsing configmap: %s", err))
 		return ""
 	}
 
-	// shared.EchoVar("Successfully parsed configmap for prometheus config", string(config))
 	return string(config)
 }
 
+// loadYAMLData loads and unmarshals YAML data from a file
+func loadYAMLData(filename string, data interface{}) error {
+	fileContent, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("error reading file %s: %v", filename, err)
+	}
+
+	return yaml.Unmarshal(fileContent, data)
+}
+
+// loadRegexHash loads the regex hash from file
 func loadRegexHash() {
-	data, err := os.ReadFile(regexHashFile)
-	if err != nil {
-		fmt.Printf("Exception in loadRegexHash for prometheus config: %v. Keep list regexes will not be used\n", err)
-		return
-	}
-
-	err = yaml.Unmarshal(data, &regexHash)
-	if err != nil {
-		fmt.Printf("Exception in loadRegexHash for prometheus config: %v. Keep list regexes will not be used\n", err)
+	if err := loadYAMLData(regexHashFile, &regexHash); err != nil {
+		fmt.Printf("Exception in loadRegexHash: %v. Keep list regexes will not be used\n", err)
 	}
 }
 
+// loadIntervalHash loads the interval hash from file
 func loadIntervalHash() {
-	data, err := os.ReadFile(intervalHashFile)
-	if err != nil {
-		fmt.Printf("Exception in loadIntervalHash for prometheus config: %v. Scrape interval will not be used\n", err)
-		return
-	}
-
-	err = yaml.Unmarshal(data, &intervalHash)
-	if err != nil {
-		fmt.Printf("Exception in loadIntervalHash for prometheus config: %v. Scrape interval will not be used\n", err)
+	if err := loadYAMLData(intervalHashFile, &intervalHash); err != nil {
+		fmt.Printf("Exception in loadIntervalHash: %v. Scrape interval will not be used\n", err)
 	}
 }
 
+// isConfigReaderSidecar checks if current container is a config reader sidecar
 func isConfigReaderSidecar() bool {
 	containerType := os.Getenv("CONTAINER_TYPE")
-	if containerType != "" {
-		currentContainerType := strings.ToLower(strings.TrimSpace(containerType))
-		if currentContainerType == configReaderSidecarContainerType {
-			return true
-		}
-	}
-	return false
+	return containerType != "" && strings.ToLower(strings.TrimSpace(containerType)) == configReaderSidecarContainerType
 }
 
-func UpdateScrapeIntervalConfig(yamlConfigFile string, scrapeIntervalSetting string) {
+// UpdateScrapeIntervalConfig updates the scrape interval in a YAML config file
+func UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting string) {
 	fmt.Printf("Updating scrape interval config for %s\n", yamlConfigFile)
 
-	// Read YAML config file
+	var config map[string]interface{}
 	data, err := os.ReadFile(yamlConfigFile)
 	if err != nil {
-		fmt.Printf("Error reading config file %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
+		fmt.Printf("Error reading config file %s: %v\n", yamlConfigFile, err)
 		return
 	}
 
-	// Unmarshal YAML data
-	var config map[string]interface{}
-	err = yaml.Unmarshal(data, &config)
-	if err != nil {
-		fmt.Printf("Error unmarshalling YAML for %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		fmt.Printf("Error unmarshalling YAML: %v\n", err)
 		return
 	}
 
-	// Update scrape interval config
+	// Update scrape interval for each scrape config
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
 		for _, scfg := range scrapeConfigs {
 			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
-				fmt.Printf("scrapeInterval %s\n", scrapeIntervalSetting)
 				scfgMap["scrape_interval"] = scrapeIntervalSetting
 			}
 		}
 
-		// Marshal updated config back to YAML
-		cfgYamlWithScrapeConfig, err := yaml.Marshal(config)
+		// Write updated config back to file
+		cfgYaml, err := yaml.Marshal(config)
 		if err != nil {
-			fmt.Printf("Error marshalling YAML for %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
+			fmt.Printf("Error marshalling YAML: %v\n", err)
 			return
 		}
 
-		// Write updated YAML back to file
-		err = os.WriteFile(yamlConfigFile, []byte(cfgYamlWithScrapeConfig), fs.FileMode(0644))
-		if err != nil {
-			fmt.Printf("Error writing to file %s: %v. The scrape interval will not be updated\n", yamlConfigFile, err)
-			return
+		if err := os.WriteFile(yamlConfigFile, cfgYaml, fs.FileMode(0644)); err != nil {
+			fmt.Printf("Error writing file: %v\n", err)
 		}
 	} else {
-		fmt.Printf("No 'scrape_configs' found in the YAML. The scrape interval will not be updated.\n")
+		fmt.Printf("No 'scrape_configs' found in the YAML\n")
 	}
 }
 
+// AppendMetricRelabelConfig adds a metric relabel config to keep specific metrics
 func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
-	fmt.Printf("Starting to append keep list regex or minimal ingestion regex to %s\n", yamlConfigFile)
-
-	content, err := os.ReadFile(yamlConfigFile)
-	if err != nil {
-		return fmt.Errorf("error reading config file %s: %v. The keep list regex will not be used", yamlConfigFile, err)
-	}
+	fmt.Printf("Appending keep list regex to %s\n", yamlConfigFile)
 
 	var config map[string]interface{}
+	content, err := os.ReadFile(yamlConfigFile)
+	if err != nil {
+		return fmt.Errorf("error reading config file: %v", err)
+	}
+
 	if err := yaml.Unmarshal(content, &config); err != nil {
-		return fmt.Errorf("error unmarshalling YAML for %s: %v. The keep list regex will not be used", yamlConfigFile, err)
+		return fmt.Errorf("error unmarshalling YAML: %v", err)
 	}
 
 	keepListMetricRelabelConfig := map[string]interface{}{
@@ -156,7 +142,6 @@ func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
 
 	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
 		for i, scfg := range scrapeConfigs {
-			// Ensure scfg is a map with string keys
 			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
 				// Convert to map[string]interface{}
 				stringScfgMap := make(map[string]interface{})
@@ -164,213 +149,103 @@ func AppendMetricRelabelConfig(yamlConfigFile, keepListRegex string) error {
 					if key, ok := k.(string); ok {
 						stringScfgMap[key] = v
 					} else {
-						return fmt.Errorf("encountered non-string key in scrape config map: %v", k)
+						return fmt.Errorf("non-string key in scrape config: %v", k)
 					}
 				}
 
-				// Update or add metric_relabel_configs
+				// Add or update metric_relabel_configs
 				if metricRelabelCfgs, ok := stringScfgMap["metric_relabel_configs"].([]interface{}); ok {
 					stringScfgMap["metric_relabel_configs"] = append(metricRelabelCfgs, keepListMetricRelabelConfig)
 				} else {
 					stringScfgMap["metric_relabel_configs"] = []interface{}{keepListMetricRelabelConfig}
 				}
 
-				// Convert back to map[interface{}]interface{} for YAML marshalling
+				// Convert back for YAML marshalling
 				interfaceScfgMap := make(map[interface{}]interface{})
 				for k, v := range stringScfgMap {
 					interfaceScfgMap[k] = v
 				}
-
-				// Update the scrape_configs list
 				scrapeConfigs[i] = interfaceScfgMap
 			}
 		}
-
-		// Write updated scrape_configs back to config
 		config["scrape_configs"] = scrapeConfigs
 	} else {
-		fmt.Println("No 'scrape_configs' found in the YAML. Skipping updates.")
+		fmt.Println("No 'scrape_configs' found in the YAML")
 		return nil
 	}
 
-	cfgYamlWithMetricRelabelConfig, err := yaml.Marshal(config)
+	cfgYaml, err := yaml.Marshal(config)
 	if err != nil {
-		return fmt.Errorf("error marshalling YAML for %s: %v. The keep list regex will not be used", yamlConfigFile, err)
+		return fmt.Errorf("error marshalling YAML: %v", err)
 	}
 
-	if err := os.WriteFile(yamlConfigFile, cfgYamlWithMetricRelabelConfig, os.ModePerm); err != nil {
-		return fmt.Errorf("error writing to file %s: %v. The keep list regex will not be used", yamlConfigFile, err)
-	}
-
-	return nil
+	return os.WriteFile(yamlConfigFile, cfgYaml, os.ModePerm)
 }
 
-func AppendRelabelConfig(yamlConfigFile string, relabelConfig []map[string]interface{}, keepRegex string) {
-	fmt.Printf("Adding relabel config for %s\n", yamlConfigFile)
-
-	// Read YAML config file
-	data, err := os.ReadFile(yamlConfigFile)
-	if err != nil {
-		fmt.Printf("Error reading config file %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
-		return
-	}
-
-	// Unmarshal YAML data
-	var config map[string]interface{}
-	err = yaml.Unmarshal(data, &config)
-	if err != nil {
-		fmt.Printf("Error unmarshalling YAML for %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
-		return
-	}
-
-	// Append relabel config for keep list to each scrape config
-	if scrapeConfigs, ok := config["scrape_configs"].([]interface{}); ok {
-		for _, scfg := range scrapeConfigs {
-			if scfgMap, ok := scfg.(map[interface{}]interface{}); ok {
-				relabelCfgs, exists := scfgMap["relabel_configs"]
-				if !exists {
-					scfgMap["relabel_configs"] = relabelConfig
-				} else if relabelCfgsSlice, ok := relabelCfgs.([]interface{}); ok {
-					for _, rc := range relabelConfig {
-						relabelCfgsSlice = append(relabelCfgsSlice, rc)
-					}
-					scfgMap["relabel_configs"] = relabelCfgsSlice
-				}
-			}
-		}
-
-		// Marshal updated config back to YAML
-		cfgYamlWithRelabelConfig, err := yaml.Marshal(config)
-		if err != nil {
-			fmt.Printf("Error marshalling YAML for %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
-			return
-		}
-
-		// Write updated YAML back to file
-		err = os.WriteFile(yamlConfigFile, []byte(cfgYamlWithRelabelConfig), fs.FileMode(0644))
-		if err != nil {
-			fmt.Printf("Error writing to file %s: %v. The relabel config will not be added\n", yamlConfigFile, err)
-			return
-		}
-	} else {
-		fmt.Printf("No 'scrape_configs' found in the YAML. The relabel config will not be added.\n")
-	}
-}
-
+// UpdatePlaceholders replaces placeholders in a file with environment variables
 func UpdatePlaceholders(yamlConfigFile string, placeholders []string) error {
 	contents, err := os.ReadFile(yamlConfigFile)
 	if err != nil {
 		return err
 	}
+
 	for _, placeholder := range placeholders {
 		contents = []byte(strings.ReplaceAll(string(contents), fmt.Sprintf("$$%s$$", placeholder), os.Getenv(placeholder)))
 	}
+
 	return os.WriteFile(kubeletDefaultFileDs, contents, 0644)
 }
 
+// processDefaultJob processes a single default scrape job
+func processDefaultJob(job *scrapeConfigs.ScrapeJob) {
+	if job.ScrapeInterval != "" {
+		UpdateScrapeIntervalConfig(job.ScrapeConfigDefinitionFile, job.ScrapeInterval)
+	}
+
+	if job.KeepListRegex != "" {
+		AppendMetricRelabelConfig(job.ScrapeConfigDefinitionFile, job.KeepListRegex)
+	}
+
+	if job.ControllerType == scrapeConfigs.ControllerType.DaemonSet {
+		if err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, []string{"NODE_IP", "NODE_NAME"}); err != nil {
+			fmt.Printf("Error updating placeholders for DaemonSet: %v\n", err)
+		}
+	}
+
+	if job.PlaceholderNames != nil {
+		if err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, job.PlaceholderNames); err != nil {
+			fmt.Printf("Error updating placeholders: %v\n", err)
+		}
+	}
+}
+
+// populateDefaultPrometheusConfig processes default scrape jobs
 func populateDefaultPrometheusConfig() {
 	defaultConfigs := []string{}
 	currentControllerType := strings.TrimSpace(strings.ToLower(os.Getenv("CONTROLLER_TYPE")))
-
-	// Default values
-	advancedMode := false
-	windowsDaemonset := false
-
-	// Get current mode (advanced or not...)
-	currentMode := strings.TrimSpace(strings.ToLower(os.Getenv("MODE")))
-	if currentMode == "advanced" {
-		advancedMode = true
-	}
-
-	// Get if windowsdaemonset is enabled or not (i.e., WINMODE env = advanced or not...)
-	winMode := strings.TrimSpace(strings.ToLower(os.Getenv("WINMODE")))
-	if winMode == "advanced" {
-		windowsDaemonset = true
-	}
-
 	osType := strings.ToLower(os.Getenv("OS_TYPE"))
 
 	for _, job := range scrapeConfigs.DefaultScrapeJobs {
 		if job.Enabled && job.ControllerType == currentControllerType && job.OSType == osType {
-			if job.ScrapeInterval != "" {
-				UpdateScrapeIntervalConfig(job.ScrapeConfigDefinitionFile, job.ScrapeInterval)
-			}
-			if job.KeepListRegex != "" {
-				AppendMetricRelabelConfig(job.ScrapeConfigDefinitionFile, job.KeepListRegex)
-			}
-			if job.ControllerType == scrapeConfigs.ControllerType.DaemonSet {
-				err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, []string{"NODE_IP", "NODE_NAME"})
-				if err != nil {
-					fmt.Printf("Error updating placeholders for DaemonSet: %v\n", err)
-				}
-			}
-			if job.PlaceholderNames != nil {
-				err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, job.PlaceholderNames)
-				if err != nil {
-					fmt.Printf("Error updating placeholders: %v\n", err)
-				}
-			}
-
+			processDefaultJob(&job)
 			defaultConfigs = append(defaultConfigs, job.ScrapeConfigDefinitionFile)
 		}
 	}
 
 	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
-	// if mergedDefaultConfigs != nil {
-	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
-	// }
 }
 
-func populateDefaultPrometheusConfigWithOperator() {
-	defaultConfigs := []string{}
-
-	envControllerType := os.Getenv("CONTROLLER_TYPE")
-	currentControllerType := ""
-	if envControllerType != "" {
-		currentControllerType = strings.TrimSpace(strings.ToLower(envControllerType))
-	}
-	osType := strings.ToLower(os.Getenv("OS_TYPE"))
-
-	for _, job := range scrapeConfigs.DefaultScrapeJobs {
-		if job.Enabled && job.ControllerType == currentControllerType && job.OSType == osType {
-			if job.ScrapeInterval != "" {
-				UpdateScrapeIntervalConfig(job.ScrapeConfigDefinitionFile, job.ScrapeInterval)
-			}
-			if job.KeepListRegex != "" {
-				AppendMetricRelabelConfig(job.ScrapeConfigDefinitionFile, job.KeepListRegex)
-			}
-			if job.ControllerType == scrapeConfigs.ControllerType.DaemonSet {
-				err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, []string{"NODE_IP", "NODE_NAME"})
-				if err != nil {
-					fmt.Printf("Error updating placeholders for DaemonSet: %v\n", err)
-				}
-			}
-			if job.PlaceholderNames != nil {
-				err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, job.PlaceholderNames)
-				if err != nil {
-					fmt.Printf("Error updating placeholders: %v\n", err)
-				}
-			}
-
-			defaultConfigs = append(defaultConfigs, job.ScrapeConfigDefinitionFile)
-		}
-	}
-	mergedDefaultConfigs = mergeDefaultScrapeConfigs(defaultConfigs)
-	// if mergedDefaultConfigs != nil {
-	// 	fmt.Printf("Merged default scrape targets: %v\n", mergedDefaultConfigs)
-	// }
-}
-
+// mergeDefaultScrapeConfigs merges multiple YAML files into one config
 func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]interface{} {
 	mergedDefaultConfigs := make(map[interface{}]interface{})
 
 	if len(defaultScrapeConfigs) > 0 {
 		mergedDefaultConfigs["scrape_configs"] = make([]interface{}, 0)
 
-		for _, defaultScrapeConfig := range defaultScrapeConfigs {
-			defaultConfigYaml, err := loadYAMLFromFile(defaultScrapeConfig)
+		for _, configFile := range defaultScrapeConfigs {
+			defaultConfigYaml, err := loadYAMLFromFile(configFile)
 			if err != nil {
-				log.Printf("Error loading YAML from file %s: %s\n", defaultScrapeConfig, err)
+				log.Printf("Error loading YAML from file %s: %s\n", configFile, err)
 				continue
 			}
 
@@ -379,27 +254,19 @@ func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]in
 	}
 
 	fmt.Printf("Done merging %d default prometheus config(s)\n", len(defaultScrapeConfigs))
-
 	return mergedDefaultConfigs
 }
 
+// loadYAMLFromFile loads a YAML file into a map
 func loadYAMLFromFile(filename string) (map[interface{}]interface{}, error) {
-	fileContent, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
 	var yamlData map[interface{}]interface{}
-	err = yaml.Unmarshal(fileContent, &yamlData)
-	if err != nil {
+	if err := loadYAMLData(filename, &yamlData); err != nil {
 		return nil, err
 	}
-
 	return yamlData, nil
 }
 
-// This needs unit tests
-
+// deepMerge merges two maps recursively
 func deepMerge(target, source map[interface{}]interface{}) map[interface{}]interface{} {
 	for key, sourceValue := range source {
 		targetValue, exists := target[key]
@@ -416,13 +283,13 @@ func deepMerge(target, source map[interface{}]interface{}) map[interface{}]inter
 			target[key] = deepMerge(targetMap, sourceMap)
 		} else if reflect.TypeOf(targetValue) == reflect.TypeOf(sourceValue) {
 			// Both are slices, concatenate them
-			if targetSlice, targetSliceOk := targetValue.([]interface{}); targetSliceOk {
-				if sourceSlice, sourceSliceOk := sourceValue.([]interface{}); sourceSliceOk {
+			if targetSlice, ok := targetValue.([]interface{}); ok {
+				if sourceSlice, ok := sourceValue.([]interface{}); ok {
 					target[key] = append(targetSlice, sourceSlice...)
 				}
 			}
 		} else {
-			// If types are different, simply overwrite with the source value
+			// Different types, overwrite with source
 			target[key] = sourceValue
 		}
 	}
@@ -430,27 +297,28 @@ func deepMerge(target, source map[interface{}]interface{}) map[interface{}]inter
 	return target
 }
 
+// writeDefaultScrapeTargetsFile writes the merged default config to a file
 func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interface{} {
-	noDefaultScrapingEnabled := os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED")
-	if noDefaultScrapingEnabled != "" && strings.ToLower(noDefaultScrapingEnabled) == "false" {
+	if os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED") == "false" {
 		loadRegexHash()
 		loadIntervalHash()
+
 		if operatorEnabled {
-			populateDefaultPrometheusConfigWithOperator()
+			populateDefaultPrometheusConfig() // Simplified by removing redundant function
 		} else {
 			populateDefaultPrometheusConfig()
 		}
+
 		if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
-			fmt.Printf("Starting to merge default prometheus config values in collector template as backup\n")
+			fmt.Printf("Merging default prometheus config values\n")
 			mergedDefaultConfigYaml, err := yaml.Marshal(mergedDefaultConfigs)
 			if err != nil {
-				fmt.Printf("Error marshalling merged default prometheus config: %v\n", err)
+				fmt.Printf("Error marshalling merged config: %v\n", err)
 				return nil
 			}
 
-			err = os.WriteFile(mergedDefaultConfigPath, mergedDefaultConfigYaml, fs.FileMode(0644))
-			if err != nil {
-				fmt.Printf("Error writing merged default prometheus config to file: %v\n", err)
+			if err := os.WriteFile(mergedDefaultConfigPath, mergedDefaultConfigYaml, fs.FileMode(0644)); err != nil {
+				fmt.Printf("Error writing merged config: %v\n", err)
 				return nil
 			}
 
@@ -459,130 +327,67 @@ func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interfa
 	} else {
 		mergedDefaultConfigs = nil
 	}
+
 	fmt.Printf("Done creating default targets file\n")
 	return nil
 }
 
-func setDefaultFileScrapeInterval(scrapeInterval string) {
-	defaultFilesArray := []string{
-		kubeletDefaultFileRsSimple, kubeletDefaultFileRsAdvanced, kubeletDefaultFileDs,
-		kubeletDefaultFileRsAdvancedWindowsDaemonset, coreDNSDefaultFile,
-		cadvisorDefaultFileRsSimple, cadvisorDefaultFileRsAdvanced, cadvisorDefaultFileDs,
-		kubeProxyDefaultFile, apiserverDefaultFile, kubeStateDefaultFile,
-		nodeExporterDefaultFileRsSimple, nodeExporterDefaultFileRsAdvanced, nodeExporterDefaultFileDs,
-		prometheusCollectorHealthDefaultFile, windowsExporterDefaultRsSimpleFile, windowsExporterDefaultDsFile,
-		windowsKubeProxyDefaultFileRsSimpleFile, windowsKubeProxyDefaultDsFile, podAnnotationsDefaultFile,
-		kappieBasicDefaultFileDs, networkObservabilityRetinaDefaultFileDs, networkObservabilityHubbleDefaultFileDs,
-		networkObservabilityCiliumDefaultFileDs, acstorMetricsExporterDefaultFile, acstorCapacityProvisionerDefaultFile,
-	}
-
-	for _, currentFile := range defaultFilesArray {
-		contents, err := os.ReadFile(fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, currentFile))
-		if err != nil {
-			fmt.Printf("Error reading file %s: %v\n", currentFile, err)
-			continue
-		}
-
-		contents = []byte(strings.Replace(string(contents), "$$SCRAPE_INTERVAL$$", scrapeInterval, -1))
-
-		err = os.WriteFile(currentFile, contents, fs.FileMode(0644))
-		if err != nil {
-			fmt.Printf("Error writing to file %s: %v\n", currentFile, err)
-		}
-	}
-}
-
-func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultConfigs map[interface{}]interface{}) {
-	var mergedConfigYaml []byte
-
-	if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
-		shared.EchoStr("Merging default and custom scrape configs")
-		var customPrometheusConfig map[interface{}]interface{}
-		err := yaml.Unmarshal([]byte(customPromConfig), &customPrometheusConfig)
-		if err != nil {
-			shared.EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
-			return
-		}
-
-		mergedConfigs := deepMerge(mergedDefaultConfigs, customPrometheusConfig)
-		mergedConfigYaml, err = yaml.Marshal(mergedConfigs)
-		if err != nil {
-			shared.EchoError(fmt.Sprintf("Error marshalling merged configs: %v", err))
-			return
-		}
-
-		shared.EchoStr("Done merging default scrape config(s) with custom prometheus config, writing them to file")
-	} else {
-		shared.EchoWarning("The merged default scrape config is nil or empty, using only custom scrape config")
-		mergedConfigYaml = []byte(customPromConfig)
-	}
-
-	err := os.WriteFile(promMergedConfigPath, mergedConfigYaml, fs.FileMode(0644))
-	if err != nil {
-		shared.EchoError(fmt.Sprintf("Error writing merged config to file: %v", err))
-		return
-	}
-}
-
+// setLabelLimitsPerScrape sets label limits for every scrape job
 func setLabelLimitsPerScrape(prometheusConfigString string) string {
-	customConfig := prometheusConfigString
-
 	var limitedCustomConfig map[interface{}]interface{}
-	err := yaml.Unmarshal([]byte(customConfig), &limitedCustomConfig)
-	if err != nil {
-		shared.EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
+
+	if err := yaml.Unmarshal([]byte(prometheusConfigString), &limitedCustomConfig); err != nil {
+		shared.EchoError(fmt.Sprintf("Error unmarshalling config: %v", err))
 		return prometheusConfigString
 	}
 
-	if limitedCustomConfig != nil && len(limitedCustomConfig) > 0 {
-		limitedCustomScrapes, _ := limitedCustomConfig["scrape_configs"].([]interface{})
-		if limitedCustomScrapes != nil && len(limitedCustomScrapes) > 0 {
-			for _, scrape := range limitedCustomScrapes {
-				scrapeMap, _ := scrape.(map[interface{}]interface{})
-				scrapeMap["label_limit"] = 63
-				scrapeMap["label_name_length_limit"] = 511
-				scrapeMap["label_value_length_limit"] = 1023
-				shared.EchoVar(fmt.Sprintf("Successfully set label limits in custom scrape config for job %s", scrapeMap["job_name"]), "")
-			}
-			shared.EchoWarning("Done setting label limits for custom scrape config ...")
-			updatedConfig, err := yaml.Marshal(limitedCustomConfig)
-			if err != nil {
-				shared.EchoError(fmt.Sprintf("Error marshalling custom config: %v", err))
-				return prometheusConfigString
-			}
-			return string(updatedConfig)
-		} else {
-			shared.EchoWarning("No Jobs found to set label limits while processing custom scrape config")
-			return prometheusConfigString
-		}
-	} else {
-		shared.EchoWarning("Nothing to set for label limits while processing custom scrape config")
+	if limitedCustomConfig == nil || len(limitedCustomConfig) == 0 {
+		shared.EchoWarning("Nothing to set for label limits")
 		return prometheusConfigString
 	}
+
+	scrapes, ok := limitedCustomConfig["scrape_configs"].([]interface{})
+	if !ok || len(scrapes) == 0 {
+		shared.EchoWarning("No jobs found to set label limits")
+		return prometheusConfigString
+	}
+
+	for _, scrape := range scrapes {
+		if scrapeMap, ok := scrape.(map[interface{}]interface{}); ok {
+			scrapeMap["label_limit"] = 63
+			scrapeMap["label_name_length_limit"] = 511
+			scrapeMap["label_value_length_limit"] = 1023
+		}
+	}
+
+	shared.EchoWarning("Done setting label limits")
+	updatedConfig, err := yaml.Marshal(limitedCustomConfig)
+	if err != nil {
+		shared.EchoError(fmt.Sprintf("Error marshalling config: %v", err))
+		return prometheusConfigString
+	}
+
+	return string(updatedConfig)
 }
 
-func setGlobalScrapeConfigInDefaultFilesIfExists(configString string) string {
+// setGlobalScrapeConfigInDefaultFiles processes global scrape configs
+func setGlobalScrapeConfigInDefaultFiles(configString string) string {
 	var customConfig map[interface{}]interface{}
-	err := yaml.Unmarshal([]byte(configString), &customConfig)
-	if err != nil {
+	scrapeInterval := defaultScrapeInterval
+
+	if err := yaml.Unmarshal([]byte(configString), &customConfig); err != nil {
 		fmt.Println("Error:", err)
 		return ""
 	}
 
-	// Set scrape interval to 30s for updating the default merged config
-	scrapeInterval := "30s"
-
-	globalConfig, globalExists := customConfig["global"].(map[interface{}]interface{})
-	if globalExists {
-		scrapeInterval, _ = globalConfig["scrape_interval"].(string)
-
-		// Checking to see if the duration matches the pattern specified in the prometheus config
-		// Link to documentation with regex pattern -> https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file
-		matched := regexp.MustCompile(`^((\d+y)?(\d+w)?(\d+d)?(\d+h)?(\d+m)?(\d+s)?(\d+ms)?|0)$`).MatchString(scrapeInterval)
-		if !matched {
-			// Set default global scrape interval to 1m if it's not in the proper format
-			globalConfig["scrape_interval"] = "1m"
-			scrapeInterval = "30s"
+	if globalConfig, ok := customConfig["global"].(map[interface{}]interface{}); ok {
+		if si, ok := globalConfig["scrape_interval"].(string); ok {
+			// Validate scrape interval format
+			if matched := regexp.MustCompile(`^((\d+y)?(\d+w)?(\d+d)?(\d+h)?(\d+m)?(\d+s)?(\d+ms)?|0)$`).MatchString(si); matched {
+				scrapeInterval = si
+			} else {
+				globalConfig["scrape_interval"] = "1m"
+			}
 		}
 	}
 
@@ -597,22 +402,50 @@ func setGlobalScrapeConfigInDefaultFilesIfExists(configString string) string {
 	return string(updatedConfig)
 }
 
+// mergeDefaultAndCustomScrapeConfigs merges default and custom configs
+func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultConfigs map[interface{}]interface{}) {
+	var mergedConfigYaml []byte
+
+	if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
+		shared.EchoStr("Merging default and custom scrape configs")
+		var customPrometheusConfig map[interface{}]interface{}
+
+		if err := yaml.Unmarshal([]byte(customPromConfig), &customPrometheusConfig); err != nil {
+			shared.EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
+			return
+		}
+
+		mergedConfigs := deepMerge(mergedDefaultConfigs, customPrometheusConfig)
+		var err error
+		if mergedConfigYaml, err = yaml.Marshal(mergedConfigs); err != nil {
+			shared.EchoError(fmt.Sprintf("Error marshalling merged configs: %v", err))
+			return
+		}
+	} else {
+		shared.EchoWarning("Using only custom scrape config")
+		mergedConfigYaml = []byte(customPromConfig)
+	}
+
+	if err := os.WriteFile(promMergedConfigPath, mergedConfigYaml, fs.FileMode(0644)); err != nil {
+		shared.EchoError(fmt.Sprintf("Error writing merged config: %v", err))
+	}
+}
+
+// prometheusConfigMerger is the main function that merges configs
 func prometheusConfigMerger(operatorEnabled bool) {
 	shared.EchoSectionDivider("Start Processing - prometheusConfigMerger")
-	mergedDefaultConfigs = make(map[interface{}]interface{}) // Initialize mergedDefaultConfigs
+	mergedDefaultConfigs = make(map[interface{}]interface{})
 	prometheusConfigMap := parseConfigMap()
 
 	if len(prometheusConfigMap) > 0 {
-		modifiedPrometheusConfigString := setGlobalScrapeConfigInDefaultFilesIfExists(prometheusConfigMap)
+		modifiedConfig := setGlobalScrapeConfigInDefaultFiles(prometheusConfigMap)
 		writeDefaultScrapeTargetsFile(operatorEnabled)
-		// Set label limits for every custom scrape job, before merging the default & custom config
-		labellimitedconfigString := setLabelLimitsPerScrape(modifiedPrometheusConfigString)
-		mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString, mergedDefaultConfigs)
-		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Merging Default and Custom Prometheus Config")
+		labelLimitedConfig := setLabelLimitsPerScrape(modifiedConfig)
+		mergeDefaultAndCustomScrapeConfigs(labelLimitedConfig, mergedDefaultConfigs)
+		shared.EchoSectionDivider("End Processing - Done Merging Configs")
 	} else {
-		setDefaultFileScrapeInterval("30s")
+		setDefaultFileScrapeInterval(defaultScrapeInterval)
 		writeDefaultScrapeTargetsFile(operatorEnabled)
-		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Writing Default Prometheus Config")
+		shared.EchoSectionDivider("End Processing - Done Writing Default Config")
 	}
-
 }

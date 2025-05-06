@@ -6,11 +6,9 @@ import (
 	"regexp"
 	"strings"
 
-	"io/fs"
-
 	"github.com/pelletier/go-toml"
-	"github.com/prometheus-collector/shared"
 	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
+	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
 )
 
@@ -19,10 +17,10 @@ const (
 )
 
 var (
-	MATCHER = regexp.MustCompile(`^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$`)
+	durationMatcher = regexp.MustCompile(`^((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)$`)
 )
 
-func parseConfigMapForScrapeSettings() *toml.Tree {
+func loadConfigMapSettings() *toml.Tree {
 	config, err := toml.LoadFile(configMapScrapeIntervalMountPath)
 	if err != nil {
 		fmt.Printf("Error parsing config map: %v\n", err)
@@ -31,22 +29,19 @@ func parseConfigMapForScrapeSettings() *toml.Tree {
 	return config
 }
 
-func checkDuration(duration string) string {
-	if !MATCHER.MatchString(duration) || duration == "" {
+func validateDuration(duration string) string {
+	if duration == "" || !durationMatcher.MatchString(duration) {
 		return defaultScrapeInterval
 	}
 	return duration
 }
 
-func getConfigStringValue(configMapSettings *toml.Tree, key string) string {
-	if configMapSettings == nil {
+func getStringValue(config *toml.Tree, key string) string {
+	if config == nil {
 		return ""
 	}
-	valueInterface := configMapSettings.Get(key)
-	if valueInterface == nil {
-		return ""
-	}
-	value, ok := valueInterface.(string)
+
+	value, ok := config.Get(key).(string)
 	if !ok {
 		return ""
 	}
@@ -54,24 +49,23 @@ func getConfigStringValue(configMapSettings *toml.Tree, key string) string {
 }
 
 func processConfigMap() map[string]string {
-	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
 	intervalHash := make(map[string]string)
-	var configMapSettings *toml.Tree
+	var config *toml.Tree
 
-	err := os.Stat(configMapScrapeIntervalMountPath)
-	if os.IsNotExist(err)
-		fmt.Printf("configmap prometheus-collector-configmap for default-targets-scrape-interval-settings not mounted, using defaults")
-	} else if err == nil && configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
-		configMapSettings = parseConfigMapForScrapeSettings()
-		if configMapSettings != nil {
-		} else {
-			fmt.Printf("Error parsing config map, scrape interval settings is empty. Using default scrape interval settings\n")
+	// Check config map existence and schema version
+	if _, err := os.Stat(configMapScrapeIntervalMountPath); os.IsNotExist(err) {
+		fmt.Printf("Config map not mounted, using defaults\n")
+	} else if err == nil && strings.TrimSpace(os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")) == "v1" {
+		config = loadConfigMapSettings()
+		if config == nil {
+			fmt.Printf("Error parsing config map. Using default settings\n")
 		}
 	}
 
+	// Process all default jobs
 	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
-		if configMapSettings != nil {
-			interval := checkDuration(getConfigStringValue(configMapSettings, jobName))
+		if config != nil {
+			interval := validateDuration(getStringValue(config, jobName))
 			if interval != "" {
 				job.ScrapeInterval = interval
 				scrapeConfigs.DefaultScrapeJobs[jobName] = job
@@ -88,21 +82,16 @@ func writeIntervalHashToFile(intervalHash map[string]string, filePath string) er
 	if err != nil {
 		return err
 	}
-
-	err = os.WriteFile(filePath, []byte(out), fs.FileMode(0644))
-	if err != nil {
-		return err
-	}
-	return nil
+	return os.WriteFile(filePath, out, 0644)
 }
 
 func tomlparserScrapeInterval() {
 	shared.EchoSectionDivider("Start Processing - tomlparserScrapeInterval")
+
 	intervalHash := processConfigMap()
-	err := writeIntervalHashToFile(intervalHash, scrapeIntervalEnvVarPath)
-	if err != nil {
+	if err := writeIntervalHashToFile(intervalHash, scrapeIntervalEnvVarPath); err != nil {
 		fmt.Printf("Error writing to file: %v\n", err)
-		return
 	}
+
 	shared.EchoSectionDivider("End Processing - tomlparserScrapeInterval")
 }
