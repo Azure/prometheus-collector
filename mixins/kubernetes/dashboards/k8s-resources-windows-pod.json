@@ -492,7 +492,7 @@
       "from": "now-1h",
       "to": "now"
    },
-   "timezone": "utc",
+   "timezone": "browser",
    "title": "Kubernetes / Compute Resources / Pod (Windows)",
    "uid": "78070a924a2f4fe4ad515a90f19c6738"
 }

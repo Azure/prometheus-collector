@@ -5,6 +5,9 @@
    scheme: http
    kubernetes_sd_configs:
      - role: pod
+       namespaces:
+         names:
+           - acstor
    relabel_configs:
      # Include only specified namespace
    - source_labels: [__meta_kubernetes_namespace]

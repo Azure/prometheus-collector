@@ -113,6 +113,18 @@ pipeline:
           - name: labels
             delete: transport
 
+    - name: prometheus_scrape
+      host: 127.0.0.1
+      port: 9095
+      tag: prometheus.metrics.volume
+      metrics_path: /metrics
+      scrape_interval: 1m
+      processors:
+        metrics:
+          - name: metrics_selector
+            metric_name: /scrape_samples_post_metric_relabeling/
+            action: include
+
     filters:
     - name: rewrite_tag
       match: prometheus.metricsextension
