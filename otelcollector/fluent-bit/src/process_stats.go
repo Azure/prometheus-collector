@@ -59,6 +59,7 @@ var replicasetDimensionsNameToEnvVar = map[string]string{
 	"mountmarinercerts":                       "MOUNT_MARINER_CERTS",
 	"mountubuntucerts":                        "MOUNT_UBUNTU_CERTS",
 	"otlpenabled":                             "AZMON_FULL_OTLP_ENABLED",
+	"settingsconfigschemaversion":             "AZMON_AGENT_CFG_SCHEMA_VERSION",
 }
 
 var daemonsetDimensionsNameToEnvVar = map[string]string{
