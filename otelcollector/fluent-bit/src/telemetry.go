@@ -170,7 +170,8 @@ const (
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
 	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 	basicAuthEnabled                      = "BasicAuthEnabled"
-	bearerTokenEnabled                    = "BearerTokenEnabled"
+	bearerTokenEnabledWithFile            = "BearerTokenEnabledWithFile"
+	bearerTokenEnabledWithSecret          = "BearerTokenEnabledWithSecret"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -528,8 +529,9 @@ func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMet
 
 func addScrapeJobMetadataToTelemetryItem() map[string]string {
 	telemetryPropertiesString := map[string]string{
-		basicAuthEnabled:   "false",
-		bearerTokenEnabled: "false",
+		basicAuthEnabled:             "false",
+		bearerTokenEnabledWithFile:   "false",
+		bearerTokenEnabledWithSecret: "false",
 	}
 	scrapeJobs := getScrapeJobs()
 	if scrapeJobs != nil {
@@ -542,6 +544,8 @@ func addScrapeJobMetadataToTelemetryItem() map[string]string {
 		} else {
 			hasBasicAuth := false
 			hasBearerToken := false
+			hasBearerTokenInFile := false
+			hasBearerTokenInSecret := false
 			var checkForConfigProperties func(map[string]interface{})
 			checkForConfigProperties = func(data map[string]interface{}) {
 				for _, value := range data {
@@ -556,11 +560,19 @@ func addScrapeJobMetadataToTelemetryItem() map[string]string {
 							if typeValue == "Bearer" {
 								hasBearerToken = true
 							}
+							if hasBearerToken {
+								if _, ok := authValue["credentials_file"]; ok {
+									hasBearerTokenInFile = true
+								}
+								if _, ok := authValue["credentials"]; ok {
+									hasBearerTokenInSecret = true
+								}
+							}
 							// break
 						}
 					}
 
-					if hasBasicAuth && hasBearerToken {
+					if hasBasicAuth && hasBearerTokenInFile && hasBearerTokenInSecret {
 						break
 					}
 				}
@@ -570,8 +582,11 @@ func addScrapeJobMetadataToTelemetryItem() map[string]string {
 				telemetryPropertiesString[basicAuthEnabled] = "true"
 			}
 
-			if hasBearerToken {
-				telemetryPropertiesString[bearerTokenEnabled] = "true"
+			if hasBearerTokenInFile {
+				telemetryPropertiesString[bearerTokenEnabledWithFile] = "true"
+			}
+			if hasBearerTokenInSecret {
+				telemetryPropertiesString[bearerTokenEnabledWithSecret] = "true"
 			}
 		}
 	}
@@ -608,7 +623,7 @@ func getScrapeJobs() []byte {
 		fmt.Printf("Failed to reach Target Allocator endpoint - %s\n", taEndpoint)
 		return nil
 	} else {
-		fmt.Printf("Successfully reach Target Allocator endpoint - %s\n", taEndpoint)
+		fmt.Printf("Successfully reached Target Allocator endpoint - %s\n", taEndpoint)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
