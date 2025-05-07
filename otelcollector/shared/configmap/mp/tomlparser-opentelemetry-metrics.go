@@ -3,24 +3,15 @@ package configmapsettings
 import (
 	"fmt"
 	"os"
-	"strings"
-
-	"github.com/pelletier/go-toml"
+	"strconv"
 )
 
-func ConfigureOpentelemetryMetricsSettings() error {
-	configMapSettings, err := parseConfigMapForOpentelemetryMetricsSettings()
-	if err != nil || configMapSettings == nil {
-		return fmt.Errorf("Error: %v", err)
+func ConfigureOpentelemetryMetricsSettings(metricsConfigBySection map[string]map[string]string) error {
+	if metricsConfigBySection == nil {
+		return fmt.Errorf("configmap section not mounted, using defaults")
 	}
-	enabled := populateSettingValuesFromConfigMap(configMapSettings)
 
-	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
-	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
-		if _, err := os.Stat(configMapOpentelemetryMetricsMountPath); os.IsNotExist(err) {
-			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
-		}
-	}
+	enabled := populateSettingValuesFromConfigMap(metricsConfigBySection)
 
 	file, err := os.Create(opentelemetryMetricsEnvVarPath)
 	if err != nil {
@@ -35,33 +26,23 @@ func ConfigureOpentelemetryMetricsSettings() error {
 	return nil
 }
 
-func parseConfigMapForOpentelemetryMetricsSettings() (map[string]interface{}, error) {
-	// Check if config map file exists
-	file, err := os.Open(configMapOpentelemetryMetricsMountPath)
-	if err != nil {
-		return nil, fmt.Errorf("configmap section not mounted, using defaults")
-	}
-	defer file.Close()
-
-	if data, err := os.ReadFile(configMapOpentelemetryMetricsMountPath); err == nil {
-		parsedConfig := make(map[string]interface{})
-		if err := toml.Unmarshal(data, &parsedConfig); err == nil {
-			return parsedConfig, nil
-		} else {
-			return nil, fmt.Errorf("exception while parsing config map: %v, using defaults, please check config map for errors", err)
-		}
-	} else {
-		return nil, fmt.Errorf("error reading config map file: %v", err)
-	}
-}
-
-func populateOpentelemetryMetricsSettingValuesFromConfigMap(parsedConfig map[string]interface{}) bool {
+func populateOpentelemetryMetricsSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) bool {
 	enabled := false
-	if val, ok := parsedConfig["enabled"]; ok {
-		enabled = val.(bool)
+
+	// Access the nested map and value
+	innerMap, ok := metricsConfigBySection["opentelemetry-metrics"]
+	if !ok {
+		return enabled
+	}
+
+	if val, ok := innerMap["enabled"]; ok {
+		enabledBool, err := strconv.ParseBool(val)
+		if err != nil {
+			fmt.Printf("Invalid value for opentelemetry-metrics enabled: %s, defaulting to %b\n", enabled)
+			return enabled
+		}
+		enabled = enabledBool
 		fmt.Printf("Using configmap setting for opentelemetry-metrics: %v\n", enabled)
-	} else {
-		fmt.Printf("OpentelemetryMetrics configmap does not have enabled value, using default value: %v\n", enabled)
 	}
 	return enabled
 }

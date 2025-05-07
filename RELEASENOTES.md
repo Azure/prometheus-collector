@@ -41,6 +41,53 @@
 * TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe-targetallocator`
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe-cfg`
 * AKS and Arc Container Images:
+  - feat: Configmap update for CCP (v2 + v1 schema support) (https://github.com/Azure/prometheus-collector/pull/1056)
+* Pipeline/Docs/Templates Updates:
+  - 
+
+
+## Release 04-15-2025
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.16.0-main-04-15-2025-d78050c6`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.16.0-main-04-15-2025-d78050c6-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.16.0-main-04-15-2025-d78050c6-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.16.0-main-04-15-2025-d78050c6-cfg`
+* AKS and Arc Container Images:
+   * Update metrics extension (from: metricsext2-2.2024.419.1535 to:metricsext2-2.2025.123.2222 ) [applies tp widows, Linux & CCP images]
+   * Deprecate windows metric `windows_system_system_up_time` and replace it with `windows_system_boot_time_timestamp_seconds` in all dashboards & rec.rules (arm, terraform, bicep, policy templates)
+   * Scope ACSTOR discoveries to `acstor` namespace to aviod Target allocator discovering all pods across all namespaces in larger clusters
+   * update version to 6.16.0
+   * upgrade : upgrade otelcollector and targetallocator to v0.121.0 (https://github.com/Azure/prometheus-collector/pull/1110)
+   * upgrade : KSM to 2.15 (https://github.com/Azure/prometheus-collector/pull/1117)
+   * sync dashboards and few fixes for managed prometheus dashboards (https://github.com/Azure/prometheus-collector/pull/1113/files)
+   * test : add tests for config (https://github.com/Azure/prometheus-collector/pull/1114/files)
+
+* Pipeline/Docs/Templates Updates:
+   * ci/cd: update remote write sidecar to write to eastus2 workspace (https://github.com/Azure/prometheus-collector/pull/1090)
+   * release : new governed pipeline for release (https://github.com/Azure/prometheus-collector/pull/1102)
+   * update esrp to use AME MSI ID (https://github.com/Azure/prometheus-collector/pull/1101)
+   
+## Release 02-21-2025
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.15.0-main-02-21-2025-4acb2b4c-cfg`
+* AKS and Arc Container Images:
+  - Add scrape_samples_scraped metric to telemetry when debug mode is enabled (https://github.com/Azure/prometheus-collector/pull/1055)
+  - fix: set proxy the old way for mdsd in golang (https://github.com/Azure/prometheus-collector/pull/1062)
+  - fix: add cluster scope to recording rules in policy (https://github.com/Azure/prometheus-collector/pull/1064)
+  - upgrade: Upgrade otelcollector and targetallocator to 0.117.0 (https://github.com/Azure/prometheus-collector/pull/1063)
+
+* Pipeline/Docs/Templates Updates:
+   * fix: add cluster scope to recording rules in policy (https://github.com/Azure/prometheus-collector/pull/1064) 
+   * Add job labels to monitoring alerts (https://github.com/Azure/prometheus-collector/pull/1065)
+   * fix: arc conformance build in pipeline (https://github.com/Azure/prometheus-collector/pull/1066)
+
+## Release 01-16-2025
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.14.0-main-01-16-2025-8d52acfe-cfg`
+* AKS and Arc Container Images:
    * Add support for global settings (https://github.com/Azure/prometheus-collector/pull/1003)
    * Sign flagged binaries for windows containers (https://github.com/Azure/prometheus-collector/pull/1001)
    * fix hubble & cilium regex-es for minimal ingestion profile (https://github.com/Azure/prometheus-collector/pull/1017)

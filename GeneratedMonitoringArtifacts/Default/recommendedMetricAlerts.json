@@ -462,7 +462,7 @@
                     },
                     {
                         "alert": "KubePodReadyStateLow",
-                        "expression": "sum by (cluster,namespace,deployment)(kube_deployment_status_replicas_ready) / sum by (cluster,namespace,deployment)(kube_deployment_spec_replicas) <.8 or sum by (cluster,namespace,deployment)(kube_daemonset_status_number_ready) / sum by (cluster,namespace,deployment)(kube_daemonset_status_desired_number_scheduled) <.8 ",
+                        "expression": "sum by (cluster,namespace,deployment)(kube_deployment_status_replicas_ready) / sum by (cluster,namespace,deployment)(kube_deployment_spec_replicas) <.8 or sum by (cluster,namespace,daemonset)(kube_daemonset_status_number_ready) / sum by (cluster,namespace,daemonset)(kube_daemonset_status_desired_number_scheduled) <.8 ",
                         "for": "PT5M",
                         "annotations": {
                           "description": "Ready state of pods is less than 80%. For more information on this alert, please refer to this [link](https://aka.ms/aks-alerts/pod-level-recommended-alerts)."

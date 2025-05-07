@@ -54,9 +54,9 @@ func setConfigFileVersionEnv() {
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configFileVersion, true)
 }
 
-func parseSettingsForPodAnnotations() {
+func parseSettingsForPodAnnotations(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseSettingsForPodAnnotations")
-	if err := configurePodAnnotationSettings(); err != nil {
+	if err := configurePodAnnotationSettings(metricsConfigBySection); err != nil {
 		fmt.Printf("%v\n", err)
 		return
 	}
@@ -106,23 +106,23 @@ func handlePodAnnotationsFile(filename string) {
 	}
 }
 
-func parsePrometheusCollectorConfig() {
+func parsePrometheusCollectorConfig(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parsePrometheusCollectorConfig")
-	parseConfigAndSetEnvInFile()
+	parseConfigAndSetEnvInFile(metricsConfigBySection)
 	handleEnvFileError(collectorSettingsEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parsePrometheusCollectorConfig")
 }
 
-func parseDefaultScrapeSettings() {
+func parseDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseDefaultScrapeSettings")
-	tomlparserDefaultScrapeSettings()
+	tomlparserDefaultScrapeSettings(metricsConfigBySection)
 	handleEnvFileError(defaultSettingsEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseDefaultScrapeSettings")
 }
 
-func parseDebugModeSettings() {
+func parseDebugModeSettings(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseDebugModeSettings")
-	if err := ConfigureDebugModeSettings(); err != nil {
+	if err := ConfigureDebugModeSettings(metricsConfigBySection); err != nil {
 		shared.EchoError(err.Error())
 		return
 	}
@@ -150,14 +150,39 @@ func handleEnvFileError(filename string) {
 func Configmapparser() {
 	setConfigFileVersionEnv()
 	setConfigSchemaVersionEnv()
-	parseSettingsForPodAnnotations()
-	parsePrometheusCollectorConfig()
-	parseDefaultScrapeSettings()
-	parseDebugModeSettings()
+
+	var metricsConfigBySection map[string]map[string]string
+	var err error
+	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
+		filePaths := []string{"/etc/config/settings/cluster-metrics", "/etc/config/settings/prometheus-collector-settings"}
+		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
+		if err != nil {
+			fmt.Printf("Using defaults as error parsing files: %v\n", err)
+		}
+	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
+		configDir := "/etc/config/settings"
+		metricsConfigBySection, err = shared.ParseV1Config(configDir)
+		if err != nil {
+			fmt.Printf("Using defaults as error parsing config: %v\n", err)
+		}
+	} else {
+		fmt.Println("Invalid schema version. Using defaults.")
+	}
+
+	// Check if /etc/config/settings/config-version exists
+	if _, err := os.Stat("/etc/config/settings/config-version"); os.IsNotExist(err) {
+		metricsConfigBySection = nil
+		fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
+	}
+
+	parseSettingsForPodAnnotations(metricsConfigBySection)
+	parsePrometheusCollectorConfig(metricsConfigBySection)
+	parseDefaultScrapeSettings(metricsConfigBySection)
+	parseDebugModeSettings(metricsConfigBySection)
 	parseOpentelemetryMetricsSettings()
 
-	tomlparserTargetsMetricsKeepList()
-	tomlparserScrapeInterval()
+	tomlparserTargetsMetricsKeepList(metricsConfigBySection)
+	tomlparserScrapeInterval(metricsConfigBySection)
 
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 	containerType := os.Getenv("CONTAINER_TYPE")
