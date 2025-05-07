@@ -79,6 +79,8 @@ data:
     podannotations = "30s"
   debug-mode: |-
     enabled = false
+  opentelemetry-metrics: |-
+      enabled = false
 metadata:
   name: ama-metrics-settings-configmap
   namespace: kube-system
