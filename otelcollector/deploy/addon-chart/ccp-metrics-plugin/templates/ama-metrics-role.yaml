@@ -10,6 +10,7 @@ rules:
       [
         "pods",
         "endpoints",
+        "services",
       ]
     verbs: ["list", "get", "watch"]
 ---

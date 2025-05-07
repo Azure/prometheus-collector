@@ -2,8 +2,8 @@ package ccpconfigmapsettings
 
 import (
 	"fmt"
-	"strings"
 	"os"
+	"strings"
 	"time"
 
 	// "prometheus-collector/shared"
@@ -13,19 +13,19 @@ import (
 func Configmapparserforccp() {
 	fmt.Printf("in configmapparserforccp")
 	fmt.Printf("waiting for 30 secs...")
-    time.Sleep(30 * time.Second) //needed to save a restart at times when config watcher sidecar starts up later than us and hence config map wasn't yet projected into emptydir volume yet during pod startups.
+	time.Sleep(30 * time.Second) //needed to save a restart at times when config watcher sidecar starts up later than us and hence config map wasn't yet projected into emptydir volume yet during pod startups.
 
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"
 
 	entries, er := os.ReadDir("/etc/config/settings")
-    if er != nil {
-        fmt.Println("error listing /etc/config/settings", er)
-    }
- 
-    for _, e := range entries {
-            fmt.Println(e.Name())
-    }
+	if er != nil {
+		fmt.Println("error listing /etc/config/settings", er)
+	}
+
+	for _, e := range entries {
+		fmt.Println(e.Name())
+	}
 
 	fmt.Println("done listing /etc/config/settings")
 
@@ -67,16 +67,36 @@ func Configmapparserforccp() {
 		fmt.Println("Configmapparserforccp schemaversion file doesn't exist. or configmap doesn't exist:", configSchemaPath)
 	}
 
+	var metricsConfigBySection map[string]map[string]string
+	var err error
+	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
+		filePaths := []string{"/etc/config/settings/controlplane-metrics", "/etc/config/settings/prometheus-collector-settings"}
+		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
+		if err != nil {
+			fmt.Printf("Error parsing files: %v\n", err)
+			return
+		}
+	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
+		configDir := "/etc/config/settings"
+		metricsConfigBySection, err = shared.ParseV1Config(configDir)
+		if err != nil {
+			fmt.Printf("Error parsing config: %v\n", err)
+			return
+		}
+	} else {
+		fmt.Println("Invalid schema version or no configmap present. Using defaults.")
+	}
+
 	// Parse the configmap to set the right environment variables for prometheus collector settings
-	parseConfigAndSetEnvInFile()
+	parseConfigAndSetEnvInFile(metricsConfigBySection)
 	filename := "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
-	err := shared.SetEnvVarsFromFile(filename)
+	err = shared.SetEnvVarsFromFile(filename)
 	if err != nil {
 		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var: %v\n", err)
 	}
 
 	// Parse the settings for default scrape configs
-	tomlparserCCPDefaultScrapeSettings()
+	tomlparserCCPDefaultScrapeSettings(metricsConfigBySection)
 	filename = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
 	err = shared.SetEnvVarsFromFile(filename)
 	if err != nil {
@@ -84,7 +104,7 @@ func Configmapparserforccp() {
 	}
 
 	// Parse the settings for default targets metrics keep list config
-	tomlparserCCPTargetsMetricsKeepList()
+	tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection)
 
 	prometheusCcpConfigMerger()
 
