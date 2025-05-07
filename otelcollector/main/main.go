@@ -52,8 +52,14 @@ func main() {
 			}
 		}
 	} else if osType == "windows" {
-		fmt.Println("Starting filesystemwatcher.ps1")
-		shared.StartCommand("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\opt\\scripts\\filesystemwatcher.ps1")
+		initialPaths := []string{
+			`C:\etc\config\settings`,
+			`C:\etc\config\settings\prometheus`,
+		}
+		logFilePath := `C:\opt\microsoft\scripts\filesystemwatcher.txt`
+		pollInterval := 30 * time.Second
+
+		shared.StartFilesystemWatcher(initialPaths, pollInterval, logFilePath)
 	}
 
 	if ccpMetricsEnabled != "true" && osType == "linux" {
