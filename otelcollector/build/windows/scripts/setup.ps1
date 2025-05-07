@@ -15,9 +15,9 @@ New-Item -Type Directory -Path /etc/genevamonitoringagent
 New-Item -Type Directory -Path /static/react-app -Force -ErrorAction SilentlyContinue
 ############################################################################################
 Write-Host ('Installing Metrics Extension');
-try { 
-    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.15.0-main-03-10-2025-840f59b9/MdmMetricsExtension.2.2025.307.1609.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2025.307.1609.zip
-    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2025.307.1609.zip -Destination /installation/ME/
+try {
+    Invoke-WebRequest -Uri "https://github.com/Azure/prometheus-collector/releases/download/v6.14.0-main-01-23-2025-677596d1/MdmMetricsExtension.2.2025.123.2222.nupkg" -OutFile /installation/ME/mdmmetricsextension.2.2025.123.2222.zip
+    Expand-Archive -Path /installation/ME/mdmmetricsextension.2.2025.123.2222.zip -Destination /installation/ME/
     Move-Item /installation/ME/MetricsExtension /opt/metricextension/
 }
 catch {
