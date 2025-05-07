@@ -125,7 +125,8 @@ var (
 )
 
 const (
-	coresAttachedTelemetryIntervalSeconds = 600
+	// coresAttachedTelemetryIntervalSeconds = 600
+	coresAttachedTelemetryIntervalSeconds = 10
 	ksmAttachedTelemetryIntervalSeconds   = 600
 	meMetricsTelemetryIntervalSeconds     = 300
 	coresAttachedTelemetryName            = "ClusterCoreCapacity"
@@ -168,6 +169,7 @@ const (
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
 	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
+	basicAuthEnabled                      = "BasicAuthEnabled"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -359,6 +361,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 
 // Send count of cores/nodes attached to Application Insights periodically
 func SendCoreCountToAppInsightsMetrics() {
+	Log("Starting core count telemetry every %d seconds\n", coresAttachedTelemetryIntervalSeconds)
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		SendException(fmt.Sprintf("Error while getting the credentials for the golang client for cores attached telemetry: %v\n", err))
@@ -424,6 +427,7 @@ func SendCoreCountToAppInsightsMetrics() {
 				}
 			}
 		}
+
 		// Send metric to app insights for node and core capacity
 		cpuCapacityTotal := float64(telemetryProperties[linuxCpuCapacityTelemetryName] + telemetryProperties[windowsCpuCapacityTelemetryName])
 		metricTelemetryItem := appinsights.NewMetricTelemetry(coresAttachedTelemetryName, cpuCapacityTotal)
@@ -431,6 +435,12 @@ func SendCoreCountToAppInsightsMetrics() {
 		for propertyName, propertyValue := range telemetryProperties {
 			if propertyValue != 0 {
 				metricTelemetryItem.Properties[propertyName] = fmt.Sprintf("%d", propertyValue)
+			}
+		}
+		scrapeConfigProperties := addScrapeJobMetadataToTelemetryItem()
+		if scrapeConfigProperties != nil {
+			for propertyName, propertyValue := range scrapeConfigProperties {
+				metricTelemetryItem.Properties[propertyName] = propertyValue
 			}
 		}
 
@@ -459,7 +469,6 @@ type Container struct {
 
 // Send Cpu and Memory Usage for our containers to Application Insights periodically
 func SendContainersCpuMemoryToAppInsightsMetrics() {
-
 	var p CadvisorJson
 	err := json.Unmarshal(retrieveKsmData(), &p)
 	if err != nil {
@@ -516,79 +525,84 @@ func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMet
 	Log(fmt.Sprintf("Sent container CPU and Mem data for %s", cpuMetricName))
 }
 
-func SendScrapeJobMetadataToApplicationInsights() {
-	scrapeJobTicker := time.NewTicker(5 * time.Minute)
-	defer scrapeJobTicker.Stop()
-
-	for {
-		select {
-		case <-scrapeJobTicker.C:
-			scrapeJobs := getScrapeJobs()
-			if scrapeJobs != nil {
-				// Send metric to app insights for Cpu and Memory Usage for Kube state metrics
-				metricTelemetryItem := appinsights.NewMetricTelemetry(cpuMetricName, cpuUsageNanoCoresLinux)
-
-				// Abbreviated properties to save telemetry cost
-				metricTelemetryItem.Properties[memMetricName] = fmt.Sprintf("%d", int(memoryRssBytesLinux))
-				// Adding the actual pod name from Cadvisor output since the podname environment variable points to the pod on which plugin is running
-				metricTelemetryItem.Properties["PodRefName"] = fmt.Sprintf("%s", podRefName)
-
-				TelemetryClient.Track(metricTelemetryItem)
-
-				Log(fmt.Sprintf("Sent container CPU and Mem data for %s", cpuMetricName))
+func addScrapeJobMetadataToTelemetryItem() map[string]string {
+	telemetryPropertiesString := map[string]string{
+		basicAuthEnabled: "false",
+	}
+	scrapeJobs := getScrapeJobs()
+	if scrapeJobs != nil {
+		var scrapeJobsMap map[string]interface{}
+		err := json.Unmarshal(scrapeJobs, &scrapeJobsMap)
+		if err != nil {
+			Log(fmt.Sprintf("Error unmarshalling scrape jobs JSON: %v", err))
+			SendException(err)
+			return nil
+		} else {
+			hasBasicAuth := false
+			var checkForBasicAuth func(map[string]interface{})
+			checkForBasicAuth = func(data map[string]interface{}) {
+				for _, value := range data {
+					job := value.(map[string]interface{})
+					if _, ok := job["basic_auth"]; ok {
+						hasBasicAuth = true
+						break
+					}
+				}
+			}
+			checkForBasicAuth(scrapeJobsMap)
+			if hasBasicAuth {
+				telemetryPropertiesString[basicAuthEnabled] = "true"
 			}
 		}
 	}
+	return telemetryPropertiesString
 
 }
 
 // Get scrape jobs for basic auth and bearer token telemetry
 func getScrapeJobs() []byte {
-	scrapeJobTicker := time.NewTicker(5 * time.Minute)
-	defer scrapeJobTicker.Stop()
-
-	for {
-		select {
-		case <-scrapeJobTicker.C:
-			taEndpoint = "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/scrape_configs"
-			if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-				caCertPath := "/etc/operator-targets/certs/ca.crt"
-				certPEM, err := ioutil.ReadFile(caCertPath)
-				rootCAs := x509.NewCertPool()
-				// Append CA cert to the new pool
-				rootCAs.AppendCertsFromPEM(certPEM)
-				client := &http.Client{
-					Transport: &http.Transport{
-						TLSClientConfig: &tls.Config{
-							RootCAs: rootCAs,
-						},
-					},
-				}
-				taEndpoint = "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs"
-			}
-
-			resp, err := client.Get(taEndpoint)
-			if err != nil || resp.StatusCode != http.StatusOK {
-				fmt.Printf("Failed to reach Target Allocator endpoint - %s\n", taEndpoint)
-				return nil
-			} else {
-				fmt.Printf("Successfully reach Target Allocator endpoint - %s\n", taEndpoint)
-			}
-
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				Log(fmt.Sprintf("Error reading response body: %v", err))
-				SendException(err)
-				return nil
-			}
-
-			if resp != nil && resp.Body != nil {
-				defer resp.Body.Close()
-			}
-
-			return body
+	taEndpoint := "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/scrape_configs"
+	client := &http.Client{}
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+		caCertPath := "/etc/operator-targets/certs/ca.crt"
+		certPEM, err := ioutil.ReadFile(caCertPath)
+		if err != nil {
+			fmt.Printf("Unable to read ca cert file - %s\n", caCertPath)
+			return nil
 		}
+		rootCAs := x509.NewCertPool()
+		// Append CA cert to the new pool
+		rootCAs.AppendCertsFromPEM(certPEM)
+		client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: rootCAs,
+				},
+			},
+		}
+		taEndpoint = "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs"
 	}
+
+	resp, err := client.Get(taEndpoint)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		fmt.Printf("Failed to reach Target Allocator endpoint - %s\n", taEndpoint)
+		return nil
+	} else {
+		fmt.Printf("Successfully reach Target Allocator endpoint - %s\n", taEndpoint)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		Log(fmt.Sprintf("Error reading response body: %v", err))
+		SendException(err)
+		return nil
+	}
+
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+
+	return body
 }
 
 // Retrieve the JSON payload of Kube state metrics from Cadvisor endpoint
