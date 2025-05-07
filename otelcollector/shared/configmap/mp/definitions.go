@@ -7,6 +7,7 @@ var (
 	replicaSetCollectorConfig                    = "/opt/microsoft/otelcollector/collector-config-replicaset.yml"
 	debugModeEnvVarPath                          = "/opt/microsoft/configmapparser/config_debug_mode_env_var"
 	defaultSettingsMountPath                     = "/etc/config/settings/default-scrape-settings-enabled"
+	defaultSettingsMountPathv2                   = "/etc/config/settings/default-targets-scrape-enabled"
 	defaultSettingsEnvVarPath                    = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
 	configMapMountPathForPodAnnotation           = "/etc/config/settings/pod-annotation-based-scraping"
 	podAnnotationEnvVarPath                      = "/opt/microsoft/configmapparser/config_def_pod_annotation_based_scraping"
