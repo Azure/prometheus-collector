@@ -63,48 +63,58 @@
 
 # File Directory Structure
 ```
-├── test                                 - e2e test suites to run on clusters. Unit tests are included alongside the golang files.
-│   ├── README.md                        - Info about setting up, writing, and running the tests.
-│   ├── <test suite package>             - Each test suite is a golang package.
-│   │   ├── <ginkgo test suite setup>    - Ginkgo syntax to setup for any tests in the package.
-|   |   |── <ginkgo tests>               - Actual Ginkgo tests.
-|   |   |── go.mod                       - Used to import the local utils module (and any other packages).
-|   |   |── go.sum
-│   ├── containerstatus                  - Test container logs have no errors, containers are running, and all processes are running.
-│   │   ├── suite_test.go                - Setup access to the Kubernetes cluster.
-|   |   |── container_status_test.go     - Run the tests for each container that's part of our agent.
-|   |   |── go.mod
-|   |   |── go.sum
-│   ├── livenessprobe                    - Test that the pods detect and restart when a process is not running.
-│   │   ├── suite_test.go                - Setup access to the Kubernetes cluster.
-|   |   |── process_liveness_test.go     - Run the tests for each container that's part of our agent.
-|   |   |── go.mod
-|   |   |── go.sum
-│   ├── prometheusui                     - Test that the Prometheus UI paths are accessible and the API returns data.
-│   │   ├── suite_test.go                - Setup access to the Kubernetes cluster.
-|   |   |── prometheus_ui_test.go
-|   |   |── go.mod
-|   |   |── go.sum
-│   ├── querymetrics                     - Query the AMW and validate the data returned is expected.
-│   │   ├── suite_test.go                - Setup access to the Kubernetes cluster.
-|   |   |── query_metrics_test.go
-|   |   |── go.mod
-|   |   |── go.sum
-│   ├── utils                            - Generalized utils functions for the test suites to use.
-|   |   |── amw_query_api_utils.go       - Utils to query metrics from the AMW.
-|   |   |── kubernetes_api_utils.go      - Utils that call the kubernetes API.
-|   |   |── prometheus_ui_api_utils.go   - Utils that call the Prometheus UI.
-|   |   |── setup_utils.go               - Setup functions for cluster access.
-|   |   |── constants.go                 - Defined constants for test labels and transient errors to ignore.
-|   |   |── go.mod
-|   |   |── go.sum
-│   ├── test-cluster-yamls               - YAMLs to deploy on your test cluster and CI/CD clusters.
-|   |   |── configmaps                   - Configmaps for scrape jobs tested.
-|   |   |── customresources              - PodMonitor and ServiceMonitors for scrape jobs tested.
-│   ├── testkube                         - YAMLS to deploy on CI/CD clusters for TestKube.
-|   |   |── api-server-permissions.yaml  - Permissions for the TestKube runner pods to call the API server.
-|   |   |── testkube-test-crs.yaml       - CRs for TestKube test suites and tests for AKS CI/CD clusters.
-|   |   |── testkube-test-crs-arc.yaml   - CRs for TestKube test suites and tests for Arc CI/CD clusters.
+├── test                                   - e2e test suites to run on clusters. Unit tests are included alongside the golang files.
+│   ├── README.md                          - Info about setting up, writing, and running the tests.
+│   ├── ginkgo-e2e                         - Each test suite is a golang package.
+│   │   ├── <test suite package>           - Each test suite is a golang package.
+│   │   │   ├── <ginkgo test suite setup>  - Ginkgo syntax to setup for any tests in the package.
+│   │   │   ├── <ginkgo tests>             - Actual Ginkgo tests.
+│   │   │   ├── go.mod                     - Used to import the local utils module (and any other packages).
+│   │   │   ├── go.sum
+│   │   ├── containerstatus                - Test container logs have no errors, containers are running, and all processes are running.
+│   │   │   ├── suite_test.go              - Setup access to the Kubernetes cluster.
+│   │   │   ├── container_status_test.go   - Run the tests for each container that's part of our agent.
+│   │   │   ├── go.mod
+│   │   │   ├── go.sum
+│   │   ├── livenessprobe                  - Test that the pods detect and restart when a process is not running.
+│   │   │   ├── suite_test.go              - Setup access to the Kubernetes cluster.
+│   │   │   ├── process_liveness_test.go   - Run the tests for each container that's part of our agent.
+│   │   │   ├── go.mod
+│   │   │   ├── go.sum
+│   │   ├── prometheusui                   - Test that the Prometheus UI paths are accessible and the API returns data.
+│   │   │   ├── suite_test.go              - Setup access to the Kubernetes cluster.
+│   │   │   ├── prometheus_ui_test.go
+│   │   │   ├── go.mod
+│   │   │   ├── go.sum
+│   │   ├── querymetrics                   - Query the AMW and validate the data returned is expected.
+│   │   │   ├── suite_test.go              - Setup access to the Kubernetes cluster.
+│   │   │   ├── query_metrics_test.go
+│   │   │   ├── go.mod
+│   │   │   ├── go.sum
+│   │   ├── utils                          - Generalized utils functions for the test suites to use.
+│   │   │   ├── amw_query_api_utils.go     - Utils to query metrics from the AMW.
+│   │   │   ├── kubernetes_api_utils.go    - Utils that call the kubernetes API.
+│   │   │   ├── prometheus_ui_api_utils.go - Utils that call the Prometheus UI.
+│   │   │   ├── setup_utils.go             - Setup functions for cluster access.
+│   │   │   ├── constants.go               - Defined constants for test labels and transient errors to ignore.
+│   │   │   ├── go.mod
+│   │   │   ├── go.sum
+│   ├── test-cluster-yamls                 - YAMLs to deploy on your test cluster and CI/CD clusters.
+│   │   ├── configmaps                     - Configmaps for scrape jobs tested.
+│   │   ├── customresources                - PodMonitor and ServiceMonitors for scrape jobs tested.
+│   ├── testkube                           - YAMLS to deploy on CI/CD clusters for TestKube.
+│   │   ├── api-server-permissions.yaml    - Permissions for the TestKube runner pods to call the API server.
+│   │   ├── testkube-test-crs.yaml         - CRs for TestKube test suites and tests for AKS CI/CD clusters.
+│   │   ├── testkube-test-crs-arc.yaml     - CRs for TestKube test suites and tests for Arc CI/CD clusters.
+│   ├── arc-conformance                    - The same Ginkgo tests can be used with the Arc conformance infra, but with a different runner than TestKube.
+│   │   ├── arc-conformance.yaml           - The YAML for the Arc conformance test pod to give to the Arc conformance team to run in the Arc conformance infra.
+│   │   ├── Dockerfile                     - The Dockerfile for building the Arc conformance image that has the Ginkgo tests to run
+│   │   ├── e2e_tests.sh                   - The script to start the container to run the Ginkgo tests
+│   │   ├── local-e2e-tests.yaml           - The YAML to deploy the conformance test pod locally to test any changes before using in the Arc conformance infra.
+│   │   ├── README.md
+│   ├── ci-cd                              - Files related to our CI/CD clusters
+│   │   ├── ci-cd-cluster.json             - ARM template to deploy a new CI/CD cluster
+│   │   ├── ci-cd-cluster-parameters.json  - ARM template parameters
 ```
 
 # Ginkgo
@@ -459,6 +469,132 @@ Some highlights are that:
 - In your PR, use the PR checklist to include results of the e2e tests on your cluster.
 - After merging the PR into main, the new main build will be deployed on the CI/CD clusters. The e2e tests will be run on the cluster through TestKube. The pipeline is locked to deploy a new chart and run tests sequentially for only one merge at a time, so that there is no conflict between PRs merged around the same time. The tests in the Testkube test suite `e2e-tests-merge` will be run.
 - The TestKube tests in the test suite `e2e-tests-nightly` will be run every night. This includes longer-running tests such as the liveness probe tests.
+
+## Viewing TestKube Results
+All CI/CD cluster results will be sent to our [TestKube teams channel](https://teams.microsoft.com/l/channel/19%3Aef162826eb094f25885b8c02392b7b6f%40thread.tacv2/TestKube?groupId=992de6aa-c74c-430e-9bec-3ead89525bcd&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47).
+
+### View Results from Merge Test Suite
+The merge tests are run on the dev CI/CD cluster as part of the `Deploy` stage of the [build pipeline](https://github-private.visualstudio.com/azure/_build?definitionId=440&_a=summary). The job will be named `Test: AKS testkube tests`. Scroll to the bottom of the logs to view the detailed results.
+
+### View Results from Nightly Test Suite
+1. Connect to the CI/CD cluster to have your kubeconfig pointing to it in your terminal.
+2. Have the [TestKube CLI](https://docs.testkube.io/articles/install/cli) installed in your terminal.
+3. Run `testkube get testsuite` to get results similar to below:
+    ```
+    Context:  (2.1.95)   Namespace: testkube
+    ----------------------------------------
+
+      NAME              | DESCRIPTION | STEPS | LABELS | SCHEDULE  | STATUS | EXECUTION ID
+    --------------------+-------------+-------+--------+-----------+--------+---------------------------
+      e2e-tests-merge   |             |     3 |        |           | failed | 67b8d6507b2c2db2fb150f79
+      e2e-tests-nightly |             |     4 |        | 0 7 * * * | failed | 67b82471355d19c08cf7865b
+    ```
+4. Use the `EXECUTION ID` for `e2e-tests-nightly` to run `testkube get testsuiteexecution <execution ID>` to get results similar to below:
+
+    ```
+    Context:  (2.1.95)   Namespace: testkube
+    ----------------------------------------
+    Id:       67b82471355d19c08cf7865b
+    Name:     ts-e2e-tests-nightly-313
+    Status:   failed
+    Duration: 1h17m8.542s
+
+    Labels:
+    Disabled webhooks: false
+
+    Test Suite URI: /test-suites/e2e-tests-nightly
+    Test Suite Execution URI: /test-suites/e2e-tests-nightly/executions/67b82471355d19c08cf7865b
+
+      STATUSES               | STEP                           | IDS                            | ERRORS
+
+
+    -------------------------+--------------------------------+--------------------------------+-------------------
+      passed, passed, passed | containerstatus, prometheusui, | 67b82471355d19c08cf7865c,      | "", "", ""
+
+
+                            | operator                       | 67b82471355d19c08cf7865d,      |
+
+
+                            |                                | 67b82471355d19c08cf7865e       |
+
+
+      passed                 | 2m0s                           | ""                             | ""
+
+
+      failed                 | querymetrics                   | 67b82471355d19c08cf78660       | <error messages>
+    ```
+5. View an easier-to-read error message for any tests that failed by using the `ID` of the test that failed to run `testkube get execution <ID>` to get results similar to below:
+    ```
+    Running Suite: Query Metrics Test Suite - /data/repo/otelcollector/test/ginkgo-e2e/querymetrics
+    ===============================================================================================
+    Random Seed: 1740122572 - will randomize all specs
+
+    Will run 13 of 13 specs
+    Running in parallel across 4 processes
+    •
+    ------------------------------
+    • [FAILED] [0.369 seconds]
+    Query Metrics Test Suite When querying metrics [It] should return the expected results for up=1 for all default jobs
+    /data/repo/otelcollector/test/ginkgo-e2e/querymetrics/query_metrics_test.go:307
+
+      [FAILED] Expected
+          <string>: UP
+      to equal
+          <string>: up
+      In [It] at: /data/repo/otelcollector/test/ginkgo-e2e/querymetrics/query_metrics_test.go:326 @ 02/21/25 07:24:27.073
+
+      Full Stack Trace
+        prometheus-collector/otelcollector/test/querymetrics.glob..func1.3.1()
+            /data/repo/otelcollector/test/ginkgo-e2e/querymetrics/query_metrics_test.go:326 +0x42d
+    ------------------------------
+    •
+    ------------------------------
+    • [FAILED] [0.104 seconds]
+    Query Metrics Test Suite should return the expected labels for specified metrics in each job [It] External labels are applied from DaemonSet Configmap
+    /data/repo/otelcollector/test/ginkgo-e2e/querymetrics/query_metrics_test.go:296
+
+      [FAILED] Expected label "external_label_1" not found in metric "up" for the job node-configmap
+      Expected
+          <bool>: false
+      to be true
+      In [It] at: /data/repo/otelcollector/test/ginkgo-e2e/querymetrics/query_metrics_test.go:265 @ 02/21/25 07:24:27.205
+
+      Full Stack Trace
+        prometheus-collector/otelcollector/test/querymetrics.glob..func1.2({0x177f0b5, 0xe}, {0x1775779, 0x2}, 0x0?)
+            /data/repo/otelcollector/test/ginkgo-e2e/querymetrics/query_metrics_test.go:265 +0x658
+        reflect.Value.call({0x156afe0?, 0x18723d0?, 0x13?}, {0x1776068, 0x4}, {0xc000140230, 0x3, 0x3?})
+            /usr/local/go/src/reflect/value.go:596 +0xce7
+        reflect.Value.Call({0x156afe0?, 0x18723d0?, 0x1a04528?}, {0xc000140230?, 0x0?, 0x0?})
+            /usr/local/go/src/reflect/value.go:380 +0xb9
+    ------------------------------
+    •••••••••
+
+    Summarizing 2 Failures:
+      [FAIL] Query Metrics Test Suite should return the expected labels for specified metrics in each job [It] External labels are applied from DaemonSet Configmap
+      /data/repo/otelcollector/test/ginkgo-e2e/querymetrics/query_metrics_test.go:265
+      [FAIL] Query Metrics Test Suite When querying metrics [It] should return the expected results for up=1 for all default jobs
+      /data/repo/otelcollector/test/ginkgo-e2e/querymetrics/query_metrics_test.go:326
+
+    Ran 13 of 13 Specs in 12.489 seconds
+    FAIL! -- 11 Passed | 2 Failed | 0 Pending | 0 Skipped
+
+
+    Ginkgo ran 1 suite in 1m46.495464269s
+    ```
+
+## Upgrading
+### Upgrade Testkube version
+1. Connect to the CI/CD cluster to have your kubeconfig pointing to it in your terminal.
+2. Have the lasted version of the [TestKube CLI](https://docs.testkube.io/articles/install/cli) installed in your terminal.
+3. Run `testkube upgrade` to upgrade the TestKube helm chart to the latest version.
+
+### Upgrade Golang Version
+1. The required Golang version in the `go.mod` files in the `ginkgo-e2e` directory will always need to be `<=` the Golang version of the TestKube Ginkgo runner.  
+2. Check the Golang version of the TestKube Ginkgo runner in the [Dockerfile](https://github.com/kubeshop/testkube/blob/main/contrib/executor/ginkgo/build/agent/Dockerfile) of the TestKube repo.
+3. Update the version in the `go.mod` files and the `TESTKUBE_GOLANG_VERSION` variable in the [build pipeline YAML](../../.pipelines/azure-pipeline-build.yml).
+
+### Upgrade Golang Package Dependencies
+1. From the `ginkgo-e2e` directory, run `./update-go-packages.sh` to upgrade all package dependencies to the latest.
 
 ## Creating a New Test or Test Suite
 - Any test added inside a test suite will automatically be picked up to run after merging to main.

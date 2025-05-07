@@ -56,16 +56,32 @@ func DetermineConfigFiles(controllerType, clusterOverride string, otlpEnabled bo
 	case os.Getenv("OS_TYPE") != "windows":
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-daemonset.yaml"
 		if clusterOverride == "true" {
-			meConfigFile = "/usr/sbin/me_ds_internal.config"
+			if otlpEnabled {
+				meConfigFile = "/usr/sbin/me_ds_internal_setdim.config"
+			} else {
+				meConfigFile = "/usr/sbin/me_ds_internal.config"
+			}
 		} else {
-			meConfigFile = "/usr/sbin/me_ds.config"
+			if otlpEnabled {
+				meConfigFile = "/usr/sbin/me_ds_setdim.config"
+			} else {
+				meConfigFile = "/usr/sbin/me_ds.config"
+			}
 		}
 	default:
 		fluentBitConfigFile = "/opt/fluent-bit/fluent-bit-windows.conf"
 		if clusterOverride == "true" {
-			meConfigFile = "/opt/metricextension/me_ds_internal_win.config"
+			if otlpEnabled {
+				meConfigFile = "/opt/metricextension/me_ds_internal_setdim_win.config"
+			} else {
+				meConfigFile = "/opt/metricextension/me_ds_internal_win.config"
+			}
 		} else {
-			meConfigFile = "/opt/metricextension/me_ds_win.config"
+			if otlpEnabled {
+				meConfigFile = "/opt/metricextension/me_ds_setdim_win.config"
+			} else {
+				meConfigFile = "/opt/metricextension/me_ds_win.config"
+			}
 		}
 	}
 

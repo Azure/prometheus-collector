@@ -201,7 +201,8 @@
 								"properties": {
 									"description": "[concat(variables('nodeRecordingRuleGroupDescription'), variables('version'))]",
 									"scopes": [
-										"[parameters('azureMonitorWorkspaceResourceId')]"
+										"[parameters('azureMonitorWorkspaceResourceId')]",
+										"[parameters('clusterResourceId')]"
 									],
 									"clusterName": "[variables('clusterName')]",
 									"interval": "PT1M",
@@ -261,7 +262,8 @@
 								"properties": {
 									"description": "[concat(variables('kubernetesRecordingRuleGroupDescription'), variables('version'))]",
 									"scopes": [
-										"[parameters('azureMonitorWorkspaceResourceId')]"
+										"[parameters('azureMonitorWorkspaceResourceId')]",
+										"[parameters('clusterResourceId')]"
 									],
 									"clusterName": "[variables('clusterName')]",
 									"interval": "PT1M",
@@ -365,7 +367,8 @@
 								"properties": {
 									"description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
 									"scopes": [
-										"[parameters('azureMonitorWorkspaceResourceId')]"
+										"[parameters('azureMonitorWorkspaceResourceId')]",
+										"[parameters('clusterResourceId')]"
 									],
 									"enabled": "[parameters('enableWindowsRecordingRules')]",
 									"clusterName": "[variables('clusterName')]",
@@ -373,7 +376,7 @@
 									"rules": [
 										{
 											"record": "node:windows_node:sum",
-											"expression": "count (windows_system_system_up_time{job=\"windows-exporter\"})"
+											"expression": "count (windows_system_boot_time_timestamp_seconds{job=\"windows-exporter\"})"
 										},
 										{
 											"record": "node:windows_node_num_cpu:sum",
@@ -442,7 +445,8 @@
 								"properties": {
 									"description": "[concat(variables('RecordingRuleGroupDescriptionWin'), variables('version'))]",
 									"scopes": [
-										"[parameters('azureMonitorWorkspaceResourceId')]"
+										"[parameters('azureMonitorWorkspaceResourceId')]",
+										"[parameters('clusterResourceId')]"
 									],
 									"enabled": "[parameters('enableWindowsRecordingRules')]",
 									"clusterName": "[variables('clusterName')]",

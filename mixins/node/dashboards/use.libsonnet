@@ -149,7 +149,7 @@ local diskSpaceUtilisation =
                              time_from='now-1h',
                              uid=($._config.grafanaDashboardIDs['node-rsrc-use.json']),
                              tags=($._config.dashboardTags),
-                             timezone='utc',
+                             timezone='browser',
                              refresh=($._config.dashboardRefresh),
                              graphTooltip='shared_crosshair'
                            )
@@ -215,7 +215,7 @@ local diskSpaceUtilisation =
                              time_from='now-1h',
                              uid=($._config.grafanaDashboardIDs['node-cluster-rsrc-use.json']),
                              tags=($._config.dashboardTags),
-                             timezone='utc',
+                             timezone='browser',
                              refresh=($._config.dashboardRefresh),
                              graphTooltip='shared_crosshair'
                            )
@@ -327,7 +327,7 @@ local diskSpaceUtilisation =
                              time_from='now-1h',
                              uid=($._config.grafanaDashboardIDs['node-multicluster-rsrc-use.json']),
                              tags=($._config.dashboardTags),
-                             timezone='utc',
+                             timezone='browser',
                              refresh=($._config.dashboardRefresh),
                              graphTooltip='shared_crosshair'
                            )

@@ -4,9 +4,9 @@ AzureMonitorMetrics:
     #MetricLabelsAllowlist: "testlabel=[.*]"
     #MetricAnnotationsAllowList: ""
     ImageRegistry: mcr.microsoft.com
-    ImageRepository: "/oss/kubernetes/kube-state-metrics"
-# Kube-state-metrics ImageTag - 2.12.0, corresponds to chart version - 5.19.0
-    ImageTag: "v2.12.0"
+    ImageRepository: "/oss/v2/kubernetes/kube-state-metrics"
+# Kube-state-metrics ImageTag - 2.15.0-4, corresponds to chart version - 5.32.0
+    ImageTag: "v2.15.0-4"
     Collectors:
       - certificatesigningrequests
       - configmaps
@@ -73,9 +73,9 @@ AzureMonitorMetrics:
   AddonTokenAdapter:
     ImageRegistry: mcr.microsoft.com
     ImageRepository: "/aks/msi/addon-token-adapter"
-    ImageTag: "master.230804.1"
-    ImageRepositoryWin: "/aks/hcp/addon-token-adapter"
-    ImageTagWin: "master.240102.1"
+    ImageTag: "master.250423.2"
+    ImageRepositoryWin: "/aks/msi/addon-token-adapter"
+    ImageTagWin: "master.250423.2"
   ArcExtension: ${ARC_EXTENSION}
   ArcEnableOperator: true
   # Do not change the below settings. They are reserved for Arc Autonomous
@@ -156,5 +156,5 @@ prometheus-node-exporter:
     targetPort: 9110
   image:
     registry: mcr.microsoft.com
-    repository: oss/prometheus/node-exporter
+    repository: oss/v2/prometheus/node-exporter
 tolerationsOnlyForControlPlane: false

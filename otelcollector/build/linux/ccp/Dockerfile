@@ -71,13 +71,13 @@ COPY --from=otelcollector-builder /src/goversion.txt $tmpdir/goversion.txt
 COPY --from=prom-config-validator-builder /src/prom-config-validator-builder/promconfigvalidator $tmpdir/
 
 COPY ./scripts/*.sh $tmpdir/
-COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_internal.config /usr/sbin/
+COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_setdim.config ./metricextension/me_ds_internal.config ./metricextension/me_ds_internal_setdim.config /usr/sbin/
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 COPY ./mdsd/envmdsd $tmpdir/
 COPY ./build/linux/rpm-repos/ /etc/yum.repos.d/
 COPY --from=ccpmain-builder --chmod=777 /main/ccpmain $tmpdir/main/
-COPY ./react /static/react
+COPY ./react-app /static/react-app
 
 ARG TARGETARCH
 RUN tdnf clean all
@@ -108,9 +108,9 @@ ENV SSL_CERT_FILE="/etc/pki/tls/certs/ca-bundle.crt"
 # files
 COPY --from=builder /opt /opt
 COPY --from=builder /etc /etc
-COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_internal.config /usr/sbin/
+COPY --from=builder /usr/sbin/me.config /usr/sbin/me_internal.config /usr/sbin/me_ds.config /usr/sbin/me_ds_setdim.config /usr/sbin/me_ds_internal.config /usr/sbin/me_ds_internal_setdim.config /usr/sbin/
 COPY --from=builder /var/opt/microsoft /var/opt/microsoft
-COPY --from=builder /static/react /static/react
+COPY --from=builder /static/react-app /static/react-app
 
 # executables
 COPY --from=builder /usr/sbin/MetricsExtension /usr/sbin/MetricsExtension
