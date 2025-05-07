@@ -51,15 +51,6 @@ func main() {
 				log.Fatal(err)
 			}
 		}
-	} else if osType == "windows" {
-		initialPaths := []string{
-			`C:\etc\config\settings`,
-			`C:\etc\config\settings\prometheus`,
-		}
-		logFilePath := `C:\opt\microsoft\scripts\filesystemwatcher.txt`
-		pollInterval := 30 * time.Second
-
-		shared.StartFilesystemWatcher(initialPaths, pollInterval, logFilePath)
 	}
 
 	if ccpMetricsEnabled != "true" && osType == "linux" {
@@ -356,6 +347,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			goto response
 		}
 	} else {
+		shared.CheckForFilesystemChanges()
 		if shared.HasConfigChanged("C:\\opt\\microsoft\\scripts\\filesystemwatcher.txt") {
 			status = http.StatusServiceUnavailable
 			message = "Config Map Updated or DCR/DCE updated since agent started"

@@ -12,7 +12,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 func PrintMdsdVersion() {
@@ -300,89 +299,4 @@ func ModifyConfigFile(configFile string, pid int, placeholder string) error {
 	}
 
 	return nil
-}
-
-func StartFilesystemWatcher(initialPaths []string, pollInterval time.Duration, logFilePath string) {
-	watchPaths := append([]string{}, initialPaths...) // Copy to avoid modifying original
-
-	// Optionally add the metrics extension path
-	macEnv := os.Getenv("MAC")
-	metricExtensionPath := `C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension`
-	if macEnv == "true" {
-		fmt.Println("MAC environment variable is true, adding metrics extension path")
-		watchPaths = append(watchPaths, metricExtensionPath)
-	}
-
-	fmt.Println("Watching the following paths:")
-	for _, path := range watchPaths {
-		fmt.Println("  " + path)
-	}
-
-	lastModTimes := map[string]time.Time{}
-	tokenFileName := "TokenConfig.json"
-
-	for {
-		for _, root := range watchPaths {
-			_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-				if err != nil || d.IsDir() {
-					return nil
-				}
-
-				// Only watch TokenConfig.json under metricsextension
-				if root == metricExtensionPath && filepath.Base(path) != tokenFileName {
-					return nil
-				}
-
-				info, err := d.Info()
-				if err != nil {
-					return nil
-				}
-
-				lastMod, seen := lastModTimes[path]
-				if !seen || info.ModTime().After(lastMod) {
-					lastModTimes[path] = info.ModTime()
-					logChange(path, info.ModTime(), logFilePath)
-				}
-				return nil
-			})
-		}
-
-		// Detect if metricsextension got created after startup
-		if macEnv == "true" && !contains(watchPaths, metricExtensionPath) {
-			if stat, err := os.Stat(metricExtensionPath); err == nil && stat.IsDir() {
-				fmt.Println("Detected creation of metricsextension, adding to watch list")
-				watchPaths = append(watchPaths, metricExtensionPath)
-			}
-		}
-
-		time.Sleep(pollInterval)
-	}
-}
-
-func logChange(path string, modTime time.Time, logPath string) {
-	logMsg := fmt.Sprintf("%s was modified at %s", path, modTime.Format(time.RFC3339))
-	fmt.Println(logMsg)
-
-	if err := os.MkdirAll(filepath.Dir(logPath), os.ModePerm); err != nil {
-		fmt.Println("Failed to create log directory:", err)
-		return
-	}
-
-	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		fmt.Println("Failed to open log file:", err)
-		return
-	}
-	defer f.Close()
-
-	f.WriteString(logMsg + "\n")
-}
-
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }
