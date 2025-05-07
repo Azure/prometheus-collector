@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// Only being called for windows
 func CheckForFilesystemChanges() {
 	initialPaths := []string{
 		`C:\etc\config\settings`,
@@ -22,7 +23,6 @@ func CheckForFilesystemChanges() {
 
 	h := sha256.New()
 
-	// Track if TokenConfig.json exists already, for skipping actions on first appearance
 	tokenFileExists := false
 	if info, err := os.Stat(tokenFile); err == nil && !info.IsDir() {
 		tokenFileExists = true
