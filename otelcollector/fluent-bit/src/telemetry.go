@@ -170,6 +170,7 @@ const (
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
 	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
 	basicAuthEnabled                      = "BasicAuthEnabled"
+	bearerTokenEnabled                    = "BearerTokenEnabled"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -527,7 +528,8 @@ func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMet
 
 func addScrapeJobMetadataToTelemetryItem() map[string]string {
 	telemetryPropertiesString := map[string]string{
-		basicAuthEnabled: "false",
+		basicAuthEnabled:   "false",
+		bearerTokenEnabled: "false",
 	}
 	scrapeJobs := getScrapeJobs()
 	if scrapeJobs != nil {
@@ -539,19 +541,37 @@ func addScrapeJobMetadataToTelemetryItem() map[string]string {
 			return nil
 		} else {
 			hasBasicAuth := false
-			var checkForBasicAuth func(map[string]interface{})
-			checkForBasicAuth = func(data map[string]interface{}) {
+			hasBearerToken := false
+			var checkForConfigProperties func(map[string]interface{})
+			checkForConfigProperties = func(data map[string]interface{}) {
 				for _, value := range data {
 					job := value.(map[string]interface{})
 					if _, ok := job["basic_auth"]; ok {
 						hasBasicAuth = true
+						// break
+					}
+					if auth, ok := job["authorization"]; ok {
+						authValue := auth.(map[string]interface{})
+						if typeValue, ok := authValue["type"]; ok {
+							if typeValue == "Bearer" {
+								hasBearerToken = true
+							}
+							// break
+						}
+					}
+
+					if hasBasicAuth && hasBearerToken {
 						break
 					}
 				}
 			}
-			checkForBasicAuth(scrapeJobsMap)
+			checkForConfigProperties(scrapeJobsMap)
 			if hasBasicAuth {
 				telemetryPropertiesString[basicAuthEnabled] = "true"
+			}
+
+			if hasBearerToken {
+				telemetryPropertiesString[bearerTokenEnabled] = "true"
 			}
 		}
 	}
