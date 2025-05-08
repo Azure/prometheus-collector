@@ -214,7 +214,7 @@ spec:
             optional: true
         - name: anchors-mariner
           hostPath:
-            path: /etc/pki/ca-trust/anchors/
+            path: /etc/pki/ca-trust/source/anchors/
             type: DirectoryOrCreate
         - name: anchors-ubuntu
           hostPath:
