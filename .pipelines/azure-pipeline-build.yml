@@ -1127,205 +1127,205 @@ stages:
   #         GdnBreakGdnToolSemmle: true
   #         GdnBreakGdnToolSemmleSeverity: 'Warning'
 
-  # - job: Linux_Target_Allocator_AMD64
-  #   displayName: "Build: AMD64 target allocator image"
-  #   pool:
-  #     name: Azure-Pipelines-CI-Test-EO
-  #   dependsOn: Image_Tags_and_Ev2_Artifacts
-  #   variables:
-  #     TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-  #     TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
-  #   # This is necessary because of: https://github.com/moby/moby/issues/37965
-  #     DOCKER_BUILDKIT: 1
-  #     skipComponentGovernanceDetection: true
-  #   steps:
-  #     - checkout: self
-  #       persistCredentials: true
+  - job: Linux_Target_Allocator_AMD64
+    displayName: "Build: AMD64 target allocator image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+      TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+      skipComponentGovernanceDetection: true
+    steps:
+      - checkout: self
+        persistCredentials: true
 
-  #     - task: GoTool@0
-  #       displayName: "Build: specify golang version"
-  #       inputs:
-  #         version: $(GOLANG_VERSION)
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: $(GOLANG_VERSION)
   
-  #     - bash: |
-  #         mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
-  #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-  #         docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
-  #         if [ $? -ne 0 ]; then
-  #           echo "Error: Docker build failed."
-  #           exit 1
-  #         fi
-  #       retryCountOnTaskFailure: 1
-  #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
-  #       displayName: "Build: build and push target allocator image to dev ACR"
-  #       condition: succeeded()
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+          if [ $? -ne 0 ]; then
+            echo "Error: Docker build failed."
+            exit 1
+          fi
+        retryCountOnTaskFailure: 1
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
+        displayName: "Build: build and push target allocator image to dev ACR"
+        condition: succeeded()
 
-  # - job: Linux_Target_Allocator_ARM64
-  #   displayName: "Build: ARM64 target allocator image"
-  #   pool:
-  #     name: Azure-Pipelines-ARM-CI-Test-EO
-  #   dependsOn: Image_Tags_and_Ev2_Artifacts
-  #   variables:
-  #     TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-  #     TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
-  #     TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
-  #   # This is necessary because of: https://github.com/moby/moby/issues/37965
-  #     DOCKER_BUILDKIT: 1
-  #     skipComponentGovernanceDetection: true
-  #   steps:
-  #     - checkout: self
-  #       persistCredentials: true
+  - job: Linux_Target_Allocator_ARM64
+    displayName: "Build: ARM64 target allocator image"
+    pool:
+      name: Azure-Pipelines-ARM-CI-Test-EO
+    dependsOn: Image_Tags_and_Ev2_Artifacts
+    variables:
+      TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+      TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
+      TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+      skipComponentGovernanceDetection: true
+    steps:
+      - checkout: self
+        persistCredentials: true
 
-  #     - task: GoTool@0
-  #       displayName: "Build: specify golang version"
-  #       inputs:
-  #         version: $(GOLANG_VERSION)
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: $(GOLANG_VERSION)
   
-  #     - bash: |
-  #         # Add Docker's official GPG key:
-  #         sudo apt-get update
-  #         sudo apt-get install ca-certificates curl -y
-  #         sudo install -m 0755 -d /etc/apt/keyrings
-  #         sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-  #         sudo chmod a+r /etc/apt/keyrings/docker.asc
-  #         # Add the repository to Apt sources:
-  #         echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-  #         sudo apt-get update
-  #         sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+      - bash: |
+          # Add Docker's official GPG key:
+          sudo apt-get update
+          sudo apt-get install ca-certificates curl -y
+          sudo install -m 0755 -d /etc/apt/keyrings
+          sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+          sudo chmod a+r /etc/apt/keyrings/docker.asc
+          # Add the repository to Apt sources:
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
-  #         mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+          mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
 
-  #         sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-  #         sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
-  #         if [ $? -ne 0 ]; then
-  #           echo "Error: Docker build failed."
-  #           exit 1
-  #         fi
-  #       retryCountOnTaskFailure: 1
-  #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
-  #       displayName: "Build: build and push target allocator image to dev ACR"
-  #       condition: succeeded()
+          sudo docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          sudo docker build . --file Dockerfile -t $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME) --build-arg "GOLANG_VERSION=$(GOLANG_VERSION)" --metadata-file $(Build.ArtifactStagingDirectory)/targetallocator/metadata.json --push
+          if [ $? -ne 0 ]; then
+            echo "Error: Docker build failed."
+            exit 1
+          fi
+        retryCountOnTaskFailure: 1
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
+        displayName: "Build: build and push target allocator image to dev ACR"
+        condition: succeeded()
 
-  # - job: Linux_Target_Allocator
-  #   displayName: "Build: target allocator image"
-  #   pool:
-  #     name: Azure-Pipelines-CI-Test-EO
-  #   dependsOn:
-  #   - Image_Tags_and_Ev2_Artifacts
-  #   - Linux_Target_Allocator_ARM64
-  #   - Linux_Target_Allocator_AMD64
-  #   variables:
-  #     TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
-  #     TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
-  #     TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
-  #   # This is necessary because of: https://github.com/moby/moby/issues/37965
-  #     DOCKER_BUILDKIT: 1
-  #     skipComponentGovernanceDetection: true
-  #   steps:
-  #     - checkout: self
-  #       persistCredentials: true
+  - job: Linux_Target_Allocator
+    displayName: "Build: target allocator image"
+    pool:
+      name: Azure-Pipelines-CI-Test-EO
+    dependsOn:
+    - Image_Tags_and_Ev2_Artifacts
+    - Linux_Target_Allocator_ARM64
+    - Linux_Target_Allocator_AMD64
+    variables:
+      TARGET_ALLOCATOR_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_FULL_IMAGE_NAME'] ]
+      TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME'] ]
+      TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME: $[ dependencies.Image_Tags_and_Ev2_Artifacts.outputs['setup.TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME'] ]
+    # This is necessary because of: https://github.com/moby/moby/issues/37965
+      DOCKER_BUILDKIT: 1
+      skipComponentGovernanceDetection: true
+    steps:
+      - checkout: self
+        persistCredentials: true
 
-  #     - task: GoTool@0
-  #       displayName: "Build: specify golang version"
-  #       inputs:
-  #         version: $(GOLANG_VERSION)
+      - task: GoTool@0
+        displayName: "Build: specify golang version"
+        inputs:
+          version: $(GOLANG_VERSION)
   
-  #     - bash: |
-  #         mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
+      - bash: |
+          mkdir -p $(Build.ArtifactStagingDirectory)/targetallocator
           
-  #         docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
-  #         docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
-  #         docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+          docker login containerinsightsprod.azurecr.io -u $(ACR_USERNAME) -p $(ACR_PASSWORD)
+          docker manifest create $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_AMD64_FULL_IMAGE_NAME) $(TARGET_ALLOCATOR_ARM64_FULL_IMAGE_NAME)
+          docker manifest push $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
 
-  #         docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
-  #         MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
-  #         DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
-  #         SIZE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.size')
-  #         cat <<EOF >>$(Build.ArtifactStagingDirectory)/targetallocator/payload.json
-  #         {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
-  #         EOF
-  #       workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
-  #       displayName: "Build: build and push target allocator image to dev ACR"
-  #       condition: succeeded()
+          docker pull $(TARGET_ALLOCATOR_FULL_IMAGE_NAME)
+          MEDIA_TYPE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.mediaType')
+          DIGEST=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.digest')
+          SIZE=$(docker manifest inspect -v $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) | jq '.Descriptor.size')
+          cat <<EOF >>$(Build.ArtifactStagingDirectory)/targetallocator/payload.json
+          {"targetArtifact":{"mediaType":$MEDIA_TYPE,"digest":$DIGEST,"size":$SIZE}}
+          EOF
+        workingDirectory: $(Build.SourcesDirectory)/otelcollector/otel-allocator
+        displayName: "Build: build and push target allocator image to dev ACR"
+        condition: succeeded()
 
-  #     - bash: |
-  #         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-  #         export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
-  #         export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
-  #         for i in {1..5}; do
-  #           trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) > trivy_output.log 2>&1
-  #           TRIVY_EXIT_CODE=$?
-  #           if [ $TRIVY_EXIT_CODE -eq 0 ]; then
-  #             cat trivy_output.log
-  #             break
-  #           fi
-  #           if grep -q "TOOMANYREQUESTS" trivy_output.log; then
-  #             echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
-  #             sleep 5
-  #           else
-  #             cat trivy_output.log
-  #             exit 1
-  #           fi
-  #         done
-  #         if [ $TRIVY_EXIT_CODE -ne 0 ]; then
-  #           echo "Error: Trivy scan failed after 5 retries."
-  #           exit 1
-  #         fi
-  #       workingDirectory: $(Build.SourcesDirectory)
-  #       displayName: "Build: run trivy scan"
+      - bash: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          export TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+          export TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db"
+          for i in {1..5}; do
+            trivy image --exit-code 1 --ignore-unfixed --no-progress --severity HIGH,CRITICAL,MEDIUM $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) > trivy_output.log 2>&1
+            TRIVY_EXIT_CODE=$?
+            if [ $TRIVY_EXIT_CODE -eq 0 ]; then
+              cat trivy_output.log
+              break
+            fi
+            if grep -q "TOOMANYREQUESTS" trivy_output.log; then
+              echo "Error: Too many requests to the Trivy server. Retrying... ($i/5)"
+              sleep 5
+            else
+              cat trivy_output.log
+              exit 1
+            fi
+          done
+          if [ $TRIVY_EXIT_CODE -ne 0 ]; then
+            echo "Error: Trivy scan failed after 5 retries."
+            exit 1
+          fi
+        workingDirectory: $(Build.SourcesDirectory)
+        displayName: "Build: run trivy scan"
 
-  #     - task: EsrpCodeSigning@5
-  #       displayName: "ESRP CodeSigning for TargetAllocator"
-  #       inputs:
-  #         ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
-  #         UseMSIAuthentication: true
-  #         AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
-  #         AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
-  #         EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
-  #         AuthAKVName: 'ESRPPrometheusKVProd' 
-  #         AuthCertName: 'ESRPContainerImageSignCert'
-  #         AuthSignCertName:    'ESRPReqPrometheusProdCert'
-  #         FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
-  #         Pattern: "*.json"
-  #         signConfigType: inlineSignParams
-  #         inlineOperation: |
-  #           [
-  #             {
-  #                 "keyCode": "CP-469451",
-  #                 "operationSetCode": "NotaryCoseSign",
-  #                 "parameters": [
-  #                   {
-  #                     "parameterName": "CoseFlags",
-  #                     "parameterValue": "chainunprotected"
-  #                   }
-  #                 ],
-  #                 "toolName": "sign",
-  #                 "toolVersion": "1.0"
-  #             }
-  #           ]
-  #         SessionTimeout: '60'
-  #         MaxConcurrency: '50'
-  #         MaxRetryAttempts: '5'
-  #         PendingAnalysisWaitTimeoutMinutes: '5' 
+      - task: EsrpCodeSigning@5
+        displayName: "ESRP CodeSigning for TargetAllocator"
+        inputs:
+          ConnectedServiceName: "ESRPServiceConnectionPrometheus"  
+          UseMSIAuthentication: true
+          AppRegistrationClientId: 'bf21d5fe-78bd-45d2-b04d-c61f2e090c9a' 
+          AppRegistrationTenantId: '33e01921-4d64-4f8c-a055-5bdaffd5e33d' 
+          EsrpClientId: "73f8d5f9-b507-497f-b698-4ed00fcba5a3"
+          AuthAKVName: 'ESRPPrometheusKVProd' 
+          AuthCertName: 'ESRPContainerImageSignCert'
+          AuthSignCertName:    'ESRPReqPrometheusProdCert'
+          FolderPath: $(Build.ArtifactStagingDirectory)/targetallocator/
+          Pattern: "*.json"
+          signConfigType: inlineSignParams
+          inlineOperation: |
+            [
+              {
+                  "keyCode": "CP-469451",
+                  "operationSetCode": "NotaryCoseSign",
+                  "parameters": [
+                    {
+                      "parameterName": "CoseFlags",
+                      "parameterValue": "chainunprotected"
+                    }
+                  ],
+                  "toolName": "sign",
+                  "toolVersion": "1.0"
+              }
+            ]
+          SessionTimeout: '60'
+          MaxConcurrency: '50'
+          MaxRetryAttempts: '5'
+          PendingAnalysisWaitTimeoutMinutes: '5' 
 
-  #     - bash: |
-  #         set -euxo pipefail
-  #         curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
-  #         mkdir -p oras-install/
-  #         tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
-  #         sudo mv oras-install/oras /usr/local/bin/
-  #         rm -rf oras_1.0.0_*.tar.gz oras-install/
-  #         oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
-  #           --artifact-type 'application/vnd.cncf.notary.signature' \
-  #           ./payload.json:application/cose \
-  #           -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
-  #         oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
-  #           --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
-  #           --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"                
-  #       workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
-  #       displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
-  #       condition: succeeded()
+      - bash: |
+          set -euxo pipefail
+          curl -LO "https://github.com/oras-project/oras/releases/download/v1.0.0/oras_1.0.0_linux_amd64.tar.gz"
+          mkdir -p oras-install/
+          tar -zxf oras_1.0.0_*.tar.gz -C oras-install/
+          sudo mv oras-install/oras /usr/local/bin/
+          rm -rf oras_1.0.0_*.tar.gz oras-install/
+          oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.cncf.notary.signature' \
+            ./payload.json:application/cose \
+            -a "io.cncf.notary.x509chain.thumbprint#S256=[\"79E6A702361E1F60DAA84AEEC4CBF6F6420DE6BA\"]"
+          oras attach $(TARGET_ALLOCATOR_FULL_IMAGE_NAME) \
+            --artifact-type 'application/vnd.microsoft.artifact.lifecycle' \
+            --annotation "vnd.microsoft.artifact.lifecycle.end-of-life.date=$(date -u -d '-1 hour' +"%Y-%m-%dT%H:%M:%SZ")"                
+        workingDirectory: $(Build.ArtifactStagingDirectory)/targetallocator/
+        displayName: "ORAS Push Artifacts in $(Build.ArtifactStagingDirectory)/targetallocator/"
+        condition: succeeded()
 
   - job: Linux_Config_Reader
     displayName: "Build: config reader image"
