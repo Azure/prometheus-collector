@@ -54,7 +54,8 @@ type HTTPSServerConfig struct {
 
 const (
 	// DefaultValidityYears is the duration for regular certificates, SSL etc. 2 years.
-	ServerValidityYears = 2
+	// ServerValidityYears  = 2
+	ServerValidityMonths = 8
 
 	// CaValidityYears is the duration for CA certificates. 30 years.
 	CaValidityYears = 30
@@ -114,6 +115,7 @@ var taConfigFilePath = "/ta-configuration/targetallocator.yaml"
 var taConfigUpdated = false
 var taLivenessCounter = 0
 var taLivenessStartTime = time.Time{}
+var cfgReaderContainerStartTime = time.Time{}
 
 func logFatalError(message string) {
 	// Always log the full message
@@ -338,6 +340,14 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		message += "\ninotifyoutput.txt has been updated - config-reader-config changed"
 	}
 
+	duration := time.Since(cfgReaderContainerStartTime)
+	// Server certificate validity is for 8 months, so if the container is running for more than 5 months, then restart the container
+	if duration.Hours() > (1 * 2) {
+		//if duration.Hours() > (5 * 30 * 24) {
+		status = http.StatusServiceUnavailable
+		message += "\nconfig-reader container is running for more than 5 months, restart the container"
+	}
+
 	w.WriteHeader(status)
 	fmt.Fprintln(w, message)
 	if status != http.StatusOK {
@@ -378,7 +388,7 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 		"ama-metrics-operator-targets.kube-system.svc.cluster.local",
 	}
 	now := time.Now()
-	notAfter := now.AddDate(ServerValidityYears, 0, 0)
+	notAfter := now.AddDate(0, ServerValidityMonths, 0)
 
 	csr := &x509.Certificate{
 		NotBefore:             now,
@@ -399,32 +409,87 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 	return serverCertPem, serverKeyPem, nil
 }
 
-func writeServerCertCACertAndKeyToFile(serverCertPem string, serverKeyPem string, caCertPem string) error {
-	log.Println("Writing server cert and key to file")
-	if _, err := os.Stat("/etc/operator-targets/certs"); os.IsNotExist(err) {
-		if err := os.MkdirAll("/etc/operator-targets/certs", fs.FileMode(0644)); err != nil {
-			log.Println("Error creating directory for certs: %v\n", err)
+// func writeServerCertCACertAndKeyToFile(serverCertPem string, serverKeyPem string, caCertPem string) error {
+// 	log.Println("Writing server cert and key to file")
+// 	if _, err := os.Stat("/etc/operator-targets/certs"); os.IsNotExist(err) {
+// 		if err := os.MkdirAll("/etc/operator-targets/certs", fs.FileMode(0644)); err != nil {
+// 			log.Println("Error creating directory for certs: %v\n", err)
+// 			return err
+// 		}
+// 	}
+// 	if err := os.WriteFile("/etc/operator-targets/certs/server.crt", []byte(serverCertPem), fs.FileMode(0644)); err != nil {
+// 		log.Println("Error writing server cert to file: %v\n", err)
+// 		return err
+// 	}
+// 	if err := os.WriteFile("/etc/operator-targets/certs/server.key", []byte(serverKeyPem), fs.FileMode(0644)); err != nil {
+// 		log.Println("Error writing server key to file: %v\n", err)
+// 		return err
+// 	}
+
+// 	if err := os.WriteFile("/etc/operator-targets/certs/ca.crt", []byte(caCertPem), fs.FileMode(0644)); err != nil {
+// 		log.Println("Error writing ca cert to file: %v\n", err)
+// 		return err
+// 	}
+// 	log.Println("Server cert and key written to file successfully")
+// 	return nil
+// }
+
+func generateSecretWithCACertForTA(serverCertPem string, serverKeyPem string, caCertPem string) error {
+	log.Println("Generating secret with server cert, server key and CA cert")
+	// Create secret from the ca cert, server cert and server key
+	secretName := "ama-metrics-operator-targets-server-tls-secret"
+	namespace := "kube-system"
+
+	// Create the secret data
+	secretData := map[string][]byte{
+		"ca.crt":     []byte(caCertPem),
+		"server.crt": []byte(serverCertPem),
+		"server.key": []byte(serverKeyPem),
+	}
+
+	// Create the secret object
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+		},
+		Data: secretData,
+		Type: corev1.SecretTypeOpaque,
+	}
+
+	// Create the Kubernetes client
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		log.Printf("Unable to create in-cluster config: %v", err)
+		return err
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		log.Printf("Unable to create Kubernetes client: %v", err)
+		return err
+	}
+
+	// Create or update the secret in the kube-system namespace
+	_, err = clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+			if err != nil {
+				log.Printf("Unable to update secret %s in namespace %s: %v", secretName, namespace, err)
+				return err
+			}
+		} else {
+			log.Printf("Unable to create secret %s in namespace %s: %v", secretName, namespace, err)
 			return err
 		}
 	}
-	if err := os.WriteFile("/etc/operator-targets/certs/server.crt", []byte(serverCertPem), fs.FileMode(0644)); err != nil {
-		log.Println("Error writing server cert to file: %v\n", err)
-		return err
-	}
-	if err := os.WriteFile("/etc/operator-targets/certs/server.key", []byte(serverKeyPem), fs.FileMode(0644)); err != nil {
-		log.Println("Error writing server key to file: %v\n", err)
-		return err
-	}
 
-	if err := os.WriteFile("/etc/operator-targets/certs/ca.crt", []byte(caCertPem), fs.FileMode(0644)); err != nil {
-		log.Println("Error writing ca cert to file: %v\n", err)
-		return err
-	}
-	log.Println("Server cert and key written to file successfully")
+	log.Printf("Secret %s created/updated successfully in namespace %s", secretName, namespace)
 	return nil
 }
 
-func generateSecretWithCACert(caCertPem string) error {
+func generateSecretWithCACertForRs(caCertPem string) error {
 	log.Println("Generating secret with CA cert")
 	// Create secret from the ca cert, server cert and server key
 	secretName := "ama-metrics-operator-targets-tls-secret"
@@ -493,13 +558,13 @@ func createTLSCertificatesAndSecret() (error, error, error, error) {
 		log.Println("Error creating server certificate: %v\n", serErr)
 	}
 
-	var writeErr error
-	writeErr = nil
+	var secretErr error
+	secretErr = nil
 	if caErr == nil && serErr == nil {
-		log.Println("Writing to file to mount as shared volume so that targetallocator container can consume the certs")
-		writeErr := writeServerCertCACertAndKeyToFile(serverCertPem, serverKeyPem, caCertPem)
-		if writeErr != nil {
-			log.Println("Error writing server cert and key to file: %v\n", writeErr)
+		log.Println("Generating secret so that targetallocator pod can get the certs and key")
+		secretErr := generateSecretWithCACertForTA(serverCertPem, serverKeyPem, caCertPem)
+		if secretErr != nil {
+			log.Println("Error generating secret for targetallocator: %v\n", secretErr)
 		}
 	}
 
@@ -507,16 +572,17 @@ func createTLSCertificatesAndSecret() (error, error, error, error) {
 	gErr = nil
 	if caErr == nil && serErr == nil {
 		log.Println("Generating secret so that replicaset pod can get the CA cert")
-		gErr := generateSecretWithCACert(caCertPem)
+		gErr := generateSecretWithCACertForRs(caCertPem)
 		if gErr != nil {
 			log.Println("Error generating secret with CA cert: %v\n", gErr)
 		}
 	}
 	log.Println("TLS certificates and secret generated successfully")
-	return caErr, serErr, writeErr, gErr
+	return caErr, serErr, secretErr, gErr
 }
 
 func main() {
+	cfgReaderContainerStartTime = time.Now()
 	_, err := os.Create("/opt/inotifyoutput.txt")
 	if err != nil {
 		log.Fatalf("Error creating output file: %v\n", err)
@@ -543,13 +609,13 @@ func main() {
 		fmt.Println("Error starting inotify process:", err)
 	}
 
-	caErr, serErr, writeErr, gErr := createTLSCertificatesAndSecret()
+	caErr, serErr, secretErr, gErr := createTLSCertificatesAndSecret()
 
-	if caErr != nil || serErr != nil || writeErr != nil || gErr != nil {
+	if caErr != nil || serErr != nil || secretErr != nil || gErr != nil {
 		log.Println("Error creating TLS certificates and secret, retrying in 5 seconds")
 		time.Sleep(5 * time.Second)
-		caErr1, serErr1, writeErr1, gErr1 := createTLSCertificatesAndSecret()
-		if caErr1 != nil || serErr1 != nil || writeErr1 != nil || gErr1 != nil {
+		caErr1, serErr1, secretErr1, gErr1 := createTLSCertificatesAndSecret()
+		if caErr1 != nil || serErr1 != nil || secretErr1 != nil || gErr1 != nil {
 			log.Println("Error creating TLS certificates and secret, during retry, not trying again")
 			if caErr1 != nil {
 				log.Println("Error during ca cert creation: %v\n", caErr1)
@@ -557,8 +623,8 @@ func main() {
 			if serErr1 != nil {
 				log.Println("Error during server cert creation: %v\n", serErr1)
 			}
-			if writeErr1 != nil {
-				log.Println("Error writing server cert and key to file: %v\n", writeErr1)
+			if secretErr1 != nil {
+				log.Println("Error generating secret for targetallocator: %v\n", secretErr1)
 			}
 			if gErr1 != nil {
 				log.Println("Error generating secret with CA cert: %v\n", gErr1)

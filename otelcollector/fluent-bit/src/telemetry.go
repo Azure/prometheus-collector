@@ -125,8 +125,7 @@ var (
 )
 
 const (
-	// coresAttachedTelemetryIntervalSeconds = 600
-	coresAttachedTelemetryIntervalSeconds = 10
+	coresAttachedTelemetryIntervalSeconds = 600
 	ksmAttachedTelemetryIntervalSeconds   = 600
 	meMetricsTelemetryIntervalSeconds     = 300
 	coresAttachedTelemetryName            = "ClusterCoreCapacity"
