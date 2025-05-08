@@ -15,11 +15,11 @@ import (
 
 	"os"
 
-	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
-
 	certCreator "github.com/prometheus-collector/certcreator"
 	certGenerator "github.com/prometheus-collector/certgenerator"
 	certOperator "github.com/prometheus-collector/certoperator"
+	shared "github.com/prometheus-collector/shared"
+	configmapsettings "github.com/prometheus-collector/shared/configmap/mp"
 	"github.com/prometheus/common/model"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -340,12 +340,13 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		message += "\ninotifyoutput.txt has been updated - config-reader-config changed"
 	}
 
-	duration := time.Since(cfgReaderContainerStartTime)
-	// Server certificate validity is for 8 months, so if the container is running for more than 5 months, then restart the container
-	if duration.Hours() > (1 * 2) {
-		//if duration.Hours() > (5 * 30 * 24) {
-		status = http.StatusServiceUnavailable
-		message += "\nconfig-reader container is running for more than 5 months, restart the container"
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+		duration := time.Since(cfgReaderContainerStartTime)
+		// Server certificate validity is for 8 months, so if the container is running for more than 5 months, then restart the container
+		if duration.Hours() > (5 * 30 * 24) {
+			status = http.StatusServiceUnavailable
+			message = "\nconfig-reader container is running for more than 5 months, restart the container"
+		}
 	}
 
 	w.WriteHeader(status)
@@ -641,6 +642,16 @@ func main() {
 		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
 	} else {
 		log.Println("No configs found via configmap, not running config reader")
+	}
+
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+		outputFile := "/opt/inotifyoutput.txt"
+		if err = shared.Inotify(outputFile, "/etc/operator-targets/certs"); err != nil {
+			log.Println("Error starting inotify for watching targetallocator server certs: %v\n", err)
+		}
+		if err = shared.Inotify(outputFile, "/etc/operator-targets/client/certs"); err != nil {
+			log.Println("Error starting inotify for watching targetallocator client certs: %v\n", err)
+		}
 	}
 
 	http.HandleFunc("/health", healthHandler)

@@ -79,6 +79,9 @@ spec:
         - mountPath: /etc/operator-targets/certs
           name: ama-metrics-operator-targets-server-tls-secret-volume
           readOnly: true
+        - mountPath: /etc/operator-targets/client/certs
+          name: ama-metrics-operator-targets-tls-secret-volume
+          readOnly: true
         - mountPath: /etc/prometheus/certs
           name: ama-metrics-tls-secret-volume
           readOnly: true
@@ -259,6 +262,10 @@ spec:
       - name: ama-metrics-operator-targets-server-tls-secret-volume
         secret:
           secretName: ama-metrics-operator-targets-server-tls-secret
+          optional: true
+      - name: ama-metrics-operator-targets-tls-secret-volume
+        secret:
+          secretName: ama-metrics-operator-targets-tls-secret
           optional: true
       - name: ta-config-shared
         emptyDir: {}
