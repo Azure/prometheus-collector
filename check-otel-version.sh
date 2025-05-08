@@ -70,6 +70,16 @@ if [[ "$COLLECTOR_RELEASE_NAME" =~ (v?[0-9]+\.[0-9]+\.[0-9]+)/(v?[0-9]+\.[0-9]+\
     echo -e "\nParsed versions:"
     echo "STABLE_VERSION: $STABLE_VERSION"
     echo "BETA_VERSION: $BETA_VERSION"
+
+    # Write BETA_VERSION to file
+    echo "Writing BETA_VERSION to OPENTELEMETRY_VERSION file..."
+    echo "$BETA_VERSION" > OPENTELEMETRY_VERSION
+    if [ $? -eq 0 ]; then
+        echo "Successfully wrote version $BETA_VERSION to OPENTELEMETRY_VERSION file"
+    else
+        echo "Error: Failed to write to OPENTELEMETRY_VERSION file"
+        exit 1
+    fi
     
     # Run script.sh with the parsed versions
     echo -e "\nRunning script.sh with the parsed versions..."
@@ -84,3 +94,4 @@ else
     echo "Expected format: {STABLE_VERSION}/{BETA_VERSION}"
     exit 1
 fi
+

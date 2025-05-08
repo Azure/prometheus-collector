@@ -9,9 +9,9 @@ jobs:
       - name: Upgrade otel
         run: |
           bash -x ./check-otel-version.sh
-          echo "otelcollector version is $BETA_VERSION"
-          echo "VERSION=${BETA_VERSION}" >> $GITHUB_ENV
-          
+          VERSION=$(cat OPENTELEMETRY_VERSION)
+          echo "otelcollector version is $VERSION"
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Create Pull Request
         id: cpr
