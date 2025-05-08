@@ -5,9 +5,6 @@ import (
 	"errors"
 	"strings"
 	"time"
-	"bytes"
-	"fmt"
-	"io"
 
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
@@ -17,12 +14,10 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/client-go/util/wait"
-	"k8s.io/client-go/util/retry"
-	"k8s.io/client-go/util/homedir"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/kubernetes/pkg/kubectl/exec"
-	"k8s.io/kubernetes/pkg/kubectl/exec/exec_util"
+
+	"bytes"
+	"fmt"
+	"io"
 )
 
 /*
@@ -415,54 +410,6 @@ func GetAndUpdateConfigMap(clientset *kubernetes.Clientset, configMapName, confi
 	if err != nil {
 		return fmt.Errorf("Failed to update configmap: %s", err.Error())
 	}
-
-	return nil
-}
-
-// RunCommandInPod executes a command in a specific pod and container.
-func RunCommandInPod(clientset *kubernetes.Clientset, namespace, labelName, labelValue, containerName string, command []string) error {
-	// Get the pod associated with the label
-	pods, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", labelName, labelValue),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get pods: %v", err)
-	}
-
-	if len(pods.Items) == 0 {
-		return fmt.Errorf("no pods found with label %s=%s in namespace %s", labelName, labelValue, namespace)
-	}
-
-	// Assuming we want to run the command on the first pod
-	pod := pods.Items[0]
-
-	// Prepare the exec options
-	req := clientset.CoreV1().Pods(namespace).GetExec(
-		pod.Name,
-		containerName,
-		command,
-		"/bin/sh",
-	)
-
-	// Run the command in the container
-	err = req.StreamOptions()
-	if err != nil {
-		return fmt.Errorf("failed to run command in pod: %v", err)
-	}
-
-	// Check if the command was successful and return the output
-	stdout, stderr, err := req.Exec()
-	if err != nil {
-		return fmt.Errorf("command execution failed: %v", err)
-	}
-
-	// Check the output for errors
-	if stderr != "" {
-		return fmt.Errorf("stderr: %s", stderr)
-	}
-
-	// Print stdout
-	fmt.Println(stdout)
 
 	return nil
 }
