@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("Query Metrics Test Suite", func() {
 
-	DescribeTable("should return the expected results for specified metrics in each job",
+	DescribeTable("should return the expected results for specified Prometheusmetrics in each job",
 		func(job string, expectedMetrics []string) {
 			for _, metric := range expectedMetrics {
 				query := fmt.Sprintf("%s{job=\"%s\"}", metric, job)
@@ -328,5 +328,54 @@ var _ = Describe("Query Metrics Test Suite", func() {
 				}
 			}
 		})
+
+		It("should return the expected results for OTLP data-quality validation metrics", Label(utils.OTLPLabel), func() {
+			metrics := []string{
+				"otlpapp.intcounter.total",
+				"otlpapp.floatcounter.total",
+				"otlpapp.intgauge",
+				"otlpapp.floatgauge",
+				"otlpapp.intupdowncounter",
+				"otlpapp.floatupdowncounter",
+				"otlpapp.intexponentialhistogram",
+				"otlpapp.floatexponentialhistogram",
+				"otlpapp.intexplicithistogram",
+				"otlpapp.floatexplicithistogram",
+			}
+
+			for _, metric := range metrics {
+				query := fmt.Sprintf("{\"%s\"}", metric)
+
+				warnings, result, err := utils.InstantQuery(PrometheusQueryClient, query)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(warnings).To(BeEmpty())
+
+				vectorResult, ok := result.(model.Vector)
+				Expect(ok).To(BeTrue(), "result should be of type model.Vector for metric %s", metric)
+				Expect(vectorResult).NotTo(BeEmpty(), "Metric %s is missing", metric)
+
+				labelName := "temporality"
+				deltaLabelFound := false
+				cumulativeLabelFound := false
+				for _, sample := range vectorResult {
+					val, ok := sample.Metric[model.LabelName(labelName)]
+					if !ok {
+						Expect(ok).To(BeTrue(), fmt.Sprintf("Expected label %q not found in metric %q", labelName, metric))
+					}
+					if string(val) == "delta" {
+						deltaLabelFound = true
+					} else if string(val) == "cumulative" {
+						cumulativeLabelFound = true
+					}
+
+					_, ok = sample.Metric[model.LabelName("cluster")]
+					Expect(ok).To(BeTrue(), fmt.Sprintf("Expected label %q not found in metric %q", "cluster", metric))
+				}
+
+				Expect(deltaLabelFound).To(BeTrue(), fmt.Sprintf("Expected metric %q to have a sample with delta temporality label", metric))
+				Expect(cumulativeLabelFound).To(BeTrue(), fmt.Sprintf("Expected metric %q to have a sample with cumulative temporality label", metric))
+			}
+		})
+
 	})
 })

@@ -25,6 +25,8 @@ const (
 	ARM64Label                                        = "arm64"
 	FIPSLabel                                         = "fips"
 	RetinaLabel                                       = "retina"
+	MDSDLabel                                         = "mdsd"
+	OTLPLabel                                         = "otlp"
 	LinuxDaemonsetCustomConfig                        = "linux-daemonset-custom-config"
 	ConfigProcessingCommonNoConfigMaps                = "config-processing-common-no-config-maps"
 	ConfigProcessingCommonWithConfigMap               = "config-processing-common-with-config-maps"
