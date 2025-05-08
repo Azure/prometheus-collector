@@ -20,7 +20,7 @@ func CheckForFilesystemChanges() {
 	}
 	tokenFile := `C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json`
 	hashStore := `C:\last_config_hash.txt`
-	logFile := `C:\opt\microsoft\scripts\filesystemwatcher.txt`
+	logFile := `C:\filesystemwatcher.txt`
 
 	h := sha256.New()
 
@@ -52,23 +52,9 @@ func CheckForFilesystemChanges() {
 	lastHash := string(lastHashBytes)
 	lastHash = strings.TrimSpace(lastHash)
 
-	// Append to debug files
-	appendDebug := func(path, label, value string) {
-		f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err == nil {
-			defer f.Close()
-			timestamp := time.Now().Format(time.RFC3339)
-			msg := fmt.Sprintf("[%s] %s: %s\n", timestamp, label, value)
-			f.WriteString(msg)
-		}
-	}
-
-	appendDebug(`C:\debug_last_hash.txt`, "LastHash", lastHash)
-	appendDebug(`C:\debug_final_hash.txt`, "FinalHash", finalHash)
-
-	// Write the new hash on the first run, but don't log yet if it's the first time
+	// Write the new hash on the first run, but don't log yet since it's the first time
 	if lastHash == "" {
-		// On first run, just write the final hash to the file
+		// On first run, just write the final hash to the file so that we have a value to compare against
 		os.WriteFile(hashStore, []byte(finalHash), 0644)
 	} else {
 		// Check if the hash has changed
@@ -80,7 +66,6 @@ func CheckForFilesystemChanges() {
 			now := time.Now().Format(time.RFC3339)
 			msg := fmt.Sprintf("Configuration changed at %s\n", now)
 
-			os.MkdirAll(filepath.Dir(logFile), os.ModePerm)
 			f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err == nil {
 				defer f.Close()

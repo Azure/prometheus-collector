@@ -348,7 +348,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		shared.CheckForFilesystemChanges()
-		if shared.HasConfigChanged("C:\\opt\\microsoft\\scripts\\filesystemwatcher.txt") {
+		if shared.HasConfigChanged("C:\\filesystemwatcher.txt") {
 			status = http.StatusServiceUnavailable
 			message = "Config Map Updated or DCR/DCE updated since agent started"
 			fmt.Println(message)
