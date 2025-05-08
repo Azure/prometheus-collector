@@ -66,22 +66,28 @@ func CheckForFilesystemChanges() {
 	appendDebug(`C:\debug_last_hash.txt`, "LastHash", lastHash)
 	appendDebug(`C:\debug_final_hash.txt`, "FinalHash", finalHash)
 
-	// Check if the hash has changed
-	if finalHash != lastHash {
-		// Update stored hash only if it changed
+	// Write the new hash on the first run, but don't log yet if it's the first time
+	if lastHash == "" {
+		// On first run, just write the final hash to the file
 		os.WriteFile(hashStore, []byte(finalHash), 0644)
+	} else {
+		// Check if the hash has changed
+		if finalHash != lastHash {
+			// Update stored hash only if it changed
+			os.WriteFile(hashStore, []byte(finalHash), 0644)
 
-		// Log the change
-		now := time.Now().Format(time.RFC3339)
-		msg := fmt.Sprintf("Configuration changed at %s\n", now)
+			// Log the change (only when the hash has changed)
+			now := time.Now().Format(time.RFC3339)
+			msg := fmt.Sprintf("Configuration changed at %s\n", now)
 
-		os.MkdirAll(filepath.Dir(logFile), os.ModePerm)
-		f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err == nil {
-			defer f.Close()
-			f.WriteString(msg)
-		} else {
-			fmt.Println("Failed to write to log file:", err)
+			os.MkdirAll(filepath.Dir(logFile), os.ModePerm)
+			f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err == nil {
+				defer f.Close()
+				f.WriteString(msg)
+			} else {
+				fmt.Println("Failed to write to log file:", err)
+			}
 		}
 	}
 }
