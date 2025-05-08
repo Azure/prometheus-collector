@@ -107,4 +107,18 @@ var _ = Describe("When the windows prometheus-collector container liveness probe
     )
     Expect(err).NotTo(HaveOccurred())
   })
+
+  It("a change in tokenconfig.json or its directory should trigger a pod restart", func() {
+    // Define the command to change the tokenconfig.json or its directory
+    changeCommand := []string{"powershell", "Set-Content -Path C:\\path\\to\\tokenconfig.json -Value 'new content'"}
+    
+    // Execute the command in the container
+    err := utils.RunCommandInPod(K8sClient, "kube-system", "dsName", "ama-metrics-win-node", "prometheus-collector", changeCommand)
+    Expect(err).NotTo(HaveOccurred())
+
+    // Watch for the pod to restart after the change
+    err = utils.WatchForPodRestart(K8sClient, "kube-system", "dsName", "ama-metrics-win-node", 300, "prometheus-collector", "")
+    Expect(err).NotTo(HaveOccurred())
+  })
+
 })
