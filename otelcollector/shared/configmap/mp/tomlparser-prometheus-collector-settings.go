@@ -45,14 +45,17 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 	if operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED"); operatorHttpsEnabled != "" && strings.ToLower(operatorHttpsEnabled) == "true" {
 		cp.TargetallocatorHttpsEnabledChartSetting = true
 		cp.TargetallocatorHttpsEnabled = true
-		if value, ok := parsedConfig["https_config"]; ok {
-			fmt.Printf("value: %s\n", value)
-			if strings.ToLower(value) == "false" {
-				cp.TargetallocatorHttpsEnabled = false
+		if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
+			if value, ok := settings["https_config"]; ok {
+				// if value, ok := parsedConfig["https_config"]; ok {
+				// fmt.Printf("value: %s\n", value)
+				if strings.ToLower(value) == "false" {
+					cp.TargetallocatorHttpsEnabled = false
+				}
+				fmt.Printf("Configmap setting enabling https between TargetAllocator and Replicaset: %s\n", value)
 			}
-			fmt.Printf("Configmap setting enabling https between TargetAllocator and Replicaset: %s\n", value)
+			fmt.Printf("Effective value for enabling https between TargetAllocator and Replicaset: %t\n", cp.TargetallocatorHttpsEnabled)
 		}
-		fmt.Printf("Effective value for enabling https between TargetAllocator and Replicaset: %t\n", cp.TargetallocatorHttpsEnabled)
 	} else {
 		cp.TargetallocatorHttpsEnabledChartSetting = false
 		cp.TargetallocatorHttpsEnabled = false
