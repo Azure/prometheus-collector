@@ -52,7 +52,6 @@ func CheckForFilesystemChanges() {
 	lastHash := string(lastHashBytes)
 	lastHash = strings.TrimSpace(lastHash)
 
-	// Write the new hash on the first run, but don't log yet since it's the first time
 	if lastHash == "" {
 		// On first run, just write the final hash to the file so that we have a value to compare against
 		os.WriteFile(hashStore, []byte(finalHash), 0644)
