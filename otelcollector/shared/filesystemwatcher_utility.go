@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -49,6 +50,21 @@ func CheckForFilesystemChanges() {
 	// Compare to last stored hash
 	lastHashBytes, _ := os.ReadFile(hashStore)
 	lastHash := string(lastHashBytes)
+	lastHash = strings.TrimSpace(lastHash)
+
+	// Append to debug files
+	appendDebug := func(path, label, value string) {
+		f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err == nil {
+			defer f.Close()
+			timestamp := time.Now().Format(time.RFC3339)
+			msg := fmt.Sprintf("[%s] %s: %s\n", timestamp, label, value)
+			f.WriteString(msg)
+		}
+	}
+
+	appendDebug(`C:\debug_last_hash.txt`, "LastHash", lastHash)
+	appendDebug(`C:\debug_final_hash.txt`, "FinalHash", finalHash)
 
 	// Check if the hash has changed
 	if finalHash != lastHash {
