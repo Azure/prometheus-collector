@@ -59,7 +59,7 @@ sed -i '/^require (/,/^)/{b}; /^replace /,$d' go.mod
 go mod tidy
 
 # Update OtelCollector Version in main.go
-sed -i -E "s|(.*Version: *)\"[0-9]*\.[0-9]*\.[0-9]*\"|\1 \"0.123.0\"|g" main.go
+sed -i -E "s|(.*Version: *)\"[0-9]*\.[0-9]*\.[0-9]*\"|\1 \"${TAG}\"|g" main.go
 
 # Get Prometheus Version OtelCollector is using
 echo "Looking for Prometheus version in go.sum..."

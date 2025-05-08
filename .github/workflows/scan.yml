@@ -9,19 +9,22 @@ jobs:
       - name: Upgrade otel
         run: |
           bash -x ./check-otel-version.sh
+          echo "otelcollector version is $BETA_VERSION"
+          echo "VERSION=${BETA_VERSION}" >> $GITHUB_ENV
+          
 
       - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.UPGRADE_OTEL_SECRET }}
-          commit-message: Upgrade otelcollector"
+          commit-message: Upgrade otelcollector to ${{ env.VERSION }}
           committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
-          author: ${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           signoff: false
-          branch: otelcollector-upgrade
+          branch: bot/otelcollector-upgrade-${{ env.VERSION }}
           delete-branch: true
-          title: '[chore]: Upgrade otelcollector"'
+          title: '[chore]: Upgrade otelcollector to ${{ env.VERSION }}'
           body: |
-            ...
+            This PR upgrades the otelcollector to the latest version available for the opentelemetry-collector and opentelemetry-operator.
           draft: true
