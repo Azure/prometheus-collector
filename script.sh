@@ -105,8 +105,8 @@ cd "$CURRENT_DIR"
 echo "Building opentelemetry-collector-builder..."
 cd otelcollector/opentelemetry-collector-builder
 go mod tidy
-make otelcollector
-rm -f otelcollector
+#make otelcollector
+#rm -f otelcollector
 cd "$CURRENT_DIR"
 
 # Step 4: Update and build prom-config-validator-builder
@@ -116,8 +116,8 @@ cd otelcollector/prom-config-validator-builder
 cp ../opentelemetry-collector-builder/go.mod .
 sed -i '1s#.*#module github.com/microsoft/prometheus-collector/otelcollector/prom-config-validator-builder#' go.mod
 go mod tidy
-make
-rm -f promconfigvalidator
+#make
+#rm -f promconfigvalidator
 cd "$CURRENT_DIR"
 
 # Step 5: Update golang version in azure-pipeline-build.yaml
@@ -200,8 +200,8 @@ cd otelcollector/otel-allocator
 cp "$CURRENT_DIR/opentelemetry-operator/go.mod" .
 sed -i '1s#.*#module github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator#' go.mod
 go mod tidy
-make
-rm -f targetallocator
+#make
+#rm -f targetallocator
 cd "$CURRENT_DIR"
 
 # Step 9: Update Configuration Reader Builder
@@ -211,8 +211,8 @@ cd otelcollector/configuration-reader-builder
 PROM_COMMON_VERSION=$(cd "$CURRENT_DIR/otelcollector/otel-allocator" && grep "github.com/prometheus/common" go.mod | awk '{print $2}')
 sed -i "s#github.com/prometheus/common .*#github.com/prometheus/common $PROM_COMMON_VERSION#g" go.mod
 go mod tidy
-make
-rm -f configurationreader
+#make
+#rm -f configurationreader
 cd "$CURRENT_DIR"
 
 # Step 6: Clean up - remove opentelemetry-collector-contrib repo
