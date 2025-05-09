@@ -1,3 +1,4 @@
+PROMETHEUS_VERSION=$(file < PROMETHEUS_VERSION)
 all: otelcollector fluentbitplugin promconfigvalidator targetallocator
 
 .PHONY: otelcollector
@@ -11,6 +12,9 @@ fluentbitplugin:
 
 promconfigvalidator:
 	make -C ../prom-config-validator-builder
+
+prometheusui:
+	make -C ../prometheus-ui
 
 targetallocator:
 	make -C ../otel-allocator

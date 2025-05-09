@@ -169,6 +169,9 @@ func main() {
 	fmt.Println("startCommand otelcollector")
 	_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
 
+	fmt.Println("startCommand prometheusui")
+	shared.StartCommand("/opt/microsoft/otelcollector/prometheusui")
+
 	if osType == "linux" {
 		shared.LogVersionInfo()
 	}
