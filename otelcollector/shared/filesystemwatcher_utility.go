@@ -27,7 +27,16 @@ func CheckForFilesystemChanges() {
 	debug := func(format string, a ...any) {
 		msg := fmt.Sprintf(format, a...)
 		msg = time.Now().Format("2006-01-02 15:04:05") + " " + msg + "\n"
-		os.WriteFile(debugLog, []byte(msg), os.ModeAppend|0644)
+
+		f, err := os.OpenFile(debugLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			// Fallback to stdout if file can't be written
+			fmt.Printf("Failed to write debug log: %v\n", err)
+			return
+		}
+		defer f.Close()
+
+		f.WriteString(msg)
 	}
 
 	debug("Starting CheckForFilesystemChanges")
