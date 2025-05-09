@@ -52,8 +52,8 @@ func main() {
 			}
 		}
 	} else if osType == "windows" {
-		fmt.Println("Starting filesystemwatcher.ps1")
-		shared.StartCommand("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\opt\\scripts\\filesystemwatcher.ps1")
+		fmt.Println("Called shared.CheckForFilesystemChanges() once to set the hash for comparison")
+		shared.CheckForFilesystemChanges()
 	}
 
 	if ccpMetricsEnabled != "true" && osType == "linux" {
@@ -350,7 +350,10 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			goto response
 		}
 	} else {
-		if shared.HasConfigChanged("C:\\opt\\microsoft\\scripts\\filesystemwatcher.txt") {
+		if _, err := os.Stat("C:\\filesystemwatcher.txt"); os.IsNotExist(err) {
+			shared.CheckForFilesystemChanges()
+		}
+		if shared.HasConfigChanged("C:\\filesystemwatcher.txt") {
 			status = http.StatusServiceUnavailable
 			message = "Config Map Updated or DCR/DCE updated since agent started"
 			fmt.Println(message)
