@@ -1,4 +1,4 @@
-all: otelcollector fluentbitplugin promconfigvalidator targetallocator
+all: otelcollector promconfigvalidator targetallocator configurationreader
 
 .PHONY: otelcollector
 otelcollector:
