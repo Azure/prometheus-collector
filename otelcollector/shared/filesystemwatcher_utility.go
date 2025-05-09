@@ -77,10 +77,12 @@ func CheckForFilesystemChanges() {
 
 	// Compare with last stored hash
 	lastHashBytes, err := os.ReadFile(hashStore)
+	lastHash := ""
 	if err != nil {
 		debug("Could not read last hash from %s: %v", hashStore, err)
+	} else {
+		lastHash = strings.TrimSpace(string(lastHashBytes))
 	}
-	lastHash := strings.TrimSpace(string(lastHashBytes))
 	debug("Previous hash: %s", lastHash)
 
 	if lastHash == "" {
