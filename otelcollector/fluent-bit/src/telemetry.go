@@ -601,7 +601,8 @@ func getScrapeJobs() []byte {
 		caCertPath := "/etc/operator-targets/certs/ca.crt"
 		certPEM, err := ioutil.ReadFile(caCertPath)
 		if err != nil {
-			fmt.Printf("Unable to read ca cert file - %s\n", caCertPath)
+			Log(fmt.Sprintf("Unable to read ca cert file - %s\n", caCertPath))
+			SendException(err)
 			return nil
 		}
 		rootCAs := x509.NewCertPool()
@@ -619,10 +620,11 @@ func getScrapeJobs() []byte {
 
 	resp, err := client.Get(taEndpoint)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		fmt.Printf("Failed to reach Target Allocator endpoint - %s\n", taEndpoint)
+		Log(fmt.Sprintf("Failed to reach Target Allocator endpoint - %s\n", taEndpoint))
+		SendException(err)
 		return nil
 	} else {
-		fmt.Printf("Successfully reached Target Allocator endpoint - %s\n", taEndpoint)
+		Log(fmt.Sprintf("Successfully reached Target Allocator endpoint - %s\n", taEndpoint))
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
