@@ -44,6 +44,11 @@ func CheckForFilesystemChanges() {
 	h := sha256.New()
 	var allFiles []string
 
+	// Helper function to check for Kubernetes symlinks
+	isK8sSymlink := func(name string) bool {
+		return strings.HasPrefix(name, "..")
+	}
+
 	// Collect all files from initial paths
 	for _, dir := range initialPaths {
 		debug("Walking directory: %s", dir)
@@ -52,10 +57,13 @@ func CheckForFilesystemChanges() {
 				debug("Skipping %s due to error: %v", path, err)
 				return nil
 			}
-			if !d.IsDir() {
-				allFiles = append(allFiles, path)
-				debug("Queued file: %s", path)
+			// Skip directories and symlinks like `..data` or `..202x_*`
+			if d.IsDir() || isK8sSymlink(d.Name()) {
+				debug("Skipping symlink or directory: %s", path)
+				return nil
 			}
+			allFiles = append(allFiles, path)
+			debug("Queued file: %s", path)
 			return nil
 		})
 	}

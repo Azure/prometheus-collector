@@ -51,9 +51,6 @@ func main() {
 				log.Fatal(err)
 			}
 		}
-	} else if osType == "windows" {
-		fmt.Println("Called shared.CheckForFilesystemChanges() once to set the hash for comparison")
-		shared.CheckForFilesystemChanges()
 	}
 
 	if ccpMetricsEnabled != "true" && osType == "linux" {
@@ -139,6 +136,13 @@ func main() {
 		}
 	} else {
 		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile)
+	}
+
+	// note : this has to be after MA start so that the TokenConfig.json file is already in place
+	// otherwise the hash generated will be different and cause a restart.
+	if osType == "windows" {
+		fmt.Println("Called shared.CheckForFilesystemChanges() once to set the hash for comparison")
+		shared.CheckForFilesystemChanges()
 	}
 
 	// Start otelcollector
