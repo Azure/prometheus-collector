@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -21,69 +22,99 @@ func CheckForFilesystemChanges() {
 	tokenFile := `C:\opt\genevamonitoringagent\datadirectory\mcs\metricsextension\TokenConfig.json`
 	hashStore := `C:\last_config_hash.txt`
 	logFile := `C:\filesystemwatcher.txt`
+	debugLog := `C:\debug.txt`
 
-	h := sha256.New()
-
-	tokenFileExists := false
-	if info, err := os.Stat(tokenFile); err == nil && !info.IsDir() {
-		tokenFileExists = true
+	debug := func(format string, a ...any) {
+		msg := fmt.Sprintf(format, a...)
+		msg = time.Now().Format("2006-01-02 15:04:05") + " " + msg + "\n"
+		os.WriteFile(debugLog, []byte(msg), os.ModeAppend|0644)
 	}
 
-	// Hash all files in initial paths
+	debug("Starting CheckForFilesystemChanges")
+
+	h := sha256.New()
+	var allFiles []string
+
+	// Collect all files from initial paths
 	for _, dir := range initialPaths {
+		debug("Walking directory: %s", dir)
 		filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-			if err != nil || d.IsDir() {
+			if err != nil {
+				debug("Skipping %s due to error: %v", path, err)
 				return nil
 			}
-			return hashFileContents(h, path)
+			if !d.IsDir() {
+				allFiles = append(allFiles, path)
+				debug("Queued file: %s", path)
+			}
+			return nil
 		})
 	}
 
-	// If TokenConfig.json exists, hash it
-	if tokenFileExists {
-		hashFileContents(h, tokenFile)
+	// If TokenConfig.json exists, add it to the list
+	if info, err := os.Stat(tokenFile); err == nil && !info.IsDir() {
+		allFiles = append(allFiles, tokenFile)
+		debug("Token file added: %s", tokenFile)
+	} else {
+		debug("Token file not found or is a directory: %v", err)
 	}
 
-	// Generate final combined hash
-	finalHash := hex.EncodeToString(h.Sum(nil))
+	// Sort the list to ensure deterministic hash input
+	sort.Strings(allFiles)
+	debug("Sorted %d files for hashing.", len(allFiles))
 
-	// Compare to last stored hash
-	lastHashBytes, _ := os.ReadFile(hashStore)
-	lastHash := string(lastHashBytes)
-	lastHash = strings.TrimSpace(lastHash)
+	// Hash file paths and contents
+	for _, path := range allFiles {
+		debug("Hashing file: %s", path)
+		if err := hashFileContents(h, path); err != nil {
+			debug("Failed to hash file %s: %v", path, err)
+		}
+	}
+
+	// Generate final hash
+	finalHash := hex.EncodeToString(h.Sum(nil))
+	debug("Final combined hash: %s", finalHash)
+
+	// Compare with last stored hash
+	lastHashBytes, err := os.ReadFile(hashStore)
+	if err != nil {
+		debug("Could not read last hash from %s: %v", hashStore, err)
+	}
+	lastHash := strings.TrimSpace(string(lastHashBytes))
+	debug("Previous hash: %s", lastHash)
 
 	if lastHash == "" {
-		// On first run, just write the final hash to the file so that we have a value to compare against
+		debug("First run detected — storing initial hash.")
 		os.WriteFile(hashStore, []byte(finalHash), 0644)
-	} else {
-		// Check if the hash has changed
-		if finalHash != lastHash {
-			// Update stored hash only if it changed
-			os.WriteFile(hashStore, []byte(finalHash), 0644)
+	} else if finalHash != lastHash {
+		debug("Hash has changed — updating and logging.")
+		os.WriteFile(hashStore, []byte(finalHash), 0644)
+		now := time.Now().Format(time.RFC3339)
+		msg := fmt.Sprintf("Configuration changed at %s\n", now)
 
-			// Log the change (only when the hash has changed)
-			now := time.Now().Format(time.RFC3339)
-			msg := fmt.Sprintf("Configuration changed at %s\n", now)
-
-			f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err == nil {
-				defer f.Close()
-				f.WriteString(msg)
-			} else {
-				fmt.Println("Failed to write to log file:", err)
-			}
+		if f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
+			defer f.Close()
+			f.WriteString(msg)
+			debug("Wrote change log to %s", logFile)
+		} else {
+			debug("Failed to write to log file: %v", err)
 		}
+	} else {
+		debug("No change in configuration.")
 	}
 }
 
 func hashFileContents(h hash.Hash, path string) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil
+		return fmt.Errorf("unable to open file %s: %w", path, err)
 	}
 	defer f.Close()
 
-	io.WriteString(h, path) // Include path in hash for stability
+	io.WriteString(h, path) // Include path in hash
 	_, err = io.Copy(h, f)
-	return err
+	if err != nil {
+		return fmt.Errorf("error reading file %s: %w", path, err)
+	}
+	return nil
 }
