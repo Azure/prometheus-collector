@@ -2,7 +2,7 @@ trigger:
   branches:
     include:
     - main
-
+    - rashmi/https
 pr:
   autoCancel: true
   branches:

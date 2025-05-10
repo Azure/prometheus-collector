@@ -94,6 +94,7 @@ func main() {
 		httpOptions = append(httpOptions, server.WithTLSConfig(tlsConfig, cfg.HTTPS.ListenAddr))
 	}
 	srv := server.NewServer(log, allocator, cfg.ListenAddr, httpOptions...)
+	fmt.Printf("listenaddress: %v", cfg.HTTPS.ListenAddr)
 
 	discoveryCtx, discoveryCancel := context.WithCancel(ctx)
 	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(prometheus.DefaultRegisterer)
@@ -188,6 +189,7 @@ func main() {
 		func() error {
 			err := srv.Start()
 			setupLog.Info("Server failed to start")
+			setupLog.Error(err, "Error on server start")
 			return err
 		},
 		func(_ error) {
@@ -201,6 +203,7 @@ func main() {
 			func() error {
 				err := srv.StartHTTPS()
 				setupLog.Info("HTTPS Server failed to start")
+				setupLog.Error(err, "Error on HTTPS server start")
 				return err
 			},
 			func(_ error) {

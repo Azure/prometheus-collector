@@ -81,7 +81,8 @@ data:
       enabled = true
   prometheus-collector-settings: |-
     cluster_alias = ""
-    debug-mode = "false"
+    debug-mode = false
+    https_config = true
 metadata:
   name: ama-metrics-settings-configmap
   namespace: kube-system

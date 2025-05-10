@@ -168,6 +168,8 @@ spec:
             - name: OPERATOR_TARGETS_CFG_READER_IMG_VERSION
               value: "{{ .Values.AzureMonitorMetrics.ImageTagCfgReader }}"
               {{-  end  }}
+            - name: OPERATOR_TARGETS_HTTPS_ENABLED
+              value: "{{ .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}"
             {{-  end  }}
             - name: NODE_EXPORTER_VERSION
               value: "{{ $arcExtensionSettings.nodeExporterVersion }}"
@@ -203,6 +205,9 @@ spec:
             - mountPath: /etc/prometheus/certs
               name: ama-metrics-tls-secret-volume
               readOnly: true
+            - mountPath: /etc/operator-targets/ca/certs
+              name: ama-metrics-operator-targets-ca-tls-secret-volume
+              readOnly: true
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
@@ -231,7 +236,7 @@ spec:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 60
+            initialDelaySeconds: 90
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
@@ -378,6 +383,10 @@ spec:
         - name: ama-metrics-tls-secret-volume
           secret:
             secretName: ama-metrics-mtls-secret
+            optional: true
+        - name: ama-metrics-operator-targets-ca-tls-secret-volume
+          secret:
+            secretName: ama-metrics-operator-targets-ca-tls-secret
             optional: true
         {{- if $arcExtensionSettings.mountUbuntuCerts }}
         - name: anchors-ubuntu
