@@ -598,7 +598,7 @@ func getScrapeJobs() []byte {
 	taEndpoint := "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/scrape_configs"
 	client := &http.Client{}
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-		caCertPath := "/etc/operator-targets/certs/ca.crt"
+		caCertPath := "/etc/operator-targets/ca/certs/ca.crt"
 		certPEM, err := ioutil.ReadFile(caCertPath)
 		if err != nil {
 			Log(fmt.Sprintf("Unable to read ca cert file - %s\n", caCertPath))

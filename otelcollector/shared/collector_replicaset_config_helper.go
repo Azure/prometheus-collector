@@ -133,7 +133,7 @@ func RemoveHTTPSSettingsInCollectorConfig(configpath string) error {
 }
 
 func CollectorTAHttpsCheck(collectorConfig string) error {
-	caCertPath := "/etc/operator-targets/certs/ca.crt"
+	caCertPath := "/etc/operator-targets/ca/certs/ca.crt"
 
 	// Checking for file existence before proceeding.
 	retries := 2

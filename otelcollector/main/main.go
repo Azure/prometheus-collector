@@ -46,10 +46,6 @@ func main() {
 			if err := shared.Inotify(outputFile, "/etc/prometheus/certs"); err != nil {
 				log.Fatal(err)
 			}
-
-			// if err := shared.Inotify(outputFile, "/etc/operator-targets/certs"); err != nil {
-			// 	log.Fatal(err)
-			// }
 		} else { //control-plane
 			if err := shared.InotifyCCP(outputFile, "/etc/config/settings"); err != nil {
 				log.Fatal(err)
@@ -185,7 +181,7 @@ func main() {
 		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 			// starting inotify here so that it doesnt restart when it is written the first time
 			outputFile := "/opt/inotifyoutput.txt"
-			if err = shared.Inotify(outputFile, "/etc/operator-targets/certs"); err != nil {
+			if err = shared.Inotify(outputFile, "/etc/operator-targets/ca/certs"); err != nil {
 				fmt.Printf("Error starting inotify for watching targetallocator certs: %v\n", err)
 			}
 		}

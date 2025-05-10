@@ -212,9 +212,9 @@ func updateTAConfigFile(configFilePath string) {
 			HTTPS: HTTPSServerConfig{
 				Enabled:         true,
 				ListenAddr:      ":8443",
-				TLSCertFilePath: "/etc/operator-targets/certs/server.crt",
-				TLSKeyFilePath:  "/etc/operator-targets/certs/server.key",
-				CAFilePath:      "/etc/operator-targets/certs/ca.crt",
+				TLSCertFilePath: "/etc/operator-targets/server/certs/server.crt",
+				TLSKeyFilePath:  "/etc/operator-targets/server/certs/server.key",
+				CAFilePath:      "/etc/operator-targets/server/certs/ca.crt",
 			},
 		}
 	} else {
@@ -337,7 +337,17 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 	if hasConfigChanged("/opt/inotifyoutput.txt") {
 		status = http.StatusServiceUnavailable
-		message += "\ninotifyoutput.txt has been updated - config-reader-config changed"
+		message = "\ninotifyoutput.txt has been updated - config-reader-config changed"
+	}
+
+	if hasConfigChanged("/opt/inotifyoutput-server-cert-secret.txt") {
+		status = http.StatusServiceUnavailable
+		message = "\ninotifyoutput-server-cert-secret.txt has been updated"
+	}
+
+	if hasConfigChanged("/opt//opt/inotifyoutput-ca-cert-secret.txt") {
+		status = http.StatusServiceUnavailable
+		message = "\ninotifyoutput-ca-cert-secret.txt has been updated"
 	}
 
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
@@ -493,7 +503,7 @@ func generateSecretWithCACertForTA(serverCertPem string, serverKeyPem string, ca
 func generateSecretWithCACertForRs(caCertPem string) error {
 	log.Println("Generating secret with CA cert")
 	// Create secret from the ca cert, server cert and server key
-	secretName := "ama-metrics-operator-targets-tls-secret"
+	secretName := "ama-metrics-operator-targets-ca-tls-secret"
 	namespace := "kube-system"
 
 	// Create the secret data
@@ -645,11 +655,12 @@ func main() {
 	}
 
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-		outputFile := "/opt/inotifyoutput.txt"
-		if err = shared.Inotify(outputFile, "/etc/operator-targets/certs"); err != nil {
+		outputFile := "/opt/inotifyoutput-server-cert-secret.txt"
+		if err = shared.Inotify(outputFile, "/etc/operator-targets/server/certs"); err != nil {
 			log.Println("Error starting inotify for watching targetallocator server certs: %v\n", err)
 		}
-		if err = shared.Inotify(outputFile, "/etc/operator-targets/client/certs"); err != nil {
+		outputFile = "/opt/inotifyoutput-ca-cert-secret.txt"
+		if err = shared.Inotify(outputFile, "/etc/operator-targets/ca/certs"); err != nil {
 			log.Println("Error starting inotify for watching targetallocator client certs: %v\n", err)
 		}
 	}
