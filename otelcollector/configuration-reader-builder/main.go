@@ -655,6 +655,10 @@ func main() {
 	}
 
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+		log.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, starting inotify for server certs and ca certs after 10 seconds")
+		// Wait for 10 seconds before starting inotify for server certs and ca certs
+		// This is to ensure that the server certs and ca certs are generated before starting inotify
+		time.Sleep(10 * time.Second)
 		outputFile := "/opt/inotifyoutput-server-cert-secret.txt"
 		log.Println("Starting inotify for server certs")
 		if err = shared.Inotify(outputFile, "/etc/operator-targets/server/certs"); err != nil {
