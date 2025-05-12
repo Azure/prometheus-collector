@@ -445,7 +445,7 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 // 	return nil
 // }
 
-func generateSecretWithCACertForTA(serverCertPem string, serverKeyPem string, caCertPem string) error {
+func generateSecretWithServerCertsForTA(serverCertPem string, serverKeyPem string, caCertPem string) error {
 	log.Println("Generating secret with server cert, server key and CA cert")
 	// Create secret from the ca cert, server cert and server key
 	secretName := "ama-metrics-operator-targets-server-tls-secret"
@@ -573,7 +573,7 @@ func createTLSCertificatesAndSecret() (error, error, error, error) {
 	secretErr = nil
 	if caErr == nil && serErr == nil {
 		log.Println("Generating secret so that targetallocator pod can get the certs and key")
-		secretErr := generateSecretWithCACertForTA(serverCertPem, serverKeyPem, caCertPem)
+		secretErr := generateSecretWithServerCertsForTA(serverCertPem, serverKeyPem, caCertPem)
 		if secretErr != nil {
 			log.Println("Error generating secret for targetallocator: %v\n", secretErr)
 		}
@@ -656,10 +656,12 @@ func main() {
 
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 		outputFile := "/opt/inotifyoutput-server-cert-secret.txt"
+		log.Println("Starting inotify for server certs")
 		if err = shared.Inotify(outputFile, "/etc/operator-targets/server/certs"); err != nil {
 			log.Println("Error starting inotify for watching targetallocator server certs: %v\n", err)
 		}
 		outputFile = "/opt/inotifyoutput-ca-cert-secret.txt"
+		log.Println("Starting inotify for ca certs")
 		if err = shared.Inotify(outputFile, "/etc/operator-targets/ca/certs"); err != nil {
 			log.Println("Error starting inotify for watching targetallocator client certs: %v\n", err)
 		}
