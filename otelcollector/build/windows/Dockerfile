@@ -23,7 +23,6 @@ ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhN
 ENV TELEMETRY_DISABLED false
 
 COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
-COPY ./build/windows/scripts/filesystemwatcher.ps1 $tmpdir/scripts/
 RUN mkdir "C:\\opt\\microsoft\\configmapparser"
 RUN mkdir "C:\\opt\\microsoft\\scripts"
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
