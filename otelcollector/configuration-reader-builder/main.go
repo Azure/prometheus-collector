@@ -535,7 +535,24 @@ func generateSecretWithCACertForRs(caCertPem string) error {
 	}
 
 	// Create or update the secret in the kube-system namespace
-	_, err = clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	createdSecret, err := clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	if err == nil {
+		// Wait until the secret is created and available
+		for {
+			secret, getErr := clientset.CoreV1().Secrets(namespace).Get(context.TODO(), createdSecret.Name, metav1.GetOptions{})
+			if getErr == nil {
+				lastUpdateTime := secret.GetCreationTimestamp()
+				log.Printf("Secret %s was last updated at %s", createdSecret.Name, lastUpdateTime)
+				break
+			}
+			if getErr == nil {
+				log.Printf("Secret %s is now available in namespace %s", createdSecret.Name, namespace)
+				break
+			}
+			log.Printf("Waiting for secret %s to be available in namespace %s...", createdSecret.Name, namespace)
+			time.Sleep(2 * time.Second)
+		}
+	}
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
@@ -658,7 +675,7 @@ func main() {
 		log.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, starting inotify for server certs and ca certs after 10 seconds")
 		// Wait for 10 seconds before starting inotify for server certs and ca certs
 		// This is to ensure that the server certs and ca certs are generated before starting inotify
-		time.Sleep(10 * time.Second)
+		time.Sleep(90 * time.Second)
 		outputFile := "/opt/inotifyoutput-server-cert-secret.txt"
 		log.Println("Starting inotify for server certs")
 		if err = shared.Inotify(outputFile, "/etc/operator-targets/server/certs"); err != nil {
