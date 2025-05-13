@@ -345,7 +345,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 		message = "\ninotifyoutput-server-cert-secret.txt has been updated"
 	}
 
-	if hasConfigChanged("/opt//opt/inotifyoutput-ca-cert-secret.txt") {
+	if hasConfigChanged("/opt/inotifyoutput-ca-cert-secret.txt") {
 		status = http.StatusServiceUnavailable
 		message = "\ninotifyoutput-ca-cert-secret.txt has been updated"
 	}
