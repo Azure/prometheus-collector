@@ -9,8 +9,8 @@ replace github.com/prometheus-collector/shared => ../shared
 replace github.com/prometheus-collector/shared/configmap/mp => ../shared/configmap/mp
 
 require (
+	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
 	github.com/prometheus-collector/shared/configmap/mp v0.0.0-00010101000000-000000000000
-	github.com/prometheus/common v0.63.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.32.3
 )
@@ -26,9 +26,8 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/onsi/ginkgo/v2 v2.22.2 // indirect
 	github.com/onsi/gomega v1.36.2 // indirect
-	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
+	github.com/prometheus/common v0.63.0 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/x448/float16 v0.8.4 // indirect

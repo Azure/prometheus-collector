@@ -6,11 +6,14 @@ toolchain go1.24.2
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => ../prometheusreceiver
 
+replace github.com/prometheus-collector/shared => ../shared
+
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.123.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.123.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.123.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.123.0
+	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/collector/component v1.29.0
 	go.opentelemetry.io/collector/confmap v1.29.0
 	go.opentelemetry.io/collector/confmap/provider/envprovider v1.15.0
