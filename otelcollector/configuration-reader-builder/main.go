@@ -544,24 +544,7 @@ func generateSecretWithCACertForRs(caCertPem string) error {
 	}
 
 	// Create or update the secret in the kube-system namespace
-	createdSecret, err := clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
-	if err == nil {
-		// Wait until the secret is created and available
-		for {
-			secret, getErr := clientset.CoreV1().Secrets(namespace).Get(context.TODO(), createdSecret.Name, metav1.GetOptions{})
-			if getErr == nil {
-				lastUpdateTime := secret.GetCreationTimestamp()
-				log.Printf("Secret %s was last updated at %s", createdSecret.Name, lastUpdateTime)
-				break
-			}
-			if getErr == nil {
-				log.Printf("Secret %s is now available in namespace %s", createdSecret.Name, namespace)
-				break
-			}
-			log.Printf("Waiting for secret %s to be available in namespace %s...", createdSecret.Name, namespace)
-			time.Sleep(2 * time.Second)
-		}
-	}
+	_, err = clientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			_, err = clientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
