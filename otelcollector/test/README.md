@@ -323,7 +323,7 @@ Some highlights are that:
 - Install the [helm chart](https://docs.testkube.io/articles/helm-chart/) on your cluster:
   ```bash
   helm repo add kubeshop https://kubeshop.github.io/helm-charts
-  helm install --create-namespace testkube kubeshop/testkube --version 1.15.17 -n testkube
+  helm upgrade testkube kubeshop/testkube --install -f values.yaml -n testkube
   ```
 - The helm chart will install in the namespace `testkube`.
 - Run `testkube dashboard` to port-forward the dashboard.

@@ -2054,7 +2054,7 @@ extends:
                 displayName: "Wait for cluster to be ready"
               - bash: |
                   # Run the full test suite
-                  kubectl testkube run testsuite e2e-tests-merge --verbose
+                  kubectl testkube run testsuite e2e-tests-merge --verbose --job-template job-template.yaml
                   # Get the current id of the test suite now running
                   execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
                   # Watch until the all the tests in the test suite finish
@@ -2078,7 +2078,7 @@ extends:
                     exit 0
                   fi
                   exit 0
-                workingDirectory: $(Build.SourcesDirectory)
+                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
                 displayName: "Run tests"
       - deployment: Deploy_AKS_Chart
         displayName: "Deploy: AKS dev cluster"
@@ -2293,7 +2293,7 @@ extends:
                 displayName: "Wait for cluster to be ready"
               - bash: |
                   # Run the full test suite
-                  kubectl testkube run testsuite e2e-tests-merge --verbose
+                  kubectl testkube run testsuite e2e-tests-merge --verbose --job-template job-template.yaml
                   # Get the current id of the test suite now running
                   execution_id=$(kubectl testkube get testsuiteexecutions --test-suite e2e-tests-merge --limit 1 | grep e2e-tests | awk '{print $1}')
                   # Watch until the all the tests in the test suite finish
@@ -2317,5 +2317,5 @@ extends:
                     exit 0
                   fi
                   exit 0
-                workingDirectory: $(Build.SourcesDirectory)
+                workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
                 displayName: "Run tests"
