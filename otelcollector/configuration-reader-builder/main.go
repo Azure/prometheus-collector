@@ -310,6 +310,10 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 			if hasConfigChanged("/opt/inotifyoutput-ta-server-cert-secret.txt") {
 				status = http.StatusServiceUnavailable
 				message = "\ninotifyoutput-ta-server-cert-secret.txt has been updated"
+				// Resetting contents of inotifyoutput-ta-server-cert-secret.txt file after detecting changes to secret
+				if err := os.WriteFile("/opt/inotifyoutput-ta-server-cert-secret.txt", []byte{}, 0644); err != nil {
+					log.Printf("Error clearing inotifyoutput-ta-server-cert-secret.txt: %v", err)
+				}
 			}
 
 			if status != http.StatusOK {
