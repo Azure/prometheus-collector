@@ -6,10 +6,14 @@ schedules:
     include:
     - main
 parameters:
-- name: subscription
-  displayName: 'Azure Subscription'
+- name: subscriptionName
+  displayName: 'Subscription Name'
   type: string
-  default: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+  default: 'ContainerInsights_Build_Subscription'
+- name: subscriptionID
+  displayName: 'Subscription ID'
+  type: string
+  default: '9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb'
 - name: clusterName
   displayName: 'AKS Cluster Name'
   type: string
@@ -18,6 +22,14 @@ parameters:
   displayName: 'AKS Cluster Resource Group'
   type: string
   default: 'ci-dev-aks-tests'
+- name: AMW_QUERY_ENDPOINT
+  displayName: 'AMW Query Endpoint'
+  type: string
+  default: 'https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com'
+- name: AZURE_CLIENT_ID
+  displayName: 'Azure Client ID'
+  type: string
+  default: 'f8b1889c-310c-4913-93c5-3faf0f594f34'
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
@@ -71,13 +83,13 @@ stages:
           - task: AzureCLI@1
             displayName: Get kubeconfig
             inputs:
-              azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
-              scriptLocation: 'inlineScript'
-              inlineScript: 'az aks get-credentials -g ci-dev-aks-tests -n ci-dev-aks-tests'
+                azureSubscription: ${{ parameters.subscriptionName }}(${{ parameters.subscriptionID }})
+                scriptLocation: 'inlineScript'
+                inlineScript: 'az aks get-credentials -g ${{ parameters.clusterResourceGroup }} -n ${{ parameters.clusterName }}'
           
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-no-configmaps-crs.yaml > ./testkube/testkube-config-test-no-configmaps-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/api-server-permissions.yaml
@@ -136,8 +148,8 @@ stages:
             displayName: "Run tests for no configmaps"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-targets-disabled-crs.yaml > ./testkube/testkube-config-test-all-targets-disabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-targets-disabled-crs-ci-dev-aks-tests.yaml
@@ -192,8 +204,8 @@ stages:
             displayName: "Run tests for all targets disabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-default-targets-on-crs.yaml > ./testkube/testkube-config-test-default-targets-on-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-default-targets-on-crs-ci-dev-aks-tests.yaml
@@ -248,8 +260,8 @@ stages:
             displayName: "Run tests for all default targets in settings cfg map enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-rs-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-rs-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-rs-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -304,8 +316,8 @@ stages:
             displayName: "Run tests for all rs targets in settings cfg map enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-ds-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-ds-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-ds-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -360,8 +372,8 @@ stages:
             displayName: "Run tests for all ds targets in settings cfg map enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-all-targets-enabled-crs.yaml > ./testkube/testkube-config-test-all-targets-enabled-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-all-targets-enabled-crs-ci-dev-aks-tests.yaml
@@ -416,8 +428,8 @@ stages:
             displayName: "Run tests for all targets in settings cfg map enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-only-custom-configmap-crs.yaml > ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-only-custom-configmap-crs-ci-dev-aks-tests.yaml
@@ -476,8 +488,8 @@ stages:
             displayName: "Run tests for custom configmap with all actions enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-global-settings-crs.yaml > ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-global-settings-crs-ci-dev-aks-tests.yaml
@@ -532,8 +544,8 @@ stages:
             displayName: "Run tests for global ext labels enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-custom-node-configmap-crs.yaml > ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-custom-node-configmap-crs-ci-dev-aks-tests.yaml
@@ -589,8 +601,8 @@ stages:
             displayName: "Run tests for custom node configmap enabled"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-settings-error-crs.yaml > ./testkube/testkube-config-test-settings-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-settings-error-crs-ci-dev-aks-tests.yaml
@@ -648,8 +660,8 @@ stages:
             displayName: "Run tests for errorprone settings configmap"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-custom-configmap-error-crs.yaml > ./testkube/testkube-config-test-custom-configmap-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-custom-configmap-error-crs-ci-dev-aks-tests.yaml
@@ -706,8 +718,8 @@ stages:
             displayName: "Run tests for errorprone custom configmap"
 
           - bash: |
-              export AMW_QUERY_ENDPOINT="https://ci-dev-aks-tests-amw-fcdqc5d4agbyh9en.centralus.prometheus.monitor.azure.com"
-              export AZURE_CLIENT_ID="f8b1889c-310c-4913-93c5-3faf0f594f34"
+              export AMW_QUERY_ENDPOINT=${{ parameters.AMW_QUERY_ENDPOINT }}
+              export AZURE_CLIENT_ID=${{ parameters.AZURE_CLIENT_ID }}
 
               envsubst < ./testkube/config-processing-test-crs/testkube-config-test-global-ext-labels-error-crs.yaml > ./testkube/testkube-config-test-global-ext-labels-error-crs-ci-dev-aks-tests.yaml
               kubectl apply -f ./testkube/testkube-config-test-global-ext-labels-error-crs-ci-dev-aks-tests.yaml
