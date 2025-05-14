@@ -5,6 +5,19 @@ schedules:
   branches:
     include:
     - main
+    parameters:
+    - name: subscription
+      displayName: 'Azure Subscription'
+      type: string
+      default: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+    - name: clusterName
+      displayName: 'AKS Cluster Name'
+      type: string
+      default: 'ci-dev-aks-tests'
+    - name: clusterResourceGroup
+      displayName: 'AKS Cluster Resource Group'
+      type: string
+      default: 'ci-dev-aks-tests'
 
 variables:
   HELM_CHART_NAME: 'prometheus-collector'
