@@ -50,3 +50,8 @@ prometheus:
         cloud: AzurePublic
         managedIdentity:
           clientId: $USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID
+    - url: https://remotewritemonitor-wcus-13t6.westcentralus-1.metrics.ingest.monitor.azure.com/dataCollectionRules/dcr-315d0c9a2c5e463d8bd13cf2bcc4f875/streams/Microsoft-PrometheusMetrics/api/v1/write?api-version=2023-04-24
+      azureAd:
+        cloud: AzurePublic
+        managedIdentity:
+          clientId: $USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID
