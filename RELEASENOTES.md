@@ -6,6 +6,7 @@
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
 * AKS and Arc Container Images:
   - feat: Configmap update for CCP (v2 + v1 schema support) (https://github.com/Azure/prometheus-collector/pull/1056)
+  - feat: add support for bleu cloud (https://github.com/Azure/prometheus-collector/pull/1150)
 * Pipeline/Docs/Templates Updates:
   - fix: move filesystemwatcher to hash based golang appoach for windows (https://github.com/Azure/prometheus-collector/pull/1144)
 
