@@ -58,7 +58,7 @@ const (
 	ServerValidityMonths = 8
 
 	// CaValidityYears is the duration for CA certificates. 30 years.
-	CaValidityYears = 30
+	CaValidityYears = 2
 
 	// KeyRetryCount is the number of retries for certificate generation.
 	KeyRetryCount    = 3
@@ -305,6 +305,11 @@ func taHealthHandler(w http.ResponseWriter, r *http.Request) {
 						taLivenessStartTime = time.Time{}
 					}
 				}
+			}
+
+			if hasConfigChanged("/opt/inotifyoutput-ta-server-cert-secret.txt") {
+				status = http.StatusServiceUnavailable
+				message = "\ninotifyoutput-ta-server-cert-secret.txt has been updated"
 			}
 
 			if status != http.StatusOK {
@@ -672,11 +677,19 @@ func main() {
 	}
 
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-		log.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, starting inotify for server certs and ca certs after 10 seconds")
+		log.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, starting inotify for server certs and ca certs")
+		// Start inotify for server certs and ca certs for TargetAllocator container since the server has to
+		// pick up the latest server certs and ca certs after the secret to configmap propogation happens
+		outputFile := "/opt/inotifyoutput-ta-server-cert-secret.txt"
+		log.Println("Starting inotify for server certs")
+		if err = shared.Inotify(outputFile, "/etc/operator-targets/server/certs"); err != nil {
+			log.Println("Error starting inotify for watching targetallocator server certs: %v\n", err)
+		}
+
 		// Wait for 10 seconds before starting inotify for server certs and ca certs
 		// This is to ensure that the server certs and ca certs are generated before starting inotify
 		time.Sleep(90 * time.Second)
-		outputFile := "/opt/inotifyoutput-server-cert-secret.txt"
+		outputFile = "/opt/inotifyoutput-server-cert-secret.txt"
 		log.Println("Starting inotify for server certs")
 		if err = shared.Inotify(outputFile, "/etc/operator-targets/server/certs"); err != nil {
 			log.Println("Error starting inotify for watching targetallocator server certs: %v\n", err)
