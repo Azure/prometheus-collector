@@ -14,7 +14,7 @@ func main() {
 	info := component.BuildInfo{
 		Command:     "custom-collector-distro",
 		Description: "Custom OpenTelemetry Collector distribution",
-		Version:     "0.121.0",
+		Version:      "v0.125.0",
 	}
 
 	set := otelcol.CollectorSettings{
