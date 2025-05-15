@@ -388,7 +388,7 @@ resource "azurerm_monitor_alert_prometheus_rule_group" "node_and_kubernetes_reco
   resource_group_name = azurerm_resource_group.rg.name
   cluster_name        = var.cluster_name
   description         = "Node and Kubernetes Recording Rules Rule Group for Windows Nodes"
-  rule_group_enabled  = true
+  rule_group_enabled  = var.enable_windows_recording_rules
   interval            = "PT1M"
   scopes              = [azurerm_monitor_workspace.amw.id,azurerm_kubernetes_cluster.k8s.id]
 
@@ -519,7 +519,7 @@ resource "azurerm_monitor_alert_prometheus_rule_group" "node_recording_rules_rul
   resource_group_name = azurerm_resource_group.rg.name
   cluster_name        = var.cluster_name
   description         = "Node and Kubernetes Recording Rules Rule Group for Windows Nodes"
-  rule_group_enabled  = true
+  rule_group_enabled  = var.enable_windows_recording_rules
   interval            = "PT1M"
   scopes              = [azurerm_monitor_workspace.amw.id,azurerm_kubernetes_cluster.k8s.id]
 
@@ -887,7 +887,7 @@ EOF
 
   rule {
     record     = "ux:controller_cpu_usage_windows:sum_irate"
-    expression = "sum by (namespace, node, cluster, created_by_name, created_by_kind, microsoft_resourceid) (\nux:pod_cpu_usage_windows:sum_irate\n)"
+    expression = "sum by (namespace, node, cluster, created_by_name, created_by_kind, microsoft_resourceid) (ux:pod_cpu_usage_windows:sum_irate)"
   }
 
   rule {
@@ -913,17 +913,17 @@ EOF
 
   rule {
     record     = "ux:controller_workingset_memory_windows:sum"
-    expression = "sum by (namespace, node, cluster, created_by_name, created_by_kind, microsoft_resourceid) (\nux:pod_workingset_memory_windows:sum\n)"
+    expression = "sum by (namespace, node, cluster, created_by_name, created_by_kind, microsoft_resourceid) (ux:pod_workingset_memory_windows:sum)"
   }
 
   rule {
     record     = "ux:node_cpu_usage_windows:sum_irate"
-    expression = "sum by (instance, cluster, microsoft_resourceid) (\n(1 - irate(windows_cpu_time_total{job=\"windows-exporter\", mode=\"idle\"}[5m]))\n)"
+    expression = "sum by (instance, cluster, microsoft_resourceid) ((1 - irate(windows_cpu_time_total{job=\"windows-exporter\", mode=\"idle\"}[5m])))"
   }
 
   rule {
     record     = "ux:node_memory_usage_windows:sum"
-    expression = "sum by (instance, cluster, microsoft_resourceid) ((\nwindows_os_visible_memory_bytes{job = \"windows-exporter\"}\n- windows_memory_available_bytes{job = \"windows-exporter\"}\n))"
+    expression = "sum by (instance, cluster, microsoft_resourceid) ((windows_os_visible_memory_bytes{job = \"windows-exporter\"}- windows_memory_available_bytes{job = \"windows-exporter\"}))"
   }
 
   rule {
