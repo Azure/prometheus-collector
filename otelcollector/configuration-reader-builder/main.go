@@ -54,7 +54,6 @@ type HTTPSServerConfig struct {
 
 const (
 	// DefaultValidityYears is the duration for regular certificates, SSL etc. 2 years.
-	// ServerValidityYears  = 2
 	ServerValidityMonths = 8
 
 	// CaValidityYears is the duration for CA certificates. 30 years.
@@ -236,29 +235,6 @@ func updateTAConfigFile(configFilePath string) {
 		}
 	}
 
-	// targetAllocatorConfig := Config{
-	// 	AllocationStrategy: "consistent-hashing",
-	// 	FilterStrategy:     "relabel-config",
-	// 	CollectorSelector: &metav1.LabelSelector{
-	// 		MatchLabels: map[string]string{
-	// 			"rsName":                         "ama-metrics",
-	// 			"kubernetes.azure.com/managedby": "aks",
-	// 		},
-	// 	},
-	// 	Config: promScrapeConfig,
-	// 	PrometheusCR: PrometheusCRConfig{
-	// 		ServiceMonitorSelector: &metav1.LabelSelector{},
-	// 		PodMonitorSelector:     &metav1.LabelSelector{},
-	// 	},
-	// 	HTTPS: HTTPSServerConfig{
-	// 		Enabled:         true,
-	// 		ListenAddr:      ":8443",
-	// 		TLSCertFilePath: "/etc/operator-targets/certs/server.crt",
-	// 		TLSKeyFilePath:  "/etc/operator-targets/certs/server.key",
-	// 		CAFilePath:      "/etc/operator-targets/certs/ca.crt",
-	// 	},
-	// }
-
 	targetAllocatorConfigYaml, _ := yaml.Marshal(targetAllocatorConfig)
 	if err := os.WriteFile(taConfigFilePath, targetAllocatorConfigYaml, 0644); err != nil {
 		logFatalError(fmt.Sprintf("config-reader::Unable to write to: %s - %v\n", taConfigFilePath, err))
@@ -428,31 +404,6 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 	log.Println("Server certificate is generated successfully")
 	return serverCertPem, serverKeyPem, nil
 }
-
-// func writeServerCertCACertAndKeyToFile(serverCertPem string, serverKeyPem string, caCertPem string) error {
-// 	log.Println("Writing server cert and key to file")
-// 	if _, err := os.Stat("/etc/operator-targets/certs"); os.IsNotExist(err) {
-// 		if err := os.MkdirAll("/etc/operator-targets/certs", fs.FileMode(0644)); err != nil {
-// 			log.Println("Error creating directory for certs: %v\n", err)
-// 			return err
-// 		}
-// 	}
-// 	if err := os.WriteFile("/etc/operator-targets/certs/server.crt", []byte(serverCertPem), fs.FileMode(0644)); err != nil {
-// 		log.Println("Error writing server cert to file: %v\n", err)
-// 		return err
-// 	}
-// 	if err := os.WriteFile("/etc/operator-targets/certs/server.key", []byte(serverKeyPem), fs.FileMode(0644)); err != nil {
-// 		log.Println("Error writing server key to file: %v\n", err)
-// 		return err
-// 	}
-
-// 	if err := os.WriteFile("/etc/operator-targets/certs/ca.crt", []byte(caCertPem), fs.FileMode(0644)); err != nil {
-// 		log.Println("Error writing ca cert to file: %v\n", err)
-// 		return err
-// 	}
-// 	log.Println("Server cert and key written to file successfully")
-// 	return nil
-// }
 
 func generateSecretWithServerCertsForTA(serverCertPem string, serverKeyPem string, caCertPem string) error {
 	log.Println("Generating secret with server cert, server key and CA cert")

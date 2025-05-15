@@ -29,7 +29,6 @@ rules:
     verbs: ["get", "watch", "delete"]
   - apiGroups: [""]
     resources: ["secrets"]
-    # verbs: ["list", "get", "watch", "create", "update", "delete", "patch"]
     verbs: ["get", "create", "update"]
   - apiGroups: [""]
     resources: ["events"]

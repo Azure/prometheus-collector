@@ -71,13 +71,6 @@ func SetInsecureInCollectorConfig(configpath string) error {
 		fmt.Println("TLS settings are nil, not adding insecure")
 	}
 
-	// // Check to make sure ca cert is valid
-	// if !IsCertificateValid(caCertPath) {
-	// 	fmt.Printf("ca cert is invalid, removing tls section")
-	// 	delete(targetAllocatorConfig, "tls")
-	// 	targetAllocatorConfig["endpoint"] = "http://ama-metrics-operator-targets.kube-system.svc.cluster.local:443"
-	// }
-
 	updatedConfigYaml, err := yaml.Marshal(otelConfig)
 	if err != nil {
 		fmt.Printf("Unable to marshal updated otel configuration - %v\n", err)
@@ -208,43 +201,5 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 		}
 	}
 
-	// certPEM, err := ioutil.ReadFile(caCertPath)
-	// // fmt.Printf("Contents of CA cert file: %s\n", string(certPEM))
-	// if err != nil {
-	// 	fmt.Printf("Failed to read CA cert file from path: %s\n", caCertPath)
-	// 	// Fallback to start the collector without TLS
-	// 	SetInsecureInCollectorConfig(collectorConfig)
-	// } else {
-	// 	// Create a new cert pool
-	// 	rootCAs := x509.NewCertPool()
-	// 	// Append CA cert to the new pool
-	// 	if ok := rootCAs.AppendCertsFromPEM(certPEM); !ok {
-	// 		fmt.Printf("Failed to append %q to RootCAs: %v\n", caCertPath, err)
-	// 		// Fallback to starting without HTTPS
-	// 		SetInsecureInCollectorConfig(collectorConfig)
-	// 	} else {
-	// 		fmt.Printf("[%s] Pinging Target Allocator endpoint with HTTPS\n", time.Now().Format(time.RFC3339))
-	// 		client := &http.Client{
-	// 			Transport: &http.Transport{
-	// 				TLSClientConfig: &tls.Config{
-	// 					RootCAs: rootCAs,
-	// 				},
-	// 			},
-	// 		}
-	// 		resp, err := client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
-	// 		if err != nil || resp.StatusCode != http.StatusOK {
-	// 			fmt.Printf("Failed to reach Target Allocator endpoint with HTTPS, retrying: %v\n", err)
-	// 			resp, err = client.Get("https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs")
-	// 			if err != nil || resp.StatusCode != http.StatusOK {
-	// 				fmt.Printf("Failed to reach Target Allocator endpoint with HTTPS, after retry, setting insecure: %v\n", err)
-	// 				// Fallback to start the collector without HTTPS
-	// 				SetInsecureInCollectorConfig(collectorConfig)
-	// 			}
-	// 		} else {
-	// 			fmt.Printf("Target Allocator endpoint is reachable with HTTPS\n")
-	// 		}
-
-	// 	}
-	// }
 	return nil
 }

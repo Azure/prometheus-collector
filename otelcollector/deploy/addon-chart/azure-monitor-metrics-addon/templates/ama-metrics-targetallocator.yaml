@@ -36,7 +36,6 @@ spec:
       - name: targetallocator
         args:
         - --enable-prometheus-cr-watcher
-        # - --listen-addr-https=:8443
         image: "{{ .Values.AzureMonitorMetrics.ImageRegistry }}{{ .Values.AzureMonitorMetrics.ImageRepository }}:{{ .Values.AzureMonitorMetrics.ImageTagTargetAllocator }}"
         imagePullPolicy: IfNotPresent
         resources:

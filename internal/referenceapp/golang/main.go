@@ -509,7 +509,7 @@ func main() {
 	weatherServer.Handle("/metrics", promhttp.Handler())
 
 	handler := http.HandlerFunc(handleRequest)
-	http.Handle("/example", handler)
+	http.Handle("/httpsmetrics", handler)
 	http.ListenAndServe(":2114", nil)
 
 	// Run server for metrics without a type
