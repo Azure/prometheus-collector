@@ -240,7 +240,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linx-drop
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -274,7 +274,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -334,7 +334,7 @@ stages:
         set +x
         echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
         set -x
-      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/drop/arc-chart/'
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
       displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
@@ -349,8 +349,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -478,7 +478,7 @@ stages:
       inputs:
         targetType: inline
         script: "CHART_TAG=$(jq '.\"image.name\"' metadata.json | tr -d '\"' | cut -d':' -f2)\necho $CHART_TAG\nset +x\necho \"##vso[task.setvariable variable=ChartTag;]$CHART_TAG\"\nset -x\nLINUX_TAG=$CHART_TAG\necho $LINUX_TAG\nset +x\necho \"##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG\"\nset -x\nWINDOWS_TAG=$LINUX_TAG-win\necho $WINDOWS_TAG\nset +x\necho \"##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG\"\nset -x\ncd $(Pipeline.Workspace)/ev2Artifact\nfor i in 1 2 3 4 5 6 7 8 9 10         \n    do            \n    sleep 30\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$LINUX_TAG\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$WINDOWS_TAG\n    echo $(MCRRegistry)$(ProdMCRChartRepository):$CHART_TAG\n    output1=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRAgentRepository)/tags/list)\n    output2=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRArcChartRepository)/tags/list)\n     if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)\n     then\n             echo \"Images and chart are published to mcr\"\n             exit 0\n      fi\ndone          \necho \"Images and chart are not published to mcr within 5 minutes\"\nexit 1"
-        workingDirectory: $(Pipeline.Workspace)/ev2Artifact/drop/arc-chart
+        workingDirectory: $(Pipeline.Workspace)/ev2Artifact/arc-drop/
       target:
         container: host
       displayName: Check images and ARC chart are pushed to MCR
@@ -526,10 +526,10 @@ stages:
         namespace: default
         command: upgrade
         chartType: FilePath
-        chartPath: $(Pipeline.Workspace)/ev2Artifact/drop/azure-monitor-metrics-addon/
+        chartPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/azure-monitor-metrics-addon/
         releaseName: ama-metrics
         waitForExecution: false
-        arguments: --values $(Pipeline.Workspace)/ev2Artifact/drop/azure-monitor-metrics-addon/values.yaml --dependency-update
+        arguments: --values $(Pipeline.Workspace)/ev2Artifact/ev2-drop/azure-monitor-metrics-addon/values.yaml --dependency-update
       target:
         container: host
       displayName: Deploy to ci-prod-aks-mac-weu
@@ -779,7 +779,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -873,7 +873,7 @@ stages:
         set +x
         echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
         set -x
-      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/drop/arc-chart/'
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
       displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
@@ -888,8 +888,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/arc-extension/release/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/deploy/arc-extension/release/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/arc-extension/release/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/deploy/arc-extension/release/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1084,7 +1084,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -1118,7 +1118,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -1178,7 +1178,7 @@ stages:
         set +x
         echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
         set -x
-      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/drop/arc-chart/'
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop'
       displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
@@ -1193,8 +1193,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1389,7 +1389,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -1423,7 +1423,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -1483,7 +1483,7 @@ stages:
         set +x
         echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
         set -x
-      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/drop/arc-chart/'
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
       displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
@@ -1498,8 +1498,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1694,7 +1694,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop/
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -1728,7 +1728,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -1788,7 +1788,7 @@ stages:
         set +x
         echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
         set -x
-      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/drop/arc-chart/'
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
       displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
@@ -1803,8 +1803,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -1999,7 +1999,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop/
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -2033,7 +2033,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -2093,7 +2093,7 @@ stages:
         set +x
         echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
         set -x
-      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/drop/arc-chart/'
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
       displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
@@ -2108,8 +2108,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -2304,7 +2304,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linx-drop/
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -2338,7 +2338,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -2398,7 +2398,7 @@ stages:
         set +x
         echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
         set -x
-      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/drop/arc-chart/'
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
       displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
@@ -2413,8 +2413,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2=drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
@@ -2609,7 +2609,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop/
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
@@ -2643,7 +2643,7 @@ stages:
       continueOnError: true
       timeoutInMinutes: 10
       inputs:
-        Path: $(Pipeline.Workspace)/ev2Artifact/drop/linux
+        Path: $(Pipeline.Workspace)/ev2Artifact/linux-drop/linux
         MaxThreads: $(OneES_UsableProcessorCount)
         FailIfNoTargetsFound: false
         ExcludePassesFromLog: False
@@ -2703,7 +2703,7 @@ stages:
         set +x
         echo "##vso[task.setvariable variable=LinuxCCPTag;]$LINUX_CCP_TAG"
         set -x
-      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/drop/arc-chart/'
+      workingDirectory: '$(Pipeline.Workspace)/ev2Artifact/arc-drop/'
       displayName: 'Set Tags'
     - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
       condition: false
@@ -2718,8 +2718,8 @@ stages:
         ApprovalServiceEnvironment: $(ev2Environment)
         ServiceRootLocation: LinkedArtifact
         RolloutSpecType: RSPath
-        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot
-        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
+        ServiceRootPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot
+        RolloutSpecPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/ServiceGroupRoot/RolloutSpecs/RolloutSpecs.json
         OutputRolloutId: RolloutId
         OutputServiceGroupName: ServiceGroupName
         OutputRolloutStatus: RolloutStatus
