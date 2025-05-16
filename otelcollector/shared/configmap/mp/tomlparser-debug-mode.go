@@ -7,6 +7,7 @@ import (
 
 	"io/fs"
 
+	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
 )
 
@@ -49,7 +50,7 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType != "" && controllerType == "ReplicaSet" {
 			fmt.Println("Setting prometheus in the exporter metrics for service pipeline since debug mode is enabled ...")
-			var config OtelConfig
+			var config shared.OtelConfig
 			content, err := os.ReadFile(replicaSetCollectorConfig)
 			if err != nil {
 				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
