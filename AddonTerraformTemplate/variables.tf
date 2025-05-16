@@ -55,3 +55,9 @@ variable "resource_group_location" {
   default     = "eastus"
   description = "Location of the resource group."
 }
+
+variable "enable_windows_recording_rules" {
+  type    = bool
+  default = false
+  description = "Enable UX recording rules for Windows (default: false)"
+}
