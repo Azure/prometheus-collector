@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/upgrade-otel-123
 
 pr:
   autoCancel: true

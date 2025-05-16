@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/route"
@@ -119,7 +118,7 @@ func main() {
 	})
 
 	//router.Get("/version", Version)
-	router.Get("/metrics", promhttp.Handler().ServeHTTP)
+	// router.Get("/metrics", promhttp.Handler().ServeHTTP)
 
 	serveReactApp := func(w http.ResponseWriter, _ *http.Request) {
 		indexPath := reactAssetsRoot + "/index.html"
