@@ -23,18 +23,17 @@ ENV APPLICATIONINSIGHTS_AUTH_USNAT ZTliNjRmZmUtZDZlYi0xYjczLThjYWQtNDU2OTFjN2FhN
 ENV TELEMETRY_DISABLED false
 
 COPY ./build/windows/scripts/setup.ps1 $tmpdir/scripts/
-COPY ./build/windows/scripts/filesystemwatcher.ps1 $tmpdir/scripts/
 RUN mkdir "C:\\opt\\microsoft\\configmapparser"
 RUN mkdir "C:\\opt\\microsoft\\scripts"
 COPY ./configmapparser/default-prom-configs/*.yml $tmpdir/microsoft/otelcollector/default-prom-configs/
 COPY ./opentelemetry-collector-builder/otelcollector.exe ./opentelemetry-collector-builder/collector-config-default.yml ./opentelemetry-collector-builder/collector-config-template.yml $tmpdir/microsoft/otelcollector/
 COPY ./prom-config-validator-builder/promconfigvalidator.exe $tmpdir/
+COPY ./prometheus-ui/prometheusui.exe $tmpdir/microsoft/otelcollector/
 COPY ./metricextension/me.config ./metricextension/me_internal.config ./metricextension/me_ds.config ./metricextension/me_ds_win.config ./metricextension/me_ds_internal.config ./metricextension/me_ds_internal_win.config $tmpdir/metricextension/
 COPY ./fluent-bit/fluent-bit-windows.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/fluent-bit-parsers.conf $tmpdir/fluent-bit/
 COPY ./fluent-bit/src/out_appinsights.so $tmpdir/fluent-bit/bin/
 COPY ./main/main.exe $tmpdir/microsoft
-COPY ./react-app /static/react-app
 COPY ./LICENSE $tmpdir/microsoft
 COPY ./NOTICE $tmpdir/microsoft
 
