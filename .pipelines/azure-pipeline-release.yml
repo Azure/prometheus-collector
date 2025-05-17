@@ -240,7 +240,7 @@ stages:
       env:
         SBOMVALIDATOR_TEMPIGNOREMISSING: true
       inputs:
-        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linx-drop
+        BuildDropPath: $(Pipeline.Workspace)/ev2Artifact/linux-drop
         OutputPath: $(Agent.TempDirectory)/sbom_validation_results.json
         ValidateSignature: True
         Verbosity: 'Verbose'
