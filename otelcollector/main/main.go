@@ -181,7 +181,7 @@ func main() {
 		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 			// starting inotify here so that it doesnt restart when it is written the first time
 			outputFile := "/opt/inotifyoutput.txt"
-			if err = shared.Inotify(outputFile, "/etc/operator-targets/ca/certs"); err != nil {
+			if err = shared.Inotify(outputFile, "/etc/operator-targets/client/certs"); err != nil {
 				fmt.Printf("Error starting inotify for watching targetallocator certs: %v\n", err)
 			}
 		}

@@ -177,8 +177,8 @@ spec:
             readOnly: true
           - mountPath: /ta-configuration
             name: ta-config-shared
-          - mountPath: /etc/operator-targets/ca/certs
-            name: ama-metrics-operator-targets-ca-tls-secret-volume
+          - mountPath: /etc/operator-targets/client/certs
+            name: ama-metrics-operator-targets-client-tls-secret-volume
             readOnly: true
           - mountPath: /etc/operator-targets/server/certs
             name: ama-metrics-operator-targets-server-tls-secret-volume
@@ -263,9 +263,9 @@ spec:
         secret:
           secretName: ama-metrics-operator-targets-server-tls-secret
           optional: true
-      - name: ama-metrics-operator-targets-ca-tls-secret-volume
+      - name: ama-metrics-operator-targets-client-tls-secret-volume
         secret:
-          secretName: ama-metrics-operator-targets-ca-tls-secret
+          secretName: ama-metrics-operator-targets-client-tls-secret
           optional: true
       - name: ta-config-shared
         emptyDir: {}

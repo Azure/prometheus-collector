@@ -45,48 +45,48 @@ type OtelConfig struct {
 	} `yaml:"service"`
 }
 
-func SetInsecureInCollectorConfig(configpath string) error {
-	configFileContents, err := os.ReadFile(configpath)
-	if err != nil {
-		fmt.Printf("Unable to read file contents from: %s - %v\n", configpath, err)
-		return err
-	}
-	var otelConfig OtelConfig
-	err = yaml.Unmarshal([]byte(configFileContents), &otelConfig)
-	if err != nil {
-		fmt.Printf("Unable to unmarshal merged otel configuration from: %s - %v\n", configFileContents, err)
-		return err
-	}
+// func SetInsecureInCollectorConfig(configpath string) error {
+// 	configFileContents, err := os.ReadFile(configpath)
+// 	if err != nil {
+// 		fmt.Printf("Unable to read file contents from: %s - %v\n", configpath, err)
+// 		return err
+// 	}
+// 	var otelConfig OtelConfig
+// 	err = yaml.Unmarshal([]byte(configFileContents), &otelConfig)
+// 	if err != nil {
+// 		fmt.Printf("Unable to unmarshal merged otel configuration from: %s - %v\n", configFileContents, err)
+// 		return err
+// 	}
 
-	targetAllocatorConfig := otelConfig.Receivers.Prometheus.TargetAllocator
-	tlsSettings := targetAllocatorConfig["tls"]
-	if tlsSettings != nil {
-		if tlsMap, ok := tlsSettings.(map[interface{}]interface{}); ok {
-			tlsMap["insecure_skip_verify"] = true
-			targetAllocatorConfig["tls"] = tlsMap
-		} else {
-			fmt.Println("TLS settings are not in the expected format")
-		}
-	} else {
-		fmt.Println("TLS settings are nil, not adding insecure")
-	}
+// 	targetAllocatorConfig := otelConfig.Receivers.Prometheus.TargetAllocator
+// 	tlsSettings := targetAllocatorConfig["tls"]
+// 	if tlsSettings != nil {
+// 		if tlsMap, ok := tlsSettings.(map[interface{}]interface{}); ok {
+// 			tlsMap["insecure_skip_verify"] = true
+// 			targetAllocatorConfig["tls"] = tlsMap
+// 		} else {
+// 			fmt.Println("TLS settings are not in the expected format")
+// 		}
+// 	} else {
+// 		fmt.Println("TLS settings are nil, not adding insecure")
+// 	}
 
-	updatedConfigYaml, err := yaml.Marshal(otelConfig)
-	if err != nil {
-		fmt.Printf("Unable to marshal updated otel configuration - %v\n", err)
-		return err
-	}
-	if err := os.WriteFile(configpath, updatedConfigYaml, 0644); err != nil {
-		fmt.Printf("Unable to write updated configuration to: %s - %v\n", configpath, err)
-		return err
-	}
-	if err := os.Setenv("TARGETALLOCATOR_INSECURE", "true"); err != nil {
-		fmt.Printf("Unable to set environment variable TARGETALLOCATOR_INSECURE - %v\n", err)
-		return err
-	}
-	fmt.Println("Updated configuration written to", configpath)
-	return nil
-}
+// 	updatedConfigYaml, err := yaml.Marshal(otelConfig)
+// 	if err != nil {
+// 		fmt.Printf("Unable to marshal updated otel configuration - %v\n", err)
+// 		return err
+// 	}
+// 	if err := os.WriteFile(configpath, updatedConfigYaml, 0644); err != nil {
+// 		fmt.Printf("Unable to write updated configuration to: %s - %v\n", configpath, err)
+// 		return err
+// 	}
+// 	if err := os.Setenv("TARGETALLOCATOR_INSECURE", "true"); err != nil {
+// 		fmt.Printf("Unable to set environment variable TARGETALLOCATOR_INSECURE - %v\n", err)
+// 		return err
+// 	}
+// 	fmt.Println("Updated configuration written to", configpath)
+// 	return nil
+// }
 
 func RemoveHTTPSSettingsInCollectorConfig(configpath string) error {
 	configFileContents, err := os.ReadFile(configpath)
@@ -126,7 +126,7 @@ func RemoveHTTPSSettingsInCollectorConfig(configpath string) error {
 }
 
 func CollectorTAHttpsCheck(collectorConfig string) error {
-	caCertPath := "/etc/operator-targets/ca/certs/ca.crt"
+	caCertPath := "/etc/operator-targets/client/certs/ca.crt"
 
 	// Checking for file existence before proceeding.
 	retries := 2
@@ -163,10 +163,21 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 				// break
 			} else {
 				fmt.Printf("[%s] Pinging Target Allocator endpoint with HTTPS\n", time.Now().Format(time.RFC3339))
+				// Load client certificate and key
+				certPath := "/etc/operator-targets/client/certs/client.crt"
+				keyPath := "/etc/operator-targets/client/certs/client.key"
+				clientCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+				if err != nil {
+					fmt.Printf("Unable to load client certs - %s\n", certPath)
+					setInsecure = true
+					break
+				}
+
 				client := &http.Client{
 					Transport: &http.Transport{
 						TLSClientConfig: &tls.Config{
-							RootCAs: rootCAs,
+							RootCAs:      rootCAs,
+							Certificates: []tls.Certificate{clientCert},
 						},
 					},
 				}
@@ -193,7 +204,8 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 
 	if setInsecure {
 		// Fallback to starting without HTTPS
-		_ = SetInsecureInCollectorConfig(collectorConfig)
+		// _ = SetInsecureInCollectorConfig(collectorConfig)
+		_ = RemoveHTTPSSettingsInCollectorConfig(collectorConfig)
 	} else {
 		if err := os.Setenv("TARGETALLOCATOR_INSECURE", "false"); err != nil {
 			fmt.Printf("Unable to set environment variable TARGETALLOCATOR_INSECURE - %v\n", err)

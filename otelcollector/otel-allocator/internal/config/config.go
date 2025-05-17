@@ -370,7 +370,7 @@ func (c HTTPSServerConfig) NewTLSConfig() (*tls.Config, error) {
 
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.NoClientCert,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
 		ClientCAs:    caCertPool,
 		MinVersion:   tls.VersionTLS12,
 	}

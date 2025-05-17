@@ -598,7 +598,10 @@ func getScrapeJobs() []byte {
 	taEndpoint := "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/scrape_configs"
 	client := &http.Client{}
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-		caCertPath := "/etc/operator-targets/ca/certs/ca.crt"
+		caCertPath := "/etc/operator-targets/client/certs/ca.crt"
+		certPath := "/etc/operator-targets/client/certs/client.crt"
+		keyPath := "/etc/operator-targets/client/certs/client.key"
+
 		certPEM, err := ioutil.ReadFile(caCertPath)
 		if err != nil {
 			Log(fmt.Sprintf("Unable to read ca cert file - %s\n", caCertPath))
@@ -608,10 +611,20 @@ func getScrapeJobs() []byte {
 		rootCAs := x509.NewCertPool()
 		// Append CA cert to the new pool
 		rootCAs.AppendCertsFromPEM(certPEM)
+
+		// Load client certificate and key
+		clientCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		if err != nil {
+			Log(fmt.Sprintf("Unable to load client certs - %s\n", certPath))
+			SendException(err)
+			return nil
+		}
+
 		client = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					RootCAs: rootCAs,
+					RootCAs:      rootCAs,
+					Certificates: []tls.Certificate{clientCert},
 				},
 			},
 		}

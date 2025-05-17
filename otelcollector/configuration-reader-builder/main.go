@@ -56,6 +56,8 @@ const (
 	// DefaultValidityYears is the duration for regular certificates, SSL etc. 2 years.
 	ServerValidityMonths = 8
 
+	ClientValidityMonths = 8
+
 	// CaValidityYears is the duration for CA certificates. 30 years.
 	CaValidityYears = 2
 
@@ -398,11 +400,35 @@ func createServerCertificate(co certOperator.CertOperator, caCert *x509.Certific
 
 	serverCertPem, serverKeyPem, rerr := co.CreateCertificateKeyPair(csr, caCert, caKey)
 	if rerr != nil {
-		log.Println("CreateCertificateKeyPair for api server failed: %s", rerr)
+		log.Println("CreateCertificateKeyPair for targetallocator failed: %s", rerr)
 		return "", "", rerr
 	}
 	log.Println("Server certificate is generated successfully")
 	return serverCertPem, serverKeyPem, nil
+}
+
+func createClientCertificate(co certOperator.CertOperator, caCert *x509.Certificate,
+	caKey *rsa.PrivateKey) (string, string, error) {
+	log.Println("Creating client certificate")
+	now := time.Now()
+	notAfter := now.AddDate(0, ClientValidityMonths, 0)
+
+	csr := &x509.Certificate{
+		NotBefore:             now,
+		NotAfter:              notAfter,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		BasicConstraintsValid: true,
+		Subject:               pkix.Name{CommonName: "ama-metrics"},
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+
+	clientCertPem, clientKeyPem, rerr := co.CreateCertificateKeyPair(csr, caCert, caKey)
+	if rerr != nil {
+		log.Println("CreateCertificateKeyPair for replicaset client failed: %s", rerr)
+		return "", "", rerr
+	}
+	log.Println("Client certificate is generated successfully")
+	return clientCertPem, clientKeyPem, nil
 }
 
 func generateSecretWithServerCertsForTA(serverCertPem string, serverKeyPem string, caCertPem string) error {
@@ -460,15 +486,17 @@ func generateSecretWithServerCertsForTA(serverCertPem string, serverKeyPem strin
 	return nil
 }
 
-func generateSecretWithCACertForRs(caCertPem string) error {
+func generateSecretWithClientCertForRs(clientCertPem string, clientKeyPem string, caCertPem string) error {
 	log.Println("Generating secret with CA cert")
 	// Create secret from the ca cert, server cert and server key
-	secretName := "ama-metrics-operator-targets-ca-tls-secret"
+	secretName := "ama-metrics-operator-targets-client-tls-secret"
 	namespace := "kube-system"
 
 	// Create the secret data
 	secretData := map[string][]byte{
-		"ca.crt": []byte(caCertPem),
+		"ca.crt":     []byte(caCertPem),
+		"client.crt": []byte(clientCertPem),
+		"client.key": []byte(clientKeyPem),
 	}
 
 	// Create the secret object
@@ -513,7 +541,7 @@ func generateSecretWithCACertForRs(caCertPem string) error {
 	return nil
 }
 
-func createTLSCertificatesAndSecret() (error, error, error, error) {
+func createTLSCertificatesAndSecret() (error, error, error, error, error) {
 	log.Println("Generating TLS certificates and secret")
 	certCreator := certCreator.NewCertCreator()
 	certGenerator := certGenerator.NewCertGenerator(certCreator)
@@ -529,27 +557,32 @@ func createTLSCertificatesAndSecret() (error, error, error, error) {
 		log.Println("Error creating server certificate: %v\n", serErr)
 	}
 
-	var secretErr error
-	secretErr = nil
-	if caErr == nil && serErr == nil {
+	clientCertPem, clientKeyPem, cliErr := createClientCertificate(certOperator, caCert, caKey)
+	if cliErr != nil {
+		log.Println("Error creating client certificate: %v\n", cliErr)
+	}
+
+	var serverSecretErr error
+	serverSecretErr = nil
+	if caErr == nil && serErr == nil && cliErr == nil {
 		log.Println("Generating secret so that targetallocator pod can get the certs and key")
-		secretErr := generateSecretWithServerCertsForTA(serverCertPem, serverKeyPem, caCertPem)
-		if secretErr != nil {
-			log.Println("Error generating secret for targetallocator: %v\n", secretErr)
+		serverSecretErr := generateSecretWithServerCertsForTA(serverCertPem, serverKeyPem, caCertPem)
+		if serverSecretErr != nil {
+			log.Println("Error generating secret for targetallocator: %v\n", serverSecretErr)
 		}
 	}
 
-	var gErr error
-	gErr = nil
-	if caErr == nil && serErr == nil {
-		log.Println("Generating secret so that replicaset pod can get the CA cert")
-		gErr := generateSecretWithCACertForRs(caCertPem)
-		if gErr != nil {
-			log.Println("Error generating secret with CA cert: %v\n", gErr)
+	var clientSecretErr error
+	clientSecretErr = nil
+	if caErr == nil && serErr == nil && cliErr == nil {
+		log.Println("Generating secret so that replicaset pod can get the certs and key")
+		clientSecretErr := generateSecretWithClientCertForRs(clientCertPem, clientKeyPem, caCertPem)
+		if clientSecretErr != nil {
+			log.Println("Error generating secret for replciaset: %v\n", clientSecretErr)
 		}
 	}
 	log.Println("TLS certificates and secret generated successfully")
-	return caErr, serErr, secretErr, gErr
+	return caErr, serErr, cliErr, serverSecretErr, clientSecretErr
 }
 
 func main() {
@@ -580,13 +613,13 @@ func main() {
 		fmt.Println("Error starting inotify process:", err)
 	}
 
-	caErr, serErr, secretErr, gErr := createTLSCertificatesAndSecret()
+	caErr, serErr, cliErr, serverSecretErr, clientSecretErr := createTLSCertificatesAndSecret()
 
-	if caErr != nil || serErr != nil || secretErr != nil || gErr != nil {
+	if caErr != nil || serErr != nil || cliErr != nil || serverSecretErr != nil || clientSecretErr != nil {
 		log.Println("Error creating TLS certificates and secret, retrying in 5 seconds")
 		time.Sleep(5 * time.Second)
-		caErr1, serErr1, secretErr1, gErr1 := createTLSCertificatesAndSecret()
-		if caErr1 != nil || serErr1 != nil || secretErr1 != nil || gErr1 != nil {
+		caErr1, serErr1, cliErr1, serverSecretErr1, clientSecretErr1 := createTLSCertificatesAndSecret()
+		if caErr1 != nil || serErr1 != nil || cliErr1 != nil || serverSecretErr1 != nil || clientSecretErr1 != nil {
 			log.Println("Error creating TLS certificates and secret, during retry, not trying again")
 			if caErr1 != nil {
 				log.Println("Error during ca cert creation: %v\n", caErr1)
@@ -594,11 +627,15 @@ func main() {
 			if serErr1 != nil {
 				log.Println("Error during server cert creation: %v\n", serErr1)
 			}
-			if secretErr1 != nil {
-				log.Println("Error generating secret for targetallocator: %v\n", secretErr1)
+
+			if cliErr1 != nil {
+				log.Println("Error during client cert creation: %v\n", serErr1)
 			}
-			if gErr1 != nil {
-				log.Println("Error generating secret with CA cert: %v\n", gErr1)
+			if serverSecretErr1 != nil {
+				log.Println("Error generating secret for targetallocator: %v\n", serverSecretErr1)
+			}
+			if clientSecretErr1 != nil {
+				log.Println("Error generating secret for replicaset: %v\n", clientSecretErr1)
 			}
 		}
 	}
@@ -634,7 +671,7 @@ func main() {
 		}
 		outputFile = "/opt/inotifyoutput-ca-cert-secret.txt"
 		log.Println("Starting inotify for ca certs")
-		if err = shared.Inotify(outputFile, "/etc/operator-targets/ca/certs"); err != nil {
+		if err = shared.Inotify(outputFile, "/etc/operator-targets/client/certs"); err != nil {
 			log.Println("Error starting inotify for watching targetallocator client certs: %v\n", err)
 		}
 	}
