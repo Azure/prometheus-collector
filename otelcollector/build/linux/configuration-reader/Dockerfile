@@ -36,6 +36,9 @@ WORKDIR /src
 RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu
 
 COPY ./configuration-reader-builder/go.mod ./configuration-reader-builder/go.sum ./configuration-reader-builder/
+COPY ./configuration-reader-builder/certcreator/go.mod ./configuration-reader-builder/certcreator/
+COPY ./configuration-reader-builder/certgenerator/go.mod ./configuration-reader-builder/certgenerator/
+COPY ./configuration-reader-builder/certoperator/go.mod ./configuration-reader-builder/certoperator/
 RUN go version > goversion.txt
 
 COPY ./shared /src/shared
