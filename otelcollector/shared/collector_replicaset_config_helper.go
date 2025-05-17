@@ -12,38 +12,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-type OtelConfig struct {
-	Exporters  interface{} `yaml:"exporters"`
-	Processors interface{} `yaml:"processors"`
-	Extensions interface{} `yaml:"extensions"`
-	Receivers  struct {
-		Prometheus struct {
-			Config          map[string]interface{} `yaml:"config"`
-			TargetAllocator map[string]interface{} `yaml:"target_allocator"`
-		} `yaml:"prometheus"`
-	} `yaml:"receivers"`
-	Service struct {
-		Extensions interface{} `yaml:"extensions"`
-		Pipelines  struct {
-			Metrics struct {
-				Exporters  interface{} `yaml:"exporters"`
-				Processors interface{} `yaml:"processors"`
-				Receivers  interface{} `yaml:"receivers"`
-			} `yaml:"metrics"`
-			MetricsTelemetry struct {
-				Exporters  interface{} `yaml:"exporters,omitempty"`
-				Processors interface{} `yaml:"processors,omitempty"`
-				Receivers  interface{} `yaml:"receivers,omitempty"`
-			} `yaml:"metrics/telemetry,omitempty"`
-		} `yaml:"pipelines"`
-		Telemetry struct {
-			Logs struct {
-				Level    interface{} `yaml:"level"`
-				Encoding interface{} `yaml:"encoding"`
-			} `yaml:"logs"`
-		} `yaml:"telemetry"`
-	} `yaml:"service"`
-}
 
 // func SetInsecureInCollectorConfig(configpath string) error {
 // 	configFileContents, err := os.ReadFile(configpath)
