@@ -43,7 +43,6 @@ const (
 	KeyRetryTimeout  = time.Second * 10
 )
 
-
 var RESET = "\033[0m"
 var RED = "\033[31m"
 
@@ -127,7 +126,7 @@ func updateTAConfigFile(configFilePath string) {
 		}
 	}
 
-	var targetAllocatorConfig Config
+	var targetAllocatorConfig shared.Config
 
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, setting tls config in TargetAllocator")
@@ -141,11 +140,11 @@ func updateTAConfigFile(configFilePath string) {
 				},
 			},
 			Config: promScrapeConfig,
-			PrometheusCR: PrometheusCRConfig{
+			PrometheusCR: shared.PrometheusCRConfig{
 				ServiceMonitorSelector: &metav1.LabelSelector{},
 				PodMonitorSelector:     &metav1.LabelSelector{},
 			},
-			HTTPS: HTTPSServerConfig{
+			HTTPS: shared.HTTPSServerConfig{
 				Enabled:         true,
 				ListenAddr:      ":8443",
 				TLSCertFilePath: "/etc/operator-targets/server/certs/server.crt",
@@ -155,7 +154,7 @@ func updateTAConfigFile(configFilePath string) {
 		}
 	} else {
 		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is not set/false, not setting tls config in TargetAllocator")
-		targetAllocatorConfig = Config{
+		targetAllocatorConfig = shared.Config{
 			AllocationStrategy: "consistent-hashing",
 			FilterStrategy:     "relabel-config",
 			CollectorSelector: &metav1.LabelSelector{
