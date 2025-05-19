@@ -13,7 +13,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/Azure/prometheus-collector
-      branch: grace/testkube-fixes
+      branch: main
       path: otelcollector/test/ginkgo-e2e
   executionRequest:
     variables:
