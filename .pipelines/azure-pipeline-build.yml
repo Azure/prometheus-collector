@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-    - vishwa/05022025
+    - feature/otlpmain
     - main
 
 pr:
