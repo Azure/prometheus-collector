@@ -36,7 +36,7 @@ type OtelConfig struct {
 	Receivers  struct {
 		Prometheus struct {
 			Config          map[string]interface{} `yaml:"config"`
-			TargetAllocator map[string]interface{} `yaml:"target_allocator"`
+			TargetAllocator map[string]interface{} `yaml:"target_allocator,omitempty"`
 			APIServer       interface{}            `yaml:"api_server"`
 		} `yaml:"prometheus"`
 	} `yaml:"receivers"`
