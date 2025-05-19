@@ -323,7 +323,7 @@ Some highlights are that:
 - Install the [helm chart](https://docs.testkube.io/articles/helm-chart/) on your cluster:
   ```bash
   helm repo add kubeshop https://kubeshop.github.io/helm-charts
-  helm upgrade testkube kubeshop/testkube --install -f values.yaml -n testkube
+  helm upgrade testkube kubeshop/testkube --install --create-namespace -f values.yaml -n testkube
   ```
 - The helm chart will install in the namespace `testkube`.
 - Run `testkube dashboard` to port-forward the dashboard.
@@ -360,7 +360,7 @@ Some highlights are that:
   cd ./testkube
   kubectl apply -f testkube-test-crs.yaml
   ```
-- Get the full resource ID of your AMW and the client ID of the AKS cluster kubelet managed identity. Run the following command to allow query access from the cluster:
+- Get the full resource ID of your AMW and the client ID of the AKS cluster kubelet managed identity. Run the following command to allow query access from the cluster. Due to access policies, this may need to be run from Cloud Shell in the Portal:
 
   ```
   az role assignment create --assignee <client ID>  --role "Monitoring Data Reader" --scope <AMW resource ID>
