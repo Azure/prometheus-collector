@@ -488,6 +488,7 @@ testkube-api:
       ## If specified, injects a custom CA into the list of trusted CAs. Specify a secret with the PEM encoded CA under the key specified by customCaSecretKey.
       customCaSecretRef: ""
       ## Specify the key for the PEM encoded CA in the secret specified by customCaSecretRef.
+      # [SuppressMessage("Microsoft.Security", "CS002:SecretInNextLine", Justification="pointing to the filename of the secret key path, not confidential")]
       customCaSecretKey: "ca.crt"
       # -- Specifies the path to the directory (skip the trailing slash) where CA certificates should be mounted. The mounted file should container a PEM encoded CA certificate.
       customCaDirPath: ""
@@ -669,6 +670,7 @@ testkube-api:
     # -- Root username
     minioRootUser: "minio"
     # -- Root password
+    # [SuppressMessage("Microsoft.Security", "CS002:SecretInNextLine", Justification="standard helm template, not confidential")]
     minioRootPassword: "minio123"
     # -- PVC Storage Request for MinIO. Should be available in the cluster.
     storage: 10Gi
