@@ -57,7 +57,7 @@ func logFatalError(message string) {
 	log.Fatalf("%s%s%s", RED, message, RESET)
 }
 
-func updateTAConfigFile(configFilePath string) {
+func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 	defaultsMergedConfigFileContents, err := os.ReadFile(configFilePath)
 	if err != nil {
 		logFatalError(fmt.Sprintf("config-reader::Unable to read file contents from: %s - %v\n", configFilePath, err))
@@ -128,7 +128,7 @@ func updateTAConfigFile(configFilePath string) {
 
 	var targetAllocatorConfig shared.Config
 
-	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" && httpsEnabled {
 		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, setting tls config in TargetAllocator")
 		targetAllocatorConfig = shared.Config{
 			AllocationStrategy: "consistent-hashing",
@@ -153,7 +153,7 @@ func updateTAConfigFile(configFilePath string) {
 			},
 		}
 	} else {
-		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is not set/false, not setting tls config in TargetAllocator")
+		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation, not setting tls config in TargetAllocator")
 		targetAllocatorConfig = shared.Config{
 			AllocationStrategy: "consistent-hashing",
 			FilterStrategy:     "relabel-config",
@@ -546,7 +546,7 @@ func main() {
 		log.Fatalf("Error starting inotify process for config reader's liveness probe: %v\n", err)
 		fmt.Println("Error starting inotify process:", err)
 	}
-
+	httpsEnabled := true
 	caErr, serErr, cliErr, serverSecretErr, clientSecretErr := createTLSCertificatesAndSecret()
 
 	if caErr != nil || serErr != nil || cliErr != nil || serverSecretErr != nil || clientSecretErr != nil {
@@ -557,19 +557,24 @@ func main() {
 			log.Println("Error creating TLS certificates and secret, during retry, not trying again")
 			if caErr1 != nil {
 				log.Println("Error during ca cert creation: %v\n", caErr1)
+				httpsEnabled = false
 			}
 			if serErr1 != nil {
 				log.Println("Error during server cert creation: %v\n", serErr1)
+				httpsEnabled = false
 			}
 
 			if cliErr1 != nil {
 				log.Println("Error during client cert creation: %v\n", serErr1)
+				httpsEnabled = false
 			}
 			if serverSecretErr1 != nil {
 				log.Println("Error generating secret for targetallocator: %v\n", serverSecretErr1)
+				httpsEnabled = false
 			}
 			if clientSecretErr1 != nil {
 				log.Println("Error generating secret for replicaset: %v\n", clientSecretErr1)
+				httpsEnabled = false
 			}
 		}
 	}
@@ -577,10 +582,10 @@ func main() {
 	configmapsettings.Configmapparser()
 	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
 		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
-			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml")
+			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml", httpsEnabled)
 		}
 	} else if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config.yml"); err == nil {
-		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml")
+		updateTAConfigFile("/opt/microsoft/otelcollector/collector-config.yml", httpsEnabled)
 	} else {
 		log.Println("No configs found via configmap, not running config reader")
 	}
