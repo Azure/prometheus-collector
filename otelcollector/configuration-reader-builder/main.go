@@ -500,7 +500,7 @@ func createTLSCertificatesAndSecret() (error, error, error, error, error) {
 	serverSecretErr = nil
 	if caErr == nil && serErr == nil && cliErr == nil {
 		log.Println("Generating secret so that targetallocator pod can get the certs and key")
-		serverSecretErr := generateSecretWithServerCertsForTA(serverCertPem, serverKeyPem, caCertPem)
+		serverSecretErr = generateSecretWithServerCertsForTA(serverCertPem, serverKeyPem, caCertPem)
 		if serverSecretErr != nil {
 			log.Println("Error generating secret for targetallocator: %v\n", serverSecretErr)
 		}
@@ -510,7 +510,7 @@ func createTLSCertificatesAndSecret() (error, error, error, error, error) {
 	clientSecretErr = nil
 	if caErr == nil && serErr == nil && cliErr == nil {
 		log.Println("Generating secret so that replicaset pod can get the certs and key")
-		clientSecretErr := generateSecretWithClientCertForRs(clientCertPem, clientKeyPem, caCertPem)
+		clientSecretErr = generateSecretWithClientCertForRs(clientCertPem, clientKeyPem, caCertPem)
 		if clientSecretErr != nil {
 			log.Println("Error generating secret for replciaset: %v\n", clientSecretErr)
 		}
@@ -548,7 +548,6 @@ func main() {
 	}
 	httpsEnabled := true
 	caErr, serErr, cliErr, serverSecretErr, clientSecretErr := createTLSCertificatesAndSecret()
-
 	if caErr != nil || serErr != nil || cliErr != nil || serverSecretErr != nil || clientSecretErr != nil {
 		log.Println("Error creating TLS certificates and secret, retrying in 5 seconds")
 		time.Sleep(5 * time.Second)
