@@ -2245,10 +2245,10 @@ extends:
                   arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
 
 
-      - deployment: Deploy_AKS_Chart_OTEL_Cluster
+      - deployment: Deploy_AKS_Chart_OTel_Cluster
         displayName: "Deploy: AKS OTEL cluster"
         environment: Prometheus-Collector
-        #condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart_OTEL_Cluster')), eq(variables['System.StageAttempt'], 1)))
+        #condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart_OTel_Cluster')), eq(variables['System.StageAttempt'], 1)))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2270,6 +2270,13 @@ extends:
                 inputs:
                   helmVersionToInstall: 3.12.3
               - bash: |
+
+                  RETINA_VERSION=$( curl -sL https://api.github.com/repos/microsoft/retina/releases/latest | jq -r .name)
+                  echo "##vso[task.setvariable variable=RETINA_VERSION]$RETINA_VERSION"
+                  echo $RETINA_VERSION
+                  helm pull oci://ghcr.io/microsoft/retina/charts/retina --version $RETINA_VERSION --untar --untardir $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart
+                  mv $(Build.SourcesDirectory)/otelcollector/deploy/retina/custom-files/network-observability-service.yaml $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/templates/
+
                   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
                       do
                         sleep 30
@@ -2392,10 +2399,10 @@ extends:
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/testkube
                 displayName: "Run tests"
 
-      - deployment: Testkube_OTEL
-        displayName: "Test: OTEL AKS testkube tests"
+      - deployment: Testkube_OTel
+        displayName: "Test: OTel AKS testkube tests"
         environment: Prometheus-Collector
-        dependsOn: Deploy_AKS_Chart
+        dependsOn: Deploy_AKS_Chart_OTel_Cluster
         #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
@@ -2427,13 +2434,13 @@ extends:
               - bash: |
                   export AMW_QUERY_ENDPOINT="https://ci-prom-dev-aks-otlp-geaqdgeuapfeh8b2.westus3.prometheus.monitor.azure.com"
                   export AZURE_CLIENT_ID="6b8f6333-ecd0-4579-b05d-afc98a103a59"
-                  envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
+                  envsubst < ./testkube/testkube-test-crs.yaml > ./testkube/testkube-test-crs-otel.yaml
                   kubectl apply -f ./testkube/api-server-permissions.yaml
-                  kubectl apply -f ./testkube/testkube-test-crs-ci-dev-aks-mac-eus.yaml
+                  kubectl apply -f ./testkube/testkube-test-crs-otel.yaml
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-configmap.yaml
                   kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-prometheus-config-node-windows-configmap.yaml
-                  kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap.yaml
+                  #kubectl apply -f ./test-cluster-yamls/configmaps/ama-metrics-settings-configmap-v2.yaml
                   kubectl apply -f ./test-cluster-yamls/customresources/prometheus-reference-app.yaml
                   exit 0
                 workingDirectory: $(Build.SourcesDirectory)/otelcollector/test/
