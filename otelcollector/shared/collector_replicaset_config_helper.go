@@ -97,6 +97,8 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 	setInsecure := false
 	// Checking for file existence before proceeding.
 	retries := 2
+	var resp *http.Response
+
 	for i := 0; i <= retries; i++ {
 		if _, err := os.Stat(caCertPath); os.IsNotExist(err) {
 			if i == retries {
@@ -115,7 +117,6 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 	// Checking for HTTPS connection with retries
 	if !setInsecure {
 		retries_https := 2
-		var resp *http.Response
 		fmt.Printf("HTTPS connection check between Collector and TargetAllocator\n")
 		for i := 0; i <= retries_https; i++ {
 			certPEM, err := ioutil.ReadFile(caCertPath)
