@@ -1857,7 +1857,7 @@ extends:
             ScanType: CustomScan
             FileDirPath: '$(Build.ArtifactStagingDirectory)'
             DisableRemediation: false
-            AcceptableOutdatedSignatureInHours: 24
+            AcceptableOutdatedSignatureInHours: 48
             TreatAcceptableOutdatedSignatureAs: Warning
       - job: Arc_Helm_Chart
         displayName: "Package: Arc helm chart"
