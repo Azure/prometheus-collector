@@ -2,7 +2,6 @@ trigger:
   branches:
     include:
     - main
-    - grace/testkube-fixes
 
 pr:
   autoCancel: true
@@ -24,6 +23,7 @@ variables:
   NODE_EXPORTER_IMAGE: 'mcr.microsoft.com/oss/v2/prometheus/node-exporter:v1.9.1'
   IS_PR: $[eq(variables['Build.Reason'], 'PullRequest')]
   IS_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'main')]
+  IS_OTLP_MAIN_BRANCH: $[eq(variables['Build.SourceBranchName'], 'otlpmain')]
   BUILD_WINDOWS: true
   Codeql.Enabled: true
   GOLANG_VERSION: '1.23.8'
@@ -2248,7 +2248,7 @@ extends:
       - deployment: Deploy_AKS_Chart_OTel_Cluster
         displayName: "Deploy: AKS OTEL cluster"
         environment: Prometheus-Collector
-        #condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart_OTel_Cluster')), eq(variables['System.StageAttempt'], 1)))
+        condition: and(and(eq(variables.IS_PR, false), eq(variables.IS_OTLP_MAIN_BRANCH, true)), or(not(succeeded('Deploy_AKS_Chart_OTel_Cluster')), eq(variables['System.StageAttempt'], 1)))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
@@ -2318,6 +2318,20 @@ extends:
                   releaseName: 'ama-metrics'
                   waitForExecution: false
                   arguments: --dependency-update --values $(Build.SourcesDirectory)/otelcollector/deploy/addon-chart/azure-monitor-metrics-addon/values.yaml
+              - task: HelmDeploy@1
+                displayName: "Deploy: retina onto ciprom-dev-aks-otlp cluster"
+                inputs:
+                  connectionType: 'Azure Resource Manager'
+                  azureSubscription: 'ContainerInsights_Build_Subscription(9b96ebbd-c57a-42d1-bbe9-b69296e4c7fb)'
+                  azureResourceGroup: 'ciprom-dev-aks-otlp'
+                  kubernetesCluster: 'ciprom-dev-aks-otlp'
+                  namespace: 'kube-system'
+                  command: 'upgrade'
+                  chartType: 'FilePath'
+                  chartPath: '$(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina'
+                  releaseName: 'retina'
+                  waitForExecution: false
+                  arguments: --install --values $(Build.SourcesDirectory)/otelcollector/deploy/retina/chart/retina/values.yaml --skip-crds --version $(RETINA_VERSION) --set operator.enabled=true --set enabledPlugin_linux="\[dropreason\,packetforward\,linuxutil\,dns\,packetparser\]" --set logLevel=info --set operator.enableRetinaEndpoint=true --set image.tag=$(RETINA_VERSION) --set operator.tag=$(RETINA_VERSION) --set tolerations[0].key=CriticalAddonsOnly --set tolerations[0].operator=Exists --set tolerations[1].operator=Exists --set tolerations[1].effect=NoExecute --set tolerations[2].operator=Exists --set tolerations[2].effect=NoSchedule
 
 
       - deployment: Testkube
@@ -2403,7 +2417,7 @@ extends:
         displayName: "Test: OTel AKS testkube tests"
         environment: Prometheus-Collector
         dependsOn: Deploy_AKS_Chart_OTel_Cluster
-        #condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_MAIN_BRANCH, true)))
+        condition: and(succeeded(), and(eq(variables.IS_PR, false), eq(variables.IS_OTLP_MAIN_BRANCH, true)))
         variables:
           HELM_CHART_NAME: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.HELM_CHART_NAME'] ]
           HELM_SEMVER: $[ stageDependencies.Build.Image_Tags_and_Ev2_Artifacts.outputs['setup.SEMVER'] ]
