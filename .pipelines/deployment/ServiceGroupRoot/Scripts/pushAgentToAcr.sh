@@ -74,8 +74,14 @@ TOKEN=$(echo $LOGIN_INFO | jq -r '.accessToken')
 SOURCE_IMAGE_FULL_PATH=${MCR_REGISTRY}${DEV_MCR_REPOSITORY}:${IMAGE_TAG}
 AGENT_IMAGE_FULL_PATH=${PROD_ACR_REPOSITORY_WITHOUT_SLASH}:${IMAGE_TAG}
 
+echo "Source image: $SOURCE_IMAGE_FULL_PATH"
+echo "Destination image: $ACR_REGISTRY/$AGENT_IMAGE_FULL_PATH"
+
 # Use oras to copy the image
-oras copy -r $SOURCE_IMAGE_FULL_PATH $ACR_REGISTRY/$AGENT_IMAGE_FULL_PATH --to-password $TOKEN
+echo "Checking oras version"
+oras version
+echo "Starting oras copy"
+oras copy -r -v $SOURCE_IMAGE_FULL_PATH $ACR_REGISTRY/$AGENT_IMAGE_FULL_PATH --to-password $TOKEN
 if [ $? -eq 0 ]; then
   echo "Retagged and pushed image successfully"
 else

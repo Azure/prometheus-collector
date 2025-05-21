@@ -8,9 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net"
-	"net/url"
-	"os"
 	"reflect"
 	"regexp"
 	"sync"
@@ -19,11 +16,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	commonconfig "github.com/prometheus/common/config"
-	"github.com/prometheus/common/version"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
-	"github.com/prometheus/prometheus/web"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componentstatus"
 	"go.opentelemetry.io/collector/consumer"
@@ -31,6 +26,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/exp/zapslog"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/apiserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
 )
@@ -38,6 +34,7 @@ import (
 const (
 	defaultGCInterval = 2 * time.Minute
 	gcIntervalDelta   = 1 * time.Minute
+
 	// Use same settings as Prometheus web server
 	maxConnections     = 512
 	readTimeoutMinutes = 10
@@ -55,29 +52,38 @@ type pReceiver struct {
 	scrapeManager          *scrape.Manager
 	discoveryManager       *discovery.Manager
 	targetAllocatorManager *targetallocator.Manager
+	apiServerManager       *apiserver.Manager
+	registry               *prometheus.Registry
 	registerer             prometheus.Registerer
 	unregisterMetrics      func()
 	skipOffsetting         bool // for testing only
-	webHandler             *web.Handler
 }
 
 // New creates a new prometheus.Receiver reference.
 func newPrometheusReceiver(set receiver.Settings, cfg *Config, next consumer.Metrics) *pReceiver {
 	baseCfg := promconfig.Config(*cfg.PrometheusConfig)
+	registry := prometheus.NewRegistry()
+	registerer := prometheus.WrapRegistererWith(
+		prometheus.Labels{"receiver": set.ID.String()},
+		registry)
+	apiServerManager := (*apiserver.Manager)(nil)
+	if cfg.APIServer != nil && cfg.APIServer.Enabled {
+		apiServerManager = apiserver.NewManager(set, cfg.APIServer, &baseCfg, registry, registerer)
+	}
 	pr := &pReceiver{
 		cfg:          cfg,
 		consumer:     next,
 		settings:     set,
 		configLoaded: make(chan struct{}),
-		registerer: prometheus.WrapRegistererWith(
-			prometheus.Labels{"receiver": set.ID.String()},
-			prometheus.DefaultRegisterer),
+		registerer:   registerer,
+		registry:     registry,
 		targetAllocatorManager: targetallocator.NewManager(
 			set,
 			cfg.TargetAllocator,
 			&baseCfg,
 			enableNativeHistogramsGate.IsEnabled(),
 		),
+		apiServerManager: apiServerManager,
 	}
 	return pr
 }
@@ -96,7 +102,7 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 		return err
 	}
 
-	err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager, r.webHandler)
+	err = r.targetAllocatorManager.Start(ctx, host, r.scrapeManager, r.discoveryManager)
 	if err != nil {
 		return err
 	}
@@ -201,51 +207,13 @@ func (r *pReceiver) initPrometheusComponents(ctx context.Context, logger *slog.L
 			componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
 		}
 	}()
-	// Setup settings and logger and create Prometheus web handler
-	webOptions := web.Options{
-		ScrapeManager:   r.scrapeManager,
-		Context:         ctx,
-		ListenAddresses: []string{"localhost:9090"},
-		ExternalURL: &url.URL{
-			Scheme: "http",
-			Host:   "localhost:9090",
-			Path:   "",
-		},
-		RoutePrefix: "/",
-		ReadTimeout: time.Minute * readTimeoutMinutes,
-		PageTitle:   "Prometheus Receiver",
-		Version: &web.PrometheusVersion{
-			Version:   version.Version,
-			Revision:  version.Revision,
-			Branch:    version.Branch,
-			BuildUser: version.BuildUser,
-			BuildDate: version.BuildDate,
-			GoVersion: version.GoVersion,
-		},
-		Flags:          make(map[string]string),
-		MaxConnections: maxConnections,
-		IsAgent:        true,
-		Gatherer:       prometheus.DefaultGatherer,
-		UseOldUI: true,
-	}
-	go_kit_logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	r.webHandler = web.New(go_kit_logger, &webOptions)
-	sem := make(chan struct{}, maxConnections)
-	listener, err := r.webHandler.Listener("localhost:9090", sem)
-	if err != nil {
-		return err
-	}
-	// Pass config and let the web handler know the config is ready.
-	// These are needed because Prometheus allows reloading the config without restarting.
-	r.webHandler.ApplyConfig((*promconfig.Config)(r.cfg.PrometheusConfig))
-	r.webHandler.SetReady(web.Ready)
-	// Uses the same context as the discovery and scrape managers for shutting down
-	go func() {
-		if err := r.webHandler.Run(ctx, []net.Listener{listener}, ""); err != nil {
-			r.settings.Logger.Error("Web handler failed", zap.Error(err))
-			componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
+
+	if r.cfg.APIServer != nil && r.cfg.APIServer.Enabled {
+		err = r.apiServerManager.Start(ctx, host, r.scrapeManager)
+		if err != nil {
+			r.settings.Logger.Error("Failed to start APIServer", zap.Error(err))
 		}
-	}()
+	}
 
 	return nil
 }
@@ -267,7 +235,7 @@ func gcInterval(cfg *PromConfig) time.Duration {
 }
 
 // Shutdown stops and cancels the underlying Prometheus scrapers.
-func (r *pReceiver) Shutdown(context.Context) error {
+func (r *pReceiver) Shutdown(ctx context.Context) error {
 	if r.cancelFunc != nil {
 		r.cancelFunc()
 	}
@@ -279,6 +247,12 @@ func (r *pReceiver) Shutdown(context.Context) error {
 	}
 	if r.unregisterMetrics != nil {
 		r.unregisterMetrics()
+	}
+	if r.apiServerManager != nil {
+		err := r.apiServerManager.Shutdown(ctx)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

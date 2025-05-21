@@ -1,3 +1,27 @@
+defaultRules:
+  create: false
+kubelet:
+  enabled: false
+kubeApiServer:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+coreDns:
+  enabled: false
+kubeDns:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeStateMetrics:
+  enabled: false
+nodeExporter:
+  enabled: false
+alertmanager:
+  enabled: false
+grafana:
+  enabled: false
 prometheus:
   prometheusSpec:
     affinity:
@@ -46,6 +70,11 @@ prometheus:
     remoteWrite:
     - url: http://localhost:8081/api/v1/write
     - url: https://remotewritemonitor-eus2-lzt0.eastus2-1.metrics.ingest.monitor.azure.com/dataCollectionRules/dcr-c61eca33833b44fa8eddd257a0baa02a/streams/Microsoft-PrometheusMetrics/api/v1/write?api-version=2023-04-24
+      azureAd:
+        cloud: AzurePublic
+        managedIdentity:
+          clientId: $USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID
+    - url: https://remotewritemonitor-wcus-13t6.westcentralus-1.metrics.ingest.monitor.azure.com/dataCollectionRules/dcr-315d0c9a2c5e463d8bd13cf2bcc4f875/streams/Microsoft-PrometheusMetrics/api/v1/write?api-version=2023-04-24
       azureAd:
         cloud: AzurePublic
         managedIdentity:
