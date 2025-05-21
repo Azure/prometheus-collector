@@ -12,49 +12,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// func SetInsecureInCollectorConfig(configpath string) error {
-// 	configFileContents, err := os.ReadFile(configpath)
-// 	if err != nil {
-// 		fmt.Printf("Unable to read file contents from: %s - %v\n", configpath, err)
-// 		return err
-// 	}
-// 	var otelConfig OtelConfig
-// 	err = yaml.Unmarshal([]byte(configFileContents), &otelConfig)
-// 	if err != nil {
-// 		fmt.Printf("Unable to unmarshal merged otel configuration from: %s - %v\n", configFileContents, err)
-// 		return err
-// 	}
-
-// 	targetAllocatorConfig := otelConfig.Receivers.Prometheus.TargetAllocator
-// 	tlsSettings := targetAllocatorConfig["tls"]
-// 	if tlsSettings != nil {
-// 		if tlsMap, ok := tlsSettings.(map[interface{}]interface{}); ok {
-// 			tlsMap["insecure_skip_verify"] = true
-// 			targetAllocatorConfig["tls"] = tlsMap
-// 		} else {
-// 			fmt.Println("TLS settings are not in the expected format")
-// 		}
-// 	} else {
-// 		fmt.Println("TLS settings are nil, not adding insecure")
-// 	}
-
-// 	updatedConfigYaml, err := yaml.Marshal(otelConfig)
-// 	if err != nil {
-// 		fmt.Printf("Unable to marshal updated otel configuration - %v\n", err)
-// 		return err
-// 	}
-// 	if err := os.WriteFile(configpath, updatedConfigYaml, 0644); err != nil {
-// 		fmt.Printf("Unable to write updated configuration to: %s - %v\n", configpath, err)
-// 		return err
-// 	}
-// 	if err := os.Setenv("TARGETALLOCATOR_INSECURE", "true"); err != nil {
-// 		fmt.Printf("Unable to set environment variable TARGETALLOCATOR_INSECURE - %v\n", err)
-// 		return err
-// 	}
-// 	fmt.Println("Updated configuration written to", configpath)
-// 	return nil
-// }
-
 func RemoveHTTPSSettingsInCollectorConfig(configpath string) error {
 	configFileContents, err := os.ReadFile(configpath)
 	if err != nil {
