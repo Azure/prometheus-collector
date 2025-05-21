@@ -130,9 +130,9 @@ func parseDebugModeSettings(metricsConfigBySection map[string]map[string]string)
 	shared.EchoSectionDivider("End Processing - parseDebugModeSettings")
 }
 
-func parseOpentelemetryMetricsSettings() {
+func parseOpentelemetryMetricsSettings(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseOpentelemetryMetricsSettings")
-	if err := ConfigureOpentelemetryMetricsSettings(); err != nil {
+	if err := ConfigureOpentelemetryMetricsSettings(metricsConfigBySection); err != nil {
 		shared.EchoError(err.Error())
 		return
 	}
@@ -179,7 +179,7 @@ func Configmapparser() {
 	parsePrometheusCollectorConfig(metricsConfigBySection)
 	parseDefaultScrapeSettings(metricsConfigBySection)
 	parseDebugModeSettings(metricsConfigBySection)
-	parseOpentelemetryMetricsSettings()
+	parseOpentelemetryMetricsSettings(metricsConfigBySection)
 
 	tomlparserTargetsMetricsKeepList(metricsConfigBySection)
 	tomlparserScrapeInterval(metricsConfigBySection)
