@@ -274,7 +274,9 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 		duration := time.Since(cfgReaderContainerStartTime)
 		// Server certificate validity is for 8 months, so if the container is running for more than 5 months, then restart the container
-		if duration.Hours() > (5 * 30 * 24) {
+		// if duration.Hours() > (5 * 30 * 24) {
+		// adding for testing purposes
+		if duration.Hours() > 8 {
 			status = http.StatusServiceUnavailable
 			message = "\nconfig-reader container is running for more than 5 months, restart the container"
 		}
@@ -547,33 +549,36 @@ func main() {
 		fmt.Println("Error starting inotify process:", err)
 	}
 	httpsEnabled := true
-	caErr, serErr, cliErr, serverSecretErr, clientSecretErr := createTLSCertificatesAndSecret()
-	if caErr != nil || serErr != nil || cliErr != nil || serverSecretErr != nil || clientSecretErr != nil {
-		log.Println("Error creating TLS certificates and secret, retrying in 5 seconds")
-		time.Sleep(5 * time.Second)
-		caErr1, serErr1, cliErr1, serverSecretErr1, clientSecretErr1 := createTLSCertificatesAndSecret()
-		if caErr1 != nil || serErr1 != nil || cliErr1 != nil || serverSecretErr1 != nil || clientSecretErr1 != nil {
-			log.Println("Error creating TLS certificates and secret, during retry, not trying again")
-			if caErr1 != nil {
-				log.Println("Error during ca cert creation: %v\n", caErr1)
-				httpsEnabled = false
-			}
-			if serErr1 != nil {
-				log.Println("Error during server cert creation: %v\n", serErr1)
-				httpsEnabled = false
-			}
+	// test
+	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+		caErr, serErr, cliErr, serverSecretErr, clientSecretErr := createTLSCertificatesAndSecret()
+		if caErr != nil || serErr != nil || cliErr != nil || serverSecretErr != nil || clientSecretErr != nil {
+			log.Println("Error creating TLS certificates and secret, retrying in 5 seconds")
+			time.Sleep(5 * time.Second)
+			caErr1, serErr1, cliErr1, serverSecretErr1, clientSecretErr1 := createTLSCertificatesAndSecret()
+			if caErr1 != nil || serErr1 != nil || cliErr1 != nil || serverSecretErr1 != nil || clientSecretErr1 != nil {
+				log.Println("Error creating TLS certificates and secret, during retry, not trying again")
+				if caErr1 != nil {
+					log.Println("Error during ca cert creation: %v\n", caErr1)
+					httpsEnabled = false
+				}
+				if serErr1 != nil {
+					log.Println("Error during server cert creation: %v\n", serErr1)
+					httpsEnabled = false
+				}
 
-			if cliErr1 != nil {
-				log.Println("Error during client cert creation: %v\n", serErr1)
-				httpsEnabled = false
-			}
-			if serverSecretErr1 != nil {
-				log.Println("Error generating secret for targetallocator: %v\n", serverSecretErr1)
-				httpsEnabled = false
-			}
-			if clientSecretErr1 != nil {
-				log.Println("Error generating secret for replicaset: %v\n", clientSecretErr1)
-				httpsEnabled = false
+				if cliErr1 != nil {
+					log.Println("Error during client cert creation: %v\n", serErr1)
+					httpsEnabled = false
+				}
+				if serverSecretErr1 != nil {
+					log.Println("Error generating secret for targetallocator: %v\n", serverSecretErr1)
+					httpsEnabled = false
+				}
+				if clientSecretErr1 != nil {
+					log.Println("Error generating secret for replicaset: %v\n", clientSecretErr1)
+					httpsEnabled = false
+				}
 			}
 		}
 	}
