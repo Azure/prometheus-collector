@@ -467,6 +467,17 @@ stages:
       inputs:
         repoId: bfcb8d3d-7994-4f6e-9671-aae8738534cb
         path: release_gating.py
+    - task: DownloadPipelineArtifact@2
+      displayName: ⏬ Pipeline Artifact Download
+      inputs:
+        buildType: specific
+        project: $(resources.pipeline._Azureprometheus-collector.projectID)
+        definition: $(resources.pipeline._Azureprometheus-collector.pipelineID)
+        allowFailedBuilds: false
+        buildVersionToDownload: specific
+        pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
+        pipeline: _Azureprometheus-collector
+        targetPath: $(Pipeline.Workspace)/ev2Artifact
     - task: HelmInstaller@0
       inputs:
         helmVersion: 3.12.3
