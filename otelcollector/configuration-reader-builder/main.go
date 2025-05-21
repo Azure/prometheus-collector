@@ -589,7 +589,7 @@ func main() {
 		log.Println("No configs found via configmap, not running config reader")
 	}
 
-	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" && httpsEnabled {
 		log.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, starting inotify for server certs and ca certs")
 		// Start inotify for server certs and ca certs for TargetAllocator container since the server has to
 		// pick up the latest server certs and ca certs after the secret to configmap propogation happens
