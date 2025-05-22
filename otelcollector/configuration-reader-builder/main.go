@@ -550,7 +550,7 @@ func main() {
 	}
 	httpsEnabled := true
 	// test
-	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 		caErr, serErr, cliErr, serverSecretErr, clientSecretErr := createTLSCertificatesAndSecret()
 		if caErr != nil || serErr != nil || cliErr != nil || serverSecretErr != nil || clientSecretErr != nil {
 			log.Println("Error creating TLS certificates and secret, retrying in 5 seconds")
