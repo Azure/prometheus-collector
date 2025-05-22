@@ -504,6 +504,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexp
 github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.123.0/go.mod h1:GrQCYxqoCJVV/DoX9lg6QsYNHW92xsesinRdIxZXeT4=
 github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.123.0 h1:TYQu6BRq+xX4YDhmVeqDT4EYuwAKnYVv6H6lR6E53vY=
 github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.123.0/go.mod h1:S+TN+KM9SZGYajH5skm447q9756nTWegKkgSCWAMV9w=
+github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.123.0 h1:UV9Ta5Q+ZCy7K8ai+yNCurJFM8HOVIP0iJTMyzmcbMA=
+github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.123.0/go.mod h1:uX++jDqarhsxei05qI+JOH3GIB0HFTcAVgeKicCPj2I=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.123.0 h1:pA/H8Ls+4h0J66QAYR3/huEigMdSN2Xpt7t2ZkPzcz4=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.123.0/go.mod h1:PhFLkW/Y1qizpZESpe2urE4X5fVaIbiYUCle3FtTvrw=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.123.0 h1:oJYh+BgrgXe4xXxY8OgrgJdV6a6h04hJEIPSUNojIMU=

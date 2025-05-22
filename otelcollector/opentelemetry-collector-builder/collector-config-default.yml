@@ -43,7 +43,10 @@ receivers:
         scrape_configs:
         # scrape_configs must be non-null for collector to start
         - job_name: empty_job
+extensions:
+  pprof:
 service:
+  extensions: [pprof]
   pipelines:
     metrics:
       receivers: [prometheus]

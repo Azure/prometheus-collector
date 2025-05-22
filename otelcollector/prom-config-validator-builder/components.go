@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
@@ -22,9 +23,12 @@ func components() (otelcol.Factories, error) {
 	batchProcessor := batchprocessor.NewFactory()
 	resourceProcessor := resourceprocessor.NewFactory()
 	filterProcessor := filterprocessor.NewFactory()
+	pprofExtension := pprofextension.NewFactory()
 
 	factories := otelcol.Factories{
-		Extensions: map[component.Type]extension.Factory{},
+		Extensions: map[component.Type]extension.Factory{
+			pprofExtension.Type(): pprofExtension,
+		},
 		Receivers: map[component.Type]receiver.Factory{
 			promReceiver.Type(): promReceiver,
 		},
@@ -33,7 +37,7 @@ func components() (otelcol.Factories, error) {
 			promExporter.Type(): promExporter,
 		},
 		Processors: map[component.Type]processor.Factory{
-			batchProcessor.Type():   batchProcessor,
+			batchProcessor.Type():    batchProcessor,
 			resourceProcessor.Type(): resourceProcessor,
 			filterProcessor.Type():   filterProcessor,
 		},

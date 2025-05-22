@@ -10,6 +10,7 @@ replace github.com/prometheus-collector/shared => ../shared
 
 require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.123.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.123.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.123.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.123.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.123.0

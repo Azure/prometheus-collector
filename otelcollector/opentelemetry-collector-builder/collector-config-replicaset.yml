@@ -43,7 +43,10 @@ receivers:
         endpoint: http://ama-metrics-operator-targets.kube-system.svc.cluster.local
         interval: 30s
         collector_id: "${env:POD_NAME}"
+extensions:
+  pprof:
 service:
+  extensions: [pprof]
   pipelines:
     metrics:
       receivers: [prometheus]

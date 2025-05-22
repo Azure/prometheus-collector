@@ -40,7 +40,10 @@ receivers:
         server_config:
           endpoint: "localhost:9092"
       config:
+extensions:
+  pprof:
 service:
+  extensions: [pprof]
   pipelines:
     metrics:
       receivers: [prometheus]
