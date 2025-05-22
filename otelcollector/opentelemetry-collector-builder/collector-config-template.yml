@@ -36,7 +36,10 @@ processors:
 receivers:
     prometheus:
       config:
+extensions:
+  pprof:
 service:
+  extensions: [pprof]
   pipelines:
     metrics:
       receivers: [prometheus]
