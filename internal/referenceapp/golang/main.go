@@ -477,7 +477,10 @@ func main() {
 	untypedServer := http.NewServeMux()
 	untypedServer.HandleFunc("/metrics", untypedHandler)
 	weatherServer := http.NewServeMux()
-	weatherServer.Handle("/metrics", promhttp.Handler())
+	weatherServer.Handle("/metrics", promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{
+		EnableOpenMetrics:                   true,
+		EnableOpenMetricsTextCreatedSamples: true,
+	}))
 
 	// Run server for metrics without a type
 	go func() {
@@ -489,6 +492,11 @@ func main() {
 			log.Printf("HTTP server failed to start: %v", r)
 		}
 	}()
+
+	err := http.ListenAndServe(":2112", weatherServer)
+	if err != nil {
+		log.Printf("HTTP server failed to start: %v", err)
+	}
 
 	// Run main server for weather app metrics
 	// err := http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
