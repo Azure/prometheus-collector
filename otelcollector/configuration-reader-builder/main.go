@@ -549,6 +549,7 @@ func main() {
 		fmt.Println("Error starting inotify process:", err)
 	}
 	httpsEnabled := true
+	configmapsettings.Configmapparser()
 	// test
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 		caErr, serErr, cliErr, serverSecretErr, clientSecretErr := createTLSCertificatesAndSecret()
@@ -583,7 +584,6 @@ func main() {
 		}
 	}
 
-	configmapsettings.Configmapparser()
 	if os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG") == "true" {
 		if _, err = os.Stat("/opt/microsoft/otelcollector/collector-config-default.yml"); err == nil {
 			updateTAConfigFile("/opt/microsoft/otelcollector/collector-config-default.yml", httpsEnabled)
