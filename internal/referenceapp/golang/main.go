@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"log"
 	"math/rand"
@@ -451,10 +452,14 @@ var (
 	)
 )
 
+// embedFS embeds the example.txt file for serving
+//
+//go:embed example.txt
+var exampleText string
+
 func untypedHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "untyped_metric{label_0=\"label-value\"} 0")
-	fmt.Fprintf(w, "\n")
-	fmt.Fprintf(w, "untyped_metric{label_1=\"label-value\"} 1")
+	w.Header().Set("Content-Type", "application/openmetrics-text")
+	fmt.Fprint(w, exampleText)
 }
 
 func main() {
