@@ -3,34 +3,36 @@ ARG GOLANG_VERSION
 FROM mcr.microsoft.com/oss/go/microsoft/golang:${GOLANG_VERSION} as builder
 
 # Set necessary environmet variables needed for our image
-ENV GO111MODULE=on \
-    CGO_ENABLED=0 \
-    GOOS=linux \
-    GOARCH=amd64
+# ENV GO111MODULE=on \
+#     CGO_ENABLED=0 \
+#     GOOS=linux \
+#     GOARCH=amd64
 
-# Move to working directory /build
-WORKDIR /build
+# # Move to working directory /build
+# WORKDIR /build
 
-# Copy and download dependency using go mod
-COPY go.mod .
-COPY go.sum .
-#RUN tdnf install -y golang-${GOLANG_VERSION} ca-certificates
-RUN go mod download
+# # Copy and download dependency using go mod
+# COPY go.mod .
+# COPY go.sum .
+# #RUN tdnf install -y golang-${GOLANG_VERSION} ca-certificates
+# RUN go mod download
 
-# COPY client-cert.pem /etc/prometheus/certs/
-# COPY client-key.pem /etc/prometheus/certs/
+# # COPY client-cert.pem /etc/prometheus/certs/
+# # COPY client-key.pem /etc/prometheus/certs/
 
-# Copy the code into the container
-COPY . .
+# # Copy the code into the container
+# COPY . .
 
-# Build the application
-RUN go build -o main .
+# # Build the application
+# RUN go build -o main .
 
-# Move to /dist directory as the place for resulting binary folder
-WORKDIR /dist
+# # Move to /dist directory as the place for resulting binary folder
+# WORKDIR /dist
 
-# Copy binary from build to main folder
-RUN cp /build/main .
+# # Copy binary from build to main folder
+# RUN cp /build/main .
+
+COPY main /dist/main
 
 FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 

@@ -9,10 +9,15 @@ import (
 	"strconv"
 	"time"
 
+	_ "embed"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+//go:embed example.txt
+var exampleData string
 
 type TempInfo struct {
 	minTemp   int
@@ -452,9 +457,9 @@ var (
 )
 
 func untypedHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "untyped_metric{label_0=\"label-value\"} 0")
-	fmt.Fprintf(w, "\n")
-	fmt.Fprintf(w, "untyped_metric{label_1=\"label-value\"} 1")
+
+	// Use the embedded data instead of reading the file
+	fmt.Fprint(w, exampleData)
 }
 
 func main() {
