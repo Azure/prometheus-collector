@@ -402,7 +402,7 @@ var (
 	histogram = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "myapp_temperature_histogram",
-			Buckets: prometheus.LinearBuckets(0, 10, 10),
+			Buckets: prometheus.LinearBuckets(0, 2, 50),
 		},
 		[]string{
 			"city",
@@ -412,7 +412,7 @@ var (
 	rainfallHistogram = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "myapp_rainfall_histogram",
-			Buckets: prometheus.LinearBuckets(0, 0.05, 10),
+			Buckets: prometheus.LinearBuckets(0, 0.01, 50),
 		},
 		[]string{
 			"city",
@@ -422,7 +422,7 @@ var (
 	upperLimitRainfallDimensionHistogram = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "upperHistogramtBTnstaUDVyHTkqkQOTOSbCMUzpBtykcaoOYgphoAVbYzWvBMWHGnCEApFYGwUzayYWTegbAQomgbabGBpgzXZNtEVHczWy_ZEGRxFUbzNVZvvhQutrDYcNDKwRErwUxKuJYxGCEywtrXAvJGCufsEGzDUCmBPfPpcboHdHNjvmdEdtvVZzMTPyfCFwfftkzHSzoBkQSJJZxPUkyzpknfbfwbdUnZftFYqyBzmrbdQfmnMOBcer",
-			Buckets: prometheus.LinearBuckets(0, 0.05, 10),
+			Buckets: prometheus.LinearBuckets(0, 0.01, 50),
 		},
 		[]string{
 			"city",
@@ -432,7 +432,7 @@ var (
 	maxDimensionRainfallHistogram = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "max_dimension_rainfall_histogram",
-			Buckets: prometheus.LinearBuckets(0, 0.05, 10),
+			Buckets: prometheus.LinearBuckets(0, 0.01, 50),
 		},
 		[]string{
 			"city",
@@ -442,7 +442,7 @@ var (
 	emptyDimensionHistogram = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "empty_dimension_histogram",
-			Buckets: prometheus.LinearBuckets(0, 0.05, 10),
+			Buckets: prometheus.LinearBuckets(0, 0.01, 50),
 		},
 		[]string{
 			"city",
@@ -491,10 +491,10 @@ func main() {
 	}()
 
 	// Run main server for weather app metrics
-	// err := http.ListenAndServeTLS(":2112", certFile, keyFile, weatherServer)
-	// if err != nil {
-	// 	log.Printf("HTTP server failed to start: %v", err)
-	// }
+	err := http.ListenAndServe(":2112", weatherServer)
+	if err != nil {
+		log.Printf("HTTP server failed to start: %v", err)
+	}
 
 	fmt.Printf("ending main function")
 }
