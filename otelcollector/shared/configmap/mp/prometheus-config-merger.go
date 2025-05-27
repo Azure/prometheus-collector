@@ -1311,7 +1311,14 @@ func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultCo
 			return
 		}
 
-		mergedConfigs := deepMerge(mergedDefaultConfigs, customPrometheusConfig)
+		var mergedConfigs map[interface{}]interface{}
+		if customPrometheusConfig["scrape_configs"] != nil {
+			mergedConfigs = deepMerge(mergedDefaultConfigs, customPrometheusConfig)
+		} else {
+			delete(customPrometheusConfig, "scrape_configs")
+			mergedConfigs = deepMerge(mergedDefaultConfigs, customPrometheusConfig)
+		}
+
 		mergedConfigYaml, err = yaml.Marshal(mergedConfigs)
 		if err != nil {
 			shared.EchoError(fmt.Sprintf("Error marshalling merged configs: %v", err))
