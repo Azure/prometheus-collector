@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	gokitlog "github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 	commonconfig "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
@@ -60,9 +61,9 @@ func TestDiscovery(t *testing.T) {
 	registry := prometheus.NewRegistry()
 	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(registry)
 	require.NoError(t, err)
-	d := discovery.NewManager(ctx, config.NopLogger, registry, sdMetrics)
+	d := discovery.NewManager(ctx, gokitlog.NewNopLogger(), registry, sdMetrics)
 	results := make(chan []string)
-	manager := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, func(targets []*Item) {
+	manager := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, func(targets map[string]*Item) {
 		var result []string
 		for _, t := range targets {
 			result = append(result, t.TargetURL)
@@ -308,7 +309,7 @@ func TestDiscovery_ScrapeConfigHashing(t *testing.T) {
 	registry := prometheus.NewRegistry()
 	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(registry)
 	require.NoError(t, err)
-	d := discovery.NewManager(ctx, config.NopLogger, registry, sdMetrics)
+	d := discovery.NewManager(ctx, gokitlog.NewNopLogger(), registry, sdMetrics)
 	manager := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, nil)
 
 	for _, tc := range tests {
@@ -347,7 +348,7 @@ func TestDiscovery_NoConfig(t *testing.T) {
 	registry := prometheus.NewRegistry()
 	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(registry)
 	require.NoError(t, err)
-	d := discovery.NewManager(ctx, config.NopLogger, registry, sdMetrics)
+	d := discovery.NewManager(ctx, gokitlog.NewNopLogger(), registry, sdMetrics)
 	manager := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, nil)
 	defer close(manager.close)
 	defer cancelFunc()
@@ -397,7 +398,7 @@ func BenchmarkApplyScrapeConfig(b *testing.B) {
 	registry := prometheus.NewRegistry()
 	sdMetrics, err := discovery.CreateAndRegisterSDMetrics(registry)
 	require.NoError(b, err)
-	d := discovery.NewManager(ctx, config.NopLogger, registry, sdMetrics)
+	d := discovery.NewManager(ctx, gokitlog.NewNopLogger(), registry, sdMetrics)
 	manager := NewDiscoverer(ctrl.Log.WithName("test"), d, nil, scu, nil)
 
 	b.ResetTimer()

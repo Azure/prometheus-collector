@@ -1,4 +1,3 @@
-collector_namespace: default
 collector_selector:
   matchExpressions:
   - key: "app.kubernetes.io/instance"
