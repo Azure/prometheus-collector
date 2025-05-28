@@ -221,7 +221,9 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["podname"] = os.Getenv(envPodName)
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
-	CommonProperties["targetallocatorInsecure"] = os.Getenv("TARGETALLOCATOR_INSECURE")
+	CommonProperties["collectorConfigWithHttps"] = os.Getenv("COLLECTOR_CONFIG_WITH_HTTPS")
+	CommonProperties["collectorConfigHttpsRemoved"] = os.Getenv("COLLECTOR_CONFIG_HTTPS_REMOVED")
+	CommonProperties["collectorConfigInsecure"] = os.Getenv("COLLECTOR_CONFIG_INSECURE")
 	CommonProperties["operatorTargetsHttpsEnabledChartSetting"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING")
 	CommonProperties["operatorTargetsHttpsEnabled"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED")
 
