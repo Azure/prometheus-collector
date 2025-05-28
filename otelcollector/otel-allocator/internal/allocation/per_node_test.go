@@ -56,11 +56,11 @@ func TestAllocationPerNode(t *testing.T) {
 	thirdTarget := target.NewItem("sample-name", "0.0.0.0:8000", thirdLabels, "")
 	fourthTarget := target.NewItem("sample-name", "0.0.0.0:8000", fourthLabels, "")
 
-	targetList := []*target.Item{
-		firstTarget,
-		secondTarget,
-		thirdTarget,
-		fourthTarget,
+	targetList := map[string]*target.Item{
+		firstTarget.Hash():  firstTarget,
+		secondTarget.Hash(): secondTarget,
+		thirdTarget.Hash():  thirdTarget,
+		fourthTarget.Hash(): fourthTarget,
 	}
 
 	// test that targets and collectors are added properly
@@ -74,8 +74,8 @@ func TestAllocationPerNode(t *testing.T) {
 	assert.Len(t, actualItems, expectedTargetLen)
 
 	// verify allocation to nodes
-	for _, item := range targetList {
-		actualItem, found := actualItems[item.Hash()]
+	for targetHash, item := range targetList {
+		actualItem, found := actualItems[targetHash]
 		// if third target, should be skipped
 		assert.True(t, found, "target with hash %s not found", item.Hash())
 
@@ -83,7 +83,7 @@ func TestAllocationPerNode(t *testing.T) {
 		itemsForCollector := s.GetTargetsForCollectorAndJob(actualItem.CollectorName, actualItem.JobName)
 
 		// first two should be assigned one to each collector; if third target, should not be assigned
-		if item.Hash() == thirdTarget.Hash() {
+		if targetHash == thirdTarget.Hash() {
 			assert.Len(t, itemsForCollector, 0)
 			continue
 		}
@@ -123,11 +123,11 @@ func TestAllocationPerNodeUsingFallback(t *testing.T) {
 	thirdTarget := target.NewItem("sample-name", "0.0.0.0:8000", thirdLabels, "")
 	fourthTarget := target.NewItem("sample-name", "0.0.0.0:8000", fourthLabels, "")
 
-	targetList := []*target.Item{
-		firstTarget,
-		secondTarget,
-		thirdTarget,
-		fourthTarget,
+	targetList := map[string]*target.Item{
+		firstTarget.Hash():  firstTarget,
+		secondTarget.Hash(): secondTarget,
+		thirdTarget.Hash():  thirdTarget,
+		fourthTarget.Hash(): fourthTarget,
 	}
 
 	// test that targets and collectors are added properly
@@ -141,8 +141,8 @@ func TestAllocationPerNodeUsingFallback(t *testing.T) {
 	assert.Len(t, actualItems, expectedTargetLen)
 
 	// verify allocation to nodes
-	for _, item := range targetList {
-		actualItem, found := actualItems[item.Hash()]
+	for targetHash, item := range targetList {
+		actualItem, found := actualItems[targetHash]
 
 		assert.True(t, found, "target with hash %s not found", item.Hash())
 
@@ -151,7 +151,7 @@ func TestAllocationPerNodeUsingFallback(t *testing.T) {
 		// first two should be assigned one to each collector; if third target, it should be assigned
 		// according to the fallback strategy which may assign it to the otherwise empty collector or
 		// one of the others, depending on the strategy and collector loop order
-		if item.Hash() == thirdTarget.Hash() {
+		if targetHash == thirdTarget.Hash() {
 			assert.Empty(t, item.GetNodeName())
 			assert.NotZero(t, len(itemsForCollector))
 			continue

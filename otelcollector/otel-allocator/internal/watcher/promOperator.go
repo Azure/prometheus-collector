@@ -39,12 +39,6 @@ const (
 	minEventInterval = time.Second * 5
 )
 
-var DefaultScrapeProtocols = []monitoringv1.ScrapeProtocol{
-	monitoringv1.OpenMetricsText1_0_0,
-	monitoringv1.OpenMetricsText0_0_1,
-	monitoringv1.PrometheusText0_0_4,
-}
-
 func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocatorconfig.Config) (*PrometheusCRWatcher, error) {
 	promLogger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	slogger := slog.New(logr.ToSlogHandler(logger))
@@ -59,9 +53,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		return nil, err
 	}
 
-	allowList, denyList := cfg.PrometheusCR.GetAllowDenyLists()
-
-	factory := informers.NewMonitoringInformerFactories(allowList, denyList, mClient, allocatorconfig.DefaultResyncTime, nil)
+	factory := informers.NewMonitoringInformerFactories(map[string]struct{}{v1.NamespaceAll: {}}, map[string]struct{}{}, mClient, allocatorconfig.DefaultResyncTime, nil) //TODO decide what strategy to use regarding namespaces
 
 	monitoringInformers, err := getInformers(factory)
 	if err != nil {
@@ -73,9 +65,6 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 
 	// TODO: We should make these durations configurable
 	prom := &monitoringv1.Prometheus{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: cfg.CollectorNamespace,
-		},
 		Spec: monitoringv1.PrometheusSpec{
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ScrapeInterval:                  monitoringv1.Duration(cfg.PrometheusCR.ScrapeInterval.String()),
@@ -88,10 +77,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 				ProbeSelector:                   cfg.PrometheusCR.ProbeSelector,
 				ProbeNamespaceSelector:          cfg.PrometheusCR.ProbeNamespaceSelector,
 				ServiceDiscoveryRole:            &serviceDiscoveryRole,
-				Version:                         "2.55.1", // fix Prometheus version 2 to avoid generating incompatible config
-				ScrapeProtocols:                 DefaultScrapeProtocols,
 			},
-			EvaluationInterval: monitoringv1.Duration("30s"),
 		},
 	}
 
@@ -113,7 +99,7 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 			logger.Error(err, "Retrying namespace informer creation in promOperator CRD watcher")
 			return true
 		}, func() error {
-			nsMonInf, err = getNamespaceInformer(ctx, allowList, denyList, promLogger, clientset, operatorMetrics)
+			nsMonInf, err = getNamespaceInformer(ctx, map[string]struct{}{v1.NamespaceAll: {}}, promLogger, clientset, operatorMetrics)
 			return err
 		})
 	if getNamespaceInformerErr != nil {
@@ -142,7 +128,6 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		probeNamespaceSelector:          cfg.PrometheusCR.ProbeNamespaceSelector,
 		resourceSelector:                resourceSelector,
 		store:                           store,
-		prometheusCR:                    prom,
 	}, nil
 }
 
@@ -162,10 +147,9 @@ type PrometheusCRWatcher struct {
 	probeNamespaceSelector          *metav1.LabelSelector
 	resourceSelector                *prometheus.ResourceSelector
 	store                           *assets.StoreBuilder
-	prometheusCR                    *monitoringv1.Prometheus
 }
 
-func getNamespaceInformer(ctx context.Context, allowList, denyList map[string]struct{}, promOperatorLogger *slog.Logger, clientset kubernetes.Interface, operatorMetrics *operator.Metrics) (cache.SharedIndexInformer, error) {
+func getNamespaceInformer(ctx context.Context, allowList map[string]struct{}, promOperatorLogger *slog.Logger, clientset kubernetes.Interface, operatorMetrics *operator.Metrics) (cache.SharedIndexInformer, error) {
 	kubernetesVersion, err := clientset.Discovery().ServerVersion()
 	if err != nil {
 		return nil, err
@@ -181,7 +165,7 @@ func getNamespaceInformer(ctx context.Context, allowList, denyList map[string]st
 		clientset.CoreV1(),
 		clientset.AuthorizationV1().SelfSubjectAccessReviews(),
 		allowList,
-		denyList,
+		map[string]struct{}{},
 	)
 	if err != nil {
 		return nil, err
@@ -378,7 +362,13 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 		}
 
 		generatedConfig, err := w.configGenerator.GenerateServerConfiguration(
-			w.prometheusCR,
+			"30s",
+			"",
+			nil,
+			nil,
+			&monitoringv1.TSDBSpec{},
+			nil,
+			nil,
 			serviceMonitorInstances,
 			podMonitorInstances,
 			probeInstances,
@@ -388,11 +378,6 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 			nil,
 			nil,
 			[]string{})
-		if err != nil {
-			return nil, err
-		}
-
-		generatedConfig, err = applyPromConfigDefaults(generatedConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -455,19 +440,4 @@ func (w *PrometheusCRWatcher) WaitForNamedCacheSync(controllerName string, inf c
 	}
 
 	return ok
-}
-
-// applyPromConfigDefaults applies our own defaults to the Prometheus configuration. The unmarshalling process for
-// Prometheus config is quite involved, and as a result, we need to apply our own defaults before it happens.
-func applyPromConfigDefaults(configBytes []byte) ([]byte, error) {
-	var configMap map[any]any
-	err := yaml.Unmarshal(configBytes, &configMap)
-	if err != nil {
-		return nil, err
-	}
-	err = allocatorconfig.ApplyPromConfigDefaults(configMap)
-	if err != nil {
-		return nil, err
-	}
-	return yaml.Marshal(configMap)
 }
