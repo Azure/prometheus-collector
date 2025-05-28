@@ -128,48 +128,48 @@ func updateTAConfigFile(configFilePath string, httpsEnabled bool) {
 
 	var targetAllocatorConfig shared.Config
 
-	// if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" && httpsEnabled {
-	// 	fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, setting tls config in TargetAllocator")
-	// 	targetAllocatorConfig = shared.Config{
-	// 		AllocationStrategy: "consistent-hashing",
-	// 		FilterStrategy:     "relabel-config",
-	// 		CollectorSelector: &metav1.LabelSelector{
-	// 			MatchLabels: map[string]string{
-	// 				"rsName":                         "ama-metrics",
-	// 				"kubernetes.azure.com/managedby": "aks",
-	// 			},
-	// 		},
-	// 		Config: promScrapeConfig,
-	// 		PrometheusCR: shared.PrometheusCRConfig{
-	// 			ServiceMonitorSelector: &metav1.LabelSelector{},
-	// 			PodMonitorSelector:     &metav1.LabelSelector{},
-	// 		},
-	// 		HTTPS: shared.HTTPSServerConfig{
-	// 			Enabled:         true,
-	// 			ListenAddr:      ":8443",
-	// 			TLSCertFilePath: "/etc/operator-targets/server/certs/server.crt",
-	// 			TLSKeyFilePath:  "/etc/operator-targets/server/certs/server.key",
-	// 			CAFilePath:      "/etc/operator-targets/server/certs/ca.crt",
-	// 		},
-	// 	}
-	// } else {
-	fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation, not setting tls config in TargetAllocator")
-	targetAllocatorConfig = shared.Config{
-		AllocationStrategy: "consistent-hashing",
-		FilterStrategy:     "relabel-config",
-		CollectorSelector: &metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				"rsName":                         "ama-metrics",
-				"kubernetes.azure.com/managedby": "aks",
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" && httpsEnabled {
+		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is true, setting tls config in TargetAllocator")
+		targetAllocatorConfig = shared.Config{
+			AllocationStrategy: "consistent-hashing",
+			FilterStrategy:     "relabel-config",
+			CollectorSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"rsName":                         "ama-metrics",
+					"kubernetes.azure.com/managedby": "aks",
+				},
 			},
-		},
-		Config: promScrapeConfig,
-		PrometheusCR: shared.PrometheusCRConfig{
-			ServiceMonitorSelector: &metav1.LabelSelector{},
-			PodMonitorSelector:     &metav1.LabelSelector{},
-		},
+			Config: promScrapeConfig,
+			PrometheusCR: shared.PrometheusCRConfig{
+				ServiceMonitorSelector: &metav1.LabelSelector{},
+				PodMonitorSelector:     &metav1.LabelSelector{},
+			},
+			HTTPS: shared.HTTPSServerConfig{
+				Enabled:         true,
+				ListenAddr:      ":8443",
+				TLSCertFilePath: "/etc/operator-targets/server/certs/server.crt",
+				TLSKeyFilePath:  "/etc/operator-targets/server/certs/server.key",
+				CAFilePath:      "/etc/operator-targets/server/certs/ca.crt",
+			},
+		}
+	} else {
+		fmt.Println("AZMON_OPERATOR_HTTPS_ENABLED is not set/false or error in cert creation, not setting tls config in TargetAllocator")
+		targetAllocatorConfig = shared.Config{
+			AllocationStrategy: "consistent-hashing",
+			FilterStrategy:     "relabel-config",
+			CollectorSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"rsName":                         "ama-metrics",
+					"kubernetes.azure.com/managedby": "aks",
+				},
+			},
+			Config: promScrapeConfig,
+			PrometheusCR: shared.PrometheusCRConfig{
+				ServiceMonitorSelector: &metav1.LabelSelector{},
+				PodMonitorSelector:     &metav1.LabelSelector{},
+			},
+		}
 	}
-	//}
 
 	targetAllocatorConfigYaml, _ := yaml.Marshal(targetAllocatorConfig)
 	if err := os.WriteFile(taConfigFilePath, targetAllocatorConfigYaml, 0644); err != nil {
@@ -347,10 +347,11 @@ func createClientCertificate(co certOperator.CertOperator, caCert *x509.Certific
 	caKey *rsa.PrivateKey) (string, string, error) {
 	log.Println("Creating client certificate")
 	now := time.Now()
+	notBefore := now.Add(time.Minute * 10)
 	notAfter := now.AddDate(0, ClientValidityMonths, 0)
 
 	csr := &x509.Certificate{
-		NotBefore:             now,
+		NotBefore:             notBefore,
 		NotAfter:              notAfter,
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		BasicConstraintsValid: true,
