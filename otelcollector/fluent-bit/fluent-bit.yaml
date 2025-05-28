@@ -108,7 +108,7 @@ pipeline:
       processors:
         metrics:
           - name: metrics_selector
-            metric_name: /opentelemetry_allocator_targets|opentelemetry_allocator_collectors_discovered/
+            metric_name: /opentelemetry_allocator_targets|opentelemetry_allocator_collectors/
             action: include
 
     - name: prometheus_scrape
