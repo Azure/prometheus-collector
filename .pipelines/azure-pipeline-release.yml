@@ -397,7 +397,7 @@ stages:
     os: windows
   jobs:
   - job: Job_1
-    IsProduction: false
+    isProduction: false
     displayName: Deploy to Prod Clusters
     condition: succeeded()
     timeoutInMinutes: '0'
