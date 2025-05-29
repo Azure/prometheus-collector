@@ -161,8 +161,8 @@ func CollectorTAHttpsCheck(collectorConfig string) error {
 							client = &http.Client{
 								Transport: &http.Transport{
 									TLSClientConfig: &tls.Config{
-										RootCAs:            rootCAs,
-										Certificates:       []tls.Certificate{clientCert},
+										//RootCAs:            rootCAs,
+										//Certificates:       []tls.Certificate{clientCert},
 										InsecureSkipVerify: true,
 									},
 								},
