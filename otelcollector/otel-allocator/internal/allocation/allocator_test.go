@@ -174,7 +174,10 @@ func TestAllocationCollision(t *testing.T) {
 		firstTarget := target.NewItem("sample-name", "0.0.0.0:8000", firstLabels, "")
 		secondTarget := target.NewItem("sample-name", "0.0.0.0:8000", secondLabels, "")
 
-		targetList := []*target.Item{firstTarget, secondTarget}
+		targetList := map[string]*target.Item{
+			firstTarget.Hash():  firstTarget,
+			secondTarget.Hash(): secondTarget,
+		}
 
 		// test that targets and collectors are added properly
 		allocator.SetTargets(targetList)

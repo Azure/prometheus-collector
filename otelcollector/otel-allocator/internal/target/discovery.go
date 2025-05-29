@@ -24,8 +24,6 @@ import (
 	allocatorWatcher "github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator/internal/watcher"
 )
 
-const labelBuilderPreallocSize = 100
-
 var (
 	targetsDiscovered = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "opentelemetry_allocator_targets",
@@ -56,7 +54,8 @@ type Discoverer struct {
 	scrapeConfigsUpdater   scrapeConfigsUpdater
 	targetSets             map[string][]*targetgroup.Group
 	triggerReload          chan struct{}
-	processTargetsCallBack func(targets []*Item)
+	processTargetsCallBack func(targets map[string]*Item)
+	mtxTargets             sync.Mutex
 }
 
 type discoveryHook interface {
@@ -67,7 +66,7 @@ type scrapeConfigsUpdater interface {
 	UpdateScrapeConfigResponse(map[string]*promconfig.ScrapeConfig) error
 }
 
-func NewDiscoverer(log logr.Logger, manager *discovery.Manager, hook discoveryHook, scrapeConfigsUpdater scrapeConfigsUpdater, setTargets func(targets []*Item)) *Discoverer {
+func NewDiscoverer(log logr.Logger, manager *discovery.Manager, hook discoveryHook, scrapeConfigsUpdater scrapeConfigsUpdater, setTargets func(targets map[string]*Item)) *Discoverer {
 	return &Discoverer{
 		log:                    log,
 		manager:                manager,
@@ -164,29 +163,22 @@ func (m *Discoverer) reloader() {
 func (m *Discoverer) Reload() {
 	m.mtxScrape.Lock()
 	var wg sync.WaitGroup
+	targets := map[string]*Item{}
 	timer := prometheus.NewTimer(processTargetsDuration)
 	defer timer.ObserveDuration()
 
-	// count targets and preallocate
-	targetCount := 0
-	for _, groups := range m.targetSets {
-		for _, group := range groups {
-			targetCount += len(group.Targets)
-		}
-	}
-	targets := make([]*Item, targetCount)
-
-	targetsAssigned := 0
 	for jobName, groups := range m.targetSets {
 		wg.Add(1)
 		// Run the sync in parallel as these take a while and at high load can't catch up.
-		go func(jobName string, groups []*targetgroup.Group, intoTargets []*Item) {
-			m.processTargetGroups(jobName, groups, intoTargets)
+		go func(jobName string, groups []*targetgroup.Group) {
+			processedTargets := m.processTargetGroups(jobName, groups)
+			m.mtxTargets.Lock()
+			for k, v := range processedTargets {
+				targets[k] = v
+			}
+			m.mtxTargets.Unlock()
 			wg.Done()
-		}(jobName, groups, targets[targetsAssigned:])
-		for _, group := range groups {
-			targetsAssigned += len(group.Targets)
-		}
+		}(jobName, groups)
 	}
 	m.mtxScrape.Unlock()
 	wg.Wait()
@@ -194,30 +186,30 @@ func (m *Discoverer) Reload() {
 }
 
 // processTargetGroups processes the target groups and returns a map of targets.
-func (m *Discoverer) processTargetGroups(jobName string, groups []*targetgroup.Group, intoTargets []*Item) {
-	groupBuilder := labels.NewScratchBuilder(labelBuilderPreallocSize)
+func (m *Discoverer) processTargetGroups(jobName string, groups []*targetgroup.Group) map[string]*Item {
+	builder := labels.NewBuilder(labels.Labels{})
 	timer := prometheus.NewTimer(processTargetGroupsDuration.WithLabelValues(jobName))
-
+	targets := map[string]*Item{}
 	defer timer.ObserveDuration()
 	var count float64 = 0
-	index := 0
 	for _, tg := range groups {
-		groupBuilder.Reset()
+		builder.Reset(labels.EmptyLabels())
 		for ln, lv := range tg.Labels {
-			groupBuilder.Add(string(ln), string(lv))
+			builder.Set(string(ln), string(lv))
 		}
+		groupLabels := builder.Labels()
 		for _, t := range tg.Targets {
 			count++
-			targetBuilder := groupBuilder
+			builder.Reset(groupLabels)
 			for ln, lv := range t {
-				targetBuilder.Add(string(ln), string(lv))
+				builder.Set(string(ln), string(lv))
 			}
-			item := NewItem(jobName, string(t[model.AddressLabel]), targetBuilder.Labels(), "")
-			intoTargets[index] = item
-			index++
+			item := NewItem(jobName, string(t[model.AddressLabel]), builder.Labels(), "")
+			targets[item.Hash()] = item
 		}
 	}
 	targetsDiscovered.WithLabelValues(jobName).Set(count)
+	return targets
 }
 
 // Run receives and saves target set updates and triggers the scraping loops reloading.

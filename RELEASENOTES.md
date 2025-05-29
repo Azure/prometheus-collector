@@ -6,9 +6,14 @@
 * cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:<tbd>-cfg`
 * AKS and Arc Container Images:
   - feat: Configmap update for CCP (v2 + v1 schema support) (https://github.com/Azure/prometheus-collector/pull/1056)
+  - feat: add support for bleu cloud (https://github.com/Azure/prometheus-collector/pull/1150)
+  - feat: enable ux recording rules arm, bicep, terraform, policy for aks and arc (https://github.com/Azure/prometheus-collector/pull/1140)
+  - feat: Upgrade OpenTelemetry Collector components from 0.121.0 to 0.123.0 (https://github.com/Azure/prometheus-collector/pull/1139)
+  - fix: Update CA Cert volume mounts for Azure Linux (https://github.com/Azure/prometheus-collector/pull/1132)
 * Pipeline/Docs/Templates Updates:
-  - 
-
+  - fix: move filesystemwatcher to hash based golang appoach for windows (https://github.com/Azure/prometheus-collector/pull/1144)
+  - feat: move to 1ES build pipeline (https://github.com/Azure/prometheus-collector/pull/1135)
+  - fix: KubePodReadyStateLow alert query (https://github.com/Azure/prometheus-collector/pull/1141)
 
 ## Release 04-15-2025
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.16.0-main-04-15-2025-d78050c6`
