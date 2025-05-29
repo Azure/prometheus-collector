@@ -397,7 +397,6 @@ stages:
     os: windows
   jobs:
   - job: Job_1
-    isProduction: false
     displayName: Deploy to Prod Clusters
     condition: succeeded()
     timeoutInMinutes: '0'
@@ -570,7 +569,7 @@ stages:
         SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
         SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        IS_PRODUCTION: True
+        IS_PRODUCTION: false
         TASK_NAME: AzureCLI@2
         SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
         SYSTEM_DEFINITIONID: $(System.DefinitionId)
@@ -614,7 +613,7 @@ stages:
         SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
         SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        IS_PRODUCTION: True
+        IS_PRODUCTION: false
         TASK_NAME: AzureCLI@2
         SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
         SYSTEM_DEFINITIONID: $(System.DefinitionId)
