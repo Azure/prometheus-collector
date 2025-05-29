@@ -397,6 +397,7 @@ stages:
     os: windows
   jobs:
   - job: Job_1
+    IsProduction: false
     displayName: Deploy to Prod Clusters
     condition: succeeded()
     timeoutInMinutes: '0'
@@ -478,13 +479,10 @@ stages:
         pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
         pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
-    - task: HelmInstaller@0
-      inputs:
-        helmVersion: 3.12.3
-        checkLatestHelmVersion: false
+    - task: HelmInstaller@1
       target:
         container: host
-      displayName: Install Helm 3.12.3
+      displayName: Install Helm
     - task: Bash@3
       inputs:
         targetType: inline
