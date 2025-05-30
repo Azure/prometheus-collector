@@ -370,7 +370,7 @@ func SendTargetAllocatorMetricsToAppInsightsMetrics() {
 	for ; true; <-targetAllocatorMetricsTicker.C {
 		// Send metric to app insights for target allocator metrics
 		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-			taEndpoint := "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/metrics"
+			taEndpoint = "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/metrics"
 		}
 		taMetricsResponse := getTargetAllocatorResponse(taEndpoint)
 		if taMetricsResponse != nil {
@@ -563,7 +563,7 @@ func addScrapeJobMetadataToTelemetryItem() map[string]string {
 
 	// Send metric to app insights for target allocator metrics
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-		taEndpoint := "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs"
+		taEndpoint = "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs"
 	}
 	scrapeJobs := getTargetAllocatorResponse(taEndpoint)
 	if scrapeJobs != nil {
