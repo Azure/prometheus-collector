@@ -224,7 +224,6 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
 	CommonProperties["collectorConfigWithHttps"] = os.Getenv("COLLECTOR_CONFIG_WITH_HTTPS")
 	CommonProperties["collectorConfigHttpsRemoved"] = os.Getenv("COLLECTOR_CONFIG_HTTPS_REMOVED")
-	CommonProperties["collectorConfigInsecure"] = os.Getenv("COLLECTOR_CONFIG_INSECURE")
 	CommonProperties["operatorTargetsHttpsEnabledChartSetting"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING")
 	CommonProperties["operatorTargetsHttpsEnabled"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED")
 
@@ -366,9 +365,14 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 func SendTargetAllocatorMetricsToAppInsightsMetrics() {
 	Log("Starting target allocator telemetry every %d seconds\n", targetAllocatorTelemetryIntervalSeconds)
 	targetAllocatorMetricsTicker := time.NewTicker(time.Second * time.Duration(targetAllocatorTelemetryIntervalSeconds))
+	taEndpoint := "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/metrics"
+
 	for ; true; <-targetAllocatorMetricsTicker.C {
 		// Send metric to app insights for target allocator metrics
-		taMetricsResponse := getTargetAllocatorResponse("http://ama-metrics-operator-targets.kube-system.svc.cluster.local/metrics")
+		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+			taEndpoint := "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/metrics"
+		}
+		taMetricsResponse := getTargetAllocatorResponse(taEndpoint)
 		if taMetricsResponse != nil {
 			var taMetricsMap []map[interface{}]interface{}
 			err := json.Unmarshal(taMetricsResponse, &taMetricsMap)
@@ -555,7 +559,13 @@ func addScrapeJobMetadataToTelemetryItem() map[string]string {
 		bearerTokenEnabledWithFile:   "false",
 		bearerTokenEnabledWithSecret: "false",
 	}
-	scrapeJobs := getTargetAllocatorResponse("http://ama-metrics-operator-targets.kube-system.svc.cluster.local/scrape_configs")
+	taEndpoint := "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/scrape_configs"
+
+	// Send metric to app insights for target allocator metrics
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+		taEndpoint := "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs"
+	}
+	scrapeJobs := getTargetAllocatorResponse(taEndpoint)
 	if scrapeJobs != nil {
 		var scrapeJobsMap map[string]interface{}
 		err := json.Unmarshal(scrapeJobs, &scrapeJobsMap)
@@ -650,7 +660,6 @@ func getTargetAllocatorResponse(taEndpoint string) []byte {
 				},
 			},
 		}
-		taEndpoint = "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs"
 	}
 
 	resp, err := client.Get(taEndpoint)

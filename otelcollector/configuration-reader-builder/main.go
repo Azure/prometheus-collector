@@ -347,11 +347,10 @@ func createClientCertificate(co certOperator.CertOperator, caCert *x509.Certific
 	caKey *rsa.PrivateKey) (string, string, error) {
 	log.Println("Creating client certificate")
 	now := time.Now()
-	notBefore := now.Add(time.Minute * 10)
 	notAfter := now.AddDate(0, ClientValidityMonths, 0)
 
 	csr := &x509.Certificate{
-		NotBefore:             notBefore,
+		NotBefore:             now,
 		NotAfter:              notAfter,
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		BasicConstraintsValid: true,
