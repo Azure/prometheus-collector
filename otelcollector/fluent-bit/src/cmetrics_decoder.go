@@ -180,27 +180,44 @@ func SendPrometheusMetricsToAppInsights(records []map[interface{}]interface{}, t
 	telemetryPrefix := "prometheus"
 	if tag == "prometheus.metrics.targetallocator" {
 		telemetryPrefix = "target_allocator"
-	}
-
-	if tag == "prometheus.metrics.volume" {
-		SendPrometheusMetricsToAppInsightsAfterAgg(records, "job", telemetryPrefix, "scrape_samples_post_metric_relabeling")
-	} else {
-	for _, record := range records {
-		cMetrics := ConvertRecordToCMetrics(record)
-		for _, metric := range cMetrics.Metrics {
-			for _, value := range metric.Values {
-				metricTelemetryItem := appinsights.NewMetricTelemetry(
-					fmt.Sprintf("%s_%s_%s_%s", telemetryPrefix, metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name),
-					value.Value,
-				)
-				for i, labelName := range metric.Meta.Labels {
-					metricTelemetryItem.Properties[labelName] = fmt.Sprintf("%s", value.Labels[i])
+		for _, record := range records {
+			cMetrics := ConvertRecordToCMetrics(record)
+			for _, metric := range cMetrics.Metrics {
+				metricOptions := metric.Meta.Opts
+				if strings.HasPrefix(metricOptions.Name, "opentelemetry_allocator_targets") || strings.HasPrefix(metricOptions.Name, "opentelemetry_allocator_collectors") {
+					for _, value := range metric.Values {
+						metricTelemetryItem := appinsights.NewMetricTelemetry(
+							fmt.Sprintf("%s_%s_%s_%s", telemetryPrefix, metricOptions.Namespace, metricOptions.Subsystem, metricOptions.Name),
+							value.Value,
+						)
+						for i, labelName := range metric.Meta.Labels {
+							metricTelemetryItem.Properties[labelName] = fmt.Sprintf("%s", value.Labels[i])
+						}
+						TelemetryClient.Track(metricTelemetryItem)
+						Log(fmt.Sprintf("Sent telemetry for %s_%s_%s_%s", telemetryPrefix, metricOptions.Namespace, metricOptions.Subsystem, metricOptions.Name))
+					}
 				}
-				TelemetryClient.Track(metricTelemetryItem)
-				Log(fmt.Sprintf("Sent telemetry for %s_%s_%s_%s", telemetryPrefix, metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name))
 			}
 		}
-	}
+	} else if tag == "prometheus.metrics.volume" {
+		SendPrometheusMetricsToAppInsightsAfterAgg(records, "job", telemetryPrefix, "scrape_samples_post_metric_relabeling")
+	} else {
+		for _, record := range records {
+			cMetrics := ConvertRecordToCMetrics(record)
+			for _, metric := range cMetrics.Metrics {
+				for _, value := range metric.Values {
+					metricTelemetryItem := appinsights.NewMetricTelemetry(
+						fmt.Sprintf("%s_%s_%s_%s", telemetryPrefix, metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name),
+						value.Value,
+					)
+					for i, labelName := range metric.Meta.Labels {
+						metricTelemetryItem.Properties[labelName] = fmt.Sprintf("%s", value.Labels[i])
+					}
+					TelemetryClient.Track(metricTelemetryItem)
+					Log(fmt.Sprintf("Sent telemetry for %s_%s_%s_%s", telemetryPrefix, metric.Meta.Opts.Namespace, metric.Meta.Opts.Subsystem, metric.Meta.Opts.Name))
+				}
+			}
+		}
 	}
 	return output.FLB_OK
 }
