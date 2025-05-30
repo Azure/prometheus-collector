@@ -125,26 +125,26 @@ var (
 )
 
 const (
-	coresAttachedTelemetryIntervalSeconds   = 600
-	ksmAttachedTelemetryIntervalSeconds     = 600
-	meMetricsTelemetryIntervalSeconds       = 300
-	targetAllocatorTelemetryIntervalSeconds = 60
-	coresAttachedTelemetryName              = "ClusterCoreCapacity"
-	linuxCpuCapacityTelemetryName           = "LiCapacity"
-	linuxNodeCountTelemetryName             = "LiNodeCnt"
-	windowsCpuCapacityTelemetryName         = "WiCapacity"
-	windowsNodeCountTelemetryName           = "WiNodeCnt"
-	virtualNodeCountTelemetryName           = "VirtualNodeCnt"
-	arm64CpuCapacityTelemetryName           = "ArmCapacity"
-	arm64NodeCountTelemetryName             = "ArmNodeCnt"
-	marinerNodeCountTelemetryName           = "MarNodeCnt"
-	marinerCpuCapacityTelemetryName         = "MarCapacity"
-	ksmCpuMemoryTelemetryName               = "ksmUsage"
-	envAgentVersion                         = "AGENT_VERSION"
-	envControllerType                       = "CONTROLLER_TYPE"
-	envNodeIP                               = "NODE_IP"
-	envMode                                 = "MODE"
-	envCluster                              = "customResourceId" //this will contain full resourceid for MAC , ir-resprective of cluster_alias set or not
+	coresAttachedTelemetryIntervalSeconds = 600
+	ksmAttachedTelemetryIntervalSeconds   = 600
+	meMetricsTelemetryIntervalSeconds     = 300
+	// targetAllocatorTelemetryIntervalSeconds = 60
+	coresAttachedTelemetryName      = "ClusterCoreCapacity"
+	linuxCpuCapacityTelemetryName   = "LiCapacity"
+	linuxNodeCountTelemetryName     = "LiNodeCnt"
+	windowsCpuCapacityTelemetryName = "WiCapacity"
+	windowsNodeCountTelemetryName   = "WiNodeCnt"
+	virtualNodeCountTelemetryName   = "VirtualNodeCnt"
+	arm64CpuCapacityTelemetryName   = "ArmCapacity"
+	arm64NodeCountTelemetryName     = "ArmNodeCnt"
+	marinerNodeCountTelemetryName   = "MarNodeCnt"
+	marinerCpuCapacityTelemetryName = "MarCapacity"
+	ksmCpuMemoryTelemetryName       = "ksmUsage"
+	envAgentVersion                 = "AGENT_VERSION"
+	envControllerType               = "CONTROLLER_TYPE"
+	envNodeIP                       = "NODE_IP"
+	envMode                         = "MODE"
+	envCluster                      = "customResourceId" //this will contain full resourceid for MAC , ir-resprective of cluster_alias set or not
 	// explicitly defining below for clarity, but not send thru our telemetry for brieviety
 	//envCustomResourceId					  = "customResourceId"
 	//envClusterAlias						  = "AZMON_CLUSTER_ALIAS"
@@ -362,30 +362,30 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	return 0, nil
 }
 
-func SendTargetAllocatorMetricsToAppInsightsMetrics() {
-	Log("Starting target allocator telemetry every %d seconds\n", targetAllocatorTelemetryIntervalSeconds)
-	targetAllocatorMetricsTicker := time.NewTicker(time.Second * time.Duration(targetAllocatorTelemetryIntervalSeconds))
-	taEndpoint := "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/metrics"
+// func SendTargetAllocatorMetricsToAppInsightsMetrics() {
+// 	Log("Starting target allocator telemetry every %d seconds\n", targetAllocatorTelemetryIntervalSeconds)
+// 	targetAllocatorMetricsTicker := time.NewTicker(time.Second * time.Duration(targetAllocatorTelemetryIntervalSeconds))
+// 	taEndpoint := "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/metrics"
 
-	for ; true; <-targetAllocatorMetricsTicker.C {
-		// Send metric to app insights for target allocator metrics
-		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
-			taEndpoint = "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/metrics"
-		}
-		taMetricsResponse := getTargetAllocatorResponse(taEndpoint)
-		if taMetricsResponse != nil {
-			var taMetricsMap []map[interface{}]interface{}
-			err := json.Unmarshal(taMetricsResponse, &taMetricsMap)
-			if err != nil {
-				Log(fmt.Sprintf("Error unmarshalling ta metrics JSON: %v", err))
-				SendException(err)
-			} else {
-				SendPrometheusMetricsToAppInsights(taMetricsMap, "prometheus.metrics.targetallocator")
-				Log("Sent target allocator metrics to App Insights")
-			}
-		}
-	}
-}
+// 	for ; true; <-targetAllocatorMetricsTicker.C {
+// 		// Send metric to app insights for target allocator metrics
+// 		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+// 			taEndpoint = "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/metrics"
+// 		}
+// 		taMetricsResponse := getTargetAllocatorResponse(taEndpoint)
+// 		if taMetricsResponse != nil {
+// 			var taMetricsMap []map[interface{}]interface{}
+// 			err := json.Unmarshal(taMetricsResponse, &taMetricsMap)
+// 			if err != nil {
+// 				Log(fmt.Sprintf("Error unmarshalling ta metrics JSON: %v", err))
+// 				SendException(err)
+// 			} else {
+// 				SendPrometheusMetricsToAppInsights(taMetricsMap, "prometheus.metrics.targetallocator")
+// 				Log("Sent target allocator metrics to App Insights")
+// 			}
+// 		}
+// 	}
+// }
 
 // Send count of cores/nodes attached to Application Insights periodically
 func SendCoreCountToAppInsightsMetrics() {

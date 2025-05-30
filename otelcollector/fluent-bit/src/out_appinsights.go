@@ -42,7 +42,7 @@ func FLBPluginInit(ctx unsafe.Pointer) int {
 	}
 	if strings.ToLower(os.Getenv(envControllerType)) == "replicaset" {
 		go SendCoreCountToAppInsightsMetrics()
-		go SendTargetAllocatorMetricsToAppInsightsMetrics()
+		// go SendTargetAllocatorMetricsToAppInsightsMetrics()
 	}
 
 	if strings.ToLower(os.Getenv(envControllerType)) == "daemonset" {
