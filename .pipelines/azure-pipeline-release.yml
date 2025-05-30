@@ -478,17 +478,14 @@ stages:
         pipelineId: $(resources.pipeline._Azureprometheus-collector.runID)
         pipeline: _Azureprometheus-collector
         targetPath: $(Pipeline.Workspace)/ev2Artifact
-    - task: HelmInstaller@0
-      inputs:
-        helmVersion: 3.12.3
-        checkLatestHelmVersion: false
+    - task: HelmInstaller@1
       target:
         container: host
-      displayName: Install Helm 3.12.3
+      displayName: Install Helm
     - task: Bash@3
       inputs:
         targetType: inline
-        script: "CHART_TAG=$(jq '.\"image.name\"' metadata.json | tr -d '\"' | cut -d':' -f2)\necho $CHART_TAG\nset +x\necho \"##vso[task.setvariable variable=ChartTag;]$CHART_TAG\"\nset -x\nLINUX_TAG=$CHART_TAG\necho $LINUX_TAG\nset +x\necho \"##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG\"\nset -x\nWINDOWS_TAG=$LINUX_TAG-win\necho $WINDOWS_TAG\nset +x\necho \"##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG\"\nset -x\ncd $(Pipeline.Workspace)/ev2Artifact\nfor i in 1 2 3 4 5 6 7 8 9 10         \n    do            \n    sleep 30\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$LINUX_TAG\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$WINDOWS_TAG\n    echo $(MCRRegistry)$(ProdMCRChartRepository):$CHART_TAG\n    output1=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRAgentRepository)/tags/list)\n    output2=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRArcChartRepository)/tags/list)\n     if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)\n     then\n             echo \"Images and chart are published to mcr\"\n             exit 0\n      fi\ndone          \necho \"Images and chart are not published to mcr within 5 minutes\"\nexit 1"
+        script: "CHART_TAG=$(jq '.\"image.name\"' metadata.json | tr -d '\"' | cut -d':' -f2)\necho $CHART_TAG\nset +x\necho \"##vso[task.setvariable variable=ChartTag;]$CHART_TAG\"\nset -x\nLINUX_TAG=$CHART_TAG\necho $LINUX_TAG\nset +x\necho \"##vso[task.setvariable variable=LinuxTag;]$LINUX_TAG\"\nset -x\nWINDOWS_TAG=$LINUX_TAG-win\necho $WINDOWS_TAG\nset +x\necho \"##vso[task.setvariable variable=WindowsTag;]$WINDOWS_TAG\"\nset -x\nfor i in 1 2 3 4 5 6 7 8 9 10         \n    do            \n    sleep 30\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$LINUX_TAG\n    echo $(MCRRegistry)$(ProdMCRAgentRepository):$WINDOWS_TAG\n    echo $(MCRRegistry)$(ProdMCRChartRepository):$CHART_TAG\n    output1=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRAgentRepository)/tags/list)\n    output2=$(curl -s https://$(MCRRegistry)/v2$(ProdMCRArcChartRepository)/tags/list)\n     if (echo $output1 | grep $LINUX_TAG) && (echo $output1 | grep $WINDOWS_TAG) && (echo $output2 | grep $CHART_TAG)\n     then\n             echo \"Images and chart are published to mcr\"\n             exit 0\n      fi\ndone          \necho \"Images and chart are not published to mcr within 5 minutes\"\nexit 1"
         workingDirectory: $(Pipeline.Workspace)/ev2Artifact/arc-drop/
       target:
         container: host
@@ -521,7 +518,7 @@ stages:
         SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
         SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        IS_PRODUCTION: True
+        IS_PRODUCTION: false
         TASK_NAME: HelmDeploy@0
         SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
         SYSTEM_DEFINITIONID: $(System.DefinitionId)
@@ -537,10 +534,10 @@ stages:
         namespace: default
         command: upgrade
         chartType: FilePath
-        chartPath: $(Pipeline.Workspace)/ev2Artifact/ev2-drop/azure-monitor-metrics-addon/
+        chartPath: $(Pipeline.Workspace)\ev2Artifact\ev2-drop\azure-monitor-metrics-addon
         releaseName: ama-metrics
         waitForExecution: false
-        arguments: --values $(Pipeline.Workspace)/ev2Artifact/ev2-drop/azure-monitor-metrics-addon/values.yaml --dependency-update
+        arguments: --values $(Pipeline.Workspace)\ev2Artifact\ev2-drop\azure-monitor-metrics-addon/values.yaml --dependency-update
       target:
         container: host
       displayName: Deploy to ci-prod-aks-mac-weu
@@ -572,7 +569,7 @@ stages:
         SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
         SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        IS_PRODUCTION: True
+        IS_PRODUCTION: false
         TASK_NAME: AzureCLI@2
         SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
         SYSTEM_DEFINITIONID: $(System.DefinitionId)
@@ -616,7 +613,7 @@ stages:
         SERVICE_CONNECTION_SUBSCRIPTIONID: $(ONEES_SERVICE_CONNECTION_SUBSCRIPTIONID)
         SERVICE_CONNECTION_TENANTID: $(ONEES_SERVICE_CONNECTION_TENANTID)
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        IS_PRODUCTION: True
+        IS_PRODUCTION: false
         TASK_NAME: AzureCLI@2
         SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
         SYSTEM_DEFINITIONID: $(System.DefinitionId)
