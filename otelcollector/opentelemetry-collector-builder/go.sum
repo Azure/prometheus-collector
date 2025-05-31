@@ -526,8 +526,6 @@ github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterproces
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.123.0/go.mod h1:pDf6vk96BBCvVhns2Z1eLGGWCRPp+5i/kr3I6mR7Rwg=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.123.0 h1:1+IqSo1nhKdV+kdhIpVeQDPBfpJP/GgN6q1qmlPNu+E=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.123.0/go.mod h1:nV0TTdeKbC3TJOHeKaS9AlM6DA/eraSajbLDPyD5uxE=
-github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.123.0 h1:GPIk1qP6ln3ybhpLubSU1sy709M+hSLb2A4vJqYihjI=
-github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.123.0/go.mod h1:E6ccigfk95d29vetCHm2sCL2RtwK/C/meYPxaZVZksc=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQb2IpWsCzug=

@@ -171,7 +171,30 @@ func main() {
 	}
 
 	fmt.Println("startCommand otelcollector")
-	_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+
+	if controllerType == "replicaset" {
+		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+			_ = shared.CollectorTAHttpsCheck(collectorConfig)
+		} else {
+			_ = shared.RemoveHTTPSSettingsInCollectorConfig(collectorConfig)
+		}
+		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+		if err != nil {
+			fmt.Printf("Error starting otelcollector: %v\n", err)
+		}
+		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+			// starting inotify here so that it doesnt restart when it is written the first time
+			outputFile := "/opt/inotifyoutput.txt"
+			if err = shared.Inotify(outputFile, "/etc/operator-targets/client/certs"); err != nil {
+				fmt.Printf("Error starting inotify for watching targetallocator certs: %v\n", err)
+			}
+		}
+	} else {
+		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+		if err != nil {
+			fmt.Printf("Error starting otelcollector: %v\n", err)
+		}
+	}
 
 	fmt.Println("startCommand prometheusui")
 	shared.StartCommand("/opt/microsoft/otelcollector/prometheusui")
@@ -206,7 +229,7 @@ func main() {
 
 		// Create an output file for inotify events
 		outputFile := "/opt/inotifyoutput-mdsd-config.txt"
-		_, err = os.Create(outputFile)
+		_, err := os.Create(outputFile)
 		if err != nil {
 			log.Fatalf("Error creating output file: %v\n", err)
 		}
