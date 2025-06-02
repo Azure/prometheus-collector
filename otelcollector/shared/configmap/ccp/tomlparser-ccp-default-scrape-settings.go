@@ -97,6 +97,10 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string,
 		cp.ControlplaneClusterAutoscaler = val
 		fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-cluster-autoscaler: %v\n", cp.ControlplaneClusterAutoscaler)
 	}
+	if val, ok := parsedConfig["controlplane-node-auto-provisioning"]; ok && val != "" {
+		cp.ControlplaneNodeAutoProvisioning = val
+		fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-node-auto-provisioning: %v\n", cp.ControlplaneNodeAutoProvisioning)
+	}
 	if val, ok := parsedConfig["controlplane-etcd"]; ok && val != "" {
 		cp.ControlplaneEtcd = val
 		fmt.Printf("PopulateSettingValues::Using scrape settings for controlplane-etcd: %v\n", cp.ControlplaneEtcd)
@@ -108,12 +112,14 @@ func (cp *ConfigProcessor) PopulateSettingValues(parsedConfig map[string]string,
 		controllerType := os.Getenv("CONTROLLER_TYPE")
 		if controllerType == "ReplicaSet" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" &&
 			cp.ControlplaneKubeControllerManager == "" && cp.ControlplaneKubeScheduler == "" &&
-			cp.ControlplaneApiserver == "" && cp.ControlplaneClusterAutoscaler == "" && cp.ControlplaneEtcd == "" {
+			cp.ControlplaneApiserver == "" && cp.ControlplaneClusterAutoscaler == "" &&
+			cp.ControlplaneNodeAutoProvisioning == "" && cp.ControlplaneEtcd == "" {
 			cp.NoDefaultsEnabled = true
 			fmt.Println("PopulateSettingValues::No defaults enabled due to advanced mode and missing settings")
 		}
 	} else if cp.ControlplaneKubeControllerManager == "" && cp.ControlplaneKubeScheduler == "" &&
-		cp.ControlplaneApiserver == "" && cp.ControlplaneClusterAutoscaler == "" && cp.ControlplaneEtcd == "" {
+		cp.ControlplaneApiserver == "" && cp.ControlplaneClusterAutoscaler == "" &&
+		cp.ControlplaneNodeAutoProvisioning == "" && cp.ControlplaneEtcd == "" {
 		cp.NoDefaultsEnabled = true
 		fmt.Println("PopulateSettingValues::No defaults enabled due to missing settings")
 	}
@@ -137,6 +143,7 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_KUBE_SCHEDULER_ENABLED=%v\n", cp.ControlplaneKubeScheduler))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_APISERVER_ENABLED=%v\n", cp.ControlplaneApiserver))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_CLUSTER_AUTOSCALER_ENABLED=%v\n", cp.ControlplaneClusterAutoscaler))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_NODE_AUTO_PROVISIONING_ENABLED=%v\n", cp.ControlplaneNodeAutoProvisioning))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_CONTROLPLANE_ETCD_ENABLED=%v\n", cp.ControlplaneEtcd))
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", cp.NoDefaultsEnabled))
 

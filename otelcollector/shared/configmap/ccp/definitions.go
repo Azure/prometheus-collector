@@ -5,6 +5,7 @@ type RegexValues struct {
 	ControlplaneKubeScheduler         string
 	ControlplaneApiserver             string
 	ControlplaneClusterAutoscaler     string
+	ControlplaneNodeAutoProvisioning  string
 	ControlplaneEtcd                  string
 	MinimalIngestionProfile           string
 }
@@ -25,6 +26,7 @@ type ConfigProcessor struct {
 	ControlplaneKubeScheduler         string
 	ControlplaneApiserver             string
 	ControlplaneClusterAutoscaler     string
+	ControlplaneNodeAutoProvisioning  string
 	ControlplaneEtcd                  string
 	NoDefaultsEnabled                 bool
 }
