@@ -20,6 +20,7 @@ const (
 	controlplaneKubeSchedulerDefaultFile  = defaultPromConfigPathPrefix + "controlplane_kube_scheduler.yml"
 	controlplaneKubeControllerManagerFile = defaultPromConfigPathPrefix + "controlplane_kube_controller_manager.yml"
 	controlplaneClusterAutoscalerFile     = defaultPromConfigPathPrefix + "controlplane_cluster_autoscaler.yml"
+	controlplaneNodeAutoProvisioningFile  = defaultPromConfigPathPrefix + "controlplane_node_auto_provisioning.yml"
 	controlplaneEtcdDefaultFile           = defaultPromConfigPathPrefix + "controlplane_etcd.yml"
 )
 
@@ -175,6 +176,19 @@ func populateDefaultPrometheusConfig() {
 			err = os.WriteFile(controlplaneClusterAutoscalerFile, contents, fs.FileMode(0644))
 		}
 		defaultConfigs = append(defaultConfigs, controlplaneClusterAutoscalerFile)
+	}
+
+	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_NODE_AUTO_PROVISIONING_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
+		controlplaneNodeAutoProvisioningKeepListRegex, exists := regexHash["CONTROLPLANE_NODE_AUTO_PROVISIONING_KEEP_LIST_REGEX"]
+		if exists && controlplaneNodeAutoProvisioningKeepListRegex != "" {
+			appendMetricRelabelConfig(controlplaneNodeAutoProvisioningFile, controlplaneNodeAutoProvisioningKeepListRegex)
+		}
+		contents, err := os.ReadFile(controlplaneNodeAutoProvisioningFile)
+		if err == nil {
+			contents = []byte(strings.Replace(string(contents), "$$POD_NAMESPACE$$", os.Getenv("POD_NAMESPACE"), -1))
+			err = os.WriteFile(controlplaneNodeAutoProvisioningFile, contents, fs.FileMode(0644))
+		}
+		defaultConfigs = append(defaultConfigs, controlplaneNodeAutoProvisioningFile)
 	}
 
 	if enabled, exists := os.LookupEnv("AZMON_PROMETHEUS_CONTROLPLANE_ETCD_ENABLED"); exists && strings.ToLower(enabled) == "true" && currentControllerType == replicasetControllerType {
