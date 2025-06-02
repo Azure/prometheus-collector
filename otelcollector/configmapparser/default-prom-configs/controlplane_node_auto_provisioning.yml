@@ -1,0 +1,67 @@
+# scrape_configs:
+#   - job_name: prometheus_ref_app_node_auto_provisioning
+#     scheme: http
+#     scrape_interval: $$SCRAPE_INTERVAL$$
+#     kubernetes_sd_configs:
+#     - role: pod
+#     relabel_configs:
+#     - source_labels: [__meta_kubernetes_pod_label_app]
+#       action: keep
+#       regex: "prometheus-reference-app"
+scrape_configs:
+- job_name: controlplane-node-auto-provisioning
+  scrape_interval: $$SCRAPE_INTERVAL$$
+  follow_redirects: false
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  kubernetes_sd_configs:
+    - role: pod
+      namespaces:
+        names:
+          - $$POD_NAMESPACE$$
+  tls_config:
+    ca_file: /etc/kubernetes/secrets/ca.pem
+    cert_file: /etc/kubernetes/secrets/client.pem
+    key_file: /etc/kubernetes/secrets/client-key.pem
+    insecure_skip_verify: true
+  relabel_configs:
+    - source_labels: [ __meta_kubernetes_pod_label_app, __meta_kubernetes_pod_container_name ]
+      action: keep
+      regex: karpenter;controller # pod: karpenter, container: controller
+    - source_labels: [ __meta_kubernetes_pod_annotation_aks_prometheus_io_scrape ]
+      action: keep
+      regex: true
+    - source_labels: [ __meta_kubernetes_pod_annotation_aks_prometheus_io_path ]
+      action: replace
+      target_label: __metrics_path__
+      regex: (.+)
+    - source_labels: [ __address__, __meta_kubernetes_pod_annotation_aks_prometheus_io_port ]
+      action: replace
+      separator: ":"
+      target_label: __address__
+    - source_labels: [ __meta_kubernetes_pod_name ]
+      regex: (.*)
+      target_label: instance # TODO: check if this is correct
+      action: replace
+  metric_relabel_configs:
+    # Generate host alias
+    - source_labels: [ host ]
+      action: hashmod
+      regex: ^(.+)$
+      modulus: 10000000000000000000 # take last 19 digits of the MD5 hash. (Prom won't let us take more than this)
+      target_label: hostalias
+    - source_labels: [ host ]
+      regex: ^hcp-kubernetes.*.svc.cluster.local:443$
+      target_label: hostalias
+      replacement: kube-apiserver
+    # Replace the host with hostalias
+    - source_labels: [ hostalias, host ]
+      regex: ^(.+);(.+)$
+      action: replace
+      target_label: host
+    - source_labels: [ __name__ ]
+      action: drop
+      regex: (go_.*|process_(cpu|max|resident|virtual|open)_.*)
+    - action: labeldrop
+      regex: hostalias
