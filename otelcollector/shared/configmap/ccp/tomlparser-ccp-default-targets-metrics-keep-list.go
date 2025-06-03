@@ -20,7 +20,7 @@ var (
 	controlplaneKubeSchedulerMinMac                                                                       = "scheduler_pending_pods|scheduler_unschedulable_pods|scheduler_pod_scheduling_attempts|scheduler_queue_incoming_pods_total|scheduler_preemption_attempts_total|scheduler_preemption_victims|scheduler_scheduling_attempt_duration_seconds|scheduler_schedule_attempts_total|scheduler_pod_scheduling_duration_seconds"
 	controlplaneApiserverMinMac                                                                           = "apiserver_request_total|apiserver_cache_list_fetched_objects_total|apiserver_cache_list_returned_objects_total|apiserver_flowcontrol_demand_seats_average|apiserver_flowcontrol_current_limit_seats|apiserver_request_sli_duration_seconds_count|apiserver_request_sli_duration_seconds_sum|process_start_time_seconds|apiserver_request_duration_seconds_count|apiserver_request_duration_seconds_sum|apiserver_storage_list_fetched_objects_total|apiserver_storage_list_returned_objects_total|apiserver_current_inflight_requests"
 	controlplaneClusterAutoscalerMinMac                                                                   = "rest_client_requests_total|cluster_autoscaler_((last_activity|cluster_safe_to_autoscale|scale_down_in_cooldown|scaled_up_nodes_total|unneeded_nodes_count|unschedulable_pods_count|nodes_count))|cloudprovider_azure_api_request_(errors|duration_seconds_(bucket|count))"
-	controlplaneNodeAutoProvisioningMinMac                                                                = "karpenter_nodes_created_total|karpenter_nodes_terminated_total|karpenter_voluntary_disruption_eligible_nodes|karpenter_nodeclaims_disrupted_total|karpenter_voluntary_disruption_decisions_total|karpenter_pods_state"
+	controlplaneNodeAutoProvisioningMinMac                                                                = "karpenter_((nodes_created_total|nodes_terminated_total|voluntary_disruption_eligible_nodes|nodeclaims_disrupted_total|voluntary_disruption_decisions_total|pods_state))"
 	controlplaneEtcdMinMac                                                                                = "etcd_server_has_leader|rest_client_requests_total|etcd_mvcc_db_total_size_in_bytes|etcd_mvcc_db_total_size_in_use_in_bytes|etcd_server_slow_read_indexes_total|etcd_server_slow_apply_total|etcd_network_client_grpc_sent_bytes_total|etcd_server_heartbeat_send_failures_total"
 )
 
@@ -83,6 +83,7 @@ func parseConfigMapForKeepListRegex(metricsConfigBySection map[string]map[string
 			v2ToV1KeyMap := map[string]string{
 				"apiserver":               "controlplane-apiserver",
 				"cluster-autoscaler":      "controlplane-cluster-autoscaler",
+				"node-auto-provisioning":  "controlplane-node-auto-provisioning",
 				"kube-scheduler":          "controlplane-kube-scheduler",
 				"kube-controller-manager": "controlplane-kube-controller-manager",
 				"etcd":                    "controlplane-etcd",
@@ -123,6 +124,7 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}, sch
 	v2ToV1KeyMap := map[string]string{
 		"apiserver":               "controlplane-apiserver",
 		"cluster-autoscaler":      "controlplane-cluster-autoscaler",
+		"node-auto-provisioning":  "controlplane-node-auto-provisioning",
 		"kube-scheduler":          "controlplane-kube-scheduler",
 		"kube-controller-manager": "controlplane-kube-controller-manager",
 		"etcd":                    "controlplane-etcd",
@@ -144,6 +146,8 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}, sch
 			regexValues.ControlplaneApiserver = getStringValue(value)
 		case "controlplane-cluster-autoscaler":
 			regexValues.ControlplaneClusterAutoscaler = getStringValue(value)
+		case "controlplane-node-auto-provisioning":
+			regexValues.ControlplaneNodeAutoProvisioning = getStringValue(value)
 		case "controlplane-etcd":
 			regexValues.ControlplaneEtcd = getStringValue(value)
 		case "minimalingestionprofile":
