@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	gosdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -647,17 +648,31 @@ func setupOTLP() {
 		}
 	} else { // Default to sending over GRPC
 		endpoint := os.Getenv("OTEL_EXPORT_ENDPOINT")
+		protocol := os.Getenv("OTEL_EXPORT_PROTOCOL")
 		if deltaTemporality {
-			exporter, err = otlpmetricgrpc.New(ctx,
-				otlpmetricgrpc.WithEndpoint(endpoint),
-				otlpmetricgrpc.WithCompressor(gzip.Name),
-				otlpmetricgrpc.WithTemporalitySelector(deltaSelector),
-			)
+			if protocol == "http" {
+				exporter, err = otlpmetrichttp.New(ctx,
+					otlpmetrichttp.WithEndpoint(endpoint),
+					otlpmetrichttp.WithTemporalitySelector(deltaSelector),
+				)
+			} else {
+				exporter, err = otlpmetricgrpc.New(ctx,
+					otlpmetricgrpc.WithEndpoint(endpoint),
+					otlpmetricgrpc.WithCompressor(gzip.Name),
+					otlpmetricgrpc.WithTemporalitySelector(deltaSelector),
+				)
+			}
 		} else {
-			exporter, err = otlpmetricgrpc.New(ctx,
-				otlpmetricgrpc.WithEndpoint(endpoint),
-				otlpmetricgrpc.WithCompressor(gzip.Name),
-			)
+			if protocol == "http" {
+				exporter, err = otlpmetrichttp.New(ctx,
+					otlpmetrichttp.WithEndpoint(endpoint),
+				)
+			} else {
+				exporter, err = otlpmetricgrpc.New(ctx,
+					otlpmetricgrpc.WithEndpoint(endpoint),
+					otlpmetricgrpc.WithCompressor(gzip.Name),
+				)
+			}
 		}
 	}
 	if err != nil {
