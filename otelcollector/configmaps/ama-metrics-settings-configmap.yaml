@@ -75,6 +75,7 @@ data:
     default-targets-metrics-keep-list: |-
       apiserver = ""
       cluster-autoscaler = ""
+      node-auto-provisioning = ""
       kube-scheduler = ""
       kube-controller-manager = ""
       etcd = ""

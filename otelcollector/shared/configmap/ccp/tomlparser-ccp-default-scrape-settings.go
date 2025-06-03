@@ -15,6 +15,7 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	fmt.Println("SetDefaultScrapeSettings::Setting default scrape settings:")
 	config["controlplane-apiserver"] = "true"
 	config["controlplane-cluster-autoscaler"] = "false"
+	config["controlplane-node-auto-provisioning"] = "false"
 	config["controlplane-kube-scheduler"] = "false"
 	config["controlplane-kube-controller-manager"] = "false"
 	config["controlplane-etcd"] = "true"
@@ -28,6 +29,7 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	// Set default values
 	config["controlplane-apiserver"] = "true"
 	config["controlplane-cluster-autoscaler"] = "false"
+	config["controlplane-node-auto-provisioning"] = "false"
 	config["controlplane-kube-scheduler"] = "false"
 	config["controlplane-kube-controller-manager"] = "false"
 	config["controlplane-etcd"] = "true"
@@ -54,6 +56,7 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 			v2ToV1KeyMap := map[string]string{
 				"apiserver":               "controlplane-apiserver",
 				"cluster-autoscaler":      "controlplane-cluster-autoscaler",
+				"node-auto-provisioning":  "controlplane-node-auto-provisioning",
 				"kube-scheduler":          "controlplane-kube-scheduler",
 				"kube-controller-manager": "controlplane-kube-controller-manager",
 				"etcd":                    "controlplane-etcd",
@@ -70,6 +73,7 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	fmt.Println("ParseConfigMapForDefaultScrapeSettings::Final scrape settings:")
 	fmt.Printf("controlplane-apiserver: %s\n", config["controlplane-apiserver"])
 	fmt.Printf("controlplane-cluster-autoscaler: %s\n", config["controlplane-cluster-autoscaler"])
+	fmt.Printf("controlplane-node-auto-provisioning: %s\n", config["controlplane-node-auto-provisioning"])
 	fmt.Printf("controlplane-kube-scheduler: %s\n", config["controlplane-kube-scheduler"])
 	fmt.Printf("controlplane-kube-controller-manager: %s\n", config["controlplane-kube-controller-manager"])
 	fmt.Printf("controlplane-etcd: %s\n", config["controlplane-etcd"])
