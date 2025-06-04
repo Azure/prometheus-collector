@@ -316,6 +316,7 @@ func recordTestMetrics() {
 			attribute.String("label.1", "label.1-value"),
 			attribute.String("label.2", "label.2-value"),
 			attribute.String("temporality", temporalityLabel),
+			attribute.String("protocol", protocolLabel),
 		)
 		for {
 			otlpIntCounterTest.Add(ctx, 1, metric.WithAttributeSet(metricAttributes))
@@ -392,6 +393,7 @@ var (
 	otlpFloatExplicitHistogramTest    metric.Float64Histogram
 
 	temporalityLabel string
+	protocolLabel    string
 
 	scrapeIntervalSec = 60
 	metricCount       = 10000
@@ -634,6 +636,12 @@ func setupOTLP() {
 		temporalityLabel = "delta"
 	}
 
+	httpProtocol := os.Getenv("OTEL_EXPORT_PROTOCOL") == "http"
+	protocolLabel = "grpc"
+	if httpProtocol {
+		protocolLabel = "http"
+	}
+
 	// Export as stdout logs instead for debugging
 	if os.Getenv("OTEL_CONSOLE_METRICS") == "true" {
 		if deltaTemporality {
@@ -648,9 +656,8 @@ func setupOTLP() {
 		}
 	} else { // Default to sending over GRPC
 		endpoint := os.Getenv("OTEL_EXPORT_ENDPOINT")
-		protocol := os.Getenv("OTEL_EXPORT_PROTOCOL")
 		if deltaTemporality {
-			if protocol == "http" {
+			if httpProtocol {
 				exporter, err = otlpmetrichttp.New(ctx,
 					otlpmetrichttp.WithEndpoint(endpoint),
 					otlpmetrichttp.WithTemporalitySelector(deltaSelector),
@@ -663,7 +670,7 @@ func setupOTLP() {
 				)
 			}
 		} else {
-			if protocol == "http" {
+			if httpProtocol {
 				exporter, err = otlpmetrichttp.New(ctx,
 					otlpmetrichttp.WithEndpoint(endpoint),
 				)
