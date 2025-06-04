@@ -28,6 +28,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 
@@ -59,11 +60,16 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		return nil, err
 	}
 
+	mdClient, err := metadata.NewForConfig(cfg.ClusterConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	allowList, denyList := cfg.PrometheusCR.GetAllowDenyLists()
 
-	factory := informers.NewMonitoringInformerFactories(allowList, denyList, mClient, allocatorconfig.DefaultResyncTime, nil)
-
-	monitoringInformers, err := getInformers(factory)
+	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, mClient, allocatorconfig.DefaultResyncTime, nil)
+	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
+	monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +201,7 @@ func getNamespaceInformer(ctx context.Context, allowList, denyList map[string]st
 }
 
 // getInformers returns a map of informers for the given resources.
-func getInformers(factory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
+func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
 	serviceMonitorInformers, err := informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ServiceMonitorName))
 	if err != nil {
 		return nil, err
@@ -216,7 +222,7 @@ func getInformers(factory informers.FactoriesForNamespaces) (map[string]*informe
 		return nil, err
 	}
 
-	secretInformers, err := informers.NewInformersForResourceWithTransform(factory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)
+	secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)
 	if err != nil {
 		return nil, err
 	}
