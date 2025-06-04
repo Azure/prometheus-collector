@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -19,7 +19,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	gosdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -625,9 +624,9 @@ func deltaSelector(kind gosdkmetric.InstrumentKind) metricdata.Temporality {
 func setupOTLP() {
 	ctx := context.Background()
 
-	l := logr.New(log.New(os.Stdout, "", log.LstdFlags))
+	l := stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))
 	l = l.V(8)
-	global.SetLogger(l)
+	otel.SetLogger(l)
 	var (
 		exporter gosdkmetric.Exporter
 		err      error
