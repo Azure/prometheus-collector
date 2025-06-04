@@ -624,8 +624,13 @@ func deltaSelector(kind gosdkmetric.InstrumentKind) metricdata.Temporality {
 func setupOTLP() {
 	ctx := context.Background()
 
+	verbosity := 8
+	stdr.SetVerbosity(verbosity)
 	l := stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile))
 	l = l.V(8)
+	fmt.Printf("logger enabled: %v\n", l.Enabled())
+	fmt.Printf("logger level: %v\n", l.GetV())
+	fmt.Printf("logger sink: %v\n", l.GetSink())
 	otel.SetLogger(l)
 	var (
 		exporter gosdkmetric.Exporter
