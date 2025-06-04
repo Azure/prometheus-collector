@@ -216,11 +216,17 @@ func getInformers(factory informers.FactoriesForNamespaces) (map[string]*informe
 		return nil, err
 	}
 
+	secretInformers, err := informers.NewInformersForResourceWithTransform(factory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)
+	if err != nil {
+		return nil, err
+	}
+
 	return map[string]*informers.ForResource{
 		monitoringv1.ServiceMonitorName: serviceMonitorInformers,
 		monitoringv1.PodMonitorName:     podMonitorInformers,
 		monitoringv1.ProbeName:          probeInformers,
 		promv1alpha1.ScrapeConfigName:   scrapeConfigInformers,
+		string(v1.ResourceSecrets):      secretInformers,
 	}, nil
 }
 
