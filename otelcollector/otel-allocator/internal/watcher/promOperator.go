@@ -308,7 +308,13 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 				case notifyEvents <- struct{}{}:
 					oldMeta, _ := oldObj.(metav1.ObjectMetaAccessor)
 					newMeta, _ := newObj.(metav1.ObjectMetaAccessor)
-					w.logger.Info("Successfully sent update event to notifyEvents channel", "oldObjName", oldMeta.GetObjectMeta().GetName(), "newObjName", newMeta.GetObjectMeta().GetName())
+					w.logger.Info(
+						"rashmi-logs:Successfully sent update event to notifyEvents channel",
+						"oldObjName", oldMeta.GetObjectMeta().GetName(),
+						"oldobjnamespace", oldMeta.GetObjectMeta().GetNamespace(),
+						"newObjName", newMeta.GetObjectMeta().GetName(),
+						"newobjnamespace", newMeta.GetObjectMeta().GetNamespace(),
+					)
 				default:
 					w.logger.Info("notifyEvents channel is full, skipping sending update event")
 				}
