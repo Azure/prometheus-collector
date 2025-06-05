@@ -346,9 +346,11 @@ func (w *PrometheusCRWatcher) rateLimitedEventSender(upstreamEvents chan Event, 
 		case <-ticker.C: // throttle events to avoid excessive updates
 			select {
 			case <-notifyEvents:
+				w.logger.Info("New event received, sending upstream", "event", event.Source.String())
 				select {
 				case upstreamEvents <- event:
 				default: // put the notification back in the queue if we can't send it upstream
+					w.logger.Info("Upstream channel full, re-queueing event", "event", event.Source.String())
 					select {
 					case notifyEvents <- struct{}{}:
 					default:
