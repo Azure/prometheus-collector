@@ -250,12 +250,14 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 
 		_, _ = w.nsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 			UpdateFunc: func(oldObj, newObj interface{}) {
+				w.logger.Info("rashmi-logs: Inside nsinformer UpdateFunc")
 				old := oldObj.(*v1.Namespace)
 				cur := newObj.(*v1.Namespace)
 
 				// Periodic resync may resend the Namespace without changes
 				// in-between.
 				if old.ResourceVersion == cur.ResourceVersion {
+					w.logger.Info("rashmi-logs: Skipping namespace update event as resource version has not changed")
 					return
 				}
 
@@ -265,6 +267,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					"ProbeNamespaceSelector":          w.probeNamespaceSelector,
 					"ScrapeConfigNamespaceSelector":   w.scrapeConfigNamespaceSelector,
 				} {
+					w.logger.Info("rashmi-logs: Namespace update detected", "oldResourceName", old.Name, "newResourceName", cur.Name)
 					sync, err := k8sutil.LabelSelectionHasChanged(old.Labels, cur.Labels, selector)
 					if err != nil {
 						w.logger.Error("Failed to check label selection between namespaces while handling namespace updates", "selector", name, "error", err)
