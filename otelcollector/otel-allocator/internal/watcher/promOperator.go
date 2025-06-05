@@ -305,12 +305,12 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				select {
-				w.logger.Info("rashmi: update received", "oldObjName", oldObj.(*metav1.ObjectMetaAccessor).GetObjectMeta().GetName(), "newObjName", newObj.(*metav1.ObjectMetaAccessor).GetObjectMeta().GetName())
+				select {
 				case notifyEvents <- struct{}{}:
+					w.logger.Info("Successfully sent update event to notifyEvents channel", "oldObjName", oldObj.(*metav1.ObjectMetaAccessor).GetObjectMeta().GetName(), "newObjName", newObj.(*metav1.ObjectMetaAccessor).GetObjectMeta().GetName())
 				default:
+					w.logger.Info("notifyEvents channel is full, skipping sending update event")
 				}
-			},
-			DeleteFunc: func(obj interface{}) {
 				select {
 				case notifyEvents <- struct{}{}:
 				default:
