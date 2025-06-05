@@ -274,9 +274,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
 		duration := time.Since(cfgReaderContainerStartTime)
 		// Server certificate validity is for 8 months, so if the container is running for more than 5 months, then restart the container
-		// if duration.Hours() > (5 * 30 * 24) {
-		// adding for testing purposes
-		if duration.Hours() > 8 {
+		if duration.Hours() > (5 * 30 * 24) {
 			status = http.StatusServiceUnavailable
 			message = "\nconfig-reader container is running for more than 5 months, restart the container"
 		}
