@@ -3,6 +3,7 @@
 from prometheus_client import start_http_server, Summary
 import random
 import time
+import os
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import (
