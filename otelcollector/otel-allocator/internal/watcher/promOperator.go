@@ -305,6 +305,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				select {
+				w.logger.Info("rashmi: update received", "oldObjName", oldObj.(*metav1.ObjectMetaAccessor).GetObjectMeta().GetName(), "newObjName", newObj.(*metav1.ObjectMetaAccessor).GetObjectMeta().GetName())
 				case notifyEvents <- struct{}{}:
 				default:
 				}
@@ -346,11 +347,11 @@ func (w *PrometheusCRWatcher) rateLimitedEventSender(upstreamEvents chan Event, 
 		case <-ticker.C: // throttle events to avoid excessive updates
 			select {
 			case <-notifyEvents:
-				w.logger.Info("New event received, sending upstream", "event", event.Source.String())
+				w.logger.Info("rashmi: New event received, sending upstream", "event", event.Source.String())
 				select {
 				case upstreamEvents <- event:
 				default: // put the notification back in the queue if we can't send it upstream
-					w.logger.Info("Upstream channel full, re-queueing event", "event", event.Source.String())
+					w.logger.Info("rashmi: Upstream channel full, re-queueing event", "event", event.Source.String())
 					select {
 					case notifyEvents <- struct{}{}:
 					default:
