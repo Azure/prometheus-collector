@@ -29,9 +29,16 @@ func main() {
 	aksRegion := shared.GetEnv("AKSREGION", "")
 	ccpMetricsEnabled := shared.GetEnv("CCP_METRICS_ENABLED", "false")
 	osType := os.Getenv("OS_TYPE")
+	customEnvironment := shared.GetEnv("customEnvironment", "")
 
 	if osType == "windows" {
-		shared.BootstrapCACertificates()
+		env := strings.ToLower(customEnvironment)
+		switch env {
+		case "usnat", "ussec", "bleu":
+			shared.BootstrapCACertificates()
+		default:
+			// non-sovereign cloud
+		}
 		shared.SetEnvVariablesForWindows()
 	}
 
@@ -65,7 +72,6 @@ func main() {
 	shared.EchoVar("CONTROLLER_TYPE", shared.GetEnv("CONTROLLER_TYPE", ""))
 	shared.EchoVar("CLUSTER", cluster)
 
-	customEnvironment := shared.GetEnv("customEnvironment", "")
 	if ccpMetricsEnabled != "true" {
 		shared.SetupTelemetry(customEnvironment)
 		if err := shared.ConfigureEnvironment(); err != nil {
