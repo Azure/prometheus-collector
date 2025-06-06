@@ -25,7 +25,7 @@ rules:
     verbs: ["list", "get", "watch"]
   - apiGroups: [""]
     resources: ["secrets"]
-    resourceNames: ["aad-msi-auth-token", "ama-metrics-mtls-secret"]
+    resourceNames: ["aad-msi-auth-token", "ama-metrics-mtls-secret", "delete"]
     verbs: ["get", "watch"]
 {{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
   - apiGroups: [""]
