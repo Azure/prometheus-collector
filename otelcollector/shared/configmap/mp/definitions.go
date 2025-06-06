@@ -77,17 +77,19 @@ type FilesystemConfigLoader struct {
 
 // ConfigProcessor handles the processing of configuration settings.
 type ConfigProcessor struct {
-	DefaultMetricAccountName          string
-	ClusterAlias                      string
-	ClusterLabel                      string
-	IsOperatorEnabled                 bool
-	IsOperatorEnabledChartSetting     bool
-	ControlplaneKubeControllerManager string
-	ControlplaneKubeScheduler         string
-	ControlplaneApiserver             string
-	ControlplaneClusterAutoscaler     string
-	ControlplaneEtcd                  string
-	NoDefaultsEnabled                 bool
+	DefaultMetricAccountName                string
+	ClusterAlias                            string
+	ClusterLabel                            string
+	IsOperatorEnabled                       bool
+	IsOperatorEnabledChartSetting           bool
+	ControlplaneKubeControllerManager       string
+	ControlplaneKubeScheduler               string
+	ControlplaneApiserver                   string
+	ControlplaneClusterAutoscaler           string
+	ControlplaneEtcd                        string
+	NoDefaultsEnabled                       bool
+	TargetallocatorHttpsEnabled             bool
+	TargetallocatorHttpsEnabledChartSetting bool
 
 	Kubelet                    string
 	Coredns                    string
