@@ -26,6 +26,8 @@ import (
 	kubeDiscovery "github.com/prometheus/prometheus/discovery/kubernetes"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
+	kclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/metadata"
@@ -44,6 +46,21 @@ var DefaultScrapeProtocols = []monitoringv1.ScrapeProtocol{
 	monitoringv1.OpenMetricsText1_0_0,
 	monitoringv1.OpenMetricsText0_0_1,
 	monitoringv1.PrometheusText0_0_4,
+}
+
+func crdExists(ctx context.Context, slogger *slog.Logger, clientset *kclientset.Clientset, crdName string) (bool, error) {
+	_, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, crdName, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			slogger.Info("CRD does not exist", "crd", crdName)
+			return false, nil
+		}
+		slogger.Error("error while fetching crd-", "crd", crdName, "error", err)
+		return false, err
+
+	}
+	slogger.Info("CRD exists", "crd", crdName)
+	return true, nil
 }
 
 func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocatorconfig.Config) (*PrometheusCRWatcher, error) {
@@ -65,11 +82,35 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		return nil, err
 	}
 
+	crdClientSet, err := kclientset.NewForConfig(cfg.ClusterConfig)
+	if err != nil {
+		return nil, err
+	}
+	probeCRDExists, err := crdExists(ctx, slogger, crdClientSet, "probes.monitoring.coreos.com")
+	if err != nil {
+		return nil, err
+	}
+
+	scrapeConfigCRDExists, err := crdExists(ctx, slogger, crdClientSet, "scrapeconfigs.monitoring.coreos.com")
+	if err != nil {
+		return nil, err
+	}
+
+	// podmonCRDExists := crdExists(ctx, crdClientSet, "podmonitors.azmonitoring.coreos.com")
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// svcmonCRDExists := crdExists(ctx, crdClientSet, "servicemonitors.azmonitoring.coreos.com")
+	// if err != nil {
+	// 	return nil, err
+	// }
+
 	allowList, denyList := cfg.PrometheusCR.GetAllowDenyLists()
 
 	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, mClient, allocatorconfig.DefaultResyncTime, nil)
 	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
-	monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory)
+	monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory, probeCRDExists, scrapeConfigCRDExists)
 	if err != nil {
 		return nil, err
 	}
@@ -149,6 +190,8 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		resourceSelector:                resourceSelector,
 		store:                           store,
 		prometheusCR:                    prom,
+		probeCRDExists:                  probeCRDExists,
+		scrapeConfigCRDExists:           scrapeConfigCRDExists,
 	}, nil
 }
 
@@ -169,6 +212,8 @@ type PrometheusCRWatcher struct {
 	resourceSelector                *prometheus.ResourceSelector
 	store                           *assets.StoreBuilder
 	prometheusCR                    *monitoringv1.Prometheus
+	probeCRDExists                  bool // indicates if the Probe CRD exists in the cluster
+	scrapeConfigCRDExists           bool // indicates if the ScrapeConfig CRD exists in the cluster
 }
 
 func getNamespaceInformer(ctx context.Context, allowList, denyList map[string]struct{}, promOperatorLogger *slog.Logger, clientset kubernetes.Interface, operatorMetrics *operator.Metrics) (cache.SharedIndexInformer, error) {
@@ -201,7 +246,7 @@ func getNamespaceInformer(ctx context.Context, allowList, denyList map[string]st
 }
 
 // getInformers returns a map of informers for the given resources.
-func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
+func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces, probeCRDExists bool, scrapeConfigCRDExists bool) (map[string]*informers.ForResource, error) {
 	serviceMonitorInformers, err := informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ServiceMonitorName))
 	if err != nil {
 		return nil, err
@@ -212,14 +257,20 @@ func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFact
 		return nil, err
 	}
 
-	probeInformers, err := informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ProbeName))
-	if err != nil {
-		return nil, err
+	probeInformers := &informers.ForResource{}
+	scrapeConfigInformers := &informers.ForResource{}
+	if probeCRDExists {
+		probeInformers, err := informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ProbeName))
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	scrapeConfigInformers, err := informers.NewInformersForResource(factory, promv1alpha1.SchemeGroupVersion.WithResource(promv1alpha1.ScrapeConfigName))
-	if err != nil {
-		return nil, err
+	if scrapeConfigCRDExists {
+		scrapeConfigInformers, err := informers.NewInformersForResource(factory, promv1alpha1.SchemeGroupVersion.WithResource(promv1alpha1.ScrapeConfigName))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)
@@ -295,38 +346,96 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 			w.logger.Info("skipping informer", "informer", name)
 			continue
 		}
-
-		// only send an event notification if there isn't one already
-		resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			// these functions only write to the notification channel if it's empty to avoid blocking
-			// if scrape config updates are being rate-limited
-			AddFunc: func(obj interface{}) {
-				select {
-				case notifyEvents <- struct{}{}:
-				default:
-				}
-			},
-			UpdateFunc: func(oldObj, newObj interface{}) {
-				select {
-				case notifyEvents <- struct{}{}:
+		// Use a custom event handler for secrets since secret update requires asset store to be updated so that CRs can pick up updated secrets.
+		if name == string(v1.ResourceSecrets) {
+			// only send an event notification if there isn't one already
+			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
+				// these functions only write to the notification channel if it's empty to avoid blocking
+				// if scrape config updates are being rate-limited
+				AddFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					// Periodic resync may resend the Namespace without changes
+					// in-between.
+					oldResource := oldObj.(*v1.Secret)
+					newResource := newObj.(*v1.Secret)
 					oldMeta, _ := oldObj.(metav1.ObjectMetaAccessor)
 					newMeta, _ := newObj.(metav1.ObjectMetaAccessor)
+					if oldResource.ResourceVersion == newResource.ResourceVersion {
+						w.logger.Info("rashmi-logs: Skipping secret update event as resource version has not changed")
+						return
+					}
+
+					if err := w.store.objStore.Update(newResource); err != nil {
+						fmt.Errorf("unexpected store error when updating secret %q: %w", newMeta.GetObjectMeta().GetName(), err)
+						return
+					}
+
 					w.logger.Info(
-						"rashmi-logs:Successfully sent update event to notifyEvents channel",
+						"rashmi-logs:Successfully updated store, sending update event to notifyEvents channel",
 						"oldObjName", oldMeta.GetObjectMeta().GetName(),
 						"oldobjnamespace", oldMeta.GetObjectMeta().GetNamespace(),
 						"newObjName", newMeta.GetObjectMeta().GetName(),
 						"newobjnamespace", newMeta.GetObjectMeta().GetNamespace(),
 					)
-				default:
-					w.logger.Info("notifyEvents channel is full, skipping sending update event")
-				}
-				select {
-				case notifyEvents <- struct{}{}:
-				default:
-				}
-			},
-		})
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+						w.logger.Info("rashmi-logs:notifyEvents channel is full, skipping sending update event")
+					}
+				},
+				DeleteFunc: func(obj interface{}) {
+					// Periodic resync may resend the Namespace without changes
+					// in-between.
+					secretResource := obj.(*v1.ResourceSecrets)
+					secretMeta, _ := obj.(metav1.ObjectMetaAccessor)
+
+					if err := w.store.objStore.Delete(secretResource); err != nil {
+						fmt.Errorf("unexpected store error when deleting secret %q: %w", secretMeta.GetObjectMeta().GetName(), err)
+						return
+					}
+
+					w.logger.Info(
+						"rashmi-logs:Successfully removed secret from store, sending update event to notifyEvents channel",
+						"objName", secretMeta.GetObjectMeta().GetName(),
+						"objnamespace", secretMeta.GetObjectMeta().GetNamespace(),
+					)
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+						w.logger.Info("rashmi-logs:notifyEvents channel is full, skipping sending update event")
+					}
+				},
+			})
+		} else {
+			// only send an event notification if there isn't one already
+			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
+				// these functions only write to the notification channel if it's empty to avoid blocking
+				// if scrape config updates are being rate-limited
+				AddFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+				DeleteFunc: func(obj interface{}) {
+					select {
+					case notifyEvents <- struct{}{}:
+					default:
+					}
+				},
+			})
+		}
 	}
 	if !success {
 		return fmt.Errorf("failed to sync one of the caches")
@@ -392,14 +501,24 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 			return nil, err
 		}
 
-		probeInstances, err := w.resourceSelector.SelectProbes(ctx, w.informers[monitoringv1.ProbeName].ListAllByNamespace)
-		if err != nil {
-			return nil, err
+		var probeInstances []*monitoringv1.Probe
+		if w.probeCRDExists {
+			probeInstances, err = w.resourceSelector.SelectProbes(ctx, w.informers[monitoringv1.ProbeName].ListAllByNamespace)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			probeInstances = []*monitoringv1.Probe{}
 		}
 
-		scrapeConfigInstances, err := w.resourceSelector.SelectScrapeConfigs(ctx, w.informers[promv1alpha1.ScrapeConfigName].ListAllByNamespace)
-		if err != nil {
-			return nil, err
+		var scrapeConfigInstances []*promv1alpha1.ScrapeConfig
+		if w.scrapeConfigCRDExists {
+			scrapeConfigInstances, err := w.resourceSelector.SelectScrapeConfigs(ctx, w.informers[promv1alpha1.ScrapeConfigName].ListAllByNamespace)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			scrapeConfigInstances = []*promv1alpha1.ScrapeConfig{}
 		}
 
 		generatedConfig, err := w.configGenerator.GenerateServerConfiguration(
