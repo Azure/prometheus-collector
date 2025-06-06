@@ -47,8 +47,6 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 		cp.TargetallocatorHttpsEnabled = true
 		if settings, ok := metricsConfigBySection["prometheus-collector-settings"]; ok {
 			if value, ok := settings["https_config"]; ok {
-				// if value, ok := parsedConfig["https_config"]; ok {
-				// fmt.Printf("value: %s\n", value)
 				if strings.ToLower(value) == "false" {
 					cp.TargetallocatorHttpsEnabled = false
 				}
