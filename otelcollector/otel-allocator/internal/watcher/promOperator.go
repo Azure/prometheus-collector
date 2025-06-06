@@ -82,6 +82,8 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 				ProbeSelector:                   cfg.PrometheusCR.ProbeSelector,
 				ProbeNamespaceSelector:          cfg.PrometheusCR.ProbeNamespaceSelector,
 				ServiceDiscoveryRole:            &serviceDiscoveryRole,
+				Version:                         "2.55.1", // fix Prometheus version 2 to avoid generating incompatible config
+				ScrapeProtocols:                 cfg.PrometheusCR.ScrapeProtocols,
 			},
 			EvaluationInterval: monitoringv1.Duration("30s"),
 		},
