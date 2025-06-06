@@ -31,6 +31,7 @@ func main() {
 	osType := os.Getenv("OS_TYPE")
 
 	if osType == "windows" {
+		shared.BootstrapCACertificates()
 		shared.SetEnvVariablesForWindows()
 	}
 
