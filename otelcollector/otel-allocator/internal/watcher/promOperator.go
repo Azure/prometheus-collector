@@ -26,8 +26,6 @@ import (
 	kubeDiscovery "github.com/prometheus/prometheus/discovery/kubernetes"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
-	kclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/metadata"
@@ -48,20 +46,20 @@ var DefaultScrapeProtocols = []monitoringv1.ScrapeProtocol{
 	monitoringv1.PrometheusText0_0_4,
 }
 
-func crdExists(ctx context.Context, slogger *slog.Logger, clientset *kclientset.Clientset, crdName string) (bool, error) {
-	_, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, crdName, metav1.GetOptions{})
-	if err != nil {
-		if k8serrors.IsNotFound(err) {
-			slogger.Info("CRD does not exist", "crd", crdName)
-			return false, nil
-		}
-		slogger.Error("error while fetching crd-", "crd", crdName, "error", err)
-		return false, err
+// func crdExists(ctx context.Context, slogger *slog.Logger, clientset *kclientset.Clientset, crdName string) (bool, error) {
+// 	_, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, crdName, metav1.GetOptions{})
+// 	if err != nil {
+// 		if k8serrors.IsNotFound(err) {
+// 			slogger.Info("CRD does not exist", "crd", crdName)
+// 			return false, nil
+// 		}
+// 		slogger.Error("error while fetching crd-", "crd", crdName, "error", err)
+// 		return false, err
 
-	}
-	slogger.Info("CRD exists", "crd", crdName)
-	return true, nil
-}
+// 	}
+// 	slogger.Info("CRD exists", "crd", crdName)
+// 	return true, nil
+// }
 
 func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocatorconfig.Config) (*PrometheusCRWatcher, error) {
 	promLogger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
@@ -82,26 +80,32 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		return nil, err
 	}
 
-	crdClientSet, err := kclientset.NewForConfig(cfg.ClusterConfig)
-	if err != nil {
-		return nil, err
-	}
-	probeCRDExists, err := crdExists(ctx, slogger, crdClientSet, "probes.monitoring.coreos.com")
-	if err != nil {
-		return nil, err
-	}
-
-	scrapeConfigCRDExists, err := crdExists(ctx, slogger, crdClientSet, "scrapeconfigs.monitoring.coreos.com")
-	if err != nil {
-		return nil, err
-	}
-
-	// podmonCRDExists := crdExists(ctx, crdClientSet, "podmonitors.azmonitoring.coreos.com")
+	// crdClientSet, err := kclientset.NewForConfig(cfg.ClusterConfig)
 	// if err != nil {
 	// 	return nil, err
 	// }
 
-	// svcmonCRDExists := crdExists(ctx, crdClientSet, "servicemonitors.azmonitoring.coreos.com")
+	groupVersion := monitoringv1.SchemeGroupVersion
+	resource := monitoringv1.ProbeName
+	installed, err := k8sutil.IsAPIGroupVersionResourceSupported(kclient.Discovery(), groupVersion, resource)
+	if err != nil {
+		fmt.Printf("failed to check presence of resource %q (group %q): %w\n", resource, groupVersion, err)
+	}
+
+	if !installed {
+		fmt.Printf("resource %q (group: %q) not installed in the cluster\n", resource, groupVersion)
+	} else {
+		fmt.Printf("resource %q (group: %q) is installed in the cluster\n", resource, groupVersion)
+	}
+
+	// use above instead like in prom operator- https://github.com/prometheus-operator/prometheus-operator/issues/7459
+	// https://github.com/prometheus-operator/prometheus-operator/blob/c4ebc762d0d2263541c67ebfe1ba7f2b419ed547/cmd/operator/main.go#L74
+	// probeCRDExists, err := crdExists(ctx, slogger, crdClientSet, "probes.monitoring.coreos.com")
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// scrapeConfigCRDExists, err := crdExists(ctx, slogger, crdClientSet, "scrapeconfigs.monitoring.coreos.com")
 	// if err != nil {
 	// 	return nil, err
 	// }
