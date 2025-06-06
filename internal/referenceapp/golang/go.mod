@@ -2,8 +2,6 @@ module github.com/vishiy/opentelemetry-collector-builder
 
 go 1.23.0
 
-toolchain go1.23.2
-
 require (
 	github.com/prometheus/client_golang v1.11.1
 	go.opentelemetry.io/otel v1.36.0
