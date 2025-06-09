@@ -74,7 +74,7 @@ var _ = DescribeTable("otelcollector is running",
 var _ = DescribeTable("The container logs should not contain errors",
 	func(namespace string, controllerLabelName string, controllerLabelValue string) {
 		err := utils.CheckContainerLogsForErrors(K8sClient, namespace, controllerLabelName, controllerLabelValue)
-		Expect(err.Error()).To(ContainSubstring("configmap section not mounted, using defaults"))
+		Expect(err).NotTo(HaveOccurred())
 	},
 	Entry("when checking the ama-metrics replica pods", "kube-system", "rsName", "ama-metrics", Label(utils.ConfigProcessingCommonNoConfigMaps)),
 	Entry("when checking the ama-metrics-node", "kube-system", "dsName", "ama-metrics-node", Label(utils.ConfigProcessingCommonNoConfigMaps)),

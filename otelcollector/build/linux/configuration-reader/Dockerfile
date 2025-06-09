@@ -6,9 +6,13 @@ RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu
 
 COPY ./prom-config-validator-builder/go.mod ./prom-config-validator-builder/go.sum ./prom-config-validator-builder/
 COPY ./prometheusreceiver/go.mod ./prometheusreceiver/go.sum ./prometheusreceiver/
+COPY ./shared/go.mod ./shared/go.sum ./shared/
 
 WORKDIR /src/prometheusreceiver
 RUN go version
+RUN go mod download
+
+WORKDIR /src/shared
 RUN go mod download
 
 WORKDIR /src/prom-config-validator-builder
@@ -16,6 +20,7 @@ RUN go mod download
 
 COPY ./prom-config-validator-builder /src/prom-config-validator-builder
 COPY ./prometheusreceiver /src/prometheusreceiver
+COPY ./shared /src/shared
 
 ARG TARGETOS TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
@@ -31,6 +36,9 @@ WORKDIR /src
 RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu
 
 COPY ./configuration-reader-builder/go.mod ./configuration-reader-builder/go.sum ./configuration-reader-builder/
+COPY ./configuration-reader-builder/certcreator/go.mod ./configuration-reader-builder/certcreator/
+COPY ./configuration-reader-builder/certgenerator/go.mod ./configuration-reader-builder/certgenerator/
+COPY ./configuration-reader-builder/certoperator/go.mod ./configuration-reader-builder/certoperator/
 RUN go version > goversion.txt
 
 COPY ./shared /src/shared

@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/pflag"
+	uberzap "go.uber.org/zap"
 	"k8s.io/client-go/util/homedir"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	uberzap "go.uber.org/zap"
 )
 
 // Flag names.

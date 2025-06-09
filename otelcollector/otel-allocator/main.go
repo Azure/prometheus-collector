@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"syscall"
 	"strings"
+	"syscall"
 
 	gokitlog "github.com/go-kit/log"
 	"github.com/oklog/run"
@@ -104,7 +104,7 @@ func main() {
 	discoveryManager = discovery.NewManager(discoveryCtx, gokitlog.NewNopLogger(), prometheus.DefaultRegisterer, sdMetrics)
 
 	targetDiscoverer = target.NewDiscoverer(log, discoveryManager, allocatorPrehook, srv, allocator.SetTargets)
-	collectorWatcher, collectorWatcherErr := collector.NewCollectorWatcher(log, cfg.ClusterConfig, cfg.CollectorNotReadyGracePeriod)
+	collectorWatcher, collectorWatcherErr := collector.NewCollectorWatcher(log, cfg.ClusterConfig)
 	if collectorWatcherErr != nil {
 		setupLog.Error(collectorWatcherErr, "Unable to initialize collector watcher")
 		os.Exit(1)
@@ -176,7 +176,7 @@ func main() {
 		})
 	runGroup.Add(
 		func() error {
-			err := collectorWatcher.Watch(cfg.CollectorNamespace, cfg.CollectorSelector, allocator.SetCollectors)
+			err := collectorWatcher.Watch(cfg.CollectorSelector, allocator.SetCollectors)
 			setupLog.Info("Collector watcher exited")
 			return err
 		},

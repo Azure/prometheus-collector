@@ -51,9 +51,6 @@ func main() {
 				log.Fatal(err)
 			}
 		}
-	} else if osType == "windows" {
-		fmt.Println("Starting filesystemwatcher.ps1")
-		shared.StartCommand("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\opt\\scripts\\filesystemwatcher.ps1")
 	}
 
 	if ccpMetricsEnabled != "true" && osType == "linux" {
@@ -141,6 +138,13 @@ func main() {
 		shared.StartMetricsExtensionWithConfigOverridesForUnderlay(meConfigFile)
 	}
 
+	// note : this has to be after MA start so that the TokenConfig.json file is already in place
+	// otherwise the hash generated will be different and cause a restart.
+	if osType == "windows" {
+		fmt.Println("Called shared.CheckForFilesystemChanges() once to set the hash for comparison")
+		shared.CheckForFilesystemChanges()
+	}
+
 	// Start otelcollector
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 	azmonUseDefaultPrometheusConfig := os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG")
@@ -167,7 +171,33 @@ func main() {
 	}
 
 	fmt.Println("startCommand otelcollector")
-	_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+
+	if controllerType == "replicaset" {
+		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+			_ = shared.CollectorTAHttpsCheck(collectorConfig)
+		} else {
+			_ = shared.RemoveHTTPSSettingsInCollectorConfig(collectorConfig)
+		}
+		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+		if err != nil {
+			fmt.Printf("Error starting otelcollector: %v\n", err)
+		}
+		if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+			// starting inotify here so that it doesnt restart when it is written the first time
+			outputFile := "/opt/inotifyoutput.txt"
+			if err = shared.Inotify(outputFile, "/etc/operator-targets/client/certs"); err != nil {
+				fmt.Printf("Error starting inotify for watching targetallocator certs: %v\n", err)
+			}
+		}
+	} else {
+		_, err := shared.StartCommandWithOutputFile("/opt/microsoft/otelcollector/otelcollector", []string{"--config", collectorConfig}, "/opt/microsoft/otelcollector/collector-log.txt")
+		if err != nil {
+			fmt.Printf("Error starting otelcollector: %v\n", err)
+		}
+	}
+
+	fmt.Println("startCommand prometheusui")
+	shared.StartCommand("/opt/microsoft/otelcollector/prometheusui")
 
 	if osType == "linux" {
 		shared.LogVersionInfo()
@@ -199,7 +229,7 @@ func main() {
 
 		// Create an output file for inotify events
 		outputFile := "/opt/inotifyoutput-mdsd-config.txt"
-		_, err = os.Create(outputFile)
+		_, err := os.Create(outputFile)
 		if err != nil {
 			log.Fatalf("Error creating output file: %v\n", err)
 		}
@@ -350,7 +380,10 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 			goto response
 		}
 	} else {
-		if shared.HasConfigChanged("C:\\opt\\microsoft\\scripts\\filesystemwatcher.txt") {
+		if _, err := os.Stat("C:\\filesystemwatcher.txt"); os.IsNotExist(err) {
+			shared.CheckForFilesystemChanges()
+		}
+		if shared.HasConfigChanged("C:\\filesystemwatcher.txt") {
 			status = http.StatusServiceUnavailable
 			message = "Config Map Updated or DCR/DCE updated since agent started"
 			fmt.Println(message)

@@ -90,7 +90,7 @@ func TestCollectorDiff(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want diff.Changes[string, *Collector]
+		want diff.Changes[*Collector]
 	}{
 		{
 			name: "diff two collector maps",
