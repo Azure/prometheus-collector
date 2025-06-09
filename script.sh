@@ -55,7 +55,12 @@ sed -i -E "s|(github\.com\/open-telemetry\/opentelemetry-collector-contrib\/[a-z
 sed -i -E "s|(github\.com\/open-telemetry\/opentelemetry-collector-contrib\/[a-zA-Z0-9\/]*) v1\.[0-9]*\.[0-9]*|\1 ${STABLE_TAG}|g" go.mod
 
 # Remove indirect dependencies and then run go mod tidy
-sed -i '/^require (/,/^)/{b}; /^replace /,$d' go.mod
+# Delete all replace directives first
+sed -i '/^replace /d' go.mod
+
+# Add back the two specific replace directives we want to keep
+echo "replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => ../prometheusreceiver" >> go.mod
+echo "replace github.com/prometheus-collector/shared => ../shared" >> go.mod
 go mod tidy
 
 # Update OtelCollector Version in main.go

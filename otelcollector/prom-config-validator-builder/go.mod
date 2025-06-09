@@ -2,11 +2,10 @@ module github.com/rashmy/prom-config-validator-builder
 
 go 1.23.0
 
-toolchain go1.24.2
+replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => ../prometheusreceiver
+replace github.com/prometheus-collector/shared => ../shared
 
 require (
-	replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => ../prometheusreceiver
-	replace github.com/prometheus-collector/shared => ../shared
 
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.123.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.123.0
