@@ -4,8 +4,7 @@
 package target
 
 import (
-	"strconv"
-
+	"github.com/cespare/xxhash/v2"
 	"github.com/prometheus/prometheus/model/labels"
 )
 
@@ -23,15 +22,20 @@ var (
 	relevantLabelNames           = append(nodeLabels, endpointSliceTargetKindLabel, endpointSliceTargetNameLabel)
 )
 
+type ItemHash uint64
+
 type Item struct {
 	JobName       string
 	TargetURL     string
 	Labels        labels.Labels
 	CollectorName string
-	hash          string
+	hash          ItemHash
 }
 
-func (t *Item) Hash() string {
+func (t *Item) Hash() ItemHash {
+	if t.hash == 0 {
+		t.hash = ItemHash(LabelsHashWithJobName(t.Labels, t.JobName))
+	}
 	return t.hash
 }
 
@@ -53,13 +57,49 @@ func (t *Item) GetNodeName() string {
 // NewItem Creates a new target item.
 // INVARIANTS:
 // * Item fields must not be modified after creation.
-// * Item should only be made via its constructor, never directly.
 func NewItem(jobName string, targetURL string, labels labels.Labels, collectorName string) *Item {
 	return &Item{
 		JobName:       jobName,
-		hash:          jobName + targetURL + strconv.FormatUint(labels.Hash(), 10),
 		TargetURL:     targetURL,
 		Labels:        labels,
 		CollectorName: collectorName,
 	}
+}
+
+// LabelsHashWithJobName computes a hash of the labels and the job name.
+// Same logic as Prometheus labels.Hash: https://github.com/prometheus/prometheus/blob/8fd46f74aa0155e4d5aa30654f9c02e564e03743/model/labels/labels.go#L72
+// but adds in the job name since this is not in the labelset from the discovery manager.
+// The scrape manager adds it later. Address is already included in the labels, so it is not needed here.
+func LabelsHashWithJobName(ls labels.Labels, jobName string) uint64 {
+	var sep byte = '\xff'
+	var seps = []byte{sep}
+
+	// Use xxhash.Sum64(b) for fast path as it's faster.
+	b := make([]byte, 0, 1024)
+
+	// Differs from Prometheus implementation by adding job name.
+	b = append(b, jobName...)
+	b = append(b, sep)
+
+	for i, v := range ls {
+		if len(b)+len(v.Name)+len(v.Value)+2 >= cap(b) {
+			// If labels entry is 1KB+ do not allocate whole entry.
+			h := xxhash.New()
+			_, _ = h.Write(b)
+			for _, v := range ls[i:] {
+				_, _ = h.WriteString(v.Name)
+				_, _ = h.Write(seps)
+				_, _ = h.WriteString(v.Value)
+				_, _ = h.Write(seps)
+			}
+			return h.Sum64()
+		}
+
+		b = append(b, v.Name...)
+		b = append(b, sep)
+		b = append(b, v.Value...)
+		b = append(b, sep)
+	}
+
+	return xxhash.Sum64(b)
 }
