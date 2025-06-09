@@ -1,5 +1,5 @@
 PROMETHEUS_VERSION=$(file < PROMETHEUS_VERSION)
-all: otelcollector fluentbitplugin promconfigvalidator targetallocator configurationreader
+all: otelcollector fluentbitplugin promconfigvalidator targetallocator configurationreader prometheusui
 
 .PHONY: otelcollector
 otelcollector:

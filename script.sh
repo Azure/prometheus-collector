@@ -200,6 +200,13 @@ rm otelcollector/Makefile.backup
 sed -i '/import (/a\\tuberzap "go.uber.org/zap"' otelcollector/otel-allocator/internal/config/flags.go
 sed -i '/zapCmdLineOpts.BindFlags(zapFlagSet)/a\\tlvl := uberzap.NewAtomicLevelAt(uberzap.PanicLevel)\n\tzapCmdLineOpts.Level = &lvl' otelcollector/otel-allocator/internal/config/flags.go
 
+# Add the Arc EULA into the main.go file
+echo "Adding Arc EULA to otel-allocator main.go file..."
+sed -i '/cfg, err := config.Load(os.Args)/i\\t// EULA statement is required for Arc extension\n\tclusterResourceId := os.Getenv("CLUSTER")\n\tif strings.EqualFold(clusterResourceId, "connectedclusters") {\n\t\tlog.Info("MICROSOFT SOFTWARE LICENSE TERMS\\n\\nMICROSOFT Azure Arc-enabled Kubernetes\\n\\nThis software is licensed to you as part of your or your company'\''s subscription license for Microsoft Azure Services. You may only use the software with Microsoft Azure Services and subject to the terms and conditions of the agreement under which you obtained Microsoft Azure Services. If you do not have an active subscription license for Microsoft Azure Services, you may not use the software. Microsoft Azure Legal Information: https://azure.microsoft.com/en-us/support/legal/")\n\t}' otelcollector/otel-allocator/main.go
+if ! grep -q "\"strings\"" otelcollector/otel-allocator/main.go; then
+	sed -i '/import (/a\\t"strings"' otelcollector/otel-allocator/main.go
+fi
+
 # Update go.mod
 cd otelcollector/otel-allocator
 cp "$CURRENT_DIR/opentelemetry-operator/go.mod" .
