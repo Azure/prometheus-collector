@@ -50,7 +50,7 @@ func SetEnvAndSourceBashrcOrPowershell(key, value string, echo bool) error {
 	// Set the environment variable
 	err := os.Setenv(key, value)
 	if err != nil {
-		fmt.Println("error in SetEnvAndSourceBashrcOrPowershell when setting key:", key, ":value:" , value, ":error:", err)
+		fmt.Println("error in SetEnvAndSourceBashrcOrPowershell when setting key:", key, ":value:", value, ":error:", err)
 		return fmt.Errorf("failed to set environment variable: %v", err)
 	}
 
@@ -463,6 +463,13 @@ func StartFluentBit(fluentBitConfigFile string) {
 		log.Fatalf("Error creating log file: %v\n", err)
 	}
 	defer logFile.Close()
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+		SetEnvAndSourceBashrcOrPowershell("FLUENT_BIT_OPERATOR_TARGETS_TLS_SETTING", "on", true)
+		SetEnvAndSourceBashrcOrPowershell("FLUENT_BIT_OPERATOR_TARGETS_PROMETHEUS_PORT", "443", true)
+	} else {
+		SetEnvAndSourceBashrcOrPowershell("FLUENT_BIT_OPERATOR_TARGETS_TLS_SETTING", "off", true)
+		SetEnvAndSourceBashrcOrPowershell("FLUENT_BIT_OPERATOR_TARGETS_PROMETHEUS_PORT", "80", true)
+	}
 
 	fluentBitCmd := exec.Command("fluent-bit", "-c", fluentBitConfigFile, "-e", "/opt/fluent-bit/bin/out_appinsights.so")
 	fluentBitCmd.Stdout = os.Stdout

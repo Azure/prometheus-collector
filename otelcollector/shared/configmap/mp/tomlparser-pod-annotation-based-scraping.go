@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-
-	"github.com/pelletier/go-toml"
 )
 
 const (
@@ -53,13 +51,11 @@ func writeConfigToFile(podannotationNamespaceRegex string) error {
 	return nil
 }
 
-func configurePodAnnotationSettings() error {
-	parsedConfig, err := parseConfigMapForPodAnnotations()
-	if err != nil {
-		return err
+func configurePodAnnotationSettings(metricsConfigBySection map[string]map[string]string) error {
+	if metricsConfigBySection == nil {
+		return fmt.Errorf("configmap section not mounted, using defaults")
 	}
-
-	podannotationNamespaceRegex, err := populatePodAnnotationNamespaceFromConfigMap(parsedConfig)
+	podannotationNamespaceRegex, err := populatePodAnnotationNamespaceFromConfigMap(metricsConfigBySection)
 	if err != nil {
 		return err
 	}
@@ -67,15 +63,26 @@ func configurePodAnnotationSettings() error {
 	return writeConfigToFile(podannotationNamespaceRegex)
 }
 
-func populatePodAnnotationNamespaceFromConfigMap(parsedConfig map[string]interface{}) (string, error) {
-	regex, ok := parsedConfig["podannotationnamespaceregex"]
-	if !ok || regex == nil {
-		return "", fmt.Errorf("pod annotation namespace regex not found")
+func populatePodAnnotationNamespaceFromConfigMap(metricsConfigBySection map[string]map[string]string) (string, error) {
+	// Access the nested map and value
+	innerMap, ok := metricsConfigBySection["pod-annotation-based-scraping"]
+	if !ok {
+		fmt.Println("Pod annotation namespace regex configuration not found")
+		return "", fmt.Errorf("pod annotation namespace regex configuration not found")
 	}
 
-	regexString := regex.(string)
-	if !isValidRegex(regexString) {
-		return "", fmt.Errorf("invalid namespace regex: %s", regexString)
+	regex, ok := innerMap["podannotationnamespaceregex"]
+	if !ok || regex == "" {
+		fmt.Println("Pod annotation namespace regex does not have a value")
+		return "", fmt.Errorf("pod annotation namespace regex does not have a value")
+	}
+
+	// Validate the regex
+	if isValidRegex(regex) {
+		fmt.Printf("Using configmap namespace regex for pod annotations: %s\n", regex)
+		return regex, nil
+	} else {
+		return "", fmt.Errorf("Invalid namespace regex for pod annotations: %s", regex)
 	}
 
 	return regexString, nil

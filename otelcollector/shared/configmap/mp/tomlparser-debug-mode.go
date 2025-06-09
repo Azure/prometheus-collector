@@ -5,18 +5,23 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/pelletier/go-toml"
+	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
 )
 
-// ConfigureDebugModeSettings configures debug mode based on config map settings
-func ConfigureDebugModeSettings() error {
-	configMapSettings, err := parseConfigMapForDebugSettings()
-	if err != nil || configMapSettings == nil {
-		return fmt.Errorf("Error parsing debug settings: %v", err)
+const (
+	loggingPrefix = "debug-mode-config"
+)
+
+// ConfigureDebugModeSettings reads debug mode settings from the parsed config map,
+// sets default values if necessary, writes environment variables to a file,
+// and modifies a YAML configuration file based on debug mode settings.
+func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]string) error {
+	if metricsConfigBySection == nil {
+		return fmt.Errorf("configmap section not mounted, using defaults")
 	}
 
-	enabled := populateSettingValuesFromConfigMap(configMapSettings)
+	enabled := populateSettingValuesFromConfigMap(metricsConfigBySection)
 
 	// Check config schema version
 	if configSchema := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"); configSchema == "v1" {
@@ -35,11 +40,38 @@ func ConfigureDebugModeSettings() error {
 	file.WriteString(fmt.Sprintf("DEBUG_MODE_ENABLED=%v\n", enabled))
 	fmt.Printf("Setting debug mode environment variable: %v\n", enabled)
 
-	// Configure ReplicaSet collector if debug mode is enabled
-	if enabled && os.Getenv("CONTROLLER_TYPE") == "ReplicaSet" {
-		fmt.Println("Setting prometheus in the exporter metrics for service pipeline...")
-		if err := updateReplicaSetConfig(); err != nil {
-			return err
+	if enabled {
+		controllerType := os.Getenv("CONTROLLER_TYPE")
+		if controllerType != "" && controllerType == "ReplicaSet" {
+			fmt.Println("Setting prometheus in the exporter metrics for service pipeline since debug mode is enabled ...")
+			var config shared.OtelConfig
+			content, err := os.ReadFile(replicaSetCollectorConfig)
+			if err != nil {
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+			}
+
+			err = yaml.Unmarshal(content, &config)
+			if err != nil {
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+			}
+
+			config.Service.Pipelines.Metrics.Exporters = []interface{}{"otlp", "prometheus"}
+			if os.Getenv("CCP_METRICS_ENABLED") != "true" {
+				config.Service.Pipelines.MetricsTelemetry.Receivers = []interface{}{"prometheus"}
+				config.Service.Pipelines.MetricsTelemetry.Exporters = []interface{}{"prometheus/telemetry"}
+				config.Service.Pipelines.MetricsTelemetry.Processors = []interface{}{"filter/telemetry"}
+			}
+			cfgYamlWithDebugModeSettings, err := yaml.Marshal(config)
+			if err != nil {
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+			}
+
+			err = os.WriteFile(replicaSetCollectorConfig, []byte(cfgYamlWithDebugModeSettings), fs.FileMode(0644))
+			if err != nil {
+				return fmt.Errorf("Exception while setting prometheus in the exporter metrics for service pipeline when debug mode is enabled - %v\n", err)
+			}
+
+			fmt.Println("Done setting prometheus in the exporter metrics for service pipeline.")
 		}
 		fmt.Println("Done setting prometheus in the exporter metrics for service pipeline.")
 	}
@@ -101,4 +133,20 @@ func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) boo
 
 	fmt.Println("Debug mode configmap missing enabled value, using default: false")
 	return false
+func populateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) bool {
+	debugSettings, ok := metricsConfigBySection["prometheus-collector-settings"]
+	if !ok {
+		fmt.Println("The 'prometheus-collector-settings' section is not present in the parsed data. Using default value: false")
+		return false
+	}
+
+	val, ok := debugSettings["debug-mode"]
+	if !ok {
+		fmt.Println("The 'debug-mode' section is not present in the parsed data. Using default value: false")
+		return false
+	}
+
+	enabled := strings.ToLower(val) == "true"
+	fmt.Printf("Using configmap setting for debug mode: %v\n", enabled)
+	return enabled
 }

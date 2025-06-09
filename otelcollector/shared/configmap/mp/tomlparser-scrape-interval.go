@@ -36,19 +36,14 @@ func validateDuration(duration string) string {
 	return duration
 }
 
-func getStringValue(config *toml.Tree, key string) string {
-	if config == nil {
-		return ""
+func getParsedDataValue(metricsConfigBySection map[string]map[string]string, key string) string {
+	if value, exists := metricsConfigBySection["default-targets-scrape-interval-settings"][key]; exists {
+		return checkDuration(value)
 	}
-
-	value, ok := config.Get(key).(string)
-	if !ok {
-		return ""
-	}
-	return value
+	return defaultScrapeInterval
 }
 
-func processConfigMap() map[string]string {
+func processConfigMap(metricsConfigBySection map[string]map[string]string) map[string]string {
 	intervalHash := make(map[string]string)
 	var config *toml.Tree
 
@@ -85,11 +80,11 @@ func writeIntervalHashToFile(intervalHash map[string]string, filePath string) er
 	return os.WriteFile(filePath, out, 0644)
 }
 
-func tomlparserScrapeInterval() {
+func tomlparserScrapeInterval(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - tomlparserScrapeInterval")
-
-	intervalHash := processConfigMap()
-	if err := writeIntervalHashToFile(intervalHash, scrapeIntervalEnvVarPath); err != nil {
+	intervalHash := processConfigMap(metricsConfigBySection)
+	err := writeIntervalHashToFile(intervalHash, scrapeIntervalEnvVarPath)
+	if err != nil {
 		fmt.Printf("Error writing to file: %v\n", err)
 	}
 

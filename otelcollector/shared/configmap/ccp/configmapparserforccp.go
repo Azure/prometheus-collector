@@ -10,16 +10,39 @@ import (
 )
 
 func Configmapparserforccp() {
-	fmt.Println("in configmapparserforccp")
-	fmt.Println("waiting for 30 secs...")
-	time.Sleep(30 * time.Second)
+	fmt.Printf("in configmapparserforccp")
+	fmt.Printf("waiting for 30 secs...")
+	time.Sleep(30 * time.Second) //needed to save a restart at times when config watcher sidecar starts up later than us and hence config map wasn't yet projected into emptydir volume yet during pod startups.
 
 	configVersionPath := "/etc/config/settings/config-version"
 	configSchemaPath := "/etc/config/settings/schema-version"
 
-	// Debug: List directory contents
-	if entries, err := os.ReadDir("/etc/config/settings"); err != nil {
-		fmt.Println("error listing /etc/config/settings:", err)
+	entries, er := os.ReadDir("/etc/config/settings")
+	if er != nil {
+		fmt.Println("error listing /etc/config/settings", er)
+	}
+
+	for _, e := range entries {
+		fmt.Println(e.Name())
+	}
+
+	fmt.Println("done listing /etc/config/settings")
+
+	// Set agent config schema version
+	if shared.ExistsAndNotEmpty(configSchemaPath) {
+		configVersion, err := shared.ReadAndTrim(configVersionPath)
+		if err != nil {
+			fmt.Println("Error reading config version file:", err)
+			return
+		}
+		// Remove all spaces and take the first 10 characters
+		configVersion = strings.ReplaceAll(configVersion, " ", "")
+		if len(configVersion) >= 10 {
+			configVersion = configVersion[:10]
+		}
+		// Set the environment variable
+		fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_FILE_VERSION:", configVersion)
+		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configVersion, true)
 	} else {
 		for _, e := range entries {
 			fmt.Println(e.Name())
@@ -31,14 +54,45 @@ func Configmapparserforccp() {
 	processConfigFile(configVersionPath, "AZMON_AGENT_CFG_FILE_VERSION")
 	processConfigFile(configSchemaPath, "AZMON_AGENT_CFG_SCHEMA_VERSION")
 
-	// Parse configurations and set environment variables
-	parseConfigAndSetEnvInFile()
-	setEnvFromFile("/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var")
+	var metricsConfigBySection map[string]map[string]string
+	var err error
+	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
+		filePaths := []string{"/etc/config/settings/controlplane-metrics", "/etc/config/settings/prometheus-collector-settings"}
+		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
+		if err != nil {
+			fmt.Printf("Error parsing files: %v\n", err)
+			return
+		}
+	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
+		configDir := "/etc/config/settings"
+		metricsConfigBySection, err = shared.ParseV1Config(configDir)
+		if err != nil {
+			fmt.Printf("Error parsing config: %v\n", err)
+			return
+		}
+	} else {
+		fmt.Println("Invalid schema version or no configmap present. Using defaults.")
+	}
 
-	tomlparserCCPDefaultScrapeSettings()
-	setEnvFromFile("/opt/microsoft/configmapparser/config_default_scrape_settings_env_var")
+	// Parse the configmap to set the right environment variables for prometheus collector settings
+	parseConfigAndSetEnvInFile(metricsConfigBySection)
+	filename := "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
+	err = shared.SetEnvVarsFromFile(filename)
+	if err != nil {
+		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var: %v\n", err)
+	}
 
-	tomlparserCCPTargetsMetricsKeepList()
+	// Parse the settings for default scrape configs
+	tomlparserCCPDefaultScrapeSettings(metricsConfigBySection)
+	filename = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
+	err = shared.SetEnvVarsFromFile(filename)
+	if err != nil {
+		fmt.Printf("Error when settinng env for /opt/microsoft/configmapparser/config_default_scrape_settings_env_var: %v\n", err)
+	}
+
+	// Parse the settings for default targets metrics keep list config
+	tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection)
+
 	prometheusCcpConfigMerger()
 
 	// Set required environment variables

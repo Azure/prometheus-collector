@@ -332,7 +332,74 @@ func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interfa
 	return nil
 }
 
-// setLabelLimitsPerScrape sets label limits for every scrape job
+func setDefaultFileScrapeInterval(scrapeInterval string) {
+	defaultFilesArray := []string{
+		kubeletDefaultFileRsSimple, kubeletDefaultFileRsAdvanced, kubeletDefaultFileDs,
+		kubeletDefaultFileRsAdvancedWindowsDaemonset, coreDNSDefaultFile,
+		cadvisorDefaultFileRsSimple, cadvisorDefaultFileRsAdvanced, cadvisorDefaultFileDs,
+		kubeProxyDefaultFile, apiserverDefaultFile, kubeStateDefaultFile,
+		nodeExporterDefaultFileRsSimple, nodeExporterDefaultFileRsAdvanced, nodeExporterDefaultFileDs,
+		prometheusCollectorHealthDefaultFile, windowsExporterDefaultRsSimpleFile, windowsExporterDefaultDsFile,
+		windowsKubeProxyDefaultFileRsSimpleFile, windowsKubeProxyDefaultDsFile, podAnnotationsDefaultFile,
+		kappieBasicDefaultFileDs, networkObservabilityRetinaDefaultFileDs, networkObservabilityHubbleDefaultFileDs,
+		networkObservabilityCiliumDefaultFileDs, acstorMetricsExporterDefaultFile, acstorCapacityProvisionerDefaultFile,
+	}
+
+	for _, currentFile := range defaultFilesArray {
+		contents, err := os.ReadFile(fmt.Sprintf("%s%s", defaultPromConfigPathPrefix, currentFile))
+		if err != nil {
+			fmt.Printf("Error reading file %s: %v\n", currentFile, err)
+			continue
+		}
+
+		contents = []byte(strings.Replace(string(contents), "$$SCRAPE_INTERVAL$$", scrapeInterval, -1))
+
+		err = os.WriteFile(currentFile, contents, fs.FileMode(0644))
+		if err != nil {
+			fmt.Printf("Error writing to file %s: %v\n", currentFile, err)
+		}
+	}
+}
+
+func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultConfigs map[interface{}]interface{}) {
+	var mergedConfigYaml []byte
+
+	if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
+		shared.EchoStr("Merging default and custom scrape configs")
+		var customPrometheusConfig map[interface{}]interface{}
+		err := yaml.Unmarshal([]byte(customPromConfig), &customPrometheusConfig)
+		if err != nil {
+			shared.EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
+			return
+		}
+
+		var mergedConfigs map[interface{}]interface{}
+		if customPrometheusConfig["scrape_configs"] != nil {
+			mergedConfigs = deepMerge(mergedDefaultConfigs, customPrometheusConfig)
+		} else {
+			delete(customPrometheusConfig, "scrape_configs")
+			mergedConfigs = deepMerge(mergedDefaultConfigs, customPrometheusConfig)
+		}
+
+		mergedConfigYaml, err = yaml.Marshal(mergedConfigs)
+		if err != nil {
+			shared.EchoError(fmt.Sprintf("Error marshalling merged configs: %v", err))
+			return
+		}
+
+		shared.EchoStr("Done merging default scrape config(s) with custom prometheus config, writing them to file")
+	} else {
+		shared.EchoWarning("The merged default scrape config is nil or empty, using only custom scrape config")
+		mergedConfigYaml = []byte(customPromConfig)
+	}
+
+	err := os.WriteFile(promMergedConfigPath, mergedConfigYaml, fs.FileMode(0644))
+	if err != nil {
+		shared.EchoError(fmt.Sprintf("Error writing merged config to file: %v", err))
+		return
+	}
+}
+
 func setLabelLimitsPerScrape(prometheusConfigString string) string {
 	var limitedCustomConfig map[interface{}]interface{}
 

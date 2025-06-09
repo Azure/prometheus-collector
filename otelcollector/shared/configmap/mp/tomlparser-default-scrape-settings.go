@@ -20,34 +20,41 @@ func GetDefaultSettings() map[string]string {
 	return config
 }
 
-// ParseConfigMap reads settings from a config map if available, otherwise uses defaults
-func (fcl *FilesystemConfigLoader) ParseConfigMap() (map[string]string, error) {
-	config := GetDefaultSettings()
+func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string, schemaVersion string) (map[string]string, error) {
+	config := make(map[string]string)
+	// Set default values
+	config["kubelet"] = "true"
+	config["coredns"] = "false"
+	config["cadvisor"] = "true"
+	config["kubeproxy"] = "false"
+	config["apiserver"] = "false"
+	config["kubestate"] = "true"
+	config["nodeexporter"] = "true"
+	config["prometheuscollectorhealth"] = "false"
+	config["windowsexporter"] = "false"
+	config["windowskubeproxy"] = "false"
+	config["kappiebasic"] = "true"
+	config["networkobservabilityRetina"] = "true"
+	config["networkobservabilityHubble"] = "true"
+	config["networkobservabilityCilium"] = "true"
+	config["noDefaultsEnabled"] = "false"
+	config["acstor-capacity-provisioner"] = "true"
+	config["acstor-metrics-exporter"] = "true"
 
-	if _, err := os.Stat(fcl.ConfigMapMountPath); os.IsNotExist(err) {
-		fmt.Println("configmap for default scrape settings not mounted, using defaults")
-		return config, nil
+	configSectionName := "default-scrape-settings-enabled"
+	if schemaVersion == "v2" {
+          configSectionName = "default-targets-scrape-enabled"
 	}
-
-	content, err := os.ReadFile(fcl.ConfigMapMountPath)
-	if err != nil {
-		return config, fmt.Errorf("using default values, error reading config map file: %s", err)
-	}
-
-	// Parse config map content
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2 {
-			key := strings.TrimSpace(parts[0])
-			value := strings.TrimSpace(parts[1])
+	// Override defaults with values from metricsConfigBySection
+	if settings, ok := metricsConfigBySection[configSectionName]; ok {
+		for key, value := range settings {
 			if _, ok := config[key]; ok {
 				config[key] = value
 			}
 		}
 	}
 
-	fmt.Println("using configmap for default scrape settings...")
+	fmt.Println("Using configmap for default scrape settings...")
 	return config, nil
 }
 
@@ -116,6 +123,8 @@ func ConfigureDefaultScrapeSettings(configMapPath, outputFilePath string) {
 	// Load settings based on schema version
 	if configSchema := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"); configSchema == "v1" {
 		settings, err = loader.ParseConfigMap()
+	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
+		defaultSettings, err = c.ConfigLoader.ParseConfigMapForDefaultScrapeSettings(metricsConfigBySection, configSchemaVersion)
 	} else {
 		settings = GetDefaultSettings()
 	}
@@ -151,6 +160,20 @@ func ConfigureDefaultScrapeSettings(configMapPath, outputFilePath string) {
 	fmt.Println("End prometheus-collector-settings Processing")
 }
 
-func tomlparserDefaultScrapeSettings() {
-	ConfigureDefaultScrapeSettings(defaultSettingsMountPath, defaultSettingsEnvVarPath)
+func tomlparserDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
+
+	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+	configLoaderPath := defaultSettingsMountPath
+	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v2" {
+		configLoaderPath = defaultSettingsMountPathv2
+	}
+
+	configurator := &Configurator{
+		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: configLoaderPath},
+		ConfigWriter:   &FileConfigWriter{},
+		ConfigFilePath: defaultSettingsEnvVarPath,
+		ConfigParser:   &ConfigProcessor{},
+	}
+
+	configurator.ConfigureDefaultScrapeSettings(metricsConfigBySection)
 }

@@ -74,11 +74,29 @@ TOKEN=$(echo $LOGIN_INFO | jq -r '.accessToken')
 SOURCE_IMAGE_FULL_PATH=${MCR_REGISTRY}${DEV_MCR_REPOSITORY}:${IMAGE_TAG}
 AGENT_IMAGE_FULL_PATH=${PROD_ACR_REPOSITORY_WITHOUT_SLASH}:${IMAGE_TAG}
 
+echo "Source image: $SOURCE_IMAGE_FULL_PATH"
+echo "Destination image: $ACR_REGISTRY/$AGENT_IMAGE_FULL_PATH"
+
 # Use oras to copy the image
-oras copy -r $SOURCE_IMAGE_FULL_PATH $ACR_REGISTRY/$AGENT_IMAGE_FULL_PATH --to-password $TOKEN
-if [ $? -eq 0 ]; then
-  echo "Retagged and pushed image successfully"
-else
-  echo "-e error failed to retag and push image to destination ACR"
-  exit 1
-fi
+echo "Checking oras version"
+oras version
+echo "Starting oras copy"
+MAX_RETRIES=5
+RETRY_COUNT=0
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  oras copy -r -v $SOURCE_IMAGE_FULL_PATH $ACR_REGISTRY/$AGENT_IMAGE_FULL_PATH --to-password $TOKEN
+  if [ $? -eq 0 ]; then
+    echo "Retagged and pushed image successfully"
+    break
+  else
+    RETRY_COUNT=$((RETRY_COUNT+1))
+    if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+      echo "Failed to retag and push image, retrying in 60 seconds (Attempt $RETRY_COUNT/$MAX_RETRIES)..."
+      sleep 60
+    else
+      echo "-e error failed to retag and push image to destination ACR after $MAX_RETRIES attempts"
+      exit 1
+    fi
+  fi
+done

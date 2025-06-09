@@ -169,6 +169,9 @@ const (
 	keepListRegexHashFilePath             = "/opt/microsoft/configmapparser/config_def_targets_metrics_keep_list_hash"
 	intervalHashFilePath                  = "/opt/microsoft/configmapparser/config_def_targets_scrape_intervals_hash"
 	amcsConfigFilePath                    = "/etc/mdsd.d/config-cache/metricsextension/TokenConfig.json"
+	basicAuthEnabled                      = "BasicAuthEnabled"
+	bearerTokenEnabledWithFile            = "BearerTokenEnabledWithFile"
+	bearerTokenEnabledWithSecret          = "BearerTokenEnabledWithSecret"
 )
 
 // SendException  send an event to the configured app insights instance
@@ -219,6 +222,10 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 	CommonProperties["podname"] = os.Getenv(envPodName)
 	CommonProperties["helmreleasename"] = os.Getenv(envHelmReleaseName)
 	CommonProperties["osType"] = os.Getenv("OS_TYPE")
+	CommonProperties["collectorConfigWithHttps"] = os.Getenv("COLLECTOR_CONFIG_WITH_HTTPS")
+	CommonProperties["collectorConfigHttpsRemoved"] = os.Getenv("COLLECTOR_CONFIG_HTTPS_REMOVED")
+	CommonProperties["operatorTargetsHttpsEnabledChartSetting"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED_CHART_SETTING")
+	CommonProperties["operatorTargetsHttpsEnabled"] = os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED")
 
 	isMacMode := os.Getenv("MAC")
 	if strings.Compare(strings.ToLower(isMacMode), "true") == 0 {
@@ -357,6 +364,7 @@ func InitializeTelemetryClient(agentVersion string) (int, error) {
 
 // Send count of cores/nodes attached to Application Insights periodically
 func SendCoreCountToAppInsightsMetrics() {
+	Log("Starting core count telemetry every %d seconds\n", coresAttachedTelemetryIntervalSeconds)
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		SendException(fmt.Sprintf("Error while getting the credentials for the golang client for cores attached telemetry: %v\n", err))
@@ -422,6 +430,7 @@ func SendCoreCountToAppInsightsMetrics() {
 				}
 			}
 		}
+
 		// Send metric to app insights for node and core capacity
 		cpuCapacityTotal := float64(telemetryProperties[linuxCpuCapacityTelemetryName] + telemetryProperties[windowsCpuCapacityTelemetryName])
 		metricTelemetryItem := appinsights.NewMetricTelemetry(coresAttachedTelemetryName, cpuCapacityTotal)
@@ -429,6 +438,12 @@ func SendCoreCountToAppInsightsMetrics() {
 		for propertyName, propertyValue := range telemetryProperties {
 			if propertyValue != 0 {
 				metricTelemetryItem.Properties[propertyName] = fmt.Sprintf("%d", propertyValue)
+			}
+		}
+		scrapeConfigProperties := addScrapeJobMetadataToTelemetryItem()
+		if scrapeConfigProperties != nil {
+			for propertyName, propertyValue := range scrapeConfigProperties {
+				metricTelemetryItem.Properties[propertyName] = propertyValue
 			}
 		}
 
@@ -457,7 +472,6 @@ type Container struct {
 
 // Send Cpu and Memory Usage for our containers to Application Insights periodically
 func SendContainersCpuMemoryToAppInsightsMetrics() {
-
 	var p CadvisorJson
 	err := json.Unmarshal(retrieveKsmData(), &p)
 	if err != nil {
@@ -512,6 +526,138 @@ func GetAndSendContainerCPUandMemoryFromCadvisorJSON(container Container, cpuMet
 	TelemetryClient.Track(metricTelemetryItem)
 
 	Log(fmt.Sprintf("Sent container CPU and Mem data for %s", cpuMetricName))
+}
+
+func addScrapeJobMetadataToTelemetryItem() map[string]string {
+	telemetryPropertiesString := map[string]string{
+		basicAuthEnabled:             "false",
+		bearerTokenEnabledWithFile:   "false",
+		bearerTokenEnabledWithSecret: "false",
+	}
+	taEndpoint := "http://ama-metrics-operator-targets.kube-system.svc.cluster.local/scrape_configs"
+
+	// Send metric to app insights for target allocator metrics
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+		taEndpoint = "https://ama-metrics-operator-targets.kube-system.svc.cluster.local:443/scrape_configs"
+	}
+	scrapeJobs := getTargetAllocatorResponse(taEndpoint)
+	if scrapeJobs != nil {
+		var scrapeJobsMap map[string]interface{}
+		err := json.Unmarshal(scrapeJobs, &scrapeJobsMap)
+		if err != nil {
+			Log(fmt.Sprintf("Error unmarshalling scrape jobs JSON: %v", err))
+			SendException(err)
+			return nil
+		} else {
+			hasBasicAuth := false
+			hasBearerToken := false
+			hasBearerTokenInFile := false
+			hasBearerTokenInSecret := false
+			var checkForConfigProperties func(map[string]interface{})
+			checkForConfigProperties = func(data map[string]interface{}) {
+				for _, value := range data {
+					job := value.(map[string]interface{})
+					if _, ok := job["basic_auth"]; ok {
+						hasBasicAuth = true
+						// break
+					}
+					if auth, ok := job["authorization"]; ok {
+						authValue := auth.(map[string]interface{})
+						if typeValue, ok := authValue["type"]; ok {
+							if typeValue == "Bearer" {
+								hasBearerToken = true
+							}
+							if hasBearerToken {
+								if _, ok := authValue["credentials_file"]; ok {
+									hasBearerTokenInFile = true
+								}
+								if _, ok := authValue["credentials"]; ok {
+									hasBearerTokenInSecret = true
+								}
+							}
+							// break
+						}
+					}
+
+					if hasBasicAuth && hasBearerTokenInFile && hasBearerTokenInSecret {
+						break
+					}
+				}
+			}
+			checkForConfigProperties(scrapeJobsMap)
+			if hasBasicAuth {
+				telemetryPropertiesString[basicAuthEnabled] = "true"
+			}
+
+			if hasBearerTokenInFile {
+				telemetryPropertiesString[bearerTokenEnabledWithFile] = "true"
+			}
+			if hasBearerTokenInSecret {
+				telemetryPropertiesString[bearerTokenEnabledWithSecret] = "true"
+			}
+		}
+	}
+	return telemetryPropertiesString
+
+}
+
+// Get scrape jobs for basic auth and bearer token telemetry
+func getTargetAllocatorResponse(taEndpoint string) []byte {
+	client := &http.Client{}
+	if os.Getenv("AZMON_OPERATOR_HTTPS_ENABLED") == "true" {
+		caCertPath := "/etc/operator-targets/client/certs/ca.crt"
+		certPath := "/etc/operator-targets/client/certs/client.crt"
+		keyPath := "/etc/operator-targets/client/certs/client.key"
+
+		certPEM, err := ioutil.ReadFile(caCertPath)
+		if err != nil {
+			Log(fmt.Sprintf("Unable to read ca cert file - %s\n", caCertPath))
+			SendException(err)
+			return nil
+		}
+		rootCAs := x509.NewCertPool()
+		// Append CA cert to the new pool
+		rootCAs.AppendCertsFromPEM(certPEM)
+
+		// Load client certificate and key
+		clientCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		if err != nil {
+			Log(fmt.Sprintf("Unable to load client certs - %s\n", certPath))
+			SendException(err)
+			return nil
+		}
+
+		client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs:      rootCAs,
+					Certificates: []tls.Certificate{clientCert},
+				},
+			},
+		}
+	}
+
+	resp, err := client.Get(taEndpoint)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		Log(fmt.Sprintf("Failed to reach Target Allocator endpoint - %s\n", taEndpoint))
+		SendException(err)
+		return nil
+	} else {
+		Log(fmt.Sprintf("Successfully reached Target Allocator endpoint - %s\n", taEndpoint))
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		Log(fmt.Sprintf("Error reading response body: %v", err))
+		SendException(err)
+		return nil
+	}
+
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+
+	return body
 }
 
 // Retrieve the JSON payload of Kube state metrics from Cadvisor endpoint

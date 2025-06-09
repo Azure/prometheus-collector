@@ -54,10 +54,75 @@ func sanitizeContent(content string) string {
 	return noSpaces
 }
 
-// Executes a function and logs section dividers
-func executeWithSectionLog(name string, fn func() error) {
-	shared.EchoSectionDivider("Start Processing - " + name)
-	if err := fn(); err != nil {
+func parseSettingsForPodAnnotations(metricsConfigBySection map[string]map[string]string) {
+	shared.EchoSectionDivider("Start Processing - parseSettingsForPodAnnotations")
+	if err := configurePodAnnotationSettings(metricsConfigBySection); err != nil {
+		fmt.Printf("%v\n", err)
+		return
+	}
+	handlePodAnnotationsFile(podAnnotationEnvVarPath)
+	shared.EchoSectionDivider("End Processing - parseSettingsForPodAnnotations")
+}
+
+func handlePodAnnotationsFile(filename string) {
+	// Check if the file exists
+	_, e := os.Stat(filename)
+	if os.IsNotExist(e) {
+		fmt.Printf("File does not exist: %s\n", filename)
+		return
+	}
+
+	// Open the file for reading
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Printf("Error opening file: %s\n", err)
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		index := strings.Index(line, "=")
+		if index == -1 {
+			fmt.Printf("Skipping invalid line: %s\n", line)
+			continue
+		}
+
+		key := line[:index]
+		value := line[index+1:]
+
+		if key == "AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX" {
+			shared.SetEnvAndSourceBashrcOrPowershell(key, value, false)
+		} else {
+			shared.SetEnvAndSourceBashrcOrPowershell(key, value, false)
+		}
+
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("Error reading file: %s\n", err)
+	}
+}
+
+func parsePrometheusCollectorConfig(metricsConfigBySection map[string]map[string]string) {
+	shared.EchoSectionDivider("Start Processing - parsePrometheusCollectorConfig")
+	parseConfigAndSetEnvInFile(metricsConfigBySection)
+	handleEnvFileError(collectorSettingsEnvVarPath)
+	shared.EchoSectionDivider("End Processing - parsePrometheusCollectorConfig")
+}
+
+func parseDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
+	shared.EchoSectionDivider("Start Processing - parseDefaultScrapeSettings")
+	tomlparserDefaultScrapeSettings(metricsConfigBySection)
+	handleEnvFileError(defaultSettingsEnvVarPath)
+	shared.EchoSectionDivider("End Processing - parseDefaultScrapeSettings")
+}
+
+func parseDebugModeSettings(metricsConfigBySection map[string]map[string]string) {
+	shared.EchoSectionDivider("Start Processing - parseDebugModeSettings")
+	if err := ConfigureDebugModeSettings(metricsConfigBySection); err != nil {
 		shared.EchoError(err.Error())
 	}
 	shared.EchoSectionDivider("End Processing - " + name)
@@ -118,10 +183,48 @@ func handleEnvFile(filename string) {
 }
 
 func Configmapparser() {
-	for sectionName, sectionSettings := range ConfigMapSettings {
-		executeWithSectionLog(sectionName, func() error {
-			return sectionSettings.Configure()
-		})
+	setConfigFileVersionEnv()
+	setConfigSchemaVersionEnv()
+
+	var metricsConfigBySection map[string]map[string]string
+	var err error
+	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
+		filePaths := []string{"/etc/config/settings/cluster-metrics", "/etc/config/settings/prometheus-collector-settings"}
+		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
+		if err != nil {
+			fmt.Printf("Using defaults as error parsing files: %v\n", err)
+		}
+	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
+		configDir := "/etc/config/settings"
+		metricsConfigBySection, err = shared.ParseV1Config(configDir)
+		if err != nil {
+			fmt.Printf("Using defaults as error parsing config: %v\n", err)
+		}
+	} else {
+		fmt.Println("Invalid schema version. Using defaults.")
+	}
+
+	// Check if /etc/config/settings/config-version exists
+	if _, err := os.Stat("/etc/config/settings/config-version"); os.IsNotExist(err) {
+		metricsConfigBySection = nil
+		fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
+	}
+
+	parseSettingsForPodAnnotations(metricsConfigBySection)
+	parsePrometheusCollectorConfig(metricsConfigBySection)
+	parseDefaultScrapeSettings(metricsConfigBySection)
+	parseDebugModeSettings(metricsConfigBySection)
+
+	tomlparserTargetsMetricsKeepList(metricsConfigBySection)
+	tomlparserScrapeInterval(metricsConfigBySection)
+
+	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
+	containerType := os.Getenv("CONTAINER_TYPE")
+
+	if azmonOperatorEnabled == "true" || containerType == "ConfigReaderSidecar" {
+		prometheusConfigMerger(true)
+	} else {
+		prometheusConfigMerger(false)
 	}
 
 	// Set version environment variables
@@ -202,8 +305,53 @@ func Configmapparser() {
 		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
 	}
 
-	// Process additional environment variables if available
-	processValidatorEnvVars()
+	if _, err := os.Stat("/opt/microsoft/prom_config_validator_env_var"); err == nil {
+		file, err := os.Open("/opt/microsoft/prom_config_validator_env_var")
+		if err != nil {
+			shared.EchoError("Error opening file:" + err.Error())
+			return
+		}
+		defer file.Close()
+
+		// Create or truncate envvars.env file
+		envFile, err := os.Create("/opt/envvars.env")
+		if err != nil {
+			shared.EchoError("Error creating env file:" + err.Error())
+			return
+		}
+		defer envFile.Close()
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			parts := strings.Split(line, "=")
+			if len(parts) == 2 {
+				key := parts[0]
+				value := parts[1]
+				shared.SetEnvAndSourceBashrcOrPowershell(key, value, true)
+
+				// Write to envvars.env
+				fmt.Fprintf(envFile, "%s=%s\n", key, value)
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			shared.EchoError("Error reading file:" + err.Error())
+			return
+		}
+
+		// Source prom_config_validator_env_var
+		filename := "/opt/microsoft/prom_config_validator_env_var"
+		err = shared.SetEnvVarsFromFile(filename)
+		if err != nil {
+			fmt.Printf("Error when settinng env for /opt/microsoft/prom_config_validator_env_var: %v\n", err)
+		}
+
+		filename = "/opt/envvars.env"
+		err = shared.SetEnvVarsFromFile(filename)
+		if err != nil {
+			fmt.Printf("Error when settinng env for /opt/envvars.env: %v\n", err)
+		}
+	}
 
 	fmt.Printf("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
 }
