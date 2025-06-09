@@ -2,9 +2,10 @@ module github.com/vishiy/opentelemetry-collector-builder
 
 go 1.23.0
 
-replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => ../prometheusreceiver
-
 require (
+	replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => ../prometheusreceiver
+	replace github.com/prometheus-collector/shared => ../shared
+	
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.123.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.123.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.123.0

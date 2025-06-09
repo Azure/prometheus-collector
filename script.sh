@@ -98,7 +98,7 @@ rm -rf otelcollector/prometheusreceiver/testdata
 
 # Remove replacements at the end of go.mod
 cd otelcollector/prometheusreceiver
-sed -i '/^replace/d' go.mod
+sed -i '/^require (/,/^)/b; /^replace /d' go.mod
 cd "$CURRENT_DIR"
 
 # Step 3: Build opentelemetry-collector-builder
