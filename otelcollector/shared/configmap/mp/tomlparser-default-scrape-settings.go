@@ -3,6 +3,7 @@ package configmapsettings
 import (
 	"fmt"
 	"os"
+	"prometheus-collector/otelcollector/shared"
 	"regexp"
 	"strconv"
 	"strings"
@@ -10,132 +11,92 @@ import (
 	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
 )
 
-// GetDefaultSettings returns the default scrape configuration
-func GetDefaultSettings() map[string]string {
-	config := make(map[string]string)
-	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
-		config[jobName] = strconv.FormatBool(job.Enabled)
-	}
-	config["noDefaultsEnabled"] = "false"
-	return config
-}
+var NoDefaultsEnabled bool
 
-func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string, schemaVersion string) (map[string]string, error) {
-	config := make(map[string]string)
-	// Set default values
-	config["kubelet"] = "true"
-	config["coredns"] = "false"
-	config["cadvisor"] = "true"
-	config["kubeproxy"] = "false"
-	config["apiserver"] = "false"
-	config["kubestate"] = "true"
-	config["nodeexporter"] = "true"
-	config["prometheuscollectorhealth"] = "false"
-	config["windowsexporter"] = "false"
-	config["windowskubeproxy"] = "false"
-	config["kappiebasic"] = "true"
-	config["networkobservabilityRetina"] = "true"
-	config["networkobservabilityHubble"] = "true"
-	config["networkobservabilityCilium"] = "true"
-	config["noDefaultsEnabled"] = "false"
-	config["acstor-capacity-provisioner"] = "true"
-	config["acstor-metrics-exporter"] = "true"
-
+// ParseConfigMapForDefaultScrapeSettings extracts the control plane scrape settings from metricsConfigBySection.
+func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, schemaVersion string) error {
 	configSectionName := "default-scrape-settings-enabled"
-	if schemaVersion == "v2" {
-          configSectionName = "default-targets-scrape-enabled"
+	if schemaVersion == shared.SchemaVersion.V2 {
+		configSectionName = "default-targets-scrape-enabled"
 	}
-	// Override defaults with values from metricsConfigBySection
-	if settings, ok := metricsConfigBySection[configSectionName]; ok {
-		for key, value := range settings {
-			if _, ok := config[key]; ok {
-				config[key] = value
-			}
-		}
+	settings, ok := metricsConfigBySection[configSectionName]
+	if !ok {
+		fmt.Println("ParseConfigMapForDefaultScrapeSettings::No default-targets-scrape-enabled section found, using defaults")
+		return nil
 	}
 
-	fmt.Println("Using configmap for default scrape settings...")
-	return config, nil
-}
-
-// ApplySettings applies the parsed configuration to the scrape jobs
-func ApplySettings(parsedConfig map[string]string) bool {
-	// Apply settings to jobs
-	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
-		if value, exists := parsedConfig[jobName]; exists {
-			if enabled, err := strconv.ParseBool(value); err == nil {
-				job.Enabled = enabled
-				scrapeConfigs.DefaultScrapeJobs[jobName] = job
-				fmt.Printf("config::Using configmap setting for if %s is enabled: %v\n", jobName, enabled)
-			} else {
-				fmt.Printf("config::Error converting %s to bool: %v\n", value, err)
+	for jobName, job := range shared.DefaultScrapeJobs {
+		if setting, ok := settings[jobName]; ok {
+			var err error
+			job.Enabled, err = strconv.ParseBool(setting)
+			if err != nil {
+				return fmt.Errorf("ParseConfigMapForDefaultScrapeSettings::Error parsing value for %s: %v", jobName, err)
 			}
+			if job.Enabled {
+				NoDefaultsEnabled = false
+			}
+
+			fmt.Printf("ParseConfigMapForDefaultScrapeSettings::Job: %s, Enabled: %t\n", jobName, job.Enabled)
 		}
 	}
 
 	// Check if no defaults are enabled
 	controllerType := os.Getenv("CONTROLLER_TYPE")
 	osType := strings.ToLower(os.Getenv("OS_TYPE"))
-	noDefaultsEnabled := true
+	NoDefaultsEnabled = true
 
 	for _, job := range scrapeConfigs.DefaultScrapeJobs {
 		if job.ControllerType == controllerType &&
 			job.OSType == osType &&
 			job.Enabled {
-			noDefaultsEnabled = false
+			NoDefaultsEnabled = false
 			break
 		}
 	}
 
-	if noDefaultsEnabled {
+	if NoDefaultsEnabled {
 		fmt.Printf("No default scrape configs enabled\n")
 	}
 
-	return noDefaultsEnabled
+	return nil
 }
 
-// WriteSettingsToFile writes the current settings to a file
-func WriteSettingsToFile(filename string, noDefaultsEnabled bool) error {
+func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, cp *ConfigProcessor) error {
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("error opening file: %s", err)
+		return fmt.Errorf("Exception while opening file for writing prometheus-collector config environment variables: %s", err)
 	}
 	defer file.Close()
 
 	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
-		file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_%s_SCRAPING_ENABLED=%v\n",
-			strings.ToUpper(job.JobName), job.Enabled))
+		file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_%s_SCRAPING_ENABLED=%v\n", strings.ToUpper(job.JobName), job.Enabled))
 	}
-	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", noDefaultsEnabled))
+	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", NoDefaultsEnabled))
 
 	return nil
 }
 
 // ConfigureDefaultScrapeSettings orchestrates the configuration process
-func ConfigureDefaultScrapeSettings(configMapPath, outputFilePath string) {
+func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) {
 	fmt.Println("Start prometheus-collector-settings Processing")
 
-	var settings map[string]string
+	// Load default settings based on the schema version
 	var err error
-
-	loader := &FilesystemConfigLoader{ConfigMapMountPath: configMapPath}
-
-	// Load settings based on schema version
-	if configSchema := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"); configSchema == "v1" {
-		settings, err = loader.ParseConfigMap()
-	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
-		defaultSettings, err = c.ConfigLoader.ParseConfigMapForDefaultScrapeSettings(metricsConfigBySection, configSchemaVersion)
+	// Load default settings based on the schema version
+	if configSchemaVersion == shared.SchemaVersion.V1 || configSchemaVersion == shared.SchemaVersion.V2 {
+		fmt.Println("ConfigureDefaultScrapeSettings::Loading settings from config map")
 	} else {
-		settings = GetDefaultSettings()
+		// Initialize with an empty metrics config map if none is provided
+		fmt.Println("ConfigureDefaultScrapeSettings::Loading default settings")
+		metricsConfigBySection = make(map[string]map[string]string)
 	}
 
+	// Populate and print setting values
+	err = PopulateSettingValues(metricsConfigBySection, configSchemaVersion)
 	if err != nil {
-		fmt.Printf("Error loading settings: %v\n", err)
+		fmt.Printf("Error loading default settings: %v\n", err)
 		return
 	}
-
-	// Apply settings
-	noDefaultsEnabled := ApplySettings(settings)
 
 	// Set cluster alias
 	clusterAlias := os.Getenv("CLUSTER")
@@ -151,20 +112,19 @@ func ConfigureDefaultScrapeSettings(configMapPath, outputFilePath string) {
 		fmt.Printf("Sanitized cluster alias: %s\n", sanitized)
 	}
 
-	// Write settings to file
-	if err := WriteSettingsToFile(outputFilePath, noDefaultsEnabled); err != nil {
-		fmt.Printf("Error writing settings to file: %v\n", err)
+	// Write default scrape settings to file
+	err = c.ConfigWriter.WriteDefaultScrapeSettingsToFile(c.ConfigFilePath, c.ConfigParser)
+	if err != nil {
+		fmt.Printf("Error writing default scrape settings to file: %v\n", err)
 		return
 	}
 
-	fmt.Println("End prometheus-collector-settings Processing")
+	fmt.Printf("End prometheus-collector-settings Processing\n")
 }
 
-func tomlparserDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
-
-	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+func tomlparserDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) {
 	configLoaderPath := defaultSettingsMountPath
-	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v2" {
+	if configSchemaVersion == shared.SchemaVersion.V2 {
 		configLoaderPath = defaultSettingsMountPathv2
 	}
 
@@ -175,5 +135,5 @@ func tomlparserDefaultScrapeSettings(metricsConfigBySection map[string]map[strin
 		ConfigParser:   &ConfigProcessor{},
 	}
 
-	configurator.ConfigureDefaultScrapeSettings(metricsConfigBySection)
+	configurator.ConfigureDefaultScrapeSettings(metricsConfigBySection, configSchemaVersion)
 }

@@ -113,9 +113,9 @@ func parsePrometheusCollectorConfig(metricsConfigBySection map[string]map[string
 	shared.EchoSectionDivider("End Processing - parsePrometheusCollectorConfig")
 }
 
-func parseDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string) {
+func parseDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string, schemaVersion string) {
 	shared.EchoSectionDivider("Start Processing - parseDefaultScrapeSettings")
-	tomlparserDefaultScrapeSettings(metricsConfigBySection)
+	tomlparserDefaultScrapeSettings(metricsConfigBySection, schemaVersion)
 	handleEnvFileError(defaultSettingsEnvVarPath)
 	shared.EchoSectionDivider("End Processing - parseDefaultScrapeSettings")
 }
@@ -183,25 +183,29 @@ func handleEnvFile(filename string) {
 }
 
 func Configmapparser() {
-	setConfigFileVersionEnv()
-	setConfigSchemaVersionEnv()
+	shared.ProcessConfigFile(configVersionFile, "AZMON_AGENT_CFG_FILE_VERSION")
+	shared.ProcessConfigFile(schemaVersionFile, "AZMON_AGENT_CFG_SCHEMA_VERSION")
 
 	var metricsConfigBySection map[string]map[string]string
 	var err error
-	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
-		filePaths := []string{"/etc/config/settings/cluster-metrics", "/etc/config/settings/prometheus-collector-settings"}
+	var schemaVersion = shared.ParseSchemaVersion(os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
+	switch schemaVersion {
+	case shared.SchemaVersion.V2:
+		filePaths := []string{"/etc/config/settings/metrics", "/etc/config/settings/prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
-			fmt.Printf("Using defaults as error parsing files: %v\n", err)
+			fmt.Printf("Error parsing files: %v\n", err)
+			return
 		}
-	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
+	case shared.SchemaVersion.V1:
 		configDir := "/etc/config/settings"
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
-			fmt.Printf("Using defaults as error parsing config: %v\n", err)
+			fmt.Printf("Error parsing config: %v\n", err)
+			return
 		}
-	} else {
-		fmt.Println("Invalid schema version. Using defaults.")
+	default:
+		fmt.Println("Invalid schema version or no configmap present. Using defaults.")
 	}
 
 	// Check if /etc/config/settings/config-version exists
@@ -212,11 +216,11 @@ func Configmapparser() {
 
 	parseSettingsForPodAnnotations(metricsConfigBySection)
 	parsePrometheusCollectorConfig(metricsConfigBySection)
-	parseDefaultScrapeSettings(metricsConfigBySection)
+	parseDefaultScrapeSettings(metricsConfigBySection, schemaVersion)
 	parseDebugModeSettings(metricsConfigBySection)
 
-	tomlparserTargetsMetricsKeepList(metricsConfigBySection)
-	tomlparserScrapeInterval(metricsConfigBySection)
+	tomlparserTargetsMetricsKeepList(metricsConfigBySection, schemaVersion)
+	tomlparserScrapeInterval(metricsConfigBySection, schemaVersion)
 
 	azmonOperatorEnabled := os.Getenv("AZMON_OPERATOR_ENABLED")
 	containerType := os.Getenv("CONTAINER_TYPE")

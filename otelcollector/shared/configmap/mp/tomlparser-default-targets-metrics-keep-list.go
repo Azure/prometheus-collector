@@ -4,69 +4,65 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"prometheus-collector/otelcollector/shared"
+	"strconv"
 	"strings"
 
-	"github.com/pelletier/go-toml"
 	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
 	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
 )
 
-// getStringValue converts various types to string representation
-func getStringValue(value interface{}) string {
-	switch v := value.(type) {
-	case string:
-		return v
-	case bool:
-		return fmt.Sprintf("%t", v)
-	case nil:
-		return ""
+// populateKeepList initializes the regex keep list with values from metricsConfigBySection.
+func populateKeepList(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) error {
+	keeplist := metricsConfigBySection["default-targets-metrics-keep-list"]
+
+	minimalProfileEnabled := true
+	var err error
+	switch configSchemaVersion {
+	case shared.SchemaVersion.V1:
+		minimalProfileEnabled, err = strconv.ParseBool(keeplist["minimalingestionprofile"])
+		if err != nil {
+			return fmt.Errorf("Invalid value for minimalingestionprofile in v1: %s", keeplist["minimalingestionprofile"])
+		}
+	case shared.SchemaVersion.V2:
+		minimalProfileEnabled, err = strconv.ParseBool(metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
+		if err != nil {
+			fmt.Printf("Invalid value for minimal-ingestion-profile in v2: %s", metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
+			metricsConfigBySection = map[string]map[string]string{}
+		}
 	default:
-		return fmt.Sprintf("%v", v)
-	}
-}
-
-func parseConfigMapForKeepListRegex() {
-	if _, err := os.Stat(configMapKeepListMountPath); os.IsNotExist(err) {
-		fmt.Println("configmap prometheus-collector-configmap for default-targets-metrics-keep-list not mounted, using defaults")
-		return
-	}
-
-	content, err := os.ReadFile(configMapKeepListMountPath)
-	if err != nil {
-		fmt.Printf("Error while parsing config map for default-targets-metrics-keep-list: %v, using defaults\n", err)
-		return
-	}
-
-	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
-	if configSchemaVersion == "" || strings.TrimSpace(configSchemaVersion) != "v1" {
 		fmt.Printf("Unsupported/missing config schema version - '%s', using defaults\n", configSchemaVersion)
-		return
-	}
-
-	tree, err := toml.Load(string(content))
-	if err != nil {
-		fmt.Printf("Error parsing TOML: %v\n", err)
-		return
+		metricsConfigBySection = map[string]map[string]string{}
 	}
 
 	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
-		customerKeepListRegex := getStringValue(tree.Get(jobName))
-		if customerKeepListRegex != "" && !isValidRegex(customerKeepListRegex) {
-			fmt.Printf("invalid regex for %s: %s", jobName, customerKeepListRegex)
-			customerKeepListRegex = ""
+		if setting, ok := keeplist[jobName]; ok {
+			fmt.Printf("parseConfigMapForKeepListRegex::Adding key: %s, value: %s\n", jobName, setting)
+			if !shared.IsValidRegex(setting) {
+				fmt.Printf("parseConfigMapForKeepListRegex::Invalid regex for job %s: %s\n", jobName, setting)
+				continue // Skip invalid regex
+			}
+			job.CustomerKeepListRegex = setting
+			fmt.Printf("populateSettingValuesFromConfigMap::%s: %s\n", jobName, job.CustomerKeepListRegex)
 		}
-		job.CustomerKeepListRegex = customerKeepListRegex
-		scrapeConfigs.DefaultScrapeJobs[jobName] = job
+
+		if minimalProfileEnabled {
+			fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is true or not set, appending minimal metrics")
+			job.CustomerKeepListRegex += "|" + job.KeepListRegex
+		} else {
+			fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is false, appending values")
+		}
 	}
 
 	fmt.Printf("Parsed config map for default-targets-metrics-keep-list successfully\n")
+	return nil
 }
 
-func tomlparserTargetsMetricsKeepList() {
+func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) {
 	shared.EchoSectionDivider("Start Processing - tomlparserTargetsMetricsKeepList")
 
-	parseConfigMapForKeepListRegex()
+	populateKeepList(metricsConfigBySection, configSchemaVersion)
 
 	// Write settings to a YAML file
 	data := map[string]string{}
@@ -79,12 +75,10 @@ func tomlparserTargetsMetricsKeepList() {
 		fmt.Println(err.Error())
 		return
 	}
-
 	err = os.WriteFile(configMapKeepListEnvVarPath, []byte(out), fs.FileMode(0644))
 	if err != nil {
 		fmt.Printf("Exception while writing to file: %v\n", err)
 		return
 	}
-
 	shared.EchoSectionDivider("End Processing - tomlparserTargetsMetricsKeepList")
 }
