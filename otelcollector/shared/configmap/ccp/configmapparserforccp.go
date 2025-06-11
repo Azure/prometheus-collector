@@ -25,30 +25,7 @@ func Configmapparserforccp() {
 	for _, e := range entries {
 		fmt.Println(e.Name())
 	}
-
 	fmt.Println("done listing /etc/config/settings")
-
-	// Set agent config schema version
-	if shared.ExistsAndNotEmpty(configSchemaPath) {
-		configVersion, err := shared.ReadAndTrim(configVersionPath)
-		if err != nil {
-			fmt.Println("Error reading config version file:", err)
-			return
-		}
-		// Remove all spaces and take the first 10 characters
-		configVersion = strings.ReplaceAll(configVersion, " ", "")
-		if len(configVersion) >= 10 {
-			configVersion = configVersion[:10]
-		}
-		// Set the environment variable
-		fmt.Println("Configmapparserforccp setting env var AZMON_AGENT_CFG_FILE_VERSION:", configVersion)
-		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_AGENT_CFG_FILE_VERSION", configVersion, true)
-	} else {
-		for _, e := range entries {
-			fmt.Println(e.Name())
-		}
-		fmt.Println("done listing /etc/config/settings")
-	}
 
 	// Process config schema and version
 	processConfigFile(configVersionPath, "AZMON_AGENT_CFG_FILE_VERSION")
@@ -56,26 +33,28 @@ func Configmapparserforccp() {
 
 	var metricsConfigBySection map[string]map[string]string
 	var err error
-	if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v2" {
+	var schemaVersion = shared.ParseSchemaVersion(os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
+	switch schemaVersion {
+	case shared.SchemaVersion.V2:
 		filePaths := []string{"/etc/config/settings/controlplane-metrics", "/etc/config/settings/prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
 			fmt.Printf("Error parsing files: %v\n", err)
 			return
 		}
-	} else if os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION") == "v1" {
+	case shared.SchemaVersion.V1:
 		configDir := "/etc/config/settings"
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
 			fmt.Printf("Error parsing config: %v\n", err)
 			return
 		}
-	} else {
+	default:
 		fmt.Println("Invalid schema version or no configmap present. Using defaults.")
 	}
 
 	// Parse the configmap to set the right environment variables for prometheus collector settings
-	parseConfigAndSetEnvInFile(metricsConfigBySection)
+	parseConfigAndSetEnvInFile(metricsConfigBySection, schemaVersion)
 	filename := "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var"
 	err = shared.SetEnvVarsFromFile(filename)
 	if err != nil {
@@ -83,7 +62,7 @@ func Configmapparserforccp() {
 	}
 
 	// Parse the settings for default scrape configs
-	tomlparserCCPDefaultScrapeSettings(metricsConfigBySection)
+	tomlparserCCPDefaultScrapeSettings(metricsConfigBySection, schemaVersion)
 	filename = "/opt/microsoft/configmapparser/config_default_scrape_settings_env_var"
 	err = shared.SetEnvVarsFromFile(filename)
 	if err != nil {
@@ -91,7 +70,7 @@ func Configmapparserforccp() {
 	}
 
 	// Parse the settings for default targets metrics keep list config
-	tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection)
+	tomlparserCCPTargetsMetricsKeepList(metricsConfigBySection, schemaVersion)
 
 	prometheusCcpConfigMerger()
 

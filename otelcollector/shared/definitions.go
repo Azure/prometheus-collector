@@ -1,9 +1,12 @@
-package defaultscrapeconfigs
+package shared
+
+import "strings"
 
 type DefaultScrapeJob struct {
 	JobName                    string
 	Enabled                    bool
 	OSType                     string
+	KubernetesPlane            string
 	ControllerType             string
 	ScrapeConfigDefinitionFile string
 	PlaceholderNames           []string
@@ -33,11 +36,46 @@ var OSType = OSTypeStrings{
 	Windows: "windows",
 }
 
-var DefaultScrapeJobs = map[string]DefaultScrapeJob{
+type KubernetesPlaneStrings struct {
+	ControlPlane string
+	DataPlane    string
+}
+
+var KubernetesPlane = KubernetesPlaneStrings{
+	ControlPlane: "controlplane",
+	DataPlane:    "dataplane",
+}
+
+type SchemaVersionStrings struct {
+	V1  string
+	V2  string
+	Nil string
+}
+
+var SchemaVersion = SchemaVersionStrings{
+	V1:  "v1",
+	V2:  "v2",
+	Nil: "",
+}
+
+func ParseSchemaVersion(schema string) string {
+	sanitizedSchema := strings.ToLower(strings.TrimSpace(schema))
+	switch sanitizedSchema {
+	case "v1":
+		return SchemaVersion.V1
+	case "v2":
+		return SchemaVersion.V2
+	default:
+		return SchemaVersion.Nil
+	}
+}
+
+var DefaultScrapeJobs = map[string]*DefaultScrapeJob{
 	"kubelet": {
 		JobName:                    "kubelet",
 		Enabled:                    true,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.DaemonSet,
 		ScrapeConfigDefinitionFile: "kubeletDefaultDs.yml",
 		PlaceholderNames:           []string{"NODE_NAME", "NODE_IP", "OS_TYPE"},
@@ -48,6 +86,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "coredns",
 		Enabled:                    false,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "corednsDefault.yml",
 		PlaceholderNames:           []string{},
@@ -59,6 +98,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "cadvisor",
 		Enabled:                    true,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.DaemonSet,
 		ScrapeConfigDefinitionFile: "cadvisorDefaultDs.yml",
 		PlaceholderNames:           []string{},
@@ -70,6 +110,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "kubeproxy",
 		Enabled:                    false,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "kubeproxyDefault.yml",
 		PlaceholderNames:           []string{},
@@ -81,6 +122,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "apiserver",
 		Enabled:                    false,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "apiserverDefault.yml",
 		PlaceholderNames:           []string{},
@@ -92,6 +134,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "kubestate",
 		Enabled:                    true,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "kubestateDefault.yml",
 		PlaceholderNames:           []string{"KUBE_STATE_NAME", "POD_NAMESPACE"},
@@ -103,6 +146,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "nodeexporter",
 		Enabled:                    true,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.DaemonSet,
 		ScrapeConfigDefinitionFile: "nodeexporterDefaultDs.yml",
 		PlaceholderNames:           []string{"NODE_NAME", "NODE_IP", "NODE_EXPORTER_TARGETPORT"},
@@ -114,6 +158,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "kappiebasic",
 		Enabled:                    false,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.DaemonSet,
 		ScrapeConfigDefinitionFile: "kappieBasicDefaultDs.yml",
 		PlaceholderNames:           []string{},
@@ -125,6 +170,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "windowsexporter",
 		Enabled:                    false,
 		OSType:                     OSType.Windows,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.DaemonSet,
 		ScrapeConfigDefinitionFile: "windowsexporterDefaultDs.yml",
 		PlaceholderNames:           []string{},
@@ -136,6 +182,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "windowskubeproxy",
 		Enabled:                    false,
 		OSType:                     OSType.Windows,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.DaemonSet,
 		ScrapeConfigDefinitionFile: "windowskubeproxyDefaultDs.yml",
 		PlaceholderNames:           []string{},
@@ -147,6 +194,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "networkobservabilityRetina",
 		Enabled:                    true,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.DaemonSet,
 		ScrapeConfigDefinitionFile: "networkobservabilityRetinaDefaultDs.yml",
 		PlaceholderNames:           []string{},
@@ -158,6 +206,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "networkobservabilityHubble",
 		Enabled:                    true,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.DaemonSet,
 		ScrapeConfigDefinitionFile: "networkobservabilityHubbleDefaultDs.yml",
 		PlaceholderNames:           []string{},
@@ -169,6 +218,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "networkobservabilityCilium",
 		Enabled:                    true,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.DaemonSet,
 		ScrapeConfigDefinitionFile: "networkobservabilityCiliumDefaultDs.yml",
 		PlaceholderNames:           []string{},
@@ -180,6 +230,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "podannotations",
 		Enabled:                    false,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "podannotationsDefault.yml",
 		PlaceholderNames:           []string{},
@@ -191,6 +242,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "acstor-capacity-provisioner",
 		Enabled:                    true,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "acstorCapacityProvisionerDefaultFile.yml",
 		PlaceholderNames:           []string{},
@@ -202,6 +254,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "acstor-metrics-exporter",
 		Enabled:                    true,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "acstorMetricsExporterDefaultFile.yml",
 		PlaceholderNames:           []string{},
@@ -213,6 +266,7 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "prometheuscollectorhealth",
 		Enabled:                    false,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "prometheusCollectorHealthDefault.yml",
 		PlaceholderNames:           []string{},
@@ -222,11 +276,12 @@ var DefaultScrapeJobs = map[string]DefaultScrapeJob{
 	},
 }
 
-var ControlPlaneDefaultScrapeJobs = map[string]DefaultScrapeJob{
+var ControlPlaneDefaultScrapeJobs = map[string]*DefaultScrapeJob{
 	"apiserver": {
 		JobName:                    "apiserver",
 		Enabled:                    true,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.ControlPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "controlplane_apiserver.yml",
 		PlaceholderNames:           []string{},
@@ -238,6 +293,7 @@ var ControlPlaneDefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "cluster-autoscaler",
 		Enabled:                    false,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.ControlPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "controlplane_cluster_autoscaler.yml",
 		PlaceholderNames:           []string{},
@@ -249,6 +305,7 @@ var ControlPlaneDefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "kube-scheduler",
 		Enabled:                    false,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.ControlPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "controlplane_kube_scheduler.yml",
 		PlaceholderNames:           []string{},
@@ -260,6 +317,7 @@ var ControlPlaneDefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "kube-controller-manager",
 		Enabled:                    false,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.ControlPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "controlplane_kube_controller_manager.yml",
 		PlaceholderNames:           []string{},
@@ -271,6 +329,7 @@ var ControlPlaneDefaultScrapeJobs = map[string]DefaultScrapeJob{
 		JobName:                    "etcd",
 		Enabled:                    true,
 		OSType:                     OSType.Linux,
+		KubernetesPlane:            KubernetesPlane.ControlPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "controlplane_etcd.yml",
 		PlaceholderNames:           []string{},

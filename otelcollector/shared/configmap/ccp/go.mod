@@ -1,6 +1,7 @@
 module github.com/prometheus-collector/shared/configmap/ccp
 
 replace github.com/prometheus-collector/shared => ../../../shared
+replace github.com/prometheus-collector/defaultscrapeconfigs => ../../defaultscrapeconfigs
 
 go 1.23.0
 

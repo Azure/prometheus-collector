@@ -5,6 +5,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/prometheus-collector/shared"
 )
 
 // PopulateSettingValuesFromConfigMap populates settings from the parsed configuration.
@@ -62,12 +64,10 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 }
 
 // Configure processes the configuration and writes it to a file.
-func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]string) {
-	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
-
+func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) {
 	fmt.Printf("Start prometheus-collector-settings Processing\n")
 
-	if configSchemaVersion != "" && (strings.TrimSpace(configSchemaVersion) == "v1" || strings.TrimSpace(configSchemaVersion) == "v2") {
+	if configSchemaVersion == shared.SchemaVersion.V1 || configSchemaVersion == shared.SchemaVersion.V2 {
 		if len(metricsConfigBySection) > 0 {
 			c.ConfigParser.PopulateSettingValuesFromConfigMap(metricsConfigBySection)
 		}
@@ -102,7 +102,7 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 }
 
 // parseConfigAndSetEnvInFile initializes the configurator and processes the configuration.
-func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string) {
+func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string, schemaVersion string) {
 	configurator := &Configurator{
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: "/etc/config/settings/prometheus-collector-settings"},
 		ConfigParser:   &ConfigProcessor{},
@@ -110,5 +110,5 @@ func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]str
 		ConfigFilePath: "/opt/microsoft/configmapparser/config_prometheus_collector_settings_env_var",
 	}
 
-	configurator.Configure(metricsConfigBySection)
+	configurator.Configure(metricsConfigBySection, schemaVersion)
 }
