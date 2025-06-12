@@ -263,11 +263,6 @@ func Configmapparser() {
 	// tomlparserTargetsMetricsKeepList()
 	// tomlparserScrapeInterval()
 
-	// Merge configurations
-	useOperatorMode := os.Getenv("AZMON_OPERATOR_ENABLED") == "true" ||
-		os.Getenv("CONTAINER_TYPE") == "ConfigReaderSidecar"
-	prometheusConfigMerger(useOperatorMode)
-
 	// Set default flags
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
@@ -305,6 +300,7 @@ func Configmapparser() {
 		}
 		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
 	} else {
+		// This else block is needed, when there is no custom config mounted as config map or default configs enabled
 		fmt.Println("prom-config-validator::No custom config via configmap or default scrape configs enabled.")
 		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
 	}
@@ -358,44 +354,4 @@ func Configmapparser() {
 	}
 
 	fmt.Printf("prom-config-validator::Use default prometheus config: %s\n", os.Getenv("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG"))
-}
-
-func processValidatorEnvVars() {
-	validatorEnvFile := "/opt/microsoft/prom_config_validator_env_var"
-	if !shared.FileExists(validatorEnvFile) {
-		return
-	}
-
-	file, err := os.Open(validatorEnvFile)
-	if err != nil {
-		shared.EchoError("Error opening file:" + err.Error())
-		return
-	}
-	defer file.Close()
-
-	envFile, err := os.Create("/opt/envvars.env")
-	if err != nil {
-		shared.EchoError("Error creating env file:" + err.Error())
-		return
-	}
-	defer envFile.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Split(line, "=")
-		if len(parts) == 2 {
-			key, value := parts[0], parts[1]
-			shared.SetEnvAndSourceBashrcOrPowershell(key, value, true)
-			fmt.Fprintf(envFile, "%s=%s\n", key, value)
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		shared.EchoError("Error reading file:" + err.Error())
-		return
-	}
-
-	handleEnvFile(validatorEnvFile)
-	handleEnvFile("/opt/envvars.env")
 }
