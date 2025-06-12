@@ -7,13 +7,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
 )
 
 var NoDefaultsEnabled bool
 
-// ParseConfigMapForDefaultScrapeSettings extracts the control plane scrape settings from metricsConfigBySection.
 func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, schemaVersion string) error {
 	configSectionName := "default-scrape-settings-enabled"
 	if schemaVersion == shared.SchemaVersion.V2 {
@@ -45,7 +42,7 @@ func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, 
 	osType := strings.ToLower(os.Getenv("OS_TYPE"))
 	NoDefaultsEnabled = true
 
-	for _, job := range scrapeConfigs.DefaultScrapeJobs {
+	for _, job := range shared.DefaultScrapeJobs {
 		if job.ControllerType == controllerType &&
 			job.OSType == osType &&
 			job.Enabled {
@@ -68,21 +65,19 @@ func (fcw *FileConfigWriter) WriteDefaultScrapeSettingsToFile(filename string, c
 	}
 	defer file.Close()
 
-	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
-		file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_%s_SCRAPING_ENABLED=%v\n", strings.ToUpper(job.JobName), job.Enabled))
+	for jobName, job := range shared.DefaultScrapeJobs {
+		file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_%s_SCRAPING_ENABLED=%v\n", strings.ToUpper(jobName), job.Enabled))
 	}
 	file.WriteString(fmt.Sprintf("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED=%v\n", NoDefaultsEnabled))
 
 	return nil
 }
 
-// ConfigureDefaultScrapeSettings orchestrates the configuration process
 func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) {
 	fmt.Println("Start prometheus-collector-settings Processing")
 
 	// Load default settings based on the schema version
 	var err error
-	// Load default settings based on the schema version
 	if configSchemaVersion == shared.SchemaVersion.V1 || configSchemaVersion == shared.SchemaVersion.V2 {
 		fmt.Println("ConfigureDefaultScrapeSettings::Loading settings from config map")
 	} else {
@@ -99,17 +94,17 @@ func (c *Configurator) ConfigureDefaultScrapeSettings(metricsConfigBySection map
 	}
 
 	// Set cluster alias
-	clusterAlias := os.Getenv("CLUSTER")
-	if mac := os.Getenv("MAC"); mac == "true" {
-		parts := strings.Split(clusterAlias, "/")
-		clusterAlias = parts[len(parts)-1]
+	if mac := os.Getenv("MAC"); mac != "" && strings.TrimSpace(mac) == "true" {
+		clusterArray := strings.Split(strings.TrimSpace(os.Getenv("CLUSTER")), "/")
+		c.ConfigParser.ClusterAlias = clusterArray[len(clusterArray)-1]
+	} else {
+		c.ConfigParser.ClusterAlias = os.Getenv("CLUSTER")
 	}
 
-	if clusterAlias != "" {
-		// Sanitize cluster alias
-		sanitized := regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(clusterAlias, "_")
-		sanitized = strings.Trim(sanitized, "_")
-		fmt.Printf("Sanitized cluster alias: %s\n", sanitized)
+	if c.ConfigParser.ClusterAlias != "" && len(c.ConfigParser.ClusterAlias) > 0 {
+		c.ConfigParser.ClusterAlias = regexp.MustCompile(`[^0-9a-zA-Z]+`).ReplaceAllString(c.ConfigParser.ClusterAlias, "_")
+		c.ConfigParser.ClusterAlias = strings.Trim(c.ConfigParser.ClusterAlias, "_")
+		fmt.Printf("After replacing non-alpha-numeric characters with '_': %s\n", c.ConfigParser.ClusterAlias)
 	}
 
 	// Write default scrape settings to file

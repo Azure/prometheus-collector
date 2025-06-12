@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
 	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
 )
@@ -36,7 +35,7 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string, confi
 		metricsConfigBySection = map[string]map[string]string{}
 	}
 
-	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
+	for jobName, job := range shared.DefaultScrapeJobs {
 		if setting, ok := keeplist[jobName]; ok {
 			fmt.Printf("parseConfigMapForKeepListRegex::Adding key: %s, value: %s\n", jobName, setting)
 			if !shared.IsValidRegex(setting) {
@@ -66,7 +65,7 @@ func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[stri
 
 	// Write settings to a YAML file
 	data := map[string]string{}
-	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
+	for jobName, job := range shared.DefaultScrapeJobs {
 		data[fmt.Sprintf("%s_METRICS_KEEP_LIST_REGEX", strings.ToUpper(jobName))] = job.KeepListRegex
 	}
 

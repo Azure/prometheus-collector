@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 
-	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
 	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
 )
@@ -34,7 +33,7 @@ func processConfigMap(metricsConfigBySection map[string]map[string]string, confi
 	}
 
 	// Process all default jobs
-	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
+	for jobName, job := range shared.DefaultScrapeJobs {
 		if value, exists := metricsConfigBySection["default-targets-scrape-interval-settings"][jobName]; exists {
 			interval := checkDuration(value)
 			if interval != "" {
@@ -57,7 +56,7 @@ func tomlparserScrapeInterval(metricsConfigBySection map[string]map[string]strin
 	processConfigMap(metricsConfigBySection, configSchemaVersion)
 
 	data := map[string]string{}
-	for jobName, job := range scrapeConfigs.DefaultScrapeJobs {
+	for jobName, job := range shared.DefaultScrapeJobs {
 		data[fmt.Sprintf("%s_SCRAPE_INTERVAL", strings.ToUpper(jobName))] = job.ScrapeInterval
 	}
 	err := writeIntervalHashToFile(data, scrapeIntervalEnvVarPath)

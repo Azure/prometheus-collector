@@ -96,16 +96,6 @@ func handleEnvFileError(filename string) {
 	}
 }
 
-func runPrometheusValidator(configPath, outputPath, templatePath string) bool {
-	err := shared.StartCommandAndWait(
-		"/opt/promconfigvalidator",
-		"--config", configPath,
-		"--output", outputPath,
-		"--otelTemplate", templatePath,
-	)
-	return err == nil
-}
-
 func Configmapparser() {
 	shared.ProcessConfigFile(configVersionFile, "AZMON_AGENT_CFG_FILE_VERSION")
 	shared.ProcessConfigFile(schemaVersionFile, "AZMON_AGENT_CFG_SCHEMA_VERSION")
@@ -155,39 +145,6 @@ func Configmapparser() {
 		prometheusConfigMerger(false)
 	}
 
-	// Set version environment variables
-	// schemaVersion := setEnvFromFileOrDefault(schemaVersionFile, "AZMON_AGENT_CFG_SCHEMA_VERSION", defaultConfigSchemaVersion)
-	// configVersion := setEnvFromFileOrDefault(configVersionFile, "AZMON_AGENT_CFG_FILE_VERSION", defaultConfigFileVersion)
-
-	// Parse settings
-	// parseSettingsForPodAnnotations()
-
-	// Parse configs
-	// executeWithSectionLog("parsePrometheusCollectorConfig", func() error {
-	// 	parseConfigAndSetEnvInFile(schemaVersion)
-	// 	handleEnvFile(collectorSettingsEnvVarPath)
-	// 	return nil
-	// })
-
-	// executeWithSectionLog("parseDefaultScrapeSettings", func() error {
-	// 	tomlparserDefaultScrapeSettings()
-	// 	handleEnvFile(defaultSettingsEnvVarPath)
-	// 	return nil
-	// })
-
-	// executeWithSectionLog("parseDebugModeSettings", func() error {
-	// 	err := ConfigureDebugModeSettings()
-	// 	if err == nil {
-	// 		handleEnvFile(debugModeEnvVarPath)
-	// 	}
-	// 	return err
-	// })
-
-	// // Process TOML configs
-	// tomlparserTargetsMetricsKeepList()
-	// tomlparserScrapeInterval()
-
-	// Set default flags
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
 

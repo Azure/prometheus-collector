@@ -71,7 +71,6 @@ func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *Co
 	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_LABEL=%s\n", configParser.ClusterLabel))
 	file.WriteString(fmt.Sprintf("AZMON_CLUSTER_ALIAS=%s\n", configParser.ClusterAlias))
 	file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CHART_SETTING=%t\n", configParser.IsOperatorEnabledChartSetting))
-
 	if configParser.IsOperatorEnabled {
 		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED=%t\n", configParser.IsOperatorEnabled))
 		file.WriteString(fmt.Sprintf("AZMON_OPERATOR_ENABLED_CFG_MAP_SETTING=%t\n", configParser.IsOperatorEnabled))

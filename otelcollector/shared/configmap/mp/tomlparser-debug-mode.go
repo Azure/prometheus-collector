@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"prometheus-collector/otelcollector/shared"
 
 	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
@@ -16,28 +17,27 @@ const (
 // ConfigureDebugModeSettings reads debug mode settings from the parsed config map,
 // sets default values if necessary, writes environment variables to a file,
 // and modifies a YAML configuration file based on debug mode settings.
-func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]string) error {
+func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) error {
 	if metricsConfigBySection == nil {
 		return fmt.Errorf("configmap section not mounted, using defaults")
 	}
 
 	enabled := populateSettingValuesFromConfigMap(metricsConfigBySection)
 
-	// Check config schema version
-	if configSchema := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"); configSchema == "v1" {
+	if configSchemaVersion == shared.SchemaVersion.V1 {
 		if _, err := os.Stat(configMapDebugMountPath); os.IsNotExist(err) {
-			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults\n", configSchema)
+			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
 		}
 	}
 
-	// Write debug mode environment variable
 	file, err := os.Create(debugModeEnvVarPath)
 	if err != nil {
-		return fmt.Errorf("Exception while writing environment variables: %v", err)
+		return fmt.Errorf("Exception while opening file for writing prometheus-collector config environment variables: %v\n", err)
 	}
 	defer file.Close()
 
 	file.WriteString(fmt.Sprintf("DEBUG_MODE_ENABLED=%v\n", enabled))
+
 	fmt.Printf("Setting debug mode environment variable: %v\n", enabled)
 
 	if enabled {
@@ -73,7 +73,6 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 
 			fmt.Println("Done setting prometheus in the exporter metrics for service pipeline.")
 		}
-		fmt.Println("Done setting prometheus in the exporter metrics for service pipeline.")
 	}
 
 	return nil
