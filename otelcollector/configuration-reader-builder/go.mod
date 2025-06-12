@@ -2,7 +2,7 @@ module github.com/configurationreader
 
 go 1.24.0
 
-toolchain go1.24.2
+toolchain go1.24.4
 
 replace github.com/prometheus-collector/shared => ../shared
 
