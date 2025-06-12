@@ -3,7 +3,6 @@ package ccpconfigmapsettings
 import (
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/prometheus-collector/shared"
@@ -25,6 +24,7 @@ func Configmapparserforccp() {
 	for _, e := range entries {
 		fmt.Println(e.Name())
 	}
+
 	fmt.Println("done listing /etc/config/settings")
 
 	// Process config schema and version
@@ -77,27 +77,19 @@ func Configmapparserforccp() {
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
 
-
 	// No need to merge custom prometheus config, only merging in the default configs
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
-	shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml",
-		"--output", "/opt/ccp-collector-config-with-defaults.yml",
-		"--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
+	shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml", "--output", "/opt/ccp-collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
 	if !shared.Exists("/opt/ccp-collector-config-with-defaults.yml") {
 		fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
-	} else if err := shared.CopyFile("/opt/ccp-collector-config-with-defaults.yml",
-		"/opt/microsoft/otelcollector/ccp-collector-config-default.yml"); err != nil {
-		fmt.Printf("Error copying file: %v\n", err)
 	} else {
-		fmt.Println("File copied successfully.")
-	}
-}
-
-func processConfigFile(path, envVar string) {
-	if shared.ExistsAndNotEmpty(path) {
-		value, err := shared.ReadAndTrim(path)
+		sourcePath := "/opt/ccp-collector-config-with-defaults.yml"
+		destinationPath := "/opt/microsoft/otelcollector/ccp-collector-config-default.yml"
+		err := shared.CopyFile(sourcePath, destinationPath)
 		if err != nil {
-			fmt.Printf("Error reading file %s: %v\n", path, err)
-			return
+			fmt.Printf("Error copying file: %v\n", err)
+		} else {
+			fmt.Println("File copied successfully.")
 		}
+	}
 }

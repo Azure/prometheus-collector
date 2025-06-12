@@ -12,7 +12,6 @@ import (
 
 var NoDefaultsEnabled bool
 
-// ParseConfigMapForDefaultScrapeSettings extracts the control plane scrape settings from metricsConfigBySection.
 func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, schemaVersion string) error {
 	settings, ok := metricsConfigBySection["default-targets-scrape-enabled"]
 	if !ok {

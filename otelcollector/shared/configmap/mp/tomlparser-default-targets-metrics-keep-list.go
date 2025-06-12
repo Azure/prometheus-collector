@@ -75,10 +75,12 @@ func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[stri
 		fmt.Println(err.Error())
 		return
 	}
+
 	err = os.WriteFile(configMapKeepListEnvVarPath, []byte(out), fs.FileMode(0644))
 	if err != nil {
 		fmt.Printf("Exception while writing to file: %v\n", err)
 		return
 	}
+
 	shared.EchoSectionDivider("End Processing - tomlparserTargetsMetricsKeepList")
 }

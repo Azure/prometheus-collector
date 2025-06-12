@@ -38,6 +38,8 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 				fmt.Printf("Configmap setting enabling operator: %t\n", cp.IsOperatorEnabled)
 			}
 		}
+	} else {
+		cp.IsOperatorEnabledChartSetting = false
 	}
 
 	if operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED"); operatorHttpsEnabled != "" && strings.ToLower(operatorHttpsEnabled) == "true" {
@@ -61,7 +63,7 @@ func (cp *ConfigProcessor) PopulateSettingValuesFromConfigMap(metricsConfigBySec
 func (fcw *FileConfigWriter) WriteConfigToFile(filename string, configParser *ConfigProcessor) error {
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("exception while opening file: %s", err)
+		return fmt.Errorf("exception while opening file for writing prometheus-collector config environment variables: %s", err)
 	}
 	defer file.Close()
 
@@ -100,8 +102,7 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 		c.ConfigParser.ClusterLabel = os.Getenv("CLUSTER")
 	}
 
-	// Override cluster label with alias if available
-	if c.ConfigParser.ClusterAlias != "" {
+	if c.ConfigParser.ClusterAlias != "" && len(c.ConfigParser.ClusterAlias) > 0 {
 		c.ConfigParser.ClusterLabel = c.ConfigParser.ClusterAlias
 		fmt.Printf("Using clusterLabel from cluster_alias: %s\n", c.ConfigParser.ClusterAlias)
 	}
@@ -109,9 +110,10 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 	fmt.Printf("AZMON_CLUSTER_ALIAS: '%s'\n", c.ConfigParser.ClusterAlias)
 	fmt.Printf("AZMON_CLUSTER_LABEL: %s\n", c.ConfigParser.ClusterLabel)
 
-	// Write config to file
-	if err := c.ConfigWriter.WriteConfigToFile(c.ConfigFilePath, c.ConfigParser); err != nil {
+	err := c.ConfigWriter.WriteConfigToFile(c.ConfigFilePath, c.ConfigParser)
+	if err != nil {
 		fmt.Printf("%v\n", err)
+		return
 	}
 }
 

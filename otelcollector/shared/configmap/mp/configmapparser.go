@@ -14,46 +14,6 @@ const (
 	defaultConfigFileVersion   = "ver1"
 )
 
-// Sets an environment variable from a file or uses default if file is invalid
-func setEnvFromFileOrDefault(filePath, envName, defaultValue string) string {
-	content, err := readFileContent(filePath)
-	if err != nil {
-		shared.EchoError(fmt.Sprintf("Error reading file %s: %v", filePath, err))
-		shared.SetEnvAndSourceBashrcOrPowershell(envName, defaultValue, true)
-		return defaultValue
-	}
-
-	value := sanitizeContent(content)
-	shared.SetEnvAndSourceBashrcOrPowershell(envName, value, true)
-
-	return value
-}
-
-// Reads file content as string, handling errors and empty files
-func readFileContent(filePath string) (string, error) {
-	fileInfo, err := os.Stat(filePath)
-	if err != nil || fileInfo.Size() == 0 {
-		return "", fmt.Errorf("file doesn't exist or is empty")
-	}
-
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", err
-	}
-
-	return string(content), nil
-}
-
-// Sanitizes content by trimming and limiting length
-func sanitizeContent(content string) string {
-	trimmed := strings.TrimSpace(content)
-	noSpaces := strings.ReplaceAll(trimmed, " ", "")
-	if len(noSpaces) > 10 {
-		return noSpaces[:10]
-	}
-	return noSpaces
-}
-
 func parseSettingsForPodAnnotations(metricsConfigBySection map[string]map[string]string) {
 	shared.EchoSectionDivider("Start Processing - parseSettingsForPodAnnotations")
 	if err := configurePodAnnotationSettings(metricsConfigBySection); err != nil {
@@ -125,46 +85,16 @@ func parseDebugModeSettings(metricsConfigBySection map[string]map[string]string)
 	if err := ConfigureDebugModeSettings(metricsConfigBySection); err != nil {
 		shared.EchoError(err.Error())
 	}
-	shared.EchoSectionDivider("End Processing - " + name)
+	handleEnvFileError(debugModeEnvVarPath)
+	shared.EchoSectionDivider("End Processing - parseDebugModeSettings")
 }
 
-// func parseSettingsForPodAnnotations() {
-// 	executeWithSectionLog("parseSettingsForPodAnnotations", func() error {
-// 		if err := configurePodAnnotationSettings(); err != nil {
-// 			return err
-// 		}
-// 		handlePodAnnotationsFile(podAnnotationEnvVarPath)
-// 		return nil
-// 	})
-// }
-
-// func handlePodAnnotationsFile(filename string) {
-// 	file, err := os.Open(filename)
-// 	if os.IsNotExist(err) {
-// 		fmt.Printf("File does not exist: %s\n", filename)
-// 		return
-// 	} else if err != nil {
-// 		fmt.Printf("Error opening file: %s\n", err)
-// 		return
-// 	}
-// 	defer file.Close()
-
-// 	scanner := bufio.NewScanner(file)
-// 	for scanner.Scan() {
-// 		line := scanner.Text()
-// 		if index := strings.Index(line, "="); index != -1 {
-// 			key := line[:index]
-// 			value := line[index+1:]
-// 			shared.SetEnvAndSourceBashrcOrPowershell(key, value, false)
-// 		} else {
-// 			fmt.Printf("Skipping invalid line: %s\n", line)
-// 		}
-// 	}
-
-// 	if err := scanner.Err(); err != nil {
-// 		fmt.Printf("Error reading file: %s\n", err)
-// 	}
-// }
+func handleEnvFileError(filename string) {
+	err := shared.SetEnvVarsFromFile(filename)
+	if err != nil {
+		fmt.Printf("Error when setting env for %s: %v\n", filename, err)
+	}
+}
 
 func runPrometheusValidator(configPath, outputPath, templatePath string) bool {
 	err := shared.StartCommandAndWait(
@@ -174,12 +104,6 @@ func runPrometheusValidator(configPath, outputPath, templatePath string) bool {
 		"--otelTemplate", templatePath,
 	)
 	return err == nil
-}
-
-func handleEnvFile(filename string) {
-	if err := shared.SetEnvVarsFromFile(filename); err != nil {
-		fmt.Printf("Error setting env vars from %s: %v\n", filename, err)
-	}
 }
 
 func Configmapparser() {
@@ -267,36 +191,41 @@ func Configmapparser() {
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
 
-	// Handle prometheus configuration
-	templatePath := "/opt/microsoft/otelcollector/collector-config-template.yml"
-	outputPath := "/opt/microsoft/otelcollector/collector-config.yml"
-
-	if shared.FileExists("/opt/promMergedConfig.yml") && !shared.FileExists(outputPath) {
-		if runPrometheusValidator("/opt/promMergedConfig.yml", outputPath, templatePath) {
-			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_SET_GLOBAL_SETTINGS", "true", true)
-		} else {
-			fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
-			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", true)
-
-			if shared.FileExists(mergedDefaultConfigPath) {
-				fmt.Println("prom-config-validator::Running validator on just default scrape configs")
-				defaultOutputPath := "/opt/collector-config-with-defaults.yml"
-				if runPrometheusValidator(mergedDefaultConfigPath, defaultOutputPath, templatePath) {
-					shared.CopyFile(defaultOutputPath, "/opt/microsoft/otelcollector/collector-config-default.yml")
-				} else {
-					fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+	// Running promconfigvalidator if promMergedConfig.yml exists
+	if shared.FileExists("/opt/promMergedConfig.yml") {
+		if !shared.FileExists("/opt/microsoft/otelcollector/collector-config.yml") {
+			err := shared.StartCommandAndWait("/opt/promconfigvalidator",
+				"--config", "/opt/promMergedConfig.yml",
+				"--output", "/opt/microsoft/otelcollector/collector-config.yml",
+				"--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml",
+			)
+			if err != nil {
+				fmt.Println("prom-config-validator::Prometheus custom config validation failed. The custom config will not be used")
+				fmt.Printf("Command execution failed: %v\n", err)
+				shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "true", true)
+				if shared.FileExists(mergedDefaultConfigPath) {
+					fmt.Println("prom-config-validator::Running validator on just default scrape configs")
+					shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", mergedDefaultConfigPath, "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+					if !shared.FileExists("/opt/collector-config-with-defaults.yml") {
+						fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+					} else {
+						shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
+					}
 				}
+				shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
+			} else {
+				shared.SetEnvAndSourceBashrcOrPowershell("AZMON_SET_GLOBAL_SETTINGS", "true", true)
 			}
-			shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
 		}
-	} else if shared.FileExists(mergedDefaultConfigPath) {
+	} else if _, err := os.Stat(mergedDefaultConfigPath); err == nil {
 		fmt.Println("prom-config-validator::No custom prometheus config found. Only using default scrape configs")
-		defaultOutputPath := "/opt/collector-config-with-defaults.yml"
-		if runPrometheusValidator(mergedDefaultConfigPath, defaultOutputPath, templatePath) {
-			fmt.Println("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
-			shared.CopyFile(defaultOutputPath, "/opt/microsoft/otelcollector/collector-config-default.yml")
-		} else {
+		err := shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", mergedDefaultConfigPath, "--output", "/opt/collector-config-with-defaults.yml", "--otelTemplate", "/opt/microsoft/otelcollector/collector-config-template.yml")
+		if err != nil {
 			fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
+			fmt.Printf("Command execution failed: %v\n", err)
+		} else {
+			fmt.Println("prom-config-validator::Prometheus default scrape config validation succeeded, using this as collector config")
+			shared.CopyFile("/opt/collector-config-with-defaults.yml", "/opt/microsoft/otelcollector/collector-config-default.yml")
 		}
 		shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
 	} else {
