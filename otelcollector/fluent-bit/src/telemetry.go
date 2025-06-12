@@ -20,7 +20,7 @@ import (
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
-	"github.com/prometheus-collector/defaultscrapeconfigs"
+	"github.com/prometheus-collector/shared"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -836,7 +836,7 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 
 			if os.Getenv(envControllerType) == "ReplicaSet" {
 
-				for jobName, job := range defaultscrapeconfigs.DefaultScrapeJobs {
+				for jobName, job := range shared.DefaultScrapeJobs {
 					metric.Properties[fmt.Sprintf(%sEnabled)] = job.Enabled
 					if job.KeepListRegex != "" {
 						metric.Properties[fmt.Sprintf("%sKeepListRegex", jobName)] = job.KeepListRegex

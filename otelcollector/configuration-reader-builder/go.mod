@@ -6,8 +6,6 @@ replace github.com/prometheus-collector/shared => ../shared
 
 replace github.com/prometheus-collector/shared/configmap/mp => ../shared/configmap/mp
 
-replace github.com/prometheus-collector/defaultscrapeconfigs => ../defaultscrapeconfigs
-
 replace github.com/prometheus-collector/certoperator => ./certoperator
 
 replace github.com/prometheus-collector/certgenerator => ./certgenerator

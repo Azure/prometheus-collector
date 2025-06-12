@@ -1,6 +1,6 @@
 module Docker-Provider/source/plugins/go/src
 
-replace github.com/prometheus-collector/defaultscrapeconfigs => ../../defaultscrapeconfigs
+replace github.com/prometheus-collector/shared => ../shared
 
 go 1.23.0
 
@@ -9,7 +9,7 @@ toolchain go1.24.1
 require (
 	github.com/fluent/fluent-bit-go v0.0.0-20220311094233-780004bf5562
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
-	github.com/prometheus-collector/defaultscrapeconfigs v0.0.0-00010101000000-000000000000
+	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.18.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/prometheus/client_golang v1.22.0
