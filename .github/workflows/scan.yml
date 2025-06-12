@@ -5,6 +5,8 @@ on:
     - cron: '*/5 * * * *'
 jobs:
   createPullRequest:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +45,8 @@ jobs:
 
       - name: Checkout PR branch if it exists
         if: steps.check_pr.outputs.exists != '0'
+        with:
+          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
         run: |
           git fetch origin bot/otelcollector-upgrade-${{ env.VERSION }}
           git checkout bot/otelcollector-upgrade-${{ env.VERSION }}
@@ -109,17 +113,6 @@ jobs:
             echo "EOF" >> $GITHUB_OUTPUT
           fi
 
-      - name: Commit Trivy ignore changes
-        if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' && steps.trivy-scan.outputs.cve_changes }}
-        run: |
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add .trivyignore
-          git commit -m "Update .trivyignore with new CVEs from version ${{ env.VERSION }}" || echo "No changes to commit"
-          git push origin bot/otelcollector-upgrade-${{ env.VERSION }}
-        env:
-          GH_TOKEN: ${{ secrets.UPGRADE_OTEL_SECRET }}
-
       - name: Comment CVE changes on PR
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' && steps.trivy-scan.outputs.cve_changes }}
         uses: peter-evans/create-or-update-comment@v4
@@ -136,6 +129,17 @@ jobs:
             ```
 
             The trivyignore file was updated to ignore the new CVEs.
+
+      - name: Commit Trivy ignore changes
+        if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' && steps.trivy-scan.outputs.cve_changes }}
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .trivyignore
+          git commit -m "Update .trivyignore with new CVEs from version ${{ env.VERSION }}" || echo "No changes to commit"
+          git push origin bot/otelcollector-upgrade-${{ env.VERSION }}
+        with:
+          token: ${{ secrets.UPGRADE_OTEL_SECRET }}
 
       - name: Wait for 1 minute for all commits to be processed
         if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
