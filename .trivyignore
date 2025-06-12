@@ -1,14 +1,13 @@
+# This file contains CVEs to be ignored by Trivy
+# Auto-generated on Thu Jun 12 21:11:07 UTC 2025
+
 # CRITICAL
+
 # HIGH
-# targetallocator
-CVE-2025-22869 # golang.org/x/crypto
-CVE-2025-30204 # github.com/golang-jwt/jwt/v5
+
 # MEDIUM
-# otelcollector
-CVE-2025-22872 # golang.org/x/net
-# promconfigvalidator
-CVE-2025-22872 # golang.org/x/net
 # prometheusui
 CVE-2025-22872 # golang.org/x/net
-# targetallocator
-CVE-2025-22870 # golang.org/x/net 
+
+# LOW
+
