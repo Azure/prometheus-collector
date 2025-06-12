@@ -23,7 +23,7 @@ import (
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
 	prometheusgoclient "github.com/prometheus/client_golang/prometheus"
 	promconfig "github.com/prometheus/prometheus/config"
-	kubeDiscovery "github.com/prometheus/prometheus/discovery/kubernetes"
+
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,21 +46,6 @@ var DefaultScrapeProtocols = []monitoringv1.ScrapeProtocol{
 	monitoringv1.PrometheusText0_0_4,
 }
 
-// func crdExists(ctx context.Context, slogger *slog.Logger, clientset *kclientset.Clientset, crdName string) (bool, error) {
-// 	_, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, crdName, metav1.GetOptions{})
-// 	if err != nil {
-// 		if k8serrors.IsNotFound(err) {
-// 			slogger.Info("CRD does not exist", "crd", crdName)
-// 			return false, nil
-// 		}
-// 		slogger.Error("error while fetching crd-", "crd", crdName, "error", err)
-// 		return false, err
-
-// 	}
-// 	slogger.Info("CRD exists", "crd", crdName)
-// 	return true, nil
-// }
-
 func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocatorconfig.Config) (*PrometheusCRWatcher, error) {
 	promLogger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	slogger := slog.New(logr.ToSlogHandler(logger))
@@ -80,23 +65,30 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		return nil, err
 	}
 
-	// crdClientSet, err := kclientset.NewForConfig(cfg.ClusterConfig)
+	// probeGroupVersion := monitoringv1.SchemeGroupVersion
+	// probeResource := monitoringv1.ProbeName
+	// probeCRDInstalled, err := k8sutil.IsAPIGroupVersionResourceSupported(clientset.Discovery(), probeGroupVersion, probeResource)
 	// if err != nil {
 	// 	return nil, err
 	// }
 
-	groupVersion := monitoringv1.SchemeGroupVersion
-	resource := monitoringv1.ProbeName
-	installed, err := k8sutil.IsAPIGroupVersionResourceSupported(kclient.Discovery(), groupVersion, resource)
-	if err != nil {
-		fmt.Printf("failed to check presence of resource %q (group %q): %w\n", resource, groupVersion, err)
-	}
+	// if !probeCRDInstalled {
+	// 	fmt.Printf("resource %q (group: %q) not installed in the cluster\n", probeResource, probeGroupVersion)
+	// } else {
+	// 	fmt.Printf("resource %q (group: %q) is installed in the cluster\n", probeResource, probeGroupVersion)
+	// }
 
-	if !installed {
-		fmt.Printf("resource %q (group: %q) not installed in the cluster\n", resource, groupVersion)
-	} else {
-		fmt.Printf("resource %q (group: %q) is installed in the cluster\n", resource, groupVersion)
-	}
+	// scrapeConfigGroupVersion := promv1alpha1.SchemeGroupVersion
+	// scrapeConfigResource := promv1alpha1.ScrapeConfigName
+	// scrapeConfigCRDInstalled, err := k8sutil.IsAPIGroupVersionResourceSupported(clientset.Discovery(), scrapeConfigGroupVersion, scrapeConfigResource)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if !scrapeConfigCRDInstalled {
+	// 	fmt.Printf("resource %q (group: %q) not installed in the cluster\n", scrapeConfigResource, scrapeConfigGroupVersion)
+	// } else {
+	// 	fmt.Printf("resource %q (group: %q) is installed in the cluster\n", scrapeConfigResource, scrapeConfigGroupVersion)
+	// }
 
 	// use above instead like in prom operator- https://github.com/prometheus-operator/prometheus-operator/issues/7459
 	// https://github.com/prometheus-operator/prometheus-operator/blob/c4ebc762d0d2263541c67ebfe1ba7f2b419ed547/cmd/operator/main.go#L74
@@ -114,7 +106,8 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 
 	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, mClient, allocatorconfig.DefaultResyncTime, nil)
 	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
-	monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory, probeCRDExists, scrapeConfigCRDExists)
+	// monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory, probeCRDInstalled, scrapeConfigCRDInstalled)
+	monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory)
 	if err != nil {
 		return nil, err
 	}
@@ -194,8 +187,8 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		resourceSelector:                resourceSelector,
 		store:                           store,
 		prometheusCR:                    prom,
-		probeCRDExists:                  probeCRDExists,
-		scrapeConfigCRDExists:           scrapeConfigCRDExists,
+		// probeCRDInstalled:               probeCRDInstalled,
+		// scrapeConfigCRDInstalled:        scrapeConfigCRDInstalled,
 	}, nil
 }
 
@@ -216,8 +209,8 @@ type PrometheusCRWatcher struct {
 	resourceSelector                *prometheus.ResourceSelector
 	store                           *assets.StoreBuilder
 	prometheusCR                    *monitoringv1.Prometheus
-	probeCRDExists                  bool // indicates if the Probe CRD exists in the cluster
-	scrapeConfigCRDExists           bool // indicates if the ScrapeConfig CRD exists in the cluster
+	probeCRDInstalled               bool // indicates if the Probe CRD exists in the cluster
+	scrapeConfigCRDInstalled        bool // indicates if the ScrapeConfig CRD exists in the cluster
 }
 
 func getNamespaceInformer(ctx context.Context, allowList, denyList map[string]struct{}, promOperatorLogger *slog.Logger, clientset kubernetes.Interface, operatorMetrics *operator.Metrics) (cache.SharedIndexInformer, error) {
@@ -250,7 +243,8 @@ func getNamespaceInformer(ctx context.Context, allowList, denyList map[string]st
 }
 
 // getInformers returns a map of informers for the given resources.
-func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces, probeCRDExists bool, scrapeConfigCRDExists bool) (map[string]*informers.ForResource, error) {
+// func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces, probeCRDInstalled bool, scrapeConfigCRDInstalled bool) (map[string]*informers.ForResource, error) {
+func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
 	serviceMonitorInformers, err := informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ServiceMonitorName))
 	if err != nil {
 		return nil, err
@@ -261,21 +255,21 @@ func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFact
 		return nil, err
 	}
 
-	probeInformers := &informers.ForResource{}
-	scrapeConfigInformers := &informers.ForResource{}
-	if probeCRDExists {
-		probeInformers, err := informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ProbeName))
-		if err != nil {
-			return nil, err
-		}
+	// probeInformers := &informers.ForResource{}
+	// if probeCRDInstalled {
+	probeInformers, err := informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ProbeName))
+	if err != nil {
+		return nil, err
 	}
+	// }
 
-	if scrapeConfigCRDExists {
-		scrapeConfigInformers, err := informers.NewInformersForResource(factory, promv1alpha1.SchemeGroupVersion.WithResource(promv1alpha1.ScrapeConfigName))
-		if err != nil {
-			return nil, err
-		}
+	// scrapeConfigInformers := &informers.ForResource{}
+	// if scrapeConfigCRDInstalled {
+	scrapeConfigInformers, err := informers.NewInformersForResource(factory, promv1alpha1.SchemeGroupVersion.WithResource(promv1alpha1.ScrapeConfigName))
+	if err != nil {
+		return nil, err
 	}
+	// }
 
 	secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)
 	if err != nil {
@@ -374,7 +368,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 						return
 					}
 
-					if err := w.store.objStore.Update(newResource); err != nil {
+					if err := w.store.UpdateObject(newResource); err != nil {
 						fmt.Errorf("unexpected store error when updating secret %q: %w", newMeta.GetObjectMeta().GetName(), err)
 						return
 					}
@@ -389,7 +383,6 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					select {
 					case notifyEvents <- struct{}{}:
 					default:
-						w.logger.Info("rashmi-logs:notifyEvents channel is full, skipping sending update event")
 					}
 				},
 				DeleteFunc: func(obj interface{}) {
@@ -398,7 +391,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					secretResource := obj.(*v1.ResourceSecrets)
 					secretMeta, _ := obj.(metav1.ObjectMetaAccessor)
 
-					if err := w.store.objStore.Delete(secretResource); err != nil {
+					if err := w.store.objStore.DeleteObject(secretResource); err != nil {
 						fmt.Errorf("unexpected store error when deleting secret %q: %w", secretMeta.GetObjectMeta().GetName(), err)
 						return
 					}
@@ -411,7 +404,6 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					select {
 					case notifyEvents <- struct{}{}:
 					default:
-						w.logger.Info("rashmi-logs:notifyEvents channel is full, skipping sending update event")
 					}
 				},
 			})
@@ -550,8 +542,8 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 			return nil, unmarshalErr
 		}
 
-		// set kubeconfig path to service discovery configs, else kubernetes_sd will always attempt in-cluster
-		// authentication even if running with a detected kubeconfig
+		// // set kubeconfig path to service discovery configs, else kubernetes_sd will always attempt in-cluster
+		// // authentication even if running with a detected kubeconfig
 		for _, scrapeConfig := range promCfg.ScrapeConfigs {
 			for _, serviceDiscoveryConfig := range scrapeConfig.ServiceDiscoveryConfigs {
 				if serviceDiscoveryConfig.Name() == "kubernetes" {
