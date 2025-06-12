@@ -28,8 +28,8 @@ func Configmapparserforccp() {
 	fmt.Println("done listing /etc/config/settings")
 
 	// Process config schema and version
-	processConfigFile(configVersionPath, "AZMON_AGENT_CFG_FILE_VERSION")
-	processConfigFile(configSchemaPath, "AZMON_AGENT_CFG_SCHEMA_VERSION")
+	shared.ProcessConfigFile(configVersionPath, "AZMON_AGENT_CFG_FILE_VERSION")
+	shared.ProcessConfigFile(configSchemaPath, "AZMON_AGENT_CFG_SCHEMA_VERSION")
 
 	var metricsConfigBySection map[string]map[string]string
 	var err error
@@ -74,17 +74,15 @@ func Configmapparserforccp() {
 
 	prometheusCcpConfigMerger()
 
-	// Set required environment variables
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
-	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
 
-	// Run the command to validate and generate config
+
+	// No need to merge custom prometheus config, only merging in the default configs
+	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_USE_DEFAULT_PROMETHEUS_CONFIG", "true", true)
 	shared.StartCommandAndWait("/opt/promconfigvalidator", "--config", "/opt/defaultsMergedConfig.yml",
 		"--output", "/opt/ccp-collector-config-with-defaults.yml",
 		"--otelTemplate", "/opt/microsoft/otelcollector/ccp-collector-config-template.yml")
-
-	// Copy the generated config if it exists
 	if !shared.Exists("/opt/ccp-collector-config-with-defaults.yml") {
 		fmt.Println("prom-config-validator::Prometheus default scrape config validation failed. No scrape configs will be used")
 	} else if err := shared.CopyFile("/opt/ccp-collector-config-with-defaults.yml",
@@ -102,21 +100,4 @@ func processConfigFile(path, envVar string) {
 			fmt.Printf("Error reading file %s: %v\n", path, err)
 			return
 		}
-
-		value = strings.ReplaceAll(value, " ", "")
-		if len(value) >= 10 {
-			value = value[:10]
-		}
-
-		fmt.Printf("Setting env var %s: %s\n", envVar, value)
-		shared.SetEnvAndSourceBashrcOrPowershell(envVar, value, true)
-	} else {
-		fmt.Printf("File doesn't exist or is empty: %s\n", path)
-	}
-}
-
-func setEnvFromFile(filename string) {
-	if err := shared.SetEnvVarsFromFile(filename); err != nil {
-		fmt.Printf("Error setting env vars from %s: %v\n", filename, err)
-	}
 }
