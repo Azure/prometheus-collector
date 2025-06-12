@@ -44,12 +44,11 @@ jobs:
           GH_TOKEN: ${{ secrets.UPGRADE_OTEL_SECRET }}
 
       - name: Checkout PR branch if it exists
+        uses: actions/checkout@v4
         if: steps.check_pr.outputs.exists != '0'
         with:
+          ref: bot/otelcollector-upgrade-${{ env.VERSION }}
           token: ${{ secrets.UPGRADE_OTEL_SECRET }}
-        run: |
-          git fetch origin bot/otelcollector-upgrade-${{ env.VERSION }}
-          git checkout bot/otelcollector-upgrade-${{ env.VERSION }}
 
       - name: Build otelcollector and related go binaries
         if: ${{ steps.cpr.outputs.pull-request-number }}
