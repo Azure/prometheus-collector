@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	scrapeConfigs "github.com/prometheus-collector/defaultscrapeconfigs"
 	"github.com/prometheus-collector/shared"
 
 	"gopkg.in/yaml.v2"
@@ -20,7 +19,6 @@ const (
 	replicasetControllerType         = "replicaset"
 	daemonsetControllerType          = "daemonset"
 	configReaderSidecarContainerType = "configreadersidecar"
-	defaultScrapeInterval            = "30s"
 )
 
 var (
@@ -51,37 +49,6 @@ func parseConfigMap() string {
 	return string(config)
 }
 
-// loadYAMLData loads and unmarshals YAML data from a file
-func loadYAMLData(filename string, data interface{}) error {
-	fileContent, err := os.ReadFile(filename)
-	if err != nil {
-		return fmt.Errorf("error reading file %s: %v", filename, err)
-	}
-
-	return yaml.Unmarshal(fileContent, data)
-}
-
-// loadRegexHash loads the regex hash from file
-func loadRegexHash() {
-	if err := loadYAMLData(regexHashFile, &regexHash); err != nil {
-		fmt.Printf("Exception in loadRegexHash: %v. Keep list regexes will not be used\n", err)
-	}
-}
-
-// loadIntervalHash loads the interval hash from file
-func loadIntervalHash() {
-	if err := loadYAMLData(intervalHashFile, &intervalHash); err != nil {
-		fmt.Printf("Exception in loadIntervalHash: %v. Scrape interval will not be used\n", err)
-	}
-}
-
-// isConfigReaderSidecar checks if current container is a config reader sidecar
-func isConfigReaderSidecar() bool {
-	containerType := os.Getenv("CONTAINER_TYPE")
-	return containerType != "" && strings.ToLower(strings.TrimSpace(containerType)) == configReaderSidecarContainerType
-}
-
-// UpdateScrapeIntervalConfig updates the scrape interval in a YAML config file
 func UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting string) {
 	fmt.Printf("Updating scrape interval config for %s\n", yamlConfigFile)
 
@@ -299,10 +266,7 @@ func deepMerge(target, source map[interface{}]interface{}) map[interface{}]inter
 
 // writeDefaultScrapeTargetsFile writes the merged default config to a file
 func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interface{} {
-	if os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED") == "false" {
-		loadRegexHash()
-		loadIntervalHash()
-
+	if strings.ToLower(os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED")) == "false" {
 		if operatorEnabled {
 			populateDefaultPrometheusConfig() // Simplified by removing redundant function
 		} else {
@@ -310,15 +274,15 @@ func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interfa
 		}
 
 		if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
-			fmt.Printf("Merging default prometheus config values\n")
+			fmt.Printf("Starting to merge default prometheus config values in collector template as backup\n")
 			mergedDefaultConfigYaml, err := yaml.Marshal(mergedDefaultConfigs)
 			if err != nil {
-				fmt.Printf("Error marshalling merged config: %v\n", err)
+				fmt.Printf("Error marshalling merged default prometheus config: %v\n", err)
 				return nil
 			}
 
 			if err := os.WriteFile(mergedDefaultConfigPath, mergedDefaultConfigYaml, fs.FileMode(0644)); err != nil {
-				fmt.Printf("Error writing merged config: %v\n", err)
+				fmt.Printf("Error writing merged default prometheus config to file: %v\n", err)
 				return nil
 			}
 
@@ -361,50 +325,11 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 	}
 }
 
-func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultConfigs map[interface{}]interface{}) {
-	var mergedConfigYaml []byte
-
-	if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
-		shared.EchoStr("Merging default and custom scrape configs")
-		var customPrometheusConfig map[interface{}]interface{}
-		err := yaml.Unmarshal([]byte(customPromConfig), &customPrometheusConfig)
-		if err != nil {
-			shared.EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
-			return
-		}
-
-		var mergedConfigs map[interface{}]interface{}
-		if customPrometheusConfig["scrape_configs"] != nil {
-			mergedConfigs = deepMerge(mergedDefaultConfigs, customPrometheusConfig)
-		} else {
-			delete(customPrometheusConfig, "scrape_configs")
-			mergedConfigs = deepMerge(mergedDefaultConfigs, customPrometheusConfig)
-		}
-
-		mergedConfigYaml, err = yaml.Marshal(mergedConfigs)
-		if err != nil {
-			shared.EchoError(fmt.Sprintf("Error marshalling merged configs: %v", err))
-			return
-		}
-
-		shared.EchoStr("Done merging default scrape config(s) with custom prometheus config, writing them to file")
-	} else {
-		shared.EchoWarning("The merged default scrape config is nil or empty, using only custom scrape config")
-		mergedConfigYaml = []byte(customPromConfig)
-	}
-
-	err := os.WriteFile(promMergedConfigPath, mergedConfigYaml, fs.FileMode(0644))
-	if err != nil {
-		shared.EchoError(fmt.Sprintf("Error writing merged config to file: %v", err))
-		return
-	}
-}
-
 func setLabelLimitsPerScrape(prometheusConfigString string) string {
 	var limitedCustomConfig map[interface{}]interface{}
 
 	if err := yaml.Unmarshal([]byte(prometheusConfigString), &limitedCustomConfig); err != nil {
-		shared.EchoError(fmt.Sprintf("Error unmarshalling config: %v", err))
+		shared.EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
 		return prometheusConfigString
 	}
 
@@ -413,20 +338,20 @@ func setLabelLimitsPerScrape(prometheusConfigString string) string {
 		return prometheusConfigString
 	}
 
-	scrapes, ok := limitedCustomConfig["scrape_configs"].([]interface{})
-	if !ok || len(scrapes) == 0 {
+	limitedCustomScrapes, ok := limitedCustomConfig["scrape_configs"].([]interface{})
+	if !ok || len(limitedCustomScrapes) == 0 {
 		shared.EchoWarning("No jobs found to set label limits")
 		return prometheusConfigString
 	}
 
-	for _, scrape := range scrapes {
+	for _, scrape := range limitedCustomScrapes {
 		if scrapeMap, ok := scrape.(map[interface{}]interface{}); ok {
 			scrapeMap["label_limit"] = 63
 			scrapeMap["label_name_length_limit"] = 511
 			scrapeMap["label_value_length_limit"] = 1023
+			shared.EchoVar(fmt.Sprintf("Successfully set label limits in custom scrape config for job %s", scrapeMap["job_name"]), "")
 		}
 	}
-
 	shared.EchoWarning("Done setting label limits")
 	updatedConfig, err := yaml.Marshal(limitedCustomConfig)
 	if err != nil {
@@ -437,15 +362,15 @@ func setLabelLimitsPerScrape(prometheusConfigString string) string {
 	return string(updatedConfig)
 }
 
-// setGlobalScrapeConfigInDefaultFiles processes global scrape configs
-func setGlobalScrapeConfigInDefaultFiles(configString string) string {
+func setGlobalScrapeConfigInDefaultFilesIfExists(configString string) string {
 	var customConfig map[interface{}]interface{}
-	scrapeInterval := defaultScrapeInterval
-
 	if err := yaml.Unmarshal([]byte(configString), &customConfig); err != nil {
 		fmt.Println("Error:", err)
 		return ""
 	}
+
+	// Set scrape interval to 30s for updating the default merged config
+	scrapeInterval := defaultScrapeInterval
 
 	if globalConfig, ok := customConfig["global"].(map[interface{}]interface{}); ok {
 		if si, ok := globalConfig["scrape_interval"].(string); ok {
@@ -469,7 +394,6 @@ func setGlobalScrapeConfigInDefaultFiles(configString string) string {
 	return string(updatedConfig)
 }
 
-// mergeDefaultAndCustomScrapeConfigs merges default and custom configs
 func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultConfigs map[interface{}]interface{}) {
 	var mergedConfigYaml []byte
 
@@ -501,18 +425,19 @@ func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultCo
 // prometheusConfigMerger is the main function that merges configs
 func prometheusConfigMerger(operatorEnabled bool) {
 	shared.EchoSectionDivider("Start Processing - prometheusConfigMerger")
-	mergedDefaultConfigs = make(map[interface{}]interface{})
+	mergedDefaultConfigs = make(map[interface{}]interface{}) // Initialize mergedDefaultConfigs
 	prometheusConfigMap := parseConfigMap()
 
 	if len(prometheusConfigMap) > 0 {
-		modifiedConfig := setGlobalScrapeConfigInDefaultFiles(prometheusConfigMap)
+		modifiedPrometheusConfigString := setGlobalScrapeConfigInDefaultFilesIfExists(prometheusConfigMap)
 		writeDefaultScrapeTargetsFile(operatorEnabled)
-		labelLimitedConfig := setLabelLimitsPerScrape(modifiedConfig)
-		mergeDefaultAndCustomScrapeConfigs(labelLimitedConfig, mergedDefaultConfigs)
-		shared.EchoSectionDivider("End Processing - Done Merging Configs")
+		// Set label limits for every custom scrape job, before merging the default & custom config
+		labellimitedconfigString := setLabelLimitsPerScrape(modifiedPrometheusConfigString)
+		mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString, mergedDefaultConfigs)
+		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Merging Default and Custom Prometheus Config")
 	} else {
 		setDefaultFileScrapeInterval(defaultScrapeInterval)
 		writeDefaultScrapeTargetsFile(operatorEnabled)
-		shared.EchoSectionDivider("End Processing - Done Writing Default Config")
+		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Writing Default Prometheus Config")
 	}
 }
