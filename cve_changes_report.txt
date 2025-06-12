@@ -1,0 +1,8 @@
+=== CVE Changes Report ===
+Removed CVEs:
+  - CVE-2025-22872 from promconfigvalidator with severity MEDIUM and package golang.org/x/net
+  - CVE-2025-22872 from otelcollector with severity MEDIUM and package golang.org/x/net
+  - CVE-2025-22869 from targetallocator with severity HIGH and package golang.org/x/crypto
+  - CVE-2025-22870 from targetallocator with severity MEDIUM and package golang.org/x/net 
+  - CVE-2025-30204 from targetallocator with severity HIGH and package github.com/golang-jwt/jwt/v5
+Added CVEs:
