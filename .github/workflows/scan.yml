@@ -14,23 +14,6 @@ jobs:
           VERSION=$(cat OPENTELEMETRY_VERSION)
           echo "otelcollector version is $VERSION"
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
-      
-      - name: Install Trivy
-        run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.46.1
-
-      - name: Run Trivy scan on built binaries
-        id: trivy-scan
-        continue-on-error: true
-        run: |
-          ./updatetrivyignore.sh
-
-          # Add the contents of cve_changes_report.txt to GitHub outputs
-          if [ -f "cve_changes_report.txt" ]; then
-            echo "cve_changes<<EOF" >> $GITHUB_OUTPUT
-            cat cve_changes_report.txt >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-          fi
 
       - name: Create Pull Request
         id: cpr
@@ -106,9 +89,39 @@ jobs:
           body: |
             ✅ Building the otelcollector and related go binaries succeeded. No breaking changes were detected.
             The otelcollector was successfully upgraded to version ${{ env.VERSION }}.
-      
+
+      - name: Install Trivy
+        if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.46.1
+
+      - name: Run Trivy scan on built binaries
+        if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' }}
+        id: trivy-scan
+        continue-on-error: true
+        run: |
+          ./updatetrivyignore.sh
+
+          # Add the contents of cve_changes_report.txt to GitHub outputs
+          if [ -f "cve_changes_report.txt" ]; then
+            echo "cve_changes<<EOF" >> $GITHUB_OUTPUT
+            cat cve_changes_report.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit Trivy ignore changes
+        if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' && steps.trivy-scan.outputs.cve_changes }}
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .trivyignore
+          git commit -m "Update .trivyignore with new CVEs from version ${{ env.VERSION }}" || echo "No changes to commit"
+          git push origin bot/otelcollector-upgrade-${{ env.VERSION }}
+        env:
+          GH_TOKEN: ${{ secrets.UPGRADE_OTEL_SECRET }}
+
       - name: Comment CVE changes on PR
-        if: ${{ steps.cpr.outputs.pull-request-number && steps.trivy-scan.outputs.cve_changes }}
+        if: ${{ steps.cpr.outputs.pull-request-number && steps.run-make.outputs.make_failed == 'false' && steps.trivy-scan.outputs.cve_changes }}
         uses: peter-evans/create-or-update-comment@v4
         with:
           token: ${{ secrets.UPGRADE_OTEL_SECRET }}
