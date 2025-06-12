@@ -2,9 +2,9 @@ module github.com/prometheus-collector/shared/configmap/ccp
 
 replace github.com/prometheus-collector/shared => ../../../shared
 
-go 1.23.0
+go 1.24.0
 
-toolchain go1.23.2
+toolchain go1.24.4
 
 require (
 	github.com/prometheus-collector/shared v0.0.0-00010101000000-000000000000
@@ -27,6 +27,7 @@ require (
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
