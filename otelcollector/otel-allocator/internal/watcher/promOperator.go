@@ -360,16 +360,16 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 				UpdateFunc: func(oldObj, newObj interface{}) {
 					// Periodic resync may resend the Namespace without changes
 					// in-between.
-					oldResource := oldObj.(*v1.Secret)
-					newResource := newObj.(*v1.Secret)
+					// oldResource := oldObj.(*v1.Secret)
+					// newResource := newObj.(*v1.Secret)
 					oldMeta, _ := oldObj.(metav1.ObjectMetaAccessor)
 					newMeta, _ := newObj.(metav1.ObjectMetaAccessor)
-					if oldResource.ResourceVersion == newResource.ResourceVersion {
-						w.logger.Info("rashmi-logs: Skipping secret update event as resource version has not changed")
-						return
-					}
+					// if oldResource.ResourceVersion == newResource.ResourceVersion {
+					// 	w.logger.Info("rashmi-logs: Skipping secret update event as resource version has not changed")
+					// 	return
+					// }
 
-					if err := w.store.UpdateObject(newResource); err != nil {
+					if err := w.store.UpdateObject(newObj); err != nil {
 						fmt.Errorf("unexpected store error when updating secret %q: %w", newMeta.GetObjectMeta().GetName(), err)
 						return
 					}
@@ -389,10 +389,10 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 				DeleteFunc: func(obj interface{}) {
 					// Periodic resync may resend the Namespace without changes
 					// in-between.
-					secretResource := obj.(*v1.Secret)
+					//secretResource := obj.(*v1.Secret)
 					secretMeta, _ := obj.(metav1.ObjectMetaAccessor)
 
-					if err := w.store.DeleteObject(secretResource); err != nil {
+					if err := w.store.DeleteObject(obj); err != nil {
 						fmt.Errorf("unexpected store error when deleting secret %q: %w", secretMeta.GetObjectMeta().GetName(), err)
 						return
 					}
