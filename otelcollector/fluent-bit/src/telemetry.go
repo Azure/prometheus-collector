@@ -845,15 +845,6 @@ func PushMEProcessedAndReceivedCountToAppInsightsMetrics() {
 						metric.Properties[fmt.Sprintf("%sScrapeInterval", jobName)] = job.ScrapeInterval
 					}
 				}
-				if NetworkObservabilityCiliumScrapeInterval != "" {
-					metric.Properties["NetworkObservabilityCiliumScrapeInterval"] = NetworkObservabilityCiliumScrapeInterval
-				}
-				if NetworkObservabilityHubbleScrapeInterval != "" {
-					metric.Properties["NetworkObservabilityHubbleScrapeInterval"] = NetworkObservabilityHubbleScrapeInterval
-				}
-				if NetworkObservabilityRetinaScrapeInterval != "" {
-					metric.Properties["NetworkObservabilityRetinaScrapeInterval"] = NetworkObservabilityRetinaScrapeInterval
-				}
 			}
 
 			TelemetryClient.Track(metric)

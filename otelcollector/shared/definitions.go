@@ -233,7 +233,7 @@ var DefaultScrapeJobs = map[string]*DefaultScrapeJob{
 		KubernetesPlane:            KubernetesPlane.DataPlane,
 		ControllerType:             ControllerType.ReplicaSet,
 		ScrapeConfigDefinitionFile: "podannotationsDefault.yml",
-		PlaceholderNames:           []string{},
+		PlaceholderNames:           []string{"AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX"},
 		MinimalKeepListRegex:       "",
 		CustomerKeepListRegex:      "",
 		ScrapeInterval:             "30s",

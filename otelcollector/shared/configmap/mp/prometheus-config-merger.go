@@ -250,7 +250,7 @@ func UpdatePlaceholders(yamlConfigFile string, placeholders []string) error {
 		contents = []byte(strings.ReplaceAll(string(contents), fmt.Sprintf("$$%s$$", placeholder), os.Getenv(placeholder)))
 	}
 
-	return os.WriteFile(kubeletDefaultFileDs, contents, 0644)
+	return os.WriteFile(yamlConfigFile, contents, 0644)
 }
 
 func processDefaultJob(job *shared.ScrapeJob) {
@@ -398,7 +398,6 @@ func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultCo
 	if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
 		shared.EchoStr("Merging default and custom scrape configs")
 		var customPrometheusConfig map[interface{}]interface{}
-
 		err := yaml.Unmarshal([]byte(customPromConfig), &customPrometheusConfig)
 		if err != nil {
 			shared.EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
@@ -433,8 +432,9 @@ func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultCo
 }
 
 func setLabelLimitsPerScrape(prometheusConfigString string) string {
-	var limitedCustomConfig map[interface{}]interface{}
+	customConfig := prometheusConfigString
 
+	var limitedCustomConfig map[interface{}]interface{}
 	err := yaml.Unmarshal([]byte(customConfig), &limitedCustomConfig)
 	if err != nil {
 		shared.EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
