@@ -4,6 +4,8 @@ go 1.24.0
 
 toolchain go1.24.4
 
+require github.com/prometheus-operator/prometheus-operator v0.80.1
+
 replace github.com/prometheus-operator/prometheus-operator => github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250612225504-9d74176851ff
 
 require (
@@ -35,13 +37,13 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.33.1
-	k8s.io/apiextensions-apiserver v0.33.1 // indirect
+	k8s.io/apiextensions-apiserver v0.32.1 // indirect
 	k8s.io/apimachinery v0.33.1
-	k8s.io/client-go v0.33.1
-	k8s.io/component-base v0.33.1 // indirect
+	k8s.io/client-go v0.32.1
+	k8s.io/component-base v0.32.1 // indirect
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979
-	sigs.k8s.io/controller-runtime v0.21.0
+	k8s.io/utils v0.0.0-20241210054802-24370beab758
+	sigs.k8s.io/controller-runtime v0.20.1
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
@@ -198,11 +200,10 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
 )
 
-require github.com/prometheus-operator/prometheus-operator v0.0.0-00010101000000-000000000000
-
 require (
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
 	github.com/evanphx/json-patch v5.9.0+incompatible // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/gophercloud/gophercloud v1.14.1 // indirect
 	github.com/moby/sys/atomicwriter v0.1.0 // indirect

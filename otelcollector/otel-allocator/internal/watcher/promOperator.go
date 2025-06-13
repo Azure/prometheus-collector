@@ -23,6 +23,7 @@ import (
 	"github.com/prometheus-operator/prometheus-operator/pkg/prometheus"
 	prometheusgoclient "github.com/prometheus/client_golang/prometheus"
 	promconfig "github.com/prometheus/prometheus/config"
+	kubeDiscovery "github.com/prometheus/prometheus/discovery/kubernetes"
 
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
@@ -65,30 +66,30 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		return nil, err
 	}
 
-	// probeGroupVersion := monitoringv1.SchemeGroupVersion
-	// probeResource := monitoringv1.ProbeName
-	// probeCRDInstalled, err := k8sutil.IsAPIGroupVersionResourceSupported(clientset.Discovery(), probeGroupVersion, probeResource)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	probeGroupVersion := monitoringv1.SchemeGroupVersion
+	probeResource := monitoringv1.ProbeName
+	probeCRDInstalled, err := k8sutil.IsAPIGroupVersionResourceSupported(clientset.Discovery(), probeGroupVersion, probeResource)
+	if err != nil {
+		return nil, err
+	}
 
-	// if !probeCRDInstalled {
-	// 	fmt.Printf("resource %q (group: %q) not installed in the cluster\n", probeResource, probeGroupVersion)
-	// } else {
-	// 	fmt.Printf("resource %q (group: %q) is installed in the cluster\n", probeResource, probeGroupVersion)
-	// }
+	if !probeCRDInstalled {
+		fmt.Printf("resource %q (group: %q) not installed in the cluster\n", probeResource, probeGroupVersion)
+	} else {
+		fmt.Printf("resource %q (group: %q) is installed in the cluster\n", probeResource, probeGroupVersion)
+	}
 
-	// scrapeConfigGroupVersion := promv1alpha1.SchemeGroupVersion
-	// scrapeConfigResource := promv1alpha1.ScrapeConfigName
-	// scrapeConfigCRDInstalled, err := k8sutil.IsAPIGroupVersionResourceSupported(clientset.Discovery(), scrapeConfigGroupVersion, scrapeConfigResource)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if !scrapeConfigCRDInstalled {
-	// 	fmt.Printf("resource %q (group: %q) not installed in the cluster\n", scrapeConfigResource, scrapeConfigGroupVersion)
-	// } else {
-	// 	fmt.Printf("resource %q (group: %q) is installed in the cluster\n", scrapeConfigResource, scrapeConfigGroupVersion)
-	// }
+	scrapeConfigGroupVersion := promv1alpha1.SchemeGroupVersion
+	scrapeConfigResource := promv1alpha1.ScrapeConfigName
+	scrapeConfigCRDInstalled, err := k8sutil.IsAPIGroupVersionResourceSupported(clientset.Discovery(), scrapeConfigGroupVersion, scrapeConfigResource)
+	if err != nil {
+		return nil, err
+	}
+	if !scrapeConfigCRDInstalled {
+		fmt.Printf("resource %q (group: %q) not installed in the cluster\n", scrapeConfigResource, scrapeConfigGroupVersion)
+	} else {
+		fmt.Printf("resource %q (group: %q) is installed in the cluster\n", scrapeConfigResource, scrapeConfigGroupVersion)
+	}
 
 	// use above instead like in prom operator- https://github.com/prometheus-operator/prometheus-operator/issues/7459
 	// https://github.com/prometheus-operator/prometheus-operator/blob/c4ebc762d0d2263541c67ebfe1ba7f2b419ed547/cmd/operator/main.go#L74
@@ -106,8 +107,8 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 
 	monitoringInformerFactory := informers.NewMonitoringInformerFactories(allowList, denyList, mClient, allocatorconfig.DefaultResyncTime, nil)
 	metaDataInformerFactory := informers.NewMetadataInformerFactory(allowList, denyList, mdClient, allocatorconfig.DefaultResyncTime, nil)
-	// monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory, probeCRDInstalled, scrapeConfigCRDInstalled)
-	monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory)
+	monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory, probeCRDInstalled, scrapeConfigCRDInstalled)
+	// monitoringInformers, err := getInformers(monitoringInformerFactory, metaDataInformerFactory)
 	if err != nil {
 		return nil, err
 	}
@@ -187,8 +188,8 @@ func NewPrometheusCRWatcher(ctx context.Context, logger logr.Logger, cfg allocat
 		resourceSelector:                resourceSelector,
 		store:                           store,
 		prometheusCR:                    prom,
-		// probeCRDInstalled:               probeCRDInstalled,
-		// scrapeConfigCRDInstalled:        scrapeConfigCRDInstalled,
+		probeCRDInstalled:               probeCRDInstalled,
+		scrapeConfigCRDInstalled:        scrapeConfigCRDInstalled,
 	}, nil
 }
 
@@ -243,8 +244,8 @@ func getNamespaceInformer(ctx context.Context, allowList, denyList map[string]st
 }
 
 // getInformers returns a map of informers for the given resources.
-// func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces, probeCRDInstalled bool, scrapeConfigCRDInstalled bool) (map[string]*informers.ForResource, error) {
-func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
+func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces, probeCRDInstalled bool, scrapeConfigCRDInstalled bool) (map[string]*informers.ForResource, error) {
+	// func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFactory informers.FactoriesForNamespaces) (map[string]*informers.ForResource, error) {
 	serviceMonitorInformers, err := informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ServiceMonitorName))
 	if err != nil {
 		return nil, err
@@ -255,21 +256,21 @@ func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFact
 		return nil, err
 	}
 
-	// probeInformers := &informers.ForResource{}
-	// if probeCRDInstalled {
-	probeInformers, err := informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ProbeName))
-	if err != nil {
-		return nil, err
+	probeInformers := &informers.ForResource{}
+	if probeCRDInstalled {
+		probeInformers, err = informers.NewInformersForResource(factory, monitoringv1.SchemeGroupVersion.WithResource(monitoringv1.ProbeName))
+		if err != nil {
+			return nil, err
+		}
 	}
-	// }
 
-	// scrapeConfigInformers := &informers.ForResource{}
-	// if scrapeConfigCRDInstalled {
-	scrapeConfigInformers, err := informers.NewInformersForResource(factory, promv1alpha1.SchemeGroupVersion.WithResource(promv1alpha1.ScrapeConfigName))
-	if err != nil {
-		return nil, err
+	scrapeConfigInformers := &informers.ForResource{}
+	if scrapeConfigCRDInstalled {
+		scrapeConfigInformers, err = informers.NewInformersForResource(factory, promv1alpha1.SchemeGroupVersion.WithResource(promv1alpha1.ScrapeConfigName))
+		if err != nil {
+			return nil, err
+		}
 	}
-	// }
 
 	secretInformers, err := informers.NewInformersForResourceWithTransform(metaDataInformerFactory, v1.SchemeGroupVersion.WithResource(string(v1.ResourceSecrets)), informers.PartialObjectMetadataStrip)
 	if err != nil {
@@ -388,10 +389,10 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 				DeleteFunc: func(obj interface{}) {
 					// Periodic resync may resend the Namespace without changes
 					// in-between.
-					secretResource := obj.(*v1.ResourceSecrets)
+					secretResource := obj.(*v1.Secret)
 					secretMeta, _ := obj.(metav1.ObjectMetaAccessor)
 
-					if err := w.store.objStore.DeleteObject(secretResource); err != nil {
+					if err := w.store.DeleteObject(secretResource); err != nil {
 						fmt.Errorf("unexpected store error when deleting secret %q: %w", secretMeta.GetObjectMeta().GetName(), err)
 						return
 					}
@@ -497,24 +498,24 @@ func (w *PrometheusCRWatcher) LoadConfig(ctx context.Context) (*promconfig.Confi
 			return nil, err
 		}
 
-		var probeInstances []*monitoringv1.Probe
-		if w.probeCRDExists {
+		var probeInstances map[string]*monitoringv1.Probe
+		if w.probeCRDInstalled {
 			probeInstances, err = w.resourceSelector.SelectProbes(ctx, w.informers[monitoringv1.ProbeName].ListAllByNamespace)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			probeInstances = []*monitoringv1.Probe{}
+			probeInstances = make(map[string]*monitoringv1.Probe)
 		}
 
-		var scrapeConfigInstances []*promv1alpha1.ScrapeConfig
-		if w.scrapeConfigCRDExists {
-			scrapeConfigInstances, err := w.resourceSelector.SelectScrapeConfigs(ctx, w.informers[promv1alpha1.ScrapeConfigName].ListAllByNamespace)
+		var scrapeConfigInstances map[string]*promv1alpha1.ScrapeConfig
+		if w.scrapeConfigCRDInstalled {
+			scrapeConfigInstances, err = w.resourceSelector.SelectScrapeConfigs(ctx, w.informers[promv1alpha1.ScrapeConfigName].ListAllByNamespace)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			scrapeConfigInstances = []*promv1alpha1.ScrapeConfig{}
+			scrapeConfigInstances = make(map[string]*promv1alpha1.ScrapeConfig)
 		}
 
 		generatedConfig, err := w.configGenerator.GenerateServerConfiguration(
