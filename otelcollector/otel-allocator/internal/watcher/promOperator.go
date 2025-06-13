@@ -347,6 +347,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 		}
 		// Use a custom event handler for secrets since secret update requires asset store to be updated so that CRs can pick up updated secrets.
 		if name == string(v1.ResourceSecrets) {
+			w.logger.Info("rashmi-logs: Using custom event handler for secrets informer", "informer", name)
 			// only send an event notification if there isn't one already
 			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
 				// these functions only write to the notification channel if it's empty to avoid blocking
@@ -358,6 +359,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					}
 				},
 				UpdateFunc: func(oldObj, newObj interface{}) {
+					w.logger.Info("rashmi-logs: Inside secret informer UpdateFunc")
 					// Periodic resync may resend the Namespace without changes
 					// in-between.
 					// oldResource := oldObj.(*v1.Secret)
@@ -409,6 +411,7 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 				},
 			})
 		} else {
+			w.logger.Info("rashmi-logs: Using default event handler for informer", "informer", name)
 			// only send an event notification if there isn't one already
 			resource.AddEventHandler(cache.ResourceEventHandlerFuncs{
 				// these functions only write to the notification channel if it's empty to avoid blocking
