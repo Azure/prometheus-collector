@@ -3,10 +3,11 @@ package configmapsettings
 import (
 	"fmt"
 	"os"
-	"prometheus-collector/otelcollector/shared"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/prometheus-collector/shared"
 )
 
 var NoDefaultsEnabled bool

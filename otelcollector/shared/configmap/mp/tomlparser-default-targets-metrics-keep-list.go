@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"prometheus-collector/otelcollector/shared"
 	"strconv"
 	"strings"
 

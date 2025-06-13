@@ -2,9 +2,10 @@ package configmapsettings
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
-	"prometheus-collector/otelcollector/shared"
+	"strings"
+
+	"io/fs"
 
 	"github.com/prometheus-collector/shared"
 	"gopkg.in/yaml.v2"
@@ -17,14 +18,15 @@ const (
 // ConfigureDebugModeSettings reads debug mode settings from the parsed config map,
 // sets default values if necessary, writes environment variables to a file,
 // and modifies a YAML configuration file based on debug mode settings.
-func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) error {
+func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]string) error {
 	if metricsConfigBySection == nil {
 		return fmt.Errorf("configmap section not mounted, using defaults")
 	}
 
 	enabled := populateSettingValuesFromConfigMap(metricsConfigBySection)
 
-	if configSchemaVersion == shared.SchemaVersion.V1 {
+	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
 		if _, err := os.Stat(configMapDebugMountPath); os.IsNotExist(err) {
 			fmt.Printf("Unsupported/missing config schema version - '%s', using defaults, please use supported schema version\n", configSchemaVersion)
 		}
@@ -36,9 +38,13 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 	}
 	defer file.Close()
 
+	//if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+	//file.WriteString(fmt.Sprintf("export DEBUG_MODE_ENABLED=%v\n", defaultEnabled))
+	//} else {
 	file.WriteString(fmt.Sprintf("DEBUG_MODE_ENABLED=%v\n", enabled))
 
 	fmt.Printf("Setting debug mode environment variable: %v\n", enabled)
+	//}
 
 	if enabled {
 		controllerType := os.Getenv("CONTROLLER_TYPE")
@@ -78,60 +84,6 @@ func ConfigureDebugModeSettings(metricsConfigBySection map[string]map[string]str
 	return nil
 }
 
-func updateReplicaSetConfig() error {
-	var config OtelConfig
-	content, err := os.ReadFile(replicaSetCollectorConfig)
-	if err != nil {
-		return fmt.Errorf("Error reading collector config: %v", err)
-	}
-
-	if err := yaml.Unmarshal(content, &config); err != nil {
-		return fmt.Errorf("Error parsing collector config: %v", err)
-	}
-
-	config.Service.Pipelines.Metrics.Exporters = []interface{}{"otlp", "prometheus"}
-
-	if os.Getenv("CCP_METRICS_ENABLED") != "true" {
-		config.Service.Pipelines.MetricsTelemetry.Receivers = []interface{}{"prometheus"}
-		config.Service.Pipelines.MetricsTelemetry.Exporters = []interface{}{"prometheus/telemetry"}
-		config.Service.Pipelines.MetricsTelemetry.Processors = []interface{}{"filter/telemetry"}
-	}
-
-	cfgYaml, err := yaml.Marshal(config)
-	if err != nil {
-		return fmt.Errorf("Error marshaling updated config: %v", err)
-	}
-
-	return os.WriteFile(replicaSetCollectorConfig, cfgYaml, fs.FileMode(0644))
-}
-
-func parseConfigMapForDebugSettings() (map[string]interface{}, error) {
-	if _, err := os.Stat(configMapDebugMountPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("configmap section not mounted, using defaults")
-	}
-
-	data, err := os.ReadFile(configMapDebugMountPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading config map file: %v", err)
-	}
-
-	parsedConfig := make(map[string]interface{})
-	if err := toml.Unmarshal(data, &parsedConfig); err != nil {
-		return nil, fmt.Errorf("exception parsing config map: %v", err)
-	}
-
-	return parsedConfig, nil
-}
-
-func populateSettingValuesFromConfigMap(parsedConfig map[string]interface{}) bool {
-	if val, ok := parsedConfig["enabled"]; ok {
-		enabled := val.(bool)
-		fmt.Printf("Using configmap setting for debug mode: %v\n", enabled)
-		return enabled
-	}
-
-	fmt.Println("Debug mode configmap missing enabled value, using default: false")
-	return false
 func populateSettingValuesFromConfigMap(metricsConfigBySection map[string]map[string]string) bool {
 	debugSettings, ok := metricsConfigBySection["prometheus-collector-settings"]
 	if !ok {

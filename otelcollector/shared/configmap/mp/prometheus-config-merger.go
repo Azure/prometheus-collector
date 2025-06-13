@@ -232,7 +232,7 @@ func populateDefaultPrometheusConfig() {
 
 	for _, job := range shared.DefaultScrapeJobs {
 		if job.Enabled && job.ControllerType == currentControllerType && job.OSType == osType {
-			processDefaultJob(&job)
+			processDefaultJob(job)
 			defaultConfigs = append(defaultConfigs, job.ScrapeConfigDefinitionFile)
 		}
 	}
@@ -253,7 +253,7 @@ func UpdatePlaceholders(yamlConfigFile string, placeholders []string) error {
 	return os.WriteFile(yamlConfigFile, contents, 0644)
 }
 
-func processDefaultJob(job *shared.ScrapeJob) {
+func processDefaultJob(job *shared.DefaultScrapeJob) {
 	if job.ScrapeInterval != "" {
 		UpdateScrapeIntervalConfig(job.ScrapeConfigDefinitionFile, job.ScrapeInterval)
 	}
@@ -372,7 +372,7 @@ func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interfa
 }
 
 func setDefaultFileScrapeInterval(scrapeInterval string) {
-	for jobName, job := range shared.DefaultScrapeJobs {
+	for _, job := range shared.DefaultScrapeJobs {
 		if job.ScrapeInterval != "" {
 			scrapeInterval = job.ScrapeInterval
 		}
