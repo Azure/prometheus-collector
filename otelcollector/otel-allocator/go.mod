@@ -2,7 +2,9 @@ module github.com/open-telemetry/opentelemetry-operator/cmd/otel-allocator
 
 go 1.24.0
 
-toolchain go1.24.4
+toolchain go1.24.1
+
+retract v1.51.0
 
 require github.com/prometheus-operator/prometheus-operator v0.80.1
 
