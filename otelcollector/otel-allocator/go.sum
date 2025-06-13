@@ -458,8 +458,8 @@ github.com/prometheus/prometheus v0.301.0 h1:0z8dgegmILivNomCd79RKvVkIols8vBGPKm
 github.com/prometheus/prometheus v0.301.0/go.mod h1:BJLjWCKNfRfjp7Q48DrAjARnCi7GhfUVvUFEAWTssZM=
 github.com/prometheus/sigv4 v0.1.2 h1:R7570f8AoM5YnTUPFm3mjZH5q2k4D+I/phCWvZ4PXG8=
 github.com/prometheus/sigv4 v0.1.2/go.mod h1:GF9fwrvLgkQwDdQ5BXeV9XUSCH/IPNqzvAoaohfjqMU=
-github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250613193036-d4def3840f7e h1:Vjeon3Bl29zZm6WhoheZJx0eLFKdYqhfqPzxY3mR4Kg=
-github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250613193036-d4def3840f7e/go.mod h1:AezMsoCYMV5z5rfU91trdr7tZ6VyYpxncTzvY94VS68=
+github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250613205237-a3deb3bafe25 h1:uGpF7PLiRjPeJCFH33QZdzNqfjwB21dZ2b0MSQU8jq4=
+github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250613205237-a3deb3bafe25/go.mod h1:AezMsoCYMV5z5rfU91trdr7tZ6VyYpxncTzvY94VS68=
 github.com/redis/go-redis/v9 v9.7.3 h1:YpPyAayJV+XErNsatSElgRZZVCwXX9QzkKYNvO7x0wM=
 github.com/redis/go-redis/v9 v9.7.3/go.mod h1:bGUrSggJ9X9GUmZpZNEOQKaANxSGgOEBRltRTZHSvrA=
 github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=

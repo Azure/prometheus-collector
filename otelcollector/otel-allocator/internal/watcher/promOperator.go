@@ -372,20 +372,20 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					// }
 
 					if err := w.store.UpdateObject(newObj); err != nil {
-						fmt.Errorf("unexpected store error when updating secret %q: %w", newMeta.GetObjectMeta().GetName(), err)
-						return
-					}
-
-					w.logger.Info(
-						"rashmi-logs:Successfully updated store, sending update event to notifyEvents channel",
-						"oldObjName", oldMeta.GetObjectMeta().GetName(),
-						"oldobjnamespace", oldMeta.GetObjectMeta().GetNamespace(),
-						"newObjName", newMeta.GetObjectMeta().GetName(),
-						"newobjnamespace", newMeta.GetObjectMeta().GetNamespace(),
-					)
-					select {
-					case notifyEvents <- struct{}{}:
-					default:
+						w.logger.Error("unexpected store error when updating secret  - ", newMeta.GetObjectMeta().GetName(), "error", err)
+						//return
+					} else {
+						w.logger.Info(
+							"rashmi-logs:Successfully updated store, sending update event to notifyEvents channel",
+							"oldObjName", oldMeta.GetObjectMeta().GetName(),
+							"oldobjnamespace", oldMeta.GetObjectMeta().GetNamespace(),
+							"newObjName", newMeta.GetObjectMeta().GetName(),
+							"newobjnamespace", newMeta.GetObjectMeta().GetNamespace(),
+						)
+						select {
+						case notifyEvents <- struct{}{}:
+						default:
+						}
 					}
 				},
 				DeleteFunc: func(obj interface{}) {
@@ -395,18 +395,18 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					secretMeta, _ := obj.(metav1.ObjectMetaAccessor)
 
 					if err := w.store.DeleteObject(obj); err != nil {
-						fmt.Errorf("unexpected store error when deleting secret %q: %w", secretMeta.GetObjectMeta().GetName(), err)
-						return
-					}
-
-					w.logger.Info(
-						"rashmi-logs:Successfully removed secret from store, sending update event to notifyEvents channel",
-						"objName", secretMeta.GetObjectMeta().GetName(),
-						"objnamespace", secretMeta.GetObjectMeta().GetNamespace(),
-					)
-					select {
-					case notifyEvents <- struct{}{}:
-					default:
+						w.logger.Error("unexpected store error when deleting secret - ", secretMeta.GetObjectMeta().GetName(), "error", err)
+						//return
+					} else {
+						w.logger.Info(
+							"rashmi-logs:Successfully removed secret from store, sending update event to notifyEvents channel",
+							"objName", secretMeta.GetObjectMeta().GetName(),
+							"objnamespace", secretMeta.GetObjectMeta().GetNamespace(),
+						)
+						select {
+						case notifyEvents <- struct{}{}:
+						default:
+						}
 					}
 				},
 			})
