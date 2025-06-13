@@ -12,42 +12,38 @@ const (
 	envVariableAnnotationsEnabledName = "AZMON_PROMETHEUS_POD_ANNOTATION_SCRAPING_ENABLED"
 )
 
-func parseConfigMapForPodAnnotations() (map[string]interface{}, error) {
-	data, err := os.ReadFile(configMapMountPathForPodAnnotation)
-	if err != nil {
-		return nil, fmt.Errorf("configmap section not mounted or unreadable: %v", err)
-	}
-
-	parsedConfig := make(map[string]interface{})
-	if err := toml.Unmarshal(data, &parsedConfig); err != nil {
-		return nil, fmt.Errorf("exception parsing config map: %v", err)
-	}
-	return parsedConfig, nil
-}
-
 func isValidRegex(str string) bool {
 	_, err := regexp.Compile(str)
 	return err == nil
 }
 
 func writeConfigToFile(podannotationNamespaceRegex string) error {
-	if podannotationNamespaceRegex == "" {
-		return nil
-	}
-
+	fmt.Printf("Writing configuration to file: %s\n", podAnnotationEnvVarPath)
 	file, err := os.Create(podAnnotationEnvVarPath)
 	if err != nil {
-		return fmt.Errorf("error creating file: %v", err)
+		return fmt.Errorf("error opening file: %v", err)
 	}
 	defer file.Close()
 
-	envVarString := fmt.Sprintf("%s='%s'\n", envVariableTemplateName, podannotationNamespaceRegex)
-	envVarAnnotationsEnabled := fmt.Sprintf("%s=%s\n", envVariableAnnotationsEnabledName, "true")
+	if podannotationNamespaceRegex != "" {
+		linuxPrefix := ""
+		//if os.Getenv("OS_TYPE") != "" && strings.ToLower(os.Getenv("OS_TYPE")) == "linux" {
+		//	linuxPrefix = "export "
+		//}
+		// Writes the variable to the file in the format: AZMON_PROMETHEUS_POD_ANNOTATION_NAMESPACES_REGEX='value'
+		envVarString := fmt.Sprintf("%s%s='%s'\n", linuxPrefix, envVariableTemplateName, podannotationNamespaceRegex)
+		envVarAnnotationsEnabled := fmt.Sprintf("%s%s=%s\n", linuxPrefix, envVariableAnnotationsEnabledName, "true")
+		fmt.Printf("Writing to file: %s%s", envVarString, envVarAnnotationsEnabled)
 
-	if _, err := file.WriteString(envVarString + envVarAnnotationsEnabled); err != nil {
-		return fmt.Errorf("error writing to file: %v", err)
+		if _, err := file.WriteString(envVarString); err != nil {
+			return fmt.Errorf("error writing to file: %v", err)
+		}
+		if _, err := file.WriteString(envVarAnnotationsEnabled); err != nil {
+			return fmt.Errorf("error writing to file: %v", err)
+		}
+
+		fmt.Println("Configuration written to file successfully.")
 	}
-
 	return nil
 }
 
@@ -59,8 +55,10 @@ func configurePodAnnotationSettings(metricsConfigBySection map[string]map[string
 	if err != nil {
 		return err
 	}
-
-	return writeConfigToFile(podannotationNamespaceRegex)
+	if err := writeConfigToFile(podannotationNamespaceRegex); err != nil {
+		return err
+	}
+	return nil
 }
 
 func populatePodAnnotationNamespaceFromConfigMap(metricsConfigBySection map[string]map[string]string) (string, error) {
@@ -84,6 +82,4 @@ func populatePodAnnotationNamespaceFromConfigMap(metricsConfigBySection map[stri
 	} else {
 		return "", fmt.Errorf("Invalid namespace regex for pod annotations: %s", regex)
 	}
-
-	return regexString, nil
 }

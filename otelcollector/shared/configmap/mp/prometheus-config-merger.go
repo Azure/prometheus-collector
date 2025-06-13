@@ -44,6 +44,17 @@ func parseConfigMap() string {
 	return string(config)
 }
 
+func isConfigReaderSidecar() bool {
+	containerType := os.Getenv("CONTAINER_TYPE")
+	if containerType != "" {
+		currentContainerType := strings.ToLower(strings.TrimSpace(containerType))
+		if currentContainerType == configReaderSidecarContainerType {
+			return true
+		}
+	}
+	return false
+}
+
 func UpdateScrapeIntervalConfig(yamlConfigFile, scrapeIntervalSetting string) {
 	fmt.Printf("Updating scrape interval config for %s\n", yamlConfigFile)
 
@@ -214,6 +225,9 @@ func AppendRelabelConfig(yamlConfigFile string, relabelConfig []map[string]inter
 func populateDefaultPrometheusConfig() {
 	defaultConfigs := []string{}
 	currentControllerType := strings.TrimSpace(strings.ToLower(os.Getenv("CONTROLLER_TYPE")))
+	if isConfigReaderSidecar() {
+		currentControllerType = shared.ControllerType.ReplicaSet
+	}
 	osType := strings.ToLower(os.Getenv("OS_TYPE"))
 
 	for _, job := range shared.DefaultScrapeJobs {
@@ -385,17 +399,27 @@ func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultCo
 		shared.EchoStr("Merging default and custom scrape configs")
 		var customPrometheusConfig map[interface{}]interface{}
 
-		if err := yaml.Unmarshal([]byte(customPromConfig), &customPrometheusConfig); err != nil {
+		err := yaml.Unmarshal([]byte(customPromConfig), &customPrometheusConfig)
+		if err != nil {
 			shared.EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
 			return
 		}
 
-		mergedConfigs := deepMerge(mergedDefaultConfigs, customPrometheusConfig)
-		var err error
-		if mergedConfigYaml, err = yaml.Marshal(mergedConfigs); err != nil {
+		var mergedConfigs map[interface{}]interface{}
+		if customPrometheusConfig["scrape_configs"] != nil {
+			mergedConfigs = deepMerge(mergedDefaultConfigs, customPrometheusConfig)
+		} else {
+			delete(customPrometheusConfig, "scrape_configs")
+			mergedConfigs = deepMerge(mergedDefaultConfigs, customPrometheusConfig)
+		}
+
+		mergedConfigYaml, err = yaml.Marshal(mergedConfigs)
+		if err != nil {
 			shared.EchoError(fmt.Sprintf("Error marshalling merged configs: %v", err))
 			return
 		}
+
+		shared.EchoStr("Done merging default scrape config(s) with custom prometheus config, writing them to file")
 	} else {
 		shared.EchoWarning("The merged default scrape config is nil or empty, using only custom scrape config")
 		mergedConfigYaml = []byte(customPromConfig)
@@ -411,39 +435,39 @@ func mergeDefaultAndCustomScrapeConfigs(customPromConfig string, mergedDefaultCo
 func setLabelLimitsPerScrape(prometheusConfigString string) string {
 	var limitedCustomConfig map[interface{}]interface{}
 
-	if err := yaml.Unmarshal([]byte(prometheusConfigString), &limitedCustomConfig); err != nil {
+	err := yaml.Unmarshal([]byte(customConfig), &limitedCustomConfig)
+	if err != nil {
 		shared.EchoError(fmt.Sprintf("Error unmarshalling custom config: %v", err))
 		return prometheusConfigString
 	}
 
-	if limitedCustomConfig == nil || len(limitedCustomConfig) == 0 {
-		shared.EchoWarning("Nothing to set for label limits")
-		return prometheusConfigString
-	}
-
-	limitedCustomScrapes, ok := limitedCustomConfig["scrape_configs"].([]interface{})
-	if !ok || len(limitedCustomScrapes) == 0 {
-		shared.EchoWarning("No jobs found to set label limits")
-		return prometheusConfigString
-	}
-
-	for _, scrape := range limitedCustomScrapes {
-		if scrapeMap, ok := scrape.(map[interface{}]interface{}); ok {
-			scrapeMap["label_limit"] = 63
-			scrapeMap["label_name_length_limit"] = 511
-			scrapeMap["label_value_length_limit"] = 1023
-			shared.EchoVar(fmt.Sprintf("Successfully set label limits in custom scrape config for job %s", scrapeMap["job_name"]), "")
+	if limitedCustomConfig != nil && len(limitedCustomConfig) > 0 {
+		limitedCustomScrapes, _ := limitedCustomConfig["scrape_configs"].([]interface{})
+		if limitedCustomScrapes != nil && len(limitedCustomScrapes) > 0 {
+			for _, scrape := range limitedCustomScrapes {
+				scrapeMap, _ := scrape.(map[interface{}]interface{})
+				scrapeMap["label_limit"] = 63
+				scrapeMap["label_name_length_limit"] = 511
+				scrapeMap["label_value_length_limit"] = 1023
+				shared.EchoVar(fmt.Sprintf("Successfully set label limits in custom scrape config for job %s", scrapeMap["job_name"]), "")
+			}
+			shared.EchoWarning("Done setting label limits for custom scrape config ...")
+			updatedConfig, err := yaml.Marshal(limitedCustomConfig)
+			if err != nil {
+				shared.EchoError(fmt.Sprintf("Error marshalling custom config: %v", err))
+				return prometheusConfigString
+			}
+			return string(updatedConfig)
+		} else {
+			shared.EchoWarning("No Jobs found to set label limits while processing custom scrape config")
+			return prometheusConfigString
 		}
-	}
-	shared.EchoWarning("Done setting label limits")
-	updatedConfig, err := yaml.Marshal(limitedCustomConfig)
-	if err != nil {
-		shared.EchoError(fmt.Sprintf("Error marshalling config: %v", err))
+	} else {
+		shared.EchoWarning("Nothing to set for label limits while processing custom scrape config")
 		return prometheusConfigString
 	}
-
-	return string(updatedConfig)
 }
+
 func setGlobalScrapeConfigInDefaultFilesIfExists(configString string) string {
 	var customConfig map[interface{}]interface{}
 	err := yaml.Unmarshal([]byte(configString), &customConfig)
@@ -493,7 +517,7 @@ func prometheusConfigMerger(operatorEnabled bool) {
 		mergeDefaultAndCustomScrapeConfigs(labellimitedconfigString, mergedDefaultConfigs)
 		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Merging Default and Custom Prometheus Config")
 	} else {
-		setDefaultFileScrapeInterval(defaultScrapeInterval)
+		setDefaultFileScrapeInterval("30s")
 		writeDefaultScrapeTargetsFile(operatorEnabled)
 		shared.EchoSectionDivider("End Processing - prometheusConfigMerger, Done Writing Default Prometheus Config")
 	}

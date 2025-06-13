@@ -136,7 +136,7 @@ func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]in
 				continue
 			}
 
-			mergedDefaultConfigs = DeepMerge(mergedDefaultConfigs, defaultConfigYaml)
+			mergedDefaultConfigs = deepMerge(mergedDefaultConfigs, defaultConfigYaml)
 		}
 	}
 
@@ -162,7 +162,7 @@ func loadYAMLFromFile(filename string) (map[interface{}]interface{}, error) {
 
 // This needs unit tests
 
-func DeepMerge(target, source map[interface{}]interface{}) map[interface{}]interface{} {
+func deepMerge(target, source map[interface{}]interface{}) map[interface{}]interface{} {
 	for key, sourceValue := range source {
 		targetValue, exists := target[key]
 
@@ -175,7 +175,7 @@ func DeepMerge(target, source map[interface{}]interface{}) map[interface{}]inter
 		sourceMap, sourceMapOk := sourceValue.(map[interface{}]interface{})
 
 		if targetMapOk && sourceMapOk {
-			target[key] = DeepMerge(targetMap, sourceMap)
+			target[key] = deepMerge(targetMap, sourceMap)
 		} else if reflect.TypeOf(targetValue) == reflect.TypeOf(sourceValue) {
 			// Both are slices, concatenate them
 			if targetSlice, targetSliceOk := targetValue.([]interface{}); targetSliceOk {
