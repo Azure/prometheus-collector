@@ -370,6 +370,20 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					// 	w.logger.Info("rashmi-logs: Skipping secret update event as resource version has not changed")
 					// 	return
 					// }
+					exists, err := w.store.HasObject(oldObj)
+					if !exists || err != nil {
+						if err != nil {
+							w.logger.Error("unexpected store error when checking if secret exists, skipping update", newMeta.GetObjectMeta().GetName(), "error", err)
+							return
+						}
+						// if the secret does not exist in the store, we skip the update
+						w.logger.Info(
+							"rashmi-logs: Secret does not exist in store, skipping update",
+							"newObjName", newMeta.GetObjectMeta().GetName(),
+							"newobjnamespace", newMeta.GetObjectMeta().GetNamespace(),
+						)
+						return
+					}
 
 					if err := w.store.UpdateObject(newObj); err != nil {
 						w.logger.Error("unexpected store error when updating secret  - ", newMeta.GetObjectMeta().GetName(), "error", err)
@@ -394,6 +408,24 @@ func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors ch
 					//secretResource := obj.(*v1.Secret)
 					secretMeta, _ := obj.(metav1.ObjectMetaAccessor)
 
+					w.logger.Info("rashmi-logs: Inside secret informer Delete Func")
+					exists, err := w.store.HasObject(obj)
+					if !exists || err != nil {
+						if err != nil {
+							w.logger.Error("unexpected store error when checking if secret exists, skipping delete", secretMeta.GetObjectMeta().GetName(), "error", err)
+							return
+						}
+						// if the secret does not exist in the store, we skip the delete
+						w.logger.Info(
+							"rashmi-logs: Secret does not exist in store, skipping delete",
+							"objName", secretMeta.GetObjectMeta().GetName(),
+							"objnamespace", secretMeta.GetObjectMeta().GetNamespace(),
+						)
+						return
+					}
+					w.logger.Info("rashmi-logs: Deleting secret from store", "objName", secretMeta.GetObjectMeta().GetName(), "objnamespace", secretMeta.GetObjectMeta().GetNamespace())
+					// if the secret exists in the store, we delete it
+					// and send an event notification to the notifyEvents channel
 					if err := w.store.DeleteObject(obj); err != nil {
 						w.logger.Error("unexpected store error when deleting secret - ", secretMeta.GetObjectMeta().GetName(), "error", err)
 						//return
