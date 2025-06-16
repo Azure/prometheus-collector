@@ -126,9 +126,7 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 
 		// This ensures that any changes to the config made, even by the target allocator, are reflected in the API.
 		func() promconfig.Config {
-			m.mtx.RLock()
-			defer m.mtx.RUnlock()
-			return *m.promCfg
+			return *(*promconfig.Config)(r.cfg.PrometheusConfig)
 		},
 		o.Flags, // nil
 		api_v1.GlobalURLOptions{
@@ -178,6 +176,9 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 		o.EnableRemoteWriteReceiver,
 		o.AcceptRemoteWriteProtoMsgs,
 		o.EnableOTLPWriteReceiver,
+		o.ConvertOTLPDelta,
+		o.NativeOTLPDeltaIngestion,
+		o.CTZeroIngestionEnabled,
 	)
 
 	// Create listener and monitor with conntrack in the same way as the Prometheus web package: https://github.com/prometheus/prometheus/blob/6150e1ca0ede508e56414363cc9062ef522db518/web/web.go#L564-L579
