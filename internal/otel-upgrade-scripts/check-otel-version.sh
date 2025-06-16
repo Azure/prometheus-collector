@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Get current OpenTelemetry Collector version if it exists
+CURRENT_VERSION=""
+if [ -f "OPENTELEMETRY_VERSION" ]; then
+    CURRENT_VERSION=$(cat OPENTELEMETRY_VERSION)
+    echo "Current OpenTelemetry Collector version: $CURRENT_VERSION"
+else
+    echo "No existing version file found. Will create one."
+fi
+
 # Script to check the latest released version of opentelemetry-collector-operator
 
 # GitHub API URL for the repository releases
@@ -71,6 +80,12 @@ if [[ "$COLLECTOR_RELEASE_NAME" =~ (v?[0-9]+\.[0-9]+\.[0-9]+)/(v?[0-9]+\.[0-9]+\
     echo "STABLE_VERSION: $STABLE_VERSION"
     echo "BETA_VERSION: $BETA_VERSION"
 
+    # Check if the BETA_VERSION is the same as the CURRENT_VERSION
+    if [ "$BETA_VERSION" = "$CURRENT_VERSION" ]; then
+        echo "The latest version ($BETA_VERSION) is already in use. No update needed."
+        exit 0
+    fi
+
     # Write BETA_VERSION to file
     echo "Writing BETA_VERSION to OPENTELEMETRY_VERSION file..."
     echo "$BETA_VERSION" > OPENTELEMETRY_VERSION
@@ -81,10 +96,10 @@ if [[ "$COLLECTOR_RELEASE_NAME" =~ (v?[0-9]+\.[0-9]+\.[0-9]+)/(v?[0-9]+\.[0-9]+\
         exit 1
     fi
     
-    # Run script.sh with the parsed versions
-    echo -e "\nRunning script.sh with the parsed versions..."
-    if [ -f "script.sh" ]; then
-        ./script.sh "$BETA_VERSION" "$STABLE_VERSION"
+    # Run upgrade.sh with the parsed versions
+    echo -e "\nRunning upgrade.sh with the parsed versions..."
+    if [ -f "upgrade.sh" ]; then
+        ./upgrade.sh "$BETA_VERSION" "$STABLE_VERSION"
     else
         echo "Warning: script.sh not found in the current directory"
         exit 1
