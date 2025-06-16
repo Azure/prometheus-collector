@@ -18,10 +18,12 @@ spec:
     port: 80
     protocol: TCP
     targetPort: 8080
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
   - name: targetallocation-https
     port: 443
     protocol: TCP
     targetPort: 8443
+{{- end }}
   selector:
     rsName: ama-metrics-operator-targets
   sessionAffinity: None

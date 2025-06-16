@@ -75,17 +75,16 @@ spec:
         volumeMounts:
         - mountPath: /conf
           name: ta-config-shared
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
         - mountPath: /etc/operator-targets/server/certs
           name: ama-metrics-operator-targets-server-tls-secret-volume
-          readOnly: true
-        - mountPath: /etc/prometheus/certs
-          name: ama-metrics-tls-secret-volume
           readOnly: true
         ports:
         - containerPort: 8080
           name: http
         - containerPort: 8443
           name: https
+{{- end }}
         livenessProbe:
           httpGet:
             path: /health-ta
@@ -177,15 +176,14 @@ spec:
             readOnly: true
           - mountPath: /ta-configuration
             name: ta-config-shared
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
           - mountPath: /etc/operator-targets/client/certs
             name: ama-metrics-operator-targets-client-tls-secret-volume
             readOnly: true
           - mountPath: /etc/operator-targets/server/certs
             name: ama-metrics-operator-targets-server-tls-secret-volume
             readOnly: true
-        securityContext:
-          allowPrivilegeEscalation: false
-          runAsUser: 0
+{{- end }}
         securityContext:
           capabilities:
             drop:
@@ -259,6 +257,7 @@ spec:
         secret:
           secretName: ama-metrics-mtls-secret
           optional: true
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
       - name: ama-metrics-operator-targets-server-tls-secret-volume
         secret:
           secretName: ama-metrics-operator-targets-server-tls-secret
@@ -267,6 +266,7 @@ spec:
         secret:
           secretName: ama-metrics-operator-targets-client-tls-secret
           optional: true
+{{- end }}
       - name: ta-config-shared
         emptyDir: {}
       - name: operator-targets-certs

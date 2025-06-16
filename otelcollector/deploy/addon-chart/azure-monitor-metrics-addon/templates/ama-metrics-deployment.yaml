@@ -205,9 +205,11 @@ spec:
             - mountPath: /etc/prometheus/certs
               name: ama-metrics-tls-secret-volume
               readOnly: true
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
             - mountPath: /etc/operator-targets/client/certs
               name: ama-metrics-operator-targets-client-tls-secret-volume
               readOnly: true
+{{- end }}
             - mountPath: /etc/config/settings/prometheus
               name: prometheus-config-vol
               readOnly: true
@@ -384,10 +386,12 @@ spec:
           secret:
             secretName: ama-metrics-mtls-secret
             optional: true
+{{- if .Values.AzureMonitorMetrics.OperatorTargetsHttpsEnabled }}
         - name: ama-metrics-operator-targets-client-tls-secret-volume
           secret:
             secretName: ama-metrics-operator-targets-client-tls-secret
             optional: true
+{{- end }}
         {{- if $arcExtensionSettings.mountUbuntuCerts }}
         - name: anchors-ubuntu
           hostPath:
