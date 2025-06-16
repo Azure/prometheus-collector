@@ -8,7 +8,7 @@ retract v1.51.0
 
 require github.com/prometheus-operator/prometheus-operator v0.80.1
 
-replace github.com/prometheus-operator/prometheus-operator => github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250615190637-9889513805aa
+replace github.com/prometheus-operator/prometheus-operator => github.com/rashmichandrashekar/prometheus-operator v0.0.0-20250616003755-37695b70b699
 
 require (
 	github.com/blang/semver/v4 v4.0.0

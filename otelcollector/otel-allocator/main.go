@@ -130,7 +130,7 @@ func main() {
 		}
 		runGroup.Add(
 			func() error {
-				promWatcherErr := promWatcher.Watch(eventChan, errChan)
+				promWatcherErr := promWatcher.Watch(ctx, eventChan, errChan)
 				setupLog.Info("Prometheus watcher exited")
 				return promWatcherErr
 			},
