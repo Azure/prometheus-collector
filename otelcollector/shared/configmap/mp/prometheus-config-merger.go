@@ -14,14 +14,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const (
+var (
 	configMapMountPath               = "/etc/config/settings/prometheus/prometheus-config"
 	replicasetControllerType         = "replicaset"
 	daemonsetControllerType          = "daemonset"
 	configReaderSidecarContainerType = "configreadersidecar"
+	scrapeConfigDefinitionPathPrefix = "/opt/microsoft/otelcollector/default-prom-configs/"
 )
 
-var mergedDefaultConfigs map[interface{}]interface{}
+var mergedDefaultConfigs = make(map[interface{}]interface{})
 
 func parseConfigMap() string {
 	defer func() {
@@ -224,7 +225,7 @@ func AppendRelabelConfig(yamlConfigFile string, relabelConfig []map[string]inter
 
 func populateDefaultPrometheusConfig() {
 	defaultConfigs := []string{}
-	currentControllerType := strings.TrimSpace(strings.ToLower(os.Getenv("CONTROLLER_TYPE")))
+	currentControllerType := strings.TrimSpace(os.Getenv("CONTROLLER_TYPE"))
 	if isConfigReaderSidecar() {
 		currentControllerType = shared.ControllerType.ReplicaSet
 	}
@@ -233,7 +234,7 @@ func populateDefaultPrometheusConfig() {
 	for _, job := range shared.DefaultScrapeJobs {
 		if job.Enabled && job.ControllerType == currentControllerType && job.OSType == osType {
 			processDefaultJob(job)
-			defaultConfigs = append(defaultConfigs, job.ScrapeConfigDefinitionFile)
+			defaultConfigs = append(defaultConfigs, scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile)
 		}
 	}
 
@@ -255,29 +256,27 @@ func UpdatePlaceholders(yamlConfigFile string, placeholders []string) error {
 
 func processDefaultJob(job *shared.DefaultScrapeJob) {
 	if job.ScrapeInterval != "" {
-		UpdateScrapeIntervalConfig(job.ScrapeConfigDefinitionFile, job.ScrapeInterval)
+		UpdateScrapeIntervalConfig(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, job.ScrapeInterval)
 	}
 
 	if job.KeepListRegex != "" {
-		AppendMetricRelabelConfig(job.ScrapeConfigDefinitionFile, job.KeepListRegex)
+		AppendMetricRelabelConfig(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, job.KeepListRegex)
 	}
 
 	if job.ControllerType == shared.ControllerType.DaemonSet {
-		if err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, []string{"NODE_IP", "NODE_NAME"}); err != nil {
+		if err := UpdatePlaceholders(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, []string{"NODE_IP", "NODE_NAME"}); err != nil {
 			fmt.Printf("Error updating placeholders for DaemonSet: %v\n", err)
 		}
 	}
 
 	if job.PlaceholderNames != nil {
-		if err := UpdatePlaceholders(job.ScrapeConfigDefinitionFile, job.PlaceholderNames); err != nil {
+		if err := UpdatePlaceholders(scrapeConfigDefinitionPathPrefix+job.ScrapeConfigDefinitionFile, job.PlaceholderNames); err != nil {
 			fmt.Printf("Error updating placeholders: %v\n", err)
 		}
 	}
 }
 
 func mergeDefaultScrapeConfigs(defaultScrapeConfigs []string) map[interface{}]interface{} {
-	mergedDefaultConfigs := make(map[interface{}]interface{})
-
 	if len(defaultScrapeConfigs) > 0 {
 		mergedDefaultConfigs["scrape_configs"] = make([]interface{}, 0)
 
@@ -346,7 +345,8 @@ func deepMerge(target, source map[interface{}]interface{}) map[interface{}]inter
 
 func writeDefaultScrapeTargetsFile(operatorEnabled bool) map[interface{}]interface{} {
 	noDefaultScrapingEnabled := os.Getenv("AZMON_PROMETHEUS_NO_DEFAULT_SCRAPING_ENABLED")
-	if noDefaultScrapingEnabled != "" && strings.ToLower(noDefaultScrapingEnabled) == "false" {
+	fmt.Println("No Default Scraping Enabled:", noDefaultScrapingEnabled)
+	if noDefaultScrapingEnabled != "true" {
 		populateDefaultPrometheusConfig()
 		if mergedDefaultConfigs != nil && len(mergedDefaultConfigs) > 0 {
 			fmt.Printf("Starting to merge default prometheus config values in collector template as backup\n")
@@ -377,7 +377,7 @@ func setDefaultFileScrapeInterval(scrapeInterval string) {
 			scrapeInterval = job.ScrapeInterval
 		}
 		if job.ScrapeConfigDefinitionFile != "" {
-			currentFile := job.ScrapeConfigDefinitionFile
+			currentFile := scrapeConfigDefinitionPathPrefix + job.ScrapeConfigDefinitionFile
 			contents, err := os.ReadFile(currentFile)
 			if err != nil {
 				fmt.Printf("Error reading file %s: %v\n", currentFile, err)
@@ -506,7 +506,6 @@ func setGlobalScrapeConfigInDefaultFilesIfExists(configString string) string {
 
 func prometheusConfigMerger(operatorEnabled bool) {
 	shared.EchoSectionDivider("Start Processing - prometheusConfigMerger")
-	mergedDefaultConfigs = make(map[interface{}]interface{}) // Initialize mergedDefaultConfigs
 	prometheusConfigMap := parseConfigMap()
 
 	if len(prometheusConfigMap) > 0 {

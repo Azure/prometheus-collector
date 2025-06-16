@@ -30,9 +30,6 @@ func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, 
 			if err != nil {
 				return fmt.Errorf("ParseConfigMapForDefaultScrapeSettings::Error parsing value for %s: %v", jobName, err)
 			}
-			if job.Enabled {
-				NoDefaultsEnabled = false
-			}
 
 			fmt.Printf("ParseConfigMapForDefaultScrapeSettings::Job: %s, Enabled: %t\n", jobName, job.Enabled)
 		}
@@ -40,6 +37,10 @@ func PopulateSettingValues(metricsConfigBySection map[string]map[string]string, 
 
 	// Check if no defaults are enabled
 	controllerType := os.Getenv("CONTROLLER_TYPE")
+	containerType := strings.ToLower(os.Getenv("CONTAINER_TYPE"))
+	if containerType == "configreadersidecar" {
+		controllerType = shared.ControllerType.ReplicaSet
+	}
 	osType := strings.ToLower(os.Getenv("OS_TYPE"))
 	NoDefaultsEnabled = true
 

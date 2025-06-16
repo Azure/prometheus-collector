@@ -19,10 +19,12 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string, confi
 	var err error
 	switch configSchemaVersion {
 	case shared.SchemaVersion.V1:
-		minimalProfileEnabled, err = strconv.ParseBool(keeplist["minimalingestionprofile"])
+		minimalProfileEnabledBool, err := strconv.ParseBool(keeplist["minimalingestionprofile"])
 		if err != nil {
-			return fmt.Errorf("Invalid value for minimalingestionprofile in v1: %s", keeplist["minimalingestionprofile"])
+			return fmt.Errorf("Invalid value for minimalingestionprofile in v1: %s, %s", err.Error())
 		}
+		minimalProfileEnabled = minimalProfileEnabledBool
+		fmt.Println("populateKeepList::Minimal ingestion profile enabled:", minimalProfileEnabled)
 	case shared.SchemaVersion.V2:
 		minimalProfileEnabled, err = strconv.ParseBool(metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
 		if err != nil {
@@ -35,6 +37,7 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string, confi
 	}
 
 	for jobName, job := range shared.DefaultScrapeJobs {
+		job.KeepListRegex = ""
 		if setting, ok := keeplist[jobName]; ok {
 			fmt.Printf("parseConfigMapForKeepListRegex::Adding key: %s, value: %s\n", jobName, setting)
 			if !shared.IsValidRegex(setting) {
@@ -47,10 +50,13 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string, confi
 
 		if minimalProfileEnabled {
 			fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is true or not set, appending minimal metrics")
-			job.CustomerKeepListRegex += "|" + job.KeepListRegex
+			job.KeepListRegex = "|" + job.MinimalKeepListRegex
+			fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal Keep List Regex:", job.MinimalKeepListRegex)
 		} else {
-			fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is false, appending values")
+			fmt.Println("populateRegexValuesWithMinimalIngestionProfile::Minimal ingestion profile is false, using configmap values")
 		}
+
+		job.KeepListRegex = job.CustomerKeepListRegex + job.KeepListRegex
 	}
 
 	fmt.Printf("Parsed config map for default-targets-metrics-keep-list successfully\n")
@@ -60,8 +66,10 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string, confi
 func tomlparserTargetsMetricsKeepList(metricsConfigBySection map[string]map[string]string, configSchemaVersion string) {
 	shared.EchoSectionDivider("Start Processing - tomlparserTargetsMetricsKeepList")
 
-	populateKeepList(metricsConfigBySection, configSchemaVersion)
-
+	err := populateKeepList(metricsConfigBySection, configSchemaVersion)
+	if err != nil {
+		fmt.Printf("Error populating keep list: %s\n", err.Error())
+	}
 	// Write settings to a YAML file
 	data := map[string]string{}
 	for jobName, job := range shared.DefaultScrapeJobs {

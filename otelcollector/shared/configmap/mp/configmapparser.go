@@ -96,7 +96,7 @@ func handleEnvFileError(filename string) {
 	}
 }
 
-func Configmapparser() {
+func processConfigFiles() {
 	shared.ProcessConfigFile(configVersionFile, "AZMON_AGENT_CFG_FILE_VERSION")
 	shared.ProcessConfigFile(schemaVersionFile, "AZMON_AGENT_CFG_SCHEMA_VERSION")
 
@@ -105,14 +105,14 @@ func Configmapparser() {
 	var schemaVersion = shared.ParseSchemaVersion(os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION"))
 	switch schemaVersion {
 	case shared.SchemaVersion.V2:
-		filePaths := []string{"/etc/config/settings/metrics", "/etc/config/settings/prometheus-collector-settings"}
+		filePaths := []string{configSettingsPrefix + "metrics", configSettingsPrefix + "prometheus-collector-settings"}
 		metricsConfigBySection, err = shared.ParseMetricsFiles(filePaths)
 		if err != nil {
 			fmt.Printf("Error parsing files: %v\n", err)
 			return
 		}
 	case shared.SchemaVersion.V1:
-		configDir := "/etc/config/settings"
+		configDir := configSettingsPrefix
 		metricsConfigBySection, err = shared.ParseV1Config(configDir)
 		if err != nil {
 			fmt.Printf("Error parsing config: %v\n", err)
@@ -122,8 +122,10 @@ func Configmapparser() {
 		fmt.Println("Invalid schema version or no configmap present. Using defaults.")
 	}
 
+	fmt.Println(metricsConfigBySection)
+
 	// Check if /etc/config/settings/config-version exists
-	if _, err := os.Stat("/etc/config/settings/config-version"); os.IsNotExist(err) {
+	if _, err := os.Stat(configVersionFile); os.IsNotExist(err) {
 		metricsConfigBySection = nil
 		fmt.Println("Config version file not found. Setting metricsConfigBySection to nil i.e. no configmap is mounted")
 	}
@@ -147,6 +149,11 @@ func Configmapparser() {
 
 	shared.SetEnvAndSourceBashrcOrPowershell("AZMON_INVALID_CUSTOM_PROMETHEUS_CONFIG", "false", true)
 	shared.SetEnvAndSourceBashrcOrPowershell("CONFIG_VALIDATOR_RUNNING_IN_AGENT", "true", true)
+}
+
+func Configmapparser() {
+
+	processConfigFiles()
 
 	// Running promconfigvalidator if promMergedConfig.yml exists
 	if shared.FileExists("/opt/promMergedConfig.yml") {
