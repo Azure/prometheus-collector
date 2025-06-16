@@ -126,7 +126,9 @@ func (m *Manager) Start(ctx context.Context, host component.Host, scrapeManager 
 
 		// This ensures that any changes to the config made, even by the target allocator, are reflected in the API.
 		func() promconfig.Config {
-			return *(*promconfig.Config)(r.cfg.PrometheusConfig)
+			m.mtx.RLock()
+			defer m.mtx.RUnlock()
+			return *m.promCfg
 		},
 		o.Flags, // nil
 		api_v1.GlobalURLOptions{
