@@ -19,15 +19,25 @@ import (
  * 2) Test that the Prometheus config created is as expected for the settings given.
  */
 var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
+	var originalDefaultScrapeJobs map[string]shared.DefaultScrapeJob
 	BeforeEach(func() {
 		cleanupEnvVars()
 		configSettingsPrefix = "/tmp/settings/"
 		os.RemoveAll(configSettingsPrefix)
+		// Save a copy of the original DefaultScrapeJobs for restoring later
+		originalDefaultScrapeJobs = make(map[string]shared.DefaultScrapeJob)
+		for key, job := range shared.DefaultScrapeJobs {
+			originalDefaultScrapeJobs[key] = *job
+		}
 	})
 	AfterEach(func() {
 		cleanupEnvVars()
 		// Remove any temporary files created during the tests
 		os.RemoveAll(configSettingsPrefix)
+		// Restore the original DefaultScrapeJobs
+		for key, job := range originalDefaultScrapeJobs {
+			shared.DefaultScrapeJobs[key] = &job
+		}
 	})
 
 	Context("when the settings configmap does not exist", func() {
@@ -513,61 +523,80 @@ var _ = Describe("Configmapparser", Ordered, Label("original-test"), func() {
 				networkobservabilityRetina = "test.*|test2"
 				networkobservabilityHubble = "test.*|test2"
 				networkobservabilityCilium = "test.*|test2"
+				acstor-capacity-provisioner = "test.*|test2"
+    			acstor-metrics-exporter = "test.*|test2"
+				prometheuscollectorhealth = "test.*|test2"
 				minimalingestionprofile = false
 			`)
 			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", ``)
 
-			checkResults(false, false, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/advanced-linux-rs.yaml")
+			checkResults(false, false, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-minimal-linux-rs.yaml")
 		})
 
 		It("should handle it being set to false with no keeplist regex values", func() {
 			setEnvVars(map[string]string{
 				"AZMON_OPERATOR_ENABLED": "true",
 				"CONTAINER_TYPE":         "ConfigReaderSidecar",
-				"CONTROLLER_TYPE":        "ReplicaSet",
-				"OS_TYPE":                "linux",
-				"MODE":                   "advanced",
-				"KUBE_STATE_NAME":        "ama-metrics-ksm",
-				"POD_NAMESPACE":          "kube-system",
-				"MAC":                    "true",
+				//"CONTROLLER_TYPE":        "ReplicaSet",
+				"OS_TYPE":         "linux",
+				"MODE":            "advanced",
+				"KUBE_STATE_NAME": "ama-metrics-ksm",
+				"POD_NAMESPACE":   "kube-system",
+				"MAC":             "true",
 			})
+			expectedKeepListHashMap := map[string]string{
+				"KUBELET_METRICS_KEEP_LIST_REGEX":                     "",
+				"COREDNS_METRICS_KEEP_LIST_REGEX":                     "",
+				"CADVISOR_METRICS_KEEP_LIST_REGEX":                    "",
+				"KUBEPROXY_METRICS_KEEP_LIST_REGEX":                   "",
+				"APISERVER_METRICS_KEEP_LIST_REGEX":                   "",
+				"KUBESTATE_METRICS_KEEP_LIST_REGEX":                   "",
+				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX":                "",
+				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX":             "",
+				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX":            "",
+				"PODANNOTATIONS_METRICS_KEEP_LIST_REGEX":              "",
+				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX":                 "",
+				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX":  "",
+				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX":  "",
+				"NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX":  "",
+				"ACSTOR-CAPACITY-PROVISIONER_METRICS_KEEP_LIST_REGEX": "",
+				"ACSTOR-METRICS-EXPORTER_METRICS_KEEP_LIST_REGEX":     "",
+				"PROMETHEUSCOLLECTORHEALTH_METRICS_KEEP_LIST_REGEX":   "",
+			}
+			expectedScrapeIntervalHashMap := map[string]string{
+				"ACSTOR-CAPACITY-PROVISIONER_SCRAPE_INTERVAL": "30s",
+				"ACSTOR-METRICS-EXPORTER_SCRAPE_INTERVAL":     "30s",
+				"KUBELET_SCRAPE_INTERVAL":                     "30s",
+				"COREDNS_SCRAPE_INTERVAL":                     "30s",
+				"CADVISOR_SCRAPE_INTERVAL":                    "30s",
+				"KUBEPROXY_SCRAPE_INTERVAL":                   "30s",
+				"APISERVER_SCRAPE_INTERVAL":                   "30s",
+				"KUBESTATE_SCRAPE_INTERVAL":                   "30s",
+				"NODEEXPORTER_SCRAPE_INTERVAL":                "30s",
+				"WINDOWSEXPORTER_SCRAPE_INTERVAL":             "30s",
+				"WINDOWSKUBEPROXY_SCRAPE_INTERVAL":            "30s",
+				//"PROMETHEUS_COLLECTOR_HEALTH_SCRAPE_INTERVAL": "30s",
+				//"POD_ANNOTATION_SCRAPE_INTERVAL":              "30s",
+				"PODANNOTATIONS_SCRAPE_INTERVAL":             "30s",
+				"PROMETHEUSCOLLECTORHEALTH_SCRAPE_INTERVAL":  "30s",
+				"KAPPIEBASIC_SCRAPE_INTERVAL":                "30s",
+				"NETWORKOBSERVABILITYRETINA_SCRAPE_INTERVAL": "30s",
+				"NETWORKOBSERVABILITYHUBBLE_SCRAPE_INTERVAL": "30s",
+				"NETWORKOBSERVABILITYCILIUM_SCRAPE_INTERVAL": "30s",
+			}
 
 			schemaVersionFile = createTempFile(configSettingsPrefix, "schema-version", "v1")
 			configVersionFile = createTempFile(configSettingsPrefix, "config-version", "ver1")
-			configMapMountPathForPodAnnotation = createTempFile(configSettingsPrefix, "podannotation", "")
-			collectorSettingsMountPath = createTempFile(configSettingsPrefix, "collector-settings", "")
-			defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-settings", "")
+			configMapMountPathForPodAnnotation = createTempFile(configSettingsPrefix, "pod-annotation-based-scraping", "")
+			collectorSettingsMountPath = createTempFile(configSettingsPrefix, "prometheus-collector-settings", "")
+			defaultSettingsMountPath = createTempFile(configSettingsPrefix, "default-scrape-settings-enabled", "")
 			configMapDebugMountPath = createTempFile(configSettingsPrefix, "debug-mode", "")
-			configMapKeepListMountPath = createTempFile(configSettingsPrefix, "keep-list", `
+			configMapKeepListMountPath = createTempFile(configSettingsPrefix, "default-targets-metrics-keep-list", `
 				minimalingestionprofile = false
 			`)
-			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "scrape-interval", ``)
+			configMapScrapeIntervalMountPath = createTempFile(configSettingsPrefix, "default-targets-scrape-interval-settings", ``)
 
-			podAnnotationEnvVarPath = createTempFile(configSettingsPrefix, "podannotation-envvar", "")
-			collectorSettingsEnvVarPath = createTempFile(configSettingsPrefix, "collector-settings-envvar", "")
-			defaultSettingsEnvVarPath = createTempFile(configSettingsPrefix, "default-settings-envvar", "")
-			debugModeEnvVarPath = createTempFile(configSettingsPrefix, "debug-mode-envvar", "")
-			configMapKeepListEnvVarPath = createTempFile(configSettingsPrefix, "keep-list-envvar", "")
-			scrapeIntervalEnvVarPath = createTempFile(configSettingsPrefix, "scrape-interval-envvar", "")
-
-			Configmapparser()
-
-			checkHashMaps(configMapKeepListEnvVarPath, map[string]string{
-				"KUBELET_METRICS_KEEP_LIST_REGEX":                    "",
-				"COREDNS_METRICS_KEEP_LIST_REGEX":                    "",
-				"CADVISOR_METRICS_KEEP_LIST_REGEX":                   "",
-				"KUBEPROXY_METRICS_KEEP_LIST_REGEX":                  "",
-				"APISERVER_METRICS_KEEP_LIST_REGEX":                  "",
-				"KUBESTATE_METRICS_KEEP_LIST_REGEX":                  "",
-				"NODEEXPORTER_METRICS_KEEP_LIST_REGEX":               "",
-				"WINDOWSEXPORTER_METRICS_KEEP_LIST_REGEX":            "",
-				"WINDOWSKUBEPROXY_METRICS_KEEP_LIST_REGEX":           "",
-				"POD_ANNOTATION_METRICS_KEEP_LIST_REGEX":             "",
-				"KAPPIEBASIC_METRICS_KEEP_LIST_REGEX":                "",
-				"NETWORKOBSERVABILITYRETINA_METRICS_KEEP_LIST_REGEX": "",
-				"NETWORKOBSERVABILITYHUBBLE_METRICS_KEEP_LIST_REGEX": "",
-				"NETWORKOBSERVABILITYCILIUM_METRICS_KEEP_LIST_REGEX": "",
-			})
+			checkResults(false, false, nil, expectedKeepListHashMap, expectedScrapeIntervalHashMap, "./testdata/no-minimal-no-keeplist-rs.yaml")
 		})
 	})
 })
