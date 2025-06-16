@@ -287,7 +287,7 @@ func getInformers(factory informers.FactoriesForNamespaces, metaDataInformerFact
 }
 
 // Watch wrapped informers and wait for an initial sync.
-func (w *PrometheusCRWatcher) Watch(ctx context.Context, upstreamEvents chan Event, upstreamErrors chan error) error {
+func (w *PrometheusCRWatcher) Watch(upstreamEvents chan Event, upstreamErrors chan error) error {
 	success := true
 	// this channel needs to be buffered because notifications are asynchronous and neither producers nor consumers wait
 	notifyEvents := make(chan struct{}, 1)
@@ -392,7 +392,7 @@ func (w *PrometheusCRWatcher) Watch(ctx context.Context, upstreamEvents chan Eve
 						return
 					}
 
-					newSecret, err := w.store.SecretClient().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
+					newSecret, err := w.store.SecretClient().Secrets(secretNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
 
 					if err != nil {
 						w.logger.Error("unexpected store error when getting updated secret - ", secretName, "error", err)
