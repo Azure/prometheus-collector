@@ -118,9 +118,9 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 
 func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string) {
 
-	operatorHttpsEnabled := os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED")
-	if operatorHttpsEnabled == "" {
-		operatorHttpsEnabled = "false"
+	operatorHttpsEnabled := false
+	if strings.ToLower(os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED")) == "true" {
+		operatorHttpsEnabled = true
 	}
 
 	configurator := &Configurator{
