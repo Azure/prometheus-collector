@@ -110,13 +110,6 @@ func (r *pReceiver) Start(ctx context.Context, host component.Host) error {
 		return err
 	}
 
-	if r.cfg.APIServer != nil && r.cfg.APIServer.Enabled {
-		err = r.initAPIServer(discoveryCtx, host)
-		if err != nil {
-			r.settings.Logger.Error("Failed to initAPIServer", zap.Error(err))
-		}
-	}
-
 	r.loadConfigOnce.Do(func() {
 		close(r.configLoaded)
 	})
