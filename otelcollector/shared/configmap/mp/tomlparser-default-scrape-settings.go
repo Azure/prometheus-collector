@@ -27,6 +27,8 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["noDefaultsEnabled"] = "false"
 	config["acstor-capacity-provisioner"] = "true"
 	config["acstor-metrics-exporter"] = "true"
+	config["minimalingestionprofile "] = "true"
+
 	return config, nil
 }
 
@@ -50,10 +52,11 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	config["noDefaultsEnabled"] = "false"
 	config["acstor-capacity-provisioner"] = "true"
 	config["acstor-metrics-exporter"] = "true"
+	config["minimalingestionprofile "] = "true"
 
 	configSectionName := "default-scrape-settings-enabled"
 	if schemaVersion == "v2" {
-          configSectionName = "default-targets-scrape-enabled"
+		configSectionName = "default-targets-scrape-enabled"
 	}
 	// Override defaults with values from metricsConfigBySection
 	if settings, ok := metricsConfigBySection[configSectionName]; ok {
