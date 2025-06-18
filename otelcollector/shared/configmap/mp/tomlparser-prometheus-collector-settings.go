@@ -117,9 +117,15 @@ func (c *Configurator) Configure(metricsConfigBySection map[string]map[string]st
 }
 
 func parseConfigAndSetEnvInFile(metricsConfigBySection map[string]map[string]string) {
+
+	operatorHttpsEnabled := false
+	if strings.ToLower(os.Getenv("OPERATOR_TARGETS_HTTPS_ENABLED")) == "true" {
+		operatorHttpsEnabled = true
+	}
+
 	configurator := &Configurator{
 		ConfigLoader:   &FilesystemConfigLoader{ConfigMapMountPath: collectorSettingsMountPath},
-		ConfigParser:   &ConfigProcessor{},
+		ConfigParser:   &ConfigProcessor{TargetallocatorHttpsEnabled: operatorHttpsEnabled},
 		ConfigWriter:   &FileConfigWriter{ConfigProcessor: &ConfigProcessor{}},
 		ConfigFilePath: collectorSettingsEnvVarPath,
 	}
