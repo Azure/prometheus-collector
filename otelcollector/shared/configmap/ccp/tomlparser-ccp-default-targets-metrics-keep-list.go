@@ -42,6 +42,8 @@ func getStringValue(value interface{}) string {
 // parseConfigMapForKeepListRegex extracts the control plane metrics keep list from metricsConfigBySection.
 func parseConfigMapForKeepListRegex(metricsConfigBySection map[string]map[string]string, schemaVersion string) map[string]interface{} {
 	configMap := make(map[string]interface{})
+	// set default to true in case there is no configmap
+	configMap["minimalingestionprofile"] = "true"
 
 	fmt.Printf("parseConfigMapForKeepListRegex::schemaVersion: %s\n", schemaVersion)
 

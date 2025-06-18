@@ -18,7 +18,6 @@ func (fcl *FilesystemConfigLoader) SetDefaultScrapeSettings() (map[string]string
 	config["controlplane-kube-scheduler"] = "false"
 	config["controlplane-kube-controller-manager"] = "false"
 	config["controlplane-etcd"] = "true"
-	config["minimalingestionprofile"] = "true"
 
 	return config, nil
 }
@@ -32,7 +31,6 @@ func (fcl *FilesystemConfigLoader) ParseConfigMapForDefaultScrapeSettings(metric
 	config["controlplane-kube-scheduler"] = "false"
 	config["controlplane-kube-controller-manager"] = "false"
 	config["controlplane-etcd"] = "true"
-	config["minimalingestionprofile"] = "true"
 
 	// Override defaults with values from metricsConfigBySection
 	if schemaVersion == "v1" {
