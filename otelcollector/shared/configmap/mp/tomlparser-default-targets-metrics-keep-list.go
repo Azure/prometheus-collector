@@ -53,17 +53,27 @@ func getStringValue(value interface{}) string {
 // populateKeepList initializes the regex keep list with values from metricsConfigBySection.
 func populateKeepList(metricsConfigBySection map[string]map[string]string) (RegexValues, error) {
 
-	keeplist := metricsConfigBySection["default-targets-metrics-keep-list"]
+	var keeplist map[string]string
+	minimalingestionprofile_value := "true" // Default value
 
-	minimalingestionprofile_value := "true"
-
-	configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
-	if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
-		minimalingestionprofile_value = getStringValue(keeplist["minimalingestionprofile"])
-	} else if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v2" {
-		minimalingestionprofile_value = getStringValue(metricsConfigBySection["minimal-ingestion-profile"]["enabled"])
+	// Handle case when no configmap is present (metricsConfigBySection is nil)
+	if metricsConfigBySection == nil {
+		// Use default values - minimalingestionprofile_value is already set to "true"
+		keeplist = make(map[string]string) // Empty keeplist for other values
 	} else {
-		return RegexValues{}, fmt.Errorf("unsupported/missing config schema version - '%s', using defaults, please use supported schema version", configSchemaVersion)
+		// Configmap is present, proceed with normal logic
+		keeplist = metricsConfigBySection["default-targets-metrics-keep-list"]
+
+		configSchemaVersion := os.Getenv("AZMON_AGENT_CFG_SCHEMA_VERSION")
+		if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v1" {
+			minimalingestionprofile_value = getStringValue(keeplist["minimalingestionprofile"])
+		} else if configSchemaVersion != "" && strings.TrimSpace(configSchemaVersion) == "v2" {
+			if minimalProfile := metricsConfigBySection["minimal-ingestion-profile"]; minimalProfile != nil {
+				minimalingestionprofile_value = getStringValue(minimalProfile["enabled"])
+			}
+		} else {
+			return RegexValues{}, fmt.Errorf("unsupported/missing config schema version - '%s', using defaults, please use supported schema version", configSchemaVersion)
+		}
 	}
 
 	regexValues := RegexValues{
@@ -91,7 +101,7 @@ func populateKeepList(metricsConfigBySection map[string]map[string]string) (Rege
 		return regexValues, err
 	}
 
-	return regexValues, nil // Return regex values and nil error if everything is valid
+	return regexValues, nil
 }
 
 func validateRegexValues(regexValues RegexValues) error {
