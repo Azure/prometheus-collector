@@ -17,13 +17,15 @@ type DefaultScrapeJob struct {
 }
 
 type ControllerTypeStrings struct {
-	ReplicaSet string
-	DaemonSet  string
+	ReplicaSet          string
+	DaemonSet           string
+	ConfigReaderSidecar string
 }
 
 var ControllerType = ControllerTypeStrings{
-	ReplicaSet: "ReplicaSet",
-	DaemonSet:  "DaemonSet",
+	ReplicaSet:          "ReplicaSet",
+	DaemonSet:           "DaemonSet",
+	ConfigReaderSidecar: "ConfigReaderSidecar",
 }
 
 type OSTypeStrings struct {

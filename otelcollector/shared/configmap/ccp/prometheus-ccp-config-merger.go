@@ -210,7 +210,7 @@ func writeDefaultScrapeTargetsFile() {
 			}
 		}
 	} else {
-		mergedDefaultConfigs = nil
+		mergedDefaultConfigs = make(map[interface{}]interface{})
 	}
 	fmt.Printf("Done creating default targets file\n")
 }
