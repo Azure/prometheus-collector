@@ -1,4 +1,18 @@
 # Azure Monitor Metrics for AKS clusters
+## Release 06-19-2025
+* Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD`
+* Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-win`
+* TA image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-targetallocator`
+* cfg sidecar image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.18.0-main-06-19-2025-TBD-cfg`
+* AKS and Arc Container Images:
+  - feat: Update max shards to 24 (https://github.com/Azure/prometheus-collector/pull/1167)
+  - feat: Secure communication between ReplicaSet and TargetAllocator (https://github.com/Azure/prometheus-collector/pull/1133)
+  - fix: Respect minimal ingestion profile when no configmap is present (https://github.com/Azure/prometheus-collector/pull/1184)
+  - fix: Set minimal ingestion environment variable with value (https://github.com/Azure/prometheus-collector/pull/1185)
+  - feat: add support for bleu cloud (https://github.com/Azure/prometheus-collector/pull/1150)
+  - feat: Upgrade OpenTelemetry Collector components from 0.123.0 to 0.127.0 (https://github.com/Azure/prometheus-collector/pull/1182)
+  - fix: Update code for win support in sovereign clouds, ca cert bootstrap (https://github.com/Azure/prometheus-collector/pull/1174)
+
 ## Release 05-29-2025
 * Linux image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.17.0-main-05-29-2025-1a3ab39b`
 * Windows image - `mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.17.0-main-05-29-2025-1a3ab39b-win`
