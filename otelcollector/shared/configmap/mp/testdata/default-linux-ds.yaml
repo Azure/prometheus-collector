@@ -15,7 +15,7 @@ scrape_configs:
     source_labels:
     - __metrics_path__
     target_label: metrics_path
-  - replacement: null
+  - replacement: test-node
     source_labels:
     - __address__
     target_label: instance
@@ -27,62 +27,10 @@ scrape_configs:
   scrape_interval: 30s
   static_configs:
   - targets:
-    - :10250
+    - 192.168.1.1:10250
   tls_config:
     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     insecure_skip_verify: true
-- bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-  job_name: cadvisor
-  label_limit: 63
-  label_name_length_limit: 511
-  label_value_length_limit: 1023
-  metric_relabel_configs:
-  - action: keep
-    regex: '|container_spec_cpu_quota|container_spec_cpu_period|container_memory_rss|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_network_receive_packets_total|container_network_transmit_packets_total|container_network_receive_packets_dropped_total|container_network_transmit_packets_dropped_total|container_fs_reads_total|container_fs_writes_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_memory_cache|container_memory_swap|container_cpu_cfs_throttled_periods_total|container_cpu_cfs_periods_total|container_memory_rss|kubernetes_build_info|container_start_time_seconds'
-    source_labels:
-    - __name__
-  metrics_path: /metrics/cadvisor
-  relabel_configs:
-  - replacement: null
-    source_labels:
-    - __address__
-    target_label: instance
-  scheme: https
-  scrape_interval: 30s
-  static_configs:
-  - targets:
-    - :10250
-  tls_config:
-    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-    insecure_skip_verify: true
-- job_name: kappie-basic
-  kubernetes_sd_configs:
-  - role: service
-  label_limit: 63
-  label_name_length_limit: 511
-  label_value_length_limit: 1023
-  metric_relabel_configs:
-  - action: keep
-    regex: '|kappie.*'
-    source_labels:
-    - __name__
-  relabel_configs:
-  - action: keep
-    regex: kube-system;kappie-svc
-    source_labels:
-    - __meta_kubernetes_namespace
-    - __meta_kubernetes_service_name
-  - action: replace
-    replacement: :10093
-    source_labels:
-    - __address__
-    target_label: __address__
-  - replacement: null
-    source_labels:
-    - __address__
-    target_label: instance
-  scheme: http
-  scrape_interval: 30s
 - job_name: networkobservability-retina
   kubernetes_sd_configs:
   - role: service
@@ -99,7 +47,7 @@ scrape_configs:
     - __meta_kubernetes_service_name
     - __meta_kubernetes_service_port_name
   - action: replace
-    replacement: null
+    replacement: 192.168.1.1
     source_labels:
     - __address__
     target_label: __address__
@@ -110,7 +58,7 @@ scrape_configs:
     - __address__
     - __meta_kubernetes_service_port_number
     target_label: __address__
-  - replacement: null
+  - replacement: test-node
     source_labels:
     - __address__
     target_label: instance
@@ -132,7 +80,7 @@ scrape_configs:
     - __meta_kubernetes_service_name
     - __meta_kubernetes_service_port_name
   - action: replace
-    replacement: null
+    replacement: 192.168.1.1
     source_labels:
     - __address__
     target_label: __address__
@@ -143,15 +91,67 @@ scrape_configs:
     - __address__
     - __meta_kubernetes_service_port_number
     target_label: __address__
-  - replacement: null
+  - replacement: test-node
     source_labels:
     - __address__
     target_label: instance
   scheme: http
   scrape_interval: 30s
+- bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  job_name: cadvisor
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  metric_relabel_configs:
+  - action: keep
+    regex: '|container_spec_cpu_quota|container_spec_cpu_period|container_memory_rss|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_network_receive_packets_total|container_network_transmit_packets_total|container_network_receive_packets_dropped_total|container_network_transmit_packets_dropped_total|container_fs_reads_total|container_fs_writes_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total|container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_memory_cache|container_memory_swap|container_cpu_cfs_throttled_periods_total|container_cpu_cfs_periods_total|container_memory_rss|kubernetes_build_info|container_start_time_seconds'
+    source_labels:
+    - __name__
+  metrics_path: /metrics/cadvisor
+  relabel_configs:
+  - replacement: test-node
+    source_labels:
+    - __address__
+    target_label: instance
+  scheme: https
+  scrape_interval: 30s
+  static_configs:
+  - targets:
+    - 192.168.1.1:10250
+  tls_config:
+    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecure_skip_verify: true
+- job_name: node
+  label_limit: 63
+  label_name_length_limit: 511
+  label_value_length_limit: 1023
+  metric_relabel_configs:
+  - action: keep
+    regex: '|node_filesystem_readonly|node_memory_MemTotal_bytes|node_cpu_seconds_total|node_memory_MemAvailable_bytes|node_memory_Buffers_bytes|node_memory_Cached_bytes|node_memory_MemFree_bytes|node_memory_Slab_bytes|node_filesystem_avail_bytes|node_filesystem_size_bytes|node_time_seconds|node_exporter_build_info|node_load1|node_vmstat_pgmajfault|node_network_receive_bytes_total|node_network_transmit_bytes_total|node_network_receive_drop_total|node_network_transmit_drop_total|node_disk_io_time_seconds_total|node_disk_io_time_weighted_seconds_total|node_load5|node_load15|node_disk_read_bytes_total|node_disk_written_bytes_total|node_uname_info|kubernetes_build_info|node_boot_time_seconds'
+    source_labels:
+    - __name__
+  relabel_configs:
+  - regex: (.*)
+    source_labels:
+    - __metrics_path__
+    target_label: metrics_path
+  - replacement: test-node
+    source_labels:
+    - __address__
+    target_label: instance
+  scheme: http
+  scrape_interval: 30s
+  static_configs:
+  - targets:
+    - 192.168.1.1:9100
 - job_name: networkobservability-cilium
   kubernetes_sd_configs:
   - role: service
+  metric_relabel_configs:
+  - action: keep
+    regex: '|cilium_drop.*|cilium_forward.*'
+    source_labels:
+    - __name__
   relabel_configs:
   - action: keep
     regex: kube-system;network-observability;cilium
@@ -160,7 +160,7 @@ scrape_configs:
     - __meta_kubernetes_service_name
     - __meta_kubernetes_service_port_name
   - action: replace
-    replacement: null
+    replacement: 192.168.1.1
     source_labels:
     - __address__
     target_label: __address__
@@ -171,7 +171,7 @@ scrape_configs:
     - __address__
     - __meta_kubernetes_service_port_number
     target_label: __address__
-  - replacement: null
+  - replacement: test-node
     source_labels:
     - __address__
     target_label: instance

@@ -6,6 +6,7 @@ toolchain go1.23.2
 
 require (
 	github.com/prometheus/common v0.62.0
+	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.32.0
 )
 
